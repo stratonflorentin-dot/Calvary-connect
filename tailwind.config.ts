@@ -11,8 +11,9 @@ export default {
     extend: {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        headline: ['Syne', 'sans-serif'],
         code: ['monospace'],
+        sans: ['DM Sans', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -88,10 +89,19 @@ export default {
             height: '0',
           },
         },
+        'pulse-status': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+        },
+        'typewriter': {
+          from: { width: '0' },
+          to: { width: '100%' }
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'pulse-slow': 'pulse-status 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },

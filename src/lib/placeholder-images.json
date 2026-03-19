@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Logistics operations warehouse",
+      "imageUrl": "https://picsum.photos/seed/fleet1/1200/800",
+      "imageHint": "logistics warehouse"
+    },
+    {
+      "id": "driver-profile",
+      "description": "Professional truck driver",
+      "imageUrl": "https://picsum.photos/seed/driver/200/200",
+      "imageHint": "professional man"
+    }
+  ]
 }
