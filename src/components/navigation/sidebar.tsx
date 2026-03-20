@@ -22,11 +22,11 @@ const ROLE_NAV: Record<UserRole, any[]> = {
     { label: 'Notifications', icon: Bell, href: '/notifications' },
   ],
   OPERATIONS: [
-    { label: 'Trips', icon: Route, href: '/trips' },
-    { label: 'Fleet', icon: Truck, href: '/fleet' },
-    { label: 'Inventory', icon: Package, href: '/inventory' },
+    { label: 'Trips & Dispatch', icon: Route, href: '/trips' },
+    { label: 'Fleet Status', icon: Truck, href: '/fleet' },
+    { label: 'Inventory Control', icon: Package, href: '/inventory' },
     { label: 'Parts Requests', icon: Wrench, href: '/parts-requests' },
-    { label: 'Live Map', icon: MapPin, href: '/map' },
+    { label: 'Fleet Map', icon: MapPin, href: '/map' },
     { label: 'Notifications', icon: Bell, href: '/notifications' },
   ],
   MECHANIC: [

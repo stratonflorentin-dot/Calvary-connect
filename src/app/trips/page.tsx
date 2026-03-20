@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { collection, query, orderBy, doc, where } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,12 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Route, Plus, MapPin, Truck as TruckIcon, User } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Route, Plus, MapPin, Truck as TruckIcon, User, ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function TripsPage() {
   const { role } = useRole();
   const firestore = useFirestore();
   const { user } = useUser();
+  const [expandedTripId, setExpandedTripId] = useState<string | null>(null);
   
   const tripsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -42,18 +45,48 @@ export default function TripsPage() {
     e.preventDefault();
     if (!firestore) return;
     const formData = new FormData(e.currentTarget);
+    const driverId = formData.get('driverId') as string;
+    const vehicleId = formData.get('vehicleId') as string;
+    
     const tripData = {
       originLocation: formData.get('origin') as string,
       destinationLocation: formData.get('destination') as string,
-      driverId: formData.get('driverId') as string,
-      fleetVehicleId: formData.get('vehicleId') as string,
+      driverId,
+      fleetVehicleId: vehicleId,
       status: 'created',
       createdAt: new Date().toISOString(),
       notes: formData.get('notes') as string,
     };
 
+    // 1. Create Trip
     addDocumentNonBlocking(collection(firestore, 'trips'), tripData);
+
+    // 2. Update Vehicle Status
+    const vehicleRef = doc(firestore, 'fleet_vehicles', vehicleId);
+    updateDocumentNonBlocking(vehicleRef, { status: 'In Use' });
+
+    // 3. Notify Driver
+    const notificationRef = collection(firestore, 'users', driverId, 'notifications');
+    addDocumentNonBlocking(notificationRef, {
+      title: 'New Trip Assigned',
+      message: `You have been assigned a new trip from ${tripData.originLocation} to ${tripData.destinationLocation}.`,
+      type: 'trip_assigned',
+      severity: 'info',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+
     e.currentTarget.reset();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'delivered': return 'bg-emerald-500';
+      case 'in_transit': return 'bg-amber-500 animate-pulse-slow';
+      case 'loaded': return 'bg-primary';
+      case 'cancelled': return 'bg-rose-500';
+      default: return 'bg-slate-400';
+    }
   };
 
   if (!['CEO', 'OPERATIONS'].includes(role || '')) return <div className="p-8">Access Denied</div>;
@@ -70,13 +103,13 @@ export default function TripsPage() {
 
           <Dialog>
             <DialogTrigger asChild>
-              <Button className="rounded-full gap-2">
+              <Button className="rounded-full gap-2 shadow-lg hover:scale-105 transition-transform">
                 <Plus className="size-4" /> New Trip
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Dispatch New Trip</DialogTitle>
+                <DialogTitle className="font-headline text-2xl">Dispatch New Trip</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleCreateTrip} className="space-y-4 pt-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -94,7 +127,7 @@ export default function TripsPage() {
                   <Label>Assigned Driver</Label>
                   <Select name="driverId" required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select driver" />
+                      <SelectValue placeholder="Select active driver" />
                     </SelectTrigger>
                     <SelectContent>
                       {drivers?.map(d => (
@@ -108,7 +141,7 @@ export default function TripsPage() {
                   <Label>Assigned Vehicle</Label>
                   <Select name="vehicleId" required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select vehicle" />
+                      <SelectValue placeholder="Select available truck" />
                     </SelectTrigger>
                     <SelectContent>
                       {fleet?.filter(v => v.status === 'Available').map(v => (
@@ -119,17 +152,18 @@ export default function TripsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input id="notes" name="notes" placeholder="Delivery instructions..." />
+                  <Label htmlFor="notes">Delivery Notes</Label>
+                  <Input id="notes" name="notes" placeholder="Special instructions..." />
                 </div>
 
-                <Button type="submit" className="w-full">Create & Dispatch</Button>
+                <Button type="submit" className="w-full h-12 text-lg font-headline">Create & Dispatch</Button>
               </form>
             </DialogContent>
           </Dialog>
         </div>
 
-        <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-hidden">
+        {/* Desktop View */}
+        <div className="hidden md:block bg-card rounded-2xl shadow-sm border p-0 overflow-hidden">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
@@ -146,7 +180,7 @@ export default function TripsPage() {
               ) : trips?.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-8">No trips dispatched yet.</TableCell></TableRow>
               ) : trips?.map((t) => (
-                <TableRow key={t.id}>
+                <TableRow key={t.id} className="hover:bg-muted/30">
                   <td className="px-6 py-4 font-mono text-xs text-primary">{t.id.slice(0, 8)}</td>
                   <td>
                     <div className="flex flex-col">
@@ -168,11 +202,7 @@ export default function TripsPage() {
                     </div>
                   </td>
                   <td>
-                    <Badge className={
-                      t.status === 'delivered' ? 'bg-emerald-500' :
-                      t.status === 'in_transit' ? 'bg-amber-500' :
-                      t.status === 'cancelled' ? 'bg-rose-500' : 'bg-primary'
-                    }>
+                    <Badge className={cn("text-[10px] font-bold", getStatusColor(t.status))}>
                       {t.status.toUpperCase()}
                     </Badge>
                   </td>
@@ -183,6 +213,63 @@ export default function TripsPage() {
               ))}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile Feed-style View */}
+        <div className="md:hidden space-y-4">
+          {trips?.map((t) => (
+            <Card key={t.id} className="relative overflow-hidden border-none shadow-md bg-white">
+              <div className={cn("absolute top-0 left-0 right-0 h-[4px]", getStatusColor(t.status))} />
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="text-[10px] font-mono text-muted-foreground uppercase">Trip #{t.id.slice(0, 8)}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-headline text-base">{t.originLocation}</span>
+                      <Route className="size-4 text-primary" />
+                      <span className="font-headline text-base">{t.destinationLocation}</span>
+                    </div>
+                  </div>
+                  <Badge className={cn("text-[9px]", getStatusColor(t.status))}>
+                    {t.status}
+                  </Badge>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <User className="size-4" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold">{drivers?.find(d => d.id === t.driverId)?.name || 'Unknown'}</span>
+                      <span className="text-[10px] text-muted-foreground">{fleet?.find(v => v.id === t.fleetVehicleId)?.plateNumber}</span>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full"
+                    onClick={() => setExpandedTripId(expandedTripId === t.id ? null : t.id)}
+                  >
+                    {expandedTripId === t.id ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                  </Button>
+                </div>
+
+                {expandedTripId === t.id && (
+                  <div className="mt-4 pt-4 border-t space-y-3 animate-in slide-in-from-top duration-300">
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Dispatcher Notes</p>
+                      <p className="text-xs">{t.notes || 'No specific notes provided.'}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" className="text-[10px] h-8">View Logs</Button>
+                      <Button variant="destructive" size="sm" className="text-[10px] h-8">Cancel Trip</Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </main>
     </div>
