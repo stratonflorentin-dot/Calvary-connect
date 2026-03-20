@@ -1,9 +1,10 @@
+
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, limit } from 'firebase/firestore';
@@ -12,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
+import { useLanguage } from '@/hooks/use-language';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export function DriverView() {
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -20,6 +23,12 @@ export function DriverView() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { format, toggleCurrency } = useCurrency();
+  const { lang, toggleLanguage, t } = useLanguage();
+
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Query for the driver's active trip
   const activeTripQuery = useMemoFirebase(() => {
@@ -39,6 +48,41 @@ export function DriverView() {
     const timer = setTimeout(() => setLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
+
+  const getCameraPermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setHasCameraPermission(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setHasCameraPermission(false);
+      toast({
+        variant: 'destructive',
+        title: 'Camera Access Denied',
+        description: 'Please enable camera permissions in your browser settings.',
+      });
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const context = canvasRef.current.getContext('2d');
+      if (context) {
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
+        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+        const dataUrl = canvasRef.current.toDataURL('image/jpeg');
+        setCapturedImage(dataUrl);
+        
+        // Stop the stream
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream?.getTracks().forEach(track => track.stop());
+      }
+    }
+  };
 
   useEffect(() => {
     if (locationEnabled && user && firestore) {
@@ -81,11 +125,12 @@ export function DriverView() {
       isApproved: false,
       createdAt: new Date().toISOString(),
       reporterUserId: user.uid,
-      photoUrl: `https://picsum.photos/seed/${Math.random()}/600/400`,
+      photoUrl: capturedImage || `https://picsum.photos/seed/${Math.random()}/600/400`,
       tripId: activeTrip?.id || null
     };
     addDocumentNonBlocking(collection(firestore, 'expenses'), expenseData);
     toast({ title: "Expense Reported", description: "Sent to accounting for approval." });
+    setCapturedImage(null);
     (e.target as HTMLFormElement).reset();
   };
 
@@ -95,7 +140,7 @@ export function DriverView() {
     const proofData = {
       tripId: activeTrip.id,
       driverId: user.uid,
-      photoUrl: `https://picsum.photos/seed/${activeTrip.id}/600/400`,
+      photoUrl: capturedImage || `https://picsum.photos/seed/${activeTrip.id}/600/400`,
       uploadedAt: new Date().toISOString(),
       caption: "Delivery successful at destination."
     };
@@ -105,6 +150,7 @@ export function DriverView() {
     setDocumentNonBlocking(tripRef, { status: 'delivered', deliveredAt: new Date().toISOString() }, { merge: true });
 
     toast({ title: "Delivery Complete", description: "Proof captured and trip marked as delivered." });
+    setCapturedImage(null);
   };
 
   if (loading) {
@@ -146,26 +192,32 @@ export function DriverView() {
     <div className="pb-24 pt-4 px-4 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto">
       <header className="flex justify-between items-center">
         <div>
-          <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest font-bold">Active Mission</p>
+          <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest font-bold">{t.active_mission}</p>
           <h1 className="text-xl font-headline tracking-tighter">{user?.displayName || 'Driver Console'}</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={toggleCurrency} className="rounded-full text-primary hover:bg-primary/10">
-          <Coins className="size-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={toggleLanguage} className="rounded-full text-primary hover:bg-primary/10 gap-2">
+            <Languages className="size-4" />
+            <span className="text-[10px] font-bold uppercase">{lang === 'en' ? 'SW' : 'EN'}</span>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={toggleCurrency} className="rounded-full text-primary hover:bg-primary/10">
+            <Coins className="size-4" />
+          </Button>
+        </div>
       </header>
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="border-none bg-primary text-white shadow-lg rounded-2xl">
           <CardContent className="p-4 flex flex-col gap-1">
             <Gauge className="size-4 text-accent mb-1" />
-            <p className="text-[10px] opacity-70 uppercase font-bold">Today's Mileage</p>
+            <p className="text-[10px] opacity-70 uppercase font-bold">{t.mileage}</p>
             <p className="text-xl font-headline">{mileage.toFixed(1)} <span className="text-xs">KM</span></p>
           </CardContent>
         </Card>
         <Card className="border-none bg-white shadow-lg rounded-2xl">
           <CardContent className="p-4 flex flex-col gap-1">
             <DollarSign className="size-4 text-emerald-500 mb-1" />
-            <p className="text-[10px] text-muted-foreground uppercase font-bold">Earnings</p>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold">{t.earnings}</p>
             <p className="text-xl font-headline text-primary truncate">{format(420)}</p>
           </CardContent>
         </Card>
@@ -200,14 +252,47 @@ export function DriverView() {
               </div>
 
               <div className="space-y-3 pt-2">
-                <Button 
-                  onClick={handleUploadProof}
-                  className="w-full h-14 bg-primary hover:bg-primary/90 font-headline text-lg rounded-xl shadow-lg"
-                >
-                  COMPLETE DELIVERY
-                </Button>
+                <Dialog>
+                   <DialogTrigger asChild>
+                      <Button className="w-full h-14 bg-primary hover:bg-primary/90 font-headline text-lg rounded-xl shadow-lg">
+                        {t.complete_delivery.toUpperCase()}
+                      </Button>
+                   </DialogTrigger>
+                   <DialogContent className="max-w-[90vw] rounded-2xl">
+                      <DialogHeader>
+                        <DialogTitle>{t.capture}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 pt-4">
+                        <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
+                        <canvas ref={canvasRef} className="hidden" />
+                        
+                        {capturedImage && (
+                          <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-emerald-500">
+                             <img src={capturedImage} className="w-full h-full object-cover" />
+                             <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+                               <CheckCircle2 className="size-12 text-white" />
+                             </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <Button onClick={getCameraPermission} variant="outline" className="flex-1">
+                            Enable Camera
+                          </Button>
+                          <Button onClick={capturePhoto} className="flex-1 bg-accent hover:bg-accent/90" disabled={!hasCameraPermission}>
+                            {t.take_photo}
+                          </Button>
+                        </div>
+                        
+                        <Button onClick={handleUploadProof} className="w-full h-12 font-headline" disabled={!capturedImage}>
+                          SUBMIT EVIDENCE
+                        </Button>
+                      </div>
+                   </DialogContent>
+                </Dialog>
+                
                 <Button variant="outline" className="w-full h-12 font-headline border-primary text-primary rounded-xl flex gap-2">
-                  <Navigation className="size-4" /> Start Navigator
+                  <Navigation className="size-4" /> {t.start_nav}
                 </Button>
               </div>
             </div>
@@ -225,23 +310,22 @@ export function DriverView() {
           <DialogTrigger asChild disabled={!activeTrip}>
             <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform disabled:opacity-50">
               <Camera className="size-5 text-accent" />
-              <p className="text-[10px] font-bold">PROOF</p>
+              <p className="text-[10px] font-bold">{t.proof.toUpperCase()}</p>
             </button>
           </DialogTrigger>
           <DialogContent className="max-w-[90vw] rounded-2xl">
             <DialogHeader>
-              <DialogTitle>Upload Proof of Delivery</DialogTitle>
+              <DialogTitle>{t.capture}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-              <div className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-dashed relative overflow-hidden">
-                <img 
-                  src={`https://picsum.photos/seed/${activeTrip?.id}/600/400`} 
-                  alt="Delivery proof" 
-                  className="absolute inset-0 w-full h-full object-cover" 
-                />
-                <Camera className="size-8 text-white relative z-10" />
-              </div>
-              <Button onClick={handleUploadProof} className="w-full h-12">Submit Proof</Button>
+               <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
+               <canvas ref={canvasRef} className="hidden" />
+               {capturedImage && <img src={capturedImage} className="w-full aspect-video rounded-xl object-cover" />}
+               <div className="flex gap-2">
+                  <Button onClick={getCameraPermission} variant="outline" className="flex-1">Camera</Button>
+                  <Button onClick={capturePhoto} className="flex-1">{t.take_photo}</Button>
+               </div>
+               <Button onClick={handleUploadProof} className="w-full h-12" disabled={!capturedImage}>Submit</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -250,7 +334,7 @@ export function DriverView() {
           <DialogTrigger asChild>
             <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
               <DollarSign className="size-5 text-emerald-500" />
-              <p className="text-[10px] font-bold">EXPENSE</p>
+              <p className="text-[10px] font-bold">{t.expense.toUpperCase()}</p>
             </button>
           </DialogTrigger>
           <DialogContent className="max-w-[90vw] rounded-2xl">
@@ -270,6 +354,20 @@ export function DriverView() {
                 <Label>Notes</Label>
                 <Input name="notes" placeholder="Optional details" />
               </div>
+              
+              <div className="space-y-2">
+                 <Label>Evidence Photo</Label>
+                 <div className="grid grid-cols-1 gap-2">
+                    <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
+                    <canvas ref={canvasRef} className="hidden" />
+                    <div className="flex gap-2">
+                       <Button type="button" onClick={getCameraPermission} variant="outline" size="sm" className="flex-1">Camera On</Button>
+                       <Button type="button" onClick={capturePhoto} variant="secondary" size="sm" className="flex-1">Snap</Button>
+                    </div>
+                    {capturedImage && <img src={capturedImage} className="w-full aspect-video rounded-xl object-cover border" />}
+                 </div>
+              </div>
+
               <Button type="submit" className="w-full h-12">Log Expense</Button>
             </form>
           </DialogContent>
@@ -277,7 +375,7 @@ export function DriverView() {
 
         <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
           <AlertTriangle className="size-5 text-rose-500" />
-          <p className="text-[10px] font-bold">ISSUE</p>
+          <p className="text-[10px] font-bold">{t.issue.toUpperCase()}</p>
         </button>
       </div>
     </div>

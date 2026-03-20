@@ -1,0 +1,92 @@
+
+"use client";
+
+import { useState, useEffect } from 'react';
+
+export type Language = 'en' | 'sw';
+
+const translations = {
+  en: {
+    dashboard: "Dashboard",
+    fleet: "Fleet",
+    finance: "Finance",
+    inventory: "Inventory",
+    map: "Live Map",
+    trips: "Trips & Dispatch",
+    users: "User Management",
+    notifications: "Notifications",
+    logout: "Logout",
+    active_mission: "Active Mission",
+    mileage: "Mileage",
+    earnings: "Earnings",
+    complete_delivery: "Complete Delivery",
+    start_nav: "Start Navigator",
+    proof: "Proof",
+    expense: "Expense",
+    issue: "Issue",
+    capture: "Capture Photo",
+    take_photo: "Take Photo",
+    switch_lang: "Kiswahili",
+    revenue: "Total Revenue",
+    expenses: "Expenses",
+    net_profit: "Net Profit",
+    recent_income: "Recent Income",
+    recent_expenses: "Recent Expenses",
+    add_vehicle: "Add Vehicle",
+    warehouse: "Warehouse Inventory",
+    dispatch: "Dispatch New Trip",
+    camera_access: "Camera Access Required",
+    camera_desc: "Please allow camera access to capture evidence.",
+  },
+  sw: {
+    dashboard: "Dashibodi",
+    fleet: "Karakana",
+    finance: "Fedha",
+    inventory: "Hesabu",
+    map: "Ramani ya Moja kwa Moja",
+    trips: "Safari na Usimamizi",
+    users: "Watumiaji",
+    notifications: "Arifa",
+    logout: "Ondoka",
+    active_mission: "Kazi Inayoendelea",
+    mileage: "Umbali",
+    earnings: "Mapato",
+    complete_delivery: "Kamilisha Uwasilishaji",
+    start_nav: "Anza Ramani",
+    proof: "Ushahidi",
+    expense: "Gharama",
+    issue: "Tatizo",
+    capture: "Piga Picha",
+    take_photo: "Piga Picha",
+    switch_lang: "English",
+    revenue: "Jumla ya Mapato",
+    expenses: "Gharama",
+    net_profit: "Faida Safi",
+    recent_income: "Mapato ya Hivi Karibuni",
+    recent_expenses: "Gharama za Hivi Karibuni",
+    add_vehicle: "Ongeza Gari",
+    warehouse: "Hesabu ya Ghala",
+    dispatch: "Anza Safari Mpya",
+    camera_access: "Ufikiaji wa Kamera Unahitajika",
+    camera_desc: "Tafadhali ruhusu ufikiaji wa kamera ili kupiga picha ya ushahidi.",
+  }
+};
+
+export function useLanguage() {
+  const [lang, setLang] = useState<Language>('en');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('fleet_lang') as Language;
+    if (saved) setLang(saved);
+  }, []);
+
+  const toggleLanguage = () => {
+    const next = lang === 'en' ? 'sw' : 'en';
+    setLang(next);
+    localStorage.setItem('fleet_lang', next);
+  };
+
+  const t = translations[lang];
+
+  return { lang, toggleLanguage, t };
+}

@@ -11,9 +11,13 @@ import { MechanicView } from '@/components/dashboard/mechanic-view';
 import { AccountantView } from '@/components/dashboard/accountant-view';
 import { NotificationsBell } from '@/components/shared/notifications-bell';
 import { AiInsightPanel } from '@/components/dashboard/ai-insight-panel';
+import { useLanguage } from '@/hooks/use-language';
+import { Button } from '@/components/ui/button';
+import { Languages } from 'lucide-react';
 
 export default function Home() {
   const { role } = useRole();
+  const { toggleLanguage, lang } = useLanguage();
 
   if (!role) return null;
 
@@ -63,7 +67,13 @@ export default function Home() {
         <header className="sticky top-0 h-16 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 z-40">
           <div className="md:hidden font-headline tracking-tighter text-primary">Calvary Connect</div>
           <div className="hidden md:block" />
-          <NotificationsBell />
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={toggleLanguage} className="rounded-full gap-2 border text-primary">
+              <Languages className="size-4" />
+              <span className="font-bold text-xs">{lang === 'en' ? 'SW' : 'EN'}</span>
+            </Button>
+            <NotificationsBell />
+          </div>
         </header>
 
         <div className="p-4 md:p-8">
