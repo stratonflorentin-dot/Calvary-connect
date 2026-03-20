@@ -1,0 +1,1033 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Calvary Connect application, including drivers, operations managers, mechanics, accountants, and CEOs.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address, used for communication and login.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The assigned role of the user within the system, determining their permissions and interface.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "description": "The current operational status of the user account.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the user's profile picture or avatar.",
+          "format": "uri"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's contact phone number."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "role",
+        "status",
+        "createdAt"
+      ]
+    },
+    "FleetVehicle": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FleetVehicle",
+      "type": "object",
+      "description": "Represents a vehicle in the company's fleet, used for logistics operations.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FleetVehicle entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "A recognizable name or model of the vehicle."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of vehicle, e.g., 'Truck', 'Van', 'Trailer'."
+        },
+        "plateNumber": {
+          "type": "string",
+          "description": "The vehicle's license plate number, must be unique."
+        },
+        "condition": {
+          "type": "string",
+          "description": "The current physical condition of the vehicle.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "description": "The current operational status of the vehicle.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lastMaintenanceDate": {
+          "type": "string",
+          "description": "The date of the last maintenance service performed on the vehicle.",
+          "format": "date-time"
+        },
+        "nextServiceDate": {
+          "type": "string",
+          "description": "The date when the next maintenance service is scheduled for the vehicle.",
+          "format": "date"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the vehicle record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the vehicle record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "plateNumber",
+        "condition",
+        "status",
+        "createdAt"
+      ]
+    },
+    "DriverLocation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DriverLocation",
+      "type": "object",
+      "description": "Represents the real-time or last known location and status of a driver. This is primarily sourced from Realtime Database but a summary might be persisted or used for querying in Firestore.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DriverLocation entity, typically matching the User ID of the driver. (Relationship: User 1:1 DriverLocation)"
+        },
+        "latitude": {
+          "type": "number",
+          "description": "The current geographical latitude of the driver."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "The current geographical longitude of the driver."
+        },
+        "heading": {
+          "type": "number",
+          "description": "The direction the driver is currently heading (degrees from North)."
+        },
+        "speed": {
+          "type": "number",
+          "description": "The current speed of the driver in kilometers per hour."
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Reference to the active Trip the driver is currently on, if any. (Relationship: Trip 1:1 DriverLocation)"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "Timestamp of the last location update.",
+          "format": "date-time"
+        },
+        "isOnline": {
+          "type": "boolean",
+          "description": "Indicates if the driver's app is currently active and sharing location."
+        },
+        "alertStatus": {
+          "type": "string",
+          "description": "Indicates if the driver has reported an alert (e.g., breakdown).",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "latitude",
+        "longitude",
+        "lastUpdated",
+        "isOnline"
+      ]
+    },
+    "Trip": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Trip",
+      "type": "object",
+      "description": "Represents a logistics trip for delivering goods, tracking its progress and associated resources.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Trip entity."
+        },
+        "originLocation": {
+          "type": "string",
+          "description": "The starting point or origin of the trip (e.g., address, warehouse name)."
+        },
+        "destinationLocation": {
+          "type": "string",
+          "description": "The final destination of the trip (e.g., address, client name)."
+        },
+        "driverId": {
+          "type": "string",
+          "description": "Reference to the User (driver) assigned to this trip. (Relationship: User 1:N Trip)"
+        },
+        "fleetVehicleId": {
+          "type": "string",
+          "description": "Reference to the FleetVehicle assigned to this trip. (Relationship: FleetVehicle 1:N Trip)"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the trip.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or instructions for the trip."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the trip was created.",
+          "format": "date-time"
+        },
+        "loadedAt": {
+          "type": "string",
+          "description": "Timestamp when the trip status was updated to 'loaded'.",
+          "format": "date-time"
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "Timestamp when the trip status was updated to 'in_transit'.",
+          "format": "date-time"
+        },
+        "deliveredAt": {
+          "type": "string",
+          "description": "Timestamp when the trip status was updated to 'delivered'.",
+          "format": "date-time"
+        },
+        "cancellationReason": {
+          "type": "string",
+          "description": "The reason provided if the trip was cancelled."
+        }
+      },
+      "required": [
+        "id",
+        "originLocation",
+        "destinationLocation",
+        "driverId",
+        "fleetVehicleId",
+        "status",
+        "createdAt"
+      ]
+    },
+    "DeliveryProof": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DeliveryProof",
+      "type": "object",
+      "description": "Records photographic proof of delivery uploaded by drivers for a specific trip.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DeliveryProof entity."
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Reference to the Trip this delivery proof is associated with. (Relationship: Trip 1:N DeliveryProof)"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "URL to the uploaded photo in Firebase Storage.",
+          "format": "uri"
+        },
+        "caption": {
+          "type": "string",
+          "description": "An optional caption or description for the proof photo."
+        },
+        "uploadedAt": {
+          "type": "string",
+          "description": "Timestamp when the delivery proof was uploaded.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "tripId",
+        "photoUrl",
+        "uploadedAt"
+      ]
+    },
+    "MaintenanceRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MaintenanceRequest",
+      "type": "object",
+      "description": "Records requests for vehicle maintenance, tracking issues and service details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MaintenanceRequest entity."
+        },
+        "fleetVehicleId": {
+          "type": "string",
+          "description": "Reference to the FleetVehicle for which maintenance is requested. (Relationship: FleetVehicle 1:N MaintenanceRequest)"
+        },
+        "reporterUserId": {
+          "type": "string",
+          "description": "Reference to the User (e.g., Driver) who reported the issue. (Relationship: User 1:N MaintenanceRequest)"
+        },
+        "assignedMechanicId": {
+          "type": "string",
+          "description": "Reference to the User (mechanic) assigned to handle this request, if any. (Relationship: User 1:N MaintenanceRequest)"
+        },
+        "issueDescription": {
+          "type": "string",
+          "description": "A detailed description of the maintenance issue."
+        },
+        "severity": {
+          "type": "string",
+          "description": "The urgency or impact level of the maintenance issue.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the maintenance request.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reportedAt": {
+          "type": "string",
+          "description": "Timestamp when the maintenance request was reported.",
+          "format": "date-time"
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "Timestamp when the mechanic started working on the request.",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp when the maintenance request was marked as completed.",
+          "format": "date-time"
+        },
+        "serviceLog": {
+          "type": "string",
+          "description": "A detailed log or summary of the service performed by the mechanic."
+        },
+        "truckConditionAfterService": {
+          "type": "string",
+          "description": "The vehicle's condition after the service was completed.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "fleetVehicleId",
+        "reporterUserId",
+        "issueDescription",
+        "severity",
+        "status",
+        "reportedAt"
+      ]
+    },
+    "InventoryItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InventoryItem",
+      "type": "object",
+      "description": "Represents an item stocked in the company's inventory, such as spare parts, fuel, or tools.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the InventoryItem entity."
+        },
+        "itemName": {
+          "type": "string",
+          "description": "The name of the inventory item."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category the item belongs to.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "quantityTotal": {
+          "type": "number",
+          "description": "The total quantity of this item ever recorded in inventory (historical maximum)."
+        },
+        "quantityAvailable": {
+          "type": "number",
+          "description": "The current quantity of the item available in stock."
+        },
+        "quantityUsed": {
+          "type": "number",
+          "description": "The cumulative quantity of this item that has been used or consumed."
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit of measurement for the item (e.g., 'pcs', 'liters', 'gallons', 'sets')."
+        },
+        "storageLocation": {
+          "type": "string",
+          "description": "The physical location where the item is stored in the warehouse or facility."
+        },
+        "reorderLevel": {
+          "type": "number",
+          "description": "The quantity level at which a reorder should be triggered for this item."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current stock status of the item, derived from quantity available and reorder level.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the inventory item was first added.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the inventory item record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "itemName",
+        "category",
+        "quantityAvailable",
+        "quantityUsed",
+        "unit",
+        "reorderLevel",
+        "status",
+        "createdAt"
+      ]
+    },
+    "InventoryUsageLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InventoryUsageLog",
+      "type": "object",
+      "description": "Records details of when and how an inventory item was used or consumed.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the InventoryUsageLog entity."
+        },
+        "inventoryItemId": {
+          "type": "string",
+          "description": "Reference to the InventoryItem that was used. (Relationship: InventoryItem 1:N InventoryUsageLog)"
+        },
+        "usedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who logged the usage. (Relationship: User 1:N InventoryUsageLog)"
+        },
+        "quantityUsed": {
+          "type": "number",
+          "description": "The quantity of the item that was used."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason or purpose for the item's usage (e.g., 'Routine service', 'Trip delivery', 'Breakdown repair')."
+        },
+        "maintenanceRequestId": {
+          "type": "string",
+          "description": "Optional reference to a MaintenanceRequest if the item was used for a repair. (Relationship: MaintenanceRequest 1:N InventoryUsageLog)"
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Optional reference to a Trip if the item was used during a trip. (Relationship: Trip 1:N InventoryUsageLog)"
+        },
+        "usedAt": {
+          "type": "string",
+          "description": "Timestamp when the item was used and the log entry was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "inventoryItemId",
+        "usedByUserId",
+        "quantityUsed",
+        "reason",
+        "usedAt"
+      ]
+    },
+    "SparePartsRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SparePartsRequest",
+      "type": "object",
+      "description": "Records requests from mechanics for spare parts, tracking their status and approval process.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SparePartsRequest entity."
+        },
+        "mechanicId": {
+          "type": "string",
+          "description": "Reference to the User (mechanic) who submitted the request. (Relationship: User 1:N SparePartsRequest)"
+        },
+        "inventoryItemId": {
+          "type": "string",
+          "description": "Optional reference to an existing InventoryItem if the request is for a known part. (Relationship: InventoryItem 1:N SparePartsRequest)"
+        },
+        "requestedPartName": {
+          "type": "string",
+          "description": "The name of the part being requested, especially if it's not an existing inventory item."
+        },
+        "quantityNeeded": {
+          "type": "number",
+          "description": "The quantity of the part requested."
+        },
+        "urgency": {
+          "type": "string",
+          "description": "The urgency level of the request.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason or justification for the parts request."
+        },
+        "linkedMaintenanceRequestId": {
+          "type": "string",
+          "description": "Optional reference to a MaintenanceRequest if this request is part of a specific repair job. (Relationship: MaintenanceRequest 1:N SparePartsRequest)"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the spare parts request.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the request was submitted.",
+          "format": "date-time"
+        },
+        "processedByUserId": {
+          "type": "string",
+          "description": "Reference to the User (CEO/Operations) who approved or rejected the request. (Relationship: User 1:N SparePartsRequest)"
+        },
+        "processedAt": {
+          "type": "string",
+          "description": "Timestamp when the request was approved or rejected.",
+          "format": "date-time"
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "The reason provided if the request was rejected."
+        },
+        "approvedQuantity": {
+          "type": "number",
+          "description": "The actual quantity of parts approved, which might differ from the requested quantity."
+        }
+      },
+      "required": [
+        "id",
+        "mechanicId",
+        "quantityNeeded",
+        "urgency",
+        "reason",
+        "status",
+        "createdAt"
+      ]
+    },
+    "Income": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Income",
+      "type": "object",
+      "description": "Records all incoming financial transactions for the company.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Income entity."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary amount of the income."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method by which the income was received (e.g., 'Bank Transfer', 'Cash', 'Card')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or description for the income entry."
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Optional reference to a Trip if this income is directly associated with a completed delivery. (Relationship: Trip 1:N Income)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the income record was created.",
+          "format": "date-time"
+        },
+        "editedAt": {
+          "type": "string",
+          "description": "Timestamp when the income record was last edited.",
+          "format": "date-time"
+        },
+        "editedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who last edited this income record. (Relationship: User 1:N Income)"
+        }
+      },
+      "required": [
+        "id",
+        "amount",
+        "paymentMethod",
+        "createdAt"
+      ]
+    },
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Records all outgoing financial expenditures for the company.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Expense entity."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the expense (e.g., 'Fuel', 'Maintenance', 'Driver Allowance', 'Office Supplies')."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary amount of the expense."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or description for the expense entry."
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Optional reference to a Trip if this expense is directly associated with it. (Relationship: Trip 1:N Expense)"
+        },
+        "isApproved": {
+          "type": "boolean",
+          "description": "Indicates if the expense has been approved by a manager or accountant."
+        },
+        "approvedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who approved this expense. (Relationship: User 1:N Expense)"
+        },
+        "approvedAt": {
+          "type": "string",
+          "description": "Timestamp when the expense was approved.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the expense record was created.",
+          "format": "date-time"
+        },
+        "editedAt": {
+          "type": "string",
+          "description": "Timestamp when the expense record was last edited.",
+          "format": "date-time"
+        },
+        "editedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who last edited this expense record. (Relationship: User 1:N Expense)"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "amount",
+        "isApproved",
+        "createdAt"
+      ]
+    },
+    "FuelRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FuelRequest",
+      "type": "object",
+      "description": "Records requests from drivers for fuel, tracking their approval and associated expenses.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FuelRequest entity."
+        },
+        "driverId": {
+          "type": "string",
+          "description": "Reference to the User (driver) who submitted the fuel request. (Relationship: User 1:N FuelRequest)"
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Reference to the Trip for which the fuel is requested. (Relationship: Trip 1:N FuelRequest)"
+        },
+        "amountLiters": {
+          "type": "number",
+          "description": "The quantity of fuel requested in liters."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or context provided by the driver for the request."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the fuel request.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the fuel request was submitted.",
+          "format": "date-time"
+        },
+        "processedByUserId": {
+          "type": "string",
+          "description": "Reference to the User (Accountant/Operations) who processed (approved/rejected) the request. (Relationship: User 1:N FuelRequest)"
+        },
+        "processedAt": {
+          "type": "string",
+          "description": "Timestamp when the request was processed.",
+          "format": "date-time"
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "The reason provided if the fuel request was rejected."
+        }
+      },
+      "required": [
+        "id",
+        "driverId",
+        "tripId",
+        "amountLiters",
+        "status",
+        "createdAt"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Stores system notifications to be delivered to specific users or roles.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Notification entity."
+        },
+        "recipientId": {
+          "type": "string",
+          "description": "Reference to the User who is the recipient of this notification. (Relationship: User 1:N Notification)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The category or type of the notification (e.g., 'parts_request_submitted', 'trip_assigned', 'low_stock')."
+        },
+        "severity": {
+          "type": "string",
+          "description": "The severity level of the notification, influencing its display (e.g., 'info', 'warning', 'critical', 'success')."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title or short summary of the notification."
+        },
+        "message": {
+          "type": "string",
+          "description": "The detailed message content of the notification."
+        },
+        "referenceId": {
+          "type": "string",
+          "description": "Optional reference to the ID of the entity that triggered this notification (e.g., Trip ID, Maintenance Request ID)."
+        },
+        "referenceType": {
+          "type": "string",
+          "description": "Optional type of the entity referenced by 'referenceId' (e.g., 'Trip', 'MaintenanceRequest', 'InventoryItem')."
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Indicates whether the recipient has viewed or acknowledged the notification."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the notification was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "recipientId",
+        "type",
+        "severity",
+        "title",
+        "message",
+        "isRead",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores individual user profiles including their role. CEO has full read/write access. Users can read/write their own profile. Other roles can read specific fields as needed. 'role' field within the User document defines the user's primary system role, while dedicated role collections are used for security rule checks."
+        }
+      },
+      {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Personalized notifications for each user. Access is restricted to the owner of the `userId` in the path. This structure ensures Authorization Independence as `recipientId` is implicitly asserted by the path, eliminating the need for `get()` calls in rules. Supports QAPs by making notifications inherently private.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who is the recipient of the notification."
+            },
+            {
+              "name": "notificationId",
+              "description": "The unique identifier for the notification document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_ceo/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for CEO roles. Documents here are typically minimal, serving primarily for existence checks in security rules to grant CEO-specific permissions. Maintained in sync with the 'role' field in the /users collection for the respective user. This provides Authorization Independence for role checks."
+        }
+      },
+      {
+        "path": "/roles_operations/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for Operations Manager roles, used for security rule existence checks. Maintained in sync with the 'role' field in the /users collection for the respective user. This provides Authorization Independence for role checks."
+        }
+      },
+      {
+        "path": "/roles_mechanic/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for Mechanic roles, used for security rule existence checks. Maintained in sync with the 'role' field in the /users collection for the respective user. This provides Authorization Independence for role checks."
+        }
+      },
+      {
+        "path": "/roles_accountant/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for Accountant roles, used for security rule existence checks. Maintained in sync with the 'role' field in the /users collection for the respective user. This provides Authorization Independence for role checks."
+        }
+      },
+      {
+        "path": "/roles_driver/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Dedicated collection for Driver roles, used for security rule existence checks. Maintained in sync with the 'role' field in the /users collection for the respective user. This provides Authorization Independence for role checks."
+        }
+      },
+      {
+        "path": "/fleet_vehicles/{fleetVehicleId}",
+        "definition": {
+          "entityName": "FleetVehicle",
+          "schema": {
+            "$ref": "#/backend/entities/FleetVehicle"
+          },
+          "description": "Stores information about each vehicle in the fleet. CEO and Operations Managers have full read/write access. Mechanics can read and update condition/maintenance-related fields. Drivers can read vehicles assigned to their trips."
+        }
+      },
+      {
+        "path": "/driver_locations/{driverId}",
+        "definition": {
+          "entityName": "DriverLocation",
+          "schema": {
+            "$ref": "#/backend/entities/DriverLocation"
+          },
+          "description": "Stores the real-time or last known location and status for each driver. The driver ('driverId' in path matches 'request.auth.uid') has write access. CEO and Operations Managers have read access."
+        }
+      },
+      {
+        "path": "/trips/{tripId}",
+        "definition": {
+          "entityName": "Trip",
+          "schema": {
+            "$ref": "#/backend/entities/Trip"
+          },
+          "description": "Records details for logistics trips. Operations Managers can create, read all, and update. CEO can read all. Drivers ('driverId' field matches 'request.auth.uid') can read their assigned trips and update 'status' (e.g., loaded, in_transit, delivered) and timestamps. Includes denormalized 'driverId' and 'fleetVehicleId' for direct authorization checks."
+        }
+      },
+      {
+        "path": "/trips/{tripId}/delivery_proofs/{deliveryProofId}",
+        "definition": {
+          "entityName": "DeliveryProof",
+          "schema": {
+            "$ref": "#/backend/entities/DeliveryProof"
+          },
+          "description": "Stores photographic proof of delivery associated with a specific trip. Drivers can create proof for trips where their 'request.auth.uid' matches the denormalized 'driverId' field within this document (copied from the parent Trip). CEO and Operations Managers can read all delivery proofs. This denormalization ensures Authorization Independence without requiring a 'get()' call to the parent Trip.",
+          "params": [
+            {
+              "name": "tripId",
+              "description": "The unique identifier of the trip this delivery proof belongs to."
+            },
+            {
+              "name": "deliveryProofId",
+              "description": "The unique identifier for the delivery proof document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/maintenance_requests/{maintenanceRequestId}",
+        "definition": {
+          "entityName": "MaintenanceRequest",
+          "schema": {
+            "$ref": "#/backend/entities/MaintenanceRequest"
+          },
+          "description": "Records requests for vehicle maintenance. Drivers/Mechanics ('reporterUserId' matches 'request.auth.uid') can create/read their own requests. Mechanics ('assignedMechanicId' matches 'request.auth.uid') can read/update their assigned requests. CEO and Operations Managers have full read/write access for management. Includes explicit 'reporterUserId' and 'assignedMechanicId' for Authorization Independence."
+        }
+      },
+      {
+        "path": "/inventory_items/{inventoryItemId}",
+        "definition": {
+          "entityName": "InventoryItem",
+          "schema": {
+            "$ref": "#/backend/entities/InventoryItem"
+          },
+          "description": "Manages company inventory items. CEO and Operations Managers have full read/write access. Mechanics can read filtered inventory (e.g., spare parts, tools) and update 'quantityAvailable' and 'quantityUsed' when logging usage."
+        }
+      },
+      {
+        "path": "/inventory_usage_logs/{inventoryUsageLogId}",
+        "definition": {
+          "entityName": "InventoryUsageLog",
+          "schema": {
+            "$ref": "#/backend/entities/InventoryUsageLog"
+          },
+          "description": "Logs details of when and how an inventory item was used. Mechanics ('usedByUserId' matches 'request.auth.uid') can create their own usage logs. CEO, Operations Managers, and Accountants have read-only access to all logs. Includes explicit 'usedByUserId' for Authorization Independence."
+        }
+      },
+      {
+        "path": "/spare_parts_requests/{sparePartsRequestId}",
+        "definition": {
+          "entityName": "SparePartsRequest",
+          "schema": {
+            "$ref": "#/backend/entities/SparePartsRequest"
+          },
+          "description": "Records requests for spare parts, primarily from mechanics. Mechanics ('mechanicId' matches 'request.auth.uid') can create, read, and update their own requests. CEO and Operations Managers can read all requests and approve/reject them. Includes explicit 'mechanicId' and 'processedByUserId' for Authorization Independence."
+        }
+      },
+      {
+        "path": "/income/{incomeId}",
+        "definition": {
+          "entityName": "Income",
+          "schema": {
+            "$ref": "#/backend/entities/Income"
+          },
+          "description": "Records all incoming financial transactions. Accountants have full read/write/delete access. CEO has read access. Includes 'editedByUserId' for auditing and Authorization Independence."
+        }
+      },
+      {
+        "path": "/expenses/{expenseId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Records all outgoing financial expenditures. Accountants have full read/write/delete access. CEO has read access and approval capability. Drivers can implicitly create expenses via Fuel Requests. Includes 'approvedByUserId' and 'editedByUserId' for auditing and Authorization Independence."
+        }
+      },
+      {
+        "path": "/fuel_requests/{fuelRequestId}",
+        "definition": {
+          "entityName": "FuelRequest",
+          "schema": {
+            "$ref": "#/backend/entities/FuelRequest"
+          },
+          "description": "Records requests from drivers for fuel. Drivers ('driverId' matches 'request.auth.uid') can create and read their own requests. Accountants, Operations Managers, and CEO can read all requests. Accountants/Operations Managers can process (approve/reject) requests. Includes explicit 'driverId' and 'processedByUserId' for Authorization Independence."
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure for Calvary Connect prioritizes security, scalability, and debuggability by adhering to the core design principles and strategy mandates. \n\n**Authorization Independence:** This is achieved primarily through pervasive denormalization and structural choices. User roles are not inferred from the `/users` collection via `get()`; instead, dedicated top-level role collections (e.g., `/roles_ceo/{uid}`, `/roles_driver/{uid}`) are used. This allows for simple, atomic `exists()` checks in security rules, eliminating hierarchical dependencies for role-based access. Furthermore, for subcollections whose access inherently depends on parent data, crucial authorization fields are denormalized. For instance, `DeliveryProof` documents, nested under a `Trip`, will include the `driverId` directly within the `DeliveryProof` document. This allows a driver to prove they are authorized to create proof for *their* trip without performing a `get()` on the parent `Trip` document. Similarly, `Notification` documents are placed in `/users/{userId}/notifications/{notificationId}`, where `userId` in the path directly asserts ownership, removing the need for `get()` on a parent user profile.\n\n**Querying and Access Patterns (QAPs):** The design ensures secure `list` operations by implementing structural segregation. Each collection is designed to hold documents with a homogeneous security posture. For example:\n*   **Private User Data:** `/users/{userId}/notifications` ensures a user can only `list` their own notifications, inherently satisfying QAPs for personal data.\n*   **Global Data for Specific Roles:** Collections like `/users`, `/fleet_vehicles`, and `/trips` are accessible for `list` operations by high-privilege roles (CEO, Operations Manager) because these roles are authorized to view *all* documents in those collections. Security rules will check for the presence of the user's UID in the respective role collections (e.g., `exists(/databases/$(database)/documents/roles_ceo/$(request.auth.uid))`).\n*   **Filtered Data for Specific Roles:** For roles like drivers or mechanics needing to list specific subsets of data (e.g., a driver listing their assigned trips or a mechanic listing their assigned maintenance requests), the structure supports secure `list` operations by requiring client-side queries to include appropriate `where` clauses (e.g., `where('driverId', '==', request.auth.uid)`). Firestore security rules will enforce that these filters match `request.auth.uid` or the user's role, preventing unauthorized `list` operations if a malicious client attempts to omit the filter."
+  }
+}

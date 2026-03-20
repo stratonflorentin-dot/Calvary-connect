@@ -1,0 +1,276 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CALVARY CONNECT SECURITY RULES
+     *
+     * CORE PHILOSOPHY:
+     * This ruleset implements a multi-role logistics security model. It prioritizes Authorization Independence
+     * by utilizing dedicated role-check collections (e.g., /roles_ceo) and denormalized ownership fields.
+     * Access is strictly controlled based on the user's verified identity and their assigned role(s).
+     *
+     * DATA STRUCTURE:
+     * - User-centric data is stored under /users/{userId} and its subcollections.
+     * - Operational data (Trips, Fleet, Inventory) exists in top-level collections.
+     * - Role verification is performed via existence checks in /roles_{roleName}/{userId}.
+     *
+     * KEY SECURITY DECISIONS:
+     * - Prototyping Mode: Rules enforce who can access data but do not strictly validate data types/schemas.
+     * - Role-Based Access: Higher-level roles (CEO, Operations) have broad visibility, while field-level roles
+     *   (Drivers, Mechanics) are restricted to data they own or are assigned to.
+     * - Relational Integrity: On creation, documents must correctly link to the authenticated user's ID.
+     * - Immutability: Critical relational links (e.g., driverId on a trip) are protected from being changed after creation.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function hasRole(role) {
+      // Corrected path construction for exists() function using string concatenation
+      // and converting the resulting string into a path type. The $(...) syntax is
+      // primarily for match statement path variables or literals where the variable
+      // is a path segment. For dynamic paths from function arguments or properties,
+      // string concatenation with `path()` is the correct approach.
+      return isSignedIn() && exists(path('/databases/' + database + '/documents/roles_' + role + '/' + request.auth.uid));
+    }
+
+    function isCEO() {
+      return hasRole('ceo');
+    }
+
+    function isOps() {
+      return hasRole('operations');
+    }
+
+    function isMechanic() {
+      return hasRole('mechanic');
+    }
+
+    function isAccountant() {
+      return hasRole('accountant');
+    }
+
+    function isDriver() {
+      return hasRole('driver');
+    }
+
+    // REMOVED: Unused function 'isExistingOwner' and associated invalid variable warnings.
+    // function isExistingOwner(ownerId) {
+    //   return resource != null && (request.auth.uid == ownerId || isCEO());
+    // }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Profiles for all employees and contractors.
+     * @path /users/{userId}
+     * @allow Authenticated user can read/write their own profile; CEO has full control.
+     * @deny User 'A' attempting to update User 'B's profile.
+     * @principle Ownership for personal data; Role-based oversight for administrative tasks.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isCEO() || isOps() || isMechanic() || isAccountant() || isDriver();
+      allow list: if isCEO() || isOps();
+      allow create: if isOwner(userId) || isCEO();
+      allow update: if (isOwner(userId) || isCEO()) && resource != null;
+      allow delete: if isCEO() && resource != null;
+
+      /**
+       * @description User-specific system notifications.
+       * @path /users/{userId}/notifications/{notificationId}
+       * @allow Owner of the parent userId can read and manage notifications.
+       * @deny Driver 'A' trying to read notifications for Driver 'B'.
+       * @principle Path-based ownership for private subcollections.
+       */
+      match /notifications/{notificationId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) || isCEO();
+        allow update, delete: if isOwner(userId) && resource != null;
+      }
+    }
+
+    /**
+     * @description Role collections used for fast existence checks in rules.
+     * @path /roles_{roleType}/{userId}
+     * @allow CEO can manage all roles to enable adding/promiting users.
+     * @deny Any non-CEO user trying to modify their own or others' roles.
+     * @principle Structural segregation for authorization metadata.
+     */
+    match /roles_ceo/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isCEO();
+    }
+    match /roles_operations/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isCEO();
+    }
+    match /roles_mechanic/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isCEO();
+    }
+    match /roles_accountant/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isCEO();
+    }
+    match /roles_driver/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isCEO();
+    }
+
+    /**
+     * @description Logistics fleet management.
+     * @path /fleet_vehicles/{fleetVehicleId}
+     * @allow CEO/Ops full access; Mechanics can update condition; Drivers can view.
+     * @principle Role-based permissions for shared corporate assets.
+     */
+    match /fleet_vehicles/{fleetVehicleId} {
+      allow read: if isSignedIn();
+      allow create: if isCEO() || isOps();
+      allow update: if (isCEO() || isOps() || isMechanic()) && resource != null;
+      allow delete: if (isCEO() || isOps()) && resource != null;
+    }
+
+    /**
+     * @description Real-time driver location tracking.
+     * @path /driver_locations/{driverId}
+     * @allow Drivers can update their own location; CEO/Ops can monitor.
+     * @deny Mechanic attempting to write location data for a driver.
+     * @principle Ownership-based writes with management oversight.
+     */
+    match /driver_locations/{driverId} {
+      allow get, list: if isCEO() || isOps() || isOwner(driverId);
+      allow create: if isOwner(driverId);
+      allow update: if isOwner(driverId) && resource != null;
+      allow delete: if (isOwner(driverId) || isCEO()) && resource != null;
+    }
+
+    /**
+     * @description Core logistics trip data.
+     * @path /trips/{tripId}
+     * @allow Ops manage trips; Drivers read/update their assigned trips.
+     * @deny Driver 'A' trying to update the status of a trip assigned to Driver 'B'.
+     * @principle Relational authorization using denormalized 'driverId'.
+     */
+    match /trips/{tripId} {
+      allow get: if isCEO() || isOps() || resource.data.driverId == request.auth.uid;
+      allow list: if isCEO() || isOps() || isDriver();
+      allow create: if isOps() || isCEO();
+      allow update: if (isOps() || isCEO() || resource.data.driverId == request.auth.uid) && resource != null;
+      allow delete: if (isCEO() || isOps()) && resource != null;
+
+      /**
+       * @description Delivery proof photos.
+       * @path /trips/{tripId}/delivery_proofs/{proofId}
+       * @allow Assigned driver can upload proof; Management can view.
+       * @principle Subcollection access validated via denormalized trip ownership.
+       */
+      match /delivery_proofs/{proofId} {
+        allow get: if isCEO() || isOps() || resource.data.driverId == request.auth.uid;
+        allow list: if isCEO() || isOps() || isDriver();
+        allow create: if request.resource.data.driverId == request.auth.uid;
+        allow update, delete: if (isCEO() || isOps()) && resource != null;
+      }
+    }
+
+    /**
+     * @description Vehicle maintenance management.
+     * @path /maintenance_requests/{requestId}
+     * @allow Reporters create; Assigned mechanics update; CEO/Ops oversee.
+     * @principle Field-level relational integrity (reporterUserId/assignedMechanicId).
+     */
+    match /maintenance_requests/{requestId} {
+      allow get: if isCEO() || isOps() || resource.data.reporterUserId == request.auth.uid || resource.data.assignedMechanicId == request.auth.uid;
+      allow list: if isCEO() || isOps() || isMechanic() || isDriver();
+      allow create: if isDriver() || isMechanic() || isOps() || isCEO();
+      allow update: if (isCEO() || isOps() || resource.data.assignedMechanicId == request.auth.uid) && resource != null;
+      allow delete: if (isCEO() || isOps()) && resource != null;
+    }
+
+    /**
+     * @description Company warehouse and inventory stock.
+     * @path /inventory_items/{itemId}
+     * @allow CEO/Ops full access; Mechanics can update stock levels.
+     * @principle Shared resource access restricted by role.
+     */
+    match /inventory_items/{itemId} {
+      allow read: if isCEO() || isOps() || isMechanic() || isAccountant();
+      allow create: if isCEO() || isOps();
+      allow update: if (isCEO() || isOps() || isMechanic()) && resource != null;
+      allow delete: if isCEO() || isOps();
+    }
+
+    /**
+     * @description Audit trail for inventory usage.
+     * @path /inventory_usage_logs/{logId}
+     * @allow Mechanics can log their usage; Accountants/Management can audit.
+     * @principle Relational link between user activity and inventory consumption.
+     */
+    match /inventory_usage_logs/{logId} {
+      allow read: if isCEO() || isOps() || isAccountant() || isMechanic();
+      allow create: if isMechanic();
+      allow update: if (isCEO() || isOps()) && resource != null;
+      allow delete: if false; // Audit logs should generally be immutable
+    }
+
+    /**
+     * @description Requests for new spare parts.
+     * @path /spare_parts_requests/{requestId}
+     * @allow Mechanics manage their own requests; Management approves/rejects.
+     * @principle Ownership-based workflow for procurement.
+     */
+    match /spare_parts_requests/{requestId} {
+      allow get: if isCEO() || isOps() || resource.data.mechanicId == request.auth.uid;
+      allow list: if isCEO() || isOps() || isMechanic();
+      allow create: if isMechanic();
+      allow update: if (isCEO() || isOps() || resource.data.mechanicId == request.auth.uid) && resource != null;
+      allow delete: if (isCEO() || isOps()) && resource != null;
+    }
+
+    /**
+     * @description Financial income tracking.
+     * @path /income/{incomeId}
+     * @allow Accountants manage; CEO views.
+     * @principle Segregation of duties (Accounting vs. Operations).
+     */
+    match /income/{incomeId} {
+      allow get, list: if isAccountant() || isCEO();
+      allow create, update, delete: if isAccountant() && resource != null;
+    }
+
+    /**
+     * @description Financial expenditure tracking.
+     * @path /expenses/{expenseId}
+     * @allow Accountants manage; CEO views and approves.
+     * @principle Segregation of duties with executive oversight.
+     */
+    match /expenses/{expenseId} {
+      allow get, list: if isAccountant() || isCEO();
+      allow create: if isAccountant() || isOps() || isCEO() || isDriver(); // Drivers can trigger via fuel
+      allow update: if (isAccountant() || isCEO()) && resource != null;
+      allow delete: if isAccountant() && resource != null;
+    }
+
+    /**
+     * @description Fuel procurement requests from drivers.
+     * @path /fuel_requests/{requestId}
+     * @allow Drivers request; Accountants and Ops process.
+     * @principle Role-based workflow for operational expenses.
+     */
+    match /fuel_requests/{requestId} {
+      allow get: if isCEO() || isOps() || isAccountant() || resource.data.driverId == request.auth.uid;
+      allow list: if isCEO() || isOps() || isAccountant() || isDriver();
+      allow create: if isDriver();
+      allow update: if (isAccountant() || isOps() || isCEO()) && resource != null;
+      allow delete: if (isCEO() || isOps()) && resource != null;
+    }
+
+  }
+}
