@@ -2,10 +2,12 @@
 "use client";
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wrench, Package, History, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Wrench, Package, History, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export function MechanicView() {
   const firestore = useFirestore();
@@ -13,42 +15,55 @@ export function MechanicView() {
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'maintenance_requests'), orderBy('reportedAt', 'desc'));
+    return query(collection(firestore, 'maintenance_requests'), orderBy('reportedAt', 'desc'), limit(5));
   }, [firestore, user]);
 
   const { data: requests } = useCollection(requestsQuery);
 
+  const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
+  const inProgressCount = requests?.filter(r => r.status === 'in_progress').length || 0;
+
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-headline tracking-tighter">Maintenance Hub</h1>
-        <p className="text-muted-foreground text-sm">Monitor fleet health and manage service logs.</p>
+      <header className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-headline tracking-tighter">Maintenance Hub</h1>
+          <p className="text-muted-foreground text-sm">Real-time fleet health and service control.</p>
+        </div>
+        <Link href="/service-requests">
+          <Button variant="outline" size="sm" className="rounded-full gap-2 border-primary text-primary">
+            View All Tasks <ArrowRight className="size-4" />
+          </Button>
+        </Link>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="rounded-2xl border-none shadow-sm bg-primary text-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-primary-foreground/70">Pending Jobs</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-primary-foreground/70">Tasks Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-headline">{requests?.filter(r => r.status === 'pending').length || 0}</div>
+            <div className="text-3xl font-headline">{pendingCount}</div>
           </CardContent>
         </Card>
         <Card className="rounded-2xl border-none shadow-sm bg-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Critical Fleet</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">In Progress</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
-            <div className="text-3xl font-headline text-rose-500">2</div>
-            <AlertCircle className="size-5 text-rose-500" />
+            <div className="text-3xl font-headline text-blue-500">{inProgressCount}</div>
           </CardContent>
         </Card>
         <Card className="rounded-2xl border-none shadow-sm bg-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Parts in Stock</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Quick Action</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-headline text-primary">124</div>
+            <Link href="/truck-history">
+              <Button variant="ghost" className="w-full justify-start gap-2 h-auto py-2 text-xs font-bold text-primary hover:bg-primary/5">
+                <History className="size-4" /> Check Truck History
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -56,7 +71,7 @@ export function MechanicView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <section className="space-y-4">
           <h2 className="text-xl font-headline tracking-tighter flex items-center gap-2">
-            <Wrench className="size-5 text-primary" /> Active Service Queue
+            <Wrench className="size-5 text-primary" /> Active Queue
           </h2>
           <div className="space-y-3">
             {requests?.length === 0 ? (
@@ -65,11 +80,14 @@ export function MechanicView() {
               <Card key={request.id} className="rounded-xl shadow-sm border overflow-hidden">
                 <CardContent className="p-4 flex justify-between items-center">
                   <div>
-                    <p className="font-headline text-sm">{request.issueDescription}</p>
-                    <p className="text-[10px] text-muted-foreground">Reported: {new Date(request.reportedAt).toLocaleDateString()}</p>
+                    <p className="font-headline text-sm truncate max-w-[200px]">{request.issueDescription}</p>
+                    <p className="text-[10px] text-muted-foreground">Truck ID: {request.fleetVehicleId}</p>
                   </div>
-                  <Badge className={request.severity === 'Critical' ? 'bg-rose-500' : 'bg-amber-500'}>
-                    {request.severity}
+                  <Badge className={cn(
+                    "text-[10px]",
+                    request.status === 'in_progress' ? 'bg-blue-500' : 'bg-amber-500'
+                  )}>
+                    {request.status.toUpperCase()}
                   </Badge>
                 </CardContent>
               </Card>
@@ -79,21 +97,25 @@ export function MechanicView() {
 
         <section className="space-y-4">
           <h2 className="text-xl font-headline tracking-tighter flex items-center gap-2">
-            <History className="size-5 text-primary" /> Recent Fixes
+            <History className="size-5 text-primary" /> Recent Maintenance Activity
           </h2>
-          <div className="bg-card rounded-2xl shadow-sm border p-6">
+          <div className="bg-white rounded-2xl shadow-sm border p-6">
             <div className="space-y-4">
-              {[1, 2, 3].map(i => (
+              {requests?.filter(r => r.status === 'completed').slice(0, 3).map((log, i) => (
                 <div key={i} className="flex gap-3 border-b pb-3 last:border-0">
                   <div className="size-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
                     <CheckCircle2 className="size-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold">Brake Pad Replacement</p>
-                    <p className="text-xs text-muted-foreground">Truck #G-2883-24 • 2 days ago</p>
+                    <p className="text-sm font-bold">{log.issueDescription}</p>
+                    <p className="text-xs text-muted-foreground">Log: {log.serviceLog}</p>
+                    <p className="text-[9px] text-muted-foreground mt-1 uppercase font-bold">{new Date(log.completedAt).toLocaleDateString()}</p>
                   </div>
                 </div>
               ))}
+              {requests?.filter(r => r.status === 'completed').length === 0 && (
+                <p className="text-xs text-muted-foreground italic text-center py-4">No completed logs yet.</p>
+              )}
             </div>
           </div>
         </section>
