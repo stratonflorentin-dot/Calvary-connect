@@ -14,11 +14,11 @@ export function StatCards() {
   const { format } = useCurrency();
   const { t } = useLanguage();
 
-  const fleetQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'fleet_vehicles') : null, [firestore, user, role]);
-  const tripsQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'trips') : null, [firestore, user, role]);
-  const incomeQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'income') : null, [firestore, user, role]);
-  const inventoryQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'inventory_items') : null, [firestore, user, role]);
-  const locationsQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'driver_locations') : null, [firestore, user, role]);
+  const fleetQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'fleet_vehicles') : null, [firestore, user, role]);
+  const tripsQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'trips') : null, [firestore, user, role]);
+  const incomeQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'income') : null, [firestore, user, role]);
+  const inventoryQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'inventory_items') : null, [firestore, user, role]);
+  const locationsQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'driver_locations') : null, [firestore, user, role]);
 
   const { data: fleet } = useCollection(fleetQuery);
   const { data: trips } = useCollection(tripsQuery);
