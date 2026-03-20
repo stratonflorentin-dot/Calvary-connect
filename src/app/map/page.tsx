@@ -6,7 +6,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Truck, Navigation, Search } from 'lucide-react';
+import { MapPin, Truck, Navigation, Search, Plus, Minus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export default function LiveMapPage() {
@@ -80,9 +80,15 @@ export default function LiveMapPage() {
 
           {/* Map Controls */}
           <div className="absolute bottom-24 right-6 flex flex-col gap-2">
-            <button className="size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted"><Plus /></button>
-            <button className="size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted font-bold text-lg">−</button>
-            <button className="size-12 rounded-xl bg-primary shadow-xl flex items-center justify-center text-white"><MapPin /></button>
+            <button className="size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted">
+              <Plus className="size-5" />
+            </button>
+            <button className="size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted">
+              <Minus className="size-5" />
+            </button>
+            <button className="size-12 rounded-xl bg-primary shadow-xl flex items-center justify-center text-white">
+              <MapPin className="size-5" />
+            </button>
           </div>
         </div>
 
