@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Sidebar } from '@/components/navigation/sidebar';
@@ -6,22 +7,28 @@ import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebas
 import { collection } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Truck, Navigation, Search, Plus, Minus } from 'lucide-react';
+import { MapPin, Truck, Navigation, Search, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { APIProvider, Map, Marker, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
+import { useState } from 'react';
 
 export default function LiveMapPage() {
   const { role } = useRole();
   const firestore = useFirestore();
   const { user } = useUser();
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   
   const locationsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return collection(firestore, 'driver_locations');
   }, [firestore, user]);
 
-  const { data: locations } = useCollection(locationsQuery);
+  const { data: locations, isLoading } = useCollection(locationsQuery);
 
   if (!['CEO', 'OPERATIONS'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+
+  // Default center: Accra, Ghana
+  const defaultCenter = { lat: 5.6037, lng: -0.1870 };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -43,44 +50,72 @@ export default function LiveMapPage() {
               {locations?.filter(l => l.isOnline).length || 0} Online
             </Badge>
             <Badge className="bg-primary text-white whitespace-nowrap gap-2 py-2 px-4 shadow-lg h-fit">
-              <Truck className="size-4" /> 12 Active Trips
+              <Truck className="size-4" /> {locations?.length || 0} Total Assets
             </Badge>
           </div>
         </div>
 
-        {/* Real Live Map (Simulated with high-fidelity placeholder UI) */}
-        <div className="flex-1 bg-slate-200 relative overflow-hidden">
-          {/* Simulated Map Background */}
-          <div className="absolute inset-0 grayscale opacity-40 bg-[url('https://api.mapbox.com/styles/v1/mapbox/light-v10/static/0,0,1/1200x800?access_token=pk.placeholder')] bg-cover" />
-          
-          {/* Active Pings */}
-          {locations?.map((loc) => (
-            <div 
-              key={loc.id} 
-              className="absolute transition-all duration-1000"
-              style={{ 
-                left: `${(loc.longitude % 1) * 100}%`, 
-                top: `${(loc.latitude % 1) * 100}%` 
-              }}
+        {/* Google Map Container */}
+        <div className="flex-1 relative">
+          <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
+            <Map
+              defaultCenter={defaultCenter}
+              defaultZoom={12}
+              gestureHandling={'greedy'}
+              disableDefaultUI={true}
+              mapId={'bf50a91341416e8'} // Use a valid map ID if you have one for AdvancedMarkers
+              className="w-full h-full"
             >
-              <div className="relative group cursor-pointer">
-                <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping scale-150" />
-                <div className="relative size-10 rounded-full bg-white shadow-xl border-2 border-primary flex items-center justify-center text-primary group-hover:scale-125 transition-transform">
-                  <Navigation className="size-5" style={{ transform: `rotate(${loc.heading || 0}deg)` }} />
-                </div>
-                
-                {/* Tooltip on Hover */}
-                <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-white p-2 rounded-lg shadow-2xl border w-32 hidden group-hover:block z-20">
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">Truck</p>
-                  <p className="text-xs font-headline">G-2883-24</p>
-                  <p className="text-[10px] text-emerald-600 mt-1">{loc.speed} KM/H</p>
-                </div>
-              </div>
-            </div>
-          ))}
+              {locations?.map((loc) => (
+                <AdvancedMarker
+                  key={loc.id}
+                  position={{ lat: loc.latitude, lng: loc.longitude }}
+                  onClick={() => setSelectedDriverId(loc.id)}
+                >
+                  <div className="relative">
+                    {loc.alertStatus === 'breakdown' && (
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-rose-500 text-white p-1 rounded-full shadow-lg animate-bounce">
+                        <AlertTriangle className="size-4" />
+                      </div>
+                    )}
+                    <div className={cn(
+                      "size-10 rounded-full border-2 bg-white shadow-xl flex items-center justify-center transition-transform hover:scale-110",
+                      loc.isOnline ? "border-emerald-500" : "border-muted-foreground grayscale"
+                    )}>
+                      <Navigation 
+                        className={cn("size-5", loc.isOnline ? "text-emerald-600" : "text-muted-foreground")} 
+                        style={{ transform: `rotate(${loc.heading || 0}deg)` }} 
+                      />
+                    </div>
+                  </div>
+                </AdvancedMarker>
+              ))}
+
+              {selectedDriverId && locations?.find(l => l.id === selectedDriverId) && (
+                <InfoWindow
+                  position={{ 
+                    lat: locations.find(l => l.id === selectedDriverId)!.latitude, 
+                    lng: locations.find(l => l.id === selectedDriverId)!.longitude 
+                  }}
+                  onCloseClick={() => setSelectedDriverId(null)}
+                >
+                  <div className="p-2">
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Truck ID</p>
+                    <p className="text-sm font-headline">{selectedDriverId.slice(0, 8)}</p>
+                    <p className="text-xs text-emerald-600 font-bold mt-1">
+                      {locations.find(l => l.id === selectedDriverId)!.speed} KM/H
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Last Updated: {new Date(locations.find(l => l.id === selectedDriverId)!.lastUpdated).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </InfoWindow>
+              )}
+            </Map>
+          </APIProvider>
 
           {/* Map Controls */}
-          <div className="absolute bottom-24 right-6 flex flex-col gap-2">
+          <div className="absolute bottom-24 right-6 flex flex-col gap-2 pointer-events-auto">
             <button className="size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted">
               <Plus className="size-5" />
             </button>
@@ -94,16 +129,16 @@ export default function LiveMapPage() {
         </div>
 
         {/* Active Alerts Panel */}
-        <div className="absolute bottom-6 left-6 right-6 md:right-auto md:w-80 space-y-2">
+        <div className="absolute bottom-6 left-6 right-6 md:right-auto md:w-80 space-y-2 pointer-events-none">
           {locations?.filter(l => l.alertStatus === 'breakdown').map(l => (
-            <Card key={l.id} className="p-3 border-l-4 border-l-rose-500 shadow-2xl bg-white/95 backdrop-blur-md animate-in slide-in-from-left">
+            <Card key={l.id} className="p-3 border-l-4 border-l-rose-500 shadow-2xl bg-white/95 backdrop-blur-md animate-in slide-in-from-left pointer-events-auto">
               <div className="flex items-center gap-3">
                 <div className="size-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
-                  <Truck className="size-4" />
+                  <AlertTriangle className="size-4" />
                 </div>
                 <div>
                   <p className="text-xs font-bold">BREAKDOWN REPORTED</p>
-                  <p className="text-[10px] text-muted-foreground">Truck G-7721 • A1 Highway</p>
+                  <p className="text-[10px] text-muted-foreground">Truck {l.id.slice(0, 6)} • Lat: {l.latitude.toFixed(4)}, Lng: {l.longitude.toFixed(4)}</p>
                 </div>
               </div>
             </Card>
@@ -112,4 +147,8 @@ export default function LiveMapPage() {
       </main>
     </div>
   );
+}
+
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(' ');
 }
