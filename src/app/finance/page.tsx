@@ -1,19 +1,20 @@
-
 "use client";
 
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
+import { useCurrency } from '@/hooks/use-currency';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Image as ImageIcon, Coins } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
 export default function FinancePage() {
   const { role } = useRole();
+  const { format, currency, toggleCurrency } = useCurrency();
   const firestore = useFirestore();
   const { user } = useUser();
   
@@ -40,9 +41,15 @@ export default function FinancePage() {
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role!} />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-headline tracking-tighter">Financial Ledger</h1>
-          <p className="text-muted-foreground text-sm">Real-time tracking of revenue and expenditures.</p>
+        <header className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-headline tracking-tighter">Financial Ledger</h1>
+            <p className="text-muted-foreground text-sm">Real-time tracking of revenue and expenditures.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={toggleCurrency} className="gap-2 rounded-full border-primary text-primary">
+            <Coins className="size-4" />
+            Switch to {currency === 'USD' ? 'TZS' : 'USD'}
+          </Button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -52,7 +59,7 @@ export default function FinancePage() {
               <TrendingUp className="size-5 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-headline">${totalIncome.toLocaleString()}</div>
+              <div className="text-2xl lg:text-3xl font-headline">{format(totalIncome)}</div>
               <p className="text-xs text-primary-foreground/60 mt-1">+12.5% from last month</p>
             </CardContent>
           </Card>
@@ -63,8 +70,8 @@ export default function FinancePage() {
               <TrendingDown className="size-5 text-rose-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-headline">${totalExpenses.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground mt-1">Pending approval: $1,240</p>
+              <div className="text-2xl lg:text-3xl font-headline">{format(totalExpenses)}</div>
+              <p className="text-xs text-muted-foreground mt-1">Pending approval: {format(1240)}</p>
             </CardContent>
           </Card>
 
@@ -74,8 +81,8 @@ export default function FinancePage() {
               <Wallet className="size-5 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-headline" style={{ color: netProfit >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))' }}>
-                ${netProfit.toLocaleString()}
+              <div className="text-2xl lg:text-3xl font-headline" style={{ color: netProfit >= 0 ? 'hsl(var(--primary))' : 'hsl(var(--destructive))' }}>
+                {format(netProfit)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Operating margin: 34%</p>
             </CardContent>
@@ -99,7 +106,7 @@ export default function FinancePage() {
                     <TableRow key={item.id}>
                       <TableCell className="text-xs">{item.notes || 'Trip Delivery Payment'}</TableCell>
                       <TableCell><Badge variant="outline">{item.paymentMethod}</Badge></TableCell>
-                      <TableCell className="text-right font-medium text-emerald-600">+${item.amount}</TableCell>
+                      <TableCell className="text-right font-medium text-emerald-600">+{format(item.amount)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -143,7 +150,7 @@ export default function FinancePage() {
                                 />
                               </div>
                               <div className="mt-4 space-y-2">
-                                <p className="text-sm font-bold">{item.category} - ${item.amount}</p>
+                                <p className="text-sm font-bold">{item.category} - {format(item.amount)}</p>
                                 <p className="text-xs text-muted-foreground">{item.notes}</p>
                               </div>
                             </DialogContent>
@@ -157,7 +164,7 @@ export default function FinancePage() {
                           {item.isApproved ? 'Approved' : 'Pending'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-medium text-rose-600">-${item.amount}</TableCell>
+                      <TableCell className="text-right font-medium text-rose-600">-{format(item.amount)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -2,11 +2,13 @@
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Truck, Route, DollarSign, Users, Package, Fuel } from 'lucide-react';
+import { Truck, Route, Coins, Users, Package, Fuel } from 'lucide-react';
+import { useCurrency } from '@/hooks/use-currency';
 
 export function StatCards() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { format } = useCurrency();
 
   const fleetQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'fleet_vehicles') : null, [firestore, user]);
   const tripsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'trips') : null, [firestore, user]);
@@ -28,7 +30,7 @@ export function StatCards() {
   const stats = [
     { label: 'Total Trucks', value: fleet?.length || 0, icon: Truck, gradient: 'linear-gradient(135deg, #1a1a2e, #16213e)' },
     { label: 'Active Trips', value: activeTrips, icon: Route, gradient: 'linear-gradient(135deg, #0f3460, #533483)' },
-    { label: 'Total Revenue', value: `$${(totalRevenue / 1000).toFixed(1)}k`, icon: DollarSign, gradient: 'linear-gradient(135deg, #1B4332, #2D6A4F)' },
+    { label: 'Revenue', value: format(totalRevenue), icon: Coins, gradient: 'linear-gradient(135deg, #1B4332, #2D6A4F)' },
     { label: 'Fuel Requests', value: '4.2k L', icon: Fuel, gradient: 'linear-gradient(135deg, #7B2D00, #D97706)' },
     { label: 'Drivers Online', value: onlineDrivers, icon: Users, gradient: 'linear-gradient(135deg, #1a3a4a, #0369A1)' },
     { label: 'Low Stock', value: lowStock, icon: Package, gradient: 'linear-gradient(135deg, #7F1D1D, #DC2626)' },
@@ -47,7 +49,7 @@ export function StatCards() {
             <stat.icon className="size-5 text-white/70 self-end" />
             <div>
               <p className="text-[10px] text-white/60 font-medium uppercase tracking-wider">{stat.label}</p>
-              <p className="text-xl font-headline text-white">{stat.value}</p>
+              <p className="text-sm font-headline text-white truncate">{stat.value}</p>
             </div>
           </div>
         ))}
@@ -64,7 +66,7 @@ export function StatCards() {
               <p className="text-[11px] font-sans font-medium text-muted-foreground uppercase tracking-widest">{stat.label}</p>
               <stat.icon className="size-6 text-primary" />
             </div>
-            <p className="text-3xl font-headline tracking-tighter text-foreground">{stat.value}</p>
+            <p className="text-xl xl:text-2xl font-headline tracking-tighter text-foreground truncate">{stat.value}</p>
           </div>
         ))}
       </div>

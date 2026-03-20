@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Camera, AlertTriangle, User, DollarSign, Gauge, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, limit } from 'firebase/firestore';
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
+import { useCurrency } from '@/hooks/use-currency';
 
 export function DriverView() {
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -19,6 +19,7 @@ export function DriverView() {
   const [mileage, setMileage] = useState(12450);
   const { user } = useUser();
   const firestore = useFirestore();
+  const { format, toggleCurrency } = useCurrency();
 
   // Query for the driver's active trip
   const activeTripQuery = useMemoFirebase(() => {
@@ -80,19 +81,16 @@ export function DriverView() {
       isApproved: false,
       createdAt: new Date().toISOString(),
       reporterUserId: user.uid,
-      photoUrl: `https://picsum.photos/seed/${Math.random()}/600/400`, // Simulated photo
+      photoUrl: `https://picsum.photos/seed/${Math.random()}/600/400`,
       tripId: activeTrip?.id || null
     };
     addDocumentNonBlocking(collection(firestore, 'expenses'), expenseData);
-    toast({ title: "Expense Reported", description: "Sent to accounting for approval with photo proof." });
+    toast({ title: "Expense Reported", description: "Sent to accounting for approval." });
     (e.target as HTMLFormElement).reset();
   };
 
   const handleUploadProof = () => {
-    if (!firestore || !user || !activeTrip) {
-      toast({ variant: "destructive", title: "Error", description: "No active trip found." });
-      return;
-    }
+    if (!firestore || !user || !activeTrip) return;
 
     const proofData = {
       tripId: activeTrip.id,
@@ -102,10 +100,7 @@ export function DriverView() {
       caption: "Delivery successful at destination."
     };
 
-    // Save proof to trip subcollection
     addDocumentNonBlocking(collection(firestore, 'trips', activeTrip.id, 'delivery_proofs'), proofData);
-    
-    // Also update trip status
     const tripRef = doc(firestore, 'trips', activeTrip.id);
     setDocumentNonBlocking(tripRef, { status: 'delivered', deliveredAt: new Date().toISOString() }, { merge: true });
 
@@ -139,7 +134,7 @@ export function DriverView() {
         </div>
         <Button 
           onClick={() => setLocationEnabled(true)}
-          className="w-full h-14 bg-amber-500 hover:bg-amber-600 font-headline text-lg rounded-2xl shadow-lg active:scale-95 transition-transform"
+          className="w-full h-14 bg-amber-500 hover:bg-amber-600 font-headline text-lg rounded-2xl shadow-lg"
         >
           Enable Tracking
         </Button>
@@ -154,7 +149,9 @@ export function DriverView() {
           <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest font-bold">Active Mission</p>
           <h1 className="text-xl font-headline tracking-tighter">{user?.displayName || 'Driver Console'}</h1>
         </div>
-        <Badge className="bg-emerald-500 text-[9px] animate-pulse-slow">Live Ping</Badge>
+        <Button variant="ghost" size="sm" onClick={toggleCurrency} className="rounded-full text-primary hover:bg-primary/10">
+          <Coins className="size-4" />
+        </Button>
       </header>
 
       <div className="grid grid-cols-2 gap-3">
@@ -169,7 +166,7 @@ export function DriverView() {
           <CardContent className="p-4 flex flex-col gap-1">
             <DollarSign className="size-4 text-emerald-500 mb-1" />
             <p className="text-[10px] text-muted-foreground uppercase font-bold">Earnings</p>
-            <p className="text-xl font-headline text-primary">$420.00</p>
+            <p className="text-xl font-headline text-primary truncate">{format(420)}</p>
           </CardContent>
         </Card>
       </div>
@@ -217,7 +214,7 @@ export function DriverView() {
           ) : (
             <div className="py-8 text-center space-y-4">
               <CheckCircle2 className="size-12 text-emerald-500 mx-auto" />
-              <p className="text-sm text-muted-foreground">All assignments completed. Waiting for new dispatch.</p>
+              <p className="text-sm text-muted-foreground">Waiting for new dispatch.</p>
             </div>
           )}
         </CardContent>
@@ -273,11 +270,7 @@ export function DriverView() {
                 <Label>Notes</Label>
                 <Input name="notes" placeholder="Optional details" />
               </div>
-              <div className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-dashed relative overflow-hidden">
-                <ImageIcon className="size-8 text-muted-foreground" />
-                <p className="absolute bottom-2 text-[10px] text-muted-foreground">Tap to take photo of receipt</p>
-              </div>
-              <Button type="submit" className="w-full h-12">Log Expense & Proof</Button>
+              <Button type="submit" className="w-full h-12">Log Expense</Button>
             </form>
           </DialogContent>
         </Dialog>

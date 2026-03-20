@@ -1,18 +1,19 @@
-
 "use client";
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Wallet, FileText, TrendingUp, TrendingDown, Image as ImageIcon } from 'lucide-react';
+import { Wallet, FileText, TrendingUp, TrendingDown, Image as ImageIcon, Coins } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { useCurrency } from '@/hooks/use-currency';
 
 export function AccountantView() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { format, toggleCurrency, currency } = useCurrency();
 
   const expenseQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -25,19 +26,25 @@ export function AccountantView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-headline tracking-tighter">Financial Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Audit company revenue and authorize expenditures.</p>
+      <header className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-headline tracking-tighter">Financial Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Audit company revenue and authorize expenditures.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={toggleCurrency} className="gap-2 rounded-full border-primary text-primary">
+          <Coins className="size-4" />
+          {currency === 'USD' ? 'USD' : 'TZS'}
+        </Button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="rounded-2xl border-none shadow-sm bg-white">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Month-to-Date Expense</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Recent Expenses</CardTitle>
             <TrendingDown className="size-5 text-rose-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-headline">${totalExpenses.toLocaleString()}</div>
+            <div className="text-2xl xl:text-3xl font-headline">{format(totalExpenses)}</div>
           </CardContent>
         </Card>
         <Card className="rounded-2xl border-none shadow-sm bg-primary text-white">
@@ -46,7 +53,7 @@ export function AccountantView() {
             <FileText className="size-5 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-headline">12</div>
+            <div className="text-2xl xl:text-3xl font-headline">12</div>
           </CardContent>
         </Card>
         <Card className="rounded-2xl border-none shadow-sm bg-white">
@@ -55,7 +62,7 @@ export function AccountantView() {
             <TrendingUp className="size-5 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-headline">$84,200</div>
+            <div className="text-2xl xl:text-3xl font-headline">{format(84200)}</div>
           </CardContent>
         </Card>
       </div>
@@ -103,7 +110,7 @@ export function AccountantView() {
                       </Dialog>
                     )}
                   </TableCell>
-                  <TableCell className="font-bold text-rose-600">-${expense.amount}</TableCell>
+                  <TableCell className="font-bold text-rose-600">-{format(expense.amount)}</TableCell>
                   <TableCell>
                     <Badge variant={expense.isApproved ? "default" : "secondary"}>
                       {expense.isApproved ? "Approved" : "Pending"}
