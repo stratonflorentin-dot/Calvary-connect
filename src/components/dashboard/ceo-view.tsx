@@ -1,7 +1,7 @@
 "use client";
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, limit } from 'firebase/firestore';
+import { collection, query, limit, orderBy } from 'firebase/firestore';
 import { StatCards } from './stat-cards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { AlertTriangle, Clock } from 'lucide-react';
 
 const revenueData = [
   { name: 'Jan', income: 4000, expenses: 2400 },
@@ -38,18 +39,56 @@ export function CeoView() {
     return query(collection(firestore, 'fleet_vehicles'), limit(5));
   }, [firestore, user]);
 
+  const maintenanceQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'maintenance_requests'), 
+      orderBy('reportedAt', 'desc'), 
+      limit(3)
+    );
+  }, [firestore, user]);
+
   const { data: fleet } = useCollection(fleetQuery);
+  const { data: recentIssues } = useCollection(maintenanceQuery);
+
+  const activeAlerts = recentIssues?.filter(issue => issue.status === 'pending' && issue.severity === 'Critical') || [];
 
   return (
     <div className="space-y-6">
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-headline tracking-tighter text-foreground">CEO Dashboard</h1>
-          <p className="text-muted-foreground text-sm font-sans">Overview of fleet operations and financial metrics.</p>
+          <h1 className="text-3xl font-headline tracking-tighter text-foreground">Command Dashboard</h1>
+          <p className="text-muted-foreground text-sm font-sans">Strategic overview for CEO and Operations.</p>
         </div>
       </header>
 
       <StatCards />
+
+      {/* Critical Alerts Panel for Operations/CEO */}
+      {activeAlerts.length > 0 && (
+        <div className="grid grid-cols-1 gap-4">
+          {activeAlerts.map(alert => (
+            <Card key={alert.id} className="border-none bg-rose-50 border-l-4 border-l-rose-500 shadow-sm">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-full bg-rose-500 flex items-center justify-center text-white animate-pulse">
+                    <AlertTriangle className="size-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-rose-700 uppercase tracking-widest">Critical Alert: Breakdown Reported</p>
+                    <p className="text-sm font-medium">{alert.issueDescription}</p>
+                    <div className="flex items-center gap-2 mt-1 text-[10px] text-rose-600">
+                      <Clock className="size-3" />
+                      {new Date(alert.reportedAt).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                <Badge variant="destructive" className="bg-rose-600">Immediate Action Required</Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="rounded-2xl shadow-sm border-none bg-white">
