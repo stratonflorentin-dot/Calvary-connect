@@ -1,25 +1,38 @@
 "use client";
 
-import { cn } from '@/lib/utils';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { Truck, Route, DollarSign, Users, Package, Fuel } from 'lucide-react';
 
-interface StatItem {
-  label: string;
-  value: string | number;
-  icon: any;
-  gradient: string;
-}
-
-const stats: StatItem[] = [
-  { label: 'Total Trucks', value: 24, icon: Truck, gradient: 'linear-gradient(135deg, #1a1a2e, #16213e)' },
-  { label: 'Active Trips', value: 8, icon: Route, gradient: 'linear-gradient(135deg, #0f3460, #533483)' },
-  { label: 'Total Revenue', value: '$124.5k', icon: DollarSign, gradient: 'linear-gradient(135deg, #1B4332, #2D6A4F)' },
-  { label: 'Fuel Consumption', value: '4.2k L', icon: Fuel, gradient: 'linear-gradient(135deg, #7B2D00, #D97706)' },
-  { label: 'Drivers Online', value: 12, icon: Users, gradient: 'linear-gradient(135deg, #1a3a4a, #0369A1)' },
-  { label: 'Low Stock', value: 5, icon: Package, gradient: 'linear-gradient(135deg, #7F1D1D, #DC2626)' },
-];
-
 export function StatCards() {
+  const firestore = useFirestore();
+
+  const fleetQuery = useMemoFirebase(() => firestore ? collection(firestore, 'fleet_vehicles') : null, [firestore]);
+  const tripsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'trips') : null, [firestore]);
+  const incomeQuery = useMemoFirebase(() => firestore ? collection(firestore, 'income') : null, [firestore]);
+  const inventoryQuery = useMemoFirebase(() => firestore ? collection(firestore, 'inventory_items') : null, [firestore]);
+  const locationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'driver_locations') : null, [firestore]);
+
+  const { data: fleet } = useCollection(fleetQuery);
+  const { data: trips } = useCollection(tripsQuery);
+  const { data: income } = useCollection(incomeQuery);
+  const { data: inventory } = useCollection(inventoryQuery);
+  const { data: locations } = useCollection(locationsQuery);
+
+  const totalRevenue = income?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+  const activeTrips = trips?.filter(t => t.status !== 'delivered' && t.status !== 'cancelled').length || 0;
+  const lowStock = inventory?.filter(i => (i.quantityAvailable || 0) < (i.reorderLevel || 10)).length || 0;
+  const onlineDrivers = locations?.filter(l => l.isOnline).length || 0;
+
+  const stats = [
+    { label: 'Total Trucks', value: fleet?.length || 0, icon: Truck, gradient: 'linear-gradient(135deg, #1a1a2e, #16213e)' },
+    { label: 'Active Trips', value: activeTrips, icon: Route, gradient: 'linear-gradient(135deg, #0f3460, #533483)' },
+    { label: 'Total Revenue', value: `$${(totalRevenue / 1000).toFixed(1)}k`, icon: DollarSign, gradient: 'linear-gradient(135deg, #1B4332, #2D6A4F)' },
+    { label: 'Fuel Requests', value: '4.2k L', icon: Fuel, gradient: 'linear-gradient(135deg, #7B2D00, #D97706)' },
+    { label: 'Drivers Online', value: onlineDrivers, icon: Users, gradient: 'linear-gradient(135deg, #1a3a4a, #0369A1)' },
+    { label: 'Low Stock', value: lowStock, icon: Package, gradient: 'linear-gradient(135deg, #7F1D1D, #DC2626)' },
+  ];
+
   return (
     <div className="w-full">
       {/* Mobile Horizontal Scroll */}

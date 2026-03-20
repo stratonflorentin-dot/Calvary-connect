@@ -1,5 +1,7 @@
 "use client";
 
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, limit, orderBy } from 'firebase/firestore';
 import { StatCards } from './stat-cards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -7,6 +9,7 @@ import {
   LineChart, Line
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const revenueData = [
   { name: 'Jan', income: 4000, expenses: 2400 },
@@ -27,6 +30,15 @@ const fuelData = [
 ];
 
 export function CeoView() {
+  const firestore = useFirestore();
+
+  const fleetQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'fleet_vehicles'), limit(5));
+  }, [firestore]);
+
+  const { data: fleet } = useCollection(fleetQuery);
+
   return (
     <div className="space-y-6">
       <header className="flex justify-between items-center">
@@ -98,22 +110,17 @@ export function CeoView() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {[
-                { name: 'Mercedes Axor', type: 'Heavy Duty', plate: 'G-2883', cond: 'Good', status: 'In Use' },
-                { name: 'Scania R500', type: 'Container', plate: 'T-9921', cond: 'Fair', status: 'Maintenance' },
-                { name: 'Volvo FH16', type: 'Heavy Duty', plate: 'K-1122', cond: 'Good', status: 'Available' },
-                { name: 'MAN TGX', type: 'Trailer', plate: 'M-4452', cond: 'Poor', status: 'Available' },
-              ].map((truck, i) => (
-                <tr key={i} className="hover:bg-muted/30 transition-colors">
+              {fleet?.map((truck) => (
+                <tr key={truck.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4 font-medium">{truck.name}</td>
                   <td className="px-6 py-4">{truck.type}</td>
-                  <td className="px-6 py-4 font-mono">{truck.plate}</td>
+                  <td className="px-6 py-4 font-mono">{truck.plateNumber}</td>
                   <td className="px-6 py-4">
                     <span className={cn(
                       "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
-                      truck.cond === 'Good' ? 'bg-emerald-100 text-emerald-700' : 
-                      truck.cond === 'Fair' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
-                    )}>{truck.cond}</span>
+                      truck.condition === 'Good' ? 'bg-emerald-100 text-emerald-700' : 
+                      truck.condition === 'Fair' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                    )}>{truck.condition}</span>
                   </td>
                   <td className="px-6 py-4">
                     <Badge className={cn(
@@ -123,14 +130,15 @@ export function CeoView() {
                   </td>
                 </tr>
               ))}
+              {(!fleet || fleet.length === 0) && (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-muted-foreground">No fleet vehicles found.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </CardContent>
       </Card>
     </div>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
 }

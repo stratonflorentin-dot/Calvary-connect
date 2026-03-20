@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { getCeoAiInsights, CeoAiInsightsOutput } from '@/ai/flows/ceo-ai-insights';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw, CheckCircle2, AlertCircle, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,22 +12,43 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function AiInsightPanel() {
   const [loading, setLoading] = useState(false);
   const [insight, setInsight] = useState<CeoAiInsightsOutput | null>(null);
+  const firestore = useFirestore();
+
+  const fleetQuery = useMemoFirebase(() => firestore ? collection(firestore, 'fleet_vehicles') : null, [firestore]);
+  const tripsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'trips') : null, [firestore]);
+  const incomeQuery = useMemoFirebase(() => firestore ? collection(firestore, 'income') : null, [firestore]);
+  const expenseQuery = useMemoFirebase(() => firestore ? collection(firestore, 'expenses') : null, [firestore]);
+  const inventoryQuery = useMemoFirebase(() => firestore ? collection(firestore, 'inventory_items') : null, [firestore]);
+  const locationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'driver_locations') : null, [firestore]);
+
+  const { data: fleet } = useCollection(fleetQuery);
+  const { data: trips } = useCollection(tripsQuery);
+  const { data: income } = useCollection(incomeQuery);
+  const { data: expenses } = useCollection(expenseQuery);
+  const { data: inventory } = useCollection(inventoryQuery);
+  const { data: locations } = useCollection(locationsQuery);
 
   const generate = async () => {
     setLoading(true);
     try {
-      // Mock data for the flow call based on existing stat values
+      const revenueThisMonth = income?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+      const expensesThisMonth = expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+
       const data = {
-        activeTripsCount: 8,
-        fleetBreakdown: { available: 10, inUse: 12, maintenance: 2 },
-        revenueThisMonth: 124500,
-        expensesThisMonth: 82000,
-        netProfit: 42500,
-        fuelConsumptionLiters: 4200,
+        activeTripsCount: trips?.filter(t => t.status === 'in_transit').length || 0,
+        fleetBreakdown: { 
+          available: fleet?.filter(v => v.status === 'Available').length || 0, 
+          inUse: fleet?.filter(v => v.status === 'In Use').length || 0, 
+          maintenance: fleet?.filter(v => v.status === 'Maintenance').length || 0 
+        },
+        revenueThisMonth,
+        expensesThisMonth,
+        netProfit: revenueThisMonth - expensesThisMonth,
+        fuelConsumptionLiters: 4200, // Placeholder as consumption log is complex
         pendingMaintenanceCount: 5,
-        lowStockCount: 5,
-        onlineDriverCount: 12,
-        completedDeliveriesThisMonth: 45,
+        lowStockCount: inventory?.filter(i => i.quantityAvailable < 10).length || 0,
+        onlineDriverCount: locations?.filter(l => l.isOnline).length || 0,
+        completedDeliveriesThisMonth: trips?.filter(t => t.status === 'delivered').length || 0,
       };
       const result = await getCeoAiInsights(data);
       setInsight(result);
