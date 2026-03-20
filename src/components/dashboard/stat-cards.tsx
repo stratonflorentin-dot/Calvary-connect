@@ -1,14 +1,17 @@
+
 "use client";
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Truck, Route, Coins, Users, Package, Fuel } from 'lucide-react';
 import { useCurrency } from '@/hooks/use-currency';
+import { useLanguage } from '@/hooks/use-language';
 
 export function StatCards() {
   const firestore = useFirestore();
   const { user } = useUser();
   const { format } = useCurrency();
+  const { t } = useLanguage();
 
   const fleetQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'fleet_vehicles') : null, [firestore, user]);
   const tripsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'trips') : null, [firestore, user]);
@@ -28,17 +31,16 @@ export function StatCards() {
   const onlineDrivers = locations?.filter(l => l.isOnline).length || 0;
 
   const stats = [
-    { label: 'Total Trucks', value: fleet?.length || 0, icon: Truck, gradient: 'linear-gradient(135deg, #1a1a2e, #16213e)' },
-    { label: 'Active Trips', value: activeTrips, icon: Route, gradient: 'linear-gradient(135deg, #0f3460, #533483)' },
-    { label: 'Revenue', value: format(totalRevenue), icon: Coins, gradient: 'linear-gradient(135deg, #1B4332, #2D6A4F)' },
-    { label: 'Fuel Requests', value: '4.2k L', icon: Fuel, gradient: 'linear-gradient(135deg, #7B2D00, #D97706)' },
-    { label: 'Drivers Online', value: onlineDrivers, icon: Users, gradient: 'linear-gradient(135deg, #1a3a4a, #0369A1)' },
-    { label: 'Low Stock', value: lowStock, icon: Package, gradient: 'linear-gradient(135deg, #7F1D1D, #DC2626)' },
+    { label: t.total_trucks, value: fleet?.length || 0, icon: Truck, gradient: 'linear-gradient(135deg, #1a1a2e, #16213e)' },
+    { label: t.active_trips, value: activeTrips, icon: Route, gradient: 'linear-gradient(135deg, #0f3460, #533483)' },
+    { label: t.revenue, value: format(totalRevenue), icon: Coins, gradient: 'linear-gradient(135deg, #1B4332, #2D6A4F)' },
+    { label: t.fuel, value: '4.2k L', icon: Fuel, gradient: 'linear-gradient(135deg, #7B2D00, #D97706)' },
+    { label: t.online_drivers, value: onlineDrivers, icon: Users, gradient: 'linear-gradient(135deg, #1a3a4a, #0369A1)' },
+    { label: t.low_stock, value: lowStock, icon: Package, gradient: 'linear-gradient(135deg, #7F1D1D, #DC2626)' },
   ];
 
   return (
     <div className="w-full">
-      {/* Mobile Horizontal Scroll */}
       <div className="md:hidden flex overflow-x-auto no-scrollbar story-snap gap-3 py-2 px-1">
         {stats.map((stat) => (
           <div
@@ -55,7 +57,6 @@ export function StatCards() {
         ))}
       </div>
 
-      {/* Desktop Grid */}
       <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stats.map((stat) => (
           <div

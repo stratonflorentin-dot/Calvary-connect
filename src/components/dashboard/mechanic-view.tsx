@@ -8,10 +8,13 @@ import { Wrench, Package, History, AlertCircle, CheckCircle2, ArrowRight } from 
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/hooks/use-language';
+import { cn } from '@/lib/utils';
 
 export function MechanicView() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { t } = useLanguage();
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -27,12 +30,12 @@ export function MechanicView() {
     <div className="space-y-6">
       <header className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-headline tracking-tighter">Maintenance Hub</h1>
-          <p className="text-muted-foreground text-sm">Real-time fleet health and service control.</p>
+          <h1 className="text-3xl font-headline tracking-tighter">{t.maintenance_hub}</h1>
+          <p className="text-muted-foreground text-sm">{t.real_time_health}</p>
         </div>
         <Link href="/service-requests">
           <Button variant="outline" size="sm" className="rounded-full gap-2 border-primary text-primary">
-            View All Tasks <ArrowRight className="size-4" />
+            {t.overview} <ArrowRight className="size-4" />
           </Button>
         </Link>
       </header>
@@ -40,7 +43,7 @@ export function MechanicView() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="rounded-2xl border-none shadow-sm bg-primary text-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-primary-foreground/70">Tasks Pending</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-primary-foreground/70">{t.tasks_pending}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-headline">{pendingCount}</div>
@@ -48,7 +51,7 @@ export function MechanicView() {
         </Card>
         <Card className="rounded-2xl border-none shadow-sm bg-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">In Progress</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">{t.in_progress}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
             <div className="text-3xl font-headline text-blue-500">{inProgressCount}</div>
@@ -56,12 +59,12 @@ export function MechanicView() {
         </Card>
         <Card className="rounded-2xl border-none shadow-sm bg-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Quick Action</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">{t.quick_action}</CardTitle>
           </CardHeader>
           <CardContent>
             <Link href="/truck-history">
               <Button variant="ghost" className="w-full justify-start gap-2 h-auto py-2 text-xs font-bold text-primary hover:bg-primary/5">
-                <History className="size-4" /> Check Truck History
+                <History className="size-4" /> {t.check_history}
               </Button>
             </Link>
           </CardContent>
@@ -71,7 +74,7 @@ export function MechanicView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <section className="space-y-4">
           <h2 className="text-xl font-headline tracking-tighter flex items-center gap-2">
-            <Wrench className="size-5 text-primary" /> Active Queue
+            <Wrench className="size-5 text-primary" /> {t.active_queue}
           </h2>
           <div className="space-y-3">
             {requests?.length === 0 ? (
@@ -97,7 +100,7 @@ export function MechanicView() {
 
         <section className="space-y-4">
           <h2 className="text-xl font-headline tracking-tighter flex items-center gap-2">
-            <History className="size-5 text-primary" /> Recent Maintenance Activity
+            <History className="size-5 text-primary" /> {t.recent_activity}
           </h2>
           <div className="bg-white rounded-2xl shadow-sm border p-6">
             <div className="space-y-4">
@@ -113,9 +116,6 @@ export function MechanicView() {
                   </div>
                 </div>
               ))}
-              {requests?.filter(r => r.status === 'completed').length === 0 && (
-                <p className="text-xs text-muted-foreground italic text-center py-4">No completed logs yet.</p>
-              )}
             </div>
           </div>
         </section>

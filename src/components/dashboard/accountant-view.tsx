@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
@@ -9,11 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useCurrency } from '@/hooks/use-currency';
+import { useLanguage } from '@/hooks/use-language';
 
 export function AccountantView() {
   const firestore = useFirestore();
   const { user } = useUser();
   const { format, toggleCurrency, currency } = useCurrency();
+  const { t } = useLanguage();
 
   const expenseQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -28,8 +31,8 @@ export function AccountantView() {
     <div className="space-y-6">
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-headline tracking-tighter">Financial Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Audit company revenue and authorize expenditures.</p>
+          <h1 className="text-3xl font-headline tracking-tighter">{t.financial_dashboard}</h1>
+          <p className="text-muted-foreground text-sm">{t.audit_revenue}</p>
         </div>
         <Button variant="outline" size="sm" onClick={toggleCurrency} className="gap-2 rounded-full border-primary text-primary">
           <Coins className="size-4" />
@@ -40,7 +43,7 @@ export function AccountantView() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="rounded-2xl border-none shadow-sm bg-white">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Recent Expenses</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">{t.recent_expenses}</CardTitle>
             <TrendingDown className="size-5 text-rose-500" />
           </CardHeader>
           <CardContent>
@@ -49,7 +52,7 @@ export function AccountantView() {
         </Card>
         <Card className="rounded-2xl border-none shadow-sm bg-primary text-white">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-widest text-primary-foreground/70">Unpaid Invoices</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-primary-foreground/70">{t.unpaid_invoices}</CardTitle>
             <FileText className="size-5 text-accent" />
           </CardHeader>
           <CardContent>
@@ -58,7 +61,7 @@ export function AccountantView() {
         </Card>
         <Card className="rounded-2xl border-none shadow-sm bg-white">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Cash Reserves</CardTitle>
+            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">{t.cash_reserves}</CardTitle>
             <TrendingUp className="size-5 text-emerald-500" />
           </CardHeader>
           <CardContent>
@@ -69,7 +72,7 @@ export function AccountantView() {
 
       <Card className="rounded-2xl shadow-sm border-none bg-white overflow-hidden">
         <CardHeader>
-          <CardTitle className="text-lg font-headline">Expense Approval Queue</CardTitle>
+          <CardTitle className="text-lg font-headline">{t.approval_queue}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>

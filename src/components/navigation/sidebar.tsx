@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -8,46 +9,49 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
-
-const ROLE_NAV: Record<UserRole, any[]> = {
-  CEO: [
-    { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
-    { label: 'Fleet', icon: Truck, href: '/fleet' },
-    { label: 'Finance', icon: DollarSign, href: '/finance' },
-    { label: 'Reports', icon: BarChart2, href: '/reports' },
-    { label: 'User Management', icon: Users, href: '/users' },
-    { label: 'Inventory', icon: Package, href: '/inventory' },
-    { label: 'Live Map', icon: MapPin, href: '/map' },
-    { label: 'AI Insights', icon: Sparkles, href: '/ai-insights' },
-    { label: 'Notifications', icon: Bell, href: '/notifications' },
-  ],
-  OPERATIONS: [
-    { label: 'Trips & Dispatch', icon: Route, href: '/trips' },
-    { label: 'Fleet Status', icon: Truck, href: '/fleet' },
-    { label: 'Inventory Control', icon: Package, href: '/inventory' },
-    { label: 'Parts Requests', icon: Wrench, href: '/parts-requests' },
-    { label: 'Fleet Map', icon: MapPin, href: '/map' },
-    { label: 'Notifications', icon: Bell, href: '/notifications' },
-  ],
-  MECHANIC: [
-    { label: 'Service Requests', icon: Wrench, href: '/service-requests' },
-    { label: 'Inventory', icon: Package, href: '/inventory' },
-    { label: 'Spare Parts', icon: Truck, href: '/spare-parts' },
-    { label: 'Truck History', icon: BarChart2, href: '/truck-history' },
-    { label: 'Notifications', icon: Bell, href: '/notifications' },
-  ],
-  ACCOUNTANT: [
-    { label: 'Expenses', icon: DollarSign, href: '/expenses' },
-    { label: 'Income', icon: Calculator, href: '/income' },
-    { label: 'Fuel Approvals', icon: Truck, href: '/fuel-approvals' },
-    { label: 'Allowances', icon: Users, href: '/allowances' },
-    { label: 'Monthly Report', icon: BarChart2, href: '/monthly-report' },
-  ],
-  DRIVER: [] // Driver is mobile only
-};
+import { useLanguage } from '@/hooks/use-language';
 
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
+
+  const ROLE_NAV: Record<UserRole, any[]> = {
+    CEO: [
+      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
+      { label: t.fleet, icon: Truck, href: '/fleet' },
+      { label: t.finance, icon: DollarSign, href: '/finance' },
+      { label: t.monthly_report, icon: BarChart2, href: '/reports' },
+      { label: t.users, icon: Users, href: '/users' },
+      { label: t.inventory, icon: Package, href: '/inventory' },
+      { label: t.map, icon: MapPin, href: '/map' },
+      { label: t.ai_insights, icon: Sparkles, href: '/ai-insights' },
+      { label: t.notifications, icon: Bell, href: '/notifications' },
+    ],
+    OPERATIONS: [
+      { label: t.trips, icon: Route, href: '/trips' },
+      { label: t.fleet_status, icon: Truck, href: '/fleet' },
+      { label: t.inventory, icon: Package, href: '/inventory' },
+      { label: t.parts_requests, icon: Wrench, href: '/parts-requests' },
+      { label: t.fleet_map, icon: MapPin, href: '/map' },
+      { label: t.notifications, icon: Bell, href: '/notifications' },
+    ],
+    MECHANIC: [
+      { label: t.service_requests, icon: Wrench, href: '/service-requests' },
+      { label: t.inventory, icon: Package, href: '/inventory' },
+      { label: t.parts_requests, icon: Truck, href: '/spare-parts' },
+      { label: t.truck_history, icon: BarChart2, href: '/truck-history' },
+      { label: t.notifications, icon: Bell, href: '/notifications' },
+    ],
+    ACCOUNTANT: [
+      { label: t.expenses, icon: DollarSign, href: '/expenses' },
+      { label: t.income, icon: Calculator, href: '/income' },
+      { label: t.fuel_approvals, icon: Truck, href: '/fuel-approvals' },
+      { label: t.allowances, icon: Users, href: '/allowances' },
+      { label: t.monthly_report, icon: BarChart2, href: '/monthly-report' },
+    ],
+    DRIVER: []
+  };
+
   const navItems = ROLE_NAV[role] || [];
 
   return (
@@ -81,7 +85,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       <div className="p-4 border-t border-sidebar-border">
         <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-destructive hover:text-white transition-all">
           <LogOut className="size-5" />
-          <span>Logout</span>
+          <span>{t.logout}</span>
         </button>
       </div>
     </aside>

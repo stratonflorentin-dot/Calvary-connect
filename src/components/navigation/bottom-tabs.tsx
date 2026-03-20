@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -7,46 +8,49 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
-
-const ROLE_TABS: Record<UserRole, any[]> = {
-  CEO: [
-    { label: 'Home', icon: Home, href: '/' },
-    { label: 'Fleet', icon: Truck, href: '/fleet' },
-    { label: 'Finance', icon: DollarSign, href: '/finance' },
-    { label: 'Map', icon: MapPin, href: '/map' },
-    { label: 'Profile', icon: User, href: '/profile' },
-  ],
-  OPERATIONS: [
-    { label: 'Trips', icon: Route, href: '/trips' },
-    { label: 'Fleet', icon: Truck, href: '/fleet' },
-    { label: 'Inventory', icon: Package, href: '/inventory' },
-    { label: 'Map', icon: MapPin, href: '/map' },
-    { label: 'Profile', icon: User, href: '/profile' },
-  ],
-  DRIVER: [
-    { label: 'My Trips', icon: Route, href: '/trips' },
-    { label: 'Proof', icon: Home, href: '/proof' },
-    { label: 'Report', icon: History, href: '/report' },
-    { label: 'Profile', icon: User, href: '/profile' },
-  ],
-  MECHANIC: [
-    { label: 'Requests', icon: Wrench, href: '/requests' },
-    { label: 'Parts', icon: Truck, href: '/parts' },
-    { label: 'Inventory', icon: Package, href: '/inventory' },
-    { label: 'History', icon: History, href: '/history' },
-    { label: 'Profile', icon: User, href: '/profile' },
-  ],
-  ACCOUNTANT: [
-    { label: 'Overview', icon: Home, href: '/finance' },
-    { label: 'Expenses', icon: DollarSign, href: '/expenses' },
-    { label: 'Income', icon: Calculator, href: '/income' },
-    { label: 'Fuel', icon: Truck, href: '/fuel' },
-    { label: 'Profile', icon: User, href: '/profile' },
-  ]
-};
+import { useLanguage } from '@/hooks/use-language';
 
 export function BottomTabs({ role }: { role: UserRole }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
+
+  const ROLE_TABS: Record<UserRole, any[]> = {
+    CEO: [
+      { label: t.home, icon: Home, href: '/' },
+      { label: t.fleet, icon: Truck, href: '/fleet' },
+      { label: t.finance, icon: DollarSign, href: '/finance' },
+      { label: t.map, icon: MapPin, href: '/map' },
+      { label: t.profile, icon: User, href: '/profile' },
+    ],
+    OPERATIONS: [
+      { label: t.trips, icon: Route, href: '/trips' },
+      { label: t.fleet, icon: Truck, href: '/fleet' },
+      { label: t.inventory, icon: Package, href: '/inventory' },
+      { label: t.map, icon: MapPin, href: '/map' },
+      { label: t.profile, icon: User, href: '/profile' },
+    ],
+    DRIVER: [
+      { label: t.trips, icon: Route, href: '/trips' },
+      { label: t.proof, icon: Home, href: '/proof' },
+      { label: t.report_maintenance, icon: History, href: '/report' },
+      { label: t.profile, icon: User, href: '/profile' },
+    ],
+    MECHANIC: [
+      { label: t.service_requests, icon: Wrench, href: '/requests' },
+      { label: t.parts_requests, icon: Truck, href: '/parts' },
+      { label: t.inventory, icon: Package, href: '/inventory' },
+      { label: t.truck_history, icon: History, href: '/history' },
+      { label: t.profile, icon: User, href: '/profile' },
+    ],
+    ACCOUNTANT: [
+      { label: t.overview, icon: Home, href: '/finance' },
+      { label: t.expenses, icon: DollarSign, href: '/expenses' },
+      { label: t.income, icon: Calculator, href: '/income' },
+      { label: t.fuel, icon: Truck, href: '/fuel' },
+      { label: t.profile, icon: User, href: '/profile' },
+    ]
+  };
+
   const tabs = ROLE_TABS[role] || [];
 
   return (

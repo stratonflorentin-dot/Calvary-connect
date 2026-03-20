@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -8,12 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw, CheckCircle2, AlertCircle, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/hooks/use-language';
 
 export function AiInsightPanel() {
   const [loading, setLoading] = useState(false);
   const [insight, setInsight] = useState<CeoAiInsightsOutput | null>(null);
   const firestore = useFirestore();
   const { user } = useUser();
+  const { t } = useLanguage();
 
   const fleetQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'fleet_vehicles') : null, [firestore, user]);
   const tripsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'trips') : null, [firestore, user]);
@@ -45,7 +48,7 @@ export function AiInsightPanel() {
         revenueThisMonth,
         expensesThisMonth,
         netProfit: revenueThisMonth - expensesThisMonth,
-        fuelConsumptionLiters: 4200, // Placeholder as consumption log is complex
+        fuelConsumptionLiters: 4200,
         pendingMaintenanceCount: 5,
         lowStockCount: inventory?.filter(i => i.quantityAvailable < 10).length || 0,
         onlineDriverCount: locations?.filter(l => l.isOnline).length || 0,
@@ -67,7 +70,7 @@ export function AiInsightPanel() {
           <div className="size-8 rounded-full bg-primary flex items-center justify-center text-white">
             <Sparkles className="size-4" />
           </div>
-          <CardTitle className="text-xl font-headline tracking-tighter">AI Fleet Insights</CardTitle>
+          <CardTitle className="text-xl font-headline tracking-tighter">{t.ai_insights}</CardTitle>
         </div>
         <Button 
           onClick={generate} 
@@ -77,7 +80,7 @@ export function AiInsightPanel() {
           className="rounded-full border-primary text-primary hover:bg-primary hover:text-white"
         >
           {loading ? <RefreshCw className="size-4 animate-spin" /> : <RefreshCw className="size-4 mr-2" />}
-          {insight ? 'Regenerate' : 'Analyze Fleet'}
+          {insight ? 'Regenerate' : t.analyze_fleet}
         </Button>
       </CardHeader>
       
@@ -88,7 +91,7 @@ export function AiInsightPanel() {
               <Sparkles className="size-8" />
             </div>
             <div className="max-w-xs">
-              <p className="font-headline text-lg">Harness Fleet Intelligence</p>
+              <p className="font-headline text-lg">{t.harness_intelligence}</p>
               <p className="text-sm text-muted-foreground">Click the button above to analyze live data and generate actionable recommendations.</p>
             </div>
           </div>
@@ -139,8 +142,6 @@ export function AiInsightPanel() {
                 ))}
               </ul>
             </section>
-            
-            <p className="text-[10px] text-muted-foreground text-center">Last analyzed: {new Date().toLocaleTimeString()}</p>
           </div>
         )}
       </CardContent>

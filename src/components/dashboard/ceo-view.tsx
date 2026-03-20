@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
@@ -11,6 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Clock } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
 
 const revenueData = [
   { name: 'Jan', income: 4000, expenses: 2400 },
@@ -33,6 +35,7 @@ const fuelData = [
 export function CeoView() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { t } = useLanguage();
 
   const fleetQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -57,14 +60,13 @@ export function CeoView() {
     <div className="space-y-6">
       <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-headline tracking-tighter text-foreground">Command Dashboard</h1>
-          <p className="text-muted-foreground text-sm font-sans">Strategic overview for CEO and Operations.</p>
+          <h1 className="text-3xl font-headline tracking-tighter text-foreground">{t.command_dashboard}</h1>
+          <p className="text-muted-foreground text-sm font-sans">{t.strategic_overview}</p>
         </div>
       </header>
 
       <StatCards />
 
-      {/* Critical Alerts Panel for Operations/CEO */}
       {activeAlerts.length > 0 && (
         <div className="grid grid-cols-1 gap-4">
           {activeAlerts.map(alert => (
@@ -75,7 +77,7 @@ export function CeoView() {
                     <AlertTriangle className="size-6" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-rose-700 uppercase tracking-widest">Critical Alert: Breakdown Reported</p>
+                    <p className="text-xs font-bold text-rose-700 uppercase tracking-widest">{t.critical_alert}</p>
                     <p className="text-sm font-medium">{alert.issueDescription}</p>
                     <div className="flex items-center gap-2 mt-1 text-[10px] text-rose-600">
                       <Clock className="size-3" />
@@ -83,7 +85,7 @@ export function CeoView() {
                     </div>
                   </div>
                 </div>
-                <Badge variant="destructive" className="bg-rose-600">Immediate Action Required</Badge>
+                <Badge variant="destructive" className="bg-rose-600">{t.immediate_action}</Badge>
               </CardContent>
             </Card>
           ))}
@@ -93,7 +95,7 @@ export function CeoView() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="rounded-2xl shadow-sm border-none bg-white">
           <CardHeader>
-            <CardTitle className="text-lg font-headline">Revenue vs Expenses</CardTitle>
+            <CardTitle className="text-lg font-headline">{t.revenue_vs_expenses}</CardTitle>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -115,7 +117,7 @@ export function CeoView() {
 
         <Card className="rounded-2xl shadow-sm border-none bg-white">
           <CardHeader>
-            <CardTitle className="text-lg font-headline">Fuel Consumption (L)</CardTitle>
+            <CardTitle className="text-lg font-headline">{t.fuel_consumption}</CardTitle>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -135,8 +137,8 @@ export function CeoView() {
 
       <Card className="rounded-2xl shadow-sm border-none bg-white overflow-hidden">
         <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle className="text-lg font-headline">Active Fleet Overview</CardTitle>
-          <Badge variant="outline" className="border-primary text-primary">Live Updates</Badge>
+          <CardTitle className="text-lg font-headline">{t.active_fleet}</CardTitle>
+          <Badge variant="outline" className="border-primary text-primary">{t.live_updates}</Badge>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
@@ -170,11 +172,6 @@ export function CeoView() {
                   </td>
                 </tr>
               ))}
-              {(!fleet || fleet.length === 0) && (
-                <tr>
-                  <td colSpan={5} className="text-center py-8 text-muted-foreground">No fleet vehicles found.</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </CardContent>
