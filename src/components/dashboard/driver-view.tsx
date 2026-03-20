@@ -4,17 +4,18 @@
 import { useEffect, useState, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages } from 'lucide-react';
+import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages, Wrench } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where, limit } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
 import { useLanguage } from '@/hooks/use-language';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export function DriverView() {
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -103,7 +104,7 @@ export function DriverView() {
           speed: Math.floor(Math.random() * 60) + 20,
           isOnline: true,
           lastUpdated: new Date().toISOString(),
-          alertStatus: 'none'
+          // We don't overwrite alertStatus here to keep breakdown alerts active
         }, { merge: true });
       }, 5000);
 
@@ -151,6 +152,39 @@ export function DriverView() {
 
     toast({ title: "Delivery Complete", description: "Proof captured and trip marked as delivered." });
     setCapturedImage(null);
+  };
+
+  const handleReportIssue = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!firestore || !user) return;
+    const formData = new FormData(e.currentTarget);
+    const type = formData.get('issueType') as string;
+    const description = formData.get('description') as string;
+    const severity = formData.get('severity') as string;
+
+    const maintenanceData = {
+      fleetVehicleId: activeTrip?.fleetVehicleId || 'unknown',
+      reporterUserId: user.uid,
+      issueDescription: description,
+      severity: severity,
+      status: 'pending',
+      reportedAt: new Date().toISOString(),
+    };
+
+    addDocumentNonBlocking(collection(firestore, 'maintenance_requests'), maintenanceData);
+
+    // If it's a breakdown, update live location status for map alerts
+    if (type === 'breakdown') {
+      const locRef = doc(firestore, 'driver_locations', user.uid);
+      updateDocumentNonBlocking(locRef, { alertStatus: 'breakdown' });
+    }
+
+    toast({ 
+      title: "Issue Reported", 
+      description: type === 'breakdown' ? "Emergency breakdown signal sent to command center." : "Maintenance request submitted to garage." 
+    });
+    
+    (e.target as HTMLFormElement).reset();
   };
 
   if (loading) {
@@ -373,10 +407,57 @@ export function DriverView() {
           </DialogContent>
         </Dialog>
 
-        <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
-          <AlertTriangle className="size-5 text-rose-500" />
-          <p className="text-[10px] font-bold">{t.issue.toUpperCase()}</p>
-        </button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
+              <AlertTriangle className="size-5 text-rose-500" />
+              <p className="text-[10px] font-bold">{t.issue.toUpperCase()}</p>
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[90vw] rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>{t.issue}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleReportIssue} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>{t.severity}</Label>
+                <Select name="severity" defaultValue="Medium" required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Low (Informational)</SelectItem>
+                    <SelectItem value="Medium">Medium (Attention Required)</SelectItem>
+                    <SelectItem value="Critical">Critical (Stop Vehicle)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Issue Type</Label>
+                <Select name="issueType" defaultValue="maintenance" required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="maintenance">{t.report_maintenance}</SelectItem>
+                    <SelectItem value="breakdown">{t.report_breakdown}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t.issue_description}</Label>
+                <Textarea name="description" placeholder="Describe the issue..." required />
+              </div>
+
+              <Button type="submit" variant="destructive" className="w-full h-12 font-headline">
+                <AlertTriangle className="size-4 mr-2" />
+                {t.submit_report.toUpperCase()}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

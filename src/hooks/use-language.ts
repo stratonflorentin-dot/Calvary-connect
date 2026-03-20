@@ -23,7 +23,7 @@ const translations = {
     start_nav: "Start Navigator",
     proof: "Proof",
     expense: "Expense",
-    issue: "Issue",
+    issue: "Report Issue",
     capture: "Capture Photo",
     take_photo: "Take Photo",
     switch_lang: "Kiswahili",
@@ -37,6 +37,11 @@ const translations = {
     dispatch: "Dispatch New Trip",
     camera_access: "Camera Access Required",
     camera_desc: "Please allow camera access to capture evidence.",
+    report_breakdown: "Report Breakdown",
+    report_maintenance: "Maintenance Need",
+    issue_description: "What is wrong with the vehicle?",
+    submit_report: "Send Emergency Report",
+    severity: "Severity Level",
   },
   sw: {
     dashboard: "Dashibodi",
@@ -55,7 +60,7 @@ const translations = {
     start_nav: "Anza Ramani",
     proof: "Ushahidi",
     expense: "Gharama",
-    issue: "Tatizo",
+    issue: "Ripoti Tatizo",
     capture: "Piga Picha",
     take_photo: "Piga Picha",
     switch_lang: "English",
@@ -69,6 +74,11 @@ const translations = {
     dispatch: "Anza Safari Mpya",
     camera_access: "Ufikiaji wa Kamera Unahitajika",
     camera_desc: "Tafadhali ruhusu ufikiaji wa kamera ili kupiga picha ya ushahidi.",
+    report_breakdown: "Ripoti Gari Kuharibika",
+    report_maintenance: "Mahitaji ya Matengenezo",
+    issue_description: "Gari lina tatizo gani?",
+    submit_report: "Tuma Ripoti ya Dharura",
+    severity: "Kiwango cha Tatizo",
   }
 };
 
