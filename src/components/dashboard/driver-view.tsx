@@ -4,10 +4,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages, Wrench, Phone } from 'lucide-react';
+import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages, Wrench, Phone, Truck as TruckIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, where, limit } from 'firebase/firestore';
+import { doc, collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -153,7 +153,7 @@ export function DriverView() {
     setCapturedImage(null);
   };
 
-  const handleReportIssue = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleReportIssue = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!firestore || !user) return;
     const formData = new FormData(e.currentTarget);
@@ -172,6 +172,20 @@ export function DriverView() {
 
     addDocumentNonBlocking(collection(firestore, 'maintenance_requests'), maintenanceData);
 
+    // Notify ALL mechanics
+    const mechanicsSnap = await getDocs(collection(firestore, 'roles_mechanic'));
+    mechanicsSnap.forEach((mechanicDoc) => {
+      const notifRef = collection(firestore, 'users', mechanicDoc.id, 'notifications');
+      addDocumentNonBlocking(notifRef, {
+        title: type === 'breakdown' ? 'EMERGENCY: Vehicle Breakdown' : 'New Maintenance Request',
+        message: `Vehicle ${activeTrip?.fleetVehicleId || 'Unknown'} has reported: ${description}. Severity: ${severity}`,
+        type: 'maintenance_request',
+        severity: severity === 'Critical' ? 'critical' : 'warning',
+        isRead: false,
+        createdAt: new Date().toISOString()
+      });
+    });
+
     if (type === 'breakdown') {
       const locRef = doc(firestore, 'driver_locations', user.uid);
       updateDocumentNonBlocking(locRef, { alertStatus: 'breakdown' });
@@ -179,7 +193,7 @@ export function DriverView() {
 
     toast({ 
       title: "Issue Reported", 
-      description: type === 'breakdown' ? "Emergency breakdown signal sent to command center." : "Maintenance request submitted to garage." 
+      description: type === 'breakdown' ? "Emergency breakdown signal sent to mechanics and command center." : "Maintenance request submitted." 
     });
     
     (e.target as HTMLFormElement).reset();
@@ -470,17 +484,5 @@ export function DriverView() {
         </Dialog>
       </div>
     </div>
-  );
-}
-
-function TruckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
-      <path d="M15 18H9" />
-      <path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3v10h2" />
-      <circle cx="7" cy="18" r="2" />
-      <circle cx="17" cy="18" r="2" />
-    </svg>
   );
 }
