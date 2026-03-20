@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -13,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Route, Plus, MapPin, Truck as TruckIcon, User, ChevronDown, ChevronUp, MoreVertical } from 'lucide-react';
+import { Route, Plus, MapPin, Truck as TruckIcon, User, ChevronDown, ChevronUp, Image as ImageIcon, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function TripsPage() {
@@ -58,14 +59,11 @@ export default function TripsPage() {
       notes: formData.get('notes') as string,
     };
 
-    // 1. Create Trip
     addDocumentNonBlocking(collection(firestore, 'trips'), tripData);
 
-    // 2. Update Vehicle Status
     const vehicleRef = doc(firestore, 'fleet_vehicles', vehicleId);
     updateDocumentNonBlocking(vehicleRef, { status: 'In Use' });
 
-    // 3. Notify Driver
     const notificationRef = collection(firestore, 'users', driverId, 'notifications');
     addDocumentNonBlocking(notificationRef, {
       title: 'New Trip Assigned',
@@ -171,7 +169,7 @@ export default function TripsPage() {
                 <TableHead>Route</TableHead>
                 <TableHead>Driver / Vehicle</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right px-6">Created</TableHead>
+                <TableHead className="text-right px-6">Evidence</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -206,8 +204,8 @@ export default function TripsPage() {
                       {t.status.toUpperCase()}
                     </Badge>
                   </td>
-                  <td className="text-right px-6 text-xs text-muted-foreground">
-                    {new Date(t.createdAt).toLocaleDateString()}
+                  <td className="text-right px-6">
+                    <TripEvidenceDialog tripId={t.id} status={t.status} />
                   </td>
                 </TableRow>
               ))}
@@ -245,14 +243,17 @@ export default function TripsPage() {
                       <span className="text-[10px] text-muted-foreground">{fleet?.find(v => v.id === t.fleetVehicleId)?.plateNumber}</span>
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full"
-                    onClick={() => setExpandedTripId(expandedTripId === t.id ? null : t.id)}
-                  >
-                    {expandedTripId === t.id ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-                  </Button>
+                  <div className="flex gap-1">
+                    <TripEvidenceDialog tripId={t.id} status={t.status} />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-full"
+                      onClick={() => setExpandedTripId(expandedTripId === t.id ? null : t.id)}
+                    >
+                      {expandedTripId === t.id ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                    </Button>
+                  </div>
                 </div>
 
                 {expandedTripId === t.id && (
@@ -273,5 +274,66 @@ export default function TripsPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+function TripEvidenceDialog({ tripId, status }: { tripId: string, status: string }) {
+  const firestore = useFirestore();
+  const proofQuery = useMemoFirebase(() => {
+    if (!firestore || status !== 'delivered') return null;
+    return collection(firestore, 'trips', tripId, 'delivery_proofs');
+  }, [firestore, tripId, status]);
+
+  const { data: proofs } = useCollection(proofQuery);
+
+  if (status !== 'delivered') return null;
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10">
+          <Camera className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Delivery Proof - Trip #{tripId.slice(0, 8)}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6 pt-4">
+          {proofs && proofs.length > 0 ? (
+            proofs.map((proof, idx) => (
+              <div key={idx} className="space-y-4">
+                <div className="aspect-video rounded-xl overflow-hidden bg-muted border">
+                  <img src={proof.photoUrl} alt="Delivery proof" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <p className="font-bold text-emerald-600 flex items-center gap-2">
+                    <CheckCircle2 className="size-3" /> Successfully Delivered
+                  </p>
+                  <p className="text-muted-foreground">{new Date(proof.uploadedAt).toLocaleString()}</p>
+                </div>
+                <p className="text-sm bg-muted/50 p-4 rounded-xl border italic">"{proof.caption}"</p>
+              </div>
+            ))
+          ) : (
+            <div className="py-12 text-center space-y-4">
+              <div className="size-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+                <ImageIcon className="size-8 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">No photos uploaded for this trip yet.</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CheckCircle2({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
   );
 }

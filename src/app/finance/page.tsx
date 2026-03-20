@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Sidebar } from '@/components/navigation/sidebar';
@@ -7,7 +8,9 @@ import { collection } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export default function FinancePage() {
   const { role } = useRole();
@@ -111,6 +114,7 @@ export default function FinancePage() {
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead>Category</TableHead>
+                    <TableHead>Proof</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
@@ -119,6 +123,35 @@ export default function FinancePage() {
                   {expenses?.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="text-xs">{item.category}</TableCell>
+                      <TableCell>
+                        {item.photoUrl ? (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-primary hover:text-primary">
+                                <ImageIcon className="size-3" /> View
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                              <DialogHeader>
+                                <DialogTitle>Expense Evidence</DialogTitle>
+                              </DialogHeader>
+                              <div className="mt-4 aspect-video rounded-xl overflow-hidden bg-muted">
+                                <img 
+                                  src={item.photoUrl} 
+                                  alt="Receipt proof" 
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <div className="mt-4 space-y-2">
+                                <p className="text-sm font-bold">{item.category} - ${item.amount}</p>
+                                <p className="text-xs text-muted-foreground">{item.notes}</p>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">No image</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge className={item.isApproved ? 'bg-emerald-500' : 'bg-amber-500'}>
                           {item.isApproved ? 'Approved' : 'Pending'}

@@ -4,10 +4,10 @@
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Camera, AlertTriangle, User, DollarSign, Gauge, CheckCircle2 } from 'lucide-react';
+import { MapPin, Navigation, Camera, AlertTriangle, User, DollarSign, Gauge, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, where, limit } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -20,12 +20,25 @@ export function DriverView() {
   const { user } = useUser();
   const firestore = useFirestore();
 
+  // Query for the driver's active trip
+  const activeTripQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'trips'),
+      where('driverId', '==', user.uid),
+      where('status', 'in', ['created', 'loaded', 'in_transit']),
+      limit(1)
+    );
+  }, [firestore, user]);
+
+  const { data: activeTrips } = useCollection(activeTripQuery);
+  const activeTrip = activeTrips?.[0];
+
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Real-time location & mileage simulation
   useEffect(() => {
     if (locationEnabled && user && firestore) {
       const locRef = doc(firestore, 'driver_locations', user.uid);
@@ -66,15 +79,37 @@ export function DriverView() {
       notes: formData.get('notes') as string,
       isApproved: false,
       createdAt: new Date().toISOString(),
-      reporterUserId: user.uid
+      reporterUserId: user.uid,
+      photoUrl: `https://picsum.photos/seed/${Math.random()}/600/400`, // Simulated photo
+      tripId: activeTrip?.id || null
     };
     addDocumentNonBlocking(collection(firestore, 'expenses'), expenseData);
-    toast({ title: "Expense Reported", description: "Sent to accounting for approval." });
+    toast({ title: "Expense Reported", description: "Sent to accounting for approval with photo proof." });
     (e.target as HTMLFormElement).reset();
   };
 
   const handleUploadProof = () => {
-    toast({ title: "Proof Captured", description: "Photo proof of delivery has been logged." });
+    if (!firestore || !user || !activeTrip) {
+      toast({ variant: "destructive", title: "Error", description: "No active trip found." });
+      return;
+    }
+
+    const proofData = {
+      tripId: activeTrip.id,
+      driverId: user.uid,
+      photoUrl: `https://picsum.photos/seed/${activeTrip.id}/600/400`,
+      uploadedAt: new Date().toISOString(),
+      caption: "Delivery successful at destination."
+    };
+
+    // Save proof to trip subcollection
+    addDocumentNonBlocking(collection(firestore, 'trips', activeTrip.id, 'delivery_proofs'), proofData);
+    
+    // Also update trip status
+    const tripRef = doc(firestore, 'trips', activeTrip.id);
+    setDocumentNonBlocking(tripRef, { status: 'delivered', deliveredAt: new Date().toISOString() }, { merge: true });
+
+    toast({ title: "Delivery Complete", description: "Proof captured and trip marked as delivered." });
   };
 
   if (loading) {
@@ -147,39 +182,51 @@ export function DriverView() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center gap-4 py-2">
-            <div className="flex flex-col items-center gap-1">
-              <div className="size-2.5 rounded-full bg-primary" />
-              <div className="w-[1px] h-10 border-l border-dashed border-primary/40" />
-              <div className="size-2.5 rounded-full border border-primary" />
-            </div>
-            <div className="flex-1 space-y-4">
-              <div>
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">Origin</p>
-                <p className="font-headline text-sm">Accra Logistics Hub</p>
+          {activeTrip ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 py-2">
+                <div className="flex flex-col items-center gap-1">
+                  <div className="size-2.5 rounded-full bg-primary" />
+                  <div className="w-[1px] h-10 border-l border-dashed border-primary/40" />
+                  <div className="size-2.5 rounded-full border border-primary" />
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <p className="text-[8px] text-muted-foreground uppercase font-bold">Origin</p>
+                    <p className="font-headline text-sm">{activeTrip.originLocation}</p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] text-muted-foreground uppercase font-bold">Destination</p>
+                    <p className="font-headline text-sm text-primary">{activeTrip.destinationLocation}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">Destination</p>
-                <p className="font-headline text-sm text-primary">Kumasi Terminal</p>
-              </div>
-            </div>
-          </div>
 
-          <div className="space-y-3 pt-2">
-            <Button className="w-full h-14 bg-primary hover:bg-primary/90 font-headline text-lg rounded-xl shadow-lg">
-              COMPLETE DELIVERY
-            </Button>
-            <Button variant="outline" className="w-full h-12 font-headline border-primary text-primary rounded-xl flex gap-2">
-              <Navigation className="size-4" /> Start Navigator
-            </Button>
-          </div>
+              <div className="space-y-3 pt-2">
+                <Button 
+                  onClick={handleUploadProof}
+                  className="w-full h-14 bg-primary hover:bg-primary/90 font-headline text-lg rounded-xl shadow-lg"
+                >
+                  COMPLETE DELIVERY
+                </Button>
+                <Button variant="outline" className="w-full h-12 font-headline border-primary text-primary rounded-xl flex gap-2">
+                  <Navigation className="size-4" /> Start Navigator
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center space-y-4">
+              <CheckCircle2 className="size-12 text-emerald-500 mx-auto" />
+              <p className="text-sm text-muted-foreground">All assignments completed. Waiting for new dispatch.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-3 gap-3">
         <Dialog>
-          <DialogTrigger asChild>
-            <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
+          <DialogTrigger asChild disabled={!activeTrip}>
+            <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform disabled:opacity-50">
               <Camera className="size-5 text-accent" />
               <p className="text-[10px] font-bold">PROOF</p>
             </button>
@@ -189,8 +236,13 @@ export function DriverView() {
               <DialogTitle>Upload Proof of Delivery</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-              <div className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-dashed">
-                <Camera className="size-8 text-muted-foreground" />
+              <div className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-dashed relative overflow-hidden">
+                <img 
+                  src={`https://picsum.photos/seed/${activeTrip?.id}/600/400`} 
+                  alt="Delivery proof" 
+                  className="absolute inset-0 w-full h-full object-cover" 
+                />
+                <Camera className="size-8 text-white relative z-10" />
               </div>
               <Button onClick={handleUploadProof} className="w-full h-12">Submit Proof</Button>
             </div>
@@ -221,7 +273,11 @@ export function DriverView() {
                 <Label>Notes</Label>
                 <Input name="notes" placeholder="Optional details" />
               </div>
-              <Button type="submit" className="w-full h-12">Log Expense</Button>
+              <div className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-dashed relative overflow-hidden">
+                <ImageIcon className="size-8 text-muted-foreground" />
+                <p className="absolute bottom-2 text-[10px] text-muted-foreground">Tap to take photo of receipt</p>
+              </div>
+              <Button type="submit" className="w-full h-12">Log Expense & Proof</Button>
             </form>
           </DialogContent>
         </Dialog>

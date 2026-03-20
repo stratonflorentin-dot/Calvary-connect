@@ -4,9 +4,11 @@
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Wallet, FileText, TrendingUp, TrendingDown } from 'lucide-react';
+import { DollarSign, Wallet, FileText, TrendingUp, TrendingDown, Image as ImageIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export function AccountantView() {
   const firestore = useFirestore();
@@ -67,7 +69,7 @@ export function AccountantView() {
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Category</TableHead>
-                <TableHead>Reporter</TableHead>
+                <TableHead>Proof</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
@@ -77,7 +79,30 @@ export function AccountantView() {
               {expenses?.map(expense => (
                 <TableRow key={expense.id}>
                   <TableCell className="font-medium">{expense.category}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{expense.reporterUserId?.slice(0, 8) || 'System'}</TableCell>
+                  <TableCell>
+                    {expense.photoUrl && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10">
+                            <ImageIcon className="size-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-xl">
+                          <DialogHeader>
+                            <DialogTitle>Expense Proof - {expense.category}</DialogTitle>
+                          </DialogHeader>
+                          <div className="mt-4 space-y-4">
+                            <div className="aspect-video rounded-xl overflow-hidden bg-muted border">
+                              <img src={expense.photoUrl} alt="Receipt" className="w-full h-full object-contain" />
+                            </div>
+                            <div className="p-4 bg-muted/30 rounded-lg text-sm italic">
+                              {expense.notes || "No additional notes provided."}
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </TableCell>
                   <TableCell className="font-bold text-rose-600">-${expense.amount}</TableCell>
                   <TableCell>
                     <Badge variant={expense.isApproved ? "default" : "secondary"}>
@@ -85,7 +110,9 @@ export function AccountantView() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {!expense.isApproved && <button className="text-[10px] font-bold text-primary hover:underline">Review</button>}
+                    {!expense.isApproved && (
+                      <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold">Review</Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
