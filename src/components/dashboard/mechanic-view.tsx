@@ -4,7 +4,7 @@
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wrench, Package, History, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Wrench, Package, History, AlertCircle, CheckCircle2, ArrowRight, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -28,16 +28,23 @@ export function MechanicView() {
 
   return (
     <div className="space-y-6">
-      <header className="flex justify-between items-end">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-3xl font-headline tracking-tighter">{t.maintenance_hub}</h1>
           <p className="text-muted-foreground text-sm">{t.real_time_health}</p>
         </div>
-        <Link href="/service-requests">
-          <Button variant="outline" size="sm" className="rounded-full gap-2 border-primary text-primary">
-            {t.overview} <ArrowRight className="size-4" />
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/spare-parts">
+            <Button variant="default" size="sm" className="rounded-full gap-2 shadow-lg">
+              <PlusCircle className="size-4" /> {t.request_parts}
+            </Button>
+          </Link>
+          <Link href="/service-requests">
+            <Button variant="outline" size="sm" className="rounded-full gap-2 border-primary text-primary">
+              {t.overview} <ArrowRight className="size-4" />
+            </Button>
+          </Link>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -88,7 +95,8 @@ export function MechanicView() {
                   </div>
                   <Badge className={cn(
                     "text-[10px]",
-                    request.status === 'in_progress' ? 'bg-blue-500' : 'bg-amber-500'
+                    request.status === 'in_progress' ? 'bg-blue-500' : 
+                    request.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'
                   )}>
                     {request.status.toUpperCase()}
                   </Badge>
@@ -109,13 +117,19 @@ export function MechanicView() {
                   <div className="size-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
                     <CheckCircle2 className="size-4" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-bold">{log.issueDescription}</p>
-                    <p className="text-xs text-muted-foreground">Log: {log.serviceLog}</p>
-                    <p className="text-[9px] text-muted-foreground mt-1 uppercase font-bold">{new Date(log.completedAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">Log: {log.serviceLog}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-[9px] text-muted-foreground uppercase font-bold">{new Date(log.completedAt).toLocaleDateString()}</span>
+                      <Badge variant="outline" className="text-[8px] h-4">{log.truckConditionAfterService}</Badge>
+                    </div>
                   </div>
                 </div>
               ))}
+              {requests?.filter(r => r.status === 'completed').length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4 italic">No recent completion logs found.</p>
+              )}
             </div>
           </div>
         </section>

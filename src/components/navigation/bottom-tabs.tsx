@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Home, Truck, DollarSign, MapPin, User, Route, Package, Wrench, History, Calculator
+  Home, Truck, DollarSign, MapPin, User, Route, Package, Wrench, History, Calculator, LayoutDashboard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
@@ -36,10 +36,10 @@ export function BottomTabs({ role }: { role: UserRole }) {
       { label: t.profile, icon: User, href: '/profile' },
     ],
     MECHANIC: [
-      { label: t.service_requests, icon: Wrench, href: '/requests' },
-      { label: t.parts_requests, icon: Truck, href: '/parts' },
-      { label: t.inventory, icon: Package, href: '/inventory' },
-      { label: t.truck_history, icon: History, href: '/history' },
+      { label: t.home, icon: LayoutDashboard, href: '/' },
+      { label: t.service_requests, icon: Wrench, href: '/service-requests' },
+      { label: t.parts_requests, icon: Package, href: '/spare-parts' },
+      { label: t.truck_history, icon: History, href: '/truck-history' },
       { label: t.profile, icon: User, href: '/profile' },
     ],
     ACCOUNTANT: [

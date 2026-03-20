@@ -86,6 +86,13 @@ const translations = {
     overview: "Overview",
     income: "Income",
     fuel: "Fuel",
+    request_parts: "Request Spare Parts",
+    part_name: "Part Name / Service",
+    quantity: "Quantity",
+    urgency: "Urgency",
+    reason: "Reason for Request",
+    submit_request: "Submit Resource Request",
+    my_requests: "My Parts Requests",
   },
   sw: {
     dashboard: "Dashibodi",
@@ -167,6 +174,13 @@ const translations = {
     overview: "Muhtasari",
     income: "Mapato",
     fuel: "Mafuta",
+    request_parts: "Omba Vipuri / Huduma",
+    part_name: "Jina la Kipuri / Huduma",
+    quantity: "Idadi",
+    urgency: "Uharaka",
+    reason: "Sababu ya Ombi",
+    submit_request: "Tuma Ombi la Rasilimali",
+    my_requests: "Maombi Yangu ya Vipuri",
   }
 };
 

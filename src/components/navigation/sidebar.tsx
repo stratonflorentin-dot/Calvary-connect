@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, Truck, Route, DollarSign, BarChart2, 
-  Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut
+  Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
@@ -36,10 +36,11 @@ export function Sidebar({ role }: { role: UserRole }) {
       { label: t.notifications, icon: Bell, href: '/notifications' },
     ],
     MECHANIC: [
+      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
       { label: t.service_requests, icon: Wrench, href: '/service-requests' },
+      { label: t.parts_requests, icon: Package, href: '/spare-parts' },
       { label: t.inventory, icon: Package, href: '/inventory' },
-      { label: t.parts_requests, icon: Truck, href: '/spare-parts' },
-      { label: t.truck_history, icon: BarChart2, href: '/truck-history' },
+      { label: t.truck_history, icon: History, href: '/truck-history' },
       { label: t.notifications, icon: Bell, href: '/notifications' },
     ],
     ACCOUNTANT: [
