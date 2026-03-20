@@ -1,95 +1,1127 @@
-
 {
   "entities": {
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
+      "description": "Represents a user within the Calvary Connect application, including employees with various roles.",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "role": { "type": "string" },
-        "status": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user, used for communication and login (managed by external auth system).",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The assigned role of the user within the system (e.g., CEO, Operations, Driver, Mechanic, Accountant, HR)."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current employment status of the user (e.g., 'active', 'inactive', 'deactivated')."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the user's profile picture or avatar.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was created.",
+          "format": "date-time"
+        }
       },
-      "required": ["id", "name", "email", "role", "status", "createdAt"]
+      "required": [
+        "id",
+        "name",
+        "email",
+        "role",
+        "status",
+        "createdAt"
+      ]
     },
-    "Sale": {
+    "Customer": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Sale",
+      "title": "Customer",
       "type": "object",
+      "description": "Represents a client or customer for whom logistics services are provided.",
       "properties": {
-        "id": { "type": "string" },
-        "clientName": { "type": "string" },
-        "amount": { "type": "number" },
-        "date": { "type": "string", "format": "date-time" },
-        "description": { "type": "string" },
-        "status": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Customer entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full legal or business name of the customer."
+        },
+        "contactPerson": {
+          "type": "string",
+          "description": "Name of the primary contact person at the customer's organization."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address for the customer's primary contact.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number for the customer's primary contact."
+        },
+        "address": {
+          "type": "string",
+          "description": "Physical address of the customer."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the customer record was created.",
+          "format": "date-time"
+        }
       },
-      "required": ["id", "clientName", "amount", "date"]
+      "required": [
+        "id",
+        "name",
+        "contactPerson",
+        "email",
+        "phone",
+        "address",
+        "createdAt"
+      ]
     },
-    "Purchase": {
+    "FleetVehicle": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Purchase",
+      "title": "FleetVehicle",
       "type": "object",
+      "description": "Details about a vehicle in the company's fleet.",
       "properties": {
-        "id": { "type": "string" },
-        "vendorName": { "type": "string" },
-        "amount": { "type": "number" },
-        "date": { "type": "string", "format": "date-time" },
-        "category": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FleetVehicle entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "User-friendly name or identifier for the vehicle (e.g., 'Truck 001')."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of vehicle (e.g., 'Heavy Duty Truck', 'Van', 'Light Commercial Vehicle')."
+        },
+        "plateNumber": {
+          "type": "string",
+          "description": "License plate number of the vehicle."
+        },
+        "vin": {
+          "type": "string",
+          "description": "Vehicle Identification Number (VIN)."
+        },
+        "condition": {
+          "type": "string",
+          "description": "Current physical condition of the vehicle (e.g., 'Good', 'Fair', 'Poor')."
+        },
+        "status": {
+          "type": "string",
+          "description": "Operational status of the vehicle (e.g., 'Available', 'In Use', 'Maintenance')."
+        },
+        "lastMaintenanceDate": {
+          "type": "string",
+          "description": "Timestamp of the last recorded maintenance service.",
+          "format": "date-time"
+        },
+        "nextServiceDate": {
+          "type": "string",
+          "description": "Scheduled date for the next maintenance service.",
+          "format": "date-time"
+        },
+        "currentOdometerReading": {
+          "type": "number",
+          "description": "The current mileage or odometer reading of the vehicle."
+        },
+        "purchaseDate": {
+          "type": "string",
+          "description": "Date when the vehicle was purchased.",
+          "format": "date-time"
+        },
+        "fuelType": {
+          "type": "string",
+          "description": "The type of fuel the vehicle uses (e.g., 'Diesel', 'Petrol', 'Electric')."
+        }
       },
-      "required": ["id", "vendorName", "amount", "date"]
+      "required": [
+        "id",
+        "name",
+        "type",
+        "plateNumber",
+        "vin",
+        "condition",
+        "status",
+        "currentOdometerReading",
+        "purchaseDate",
+        "fuelType"
+      ]
     },
-    "Invoice": {
+    "Trip": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Invoice",
+      "title": "Trip",
       "type": "object",
+      "description": "Represents a single logistics journey or delivery task assigned to a driver and truck.",
       "properties": {
-        "id": { "type": "string" },
-        "clientName": { "type": "string" },
-        "amount": { "type": "number" },
-        "dueDate": { "type": "string", "format": "date" },
-        "status": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Trip entity."
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to the Customer entity associated with this trip. (Relationship: Customer 1:N Trip)"
+        },
+        "origin": {
+          "type": "string",
+          "description": "Description of the trip's starting location."
+        },
+        "destination": {
+          "type": "string",
+          "description": "Description of the trip's final destination."
+        },
+        "driverId": {
+          "type": "string",
+          "description": "Reference to the User (Driver) assigned to this trip. (Relationship: User 1:N Trip)"
+        },
+        "truckId": {
+          "type": "string",
+          "description": "Reference to the FleetVehicle assigned to this trip. (Relationship: FleetVehicle 1:N Trip)"
+        },
+        "notes": {
+          "type": "string",
+          "description": "General notes or special instructions for the trip."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the trip (e.g., 'created', 'loaded', 'in_transit', 'delivered', 'cancelled')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the trip record was created.",
+          "format": "date-time"
+        },
+        "scheduledStartTime": {
+          "type": "string",
+          "description": "The planned start time for the trip.",
+          "format": "date-time"
+        },
+        "actualStartTime": {
+          "type": "string",
+          "description": "The actual time the trip officially started.",
+          "format": "date-time"
+        },
+        "loadedAt": {
+          "type": "string",
+          "description": "Timestamp when the truck was reported as loaded.",
+          "format": "date-time"
+        },
+        "inTransitAt": {
+          "type": "string",
+          "description": "Timestamp when the trip entered 'in_transit' status."
+        },
+        "deliveredAt": {
+          "type": "string",
+          "description": "Timestamp when the trip was reported as delivered.",
+          "format": "date-time"
+        },
+        "estimatedCompletionTime": {
+          "type": "string",
+          "description": "Estimated time of completion for the trip.",
+          "format": "date-time"
+        },
+        "totalDistanceKm": {
+          "type": "number",
+          "description": "The total estimated or actual distance of the trip in kilometers."
+        }
       },
-      "required": ["id", "clientName", "amount", "dueDate", "status"]
+      "required": [
+        "id",
+        "customerId",
+        "origin",
+        "destination",
+        "driverId",
+        "truckId",
+        "status",
+        "createdAt"
+      ]
     },
-    "TaxRecord": {
+    "Income": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "TaxRecord",
+      "title": "Income",
       "type": "object",
+      "description": "Records revenue generated from completed trips or other sources.",
       "properties": {
-        "id": { "type": "string" },
-        "type": { "type": "string" },
-        "amount": { "type": "number" },
-        "period": { "type": "string" },
-        "status": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Income entity."
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Reference to the Trip entity this income is associated with. (Relationship: Trip 1:N Income)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of income received."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method by which the income was received (e.g., 'Bank Transfer', 'Credit Card', 'Cash')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about the income record."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the income record was created.",
+          "format": "date-time"
+        },
+        "editedAt": {
+          "type": "string",
+          "description": "Timestamp when the income record was last edited.",
+          "format": "date-time"
+        },
+        "editedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who last edited this income record. (Relationship: User 1:N Income)"
+        }
       },
-      "required": ["id", "type", "amount", "period"]
+      "required": [
+        "id",
+        "tripId",
+        "amount",
+        "paymentMethod",
+        "createdAt"
+      ]
     },
-    "FinancialReport": {
+    "Expense": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FinancialReport",
+      "title": "Expense",
       "type": "object",
+      "description": "Records operational expenses incurred by the company.",
       "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "content": { "type": "string" },
-        "month": { "type": "string" },
-        "year": { "type": "number" },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Expense entity."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the expense (e.g., 'Fuel', 'Maintenance', 'Driver Allowance', 'Office Supplies')."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary amount of the expense."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or description for the expense."
+        },
+        "approved": {
+          "type": "boolean",
+          "description": "Indicates whether the expense has been approved."
+        },
+        "approvedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who approved this expense. (Relationship: User 1:N Expense)"
+        },
+        "approvedAt": {
+          "type": "string",
+          "description": "Timestamp when the expense was approved.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the expense record was created.",
+          "format": "date-time"
+        },
+        "editedAt": {
+          "type": "string",
+          "description": "Timestamp when the expense record was last edited.",
+          "format": "date-time"
+        },
+        "editedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who last edited this expense record. (Relationship: User 1:N Expense)"
+        },
+        "linkedTripId": {
+          "type": "string",
+          "description": "Optional reference to a Trip entity if the expense is directly related to a specific trip. (Relationship: Trip 1:N Expense)"
+        },
+        "vendorName": {
+          "type": "string",
+          "description": "Name of the vendor or service provider for this expense."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method used to pay for the expense (e.g., 'Cash', 'Company Card', 'Bank Transfer')."
+        },
+        "receiptUrl": {
+          "type": "string",
+          "description": "URL to a digital copy of the expense receipt.",
+          "format": "uri"
+        }
       },
-      "required": ["id", "title", "content", "updatedAt"]
+      "required": [
+        "id",
+        "category",
+        "amount",
+        "approved",
+        "createdAt"
+      ]
+    },
+    "Allowance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Allowance",
+      "type": "object",
+      "description": "Records allowances provided to company workers, distinct from general expenses.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Allowance entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who received this allowance. (Relationship: User 1:N Allowance)"
+        },
+        "allowanceType": {
+          "type": "string",
+          "description": "The type of allowance (e.g., 'Daily Per Diem', 'Travel Bonus', 'Meal Allowance')."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary amount of the allowance."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about the allowance."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the allowance request/payment (e.g., 'pending', 'approved', 'paid', 'rejected')."
+        },
+        "approvedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who approved this allowance. (Relationship: User 1:N Allowance)"
+        },
+        "approvedAt": {
+          "type": "string",
+          "description": "Timestamp when the allowance was approved.",
+          "format": "date-time"
+        },
+        "paidAt": {
+          "type": "string",
+          "description": "Timestamp when the allowance was paid out.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the allowance record was created.",
+          "format": "date-time"
+        },
+        "linkedExpenseId": {
+          "type": "string",
+          "description": "Optional reference to an Expense entity if an expense record is automatically created upon payment for accounting purposes. (Relationship: Allowance 1:1 Expense)"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "allowanceType",
+        "amount",
+        "status",
+        "createdAt"
+      ]
+    },
+    "FuelRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FuelRequest",
+      "type": "object",
+      "description": "Records requests from drivers for fuel, which require approval.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FuelRequest entity."
+        },
+        "driverId": {
+          "type": "string",
+          "description": "Reference to the User (Driver) who submitted the fuel request. (Relationship: User 1:N FuelRequest)"
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Reference to the Trip entity for which fuel is being requested. (Relationship: Trip 1:N FuelRequest)"
+        },
+        "amountLiters": {
+          "type": "number",
+          "description": "The requested amount of fuel in liters."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the fuel request (e.g., 'pending', 'approved', 'rejected', 'paid')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Any additional notes provided by the driver or reviewer."
+        },
+        "requestedAt": {
+          "type": "string",
+          "description": "Timestamp when the fuel request was submitted.",
+          "format": "date-time"
+        },
+        "approvedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who approved this fuel request. (Relationship: User 1:N FuelRequest)"
+        },
+        "approvedAt": {
+          "type": "string",
+          "description": "Timestamp when the fuel request was approved.",
+          "format": "date-time"
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "The reason for rejecting the fuel request, if applicable."
+        },
+        "linkedExpenseId": {
+          "type": "string",
+          "description": "Reference to the Expense entity created upon approval of this fuel request. (Relationship: FuelRequest 1:1 Expense)"
+        }
+      },
+      "required": [
+        "id",
+        "driverId",
+        "tripId",
+        "amountLiters",
+        "status",
+        "requestedAt"
+      ]
+    },
+    "MaintenanceRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MaintenanceRequest",
+      "type": "object",
+      "description": "Records requests for vehicle maintenance and tracks their service history.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MaintenanceRequest entity."
+        },
+        "truckId": {
+          "type": "string",
+          "description": "Reference to the FleetVehicle requiring maintenance. (Relationship: FleetVehicle 1:N MaintenanceRequest)"
+        },
+        "issueDescription": {
+          "type": "string",
+          "description": "Detailed description of the issue or required service."
+        },
+        "severity": {
+          "type": "string",
+          "description": "The urgency or severity of the maintenance issue (e.g., 'Minor', 'Major', 'Critical')."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the maintenance request (e.g., 'pending', 'in_progress', 'completed', 'cancelled')."
+        },
+        "reportedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who reported the maintenance issue. (Relationship: User 1:N MaintenanceRequest)"
+        },
+        "reportedAt": {
+          "type": "string",
+          "description": "Timestamp when the maintenance issue was reported.",
+          "format": "date-time"
+        },
+        "assignedMechanicUserId": {
+          "type": "string",
+          "description": "Reference to the User (Mechanic) assigned to perform the service. (Relationship: User 1:N MaintenanceRequest)"
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "Timestamp when the maintenance service began.",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Timestamp when the maintenance service was completed.",
+          "format": "date-time"
+        },
+        "serviceLog": {
+          "type": "string",
+          "description": "Detailed log or description of the service performed by the mechanic."
+        },
+        "truckConditionAfterService": {
+          "type": "string",
+          "description": "The condition of the truck after the service (e.g., 'Good', 'Fair', 'Poor')."
+        },
+        "nextServiceScheduledDate": {
+          "type": "string",
+          "description": "The date scheduled for the next routine service for this vehicle.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "truckId",
+        "issueDescription",
+        "severity",
+        "status",
+        "reportedByUserId",
+        "reportedAt"
+      ]
+    },
+    "InventoryItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InventoryItem",
+      "type": "object",
+      "description": "Represents an item stocked in the company's inventory.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the InventoryItem entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the inventory item (e.g., 'Oil Filter A123', 'Diesel Fuel')."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the item (e.g., 'Spare Parts', 'Fuel', 'Lubricants', 'Tyres', 'Tools', 'Safety Equipment', 'Office Supplies')."
+        },
+        "quantityTotal": {
+          "type": "number",
+          "description": "The total quantity of this item ever acquired or initially in stock."
+        },
+        "quantityAvailable": {
+          "type": "number",
+          "description": "The current quantity of the item available in stock."
+        },
+        "quantityUsed": {
+          "type": "number",
+          "description": "The total quantity of this item that has been used or dispensed."
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit of measurement for the item (e.g., 'pcs', 'liters', 'gallons', 'meters')."
+        },
+        "location": {
+          "type": "string",
+          "description": "Specific storage location of the item (e.g., 'Warehouse A', 'Shelf 3')."
+        },
+        "reorderLevel": {
+          "type": "number",
+          "description": "The quantity level at which a reorder should be triggered."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current stock status of the item (e.g., 'In Stock', 'Low Stock', 'Out of Stock')."
+        },
+        "supplierName": {
+          "type": "string",
+          "description": "Name of the primary supplier for this item."
+        },
+        "lastReorderDate": {
+          "type": "string",
+          "description": "Timestamp of the last time this item was reordered.",
+          "format": "date-time"
+        },
+        "lastRestockDate": {
+          "type": "string",
+          "description": "Timestamp of the last time this item was restocked.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "category",
+        "quantityTotal",
+        "quantityAvailable",
+        "quantityUsed",
+        "unit",
+        "location",
+        "reorderLevel",
+        "status"
+      ]
+    },
+    "InventoryUsageLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InventoryUsageLog",
+      "type": "object",
+      "description": "Records instances of inventory items being used or consumed.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the InventoryUsageLog entity."
+        },
+        "itemId": {
+          "type": "string",
+          "description": "Reference to the InventoryItem that was used. (Relationship: InventoryItem 1:N InventoryUsageLog)"
+        },
+        "quantityUsed": {
+          "type": "number",
+          "description": "The quantity of the item that was used."
+        },
+        "usedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who logged the usage of this item. (Relationship: User 1:N InventoryUsageLog)"
+        },
+        "linkedMaintenanceRequestId": {
+          "type": "string",
+          "description": "Optional reference to a MaintenanceRequest if the item was used for maintenance. (Relationship: MaintenanceRequest 1:N InventoryUsageLog)"
+        },
+        "linkedTripId": {
+          "type": "string",
+          "description": "Optional reference to a Trip if the item was used during a trip (e.g., fuel). (Relationship: Trip 1:N InventoryUsageLog)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason for the item's usage (e.g., 'maintenance', 'trip fuel', 'office use')."
+        },
+        "usedAt": {
+          "type": "string",
+          "description": "Timestamp when the item was used.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "itemId",
+        "quantityUsed",
+        "usedByUserId",
+        "reason",
+        "usedAt"
+      ]
+    },
+    "SparePartsRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SparePartsRequest",
+      "type": "object",
+      "description": "Records requests for spare parts or inventory items, typically submitted by mechanics.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SparePartsRequest entity."
+        },
+        "mechanicId": {
+          "type": "string",
+          "description": "Reference to the User (Mechanic) who submitted the request. (Relationship: User 1:N SparePartsRequest)"
+        },
+        "requestedInventoryItemId": {
+          "type": "string",
+          "description": "Optional reference to an existing InventoryItem if a specific item is being requested. (Relationship: InventoryItem 1:N SparePartsRequest)"
+        },
+        "partNameText": {
+          "type": "string",
+          "description": "Text description of the part name, especially if it's a new item not yet in inventory."
+        },
+        "quantityNeeded": {
+          "type": "number",
+          "description": "The quantity of the part or item requested."
+        },
+        "urgency": {
+          "type": "string",
+          "description": "The urgency level of the request (e.g., 'Low', 'Medium', 'High', 'Critical')."
+        },
+        "reasonNotes": {
+          "type": "string",
+          "description": "Detailed reason or notes explaining why the parts are needed."
+        },
+        "linkedMaintenanceRequestId": {
+          "type": "string",
+          "description": "Optional reference to a MaintenanceRequest if this request is tied to a specific service job. (Relationship: MaintenanceRequest 1:N SparePartsRequest)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the parts request (e.g., 'pending', 'approved', 'rejected', 'ordered', 'received')."
+        },
+        "requestedAt": {
+          "type": "string",
+          "description": "Timestamp when the parts request was submitted.",
+          "format": "date-time"
+        },
+        "approvedByUserId": {
+          "type": "string",
+          "description": "Reference to the User who approved this parts request. (Relationship: User 1:N SparePartsRequest)"
+        },
+        "approvedAt": {
+          "type": "string",
+          "description": "Timestamp when the parts request was approved.",
+          "format": "date-time"
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "The reason for rejecting the parts request, if applicable."
+        },
+        "linkedInventoryItemId": {
+          "type": "string",
+          "description": "Reference to the InventoryItem entity that was created or updated upon approval of this request. (Relationship: InventoryItem 1:N SparePartsRequest)"
+        }
+      },
+      "required": [
+        "id",
+        "mechanicId",
+        "partNameText",
+        "quantityNeeded",
+        "urgency",
+        "reasonNotes",
+        "status",
+        "requestedAt"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Stores notifications to be delivered to users in real-time.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Notification entity."
+        },
+        "recipientUserId": {
+          "type": "string",
+          "description": "Reference to the User who is the intended recipient of this notification. (Relationship: User 1:N Notification)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of notification (e.g., 'parts_request', 'new_trip', 'low_stock', 'breakdown_alert')."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short, descriptive title of the notification."
+        },
+        "message": {
+          "type": "string",
+          "description": "Full message content of the notification."
+        },
+        "referenceId": {
+          "type": "string",
+          "description": "ID of the related entity (e.g., tripId, maintenanceRequestId, fuelRequestId) that this notification pertains to."
+        },
+        "referenceType": {
+          "type": "string",
+          "description": "Type of the related entity (e.g., 'Trip', 'MaintenanceRequest', 'FuelRequest')."
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Flag indicating whether the recipient has read the notification."
+        },
+        "severity": {
+          "type": "string",
+          "description": "Severity level of the notification (e.g., 'info', 'warning', 'critical', 'success')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the notification was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "recipientUserId",
+        "type",
+        "title",
+        "message",
+        "referenceId",
+        "referenceType",
+        "isRead",
+        "severity",
+        "createdAt"
+      ]
+    },
+    "DeliveryProof": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DeliveryProof",
+      "type": "object",
+      "description": "Records photographic proof of delivery for completed trips.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DeliveryProof entity."
+        },
+        "tripId": {
+          "type": "string",
+          "description": "Reference to the Trip entity for which this proof of delivery was submitted. (Relationship: Trip 1:N DeliveryProof)"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the uploaded image file serving as proof of delivery.",
+          "format": "uri"
+        },
+        "caption": {
+          "type": "string",
+          "description": "Optional caption or description provided with the proof of delivery."
+        },
+        "uploadedByUserId": {
+          "type": "string",
+          "description": "Reference to the User (Driver) who uploaded this proof. (Relationship: User 1:N DeliveryProof)"
+        },
+        "uploadedAt": {
+          "type": "string",
+          "description": "Timestamp when the proof of delivery was uploaded.",
+          "format": "date-time"
+        },
+        "locationLatitude": {
+          "type": "number",
+          "description": "Latitude coordinate where the proof photo was taken."
+        },
+        "locationLongitude": {
+          "type": "number",
+          "description": "Longitude coordinate where the proof photo was taken."
+        }
+      },
+      "required": [
+        "id",
+        "tripId",
+        "imageUrl",
+        "uploadedByUserId",
+        "uploadedAt"
+      ]
     }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
     "structure": [
-      { "path": "/sales/{saleId}", "definition": { "entityName": "Sale" } },
-      { "path": "/purchases/{purchaseId}", "definition": { "entityName": "Purchase" } },
-      { "path": "/invoices/{invoiceId}", "definition": { "entityName": "Invoice" } },
-      { "path": "/taxes/{taxId}", "definition": { "entityName": "TaxRecord" } },
-      { "path": "/financial_reports/{reportId}", "definition": { "entityName": "FinancialReport" } }
-    ]
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores individual user profiles and their assigned roles (CEO, Operations, Driver, Mechanic, Accountant, HR). Essential for authentication and role-based access control. All documents include the user's 'role' for efficient rule evaluation (DBAC).",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user, matching `request.auth.uid`."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Private subcollection for each user's notifications. Access is strictly limited to the `recipientUserId` matching the path wildcard, ensuring Authorization Independence and efficient QAP for user-specific feeds. No additional denormalization for authorization needed as path guarantees ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who is the recipient of the notification."
+            },
+            {
+              "name": "notificationId",
+              "description": "The unique ID of the notification."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Centralized record of all clients. Read access for Operations, Accountant, CEO, and HR. Write access for CEO. QAP-friendly for comprehensive customer lists.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "The unique ID of the customer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/fleetVehicles/{fleetVehicleId}",
+        "definition": {
+          "entityName": "FleetVehicle",
+          "schema": {
+            "$ref": "#/backend/entities/FleetVehicle"
+          },
+          "description": "Manages the company's vehicle fleet. Includes denormalized 'status' and 'condition' for quick overview and rule checks. Read access for CEO, Operations, Mechanic, and HR. Write access for CEO, Operations (status), Mechanic (condition, nextServiceDate). QAP-friendly for fleet overviews.",
+          "params": [
+            {
+              "name": "fleetVehicleId",
+              "description": "The unique ID of the fleet vehicle."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/trips/{tripId}",
+        "definition": {
+          "entityName": "Trip",
+          "schema": {
+            "$ref": "#/backend/entities/Trip"
+          },
+          "description": "Records all logistics journeys. Includes denormalized 'driverId' and 'truckId' for Authorization Independence and efficient querying by assigned personnel. QAP-friendly for driver-specific trip lists (`where driverId == request.auth.uid`). Read/Write for CEO, Operations. Driver can read/update their assigned trips. HR can read.",
+          "params": [
+            {
+              "name": "tripId",
+              "description": "The unique ID of the trip."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/incomeRecords/{incomeRecordId}",
+        "definition": {
+          "entityName": "Income",
+          "schema": {
+            "$ref": "#/backend/entities/Income"
+          },
+          "description": "Records all revenue. Includes denormalized 'tripId' and 'editedByUserId' for Authorization Independence and accountability. QAP-friendly for Accountant's income reports. Read/Write for Accountant. Read for CEO and HR.",
+          "params": [
+            {
+              "name": "incomeRecordId",
+              "description": "The unique ID of the income record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/expenseRecords/{expenseRecordId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Records all operational expenses. Includes denormalized 'approvedByUserId', 'editedByUserId', and 'linkedTripId' for Authorization Independence and comprehensive financial tracking. QAP-friendly for Accountant's expense reports and CEO approvals. Read/Write for Accountant. Read for CEO, Operations, HR. CEO can approve.",
+          "params": [
+            {
+              "name": "expenseRecordId",
+              "description": "The unique ID of the expense record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/allowances/{allowanceId}",
+        "definition": {
+          "entityName": "Allowance",
+          "schema": {
+            "$ref": "#/backend/entities/Allowance"
+          },
+          "description": "Manages worker allowances. Includes denormalized 'userId' (recipient) and 'approvedByUserId' for Authorization Independence and clear audit trails. QAP-friendly for Accountant's allowance reports and individual user views. Read/Write for Accountant. Read for CEO, HR. Users can read their own allowances.",
+          "params": [
+            {
+              "name": "allowanceId",
+              "description": "The unique ID of the allowance record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/fuelRequests/{fuelRequestId}",
+        "definition": {
+          "entityName": "FuelRequest",
+          "schema": {
+            "$ref": "#/backend/entities/FuelRequest"
+          },
+          "description": "Driver-submitted fuel requests. Includes denormalized 'driverId' and 'approvedByUserId' for Authorization Independence and streamlined approval workflows. QAP-friendly for driver-specific requests and Accountant's approval queue. Drivers can create/read their own. Read/Write for Accountant (approve/reject). Read for CEO, Operations, HR.",
+          "params": [
+            {
+              "name": "fuelRequestId",
+              "description": "The unique ID of the fuel request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/maintenanceRequests/{maintenanceRequestId}",
+        "definition": {
+          "entityName": "MaintenanceRequest",
+          "schema": {
+            "$ref": "#/backend/entities/MaintenanceRequest"
+          },
+          "description": "Manages vehicle maintenance requests. Includes denormalized 'truckId', 'reportedByUserId', and 'assignedMechanicUserId' for Authorization Independence and clear assignment tracking. QAP-friendly for mechanic's worklist and operations overview. Drivers/Mechanics can create. Mechanics can read/write their assigned requests. Read/Write for Operations. Read for CEO, HR.",
+          "params": [
+            {
+              "name": "maintenanceRequestId",
+              "description": "The unique ID of the maintenance request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/inventoryItems/{inventoryItemId}",
+        "definition": {
+          "entityName": "InventoryItem",
+          "schema": {
+            "$ref": "#/backend/entities/InventoryItem"
+          },
+          "description": "Centralized inventory of parts and supplies. Includes denormalized 'status', 'quantityAvailable', and 'reorderLevel' for efficient stock management and rule evaluation. QAP-friendly for low stock alerts and inventory reports across roles. Read for CEO, Operations, Mechanic, HR. Write for Operations. Mechanic can decrement stock via usage logs/requests.",
+          "params": [
+            {
+              "name": "inventoryItemId",
+              "description": "The unique ID of the inventory item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/inventoryUsageLogs/{inventoryUsageLogId}",
+        "definition": {
+          "entityName": "InventoryUsageLog",
+          "schema": {
+            "$ref": "#/backend/entities/InventoryUsageLog"
+          },
+          "description": "Logs all inventory item usage. Includes denormalized 'itemId' and 'usedByUserId' for Authorization Independence and auditing. QAP-friendly for usage history reports. Create access for Operations, Mechanic. Read access for CEO, Operations, Mechanic, HR.",
+          "params": [
+            {
+              "name": "inventoryUsageLogId",
+              "description": "The unique ID of the inventory usage log entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/sparePartsRequests/{sparePartsRequestId}",
+        "definition": {
+          "entityName": "SparePartsRequest",
+          "schema": {
+            "$ref": "#/backend/entities/SparePartsRequest"
+          },
+          "description": "Mechanic-submitted spare parts requests. Includes denormalized 'mechanicId' and 'approvedByUserId' for Authorization Independence and efficient approval workflows. QAP-friendly for mechanic's request history and management's approval queue. Mechanics can create/read their own. Read/Write for CEO, Operations (approve/reject). Read for HR.",
+          "params": [
+            {
+              "name": "sparePartsRequestId",
+              "description": "The unique ID of the spare parts request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/deliveryProofs/{deliveryProofId}",
+        "definition": {
+          "entityName": "DeliveryProof",
+          "schema": {
+            "$ref": "#/backend/entities/DeliveryProof"
+          },
+          "description": "Stores proof of delivery images. Includes denormalized 'tripId' and 'uploadedByUserId' for Authorization Independence and clear association with trips and drivers. QAP-friendly for operations to verify deliveries. Drivers can create their own. Read access for CEO, Operations, HR.",
+          "params": [
+            {
+              "name": "deliveryProofId",
+              "description": "The unique ID of the delivery proof."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure for 'Calvary Connect' is designed with a strong emphasis on Authorization Independence, enabling robust and easily debuggable security rules. The core strategy is denormalization of authorization context, ensuring that all security-critical fields (e.g., owner IDs, recipient IDs, associated user IDs for approvers/creators) are present directly within each document. This eliminates the need for expensive and complex `get()` calls in security rules, promoting atomic operations and simplifying rule logic.\n\nKey aspects of the design for Authorization Independence and QAP (Query as Authorization Pattern) compliance are:\n\n1.  **User-Specific Subcollections (QAP & Authorization Independence):**\n    *   `/users/{userId}/notifications`: This path uses a subcollection model where each user's notifications are stored directly under their user document. This structure inherently enforces that `request.auth.uid` must match the `{userId}` wildcard in the path for access. The `recipientUserId` field in the `Notification` entity schema, while present, becomes redundant for rule evaluation on *this specific path*, as the path itself guarantees ownership. This is the most secure and QAP-friendly pattern for private, user-specific data, as `list` queries are automatically scoped to the authenticated user's data.\n\n2.  **Denormalized User/Role IDs in Top-Level Collections (Authorization Independence & QAP):**\n    *   For collections like `/trips`, `/fuelRequests`, `/allowances`, `/sparePartsRequests`, and `/deliveryProofs`, the respective `driverId`, `userId`, `mechanicId`, `uploadedByUserId`, and `approvedByUserId` fields are explicitly stored in each document. This is a critical denormalization step. When a driver queries for 'My Trips', they use `db.collection('trips').where('driverId', '==', request.auth.uid)`. The security rule can then simply check `request.auth.uid == resource.data.driverId` to grant read access, without needing to `get()` any parent or related user document. This makes `list` operations secure and efficient for role-specific dashboards. Similarly, approval workflows (e.g., for Fuel Requests or Spare Parts Requests) can check `request.auth.uid` against `resource.data.approvedByUserId` or the user's role (obtained from their own `/users/{uid}` document) directly on the request document.\n\n3.  **Structural Segregation for Homogeneous Security Posture:**\n    *   Each collection is designed to hold documents with similar security requirements. For example, `inventoryItems` has consistent read/write permissions across different management roles, while `fuelRequests` has specific create/read permissions for drivers and approval permissions for accountants. This simplifies security rules by preventing complex conditional logic within a single collection that would otherwise be needed to differentiate access for varied data types or states.\n\n4.  **DBAC (Database Access Control) via `User` Document:**\n    *   The `role` field on the `/users/{userId}` document is the single source of truth for user roles (CEO, Operations, Driver, Mechanic, Accountant, HR). Security rules will `get('/users/' + request.auth.uid)` once to establish the user's role, and then use this role for authorization checks across various collections. This adheres to the 'Existence over Content' principle for global roles, centralizing role definition while maintaining Authorization Independence for individual document access decisions.\n\nThis architecture ensures that security rules are straightforward, performant, and easy to audit, aligning with all core design principles and strategy mandates."
   }
 }
