@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -16,16 +16,18 @@ import { Truck, Plus, Settings } from 'lucide-react';
 export default function FleetPage() {
   const { role } = useRole();
   const firestore = useFirestore();
+  const { user } = useUser();
   
   const fleetQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'fleet_vehicles');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: fleet, isLoading } = useCollection(fleetQuery);
 
   const handleAddVehicle = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!firestore) return;
     const formData = new FormData(e.currentTarget);
     const vehicleData = {
       name: formData.get('name') as string,

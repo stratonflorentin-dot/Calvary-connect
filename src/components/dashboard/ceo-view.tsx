@@ -1,7 +1,7 @@
 "use client";
 
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, limit, orderBy } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, limit } from 'firebase/firestore';
 import { StatCards } from './stat-cards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -31,11 +31,12 @@ const fuelData = [
 
 export function CeoView() {
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const fleetQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'fleet_vehicles'), limit(5));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: fleet } = useCollection(fleetQuery);
 
