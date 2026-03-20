@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRole } from '@/hooks/use-role';
@@ -6,6 +7,8 @@ import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { RoleSelector } from '@/components/dashboard/role-selector';
 import { CeoView } from '@/components/dashboard/ceo-view';
 import { DriverView } from '@/components/dashboard/driver-view';
+import { MechanicView } from '@/components/dashboard/mechanic-view';
+import { AccountantView } from '@/components/dashboard/accountant-view';
 import { NotificationsBell } from '@/components/shared/notifications-bell';
 import { AiInsightPanel } from '@/components/dashboard/ai-insight-panel';
 
@@ -25,27 +28,26 @@ export default function Home() {
             </div>
             <div className="space-y-8">
               <AiInsightPanel />
-              {/* Other CEO sidebar widgets */}
             </div>
           </div>
         );
       case 'DRIVER':
         return <DriverView />;
       case 'OPERATIONS':
-        return <CeoView />; // Fallback for demo
+        return <CeoView />; // Operations shares CEO view with restricted sidebar access
       case 'MECHANIC':
-        return <CeoView />; // Fallback for demo
+        return <MechanicView />;
       case 'ACCOUNTANT':
-        return <CeoView />; // Fallback for demo
+        return <AccountantView />;
       default:
         return <CeoView />;
     }
   };
 
-  // Driver view is full-screen mobile only with no desktop sidebar/layout as per requirements
+  // Driver view is full-screen mobile only
   if (role === 'DRIVER') {
     return (
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-background pb-20">
         {renderContent()}
         <BottomTabs role={role} />
         <RoleSelector />

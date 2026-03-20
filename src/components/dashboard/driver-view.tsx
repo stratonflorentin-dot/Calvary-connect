@@ -4,14 +4,19 @@
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Camera, AlertTriangle, User } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { MapPin, Navigation, Camera, AlertTriangle, User, DollarSign, Gauge, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 
 export function DriverView() {
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mileage, setMileage] = useState(12450);
   const { user } = useUser();
   const firestore = useFirestore();
 
@@ -20,19 +25,17 @@ export function DriverView() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Real-time location simulation for the "Live Map"
+  // Real-time location & mileage simulation
   useEffect(() => {
     if (locationEnabled && user && firestore) {
       const locRef = doc(firestore, 'driver_locations', user.uid);
-      
-      // Initial location (Accra)
       let lat = 5.6037;
       let lng = -0.1870;
 
       const interval = setInterval(() => {
-        // Slowly move the truck
         lat += (Math.random() - 0.5) * 0.001;
         lng += (Math.random() - 0.5) * 0.001;
+        setMileage(prev => prev + 0.1);
 
         setDocumentNonBlocking(locRef, {
           id: user.uid,
@@ -48,11 +51,31 @@ export function DriverView() {
 
       return () => {
         clearInterval(interval);
-        // Mark offline when unmounting
         setDocumentNonBlocking(locRef, { isOnline: false, lastUpdated: new Date().toISOString() }, { merge: true });
       };
     }
   }, [locationEnabled, user, firestore]);
+
+  const handleReportExpense = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!firestore || !user) return;
+    const formData = new FormData(e.currentTarget);
+    const expenseData = {
+      category: formData.get('category') as string,
+      amount: Number(formData.get('amount')),
+      notes: formData.get('notes') as string,
+      isApproved: false,
+      createdAt: new Date().toISOString(),
+      reporterUserId: user.uid
+    };
+    addDocumentNonBlocking(collection(firestore, 'expenses'), expenseData);
+    toast({ title: "Expense Reported", description: "Sent to accounting for approval." });
+    (e.target as HTMLFormElement).reset();
+  };
+
+  const handleUploadProof = () => {
+    toast({ title: "Proof Captured", description: "Photo proof of delivery has been logged." });
+  };
 
   if (loading) {
     return (
@@ -77,9 +100,7 @@ export function DriverView() {
         </div>
         <div>
           <h2 className="text-2xl font-headline tracking-tighter mb-2">Location Required</h2>
-          <p className="text-muted-foreground text-sm">
-            FleetCommand requires your live location to track deliveries. You cannot use this app without location enabled.
-          </p>
+          <p className="text-muted-foreground text-sm">FleetCommand requires your live location to track deliveries.</p>
         </div>
         <Button 
           onClick={() => setLocationEnabled(true)}
@@ -92,79 +113,122 @@ export function DriverView() {
   }
 
   return (
-    <div className="pb-24 pt-4 px-4 space-y-6 animate-in fade-in duration-500">
+    <div className="pb-24 pt-4 px-4 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto">
       <header className="flex justify-between items-center">
         <div>
-          <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest font-bold">Driver Console</p>
-          <h1 className="text-xl font-headline tracking-tighter">{user?.displayName || 'John Driver'}</h1>
+          <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest font-bold">Active Mission</p>
+          <h1 className="text-xl font-headline tracking-tighter">{user?.displayName || 'Driver Console'}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-500 text-[9px] animate-pulse-slow border-none shadow-sm">
-            Live Ping
-          </Badge>
-          <button className="p-2 bg-white rounded-full shadow-sm border">
-            <User className="size-5" />
-          </button>
-        </div>
+        <Badge className="bg-emerald-500 text-[9px] animate-pulse-slow">Live Ping</Badge>
       </header>
 
-      <div className="space-y-4">
-        <div className="flex justify-between items-end">
-          <h2 className="text-lg font-headline tracking-tighter">Assigned Trip</h2>
-          <span className="text-[10px] text-muted-foreground font-bold">ID: CC-9921</span>
-        </div>
-        <Card className="border-t-4 border-t-amber-500 shadow-xl overflow-hidden rounded-2xl border-none bg-white">
-          <CardContent className="p-6 space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold text-muted-foreground">Current Asset</p>
-                <Badge variant="outline" className="font-mono text-lg border-primary text-primary px-3 py-1">G-2883-24</Badge>
-              </div>
-              <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">In Transit</Badge>
-            </div>
-
-            <div className="flex items-center gap-4 py-4">
-              <div className="flex flex-col items-center gap-1">
-                <div className="size-3 rounded-full bg-primary" />
-                <div className="w-[1.5px] h-12 border-l-2 border-dashed border-primary/30" />
-                <div className="size-3 rounded-full border-2 border-primary" />
-              </div>
-              <div className="flex flex-col justify-between h-20 flex-1">
-                <div>
-                  <p className="text-[9px] text-muted-foreground uppercase font-bold">Origin</p>
-                  <p className="font-headline text-base leading-tight">Accra Logistics Hub</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-muted-foreground uppercase font-bold">Destination</p>
-                  <p className="font-headline text-base leading-tight">Kumasi Terminal</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <Button className="w-full h-14 bg-primary hover:bg-primary/90 font-headline text-lg rounded-xl shadow-lg active:scale-95 transition-transform">
-                COMPLETE DELIVERY
-              </Button>
-              <Button variant="outline" className="w-full h-12 font-headline border-primary text-primary rounded-xl flex gap-2 active:scale-95 transition-transform">
-                <Navigation className="size-4" /> Open Navigator
-              </Button>
-            </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="border-none bg-primary text-white shadow-lg rounded-2xl">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <Gauge className="size-4 text-accent mb-1" />
+            <p className="text-[10px] opacity-70 uppercase font-bold">Today's Mileage</p>
+            <p className="text-xl font-headline">{mileage.toFixed(1)} <span className="text-xs">KM</span></p>
+          </CardContent>
+        </Card>
+        <Card className="border-none bg-white shadow-lg rounded-2xl">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <DollarSign className="size-4 text-emerald-500 mb-1" />
+            <p className="text-[10px] text-muted-foreground uppercase font-bold">Earnings</p>
+            <p className="text-xl font-headline text-primary">$420.00</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <button className="bg-white p-6 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-2 active:scale-90 transition-transform">
-          <div className="size-12 rounded-full bg-accent/20 flex items-center justify-center text-accent">
-            <Camera className="size-6" />
+      <Card className="border-t-4 border-t-primary shadow-xl rounded-2xl border-none bg-white">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-sm font-headline uppercase tracking-tighter">Current Assignment</CardTitle>
+            <Badge variant="outline" className="font-mono text-[10px]">G-2883-24</Badge>
           </div>
-          <p className="font-headline text-xs">Proof</p>
-        </button>
-        <button className="bg-white p-6 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-2 active:scale-90 transition-transform">
-          <div className="size-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
-            <AlertTriangle className="size-6" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center gap-4 py-2">
+            <div className="flex flex-col items-center gap-1">
+              <div className="size-2.5 rounded-full bg-primary" />
+              <div className="w-[1px] h-10 border-l border-dashed border-primary/40" />
+              <div className="size-2.5 rounded-full border border-primary" />
+            </div>
+            <div className="flex-1 space-y-4">
+              <div>
+                <p className="text-[8px] text-muted-foreground uppercase font-bold">Origin</p>
+                <p className="font-headline text-sm">Accra Logistics Hub</p>
+              </div>
+              <div>
+                <p className="text-[8px] text-muted-foreground uppercase font-bold">Destination</p>
+                <p className="font-headline text-sm text-primary">Kumasi Terminal</p>
+              </div>
+            </div>
           </div>
-          <p className="font-headline text-xs">Breakdown</p>
+
+          <div className="space-y-3 pt-2">
+            <Button className="w-full h-14 bg-primary hover:bg-primary/90 font-headline text-lg rounded-xl shadow-lg">
+              COMPLETE DELIVERY
+            </Button>
+            <Button variant="outline" className="w-full h-12 font-headline border-primary text-primary rounded-xl flex gap-2">
+              <Navigation className="size-4" /> Start Navigator
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-3 gap-3">
+        <Dialog>
+          <DialogTrigger asChild>
+            <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
+              <Camera className="size-5 text-accent" />
+              <p className="text-[10px] font-bold">PROOF</p>
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[90vw] rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>Upload Proof of Delivery</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-dashed">
+                <Camera className="size-8 text-muted-foreground" />
+              </div>
+              <Button onClick={handleUploadProof} className="w-full h-12">Submit Proof</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
+              <DollarSign className="size-5 text-emerald-500" />
+              <p className="text-[10px] font-bold">EXPENSE</p>
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[90vw] rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>Report Trip Expense</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleReportExpense} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Input name="category" placeholder="Fuel, Toll, etc." required />
+              </div>
+              <div className="space-y-2">
+                <Label>Amount ($)</Label>
+                <Input name="amount" type="number" step="0.01" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Input name="notes" placeholder="Optional details" />
+              </div>
+              <Button type="submit" className="w-full h-12">Log Expense</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
+          <AlertTriangle className="size-5 text-rose-500" />
+          <p className="text-[10px] font-bold">ISSUE</p>
         </button>
       </div>
     </div>
@@ -173,15 +237,7 @@ export function DriverView() {
 
 function TruckIcon({ className }: { className?: string }) {
   return (
-    <svg 
-      className={className}
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
       <path d="M15 18H9" />
       <path d="M19 18h2a1 1 0 0 0 1-1v-5l-4-4h-3v10h2" />
