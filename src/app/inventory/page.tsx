@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -16,16 +16,18 @@ import { Package, Plus, AlertCircle } from 'lucide-react';
 export default function InventoryPage() {
   const { role } = useRole();
   const firestore = useFirestore();
+  const { user } = useUser();
   
   const inventoryQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'inventory_items');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: inventory, isLoading } = useCollection(inventoryQuery);
 
   const handleAddItem = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!firestore) return;
     const formData = new FormData(e.currentTarget);
     const itemData = {
       itemName: formData.get('name') as string,

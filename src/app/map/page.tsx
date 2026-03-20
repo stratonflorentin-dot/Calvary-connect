@@ -2,7 +2,7 @@
 
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,11 +12,12 @@ import { Input } from '@/components/ui/input';
 export default function LiveMapPage() {
   const { role } = useRole();
   const firestore = useFirestore();
+  const { user } = useUser();
   
   const locationsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'driver_locations');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: locations } = useCollection(locationsQuery);
 

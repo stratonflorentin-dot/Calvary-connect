@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { getCeoAiInsights, CeoAiInsightsOutput } from '@/ai/flows/ceo-ai-insights';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw, CheckCircle2, AlertCircle, Target } from 'lucide-react';
@@ -13,13 +13,14 @@ export function AiInsightPanel() {
   const [loading, setLoading] = useState(false);
   const [insight, setInsight] = useState<CeoAiInsightsOutput | null>(null);
   const firestore = useFirestore();
+  const { user } = useUser();
 
-  const fleetQuery = useMemoFirebase(() => firestore ? collection(firestore, 'fleet_vehicles') : null, [firestore]);
-  const tripsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'trips') : null, [firestore]);
-  const incomeQuery = useMemoFirebase(() => firestore ? collection(firestore, 'income') : null, [firestore]);
-  const expenseQuery = useMemoFirebase(() => firestore ? collection(firestore, 'expenses') : null, [firestore]);
-  const inventoryQuery = useMemoFirebase(() => firestore ? collection(firestore, 'inventory_items') : null, [firestore]);
-  const locationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'driver_locations') : null, [firestore]);
+  const fleetQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'fleet_vehicles') : null, [firestore, user]);
+  const tripsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'trips') : null, [firestore, user]);
+  const incomeQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'income') : null, [firestore, user]);
+  const expenseQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'expenses') : null, [firestore, user]);
+  const inventoryQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'inventory_items') : null, [firestore, user]);
+  const locationsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'driver_locations') : null, [firestore, user]);
 
   const { data: fleet } = useCollection(fleetQuery);
   const { data: trips } = useCollection(tripsQuery);

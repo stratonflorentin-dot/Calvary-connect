@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,13 @@ import { UserPlus, Search, Mail, Shield } from 'lucide-react';
 export default function UsersPage() {
   const { role } = useRole();
   const firestore = useFirestore();
+  const { user } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: users, isLoading } = useCollection(usersQuery);
 
@@ -33,6 +34,7 @@ export default function UsersPage() {
 
   const handleAddUser = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!firestore) return;
     const formData = new FormData(e.currentTarget);
     const userData = {
       name: formData.get('name') as string,

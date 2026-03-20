@@ -2,7 +2,7 @@
 
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,16 +12,17 @@ import { DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 export default function FinancePage() {
   const { role } = useRole();
   const firestore = useFirestore();
+  const { user } = useUser();
   
   const incomeQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'income');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const expenseQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'expenses');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: income } = useCollection(incomeQuery);
   const { data: expenses } = useCollection(expenseQuery);

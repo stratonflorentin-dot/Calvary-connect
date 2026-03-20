@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -17,21 +17,22 @@ import { Route, Plus, MapPin, Truck as TruckIcon, User } from 'lucide-react';
 export default function TripsPage() {
   const { role } = useRole();
   const firestore = useFirestore();
+  const { user } = useUser();
   
   const tripsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'trips'), orderBy('createdAt', 'desc'));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const fleetQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'fleet_vehicles');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const driversQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'roles_driver');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: trips, isLoading } = useCollection(tripsQuery);
   const { data: fleet } = useCollection(fleetQuery);
@@ -39,6 +40,7 @@ export default function TripsPage() {
 
   const handleCreateTrip = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!firestore) return;
     const formData = new FormData(e.currentTarget);
     const tripData = {
       originLocation: formData.get('origin') as string,
