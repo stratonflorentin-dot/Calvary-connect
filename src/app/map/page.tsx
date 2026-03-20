@@ -9,8 +9,9 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Truck, Navigation, Search, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { APIProvider, Map, Marker, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 export default function LiveMapPage() {
   const { role } = useRole();
@@ -31,39 +32,39 @@ export default function LiveMapPage() {
   const defaultCenter = { lat: 5.6037, lng: -0.1870 };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden touch-none">
       <Sidebar role={role!} />
-      <main className="flex-1 md:ml-60 flex flex-col relative">
+      <main className="flex-1 md:ml-60 flex flex-col relative h-full">
         {/* Map Header Overlay */}
-        <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row gap-4 pointer-events-none">
-          <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border flex-1 md:max-w-sm pointer-events-auto">
-            <h2 className="text-lg font-headline tracking-tighter mb-2">Fleet Command Center</h2>
+        <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row gap-2 pointer-events-none">
+          <div className="bg-white/95 backdrop-blur-md p-3 md:p-4 rounded-2xl shadow-xl border flex-1 md:max-w-sm pointer-events-auto">
+            <h2 className="text-base md:text-lg font-headline tracking-tighter mb-1 md:mb-2">Fleet Command Center</h2>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input placeholder="Track specific truck..." className="pl-9 rounded-full bg-white/50" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3 md:size-4 text-muted-foreground" />
+              <Input placeholder="Track truck ID..." className="pl-8 md:pl-9 h-8 md:h-10 text-xs md:text-sm rounded-full bg-white/50" />
             </div>
           </div>
           
-          <div className="flex gap-2 pointer-events-auto overflow-x-auto no-scrollbar">
-            <Badge className="bg-emerald-500 text-white whitespace-nowrap gap-2 py-2 px-4 shadow-lg h-fit">
+          <div className="flex gap-2 pointer-events-auto overflow-x-auto no-scrollbar pb-2 md:pb-0">
+            <Badge className="bg-emerald-500 text-white whitespace-nowrap gap-2 py-1.5 md:py-2 px-3 md:px-4 shadow-lg h-fit border-none">
               <div className="size-2 rounded-full bg-white animate-pulse" />
               {locations?.filter(l => l.isOnline).length || 0} Online
             </Badge>
-            <Badge className="bg-primary text-white whitespace-nowrap gap-2 py-2 px-4 shadow-lg h-fit">
-              <Truck className="size-4" /> {locations?.length || 0} Total Assets
+            <Badge className="bg-primary text-white whitespace-nowrap gap-2 py-1.5 md:py-2 px-3 md:px-4 shadow-lg h-fit border-none">
+              <Truck className="size-3 md:size-4" /> {locations?.length || 0} Assets
             </Badge>
           </div>
         </div>
 
         {/* Google Map Container */}
-        <div className="flex-1 relative">
-          <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
+        <div className="flex-1 relative w-full h-full">
+          <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyBtSdFZAFguBY2Vs0z6czbELYf-1RJ-fzk'}>
             <Map
               defaultCenter={defaultCenter}
               defaultZoom={12}
               gestureHandling={'greedy'}
               disableDefaultUI={true}
-              mapId={'bf50a91341416e8'} // Use a valid map ID if you have one for AdvancedMarkers
+              mapId={'bf50a91341416e8'}
               className="w-full h-full"
             >
               {locations?.map((loc) => (
@@ -74,16 +75,16 @@ export default function LiveMapPage() {
                 >
                   <div className="relative">
                     {loc.alertStatus === 'breakdown' && (
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-rose-500 text-white p-1 rounded-full shadow-lg animate-bounce">
-                        <AlertTriangle className="size-4" />
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg animate-bounce z-20">
+                        <AlertTriangle className="size-5" />
                       </div>
                     )}
                     <div className={cn(
-                      "size-10 rounded-full border-2 bg-white shadow-xl flex items-center justify-center transition-transform hover:scale-110",
+                      "size-10 md:size-12 rounded-full border-2 bg-white shadow-2xl flex items-center justify-center transition-all hover:scale-125 cursor-pointer",
                       loc.isOnline ? "border-emerald-500" : "border-muted-foreground grayscale"
                     )}>
                       <Navigation 
-                        className={cn("size-5", loc.isOnline ? "text-emerald-600" : "text-muted-foreground")} 
+                        className={cn("size-5 md:size-6", loc.isOnline ? "text-emerald-600" : "text-muted-foreground")} 
                         style={{ transform: `rotate(${loc.heading || 0}deg)` }} 
                       />
                     </div>
@@ -99,14 +100,17 @@ export default function LiveMapPage() {
                   }}
                   onCloseClick={() => setSelectedDriverId(null)}
                 >
-                  <div className="p-2">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Truck ID</p>
-                    <p className="text-sm font-headline">{selectedDriverId.slice(0, 8)}</p>
-                    <p className="text-xs text-emerald-600 font-bold mt-1">
-                      {locations.find(l => l.id === selectedDriverId)!.speed} KM/H
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Last Updated: {new Date(locations.find(l => l.id === selectedDriverId)!.lastUpdated).toLocaleTimeString()}
+                  <div className="p-1 min-w-[120px]">
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-0.5">Asset Status</p>
+                    <p className="text-xs font-headline text-primary mb-1">Truck #{selectedDriverId.slice(0, 6)}</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-xs text-emerald-600 font-bold">
+                        {locations.find(l => l.id === selectedDriverId)!.speed} KM/H
+                      </p>
+                      <Badge className="text-[9px] h-4 px-1 bg-emerald-100 text-emerald-700 border-none">Online</Badge>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground mt-2 border-t pt-1">
+                      Signal: {new Date(locations.find(l => l.id === selectedDriverId)!.lastUpdated).toLocaleTimeString()}
                     </p>
                   </div>
                 </InfoWindow>
@@ -115,21 +119,21 @@ export default function LiveMapPage() {
           </APIProvider>
 
           {/* Map Controls */}
-          <div className="absolute bottom-24 right-6 flex flex-col gap-2 pointer-events-auto">
-            <button className="size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted">
+          <div className="absolute bottom-24 md:bottom-10 right-4 md:right-6 flex flex-col gap-2 pointer-events-auto">
+            <button className="size-10 md:size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted active:scale-90 transition-transform">
               <Plus className="size-5" />
             </button>
-            <button className="size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted">
+            <button className="size-10 md:size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted active:scale-90 transition-transform">
               <Minus className="size-5" />
             </button>
-            <button className="size-12 rounded-xl bg-primary shadow-xl flex items-center justify-center text-white">
+            <button className="size-10 md:size-12 rounded-xl bg-primary shadow-xl flex items-center justify-center text-white active:scale-95 transition-transform">
               <MapPin className="size-5" />
             </button>
           </div>
         </div>
 
         {/* Active Alerts Panel */}
-        <div className="absolute bottom-6 left-6 right-6 md:right-auto md:w-80 space-y-2 pointer-events-none">
+        <div className="absolute bottom-28 md:bottom-10 left-4 right-4 md:right-auto md:w-80 space-y-2 pointer-events-none">
           {locations?.filter(l => l.alertStatus === 'breakdown').map(l => (
             <Card key={l.id} className="p-3 border-l-4 border-l-rose-500 shadow-2xl bg-white/95 backdrop-blur-md animate-in slide-in-from-left pointer-events-auto">
               <div className="flex items-center gap-3">
@@ -147,8 +151,4 @@ export default function LiveMapPage() {
       </main>
     </div>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
 }
