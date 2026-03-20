@@ -42,6 +42,8 @@ const translations = {
     issue_description: "What is wrong with the vehicle?",
     submit_report: "Send Emergency Report",
     severity: "Severity Level",
+    agent_contact: "Agent Contact",
+    support: "Support",
   },
   sw: {
     dashboard: "Dashibodi",
@@ -79,6 +81,8 @@ const translations = {
     issue_description: "Gari lina tatizo gani?",
     submit_report: "Tuma Ripoti ya Dharura",
     severity: "Kiwango cha Tatizo",
+    agent_contact: "Nambari ya Wakala",
+    support: "Msaada",
   }
 };
 

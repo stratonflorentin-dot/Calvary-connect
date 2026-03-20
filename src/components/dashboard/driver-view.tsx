@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages, Wrench } from 'lucide-react';
+import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages, Wrench, Phone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where, limit } from 'firebase/firestore';
@@ -104,7 +104,6 @@ export function DriverView() {
           speed: Math.floor(Math.random() * 60) + 20,
           isOnline: true,
           lastUpdated: new Date().toISOString(),
-          // We don't overwrite alertStatus here to keep breakdown alerts active
         }, { merge: true });
       }, 5000);
 
@@ -173,7 +172,6 @@ export function DriverView() {
 
     addDocumentNonBlocking(collection(firestore, 'maintenance_requests'), maintenanceData);
 
-    // If it's a breakdown, update live location status for map alerts
     if (type === 'breakdown') {
       const locRef = doc(firestore, 'driver_locations', user.uid);
       updateDocumentNonBlocking(locRef, { alertStatus: 'breakdown' });
@@ -284,6 +282,18 @@ export function DriverView() {
                   </div>
                 </div>
               </div>
+
+              {activeTrip.agentContactNumber && (
+                <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] uppercase font-bold text-primary/60">{t.agent_contact}</p>
+                    <p className="text-sm font-bold text-primary">{activeTrip.agentContactNumber}</p>
+                  </div>
+                  <a href={`tel:${activeTrip.agentContactNumber}`} className="size-10 rounded-full bg-primary text-white flex items-center justify-center active:scale-90 transition-transform">
+                    <Phone className="size-5" />
+                  </a>
+                </div>
+              )}
 
               <div className="space-y-3 pt-2">
                 <Dialog>

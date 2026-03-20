@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -222,6 +223,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "agentContactNumber": {
+          "type": "string",
+          "description": "The phone number of the operations agent assigned to this trip for support."
         },
         "notes": {
           "type": "string",

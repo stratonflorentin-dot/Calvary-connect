@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, query, orderBy, doc, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Route, Plus, MapPin, Truck as TruckIcon, User, ChevronDown, ChevronUp, Image as ImageIcon, Camera } from 'lucide-react';
+import { Route, Plus, MapPin, Truck as TruckIcon, User, ChevronDown, ChevronUp, Image as ImageIcon, Camera, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function TripsPage() {
@@ -54,6 +54,7 @@ export default function TripsPage() {
       destinationLocation: formData.get('destination') as string,
       driverId,
       fleetVehicleId: vehicleId,
+      agentContactNumber: formData.get('agentContact') as string,
       status: 'created',
       createdAt: new Date().toISOString(),
       notes: formData.get('notes') as string,
@@ -67,7 +68,7 @@ export default function TripsPage() {
     const notificationRef = collection(firestore, 'users', driverId, 'notifications');
     addDocumentNonBlocking(notificationRef, {
       title: 'New Trip Assigned',
-      message: `You have been assigned a new trip from ${tripData.originLocation} to ${tripData.destinationLocation}.`,
+      message: `You have been assigned a new trip from ${tripData.originLocation} to ${tripData.destinationLocation}. Contact Agent: ${tripData.agentContactNumber}`,
       type: 'trip_assigned',
       severity: 'info',
       isRead: false,
@@ -147,6 +148,11 @@ export default function TripsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="agentContact">Agent's Contact Number</Label>
+                  <Input id="agentContact" name="agentContact" placeholder="+255 700 000 000" required />
                 </div>
 
                 <div className="space-y-2">
@@ -258,6 +264,12 @@ export default function TripsPage() {
 
                 {expandedTripId === t.id && (
                   <div className="mt-4 pt-4 border-t space-y-3 animate-in slide-in-from-top duration-300">
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground">Support Contact</p>
+                      <a href={`tel:${t.agentContactNumber}`} className="text-xs text-primary font-bold flex items-center gap-2">
+                        <Phone className="size-3" /> {t.agentContactNumber}
+                      </a>
+                    </div>
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase font-bold text-muted-foreground">Dispatcher Notes</p>
                       <p className="text-xs">{t.notes || 'No specific notes provided.'}</p>
