@@ -1,16 +1,7 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * CALVARY CONNECT SECURITY RULES
-     *
-     * CORE PHILOSOPHY:
-     * This ruleset implements a multi-role logistics security model. It prioritizes Authorization Independence
-     * by utilizing dedicated role-check collections (e.g., /roles_ceo) and denormalized ownership fields.
-     */
-
-    // --- GLOBAL HELPER FUNCTIONS ---
 
     function isSignedIn() {
       return request.auth != null;
@@ -24,27 +15,11 @@ service cloud.firestore {
       return isSignedIn() && exists(path('/databases/' + database + '/documents/roles_' + role + '/' + request.auth.uid));
     }
 
-    function isCEO() {
-      return hasRole('ceo');
-    }
-
-    function isOps() {
-      return hasRole('operations');
-    }
-
-    function isMechanic() {
-      return hasRole('mechanic');
-    }
-
-    function isAccountant() {
-      return hasRole('accountant');
-    }
-
-    function isDriver() {
-      return hasRole('driver');
-    }
-
-    // --- COLLECTION RULES ---
+    function isCEO() { return hasRole('ceo'); }
+    function isAccountant() { return hasRole('accountant'); }
+    function isOps() { return hasRole('operations'); }
+    function isDriver() { return hasRole('driver'); }
+    function isMechanic() { return hasRole('mechanic'); }
 
     match /users/{userId} {
       allow get: if isOwner(userId) || isCEO() || isOps() || isMechanic() || isAccountant() || isDriver();
@@ -60,31 +35,18 @@ service cloud.firestore {
       }
     }
 
-    /**
-     * @description Role collections used for fast existence checks.
-     * @note For prototype mode, we allow users to assign their own roles to facilitate role-switching demo.
-     */
-    match /roles_ceo/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(userId) || isCEO();
-    }
-    match /roles_operations/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(userId) || isCEO();
-    }
-    match /roles_mechanic/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(userId) || isCEO();
-    }
-    match /roles_accountant/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(userId) || isCEO();
-    }
-    match /roles_driver/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(userId) || isCEO();
-    }
+    match /roles_ceo/{userId} { allow read: if isSignedIn(); allow write: if isOwner(userId) || isCEO(); }
+    match /roles_operations/{userId} { allow read: if isSignedIn(); allow write: if isOwner(userId) || isCEO(); }
+    match /roles_mechanic/{userId} { allow read: if isSignedIn(); allow write: if isOwner(userId) || isCEO(); }
+    match /roles_accountant/{userId} { allow read: if isSignedIn(); allow write: if isOwner(userId) || isCEO(); }
+    match /roles_driver/{userId} { allow read: if isSignedIn(); allow write: if isOwner(userId) || isCEO(); }
 
+    match /sales/{id} { allow read, write: if isAccountant() || isCEO(); }
+    match /purchases/{id} { allow read, write: if isAccountant() || isCEO(); }
+    match /invoices/{id} { allow read, write: if isAccountant() || isCEO(); }
+    match /taxes/{id} { allow read, write: if isAccountant() || isCEO(); }
+    match /financial_reports/{id} { allow read, write: if isAccountant() || isCEO(); }
+    
     match /fleet_vehicles/{fleetVehicleId} {
       allow read: if isSignedIn();
       allow create: if isCEO() || isOps();
@@ -163,6 +125,5 @@ service cloud.firestore {
       allow update: if (isAccountant() || isOps() || isCEO()) && resource != null;
       allow delete: if (isCEO() || isOps()) && resource != null;
     }
-
   }
 }
