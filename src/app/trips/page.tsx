@@ -24,19 +24,19 @@ export default function TripsPage() {
   const [expandedTripId, setExpandedTripId] = useState<string | null>(null);
   
   const tripsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !role) return null;
     return query(collection(firestore, 'trips'), orderBy('createdAt', 'desc'));
-  }, [firestore, user]);
+  }, [firestore, user, role]);
 
   const fleetQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !role) return null;
     return collection(firestore, 'fleet_vehicles');
-  }, [firestore, user]);
+  }, [firestore, user, role]);
 
   const driversQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !role) return null;
     return collection(firestore, 'roles_driver');
-  }, [firestore, user]);
+  }, [firestore, user, role]);
 
   const { data: trips, isLoading } = useCollection(tripsQuery);
   const { data: fleet } = useCollection(fleetQuery);
@@ -88,7 +88,7 @@ export default function TripsPage() {
     }
   };
 
-  if (!['CEO', 'OPERATIONS'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (role && !['CEO', 'OPERATIONS'].includes(role)) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">

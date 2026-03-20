@@ -1,7 +1,7 @@
-
 "use client";
 
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useRole } from '@/hooks/use-role';
 import { collection } from 'firebase/firestore';
 import { Truck, Route, Coins, Users, Package, Fuel } from 'lucide-react';
 import { useCurrency } from '@/hooks/use-currency';
@@ -10,14 +10,15 @@ import { useLanguage } from '@/hooks/use-language';
 export function StatCards() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { role } = useRole();
   const { format } = useCurrency();
   const { t } = useLanguage();
 
-  const fleetQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'fleet_vehicles') : null, [firestore, user]);
-  const tripsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'trips') : null, [firestore, user]);
-  const incomeQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'income') : null, [firestore, user]);
-  const inventoryQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'inventory_items') : null, [firestore, user]);
-  const locationsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'driver_locations') : null, [firestore, user]);
+  const fleetQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'fleet_vehicles') : null, [firestore, user, role]);
+  const tripsQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'trips') : null, [firestore, user, role]);
+  const incomeQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'income') : null, [firestore, user, role]);
+  const inventoryQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'inventory_items') : null, [firestore, user, role]);
+  const locationsQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'driver_locations') : null, [firestore, user, role]);
 
   const { data: fleet } = useCollection(fleetQuery);
   const { data: trips } = useCollection(tripsQuery);

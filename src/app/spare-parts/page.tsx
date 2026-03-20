@@ -26,13 +26,13 @@ export default function MechanicSparePartsPage() {
   const { t } = useLanguage();
   
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !role) return null;
     return query(
       collection(firestore, 'spare_parts_requests'),
       where('mechanicId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
-  }, [firestore, user]);
+  }, [firestore, user, role]);
 
   const { data: requests, isLoading } = useCollection(requestsQuery);
 
@@ -56,11 +56,11 @@ export default function MechanicSparePartsPage() {
     e.currentTarget.reset();
   };
 
-  if (role !== 'MECHANIC') return <div className="p-8">Access Denied</div>;
+  if (role && role !== 'MECHANIC') return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
+      <Sidebar role={role!} />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <div className="flex justify-between items-center mb-8">
           <div>

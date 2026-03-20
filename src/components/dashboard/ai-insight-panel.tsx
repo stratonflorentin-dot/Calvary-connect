@@ -1,9 +1,9 @@
-
 "use client";
 
 import { useState } from 'react';
 import { getCeoAiInsights, CeoAiInsightsOutput } from '@/ai/flows/ceo-ai-insights';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useRole } from '@/hooks/use-role';
 import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw, CheckCircle2, AlertCircle, Target } from 'lucide-react';
@@ -16,14 +16,15 @@ export function AiInsightPanel() {
   const [insight, setInsight] = useState<CeoAiInsightsOutput | null>(null);
   const firestore = useFirestore();
   const { user } = useUser();
+  const { role } = useRole();
   const { t } = useLanguage();
 
-  const fleetQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'fleet_vehicles') : null, [firestore, user]);
-  const tripsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'trips') : null, [firestore, user]);
-  const incomeQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'income') : null, [firestore, user]);
-  const expenseQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'expenses') : null, [firestore, user]);
-  const inventoryQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'inventory_items') : null, [firestore, user]);
-  const locationsQuery = useMemoFirebase(() => firestore && user ? collection(firestore, 'driver_locations') : null, [firestore, user]);
+  const fleetQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'fleet_vehicles') : null, [firestore, user, role]);
+  const tripsQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'trips') : null, [firestore, user, role]);
+  const incomeQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'income') : null, [firestore, user, role]);
+  const expenseQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'expenses') : null, [firestore, user, role]);
+  const inventoryQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'inventory_items') : null, [firestore, user, role]);
+  const locationsQuery = useMemoFirebase(() => firestore && user && role ? collection(firestore, 'driver_locations') : null, [firestore, user, role]);
 
   const { data: fleet } = useCollection(fleetQuery);
   const { data: trips } = useCollection(tripsQuery);
@@ -74,7 +75,7 @@ export function AiInsightPanel() {
         </div>
         <Button 
           onClick={generate} 
-          disabled={loading}
+          disabled={loading || !role}
           size="sm" 
           variant="outline"
           className="rounded-full border-primary text-primary hover:bg-primary hover:text-white"
