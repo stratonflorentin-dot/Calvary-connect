@@ -2,14 +2,19 @@
 "use client";
 
 import { useRole } from '@/hooks/use-role';
+import { useSupabase } from '@/components/supabase-provider';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { RoleSelector } from '@/components/dashboard/role-selector';
+import { AuthComponent } from '@/components/auth/auth-component';
 import { CeoView } from '@/components/dashboard/ceo-view';
 import { DriverView } from '@/components/dashboard/driver-view';
 import { MechanicView } from '@/components/dashboard/mechanic-view';
 import { AccountantView } from '@/components/dashboard/accountant-view';
+import { HrView } from '@/components/dashboard/hr-view';
+import { OperatorView } from '@/components/dashboard/operator-view';
 import { NotificationsBell } from '@/components/shared/notifications-bell';
+import { CurrencyDisplay } from '@/components/shared/currency-display';
 import { AiInsightPanel } from '@/components/dashboard/ai-insight-panel';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
@@ -17,7 +22,23 @@ import { Languages } from 'lucide-react';
 
 export default function Home() {
   const { role } = useRole();
+  const { user, isLoading } = useSupabase();
   const { toggleLanguage, lang } = useLanguage();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthComponent />;
+  }
 
   if (!role) return null;
 
@@ -37,12 +58,14 @@ export default function Home() {
         );
       case 'DRIVER':
         return <DriverView />;
-      case 'OPERATIONS':
-        return <CeoView />; // Operations shares CEO view with restricted sidebar access
+      case 'OPERATOR':
+        return <OperatorView />;
       case 'MECHANIC':
         return <MechanicView />;
       case 'ACCOUNTANT':
         return <AccountantView />;
+      case 'HR':
+        return <HrView />;
       default:
         return <CeoView />;
     }
@@ -51,7 +74,7 @@ export default function Home() {
   // Driver view is full-screen mobile only
   if (role === 'DRIVER') {
     return (
-      <main className="min-h-screen bg-background pb-20">
+      <main className="min-h-screen bg-background pb-20 safe-area-padding">
         {renderContent()}
         <BottomTabs role={role} />
         <RoleSelector />
@@ -62,12 +85,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar role={role} />
-      
-      <main className="flex-1 md:ml-60 min-h-screen pb-24 md:pb-8">
-        <header className="sticky top-0 h-16 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 z-40">
+
+      <main className="flex-1 md:ml-60 min-h-screen pb-24 md:pb-8 p-4 md:p-8">
+        <header className="sticky top-0 h-16 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 z-40 mb-6">
           <div className="md:hidden font-headline tracking-tighter text-primary">Calvary Connect</div>
           <div className="hidden md:block" />
           <div className="flex items-center gap-4">
+            <CurrencyDisplay />
             <Button variant="ghost" size="sm" onClick={toggleLanguage} className="rounded-full gap-2 border text-primary">
               <Languages className="size-4" />
               <span className="font-bold text-xs">{lang === 'en' ? 'SW' : 'EN'}</span>
@@ -76,7 +100,7 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="p-4 md:p-8">
+        <div className="space-y-6">
           {renderContent()}
         </div>
       </main>

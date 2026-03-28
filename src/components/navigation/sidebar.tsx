@@ -5,15 +5,18 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, Truck, Route, DollarSign, BarChart2, 
-  Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History
+  Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History, Home, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
 import { useLanguage } from '@/hooks/use-language';
+import { useSupabase } from '@/components/supabase-provider';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { signOut } = useSupabase();
 
   const ROLE_NAV: Record<UserRole, any[]> = {
     CEO: [
@@ -25,9 +28,11 @@ export function Sidebar({ role }: { role: UserRole }) {
       { label: t.inventory, icon: Package, href: '/inventory' },
       { label: t.map, icon: MapPin, href: '/map' },
       { label: t.ai_insights, icon: Sparkles, href: '/ai-insights' },
+      { label: 'Audit Log', icon: Shield, href: '/audit' },
       { label: t.notifications, icon: Bell, href: '/notifications' },
     ],
-    OPERATIONS: [
+    OPERATOR: [
+      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
       { label: t.trips, icon: Route, href: '/trips' },
       { label: t.fleet_status, icon: Truck, href: '/fleet' },
       { label: t.inventory, icon: Package, href: '/inventory' },
@@ -44,22 +49,39 @@ export function Sidebar({ role }: { role: UserRole }) {
       { label: t.notifications, icon: Bell, href: '/notifications' },
     ],
     ACCOUNTANT: [
+      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
       { label: t.expenses, icon: DollarSign, href: '/expenses' },
       { label: t.income, icon: Calculator, href: '/income' },
       { label: t.fuel_approvals, icon: Truck, href: '/fuel-approvals' },
       { label: t.allowances, icon: Users, href: '/allowances' },
       { label: t.monthly_report, icon: BarChart2, href: '/monthly-report' },
     ],
-    DRIVER: []
+    DRIVER: [
+      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
+      { label: t.trips, icon: Route, href: '/trips' },
+      { label: t.proof, icon: Home, href: '/proof' },
+      { label: t.report_maintenance, icon: History, href: '/report' },
+      { label: t.notifications, icon: Bell, href: '/notifications' },
+    ],
+    HR: [
+      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
+      { label: t.users, icon: Users, href: '/users' },
+      { label: t.allowances, icon: Users, href: '/allowances' },
+      { label: t.monthly_report, icon: BarChart2, href: '/monthly-report' },
+      { label: t.notifications, icon: Bell, href: '/notifications' },
+    ]
   };
 
   const navItems = ROLE_NAV[role] || [];
 
   return (
     <aside className="hidden md:flex flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50">
-      <div className="p-6">
-        <h1 className="font-headline text-2xl tracking-tighter text-white">Calvary</h1>
-        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/50 font-medium">Connect</p>
+      <div className="p-6 flex items-center justify-between">
+        <div>
+          <h1 className="font-headline text-2xl tracking-tighter text-white">Calvary</h1>
+          <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/50 font-medium">Connect</p>
+        </div>
+        <NotificationBell />
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
@@ -84,7 +106,10 @@ export function Sidebar({ role }: { role: UserRole }) {
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-destructive hover:text-white transition-all">
+        <button 
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-destructive hover:text-white transition-all"
+          onClick={signOut}
+        >
           <LogOut className="size-5" />
           <span>{t.logout}</span>
         </button>

@@ -10,30 +10,65 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { useFirestore, useCollection, useMemoFirebase, useUser, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  severity: 'critical' | 'warning' | 'success' | 'info';
+  isRead: boolean;
+  created_at: string;
+}
 
 export function NotificationsBell() {
-  const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useSupabase();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const notificationsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'notifications'),
-      orderBy('createdAt', 'desc'),
-      limit(10)
-    );
-  }, [firestore, user]);
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!user) {
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
 
-  const { data: notifications } = useCollection(notificationsQuery);
+      try {
+        // Debug: Check if supabase is available
+        if (!supabase) {
+          console.error('Supabase client not available');
+          setNotifications([]);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Supabase client available, loading notifications...');
+        
+        // Use empty notifications for now - database disabled
+        setNotifications([]);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+        setNotifications([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotifications();
+  }, [user]);
+
   const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
 
   const handleMarkAsRead = (id: string) => {
-    if (!firestore || !user) return;
-    const notifRef = doc(firestore, 'users', user.uid, 'notifications', id);
-    updateDocumentNonBlocking(notifRef, { isRead: true });
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, isRead: true } : notif
+      )
+    );
   };
 
   const getIcon = (severity: string) => {
@@ -64,7 +99,11 @@ export function NotificationsBell() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="m-0" />
         <div className="max-h-96 overflow-y-auto">
-          {(!notifications || notifications.length === 0) ? (
+          {loading ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              Loading notifications...
+            </div>
+          ) : (!notifications || notifications.length === 0) ? (
             <div className="p-8 text-center text-muted-foreground text-sm">
               No notifications yet.
             </div>
@@ -87,7 +126,7 @@ export function NotificationsBell() {
                     )}>{notif.title}</span>
                   </div>
                   <span className="text-[10px] text-muted-foreground">
-                    {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                    {notif.created_at ? new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2">{notif.message}</p>

@@ -1,0 +1,33 @@
+<!-- Apple Touch Icon - 180x180 for iOS devices -->
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="#1e40af"/>
+  
+  <!-- Main truck body (scaled up) -->
+  <path d="M20 60C20 48.9543 28.9543 40 40 40H120C131.0457 40 140 48.9543 140 60V100C140 111.0457 131.0457 120 120 120H40C28.9543 120 20 111.0457 20 100V60Z" fill="#ffffff"/>
+  
+  <!-- Truck cab -->
+  <path d="M140 65C140 59.4772 144.4772 55 150 55H160C165.5228 55 170 59.4772 170 65V95C170 100.5228 165.5228 105 160 105H150C144.4772 105 140 100.5228 140 95V65Z" fill="#ffffff"/>
+  
+  <!-- Cargo area -->
+  <rect x="30" y="50" width="90" height="60" rx="5" fill="#60a5fa"/>
+  
+  <!-- Cargo load -->
+  <rect x="40" y="60" width="70" height="30" rx="3" fill="#fbbf24"/>
+  
+  <!-- Wheels -->
+  <circle cx="50" cy="130" r="15" fill="#1f2937"/>
+  <circle cx="100" cy="130" r="15" fill="#1f2937"/>
+  <circle cx="150" cy="130" r="10" fill="#1f2937"/>
+  
+  <!-- Wheel hubs -->
+  <circle cx="50" cy="130" r="5" fill="#6b7280"/>
+  <circle cx="100" cy="130" r="5" fill="#6b7280"/>
+  <circle cx="150" cy="130" r="4" fill="#6b7280"/>
+  
+  <!-- Cab window -->
+  <rect x="145" y="60" width="20" height="15" rx="2" fill="#dbeafe"/>
+  
+  <!-- Fleet branding -->
+  <text x="90" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ffffff">FLEET COMMAND</text>
+</svg>

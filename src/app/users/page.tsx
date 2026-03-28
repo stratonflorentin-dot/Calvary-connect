@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,51 +16,89 @@ import { UserPlus, Search, Mail, Shield } from 'lucide-react';
 
 export default function UsersPage() {
   const { role } = useRole();
-  const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useSupabase();
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'users');
-  }, [firestore, user]);
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: users, isLoading } = useCollection(usersQuery);
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        // Load real data from Supabase
+        const { data: usersData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        setUsers(usersData || []);
+      } catch (error) {
+        console.error('Error loading users:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, [user]);
 
   const filteredUsers = users?.filter(u => 
     u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddUser = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!firestore) return;
-    const formData = new FormData(e.currentTarget);
-    const userData = {
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-      role: formData.get('role') as string,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    };
-
-    // 1. Add to main users collection
-    const newUserRef = doc(collection(firestore, 'users'));
-    setDocumentNonBlocking(newUserRef, { ...userData, id: newUserRef.id }, { merge: true });
-
-    // 2. Add to dedicated role collection for "Authorization Independence"
-    const roleCollection = `roles_${userData.role.toLowerCase()}`;
-    const roleDocRef = doc(firestore, roleCollection, newUserRef.id);
-    setDocumentNonBlocking(roleDocRef, { ...userData, id: newUserRef.id }, { merge: true });
     
-    e.currentTarget.reset();
+    try {
+      const formData = new FormData(e.currentTarget);
+      const userData = {
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        role: formData.get('role') as string,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Only CEO and ADMIN can create CEO users
+      if (userData.role === 'CEO' && role !== 'CEO' && role !== 'ADMIN') {
+        console.error("You don't have permission to create CEO users.");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .insert([userData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding user:', error);
+      } else {
+        console.log('User added successfully:', data);
+        // Refresh users list
+        const { data: updatedUsers } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        setUsers(updatedUsers || []);
+        setIsAddDialogOpen(false);
+        e.currentTarget.reset();
+      }
+    } catch (error) {
+      console.error('Error adding user:', error);
+    }
   };
 
-  if (role !== 'CEO') return <div className="p-8">Access Denied</div>;
+  if (!['CEO', 'HR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
+      <Sidebar role={role!} />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -81,7 +119,7 @@ export default function UsersPage() {
               <form onSubmit={handleAddUser} className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" placeholder="John Doe" required />
+                  <Input id="name" name="name" placeholder="Full name" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
@@ -94,8 +132,9 @@ export default function UsersPage() {
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="CEO">CEO</SelectItem>
-                      <SelectItem value="OPERATIONS">Operations</SelectItem>
+                      {(role === "CEO" || role === "ADMIN") && <SelectItem value="CEO">CEO</SelectItem>}
+                      <SelectItem value="HR">HR</SelectItem>
+                      <SelectItem value="OPERATOR">Operations</SelectItem>
                       <SelectItem value="DRIVER">Driver</SelectItem>
                       <SelectItem value="MECHANIC">Mechanic</SelectItem>
                       <SelectItem value="ACCOUNTANT">Accountant</SelectItem>

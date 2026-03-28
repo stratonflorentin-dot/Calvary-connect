@@ -2,42 +2,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * CALVARY CONNECT SECURITY RULES - PROTOTYPING MODE
-     * 
-     * Core Philosophy:
-     * This ruleset enforces a strict role-based and ownership-based access control model (RBAC/OBAC).
-     * It is designed for rapid prototyping, meaning it focuses heavily on WHO can access 
-     * data rather than the specific SHAPE of the data. 
-     * 
-     * Data Structure:
-     * - Most entities are stored in top-level collections for global management.
-     * - Notifications are nested under /users/{userId} for strict privacy and efficient querying.
-     * 
-     * Key Security Decisions:
-     * 1. HR Role: Added as a high-level administrative role assisting the CEO, with broad read access 
-     *    across all panels (Finance, Fleet, Trips, Inventory).
-     * 2. Financial Dashboard: Both Income and Expenses are secured for Accountant writes and 
-     *    CEO/HR/Accountant reads to ensure auditability.
-     * 3. Fuel & Allowances: Specific workflows allow Drivers/Workers to request fuel or see 
-     *    their own allowances, while Accountants manage the lifecycle.
-     * 4. Denormalization for Authorization: Critical IDs (driverId, userId, approvedByUserId) 
-     *    are expected directly on documents to avoid costly get() lookups.
-     * 
-     * Structural Segregation:
-     * Personal data (Notifications) is isolated in subcollections to guarantee zero-leakage 
-     * between users without complex query filters.
-     */
-
-    // --- GLOBAL HELPER FUNCTIONS ---
-
     function isSignedIn() {
       return request.auth != null;
     }
 
     function getUserData() {
-      // NOTE: This assumes user profiles are always accessible to the current user.
-      // If a user's profile is deleted, this `get()` operation would fail.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
@@ -53,195 +22,255 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- COLLECTION RULES ---
+    // --- Users & notifications ---
 
-    /**
-     * @description Access rules for individual user profiles.
-     * @path /users/{userId}
-     * @allow CEO can create/update all users. Owners can read/update their own profile. HR can read all.
-     * @deny Non-owners and non-admins reading or writing to other user profiles.
-     * @principle Enforces identity integrity and role-based administration.
-     */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAnyRole(['CEO', 'HR', 'Accountant', 'Operations']);
-      allow list: if isAnyRole(['CEO', 'HR', 'Accountant', 'Operations']);
+      allow get: if isOwner(userId) || isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']);
+      allow list: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']);
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if (isOwner(userId) && resource != null) || hasRole('CEO');
       allow delete: if hasRole('CEO') && resource != null;
 
-      /**
-       * @description Private user notifications.
-       * @path /users/{userId}/notifications/{notificationId}
-       * @allow User reading and managing their own notifications.
-       * @deny Anyone reading another user's notification feed.
-       * @principle Path-based authorization for private subcollections.
-       */
       match /notifications/{notificationId} {
-        allow read, write: if isOwner(userId);
+        allow read, write, delete: if isOwner(userId) || hasRole('CEO');
       }
     }
 
-    /**
-     * @description Management of customer/client data.
-     * @path /customers/{customerId}
-     * @allow CEO to manage; Operations/Accountant/HR to view.
-     * @deny Mechanics or Drivers accessing business client lists.
-     * @principle Restricts customer PII to administrative roles.
-     */
+    match /meetings/{meetingId} {
+      allow read: if isAnyRole(['CEO', 'HR']) || (isSignedIn() && resource.data.participants != null && request.auth.uid in resource.data.participants);
+      allow create, update: if isAnyRole(['CEO', 'HR']);
+      allow delete: if hasRole('CEO') && resource != null;
+    }
+
     match /customers/{customerId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Operations', 'Accountant']);
-      allow create, update, delete: if hasRole('CEO') || (resource != null && hasRole('CEO'));
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT']);
+      allow create, update, delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Fleet vehicle records and maintenance status.
-     * @path /fleetVehicles/{fleetVehicleId}
-     * @allow Operations/Mechanic to update status; HR/CEO to view.
-     * @deny Drivers or Accountants modifying vehicle technical specs.
-     * @principle Role-based write access for operational maintenance.
-     */
-    match /fleetVehicles/{fleetVehicleId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Operations', 'Mechanic', 'Driver']);
-      allow create: if isAnyRole(['CEO', 'Operations']);
-      allow update: if (isAnyRole(['CEO', 'Operations', 'Mechanic']) && resource != null);
-      allow delete: if hasRole('CEO') && resource != null;
+    // App uses snake_case collection names (see src/)
+
+    match /fleet_vehicles/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']);
+      allow create, update: if isAnyRole(['CEO', 'OPERATOR']);
+      allow delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Core logistics journey records.
-     * @path /trips/{tripId}
-     * @allow Assigned Drivers to update status; Operations/CEO/HR to manage.
-     * @deny Drivers modifying trips not assigned to them.
-     * @principle Validates assigned ownership for operational updates.
-     */
     match /trips/{tripId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Operations', 'Accountant']) || (resource.data.driverId == request.auth.uid);
-      allow create: if isAnyRole(['CEO', 'Operations']);
-      allow update: if (isAnyRole(['CEO', 'Operations']) && resource != null) || (resource != null && resource.data.driverId == request.auth.uid);
-      allow delete: if hasRole('CEO') && resource != null;
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT']) || (resource.data.driverId == request.auth.uid);
+      allow create: if isAnyRole(['CEO', 'OPERATOR']);
+      allow update: if (isAnyRole(['CEO', 'OPERATOR']) && resource != null) || (resource != null && resource.data.driverId == request.auth.uid);
+      allow delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Financial revenue records.
-     * @path /incomeRecords/{incomeRecordId}
-     * @allow Accountants to record income; CEO/HR to view.
-     * @deny Operational staff or mechanics viewing revenue.
-     * @principle Segregation of duties for financial oversight.
-     */
-    match /incomeRecords/{incomeRecordId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Accountant']);
-      allow create, update: if hasRole('Accountant');
-      allow delete: if hasRole('CEO') && resource != null;
+    match /trips/{tripId}/delivery_proofs/{proofId} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT'])
+        || (exists(/databases/$(database)/documents/trips/$(tripId))
+            && get(/databases/$(database)/documents/trips/$(tripId)).data.driverId == request.auth.uid);
+      allow create: if isSignedIn()
+        && exists(/databases/$(database)/documents/trips/$(tripId))
+        && get(/databases/$(database)/documents/trips/$(tripId)).data.driverId == request.auth.uid;
+      allow update, delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Operational expense records.
-     * @path /expenseRecords/{expenseRecordId}
-     * @allow Accountant/CEO management; HR viewing.
-     * @deny General staff modifying financial records.
-     * @principle Centralized expense management for financial tracing.
-     */
-    match /expenseRecords/{expenseRecordId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Accountant', 'Operations']);
-      allow create: if isAnyRole(['Accountant', 'Operations', 'CEO']);
-      allow update: if (isAnyRole(['Accountant', 'CEO']) && resource != null);
-      allow delete: if hasRole('CEO') && resource != null;
+    match /allowances/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']) || (resource.data.userId == request.auth.uid);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Worker allowance tracking.
-     * @path /allowances/{allowanceId}
-     * @allow Workers to see their own; Accountant/HR/CEO to manage.
-     * @deny Users seeing other workers' per diems or bonuses.
-     * @principle Individual data ownership with administrative oversight.
-     */
-    match /allowances/{allowanceId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Accountant']) || (resource.data.userId == request.auth.uid);
-      allow create, update: if hasRole('Accountant');
-      allow delete: if hasRole('CEO') && resource != null;
+    match /fuel_requests/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']) || (resource.data.driverId == request.auth.uid);
+      allow create: if isAnyRole(['DRIVER', 'CEO', 'OPERATOR']) && request.resource.data.driverId == request.auth.uid;
+      allow update: if isAnyRole(['ACCOUNTANT', 'OPERATOR', 'CEO']);
+      allow delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Fuel requests submitted by drivers.
-     * @path /fuelRequests/{fuelRequestId}
-     * @allow Drivers to create for themselves; Accountants to approve.
-     * @deny Drivers approving their own requests.
-     * @principle Multi-party approval for high-risk spending.
-     */
-    match /fuelRequests/{fuelRequestId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Accountant', 'Operations']) || (resource.data.driverId == request.auth.uid);
-      allow create: if isAnyRole(['Driver', 'CEO', 'Operations']) && request.resource.data.driverId == request.auth.uid;
-      allow update: if (isAnyRole(['Accountant', 'Operations', 'CEO']) && resource != null);
-      allow delete: if hasRole('CEO') && resource != null;
+    match /maintenance_requests/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']);
+      allow create: if isAnyRole(['MECHANIC', 'DRIVER', 'OPERATOR', 'CEO']);
+      allow update: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
+      allow delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Vehicle maintenance logs.
-     * @path /maintenanceRequests/{maintenanceRequestId}
-     * @allow Mechanics and Operations to manage the maintenance lifecycle.
-     * @deny Accountants or HR modifying technical logs.
-     * @principle Functional segregation of technical vehicle data.
-     */
-    match /maintenanceRequests/{maintenanceRequestId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Operations', 'Mechanic', 'Driver']);
-      allow create: if isAnyRole(['Mechanic', 'Driver', 'Operations', 'CEO']);
-      allow update: if (isAnyRole(['Mechanic', 'Operations', 'CEO']) && resource != null);
-      allow delete: if hasRole('CEO') && resource != null;
+    match /inventory_items/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow create, update: if isAnyRole(['OPERATOR', 'CEO', 'MECHANIC']);
+      allow delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Parts and supplies inventory.
-     * @path /inventoryItems/{inventoryItemId}
-     * @allow Operations management; Mechanic usage logging.
-     * @deny Unsigned users or non-operational staff writing.
-     * @principle Controlled access to company physical assets.
-     */
-    match /inventoryItems/{inventoryItemId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Operations', 'Mechanic']);
-      allow create: if isAnyRole(['Operations', 'CEO']);
-      allow update: if (isAnyRole(['Operations', 'Mechanic', 'CEO']) && resource != null);
-      allow delete: if hasRole('CEO') && resource != null;
+    match /spare_parts_requests/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
+      allow update: if isAnyRole(['OPERATOR', 'CEO']);
+      allow delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Audit logs for inventory consumption.
-     * @path /inventoryUsageLogs/{inventoryUsageLogId}
-     * @allow Mechanics and Operations to create logs.
-     * @deny Modification of logs once created (audit integrity).
-     * @principle Immutable audit trail for stock consumption.
-     */
-    match /inventoryUsageLogs/{inventoryUsageLogId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Operations', 'Mechanic']);
-      allow create: if isAnyRole(['Mechanic', 'Operations', 'CEO']);
-      allow update, delete: if hasRole('CEO') && resource != null;
+    match /driver_locations/{driverId} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR']);
+      allow create, update: if request.auth.uid == driverId || hasRole('CEO');
+      allow delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Requests for new parts or tools.
-     * @path /sparePartsRequests/{sparePartsRequestId}
-     * @allow Mechanics to request; Operations/CEO to approve.
-     * @deny HR or Accountants modifying technical requests.
-     * @principle Work-order flow with administrative approval.
-     */
-    match /sparePartsRequests/{sparePartsRequestId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Operations', 'Mechanic']);
-      allow create: if isAnyRole(['Mechanic', 'Operations', 'CEO']);
-      allow update: if (isAnyRole(['Operations', 'CEO']) && resource != null);
-      allow delete: if hasRole('CEO') && resource != null;
+    match /roles_driver/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR']);
+      allow write, delete: if hasRole('CEO');
     }
 
-    /**
-     * @description Visual confirmation of delivery.
-     * @path /deliveryProofs/{deliveryProofId}
-     * @allow Drivers to upload; Operations/CEO/HR to view.
-     * @deny Mechanics or Accountants modifying delivery proof images.
-     * @principle Verifiable proof of service completion.
-     */
-    match /deliveryProofs/{deliveryProofId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'Operations']);
-      allow create: if isAnyRole(['Driver', 'Operations', 'CEO']) && request.resource.data.uploadedByUserId == request.auth.uid;
-      allow update, delete: if hasRole('CEO') && resource != null;
+    match /roles_mechanic/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow write, delete: if hasRole('CEO');
     }
 
+    // Finance ledgers (accountant + CEO; CEO deletes)
+
+    match /sales/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /purchases/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /expenses/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']);
+      allow create: if isAnyRole(['DRIVER', 'ACCOUNTANT', 'CEO']);
+      allow update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /taxes/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /invoices/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /financial_reports/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /income/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    // Legacy camelCase paths (keep if old data exists)
+
+    match /fleetVehicles/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']);
+      allow create: if isAnyRole(['CEO', 'OPERATOR']);
+      allow update: if isAnyRole(['CEO', 'OPERATOR', 'MECHANIC']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /incomeRecords/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if hasRole('ACCOUNTANT');
+      allow delete: if hasRole('CEO');
+    }
+
+    match /expenseRecords/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']);
+      allow create: if isAnyRole(['ACCOUNTANT', 'OPERATOR', 'CEO']);
+      allow update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /fuelRequests/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']) || (resource.data.driverId == request.auth.uid);
+      allow create: if isAnyRole(['DRIVER', 'CEO', 'OPERATOR']) && request.resource.data.driverId == request.auth.uid;
+      allow update: if isAnyRole(['ACCOUNTANT', 'OPERATOR', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /inventoryItems/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow create: if isAnyRole(['OPERATOR', 'CEO']);
+      allow update: if isAnyRole(['OPERATOR', 'MECHANIC', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /inventoryUsageLogs/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
+      allow update, delete: if hasRole('CEO');
+    }
+
+    match /sparePartsRequests/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
+      allow update: if isAnyRole(['OPERATOR', 'CEO']);
+      allow delete: if hasRole('CEO');
+    }
+
+    match /deliveryProofs/{id} {
+
+    // New Fleet Management Collections
+    
+    match /vehicles/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']) || isSignedIn();
+      allow create, update: if isAnyRole(['CEO', 'OPERATOR']) || isSignedIn();
+      allow delete: if hasRole('CEO');
+    }
+    
+    match /trips/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT']) || (resource.data.driverId == request.auth.uid) || isSignedIn();
+      allow create: if isAnyRole(['CEO', 'OPERATOR']) || isSignedIn();
+      allow update: if (isAnyRole(['CEO', 'OPERATOR']) && resource != null) || (resource != null && resource.data.driverId == request.auth.uid) || isSignedIn();
+      allow delete: if hasRole('CEO');
+    }
+    
+    match /expenses/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']) || (resource.data.driverId == request.auth.uid) || isSignedIn();
+      allow create: if isAnyRole(['DRIVER', 'ACCOUNTANT', 'CEO']) || isSignedIn();
+      allow update: if isAnyRole(['ACCOUNTANT', 'CEO']) || isSignedIn();
+      allow delete: if hasRole('CEO');
+    }
+    
+    match /maintenance_requests/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']) || isSignedIn();
+      allow create: if isAnyRole(['MECHANIC', 'DRIVER', 'OPERATOR', 'CEO']) || isSignedIn();
+      allow update: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']) || isSignedIn();
+      allow delete: if hasRole('CEO');
+    }
+    
+    match /spare_parts/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']) || isSignedIn();
+      allow create, update: if isAnyRole(['OPERATOR', 'CEO', 'MECHANIC']) || isSignedIn();
+      allow delete: if hasRole('CEO');
+    }
+    
+    match /parts_requests/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']) || isSignedIn();
+      allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']) || isSignedIn();
+      allow update: if isAnyRole(['OPERATOR', 'CEO']) || isSignedIn();
+      allow delete: if hasRole('CEO');
+    }
+    
+    match /allowances/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']) || (resource.data.employeeId == request.auth.uid) || isSignedIn();
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO', 'HR']) || isSignedIn();
+      allow delete: if hasRole('CEO');
+    }
+
+    // CEO: full access to any path not matched above (covers new collections and admin tasks)
+    match /{document=**} {
+      allow read, write, delete: if hasRole('CEO');
+    }
   }
 }
+}  
+ }  
+ 

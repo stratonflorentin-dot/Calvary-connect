@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useUser } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,36 +15,80 @@ import { Package, Plus, AlertCircle } from 'lucide-react';
 
 export default function InventoryPage() {
   const { role } = useRole();
-  const firestore = useFirestore();
-  const { user } = useUser();
-  
-  const inventoryQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'inventory_items');
-  }, [firestore, user]);
+  const { user } = useSupabase();
+  const [inventory, setInventory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: inventory, isLoading } = useCollection(inventoryQuery);
-
-  const handleAddItem = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!firestore) return;
-    const formData = new FormData(e.currentTarget);
-    const itemData = {
-      itemName: formData.get('name') as string,
-      category: formData.get('category') as string,
-      quantityAvailable: Number(formData.get('quantity')),
-      quantityUsed: 0,
-      unit: formData.get('unit') as string,
-      reorderLevel: 5,
-      status: 'In Stock',
-      createdAt: new Date().toISOString(),
+  useEffect(() => {
+    const loadInventory = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          console.error('Error loading inventory:', error);
+        } else {
+          setInventory(data || []);
+        }
+      } catch (error) {
+        console.log('Inventory loading error:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    addDocumentNonBlocking(collection(firestore, 'inventory_items'), itemData);
-    e.currentTarget.reset();
+    loadInventory();
+  }, [user]);
+
+  const handleAddItem = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.currentTarget);
+      const itemData = {
+        item_name: formData.get('name') as string,
+        quantity_available: parseInt(formData.get('quantity') as string),
+        unit: formData.get('unit') as string,
+        category: formData.get('category') as string,
+        min_stock_level: 10, // Default minimum stock
+        created_by: user?.id
+      };
+      
+      const { error } = await supabase
+        .from('inventory')
+        .insert(itemData);
+        
+      if (error) {
+        console.log('Add item error - skipping:', error);
+        return;
+      }
+      
+      // Refresh inventory
+      const { data: refreshedData, error: refreshError } = await supabase
+        .from('inventory')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+        
+      if (!refreshError && refreshedData) {
+        setInventory(refreshedData);
+      }
+      
+      e.currentTarget.reset();
+      console.log('Inventory item added successfully');
+    } catch (error) {
+        console.log('Refresh inventory error - skipping:', error);
+      }
   };
 
-  if (!['CEO', 'OPERATIONS', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!['CEO', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -111,19 +155,19 @@ export default function InventoryPage() {
                 <TableRow key={item.id}>
                   <td className="px-6 py-4 font-medium flex items-center gap-3">
                     <Package className="size-5 text-muted-foreground" />
-                    {item.itemName}
+                    {item.item_name}
                   </td>
-                  <td>{item.category}</td>
+                  <td>{item.category || 'Uncategorized'}</td>
                   <td>
-                    <span className="font-bold">{item.quantityAvailable}</span> {item.unit}
+                    <span className="font-bold">{item.quantity_available}</span> {item.unit}
                   </td>
                   <td>
-                    <Badge className={item.quantityAvailable < 10 ? 'bg-rose-500' : 'bg-emerald-500'}>
-                      {item.quantityAvailable < 10 ? 'Low Stock' : 'In Stock'}
+                    <Badge className={item.quantity_available <= item.min_stock_level ? 'bg-rose-500' : 'bg-emerald-500'}>
+                      {item.quantity_available <= item.min_stock_level ? 'Low Stock' : 'In Stock'}
                     </Badge>
                   </td>
                   <td className="text-right px-6">
-                    {item.quantityAvailable < 10 && <AlertCircle className="size-4 text-rose-500 inline" />}
+                    {item.quantity_available <= item.min_stock_level && <AlertCircle className="size-4 text-rose-500 inline" />}
                   </td>
                 </TableRow>
               ))}

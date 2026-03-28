@@ -3,8 +3,8 @@
 
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,56 +13,84 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Wrench, Clock, CheckCircle2, AlertTriangle, Truck } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
 
 export default function ServiceRequestsPage() {
   const { role } = useRole();
-  const firestore = useFirestore();
-  const { user } = useUser();
-  
-  const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'maintenance_requests'), orderBy('reportedAt', 'desc'));
-  }, [firestore, user]);
+  const { user } = useSupabase();
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: requests, isLoading } = useCollection(requestsQuery);
+  useEffect(() => {
+    const loadRequests = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Load real maintenance requests from Supabase
+        const { data: maintenanceRequests, error } = await supabase
+          .from('maintenance_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        setRequests(maintenanceRequests || []);
+      } catch (error) {
+        console.error('Error loading service requests:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleStartWork = (requestId: string) => {
-    if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'maintenance_requests', requestId), {
-      status: 'in_progress',
-      startedAt: new Date().toISOString()
-    });
-    toast({ title: "Work Started", description: "Truck status updated to 'In Progress'" });
+    loadRequests();
+  }, [user]);
+
+  const handleStartWork = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from('maintenance_requests')
+        .update({ status: 'in_progress' })
+        .eq('id', requestId);
+      
+      if (error) throw error;
+      
+      setRequests(prev => 
+        prev.map(r => r.id === requestId ? { ...r, status: 'in_progress' } : r)
+      );
+    } catch (error) {
+      console.error('Error starting work:', error);
+    }
   };
 
-  const handleCompleteRepair = (e: React.FormEvent<HTMLFormElement>, requestId: string, vehicleId: string) => {
+  const handleCompleteRepair = async (e: React.FormEvent<HTMLFormElement>, requestId: string, vehicleId: string) => {
     e.preventDefault();
-    if (!firestore) return;
     const formData = new FormData(e.currentTarget);
-    const log = formData.get('log') as string;
-    const condition = formData.get('condition') as string;
-
-    // 1. Update Maintenance Request
-    updateDocumentNonBlocking(doc(firestore, 'maintenance_requests', requestId), {
-      status: 'completed',
-      completedAt: new Date().toISOString(),
-      serviceLog: log,
-      truckConditionAfterService: condition
-    });
-
-    // 2. Update Vehicle Status & Condition
-    updateDocumentNonBlocking(doc(firestore, 'fleet_vehicles', vehicleId), {
-      status: 'Available',
-      condition: condition,
-      lastMaintenanceDate: new Date().toISOString()
-    });
-
-    toast({ title: "Repair Completed", description: "Service report saved and truck is now Available." });
+    const notes = formData.get('notes') as string;
+    
+    try {
+      const { error } = await supabase
+        .from('maintenance_requests')
+        .update({ 
+          status: 'completed',
+          description: notes
+        })
+        .eq('id', requestId);
+      
+      if (error) throw error;
+      
+      setRequests(prev => 
+        prev.map(r => r.id === requestId ? { ...r, status: 'completed' } : r)
+      );
+      e.currentTarget.reset();
+    } catch (error) {
+      console.error('Error completing repair:', error);
+    }
   };
 
-  if (!['CEO', 'OPERATIONS', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!['CEO', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -74,7 +102,7 @@ export default function ServiceRequestsPage() {
         </header>
 
         <div className="grid grid-cols-1 gap-4">
-          {isLoading ? (
+          {loading ? (
             <div className="py-12 text-center">Loading requests...</div>
           ) : requests?.length === 0 ? (
             <div className="py-12 text-center bg-white rounded-2xl border border-dashed">
@@ -98,7 +126,7 @@ export default function ServiceRequestsPage() {
                           Request #{r.id.slice(0, 8)}
                         </Badge>
                       </div>
-                      
+
                       <div className="space-y-1">
                         <h3 className="font-headline text-lg">{r.issueDescription}</h3>
                         <p className="text-xs text-muted-foreground flex items-center gap-2">
@@ -118,7 +146,7 @@ export default function ServiceRequestsPage() {
                           <Wrench className="size-4" /> Start Work
                         </Button>
                       )}
-                      
+
                       {r.status === 'in_progress' && (
                         <Dialog>
                           <DialogTrigger asChild>
@@ -133,11 +161,11 @@ export default function ServiceRequestsPage() {
                             <form onSubmit={(e) => handleCompleteRepair(e, r.id, r.fleetVehicleId)} className="space-y-4 pt-4">
                               <div className="space-y-2">
                                 <Label htmlFor="log">Work Performed (Service Log)</Label>
-                                <Textarea 
-                                  id="log" 
-                                  name="log" 
-                                  placeholder="Describe what was fixed, parts replaced, etc." 
-                                  required 
+                                <Textarea
+                                  id="log"
+                                  name="log"
+                                  placeholder="Describe what was fixed, parts replaced, etc."
+                                  required
                                   className="min-h-[120px]"
                                 />
                               </div>
@@ -170,7 +198,7 @@ export default function ServiceRequestsPage() {
                       <Badge className={cn(
                         "w-full justify-center py-1 mt-auto",
                         r.status === 'completed' ? 'bg-emerald-500' :
-                        r.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : 'bg-slate-400'
+                          r.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : 'bg-slate-400'
                       )}>
                         {r.status.toUpperCase()}
                       </Badge>

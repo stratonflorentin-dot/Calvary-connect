@@ -2,39 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { UserRole } from '@/types/roles';
-import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useSupabase } from '@/components/supabase-provider';
 
 export function useRole() {
   const [role, setRole] = useState<UserRole | null>(null);
-  const { user } = useUser();
-  const firestore = useFirestore();
+  const { user } = useSupabase();
 
   useEffect(() => {
     const savedRole = localStorage.getItem('fleet_command_role') as UserRole;
     if (savedRole) {
       setRole(savedRole);
+    } else if (user) {
+      // User has a role from Supabase profile
+      setRole(user.role);
     } else {
-      setRole('CEO'); // Default for demo
+      // Default to CEO for demo/access
+      setRole('CEO');
+      localStorage.setItem('fleet_command_role', 'CEO');
     }
-  }, []);
-
-  useEffect(() => {
-    // Sync the local role to Firestore for the authenticated user
-    // This allows Security Rules (Authorization Independence) to verify the role via exists() checks.
-    if (user && role && firestore) {
-      const roleCollection = `roles_${role.toLowerCase()}`;
-      const roleDocRef = doc(firestore, roleCollection, user.uid);
-      
-      setDocumentNonBlocking(roleDocRef, { 
-        id: user.uid,
-        name: user.displayName || 'Demo User',
-        email: user.email || 'anonymous@calvary.com',
-        role: role,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    }
-  }, [user, role, firestore]);
+  }, [user]);
 
   const changeRole = (newRole: UserRole) => {
     setRole(newRole);

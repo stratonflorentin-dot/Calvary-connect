@@ -1,13 +1,14 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages, Wrench, Phone, Truck as TruckIcon } from 'lucide-react';
+import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages, Wrench, Phone, Truck as TruckIcon, ClipboardList, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -20,30 +21,156 @@ import { useLanguage } from '@/hooks/use-language';
 export function DriverView() {
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [mileage, setMileage] = useState(12450);
-  const { user } = useUser();
-  const firestore = useFirestore();
+  const [mileage, setMileage] = useState(0);
+  const { user } = useSupabase();
   const { format, toggleCurrency } = useCurrency();
   const { lang, toggleLanguage, t } = useLanguage();
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [uploadedPhotos, setUploadedPhotos] = useState<any[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Query for the driver's active trip
-  const activeTripQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, 'trips'),
-      where('driverId', '==', user.uid),
-      where('status', 'in', ['created', 'loaded', 'in_transit']),
-      limit(1)
-    );
-  }, [firestore, user]);
+  // Demo data for driver functionality
+  const [activeTrips, setActiveTrips] = useState([]);
+  const [myTrips, setMyTrips] = useState([]);
+  const [myAllowances, setMyAllowances] = useState([]);
 
-  const { data: activeTrips } = useCollection(activeTripQuery);
+  useEffect(() => {
+    const loadDriverData = async () => {
+      if (!user) return;
+      
+      try {
+        // Load real trips assigned to this driver
+        const { data: driverTrips } = await supabase
+          .from('trips')
+          .select('*')
+          .eq('driver_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        // Load real photos for this driver
+        const { data: driverPhotos } = await supabase
+          .from('driver_photos')
+          .select('*')
+          .eq('driver_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        setUploadedPhotos(driverPhotos || []);
+        
+        // Load real allowances for this driver
+        const { data: driverAllowances } = await supabase
+          .from('driver_allowances')
+          .select('*')
+          .eq('driver_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        // Separate active and completed trips
+        const active = driverTrips?.filter(trip => trip.status === 'in_transit' || trip.status === 'loading') || [];
+        const completed = driverTrips?.filter(trip => trip.status === 'completed' || trip.status === 'delivered') || [];
+        
+        setActiveTrips(active);
+        setMyTrips(completed);
+        setMyAllowances(driverAllowances || []);
+        
+        // Auto-generate allowance for new trips
+        if (driverTrips && driverAllowances) {
+          for (const trip of driverTrips) {
+            const hasAllowance = driverAllowances.some(allowance => 
+              allowance.trip_id === trip.id
+            );
+            
+            if (!hasAllowance && (trip.status === 'in_transit' || trip.status === 'loading')) {
+              // Calculate allowance based on trip distance/duration
+              const allowanceAmount = calculateAllowance(trip);
+              
+              await supabase.from('driver_allowances').insert({
+                driver_id: user.id,
+                trip_id: trip.id,
+                amount: allowanceAmount,
+                status: 'approved',
+                created_at: new Date().toISOString(),
+                reason: `Trip allowance: ${trip.origin} → ${trip.destination}`
+              });
+            }
+          }
+          
+          // Refresh allowances after adding new ones
+          const { data: refreshedAllowances } = await supabase
+            .from('driver_allowances')
+            .select('*')
+            .eq('driver_id', user.id);
+          setMyAllowances(refreshedAllowances || []);
+        }
+        
+      } catch (error) {
+        console.error('Error loading driver data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDriverData();
+  }, [user]);
+
+  // Calculate allowance based on trip details
+  const calculateAllowance = (trip: any) => {
+    // Base allowance calculation
+    let baseAmount = 500; // Base amount for any trip
+    
+    // Distance-based allowance
+    if (trip.distance) {
+      const distance = parseInt(trip.distance.toString().replace(/[^0-9]/g, ''));
+      baseAmount += Math.floor(distance * 0.5); // 0.5 per km
+    }
+    
+    // Time-based allowance
+    if (trip.estimated_time) {
+      const hours = parseInt(trip.estimated_time.toString().replace(/[^0-9]/g, ''));
+      baseAmount += hours * 100; // 100 per hour
+    }
+    
+    // Cargo type adjustments
+    if (trip.cargo) {
+      const cargoType = trip.cargo.toLowerCase();
+      if (cargoType.includes('perishable')) baseAmount += 200;
+      if (cargoType.includes('hazardous') || cargoType.includes('dangerous')) baseAmount += 300;
+      if (cargoType.includes('heavy') || cargoType.includes('machinery')) baseAmount += 150;
+    }
+    
+    return baseAmount;
+  };
+
   const activeTrip = activeTrips?.[0];
+
+  const myTripsSorted = useMemo(() => {
+    if (!myTrips?.length) return [];
+    return [...myTrips].sort((a, b) => {
+      const ta = (a.created_at as string) || '';
+      const tb = (b.created_at as string) || '';
+      return tb.localeCompare(ta);
+    });
+  }, [myTrips]);
+
+  const allowanceTotal = useMemo(
+    () => myAllowances?.reduce((sum, a) => sum + (Number(a.amount) || 0), 0) ?? 0,
+    [myAllowances]
+  );
+
+  const tripStatusStyle = (status: string) => {
+    switch (status) {
+      case 'delivered':
+        return 'bg-emerald-500/15 text-emerald-700 border-emerald-200';
+      case 'in_transit':
+        return 'bg-amber-500/15 text-amber-800 border-amber-200';
+      case 'loaded':
+        return 'bg-primary/15 text-primary border-primary/30';
+      case 'cancelled':
+        return 'bg-rose-500/15 text-rose-700 border-rose-200';
+      default:
+        return 'bg-slate-500/10 text-slate-700 border-slate-200';
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1500);
@@ -77,7 +204,7 @@ export function DriverView() {
         context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
         const dataUrl = canvasRef.current.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
-        
+
         // Stop the stream
         const stream = videoRef.current.srcObject as MediaStream;
         stream?.getTracks().forEach(track => track.stop());
@@ -86,116 +213,172 @@ export function DriverView() {
   };
 
   useEffect(() => {
-    if (locationEnabled && user && firestore) {
-      const locRef = doc(firestore, 'driver_locations', user.uid);
+    if (locationEnabled && user) {
+      // TODO: Connect to Supabase for real-time location tracking
       let lat = 5.6037;
       let lng = -0.1870;
 
       const interval = setInterval(() => {
+        // Simulate location update
         lat += (Math.random() - 0.5) * 0.001;
         lng += (Math.random() - 0.5) * 0.001;
         setMileage(prev => prev + 0.1);
 
-        setDocumentNonBlocking(locRef, {
-          id: user.uid,
+        console.log('Update location - connect to Supabase later:', {
+          id: user.id,
           latitude: lat,
           longitude: lng,
-          heading: Math.random() * 360,
-          speed: Math.floor(Math.random() * 60) + 20,
           isOnline: true,
-          lastUpdated: new Date().toISOString(),
-        }, { merge: true });
+          lastUpdated: new Date().toISOString()
+        });
       }, 5000);
 
       return () => {
         clearInterval(interval);
-        setDocumentNonBlocking(locRef, { isOnline: false, lastUpdated: new Date().toISOString() }, { merge: true });
+        console.log('Set driver offline - connect to Supabase later');
       };
     }
-  }, [locationEnabled, user, firestore]);
+  }, [locationEnabled, user]);
 
   const handleReportExpense = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!firestore || !user) return;
-    const formData = new FormData(e.currentTarget);
-    const expenseData = {
-      category: formData.get('category') as string,
-      amount: Number(formData.get('amount')),
-      notes: formData.get('notes') as string,
-      isApproved: false,
-      createdAt: new Date().toISOString(),
-      reporterUserId: user.uid,
-      photoUrl: capturedImage || `https://picsum.photos/seed/${Math.random()}/600/400`,
-      tripId: activeTrip?.id || null
-    };
-    addDocumentNonBlocking(collection(firestore, 'expenses'), expenseData);
+    // TODO: Connect to Supabase
+    console.log('Report expense - connect to Supabase later');
     toast({ title: "Expense Reported", description: "Sent to accounting for approval." });
     setCapturedImage(null);
     (e.target as HTMLFormElement).reset();
   };
 
-  const handleUploadProof = () => {
-    if (!firestore || !user || !activeTrip) return;
+  const handleUploadProof = async () => {
+    if (!user || !activeTrip || !capturedImage) return;
 
-    const proofData = {
-      tripId: activeTrip.id,
-      driverId: user.uid,
-      photoUrl: capturedImage || `https://picsum.photos/seed/${activeTrip.id}/600/400`,
-      uploadedAt: new Date().toISOString(),
-      caption: "Delivery successful at destination."
-    };
+    try {
+      // Convert base64 to blob for upload
+      const response = await fetch(capturedImage);
+      const blob = await response.blob();
+      const file = new File([blob], `delivery-proof-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Upload to Supabase Storage
+      const fileName = `driver-${user.id}/trip-${activeTrip.id}/${Date.now()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('driver-photos')
+        .upload(fileName, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('driver-photos')
+        .getPublicUrl(fileName);
+      
+      // Save photo record to database
+      const { error: dbError } = await supabase.from('driver_photos').insert({
+        driver_id: user.id,
+        trip_id: activeTrip.id,
+        photo_url: publicUrl,
+        photo_type: 'delivery_proof',
+        description: `Delivery proof for trip: ${activeTrip.origin} → ${activeTrip.destination}`,
+        file_size: file.size,
+        file_type: file.type
+      });
+      
+      if (dbError) throw dbError;
+      
+      toast({ 
+        title: "Photo Uploaded Successfully", 
+        description: "Delivery proof has been saved to database." 
+      });
+      
+      // Clear captured image and refresh photos
+      setCapturedImage(null);
+      
+      // Refresh uploaded photos
+      const { data: refreshedPhotos } = await supabase
+        .from('driver_photos')
+        .select('*')
+        .eq('driver_id', user.id)
+        .order('created_at', { ascending: false });
+      setUploadedPhotos(refreshedPhotos || []);
+      
+    } catch (error: any) {
+      console.error('Error uploading photo:', error);
+      toast({ 
+        title: "Upload Failed", 
+        description: error.message || "Failed to upload photo to database.",
+        variant: "destructive"
+      });
+    }
+  };
 
-    addDocumentNonBlocking(collection(firestore, 'trips', activeTrip.id, 'delivery_proofs'), proofData);
-    const tripRef = doc(firestore, 'trips', activeTrip.id);
-    setDocumentNonBlocking(tripRef, { status: 'delivered', deliveredAt: new Date().toISOString() }, { merge: true });
+  const handleUploadExpensePhoto = async () => {
+    if (!user || !capturedImage) return;
 
-    toast({ title: "Delivery Complete", description: "Proof captured and trip marked as delivered." });
-    setCapturedImage(null);
+    try {
+      // Convert base64 to blob for upload
+      const response = await fetch(capturedImage);
+      const blob = await response.blob();
+      const file = new File([blob], `expense-receipt-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Upload to Supabase Storage
+      const fileName = `driver-${user.id}/expenses/${Date.now()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('driver-photos')
+        .upload(fileName, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('driver-photos')
+        .getPublicUrl(fileName);
+      
+      // Save photo record to database
+      const { error: dbError } = await supabase.from('driver_photos').insert({
+        driver_id: user.id,
+        photo_url: publicUrl,
+        photo_type: 'expense_receipt',
+        description: 'Expense receipt photo',
+        file_size: file.size,
+        file_type: file.type
+      });
+      
+      if (dbError) throw dbError;
+      
+      toast({ 
+        title: "Receipt Uploaded", 
+        description: "Expense receipt has been saved to database." 
+      });
+      
+      // Clear captured image and refresh photos
+      setCapturedImage(null);
+      
+      // Refresh uploaded photos
+      const { data: refreshedPhotos } = await supabase
+        .from('driver_photos')
+        .select('*')
+        .eq('driver_id', user.id)
+        .order('created_at', { ascending: false });
+      setUploadedPhotos(refreshedPhotos || []);
+      
+    } catch (error: any) {
+      console.error('Error uploading receipt:', error);
+      toast({ 
+        title: "Upload Failed", 
+        description: error.message || "Failed to upload receipt to database.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleReportIssue = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!firestore || !user) return;
-    const formData = new FormData(e.currentTarget);
-    const type = formData.get('issueType') as string;
-    const description = formData.get('description') as string;
-    const severity = formData.get('severity') as string;
-
-    const maintenanceData = {
-      fleetVehicleId: activeTrip?.fleetVehicleId || 'unknown',
-      reporterUserId: user.uid,
-      issueDescription: description,
-      severity: severity,
-      status: 'pending',
-      reportedAt: new Date().toISOString(),
-    };
-
-    addDocumentNonBlocking(collection(firestore, 'maintenance_requests'), maintenanceData);
-
-    // Notify ALL mechanics
-    const mechanicsSnap = await getDocs(collection(firestore, 'roles_mechanic'));
-    mechanicsSnap.forEach((mechanicDoc) => {
-      const notifRef = collection(firestore, 'users', mechanicDoc.id, 'notifications');
-      addDocumentNonBlocking(notifRef, {
-        title: type === 'breakdown' ? 'EMERGENCY: Vehicle Breakdown' : 'New Maintenance Request',
-        message: `Vehicle ${activeTrip?.fleetVehicleId || 'Unknown'} has reported: ${description}. Severity: ${severity}`,
-        type: 'maintenance_request',
-        severity: severity === 'Critical' ? 'critical' : 'warning',
-        isRead: false,
-        createdAt: new Date().toISOString()
-      });
+    // TODO: Connect to Supabase
+    console.log('Report maintenance issue - connect to Supabase later');
+    toast({
+      title: "Issue Reported",
+      description: "Maintenance request submitted."
     });
 
-    if (type === 'breakdown') {
-      const locRef = doc(firestore, 'driver_locations', user.uid);
-      updateDocumentNonBlocking(locRef, { alertStatus: 'breakdown' });
-    }
-
-    toast({ 
-      title: "Issue Reported", 
-      description: type === 'breakdown' ? "Emergency breakdown signal sent to mechanics and command center." : "Maintenance request submitted." 
-    });
-    
     (e.target as HTMLFormElement).reset();
   };
 
@@ -224,7 +407,7 @@ export function DriverView() {
           <h2 className="text-2xl font-headline tracking-tighter mb-2">Location Required</h2>
           <p className="text-muted-foreground text-sm">FleetCommand requires your live location to track deliveries.</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setLocationEnabled(true)}
           className="w-full h-14 bg-amber-500 hover:bg-amber-600 font-headline text-lg rounded-2xl shadow-lg"
         >
@@ -235,11 +418,11 @@ export function DriverView() {
   }
 
   return (
-    <div className="pb-24 pt-4 px-4 space-y-6 animate-in fade-in duration-500 max-w-md mx-auto">
-      <header className="flex justify-between items-center">
+    <div className="pb-24 pt-4 px-4 sm:px-6 lg:px-8 space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest font-bold">{t.active_mission}</p>
-          <h1 className="text-xl font-headline tracking-tighter">{user?.displayName || 'Driver Console'}</h1>
+          <h1 className="text-xl sm:text-2xl font-headline tracking-tighter">{user?.displayName || 'Driver Console'}</h1>
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={toggleLanguage} className="rounded-full text-primary hover:bg-primary/10 gap-2">
@@ -252,7 +435,7 @@ export function DriverView() {
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="border-none bg-primary text-white shadow-lg rounded-2xl">
           <CardContent className="p-4 flex flex-col gap-1">
             <Gauge className="size-4 text-accent mb-1" />
@@ -262,18 +445,97 @@ export function DriverView() {
         </Card>
         <Card className="border-none bg-white shadow-lg rounded-2xl">
           <CardContent className="p-4 flex flex-col gap-1">
-            <DollarSign className="size-4 text-emerald-500 mb-1" />
-            <p className="text-[10px] text-muted-foreground uppercase font-bold">{t.earnings}</p>
-            <p className="text-xl font-headline text-primary truncate">{format(420)}</p>
+            <Wallet className="size-4 text-emerald-500 mb-1" />
+            <p className="text-[10px] text-muted-foreground uppercase font-bold">Trip Allowances</p>
+            <p className="text-xl font-headline text-primary truncate">{format(allowanceTotal)}</p>
+            <p className="text-[8px] text-muted-foreground">
+              {myAllowances.length > 0 ? `${myAllowances.length} allowance${myAllowances.length > 1 ? 's' : ''}` : 'No allowances yet'}
+            </p>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-none bg-white shadow-lg rounded-2xl overflow-hidden">
+        <CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0">
+          <ClipboardList className="size-4 text-primary" />
+          <CardTitle className="text-sm font-headline uppercase tracking-tighter">{t.assigned_work}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-[10px] text-muted-foreground mb-3">{t.assignments_hint}</p>
+          {myTripsSorted.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">{t.no_assigned_trips}</p>
+          ) : (
+            <ScrollArea className="h-[min(280px,50vh)] pr-3">
+              <ul className="space-y-2">
+                {myTripsSorted.map((trip) => (
+                  <li
+                    key={trip.id}
+                    className={`rounded-xl border p-3 text-left ${activeTrip?.id === trip.id ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-muted bg-muted/20'}`}
+                  >
+                    <div className="flex justify-between items-start gap-2 mb-1">
+                      <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[45%]">
+                        {trip.fleetVehicleId || trip.id?.slice(0, 8) || '—'}
+                      </span>
+                      <Badge variant="outline" className={`text-[9px] capitalize shrink-0 ${tripStatusStyle(trip.status || 'created')}`}>
+                        {(trip.status || 'created').replace('_', ' ')}
+                      </Badge>
+                    </div>
+                    <p className="text-xs font-headline leading-tight">
+                      {trip.originLocation || '—'} <span className="text-muted-foreground font-sans font-normal">→</span>{' '}
+                      {trip.destinationLocation || '—'}
+                    </p>
+                    {trip.created_at && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {new Date(trip.created_at).toLocaleString()}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-none bg-white shadow-lg rounded-2xl overflow-hidden">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+          <div className="flex items-center gap-2">
+            <Wallet className="size-4 text-emerald-600" />
+            <CardTitle className="text-sm font-headline uppercase tracking-tighter">{t.your_allowances}</CardTitle>
+          </div>
+          <span className="text-xs font-bold text-primary">{format(allowanceTotal)}</span>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-2">
+          <p className="text-[10px] text-muted-foreground">{t.allowance_total}</p>
+          {!myAllowances?.length ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">{t.no_allowance_records}</p>
+          ) : (
+            <ScrollArea className="h-[min(200px,35vh)] pr-3">
+              <ul className="space-y-2">
+                {myAllowances
+                  .slice()
+                  .sort((a, b) => ((b.created_at as string) || '').localeCompare((a.created_at as string) || ''))
+                  .map((a) => (
+                    <li key={a.id} className="flex justify-between items-center rounded-xl border border-muted bg-muted/10 px-3 py-2 text-sm">
+                      <span className="text-muted-foreground text-xs">
+                        {a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'}
+                      </span>
+                      <span className="font-headline text-primary">{format(Number(a.amount) || 0)}</span>
+                    </li>
+                  ))}
+              </ul>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="border-t-4 border-t-primary shadow-xl rounded-2xl border-none bg-white">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             <CardTitle className="text-sm font-headline uppercase tracking-tighter">Current Assignment</CardTitle>
-            <Badge variant="outline" className="font-mono text-[10px]">G-2883-24</Badge>
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {activeTrip?.fleetVehicleId || activeTrip?.id?.slice(0, 10) || '—'}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -311,44 +573,44 @@ export function DriverView() {
 
               <div className="space-y-3 pt-2">
                 <Dialog>
-                   <DialogTrigger asChild>
-                      <Button className="w-full h-14 bg-primary hover:bg-primary/90 font-headline text-lg rounded-xl shadow-lg">
-                        {t.complete_delivery.toUpperCase()}
-                      </Button>
-                   </DialogTrigger>
-                   <DialogContent className="max-w-[90vw] rounded-2xl">
-                      <DialogHeader>
-                        <DialogTitle>{t.capture}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 pt-4">
-                        <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
-                        <canvas ref={canvasRef} className="hidden" />
-                        
-                        {capturedImage && (
-                          <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-emerald-500">
-                             <img src={capturedImage} className="w-full h-full object-cover" />
-                             <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
-                               <CheckCircle2 className="size-12 text-white" />
-                             </div>
-                          </div>
-                        )}
+                  <DialogTrigger asChild>
+                    <Button className="w-full h-14 bg-primary hover:bg-primary/90 font-headline text-lg rounded-xl shadow-lg">
+                      {t.complete_delivery.toUpperCase()}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[90vw] rounded-2xl">
+                    <DialogHeader>
+                      <DialogTitle>{t.capture}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
+                      <canvas ref={canvasRef} className="hidden" />
 
-                        <div className="flex gap-2">
-                          <Button onClick={getCameraPermission} variant="outline" className="flex-1">
-                            Enable Camera
-                          </Button>
-                          <Button onClick={capturePhoto} className="flex-1 bg-accent hover:bg-accent/90" disabled={!hasCameraPermission}>
-                            {t.take_photo}
-                          </Button>
+                      {capturedImage && (
+                        <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-emerald-500">
+                          <img src={capturedImage} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+                            <CheckCircle2 className="size-12 text-white" />
+                          </div>
                         </div>
-                        
-                        <Button onClick={handleUploadProof} className="w-full h-12 font-headline" disabled={!capturedImage}>
-                          SUBMIT EVIDENCE
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button onClick={getCameraPermission} variant="outline" className="flex-1">
+                          Enable Camera
+                        </Button>
+                        <Button onClick={capturePhoto} className="flex-1 bg-accent hover:bg-accent/90" disabled={!hasCameraPermission}>
+                          {t.take_photo}
                         </Button>
                       </div>
-                   </DialogContent>
+
+                      <Button onClick={handleUploadProof} className="w-full h-12 font-headline" disabled={!capturedImage}>
+                        SUBMIT EVIDENCE
+                      </Button>
+                    </div>
+                  </DialogContent>
                 </Dialog>
-                
+
                 <Button variant="outline" className="w-full h-12 font-headline border-primary text-primary rounded-xl flex gap-2">
                   <Navigation className="size-4" /> {t.start_nav}
                 </Button>
@@ -365,6 +627,54 @@ export function DriverView() {
 
       <div className="grid grid-cols-3 gap-3">
         <Dialog>
+          <DialogTrigger asChild>
+            <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
+              <Camera className="size-5 text-blue-500" />
+              <p className="text-[10px] font-bold">PHOTOS</p>
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[90vw] rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>My Photos</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4 max-h-64 overflow-y-auto">
+              {uploadedPhotos.length === 0 ? (
+                <div className="text-center py-8">
+                  <Camera className="size-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground">No photos uploaded yet</p>
+                  <p className="text-xs text-muted-foreground mt-2">Take photos using the camera buttons</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {uploadedPhotos.map((photo) => (
+                    <div key={photo.id} className="relative group">
+                      <img 
+                        src={photo.photo_url} 
+                        alt={photo.description}
+                        className="w-full aspect-square object-cover rounded-lg border"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <div className="text-white text-center p-2">
+                          <p className="text-xs font-medium">{photo.photo_type.replace('_', ' ')}</p>
+                          <p className="text-xs">{new Date(photo.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <p className="font-bold text-sm">Total Photos:</p>
+                  <p className="font-bold text-lg text-blue-600">{uploadedPhotos.length}</p>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog>
           <DialogTrigger asChild disabled={!activeTrip}>
             <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform disabled:opacity-50">
               <Camera className="size-5 text-accent" />
@@ -376,14 +686,14 @@ export function DriverView() {
               <DialogTitle>{t.capture}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-               <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
-               <canvas ref={canvasRef} className="hidden" />
-               {capturedImage && <img src={capturedImage} className="w-full aspect-video rounded-xl object-cover" />}
-               <div className="flex gap-2">
-                  <Button onClick={getCameraPermission} variant="outline" className="flex-1">Camera</Button>
-                  <Button onClick={capturePhoto} className="flex-1">{t.take_photo}</Button>
-               </div>
-               <Button onClick={handleUploadProof} className="w-full h-12" disabled={!capturedImage}>Submit</Button>
+              <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
+              <canvas ref={canvasRef} className="hidden" />
+              {capturedImage && <img src={capturedImage} className="w-full aspect-video rounded-xl object-cover" />}
+              <div className="flex gap-2">
+                <Button onClick={getCameraPermission} variant="outline" className="flex-1">Camera</Button>
+                <Button onClick={capturePhoto} className="flex-1">{t.take_photo}</Button>
+              </div>
+              <Button onClick={handleUploadProof} className="w-full h-12" disabled={!capturedImage}>Submit</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -391,8 +701,55 @@ export function DriverView() {
         <Dialog>
           <DialogTrigger asChild>
             <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
-              <DollarSign className="size-5 text-emerald-500" />
-              <p className="text-[10px] font-bold">{t.expense.toUpperCase()}</p>
+              <Wallet className="size-5 text-emerald-500" />
+              <p className="text-[10px] font-bold">ALLOWANCES</p>
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[90vw] rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>My Trip Allowances</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4 max-h-64 overflow-y-auto">
+              {myAllowances.length === 0 ? (
+                <div className="text-center py-8">
+                  <Wallet className="size-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground">No allowances yet</p>
+                  <p className="text-xs text-muted-foreground mt-2">Allowances are automatically generated when trips are assigned</p>
+                </div>
+              ) : (
+                myAllowances.map((allowance) => (
+                  <div key={allowance.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{allowance.reason}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(allowance.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-emerald-600">{format(allowance.amount)}</p>
+                      <Badge variant="secondary" className="text-xs">
+                        {allowance.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+              
+              <div className="pt-4 border-t">
+                <div className="flex justify-between items-center">
+                  <p className="font-bold">Total Allowances:</p>
+                  <p className="font-bold text-xl text-emerald-600">{format(allowanceTotal)}</p>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
+              <AlertTriangle className="size-5 text-rose-500" />
+              <p className="text-[10px] font-bold">{t.issue.toUpperCase()}</p>
             </button>
           </DialogTrigger>
           <DialogContent className="max-w-[90vw] rounded-2xl">
@@ -412,64 +769,19 @@ export function DriverView() {
                 <Label>Notes</Label>
                 <Input name="notes" placeholder="Optional details" />
               </div>
-              
-              <div className="space-y-2">
-                 <Label>Evidence Photo</Label>
-                 <div className="grid grid-cols-1 gap-2">
-                    <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
-                    <canvas ref={canvasRef} className="hidden" />
-                    <div className="flex gap-2">
-                       <Button type="button" onClick={getCameraPermission} variant="outline" size="sm" className="flex-1">Camera On</Button>
-                       <Button type="button" onClick={capturePhoto} variant="secondary" size="sm" className="flex-1">Snap</Button>
-                    </div>
-                    {capturedImage && <img src={capturedImage} className="w-full aspect-video rounded-xl object-cover border" />}
-                 </div>
-              </div>
-
-              <Button type="submit" className="w-full h-12">Log Expense</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog>
-          <DialogTrigger asChild>
-            <button className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform">
-              <AlertTriangle className="size-5 text-rose-500" />
-              <p className="text-[10px] font-bold">{t.issue.toUpperCase()}</p>
-            </button>
-          </DialogTrigger>
-          <DialogContent className="max-w-[90vw] rounded-2xl">
-            <DialogHeader>
-              <DialogTitle>{t.issue}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleReportIssue} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>{t.severity}</Label>
-                <Select name="severity" defaultValue="Medium" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Low">Low (Informational)</SelectItem>
-                    <SelectItem value="Medium">Medium (Attention Required)</SelectItem>
-                    <SelectItem value="Critical">Critical (Stop Vehicle)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div className="space-y-2">
-                <Label>Issue Type</Label>
-                <Select name="issueType" defaultValue="maintenance" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="maintenance">{t.report_maintenance}</SelectItem>
-                    <SelectItem value="breakdown">{t.report_breakdown}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Evidence Photo</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  <video ref={videoRef} className="w-full aspect-video rounded-xl bg-black object-cover" autoPlay playsInline muted />
+                  <canvas ref={canvasRef} className="hidden" />
+                  <div className="flex gap-2">
+                    <Button type="button" onClick={getCameraPermission} variant="outline" size="sm" className="flex-1">Camera On</Button>
+                    <Button type="button" onClick={capturePhoto} variant="secondary" size="sm" className="flex-1">Snap</Button>
+                  </div>
+                  {capturedImage && <img src={capturedImage} className="w-full aspect-video rounded-xl object-cover border" />}
+                </div>
               </div>
-
               <div className="space-y-2">
                 <Label>{t.issue_description}</Label>
                 <Textarea name="description" placeholder="Describe the issue..." required />

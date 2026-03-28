@@ -1,0 +1,9 @@
+{
+  "apphosting": {
+    "backendId": "calvary-connect",
+    "rootDir": "."
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

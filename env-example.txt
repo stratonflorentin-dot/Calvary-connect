@@ -1,0 +1,9 @@
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# For development, you can get these from:
+# 1. Go to https://supabase.com
+# 2. Create a new project
+# 3. Go to Settings > API
+# 4. Copy the Project URL and Anon Key

@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { getCeoAiInsights, CeoAiInsightsOutput } from '@/ai/flows/ceo-ai-insights';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
-import { collection } from 'firebase/firestore';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, RefreshCw, CheckCircle2, AlertCircle, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,51 +14,116 @@ import { useLanguage } from '@/hooks/use-language';
 export function AiInsightPanel() {
   const [loading, setLoading] = useState(false);
   const [insight, setInsight] = useState<CeoAiInsightsOutput | null>(null);
-  const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useSupabase();
   const { role } = useRole();
   const { t } = useLanguage();
-
-  const fleetQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'fleet_vehicles') : null, [firestore, user, role]);
-  const tripsQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'trips') : null, [firestore, user, role]);
-  const incomeQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'income') : null, [firestore, user, role]);
-  const expenseQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'expenses') : null, [firestore, user, role]);
-  const inventoryQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'inventory_items') : null, [firestore, user, role]);
-  const locationsQuery = useMemoFirebase(() => (firestore && user && role) ? collection(firestore, 'driver_locations') : null, [firestore, user, role]);
-
-  const { data: fleet } = useCollection(fleetQuery);
-  const { data: trips } = useCollection(tripsQuery);
-  const { data: income } = useCollection(incomeQuery);
-  const { data: expenses } = useCollection(expenseQuery);
-  const { data: inventory } = useCollection(inventoryQuery);
-  const { data: locations } = useCollection(locationsQuery);
 
   const generate = async () => {
     setLoading(true);
     try {
-      const revenueThisMonth = income?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-      const expensesThisMonth = expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-
-      const data = {
-        activeTripsCount: trips?.filter(t => t.status === 'in_transit').length || 0,
-        fleetBreakdown: { 
-          available: fleet?.filter(v => v.status === 'Available').length || 0, 
-          inUse: fleet?.filter(v => v.status === 'In Use').length || 0, 
-          maintenance: fleet?.filter(v => v.status === 'Maintenance').length || 0 
-        },
-        revenueThisMonth,
-        expensesThisMonth,
-        netProfit: revenueThisMonth - expensesThisMonth,
-        fuelConsumptionLiters: 4200,
-        pendingMaintenanceCount: 5,
-        lowStockCount: inventory?.filter(i => i.quantityAvailable < 10).length || 0,
-        onlineDriverCount: locations?.filter(l => l.isOnline).length || 0,
-        completedDeliveriesThisMonth: trips?.filter(t => t.status === 'delivered').length || 0,
+      // Load comprehensive real data for analysis
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const monthStart = `${currentMonth}-01`;
+      const monthEnd = `${currentMonth}-31`;
+      
+      // Real fleet data
+      const { data: vehicles } = await supabase
+        .from('vehicles')
+        .select('plate_number, status, mileage, created_at');
+      
+      // Real trips data for current month
+      const { data: currentTrips } = await supabase
+        .from('trips')
+        .select('*')
+        .gte('created_at', monthStart)
+        .lte('created_at', monthEnd);
+      
+      // Real expenses data for current month
+      const { data: currentExpenses } = await supabase
+        .from('expenses')
+        .select('*')
+        .gte('created_at', monthStart)
+        .lte('created_at', monthEnd);
+      
+      // Real driver data
+      const { data: drivers } = await supabase
+        .from('user_profiles')
+        .select('id, created_at')
+        .eq('role', 'driver');
+      
+      // Real maintenance data
+      const { data: maintenanceRequests } = await supabase
+        .from('maintenance_requests')
+        .select('*')
+        .gte('created_at', monthStart)
+        .lte('created_at', monthEnd);
+      
+      // Calculate real metrics
+      const totalVehicles = vehicles?.length || 0;
+      const activeVehicles = vehicles?.filter(v => v.status === 'active')?.length || 0;
+      const completedTrips = currentTrips?.filter(t => t.status === 'completed')?.length || 0;
+      const totalRevenue = currentTrips?.reduce((sum, trip) => sum + (trip.revenue || trip.price || 0), 0) || 0;
+      const totalExpenses = currentExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+      const netProfit = totalRevenue - totalExpenses;
+      const totalDrivers = drivers?.length || 0;
+      const maintenanceCount = maintenanceRequests?.length || 0;
+      
+      // Analyze vehicle utilization
+      const vehicleUtilization = totalVehicles > 0 ? (completedTrips / totalVehicles) * 100 : 0;
+      
+      // Analyze expense categories
+      const expenseCategories = currentExpenses?.reduce((acc, exp) => {
+        acc[exp.category] = (acc[exp.category] || 0) + (exp.amount || 0);
+        return acc;
+      }, {} as Record<string, number>) || {};
+      
+      // Generate insights based only on real data
+      const insights: CeoAiInsightsOutput = {
+        summary: `Fleet Analysis: ${totalVehicles} vehicles, ${completedTrips} completed trips, ${netProfit >= 0 ? 'profitable' : 'loss'} of ${Math.abs(netProfit)}`,
+        opportunities: [],
+        risks: [],
+        recommendations: []
       };
-      const result = await getCeoAiInsights(data);
-      setInsight(result);
-    } catch (e) {
-      console.error(e);
+      
+      // Add opportunities based on real data
+      if (vehicleUtilization < 50 && totalVehicles > 0) {
+        insights.opportunities.push(`Low vehicle utilization (${vehicleUtilization.toFixed(1)}%) - consider increasing trip assignments`);
+      }
+      
+      if (totalRevenue > 0 && netProfit > 0) {
+        insights.opportunities.push(`Profitable operations (${netProfit} profit) - consider scaling successful routes`);
+      }
+      
+      // Add risks based on real data
+      if (netProfit < 0) {
+        insights.risks.push(`Operating loss of ${Math.abs(netProfit)} - requires immediate cost review`);
+      }
+      
+      if (maintenanceCount > totalVehicles * 0.3) {
+        insights.risks.push(`High maintenance volume (${maintenanceCount} requests) - may indicate vehicle aging issues`);
+      }
+      
+      // Add recommendations based on real data
+      if (totalVehicles === 0) {
+        insights.recommendations.push('Add vehicles to your fleet to begin operations');
+      }
+      
+      if (completedTrips === 0 && totalVehicles > 0) {
+        insights.recommendations.push('Create and assign trips to generate revenue');
+      }
+      
+      if (totalExpenses > 0 && netProfit < 0) {
+        insights.recommendations.push('Review and optimize expense categories to improve profitability');
+      }
+      
+      // If no specific insights, provide factual summary
+      if (insights.opportunities.length === 0 && insights.risks.length === 0 && insights.recommendations.length === 0) {
+        insights.recommendations.push('Continue monitoring fleet performance metrics');
+      }
+      
+      setInsight(insights);
+    } catch (error) {
+      console.error('Error generating AI insights:', error);
     } finally {
       setLoading(false);
     }
@@ -91,58 +156,80 @@ export function AiInsightPanel() {
             <div className="size-16 rounded-full bg-accent/20 flex items-center justify-center text-accent">
               <Sparkles className="size-8" />
             </div>
-            <div className="max-w-xs">
-              <p className="font-headline text-lg">{t.harness_intelligence}</p>
-              <p className="text-sm text-muted-foreground">Click the button above to analyze live data and generate actionable recommendations.</p>
+            <div>
+              <h3 className="font-semibold text-lg mb-2">AI Fleet Analysis</h3>
+              <p className="text-muted-foreground text-sm max-w-md">
+                Get intelligent insights about your fleet performance, opportunities, and risks powered by AI.
+              </p>
             </div>
           </div>
         )}
 
         {loading && (
-          <div className="space-y-4 py-4">
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-32 w-full rounded-xl" />
-            <Skeleton className="h-28 w-full rounded-xl" />
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-2/3" />
+            <div className="pt-4 space-y-3">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
           </div>
         )}
 
         {insight && !loading && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-emerald-600">
-                <CheckCircle2 className="size-5" />
-                <h3 className="font-headline text-sm uppercase tracking-widest">Key Highlights</h3>
-              </div>
-              <ul className="space-y-2">
-                {insight.keyHighlights.map((h, i) => (
-                  <li key={i} className="text-sm bg-emerald-50 p-3 rounded-xl border border-emerald-100">{h}</li>
-                ))}
-              </ul>
-            </section>
+          <div className="space-y-6">
+            <div className="p-4 bg-primary/5 rounded-xl border-l-4 border-primary">
+              <p className="text-sm leading-relaxed">{insight.summary}</p>
+            </div>
 
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-amber-600">
-                <AlertCircle className="size-5" />
-                <h3 className="font-headline text-sm uppercase tracking-widest">Areas of Concern</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-600">
+                  <Target className="size-4" />
+                  <h4 className="font-semibold text-sm">Opportunities</h4>
+                </div>
+                <ul className="space-y-2">
+                  {insight.opportunities.map((opp, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="size-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span>{opp}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-2">
-                {insight.areasOfConcern.map((c, i) => (
-                  <li key={i} className="text-sm bg-amber-50 p-3 rounded-xl border border-amber-100">{c}</li>
-                ))}
-              </ul>
-            </section>
 
-            <section className="space-y-2">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-amber-600">
+                  <AlertCircle className="size-4" />
+                  <h4 className="font-semibold text-sm">Risks</h4>
+                </div>
+                <ul className="space-y-2">
+                  {insight.risks.map((risk, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <AlertCircle className="size-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>{risk}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-blue-600">
-                <Target className="size-5" />
-                <h3 className="font-headline text-sm uppercase tracking-widest">Actionable Recommendations</h3>
+                <Sparkles className="size-4" />
+                <h4 className="font-semibold text-sm">Recommendations</h4>
               </div>
               <ul className="space-y-2">
-                {insight.actionableRecommendations.map((r, i) => (
-                  <li key={i} className="text-sm bg-blue-50 p-3 rounded-xl border border-blue-100">{r}</li>
+                {insight.recommendations.map((rec, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm p-2 bg-blue-50 rounded-lg">
+                    <CheckCircle2 className="size-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <span>{rec}</span>
+                  </li>
                 ))}
               </ul>
-            </section>
+            </div>
           </div>
         )}
       </CardContent>

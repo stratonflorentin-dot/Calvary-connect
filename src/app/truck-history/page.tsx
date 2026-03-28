@@ -1,59 +1,151 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Wrench, Route, Calendar, ShieldCheck, History, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Wrench, Route, History, Plus, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 export default function TruckHistoryPage() {
   const { role } = useRole();
-  const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useSupabase();
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [fleet, setFleet] = useState<any[]>([]);
+  const [maintenanceHistory, setMaintenanceHistory] = useState<any[]>([]);
+  const [serviceRecords, setServiceRecords] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // 1. Query all vehicles for the dropdown
-  const fleetQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'fleet_vehicles');
-  }, [firestore, user]);
+  // Service record form state
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
+  const [serviceForm, setServiceForm] = useState({
+    serviceType: '',
+    serviceDescription: '',
+    partsUsed: '',
+    laborHours: '',
+    laborCost: '',
+    partsCost: '',
+    mileageAtService: '',
+    nextServiceDate: '',
+    nextServiceMileage: '',
+    notes: ''
+  });
 
-  const { data: fleet } = useCollection(fleetQuery);
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Load real fleet data from Supabase
+        const { data: vehicles, error: vehiclesError } = await supabase
+          .from('vehicles')
+          .select('*')
+          .order('plate_number');
+        
+        if (vehiclesError) throw vehiclesError;
+        
+        // Load real maintenance history from Supabase
+        const { data: maintenance, error: maintenanceError } = await supabase
+          .from('maintenance_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (maintenanceError) throw maintenanceError;
+        
+        // Load service records
+        const { data: services, error: servicesError } = await supabase
+          .from('vehicle_service_records')
+          .select('*')
+          .order('service_date', { ascending: false });
+        
+        if (servicesError) throw servicesError;
+        
+        setFleet(vehicles || []);
+        setMaintenanceHistory(maintenance || []);
+        setServiceRecords(services || []);
+      } catch (error) {
+        console.error('Error loading truck history:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // 2. Query Maintenance History for selected vehicle
-  const maintenanceQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedVehicleId) return null;
-    return query(
-      collection(firestore, 'maintenance_requests'),
-      where('fleetVehicleId', '==', selectedVehicleId),
-      where('status', '==', 'completed'),
-      orderBy('completedAt', 'desc')
-    );
-  }, [firestore, selectedVehicleId]);
-
-  // 3. Query Trip History for selected vehicle
-  const tripsQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedVehicleId) return null;
-    return query(
-      collection(firestore, 'trips'),
-      where('fleetVehicleId', '==', selectedVehicleId),
-      where('status', '==', 'delivered'),
-      orderBy('createdAt', 'desc')
-    );
-  }, [firestore, selectedVehicleId]);
-
-  const { data: maintenanceLogs } = useCollection(maintenanceQuery);
-  const { data: tripLogs } = useCollection(tripsQuery);
+    loadData();
+  }, [user]);
 
   const selectedVehicle = fleet?.find(v => v.id === selectedVehicleId);
+  const vehicleServices = serviceRecords?.filter(s => s.vehicle_id === selectedVehicleId);
+  const isMechanic = role === 'MECHANIC' || role === 'CEO' || role === 'ADMIN';
 
-  if (!['CEO', 'OPERATIONS', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  const handleAddServiceRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedVehicleId || !user) return;
+    
+    try {
+      const totalCost = (parseFloat(serviceForm.laborCost) || 0) + (parseFloat(serviceForm.partsCost) || 0);
+      
+      const { error } = await supabase
+        .from('vehicle_service_records')
+        .insert({
+          vehicle_id: selectedVehicleId,
+          mechanic_id: user.id,
+          service_type: serviceForm.serviceType,
+          service_description: serviceForm.serviceDescription,
+          parts_used: serviceForm.partsUsed,
+          labor_hours: parseFloat(serviceForm.laborHours) || 0,
+          labor_cost: parseFloat(serviceForm.laborCost) || 0,
+          parts_cost: parseFloat(serviceForm.partsCost) || 0,
+          total_cost: totalCost,
+          mileage_at_service: parseInt(serviceForm.mileageAtService) || 0,
+          next_service_date: serviceForm.nextServiceDate || null,
+          next_service_mileage: parseInt(serviceForm.nextServiceMileage) || 0,
+          notes: serviceForm.notes,
+          service_date: new Date().toISOString()
+        });
+        
+      if (error) throw error;
+      
+      // Refresh service records
+      const { data: refreshedServices } = await supabase
+        .from('vehicle_service_records')
+        .select('*')
+        .order('service_date', { ascending: false });
+      setServiceRecords(refreshedServices || []);
+      
+      toast({ title: "Service Record Added", description: "Service has been logged successfully" });
+      setServiceDialogOpen(false);
+      setServiceForm({
+        serviceType: '',
+        serviceDescription: '',
+        partsUsed: '',
+        laborHours: '',
+        laborCost: '',
+        partsCost: '',
+        mileageAtService: '',
+        nextServiceDate: '',
+        nextServiceMileage: '',
+        notes: ''
+      });
+    } catch (error: any) {
+      console.error('Error adding service record:', error);
+      toast({ title: "Error", description: "Failed to add service record", variant: "destructive" });
+    }
+  };
+
+  if (!['CEO', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -117,14 +209,24 @@ export default function TruckHistoryPage() {
                 <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
                   <Wrench className="size-5 text-primary mb-2" />
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Services</p>
-                  <p className="text-2xl font-headline">{maintenanceLogs?.length || 0}</p>
+                  <p className="text-2xl font-headline">{vehicleServices?.length || 0}</p>
                 </Card>
                 <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
                   <Route className="size-5 text-emerald-500 mb-2" />
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Trips Done</p>
-                  <p className="text-2xl font-headline">{tripLogs?.length || 0}</p>
+                  <p className="text-2xl font-headline">0</p>
                 </Card>
               </div>
+              
+              {isMechanic && (
+                <Button 
+                  onClick={() => setServiceDialogOpen(true)}
+                  className="w-full gap-2"
+                >
+                  <Plus className="size-4" />
+                  Log Service Record
+                </Button>
+              )}
             </div>
 
             {/* Main Timeline */}
@@ -137,37 +239,50 @@ export default function TruckHistoryPage() {
                 {/* Combined Logs Sorted by Date (Simplified implementation: Maintenance followed by Trips) */}
                 <div className="space-y-8">
                   <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-12 md:text-center md:ml-0">Service Records</h3>
+                      {isMechanic && (
+                        <Button size="sm" onClick={() => setServiceDialogOpen(true)} className="gap-1">
+                          <Plus className="size-3" />
+                          Add Record
+                        </Button>
+                      )}
+                    </div>
+                    {vehicleServices?.length > 0 ? (
+                      vehicleServices.map((service) => (
+                        <TimelineItem 
+                          key={service.id}
+                          type="service"
+                          title={service.service_type}
+                          date={new Date(service.service_date).toLocaleDateString()}
+                          description={service.service_description}
+                          tag={`$${service.total_cost || 0}`}
+                          icon={<Wrench className="size-4" />}
+                          color="blue"
+                        />
+                      ))
+                    ) : (
+                      <p className="text-center text-xs text-muted-foreground italic">No service records found.</p>
+                    )}
+                  </section>
+
+                  <section className="space-y-4">
                     <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-12 md:text-center md:ml-0">Maintenance Logs</h3>
-                    {maintenanceLogs?.map((log) => (
+                    {maintenanceHistory?.filter(m => m.vehicle_id === selectedVehicleId).map((log) => (
                       <TimelineItem 
                         key={log.id}
                         type="maintenance"
-                        title="Service Completed"
-                        date={new Date(log.completedAt).toLocaleDateString()}
-                        description={log.serviceLog}
-                        tag={`Condition: ${log.truckConditionAfterService}`}
+                        title="Service Request"
+                        date={new Date(log.created_at).toLocaleDateString()}
+                        description={log.description}
+                        tag={log.status}
                         icon={<Wrench className="size-4" />}
                         color="primary"
                       />
                     ))}
-                    {maintenanceLogs?.length === 0 && <p className="text-center text-xs text-muted-foreground italic">No maintenance logs found.</p>}
-                  </section>
-
-                  <section className="space-y-4">
-                    <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-12 md:text-center md:ml-0">Trip History</h3>
-                    {tripLogs?.map((trip) => (
-                      <TimelineItem 
-                        key={trip.id}
-                        type="trip"
-                        title={`Delivery: ${trip.originLocation} to ${trip.destinationLocation}`}
-                        date={new Date(trip.createdAt).toLocaleDateString()}
-                        description={trip.notes || 'No trip notes.'}
-                        tag="Delivered"
-                        icon={<Route className="size-4" />}
-                        color="emerald"
-                      />
-                    ))}
-                    {tripLogs?.length === 0 && <p className="text-center text-xs text-muted-foreground italic">No trip records found.</p>}
+                    {maintenanceHistory?.filter(m => m.vehicle_id === selectedVehicleId).length === 0 && (
+                      <p className="text-center text-xs text-muted-foreground italic">No maintenance logs found.</p>
+                    )}
                   </section>
                 </div>
               </div>
@@ -175,6 +290,166 @@ export default function TruckHistoryPage() {
           </div>
         )}
       </main>
+
+      {/* Service Record Dialog */}
+      <Dialog open={serviceDialogOpen} onOpenChange={setServiceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Log Vehicle Service</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddServiceRecord} className="space-y-6 pt-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="serviceType" className="text-sm font-medium">Service Type</Label>
+                <Input
+                  id="serviceType"
+                  value={serviceForm.serviceType}
+                  onChange={e => setServiceForm({...serviceForm, serviceType: e.target.value})}
+                  placeholder="e.g., Oil Change, Tire Replacement"
+                  className="h-10"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="serviceDescription" className="text-sm font-medium">Service Description</Label>
+                <Textarea 
+                  id="serviceDescription"
+                  value={serviceForm.serviceDescription}
+                  onChange={e => setServiceForm({...serviceForm, serviceDescription: e.target.value})}
+                  placeholder="Describe the work performed..."
+                  rows={3}
+                  className="resize-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="laborHours" className="text-sm font-medium">Labor Hours</Label>
+                  <Input
+                    id="laborHours"
+                    type="number"
+                    step="0.5"
+                    value={serviceForm.laborHours}
+                    onChange={e => setServiceForm({...serviceForm, laborHours: e.target.value})}
+                    placeholder="Hours"
+                    className="h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="laborCost" className="text-sm font-medium">Labor Cost ($)</Label>
+                  <Input
+                    id="laborCost"
+                    type="number"
+                    step="0.01"
+                    value={serviceForm.laborCost}
+                    onChange={e => setServiceForm({...serviceForm, laborCost: e.target.value})}
+                    placeholder="Cost"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="partsCost" className="text-sm font-medium">Parts Cost ($)</Label>
+                  <Input
+                    id="partsCost"
+                    type="number"
+                    step="0.01"
+                    value={serviceForm.partsCost}
+                    onChange={e => setServiceForm({...serviceForm, partsCost: e.target.value})}
+                    placeholder="Cost"
+                    className="h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mileageAtService" className="text-sm font-medium">Mileage</Label>
+                  <Input
+                    id="mileageAtService"
+                    type="number"
+                    value={serviceForm.mileageAtService}
+                    onChange={e => setServiceForm({...serviceForm, mileageAtService: e.target.value})}
+                    placeholder="Current mileage"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="partsUsed" className="text-sm font-medium">Parts Used</Label>
+                <Textarea 
+                  id="partsUsed"
+                  value={serviceForm.partsUsed}
+                  onChange={e => setServiceForm({...serviceForm, partsUsed: e.target.value})}
+                  placeholder="List parts used (optional)"
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nextServiceDate" className="text-sm font-medium">Next Service Date</Label>
+                  <div className="relative">
+                    <Input
+                      id="nextServiceDate"
+                      type="date"
+                      value={serviceForm.nextServiceDate}
+                      onChange={e => setServiceForm({...serviceForm, nextServiceDate: e.target.value})}
+                      className="h-10 pr-10"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nextServiceMileage" className="text-sm font-medium">Next Service Mileage</Label>
+                  <Input
+                    id="nextServiceMileage"
+                    type="number"
+                    value={serviceForm.nextServiceMileage}
+                    onChange={e => setServiceForm({...serviceForm, nextServiceMileage: e.target.value})}
+                    placeholder="Mileage for next service"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
+                <Textarea 
+                  id="notes"
+                  value={serviceForm.notes}
+                  onChange={e => setServiceForm({...serviceForm, notes: e.target.value})}
+                  placeholder="Any additional notes..."
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setServiceDialogOpen(false)}
+                className="px-6"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                className="px-6"
+              >
+                Save Record
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -185,7 +460,9 @@ function TimelineItem({ type, title, date, description, tag, icon, color }: any)
       {/* Icon Circle */}
       <div className={cn(
         "flex items-center justify-center w-10 h-10 rounded-full border border-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10",
-        color === 'primary' ? 'bg-primary text-white' : 'bg-emerald-500 text-white'
+        color === 'primary' ? 'bg-primary text-white' : 
+        color === 'blue' ? 'bg-blue-500 text-white' :
+        color === 'emerald' ? 'bg-emerald-500 text-white' : 'bg-gray-500 text-white'
       )}>
         {icon}
       </div>

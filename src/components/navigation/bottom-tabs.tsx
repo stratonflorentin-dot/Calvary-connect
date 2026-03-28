@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Home, Truck, DollarSign, MapPin, User, Route, Package, Wrench, History, Calculator, LayoutDashboard
+  Home, Truck, DollarSign, MapPin, User, Users, Route, Package, Wrench, History, Calculator, LayoutDashboard, BarChart2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
@@ -22,14 +22,15 @@ export function BottomTabs({ role }: { role: UserRole }) {
       { label: t.map, icon: MapPin, href: '/map' },
       { label: t.profile, icon: User, href: '/profile' },
     ],
-    OPERATIONS: [
+    OPERATOR: [
+      { label: t.home, icon: LayoutDashboard, href: '/' },
       { label: t.trips, icon: Route, href: '/trips' },
       { label: t.fleet, icon: Truck, href: '/fleet' },
-      { label: t.inventory, icon: Package, href: '/inventory' },
       { label: t.map, icon: MapPin, href: '/map' },
       { label: t.profile, icon: User, href: '/profile' },
     ],
     DRIVER: [
+      { label: t.home, icon: LayoutDashboard, href: '/' },
       { label: t.trips, icon: Route, href: '/trips' },
       { label: t.proof, icon: Home, href: '/proof' },
       { label: t.report_maintenance, icon: History, href: '/report' },
@@ -43,11 +44,17 @@ export function BottomTabs({ role }: { role: UserRole }) {
       { label: t.profile, icon: User, href: '/profile' },
     ],
     ACCOUNTANT: [
-      { label: t.overview, icon: Home, href: '/finance' },
+      { label: t.home, icon: LayoutDashboard, href: '/' },
       { label: t.expenses, icon: DollarSign, href: '/expenses' },
       { label: t.income, icon: Calculator, href: '/income' },
-      { label: t.fuel, icon: Truck, href: '/fuel' },
+      { label: t.fuel, icon: Truck, href: '/fuel-approvals' },
       { label: t.profile, icon: User, href: '/profile' },
+    ],
+    HR: [
+      { label: t.home, icon: Home, href: '/' },
+      { label: t.users, icon: Users, href: '/users' },
+      { label: t.allowances, icon: DollarSign, href: '/allowances' },
+      { label: t.monthly_report, icon: BarChart2, href: '/monthly-report' },
     ]
   };
 
@@ -61,12 +68,16 @@ export function BottomTabs({ role }: { role: UserRole }) {
           <Link
             key={tab.label}
             href={tab.href}
-            className="flex flex-col items-center justify-center gap-1 w-full relative transition-transform active:scale-125 duration-150"
+            className="flex flex-col items-center justify-center gap-1 w-full relative transition-transform active:scale-95 duration-150 py-2"
           >
             <tab.icon className={cn(
               "size-6 transition-colors",
               isActive ? "text-primary" : "text-muted-foreground"
             )} />
+            <span className={cn(
+              "text-xs transition-colors",
+              isActive ? "text-primary font-medium" : "text-muted-foreground"
+            )}>{tab.label}</span>
             {isActive && <div className="size-1 rounded-full bg-primary absolute -bottom-1" />}
           </Link>
         );

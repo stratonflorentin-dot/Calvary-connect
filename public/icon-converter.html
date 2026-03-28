@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fleet Icon Converter</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .preview { border: 1px solid #ccc; margin: 10px; }
+        button { background: #1e40af; color: white; padding: 10px 20px; border: none; cursor: pointer; margin: 5px; }
+        .size-box { border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚛 Fleet Icon Converter</h1>
+        <p>Upload your custom image to create all required icon sizes for FleetCommand</p>
+        
+        <input type="file" id="imageInput" accept="image/*">
+        <div id="preview"></div>
+        
+        <div class="size-box">
+            <h3>Required Sizes:</h3>
+            <ul>
+                <li><strong>favicon.png</strong> - 32x32 pixels (browser tabs)</li>
+                <li><strong>apple-touch-icon.png</strong> - 180x180 pixels (iOS devices)</li>
+                <li><strong>icon.png</strong> - 192x192 pixels (PWA)</li>
+                <li><strong>icon-512.png</strong> - 512x512 pixels (high-res)</li>
+            </ul>
+        </div>
+        
+        <div id="downloads"></div>
+        
+        <script>
+            document.getElementById('imageInput').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.onload = function() {
+                            document.getElementById('preview').innerHTML = 
+                                '<h3>Original Image:</h3><img src="' + e.target.result + '" class="preview" style="max-width: 200px;">';
+                            
+                            // Create download links for different sizes
+                            const sizes = [
+                                {name: 'favicon.png', size: 32},
+                                {name: 'apple-touch-icon.png', size: 180},
+                                {name: 'icon.png', size: 192},
+                                {name: 'icon-512.png', size: 512}
+                            ];
+                            
+                            let downloadHTML = '<h3>Download Icon Sizes:</h3>';
+                            sizes.forEach(sizeInfo => {
+                                downloadHTML += '<button onclick="createIcon(\'' + sizeInfo.name + '\', ' + sizeInfo.size + ')">' + sizeInfo.name + ' (' + sizeInfo.size + 'x' + sizeInfo.size + ')</button><br>';
+                            });
+                            
+                            document.getElementById('downloads').innerHTML = downloadHTML;
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            function createIcon(filename, size) {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                const img = new Image();
+                img.onload = function() {
+                    // Calculate scaling to fit
+                    const scale = Math.min(size / img.width, size / img.height);
+                    const x = (size - img.width * scale) / 2;
+                    const y = (size - img.height * scale) / 2;
+                    
+                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    
+                    // Download
+                    canvas.toBlob(function(blob) {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }, 'image/png');
+                };
+                img.src = document.querySelector('#preview img').src;
+            }
+        </script>
+    </div>
+</body>
+</html>

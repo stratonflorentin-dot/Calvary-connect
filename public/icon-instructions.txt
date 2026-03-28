@@ -1,0 +1,13 @@
+<!-- Placeholder for your custom fleet icon -->
+<!-- Replace this with your actual uploaded image -->
+<!-- 
+Instructions:
+1. Save your uploaded image as:
+   - favicon.png (32x32 pixels)
+   - icon.png (192x192 pixels for PWA)
+   - apple-touch-icon.png (180x180 pixels for iOS)
+
+2. Place these files in the public/ folder
+
+3. Update manifest.json to reference the PNG files
+-->

@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,42 +17,74 @@ import { Textarea } from '@/components/ui/textarea';
 import { Package, Plus, Clock, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { cn } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
 
 export default function MechanicSparePartsPage() {
   const { role } = useRole();
-  const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useSupabase();
   const { t } = useLanguage();
-  
-  const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !role) return null;
-    return query(
-      collection(firestore, 'spare_parts_requests'),
-      where('mechanicId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
-  }, [firestore, user, role]);
+  const [parts, setParts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: requests, isLoading } = useCollection(requestsQuery);
+  useEffect(() => {
+    const loadParts = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Load real spare parts from Supabase
+        const { data: spareParts, error } = await supabase
+          .from('spare_parts')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        setParts(spareParts || []);
+      } catch (error) {
+        console.error('Error loading spare parts:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadParts();
+  }, [user]);
+
+  const handleAddPart = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    try {
+      const { error } = await supabase
+        .from('spare_parts')
+        .insert({
+          name: formData.get('name'),
+          category: formData.get('category'),
+          quantity_available: parseInt(formData.get('quantity') as string),
+          unit: formData.get('unit'),
+          status: 'in_stock'
+        });
+      
+      if (error) throw error;
+      
+      // Reload parts list
+      const { data: updatedParts } = await supabase
+        .from('spare_parts')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      setParts(updatedParts || []);
+      e.currentTarget.reset();
+    } catch (error) {
+      console.error('Error adding part:', error);
+    }
+  };
 
   const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!firestore || !user) return;
-    const formData = new FormData(e.currentTarget);
-    
-    const requestData = {
-      mechanicId: user.uid,
-      requestedPartName: formData.get('name') as string,
-      quantityNeeded: Number(formData.get('quantity')),
-      urgency: formData.get('urgency') as string,
-      reason: formData.get('reason') as string,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-
-    addDocumentNonBlocking(collection(firestore, 'spare_parts_requests'), requestData);
-    toast({ title: "Request Submitted", description: "Your resource request has been sent for approval." });
+    // TODO: Connect to Supabase
+    console.log('Create parts request - connect to Supabase later');
     e.currentTarget.reset();
   };
 
@@ -124,11 +156,11 @@ export default function MechanicSparePartsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {loading ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-8">Loading requests...</TableCell></TableRow>
-              ) : requests?.length === 0 ? (
+              ) : parts?.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-8">No requests made yet.</TableCell></TableRow>
-              ) : requests?.map((r) => (
+              ) : parts?.map((r) => (
                 <TableRow key={r.id}>
                   <td className="px-6 py-4 font-medium flex items-center gap-3">
                     <Package className="size-4 text-muted-foreground" />
@@ -145,13 +177,13 @@ export default function MechanicSparePartsPage() {
                   </td>
                   <td>
                     <div className="flex items-center gap-2">
-                      {r.status === 'approved' ? <CheckCircle2 className="size-3 text-emerald-500" /> : 
-                       r.status === 'rejected' ? <XCircle className="size-3 text-rose-500" /> : 
-                       <Clock className="size-3 text-amber-500" />}
+                      {r.status === 'approved' ? <CheckCircle2 className="size-3 text-emerald-500" /> :
+                        r.status === 'rejected' ? <XCircle className="size-3 text-rose-500" /> :
+                          <Clock className="size-3 text-amber-500" />}
                       <Badge className={cn(
                         "text-[10px]",
-                        r.status === 'approved' ? 'bg-emerald-500' : 
-                        r.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
+                        r.status === 'approved' ? 'bg-emerald-500' :
+                          r.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
                       )}>
                         {r.status.toUpperCase()}
                       </Badge>

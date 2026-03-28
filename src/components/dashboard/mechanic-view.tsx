@@ -1,27 +1,47 @@
-
 "use client";
 
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wrench, Package, History, AlertCircle, CheckCircle2, ArrowRight, PlusCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/hooks/use-language';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 export function MechanicView() {
-  const firestore = useFirestore();
-  const { user } = useUser();
+  const { user } = useSupabase();
   const { t } = useLanguage();
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'maintenance_requests'), orderBy('reportedAt', 'desc'), limit(5));
-  }, [firestore, user]);
+  useEffect(() => {
+    const loadRequests = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Load real maintenance requests from database
+        const { data: maintenanceRequests } = await supabase
+          .from('maintenance_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        setRequests(maintenanceRequests || []);
+        
+      } catch (error) {
+        console.error('Error loading maintenance requests:', error);
+        setRequests([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const { data: requests } = useCollection(requestsQuery);
+    loadRequests();
+  }, [user]);
 
   const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
   const inProgressCount = requests?.filter(r => r.status === 'in_progress').length || 0;

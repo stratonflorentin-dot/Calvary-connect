@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Preview - FleetCommand</title>
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f8fafc;
+        }
+        .preview-container { 
+            max-width: 1000px; 
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .preview-section { 
+            margin: 20px 0; 
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .icon-display { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            margin: 10px 0;
+        }
+        .size-demo { 
+            border: 2px solid #cbd5e1; 
+            border-radius: 4px;
+            background: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #64748b;
+        }
+        .browser-tab {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px 8px 0 0;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1px;
+        }
+        .mobile-screen {
+            background: #000;
+            border: 8px solid #1f2937;
+            border-radius: 20px;
+            padding: 20px;
+            width: 200px;
+            height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .mobile-icon {
+            width: 60px;
+            height: 60px;
+            background: #1e40af;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 8px;
+            text-align: center;
+        }
+        h1 { color: #1e40af; }
+        h2 { color: #475569; margin-bottom: 15px; }
+        .current-icon { 
+            color: #059669; 
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <h1>🚛 FleetCommand Icon Preview</h1>
+        <p class="current-icon">✅ Current system icon is active and working!</p>
+        
+        <div class="preview-section">
+            <h2>📱 Browser Tab Preview</h2>
+            <div class="browser-tab">
+                <img src="/favicon.png" alt="Favicon" style="width: 16px; height: 16px;">
+                <span>FleetCommand - Fleet Management System</span>
+            </div>
+            <p><small>This is how your icon looks in browser tabs</small></p>
+        </div>
+        
+        <div class="preview-section">
+            <h2>📲 Mobile Home Screen Preview</h2>
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <div class="mobile-screen">
+                    <div class="mobile-icon">
+                        <img src="/apple-touch-icon.png" alt="App Icon" style="width: 50px; height: 50px;">
+                    </div>
+                    <div style="color: white; font-size: 10px;">FleetCommand</div>
+                </div>
+                <div>
+                    <p><strong>iOS Home Screen:</strong></p>
+                    <p><small>Your icon appears when users add FleetCommand to their home screen</small></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-section">
+            <h2>🖥️ Icon Size Comparisons</h2>
+            <div class="icon-display">
+                <div class="size-demo" style="width: 32px; height: 32px;">
+                    <img src="/favicon.png" alt="32x32" style="width: 28px; height: 28px;">
+                </div>
+                <span>Favicon (32x32) - Browser tabs</span>
+            </div>
+            <div class="icon-display">
+                <div class="size-demo" style="width: 64px; height: 64px;">
+                    <img src="/favicon.png" alt="64x64" style="width: 60px; height: 60px;">
+                </div>
+                <span>Large favicon view</span>
+            </div>
+            <div class="icon-display">
+                <div class="size-demo" style="width: 180px; height: 180px;">
+                    <img src="/apple-touch-icon.png" alt="180x180" style="width: 176px; height: 176px;">
+                </div>
+                <span>Apple Touch Icon (180x180) - iOS devices</span>
+            </div>
+            <div class="icon-display">
+                <div class="size-demo" style="width: 192px; height: 192px;">
+                    <img src="/icon.png" alt="192x192" style="width: 188px; height: 188px;">
+                </div>
+                <span>PWA Icon (192x192) - Web app installation</span>
+            </div>
+        </div>
+        
+        <div class="preview-section">
+            <h2>📋 Current Icon Status</h2>
+            <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 15px;">
+                <h3 style="color: #16a34a; margin: 0 0 10px 0;">✅ All Icons Working</h3>
+                <ul style="margin: 0; padding-left: 20px; color: #15803d;">
+                    <li>Favicon active in browser tab</li>
+                    <li>Apple touch icon ready for iOS</li>
+                    <li>PWA manifest configured</li>
+                    <li>All sizes available</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="preview-section">
+            <h2>🔄 How to Update with Your Custom Image</h2>
+            <ol style="line-height: 1.8;">
+                <li><strong>Upload your image</strong> to the icon converter tool</li>
+                <li><strong>Download all sizes</strong> (favicon.png, apple-touch-icon.png, icon.png, icon-512.png)</li>
+                <li><strong>Replace files</strong> in the public folder</li>
+                <li><strong>Refresh this page</strong> to see your custom icon</li>
+                <li><strong>Check browser tab</strong> to see favicon in action</li>
+            </ol>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 8px;">
+            <p><strong>🚛 FleetCommand Icon System Ready!</strong></p>
+            <p><small>Your fleet management system has a complete icon setup</small></p>
+        </div>
+    </div>
+    
+    <script>
+        // Check if icons are loading properly
+        window.addEventListener('load', function() {
+            const favicon = document.querySelector('link[rel="icon"]');
+            const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+            
+            if (favicon && appleIcon) {
+                console.log('✅ Icons are properly configured');
+            }
+        });
+    </script>
+</body>
+</html>

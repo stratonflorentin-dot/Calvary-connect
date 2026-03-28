@@ -93,6 +93,13 @@ const translations = {
     reason: "Reason for Request",
     submit_request: "Submit Resource Request",
     my_requests: "My Parts Requests",
+    assigned_work: "Assigned work",
+    your_allowances: "Your allowances",
+    allowance_total: "Total credited",
+    no_assigned_trips: "No trips assigned yet.",
+    no_allowance_records: "No allowance records linked to your account yet.",
+    trip_status: "Status",
+    assignments_hint: "Operations add new trips here when you are dispatched.",
   },
   sw: {
     dashboard: "Dashibodi",
@@ -181,6 +188,13 @@ const translations = {
     reason: "Sababu ya Ombi",
     submit_request: "Tuma Ombi la Rasilimali",
     my_requests: "Maombi Yangu ya Vipuri",
+    assigned_work: "Kazi uliyopewa",
+    your_allowances: "Marupurupu yako",
+    allowance_total: "Jumla iliyorekodiwa",
+    no_assigned_trips: "Bado hakuna safari zilizopewa.",
+    no_allowance_records: "Bado hakuna marupurupu yaliyounganishwa na akaunti yako.",
+    trip_status: "Hali",
+    assignments_hint: "Operesheni huongeza safari hapa unapopewa kazi.",
   }
 };
 

@@ -5,13 +5,13 @@ import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "demo-key",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "demo-app.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-app",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "demo-app.appspot.com",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "000000000000",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:000000000000:web:000000000000",
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://demo-app.firebaseio.com",
+  apiKey: "AIzaSyDMzWyeYQtc_4fgiSzNMw4eR1Npa8wPPWc",
+  authDomain: "studio-8550736767-b9073.firebaseapp.com",
+  projectId: "studio-8550736767-b9073",
+  storageBucket: "studio-8550736767-b9073.appspot.com",
+  messagingSenderId: "199053972563",
+  appId: "1:199053972563:web:274f93a9bb770edb5722a6",
+  databaseURL: "https://studio-8550736767-b9073-default-rtdb.firebaseio.com",
 };
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
