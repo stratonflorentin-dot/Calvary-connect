@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
+import { SupabaseService } from '@/services/supabase-service';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,15 +33,15 @@ export default function MechanicSparePartsPage() {
       try {
         setLoading(true);
         
-        // Load real spare parts from Supabase
-        const { data: spareParts, error } = await supabase
-          .from('spare_parts')
+        // Load real spare parts requests from Supabase
+        const { data: requests, error } = await supabase
+          .from('parts_requests')
           .select('*')
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        setParts(spareParts || []);
+        setParts(requests || []);
       } catch (error) {
         console.error('Error loading spare parts:', error);
       } finally {
@@ -81,11 +82,32 @@ export default function MechanicSparePartsPage() {
     }
   };
 
-  const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateRequest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Connect to Supabase
-    console.log('Create parts request - connect to Supabase later');
-    e.currentTarget.reset();
+    if (!user) return;
+    
+    const formData = new FormData(e.currentTarget);
+    try {
+      await SupabaseService.createPartsRequest({
+        partNameText: formData.get('name') as string,
+        quantityNeeded: Number(formData.get('quantity')),
+        urgency: formData.get('urgency') as string,
+        reasonNotes: formData.get('reason') as string,
+        status: 'pending',
+        mechanicId: user.id
+      } as any);
+      
+      // Reload parts requests list
+      const { data: updatedRequests } = await supabase
+        .from('parts_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      setParts(updatedRequests || []);
+      e.currentTarget.reset();
+    } catch (error) {
+      console.error('Error requesting part:', error);
+    }
   };
 
   if (role && role !== 'MECHANIC') return <div className="p-8">Access Denied</div>;

@@ -28,6 +28,7 @@ interface Expense {
     status: 'pending' | 'approved' | 'rejected';
     createdAt: string;
     approvedBy?: string;
+    clientReference?: string;
 }
 
 export default function ExpensesPage() {
@@ -65,6 +66,8 @@ export default function ExpensesPage() {
     const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
+        if (!user) return;
+
         try {
             const formData = new FormData(e.currentTarget);
             const expenseData = {
@@ -72,6 +75,7 @@ export default function ExpensesPage() {
                 amount: parseFloat(formData.get('amount') as string),
                 category: formData.get('category') as string,
                 date: formData.get('date') as string,
+                clientReference: formData.get('clientReference') as string,
                 driver_id: user.id,
                 status: 'pending',
                 created_at: new Date().toISOString(),
@@ -116,6 +120,7 @@ export default function ExpensesPage() {
                     amount: parseFloat(formData.get('amount') as string),
                     category: formData.get('category') as string,
                     date: formData.get('date') as string,
+                    clientReference: formData.get('clientReference') as string,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', editingExpense.id)
@@ -186,6 +191,10 @@ export default function ExpensesPage() {
                                     <div>
                                         <Label htmlFor="description">Description</Label>
                                         <Textarea id="description" name="description" required />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="clientReference">Client / Trip Reference (Optional)</Label>
+                                        <Input id="clientReference" name="clientReference" placeholder="e.g. TRP-123 or ABC Corp" />
                                     </div>
                                     <div>
                                         <Label htmlFor="amount">Amount ({currency})</Label>
@@ -261,6 +270,7 @@ export default function ExpensesPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Description</TableHead>
+                                        <TableHead>Reference</TableHead>
                                         <TableHead>Category</TableHead>
                                         <TableHead>Amount</TableHead>
                                         <TableHead>Date</TableHead>
@@ -272,6 +282,7 @@ export default function ExpensesPage() {
                                     {expenses?.map((expense) => (
                                         <TableRow key={expense.id}>
                                             <TableCell className="font-medium">{expense.description}</TableCell>
+                                            <TableCell>{expense.clientReference || '-'}</TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="capitalize">
                                                     {expense.category}
@@ -314,6 +325,15 @@ export default function ExpensesPage() {
                                                                         name="description"
                                                                         defaultValue={editingExpense?.description}
                                                                         required
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <Label htmlFor="edit-clientReference">Client / Trip Reference (Optional)</Label>
+                                                                    <Input
+                                                                        id="edit-clientReference"
+                                                                        name="clientReference"
+                                                                        defaultValue={editingExpense?.clientReference}
+                                                                        placeholder="e.g. TRP-123 or ABC Corp"
                                                                     />
                                                                 </div>
                                                                 <div>

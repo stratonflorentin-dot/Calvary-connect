@@ -81,6 +81,7 @@ export interface Expense {
   vehicleId: string;
   driverId?: string;
   tripId?: string;
+  clientReference?: string;
   category: string;
   receiptUrl?: string;
   approvedBy?: string;

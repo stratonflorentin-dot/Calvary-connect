@@ -99,6 +99,7 @@ const LEDGER_FIELDS: { [key: string]: { key: string; label: string; type: string
     { key: 'userName', label: 'User Name', type: 'text', required: true },
     { key: 'amount', label: 'Amount', type: 'number', required: true },
     { key: 'photoUrl', label: 'Proof (URL)', type: 'text', required: false },
+    { key: 'clientReference', label: 'Client / Trip Reference', type: 'text', required: false },
     { key: 'createdAt', label: 'Date', type: 'date', required: true },
   ],
   taxes: [
@@ -152,7 +153,7 @@ export default function FinancePage() {
     if (!editDialog.ledger || !editDialog.entry?.id) return;
     
     try {
-      let result;
+      let result: any;
       switch (editDialog.ledger) {
         case 'sales':
           result = await SupabaseService.updateSale(editDialog.entry.id, updated);
@@ -388,14 +389,14 @@ export default function FinancePage() {
   const [addPurchaseOpen, setAddPurchaseOpen] = useState(false);
 
   // Use SupabaseService for data fetching
-  const [sales, setSales] = useState([]);
+  const [sales, setSales] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState([]);
-  const [taxes, setTaxes] = useState([]);
-  const [reports, setReports] = useState([]);
-  const [invoices, setInvoices] = useState([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [taxes, setTaxes] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [fuelRequests, setFuelRequests] = useState<any[]>([]);
-  const [allowances, setAllowances] = useState([]);
+  const [allowances, setAllowances] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Load data from Supabase
@@ -578,18 +579,35 @@ export default function FinancePage() {
     }
   };
 
-  const handleApproveFuel = (id: string) => {
-    // TODO: Connect to Supabase
-    console.log('Approve fuel request:', id);
+  const handleApproveFuel = async (id: string) => {
+    try {
+      await SupabaseService.updateFuelRequest(id, { status: 'Approved' });
+      setFuelRequests(prev => prev.map(f => f.id === id ? { ...f, status: 'Approved' } : f));
+      toast({ title: "Fuel Approved", description: "Fuel request has been successfully approved." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to approve fuel request.", variant: "destructive" });
+    }
   };
 
-  const handleSaveReport = () => {
+  const handleSaveReport = async () => {
     if (!user || !reportTitle) {
       console.error('Missing user or report title');
       return;
     }
-    // TODO: Connect to Supabase
-    console.log('Save report - connect to Supabase later');
+    try {
+      await SupabaseService.createReport({
+        title: reportTitle,
+        content: reportContent,
+        authorId: user.id,
+        status: 'draft',
+        periodStart: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+        periodEnd: new Date().toISOString()
+      } as any);
+      toast({ title: "Report Saved", description: "Financial report has been saved successfully." });
+    } catch (error) {
+      console.error('Error saving report:', error);
+      toast({ title: "Error", description: "Failed to save the report.", variant: "destructive" });
+    }
     setReportTitle("");
     setReportContent("");
   };
@@ -839,19 +857,20 @@ export default function FinancePage() {
 
           <TabsContent value="expenses">
             <LedgerTable
-              headers={["Description", "User", "Proof", "Amount", "Action"]}
-              data={expenses?.map(e => ({
+              headers={["Description", "Reference", "User", "Proof", "Amount", "Action"]}
+              data={expenses?.map((e: any) => ({
                 id: e.id,
                 col1: e.category,
-                col2: e.userName || e.user_id || '-',
-                col3: e.photoUrl ? (
+                col2: e.clientReference || '-',
+                col3: e.userName || e.user_id || '-',
+                col4: e.photoUrl ? (
                   <Dialog>
                     <DialogTrigger asChild><Button variant="ghost" size="sm" className="h-8 gap-1"><ImageIcon className="size-3" /> View</Button></DialogTrigger>
                     <DialogContent className="max-w-2xl"><DialogTitle className="sr-only">View Receipt</DialogTitle><img src={e.photoUrl} className="w-full rounded-lg" alt="Receipt" /></DialogContent>
                   </Dialog>
                 ) : '-',
-                col4: <span className="text-rose-500 font-bold">-{format(e.amount)}</span>,
-                col5: <Button size="sm" variant="outline" onClick={() => handleOpenEdit('expenses', e)}>Edit</Button>
+                col5: <span className="text-rose-500 font-bold">-{format(e.amount)}</span>,
+                col6: <Button size="sm" variant="outline" onClick={() => handleOpenEdit('expenses', e)}>Edit</Button>
               }))}
               onAddEntry={async (entry) => {
                 try {
@@ -860,10 +879,11 @@ export default function FinancePage() {
                     userName: entry.userName,
                     amount: Number(entry.amount),
                     photoUrl: entry.photoUrl || null,
+                    clientReference: entry.clientReference || null,
                     createdAt: entry.createdAt || new Date().toISOString(),
                     status: 'pending'
                   });
-                  setExpenses(prev => [expense, ...prev]);
+                  setExpenses(prev => [expense as never, ...prev]);
                   toast({ title: "Expense Added", description: "Expense saved to database." });
                 } catch (error) {
                   toast({ title: "Error", description: "Failed to add expense.", variant: "destructive" });

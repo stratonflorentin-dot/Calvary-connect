@@ -216,6 +216,8 @@ service cloud.firestore {
     }
 
     match /deliveryProofs/{id} {
+      allow read, write: if hasRole('CEO');
+    }
 
     // New Fleet Management Collections
     
@@ -271,6 +273,3 @@ service cloud.firestore {
     }
   }
 }
-}  
- }  
- 

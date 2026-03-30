@@ -4,6 +4,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
+import { SupabaseService } from '@/services/supabase-service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Camera, AlertTriangle, Coins, DollarSign, Gauge, CheckCircle2, Languages, Wrench, Phone, Truck as TruckIcon, ClipboardList, Wallet } from 'lucide-react';
@@ -214,39 +215,35 @@ export function DriverView() {
 
   useEffect(() => {
     if (locationEnabled && user) {
-      // TODO: Connect to Supabase for real-time location tracking
-      let lat = 5.6037;
-      let lng = -0.1870;
-
-      const interval = setInterval(() => {
-        // Simulate location update
-        lat += (Math.random() - 0.5) * 0.001;
-        lng += (Math.random() - 0.5) * 0.001;
-        setMileage(prev => prev + 0.1);
-
-        console.log('Update location - connect to Supabase later:', {
-          id: user.id,
-          latitude: lat,
-          longitude: lng,
-          isOnline: true,
-          lastUpdated: new Date().toISOString()
-        });
-      }, 5000);
-
-      return () => {
-        clearInterval(interval);
-        console.log('Set driver offline - connect to Supabase later');
-      };
+      // NOTE: Location layout tracking runs visually but is disconnected from the DB because backend.json lacks a telemetry table.
+      console.log('Location tracking active (Simulation only - no telemetry DB attached)');
     }
   }, [locationEnabled, user]);
 
-  const handleReportExpense = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleReportExpense = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Connect to Supabase
-    console.log('Report expense - connect to Supabase later');
-    toast({ title: "Expense Reported", description: "Sent to accounting for approval." });
-    setCapturedImage(null);
-    (e.target as HTMLFormElement).reset();
+    if (!user) return;
+    
+    const formData = new FormData(e.currentTarget);
+    try {
+      await SupabaseService.createExpense({
+        category: formData.get('category') as string,
+        amount: Number(formData.get('amount')),
+        notes: (formData.get('notes') as string) || '',
+        description: formData.get('description') as string,
+        photoUrl: capturedImage || undefined,
+        status: 'pending',
+        userName: user.name || 'Driver',
+        driverId: user.id
+      } as any);
+      
+      toast({ title: "Expense Reported", description: "Sent to accounting for approval." });
+      setCapturedImage(null);
+      (e.target as HTMLFormElement).reset();
+    } catch (error) {
+      console.error('Error reporting expense:', error);
+      toast({ title: "Error", description: "Failed to report expense.", variant: "destructive" });
+    }
   };
 
   const handleUploadProof = async () => {
@@ -372,14 +369,24 @@ export function DriverView() {
 
   const handleReportIssue = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Connect to Supabase
-    console.log('Report maintenance issue - connect to Supabase later');
-    toast({
-      title: "Issue Reported",
-      description: "Maintenance request submitted."
-    });
-
-    (e.target as HTMLFormElement).reset();
+    if (!user) return;
+    
+    const formData = new FormData(e.currentTarget);
+    try {
+      await SupabaseService.createMaintenanceRequest({
+        truckId: activeTrip?.truckId || activeTrip?.fleetVehicleId || 'UNKNOWN_VEHICLE',
+        issueDescription: formData.get('description') as string,
+        severity: 'Medium',
+        status: 'pending',
+        reportedByUserId: user.id
+      } as any);
+      
+      toast({ title: "Issue Reported", description: "Maintenance request submitted." });
+      (e.target as HTMLFormElement).reset();
+    } catch (error) {
+      console.error('Error reporting issue:', error);
+      toast({ title: "Error", description: "Failed to report issue.", variant: "destructive" });
+    }
   };
 
   if (loading) {

@@ -223,6 +223,19 @@ export class SupabaseService {
     return data;
   }
 
+  static async deleteExpense(id: string) {
+    const user = await getCurrentUser();
+    const { data: oldData } = await supabase.from('expenses').select('*').eq('id', id).single();
+    
+    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    if (error) throw error;
+    
+    if (user) {
+      await AuditService.logCRUD(user, 'DELETE', 'expenses', id, oldData, null,
+        `Deleted expense ${id}`);
+    }
+  }
+
   // Maintenance Requests
   static async getMaintenanceRequests(filters?: { status?: string; vehicleId?: string }) {
     let query = supabase.from('maintenance_requests').select('*');

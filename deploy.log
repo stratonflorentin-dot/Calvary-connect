@@ -1,0 +1,12 @@
+﻿
+[1m[37m===[39m Deploying to 'studio-8550736767-b9073'...[22m
+
+[36m[1mi [22m[39m deploying [1mfirestore, apphosting[22m
+[36m[1mi  firestore:[22m[39m ensuring required API [1mfirestore.googleapis.com[22m is enabled...
+[36m[1mi  firestore:[22m[39m ensuring required API [1mfirestore.googleapis.com[22m is enabled...
+[36m[1mi  cloud.firestore:[22m[39m checking [1mfirestore.rules[22m for compilation errors...
+[32m[1m+  cloud.firestore:[22m[39m rules file [1mfirestore.rules[22m compiled successfully
+
+[1m[31mError:[39m[22m Your project [1mstudio-8550736767-b9073[22m must be on the Blaze (pay-as-you-go) plan to complete this command. Required API [1mfirebaseapphosting.googleapis.com[22m can't be enabled until the upgrade is complete. To upgrade, visit the following URL:
+
+https://console.firebase.google.com/project/studio-8550736767-b9073/usage/details
