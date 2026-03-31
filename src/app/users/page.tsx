@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Search, Mail, Shield } from 'lucide-react';
+import { Camera, Upload, X, UserPlus, Search, Trash2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function UsersPage() {
   const { role } = useRole();
@@ -21,6 +22,9 @@ export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -45,8 +49,57 @@ export default function UsersPage() {
     loadUsers();
   }, [user]);
 
-  const filteredUsers = users?.filter(u => 
-    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Photo must be less than 2MB');
+        return;
+      }
+      setSelectedPhoto(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadPhoto = async (userId: string): Promise<string | null> => {
+    if (!selectedPhoto) return null;
+    
+    try {
+      setUploading(true);
+      const fileExt = selectedPhoto.name.split('.').pop();
+      const fileName = `${userId}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, selectedPhoto, { upsert: true });
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(filePath);
+        
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const clearPhoto = () => {
+    setSelectedPhoto(null);
+    setPhotoPreview(null);
+  };
+
+  const getInitials = (name: string) => {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  };
+
+  const filteredUsers = users?.filter(u =>
+    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -78,24 +131,61 @@ export default function UsersPage() {
 
       if (error) {
         console.error('Error adding user:', error);
-      } else {
-        console.log('User added successfully:', data);
-        // Refresh users list
-        const { data: updatedUsers } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        setUsers(updatedUsers || []);
-        setIsAddDialogOpen(false);
-        e.currentTarget.reset();
+        return;
       }
+
+      // Upload photo if selected
+      let avatarUrl = null;
+      if (data?.id && selectedPhoto) {
+        avatarUrl = await uploadPhoto(data.id);
+        if (avatarUrl) {
+          await supabase
+            .from('user_profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', data.id);
+        }
+      }
+
+      console.log('User added successfully:', data);
+      // Refresh users list
+      const { data: updatedUsers } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      setUsers(updatedUsers || []);
+      setIsAddDialogOpen(false);
+      clearPhoto();
+      e.currentTarget.reset();
     } catch (error) {
       console.error('Error adding user:', error);
     }
   };
 
-  if (!['CEO', 'HR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      // Refresh users list
+      const { data: updatedUsers } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      setUsers(updatedUsers || []);
+      console.log('User deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      alert('Failed to delete user: ' + error.message);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -142,7 +232,48 @@ export default function UsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" className="w-full">Create Account</Button>
+                <div className="space-y-2">
+                  <Label htmlFor="photo">Profile Photo</Label>
+                  <div className="flex items-center gap-4">
+                    {photoPreview ? (
+                      <div className="relative">
+                        <Avatar className="h-16 w-16">
+                          <AvatarImage src={photoPreview} />
+                          <AvatarFallback>{getInitials(formData.get('name') as string || 'U')}</AvatarFallback>
+                        </Avatar>
+                        <button
+                          type="button"
+                          onClick={clearPhoto}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="photo"
+                          name="photo"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handlePhotoChange}
+                          className="hidden"
+                        />
+                        <Label
+                          htmlFor="photo"
+                          className="cursor-pointer flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
+                        >
+                          <Camera className="h-4 w-4" />
+                          <span>Upload Photo</span>
+                        </Label>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
+                </div>
+                <Button type="submit" className="w-full" disabled={uploading}>
+                  {uploading ? 'Uploading...' : 'Create Account'}
+                </Button>
               </form>
             </DialogContent>
           </Dialog>
@@ -167,19 +298,28 @@ export default function UsersPage() {
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8">Loading users...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8">Loading users...</TableCell></TableRow>
               ) : filteredUsers?.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8">No users found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8">No users found.</TableCell></TableRow>
               ) : filteredUsers?.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{u.name}</span>
-                      <span className="text-xs text-muted-foreground">{u.email}</span>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={u.avatar_url} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {getInitials(u.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{u.name}</span>
+                        <span className="text-xs text-muted-foreground">{u.email}</span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -192,6 +332,16 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteUser(u.id)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
