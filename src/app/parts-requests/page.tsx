@@ -92,10 +92,25 @@ export default function PartsRequestsPage() {
 
   const handleAction = async (requestId: string, status: 'approved' | 'rejected', item: any) => {
     try {
-      // Skip Supabase calls to prevent errors
+      // Update the maintenance request status in Supabase
+      const { error } = await supabase
+        .from('maintenance_requests')
+        .update({ status })
+        .eq('id', requestId);
+      
+      if (error) {
+        console.error('Error updating request status:', error);
+        return;
+      }
+      
+      // Update local state to reflect the change
+      setRequests(prev => prev.map(r => 
+        r.id === requestId ? { ...r, status } : r
+      ));
+      
       console.log(`Request ${requestId} ${status} successfully`);
     } catch (error) {
-      console.log('Handle action error - skipping:', error);
+      console.error('Handle action error:', error);
     }
   };
 
