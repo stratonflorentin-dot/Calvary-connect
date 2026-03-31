@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { DriverLocationMap } from '@/components/driver-location-map';
 
 export function OperatorView() {
     const { t } = useLanguage();
@@ -117,6 +118,7 @@ export function OperatorView() {
                     </CardContent>
                 </Card>
             </div>
+            <DriverLocationMap />
         </div>
     );
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from 'react';
@@ -18,6 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
 import { useLanguage } from '@/hooks/use-language';
+import { LocationPermissionPrompt } from '@/components/location-permission-prompt';
+import { useGeolocation } from '@/hooks/use-geolocation';
+import { DriverLocationMap } from '@/components/driver-location-map';
 
 export function DriverView() {
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -142,7 +144,45 @@ export function DriverView() {
     return baseAmount;
   };
 
+  const [showLocationPrompt, setShowLocationPrompt] = useState(true);
+  const { startTracking, isTracking } = useGeolocation({ enabled: locationEnabled, interval: 30000 });
+
+  // Show location prompt on mount
+  useEffect(() => {
+    if (user && showLocationPrompt) {
+      // Check if location permission already granted
+      navigator.permissions?.query({ name: 'geolocation' }).then((result) => {
+        if (result.state === 'granted') {
+          setLocationEnabled(true);
+          startTracking();
+        }
+      });
+    }
+  }, [user, showLocationPrompt, startTracking]);
+
   const activeTrip = activeTrips?.[0];
+
+  // Handle location granted
+  const handleLocationGranted = () => {
+    setLocationEnabled(true);
+    setShowLocationPrompt(false);
+    startTracking();
+    toast({
+      title: "Location Enabled",
+      description: "Your location is now being tracked for route monitoring.",
+    });
+  };
+
+  // Handle location denied
+  const handleLocationDenied = () => {
+    setLocationEnabled(false);
+    setShowLocationPrompt(false);
+    toast({
+      title: "Location Required",
+      description: "Location access is required for full functionality.",
+      variant: "destructive",
+    });
+  };
 
   const myTripsSorted = useMemo(() => {
     if (!myTrips?.length) return [];
