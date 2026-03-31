@@ -20,6 +20,7 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -106,7 +107,7 @@ export default function UsersPage() {
             <p className="text-muted-foreground text-sm">Add and manage employee access.</p>
           </div>
 
-          <Dialog>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-full gap-2">
                 <UserPlus className="size-4" /> Add User
