@@ -71,6 +71,8 @@ export function Sidebar({ role }: { role: UserRole }) {
     DRIVER: [
       { label: t.dashboard, icon: LayoutDashboard, href: '/' },
       { label: t.trips, icon: Route, href: '/trips' },
+      { label: t.fleet, icon: Truck, href: '/fleet' },
+      { label: t.map, icon: MapPin, href: '/map' },
       { label: t.proof, icon: Home, href: '/proof' },
       { label: t.report_maintenance, icon: History, href: '/report' },
       { label: t.notifications, icon: Bell, href: '/notifications' },
