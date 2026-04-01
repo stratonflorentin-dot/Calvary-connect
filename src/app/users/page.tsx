@@ -304,6 +304,7 @@ export default function UsersPage() {
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>User</TableHead>
+                {(role === 'CEO' || role === 'ADMIN') && <TableHead>Password</TableHead>}
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
@@ -312,9 +313,9 @@ export default function UsersPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">Loading users...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={(role === 'CEO' || role === 'ADMIN') ? 6 : 5} className="text-center py-8">Loading users...</TableCell></TableRow>
               ) : filteredUsers?.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">No users found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={(role === 'CEO' || role === 'ADMIN') ? 6 : 5} className="text-center py-8">No users found.</TableCell></TableRow>
               ) : filteredUsers?.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>

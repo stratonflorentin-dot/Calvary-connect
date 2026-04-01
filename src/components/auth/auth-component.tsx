@@ -6,6 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useSupabase } from '@/components/supabase-provider';
 import { ADMIN_EMAIL } from '@/lib/supabase';
 
@@ -41,9 +48,10 @@ export function AuthComponent() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const name = formData.get('name') as string;
+    const role = formData.get('role') as string;
 
     try {
-      await signUp(email, password, name);
+      await signUp(email, password, name, role);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -129,6 +137,22 @@ export function AuthComponent() {
                     placeholder="Create a password"
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-role">Role</Label>
+                  <Select name="role" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DRIVER">Driver</SelectItem>
+                      <SelectItem value="OPERATOR">Operator</SelectItem>
+                      <SelectItem value="MECHANIC">Mechanic</SelectItem>
+                      <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
+                      <SelectItem value="HR">HR</SelectItem>
+                      <SelectItem value="FLEET_MANAGER">Fleet Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 {error && (
                   <div className="text-sm text-destructive bg-destructive/10 p-2 rounded">

@@ -16,7 +16,7 @@ interface SupabaseContextType {
   isLoading: boolean;
   error: Error | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateRole: (role: UserRole) => Promise<void>;
 }
@@ -44,12 +44,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string, role?: string) => {
     setUser({
       id: 'demo-user',
       email: email,
       name: name,
-      role: 'DRIVER'
+      role: (role as UserRole) || 'DRIVER'
     });
   };
 
