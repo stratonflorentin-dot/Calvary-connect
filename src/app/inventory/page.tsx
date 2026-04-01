@@ -88,7 +88,7 @@ export default function InventoryPage() {
       }
   };
 
-  if (!['CEO', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">

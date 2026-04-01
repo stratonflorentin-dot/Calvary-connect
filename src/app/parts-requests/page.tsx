@@ -114,7 +114,7 @@ export default function PartsRequestsPage() {
     }
   };
 
-  if (!['CEO', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
