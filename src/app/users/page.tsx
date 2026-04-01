@@ -163,6 +163,15 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
+    // Find the user being deleted
+    const userToDelete = users.find(u => u.id === userId);
+    
+    // HR cannot delete CEO users
+    if (role === 'HR' && userToDelete?.role === 'CEO') {
+      alert('HR cannot delete CEO users. Only CEO or Admin can delete CEO users.');
+      return;
+    }
+    
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
     
     try {
