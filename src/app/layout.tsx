@@ -1,14 +1,55 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SupabaseProvider } from '@/components/supabase-provider';
 import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrapper';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#1e40af',
+}
+
 export const metadata: Metadata = {
   title: 'FleetCommand | Fleet Management System',
-  description: 'Professional fleet management platform for logistics operations, driver management, and vehicle tracking.',
+  description: 'Professional fleet management platform for logistics operations, driver management, and vehicle tracking. Available on iOS, Android, Mac, Windows, and Web.',
+  keywords: ['fleet management', 'logistics', 'driver management', 'vehicle tracking', 'fleet operations'],
+  authors: [{ name: 'FleetCommand' }],
+  creator: 'FleetCommand',
+  publisher: 'FleetCommand',
   icons: {
     icon: '/favicon.svg',
+    apple: '/apple-touch-icon.png',
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/favicon.svg',
+        color: '#1e40af',
+      },
+    ],
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'FleetCommand',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'FleetCommand',
+    title: 'FleetCommand | Fleet Management System',
+    description: 'Professional fleet management platform for logistics operations',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FleetCommand | Fleet Management System',
+    description: 'Professional fleet management platform for logistics operations',
   },
 };
 
@@ -20,12 +61,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="format-detection" content="telephone=no" />
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#1e40af" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />

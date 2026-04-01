@@ -94,15 +94,143 @@
   scroll-snap-align: start;
 }
 
-/* Safe area support for notched phones */
-@supports (padding: max(0px)) {
-  .safe-area-padding {
-    padding-left: max(1rem, env(safe-area-inset-left));
-    padding-right: max(1rem, env(safe-area-inset-right));
-    padding-top: max(1rem, env(safe-area-inset-top));
+/* Cross-platform responsive design improvements */
+
+/* Desktop and tablet optimizations */
+@media (min-width: 769px) {
+  body {
+    overflow-x: hidden;
   }
   
-  .safe-area-bottom {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  /* Better scrollbar styling for desktop */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+/* Large screen optimizations (Mac, Windows desktop) */
+@media (min-width: 1440px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+/* Touch device optimizations (iOS, Android) */
+@media (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  button:hover,
+  a:hover {
+    transform: none !important;
+  }
+  
+  /* Increase touch targets */
+  button, a, input, textarea, select, [role="button"] {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  /* Disable text selection on interactive elements */
+  button, [role="button"], a {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Prevent callout menu on iOS */
+  * {
+    -webkit-touch-callout: none;
+  }
+  
+  /* Fix iOS zoom on input focus */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  
+  /* Safe area for iPhone notch/Dynamic Island */
+  .ios-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .ios-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Android-specific fixes */
+@supports not (-webkit-touch-callout: none) {
+  /* Android Chrome specific styles */
+  body {
+    /* Prevent pull-to-refresh on Android */
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Print styles for reports */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .print-break {
+    page-break-before: always;
+  }
+}
+
+/* High contrast mode support (accessibility) */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 222 47% 11%;
+  }
+}
+
+/* Reduced motion support (accessibility) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode support for OS preference */
+@media (prefers-color-scheme: dark) {
+  /* Respect OS dark mode preference */
+}
+
+/* Landscape mode optimizations for mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .landscape-hide {
+    display: none;
+  }
+}
+
+/* Fix for Windows high DPI displays */
+@media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
+  img {
+    image-rendering: -webkit-optimize-contrast;
   }
 }
