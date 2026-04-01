@@ -5,7 +5,6 @@ import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { BottomTabs } from '@/components/navigation/bottom-tabs';
-import { RoleSelector } from '@/components/dashboard/role-selector';
 import { AuthComponent } from '@/components/auth/auth-component';
 import { CeoView } from '@/components/dashboard/ceo-view';
 import { DriverView } from '@/components/dashboard/driver-view';
@@ -78,7 +77,6 @@ export default function Home() {
       <main className="min-h-screen bg-background pb-20 safe-area-padding">
         {renderContent()}
         <BottomTabs role={role} />
-        {role === 'ADMIN' && <RoleSelector />}
       </main>
     );
   }
@@ -107,7 +105,6 @@ export default function Home() {
       </main>
 
       <BottomTabs role={role} />
-      {role === 'ADMIN' && <RoleSelector />}
     </div>
   );
 }

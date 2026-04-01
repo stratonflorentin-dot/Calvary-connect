@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { UserRole } from '@/types/roles';
 import { useSupabase } from '@/components/supabase-provider';
 
@@ -8,6 +8,11 @@ export function useRole() {
   const [role, setRole] = useState<UserRole | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const { user } = useSupabase();
+
+  // The actual user role from database (never changes with impersonation)
+  const actualRole = user?.role || null;
+  // Whether the user is an actual ADMIN
+  const isAdmin = actualRole === 'ADMIN';
 
   useEffect(() => {
     if (!user) {
@@ -44,5 +49,29 @@ export function useRole() {
     }
   };
 
-  return { role, changeRole, isInitialized };
+  // Permission check: ADMIN has full access regardless of impersonated role
+  const hasPermission = useCallback((requiredRoles: UserRole[]) => {
+    // ADMIN always has full access
+    if (isAdmin) return true;
+    // Otherwise check if current role is in required roles
+    if (!role) return false;
+    return requiredRoles.includes(role);
+  }, [isAdmin, role]);
+
+  // Check if user can access a page/feature
+  const canAccess = useCallback((allowedRoles: UserRole[]) => {
+    if (isAdmin) return true;
+    if (!role) return false;
+    return allowedRoles.includes(role);
+  }, [isAdmin, role]);
+
+  return { 
+    role, 
+    actualRole,
+    isAdmin,
+    changeRole, 
+    isInitialized,
+    hasPermission,
+    canAccess
+  };
 }

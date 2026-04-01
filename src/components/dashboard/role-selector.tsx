@@ -1,8 +1,9 @@
 "use client";
 
 import { useRole } from '@/hooks/use-role';
+import { useSupabase } from '@/components/supabase-provider';
 import { UserRole } from '@/types/roles';
-import { Settings, User, Shield, Wrench, Calculator, Users, Truck } from 'lucide-react';
+import { Shield, User, Wrench, Calculator, Users, Truck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,8 +24,10 @@ const ROLE_ICONS = {
 
 export function RoleSelector() {
   const { role, changeRole } = useRole();
+  const { user } = useSupabase();
 
-  if (!role) return null;
+  // Only show for actual ADMIN users (not impersonated roles)
+  if (!role || !user || user.role !== 'ADMIN') return null;
 
   const CurrentIcon = ROLE_ICONS[role as keyof typeof ROLE_ICONS];
 
@@ -38,8 +41,8 @@ export function RoleSelector() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <div className="p-2 border-b">
-            <p className="text-sm font-medium">Switch Role</p>
-            <p className="text-xs text-muted-foreground">Current: {role}</p>
+            <p className="text-sm font-medium">Admin View Mode</p>
+            <p className="text-xs text-muted-foreground">Viewing as: {role}</p>
           </div>
           <DropdownMenuRadioGroup value={role} onValueChange={(v) => changeRole(v as UserRole)}>
             <DropdownMenuRadioItem value="CEO" className="flex items-center gap-2">

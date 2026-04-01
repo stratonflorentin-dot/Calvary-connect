@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SupabaseProvider } from '@/components/supabase-provider';
+import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrapper';
 
 export const metadata: Metadata = {
   title: 'FleetCommand | Fleet Management System',
@@ -34,6 +35,7 @@ export default function RootLayout({
         <SupabaseProvider>
           {children}
           <Toaster />
+          <RoleSelectorWrapper />
         </SupabaseProvider>
       </body>
     </html>
