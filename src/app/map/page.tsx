@@ -120,7 +120,7 @@ export default function LiveMapPage() {
     }
   };
 
-  if (!['CEO', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   // Default center: Accra, Ghana
   const defaultCenter = { lat: 5.6037, lng: -0.1870 };

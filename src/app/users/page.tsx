@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, X, UserPlus, Search, Trash2 } from 'lucide-react';
+import { Camera, Upload, X, UserPlus, Search, Trash2, Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function UsersPage() {
@@ -22,6 +22,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -202,6 +204,67 @@ export default function UsersPage() {
     }
   };
 
+  const handleEditUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      const formData = new FormData(e.currentTarget);
+      const updateData = {
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        role: formData.get('role') as string,
+        status: formData.get('status') as string,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Only CEO and ADMIN can change role to CEO
+      if (updateData.role === 'CEO' && role !== 'CEO' && role !== 'ADMIN') {
+        alert("You don't have permission to assign CEO role.");
+        return;
+      }
+
+      // Prevent changing ADMIN user role/status (for protection)
+      if (editingUser.role === 'ADMIN' && updateData.role !== 'ADMIN') {
+        alert('Cannot change the role of the system Admin.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(updateData)
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      // Upload new photo if selected
+      if (selectedPhoto) {
+        const avatarUrl = await uploadPhoto(editingUser.id);
+        if (avatarUrl) {
+          await supabase
+            .from('user_profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', editingUser.id);
+        }
+      }
+
+      // Refresh users list
+      const { data: updatedUsers } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      setUsers(updatedUsers || []);
+      setIsEditDialogOpen(false);
+      setEditingUser(null);
+      clearPhoto();
+      console.log('User updated successfully');
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      alert('Failed to update user: ' + error.message);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role!} />
@@ -292,6 +355,96 @@ export default function UsersPage() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Edit User Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit User</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleEditUser} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Full Name</Label>
+                  <Input id="edit-name" name="name" defaultValue={editingUser?.name} placeholder="Full name" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email Address</Label>
+                  <Input id="edit-email" name="email" type="email" defaultValue={editingUser?.email} placeholder="john@calvaryconnect.com" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">System Role</Label>
+                  <Select name="role" defaultValue={editingUser?.role} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(role === "CEO" || role === "ADMIN") && <SelectItem value="CEO">CEO</SelectItem>}
+                      <SelectItem value="ADMIN">Admin</SelectItem>
+                      <SelectItem value="HR">HR</SelectItem>
+                      <SelectItem value="OPERATOR">Operations</SelectItem>
+                      <SelectItem value="DRIVER">Driver</SelectItem>
+                      <SelectItem value="MECHANIC">Mechanic</SelectItem>
+                      <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select name="status" defaultValue={editingUser?.status || 'active'} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-photo">Profile Photo</Label>
+                  <div className="flex items-center gap-4">
+                    {photoPreview ? (
+                      <div className="relative">
+                        <Avatar className="h-16 w-16">
+                          <AvatarImage src={photoPreview} />
+                          <AvatarFallback>{getInitials(editingUser?.name || 'U')}</AvatarFallback>
+                        </Avatar>
+                        <button
+                          type="button"
+                          onClick={clearPhoto}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="edit-photo"
+                          name="photo"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handlePhotoChange}
+                          className="hidden"
+                        />
+                        <Label
+                          htmlFor="edit-photo"
+                          className="cursor-pointer flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
+                        >
+                          <Camera className="h-4 w-4" />
+                          <span>Change Photo</span>
+                        </Label>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
+                </div>
+                <Button type="submit" className="w-full" disabled={uploading}>
+                  {uploading ? 'Uploading...' : 'Update User'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-hidden">
@@ -357,16 +510,31 @@ export default function UsersPage() {
                     {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    {u.role !== 'ADMIN' && u.role !== 'CEO' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteUser(u.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <div className="flex justify-end gap-1">
+                      {(role === 'CEO' || role === 'ADMIN') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingUser(u);
+                            setIsEditDialogOpen(true);
+                          }}
+                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {u.role !== 'ADMIN' && u.role !== 'CEO' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteUser(u.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

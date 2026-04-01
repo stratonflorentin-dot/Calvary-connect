@@ -22,6 +22,13 @@ export function BottomTabs({ role }: { role: UserRole }) {
       { label: t.map, icon: MapPin, href: '/map' },
       { label: t.profile, icon: User, href: '/profile' },
     ],
+    ADMIN: [
+      { label: t.home, icon: Home, href: '/' },
+      { label: t.fleet, icon: Truck, href: '/fleet' },
+      { label: t.finance, icon: DollarSign, href: '/finance' },
+      { label: t.map, icon: MapPin, href: '/map' },
+      { label: t.profile, icon: User, href: '/profile' },
+    ],
     OPERATOR: [
       { label: t.home, icon: LayoutDashboard, href: '/' },
       { label: t.trips, icon: Route, href: '/trips' },
