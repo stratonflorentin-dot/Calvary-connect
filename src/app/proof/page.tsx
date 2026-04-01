@@ -270,18 +270,46 @@ export default function DeliveryProofPage() {
                   
                   {selectedDoc.file_url && (
                     <div className="border rounded-lg overflow-hidden">
-                      {selectedDoc.file_url.match(/\.(jpg|jpeg|png)$/i) ? (
+                      {selectedDoc.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                         <img 
                           src={selectedDoc.file_url} 
                           alt={selectedDoc.document_name} 
-                          className="w-full max-h-[400px] object-contain"
+                          className="w-full max-h-[500px] object-contain"
                         />
+                      ) : selectedDoc.file_url.match(/\.pdf$/i) ? (
+                        <div className="space-y-4">
+                          <iframe 
+                            src={`${selectedDoc.file_url}#toolbar=1&navpanes=1`}
+                            className="w-full h-[500px] border-0"
+                            title={selectedDoc.document_name}
+                          />
+                          <div className="flex justify-center gap-2 p-4 border-t">
+                            <Button 
+                              variant="outline"
+                              onClick={() => window.open(selectedDoc.file_url, '_blank')}
+                            >
+                              <ExternalLink className="size-4 mr-2" />
+                              Open in New Tab
+                            </Button>
+                            <Button 
+                              variant="default"
+                              onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = selectedDoc.file_url;
+                                link.download = selectedDoc.document_name || 'document.pdf';
+                                link.click();
+                              }}
+                            >
+                              <FileText className="size-4 mr-2" />
+                              Download PDF
+                            </Button>
+                          </div>
+                        </div>
                       ) : (
                         <div className="p-8 text-center">
                           <FileText className="size-16 mx-auto text-muted-foreground mb-4" />
-                          <p className="text-muted-foreground">PDF Document</p>
+                          <p className="text-muted-foreground mb-4">Document Preview Not Available</p>
                           <Button 
-                            className="mt-4" 
                             onClick={() => window.open(selectedDoc.file_url, '_blank')}
                           >
                             <ExternalLink className="size-4 mr-2" />

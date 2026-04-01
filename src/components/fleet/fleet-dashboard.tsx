@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { AddVehicleDialog } from '@/components/fleet/add-vehicle-dialog';
+import { VehicleDetailsDialog } from '@/components/fleet/vehicle-details-dialog';
 import { 
   Truck, Package, Car, Wrench, AlertTriangle, 
   CheckCircle, Clock, Database, AlertCircle
@@ -35,6 +36,8 @@ export function FleetDashboard() {
   const [filter, setFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     loadFleetData();
@@ -406,7 +409,15 @@ export function FleetDashboard() {
               )}
 
               <div className="flex gap-2 pt-2">
-                <Button size="sm" variant="outline" className="flex-1">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedVehicle(vehicle);
+                    setDetailsOpen(true);
+                  }}
+                >
                   View Details
                 </Button>
                 <Button size="sm" className="flex-1">

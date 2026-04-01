@@ -17,7 +17,7 @@ import { Plus } from 'lucide-react';
 export default function FleetPage() {
   const { role } = useRole();
 
-  if (!['CEO', 'OPERATOR', 'MECHANIC'].includes(role || '')) {
+  if (!['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) {
     return (
       <main className="min-h-screen bg-background safe-area-padding">
         <div className="p-8">

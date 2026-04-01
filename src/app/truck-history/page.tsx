@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Wrench, Route, History, Plus, CalendarDays, FileText, Shield, Upload } from 'lucide-react';
+import { Wrench, Route, History, Plus, CalendarDays, FileText, Shield, Upload, ExternalLink, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
@@ -45,6 +45,8 @@ export default function TruckHistoryPage() {
   
   // Insurance upload state
   const [insuranceDialogOpen, setInsuranceDialogOpen] = useState(false);
+  const [viewDocDialogOpen, setViewDocDialogOpen] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [insuranceForm, setInsuranceForm] = useState({
     documentName: '',
     insuranceType: 'motor_vehicle',
@@ -394,20 +396,48 @@ export default function TruckHistoryPage() {
                       )}
                     </div>
                     {vehicleInsuranceDocs?.length > 0 ? (
-                      vehicleInsuranceDocs.map((doc) => (
-                        <TimelineItem 
-                          key={doc.id}
-                          type="insurance"
-                          title={doc.document_name || 'Insurance Document'}
-                          date={new Date(doc.created_at).toLocaleDateString()}
-                          description={`${doc.insurance_type || 'Motor Vehicle'} - ${doc.insurance_company || 'Unknown Provider'}`}
-                          tag={doc.status || 'Active'}
-                          icon={<Shield className="size-4" />}
-                          color="emerald"
-                        />
-                      ))
+                      <div className="space-y-3 ml-12 md:ml-0">
+                        {vehicleInsuranceDocs.map((doc) => (
+                          <div 
+                            key={doc.id}
+                            className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group cursor-pointer hover:bg-muted/50 rounded-lg transition-colors p-2"
+                            onClick={() => {
+                              setSelectedDoc(doc);
+                              setViewDocDialogOpen(true);
+                            }}
+                          >
+                            {/* Icon Circle */}
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 bg-emerald-500 text-white">
+                              <Shield className="size-4" />
+                            </div>
+                            {/* Card Content */}
+                            <div className="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-2xl border bg-white shadow-sm">
+                              <div className="flex items-center justify-between mb-1">
+                                <time className="font-mono text-[10px] font-bold text-slate-500">{new Date(doc.created_at).toLocaleDateString()}</time>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-[9px] uppercase tracking-tighter">{doc.status || 'Active'}</Badge>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 px-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedDoc(doc);
+                                      setViewDocDialogOpen(true);
+                                    }}
+                                  >
+                                    <Eye className="size-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="text-sm font-headline text-slate-900 mb-1">{doc.document_name || 'Insurance Document'}</div>
+                              <div className="text-xs text-slate-500 line-clamp-2 italic">{doc.insurance_type?.replace('_', ' ') || 'Motor Vehicle'} - {doc.insurance_company || 'Unknown Provider'}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <p className="text-center text-xs text-muted-foreground italic">No insurance documents found.</p>
+                      <p className="text-center text-xs text-muted-foreground italic ml-12 md:ml-0">No insurance documents found.</p>
                     )}
                   </section>
                 </div>
@@ -696,6 +726,89 @@ export default function TruckHistoryPage() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Viewer Dialog */}
+      <Dialog open={viewDocDialogOpen} onOpenChange={setViewDocDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedDoc?.document_name || 'Document'}</DialogTitle>
+          </DialogHeader>
+          {selectedDoc && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <Label className="text-muted-foreground">Insurance Type</Label>
+                  <p className="font-medium capitalize">{selectedDoc.insurance_type?.replace('_', ' ') || 'Motor Vehicle'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Insurance Company</Label>
+                  <p className="font-medium">{selectedDoc.insurance_company || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Policy Number</Label>
+                  <p className="font-medium">{selectedDoc.policy_number || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Expiry Date</Label>
+                  <p className={`font-medium ${selectedDoc.expiry_date && new Date(selectedDoc.expiry_date) < new Date() ? 'text-red-500' : ''}`}>
+                    {selectedDoc.expiry_date ? new Date(selectedDoc.expiry_date).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+              </div>
+              
+              {selectedDoc.file_url && (
+                <div className="border rounded-lg overflow-hidden">
+                  {selectedDoc.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                    <img 
+                      src={selectedDoc.file_url} 
+                      alt={selectedDoc.document_name} 
+                      className="w-full max-h-[500px] object-contain"
+                    />
+                  ) : selectedDoc.file_url.match(/\.pdf$/i) ? (
+                    <div className="space-y-4">
+                      <iframe 
+                        src={`${selectedDoc.file_url}#toolbar=1&navpanes=1`}
+                        className="w-full h-[500px] border-0"
+                        title={selectedDoc.document_name}
+                      />
+                      <div className="flex justify-center gap-2 p-4 border-t">
+                        <Button 
+                          variant="outline"
+                          onClick={() => window.open(selectedDoc.file_url, '_blank')}
+                        >
+                          <ExternalLink className="size-4 mr-2" />
+                          Open in New Tab
+                        </Button>
+                        <Button 
+                          variant="default"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = selectedDoc.file_url;
+                            link.download = selectedDoc.document_name || 'document.pdf';
+                            link.click();
+                          }}
+                        >
+                          <FileText className="size-4 mr-2" />
+                          Download PDF
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <FileText className="size-16 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-4">Document Preview Not Available</p>
+                      <Button onClick={() => window.open(selectedDoc.file_url, '_blank')}>
+                        <ExternalLink className="size-4 mr-2" />
+                        Open Document
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
