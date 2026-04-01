@@ -6,22 +6,34 @@ import { useSupabase } from '@/components/supabase-provider';
 
 export function useRole() {
   const [role, setRole] = useState<UserRole | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { user } = useSupabase();
 
   useEffect(() => {
-    // Clear any saved role from localStorage to use actual user role
-    if (user?.role === 'ADMIN') {
-      localStorage.removeItem('fleet_command_role');
-    }
-    
-    if (user) {
-      // Always use the actual user's role from Supabase first
-      setRole(user.role);
-    } else {
+    if (!user) {
       // Default to CEO for demo/access only when no user
       setRole('CEO');
       localStorage.setItem('fleet_command_role', 'CEO');
+      return;
     }
+
+    // For ADMIN users, check if there's a saved role preference
+    if (user.role === 'ADMIN') {
+      const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
+      if (savedRole && ['CEO', 'ADMIN', 'OPERATOR', 'DRIVER', 'MECHANIC', 'ACCOUNTANT', 'HR'].includes(savedRole)) {
+        setRole(savedRole);
+      } else {
+        // Default to ADMIN if no saved role
+        setRole('ADMIN');
+        localStorage.setItem('fleet_command_role', 'ADMIN');
+      }
+    } else {
+      // For non-ADMIN users, always use their actual role
+      setRole(user.role);
+      localStorage.removeItem('fleet_command_role');
+    }
+    
+    setIsInitialized(true);
   }, [user]);
 
   const changeRole = (newRole: UserRole) => {
@@ -32,5 +44,5 @@ export function useRole() {
     }
   };
 
-  return { role, changeRole };
+  return { role, changeRole, isInitialized };
 }

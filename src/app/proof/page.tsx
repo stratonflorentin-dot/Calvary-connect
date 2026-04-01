@@ -2,6 +2,7 @@
 
 import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
+import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,14 +10,67 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, FileImage, CheckCircle2 } from 'lucide-react';
-import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Upload, FileImage, CheckCircle2, Shield, FileText, Eye, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 
 export default function DeliveryProofPage() {
   const { user } = useSupabase();
   const { role } = useRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [insuranceDocuments, setInsuranceDocuments] = useState<any[]>([]);
+  const [assignedVehicle, setAssignedVehicle] = useState<any>(null);
+  const [loadingInsurance, setLoadingInsurance] = useState(true);
+  const [selectedDoc, setSelectedDoc] = useState<any>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+
+  // Load driver's assigned vehicle and insurance documents
+  useEffect(() => {
+    const loadDriverInsuranceDocs = async () => {
+      if (!user || role !== 'DRIVER') return;
+      
+      try {
+        setLoadingInsurance(true);
+        
+        // Get driver's assigned vehicle from trips or driver profile
+        const { data: driverTrips } = await supabase
+          .from('trips')
+          .select('vehicle_id, vehicles!inner(*)')
+          .eq('driver_id', user.id)
+          .eq('status', 'in_progress')
+          .limit(1)
+          .single();
+          
+        if (driverTrips?.vehicle_id) {
+          setAssignedVehicle(driverTrips.vehicles);
+          
+          // Load insurance documents for assigned vehicle
+          const { data: insuranceDocs } = await supabase
+            .from('vehicle_documents')
+            .select('*')
+            .eq('vehicle_id', driverTrips.vehicle_id)
+            .eq('document_type', 'insurance')
+            .eq('status', 'active')
+            .order('created_at', { ascending: false });
+            
+          setInsuranceDocuments(insuranceDocs || []);
+        }
+      } catch (error) {
+        console.error('Error loading insurance documents:', error);
+      } finally {
+        setLoadingInsurance(false);
+      }
+    };
+
+    loadDriverInsuranceDocs();
+  }, [user, role]);
+
+  const handleViewDocument = (doc: any) => {
+    setSelectedDoc(doc);
+    setViewDialogOpen(true);
+  };
 
   if (!user || !role) return null;
 
@@ -85,6 +139,162 @@ export default function DeliveryProofPage() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Insurance Documents Section - For Drivers */}
+          {role === 'DRIVER' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="size-5 text-emerald-500" />
+                  Insurance Documents
+                </CardTitle>
+                <CardDescription>
+                  {assignedVehicle ? (
+                    <>View insurance documents for your assigned vehicle: <strong>{assignedVehicle.plate_number || assignedVehicle.name}</strong></>
+                  ) : (
+                    "Insurance documents for your assigned vehicle"
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingInsurance ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-sm text-muted-foreground">Loading insurance documents...</span>
+                  </div>
+                ) : insuranceDocuments.length > 0 ? (
+                  <div className="space-y-3">
+                    {insuranceDocuments.map((doc) => (
+                      <div 
+                        key={doc.id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <FileText className="size-5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{doc.document_name || 'Insurance Document'}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="capitalize">{doc.insurance_type?.replace('_', ' ') || 'Motor Vehicle'}</span>
+                              <span>•</span>
+                              <span>{doc.insurance_company || 'Unknown Provider'}</span>
+                              {doc.expiry_date && (
+                                <>
+                                  <span>•</span>
+                                  <span className={new Date(doc.expiry_date) < new Date() ? 'text-red-500' : 'text-emerald-600'}>
+                                    Expires: {new Date(doc.expiry_date).toLocaleDateString()}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleViewDocument(doc)}
+                            className="gap-1"
+                          >
+                            <Eye className="size-4" />
+                            View
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => window.open(doc.file_url, '_blank')}
+                            className="gap-1"
+                          >
+                            <ExternalLink className="size-4" />
+                            Open
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Shield className="size-12 mx-auto text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground">No insurance documents found</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {assignedVehicle 
+                        ? "Contact your administrator to upload insurance documents for your vehicle."
+                        : "No vehicle is currently assigned to you."
+                      }
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Document View Dialog */}
+          <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{selectedDoc?.document_name || 'Insurance Document'}</DialogTitle>
+              </DialogHeader>
+              {selectedDoc && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <Label className="text-muted-foreground">Insurance Type</Label>
+                      <p className="font-medium capitalize">{selectedDoc.insurance_type?.replace('_', ' ') || 'Motor Vehicle'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Insurance Company</Label>
+                      <p className="font-medium">{selectedDoc.insurance_company || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Policy Number</Label>
+                      <p className="font-medium">{selectedDoc.policy_number || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Expiry Date</Label>
+                      <p className={`font-medium ${selectedDoc.expiry_date && new Date(selectedDoc.expiry_date) < new Date() ? 'text-red-500' : ''}`}>
+                        {selectedDoc.expiry_date ? new Date(selectedDoc.expiry_date).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Status</Label>
+                      <Badge className={selectedDoc.status === 'active' ? 'bg-emerald-500' : 'bg-yellow-500'}>
+                        {selectedDoc.status || 'Active'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Uploaded</Label>
+                      <p className="font-medium">{new Date(selectedDoc.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedDoc.file_url && (
+                    <div className="border rounded-lg overflow-hidden">
+                      {selectedDoc.file_url.match(/\.(jpg|jpeg|png)$/i) ? (
+                        <img 
+                          src={selectedDoc.file_url} 
+                          alt={selectedDoc.document_name} 
+                          className="w-full max-h-[400px] object-contain"
+                        />
+                      ) : (
+                        <div className="p-8 text-center">
+                          <FileText className="size-16 mx-auto text-muted-foreground mb-4" />
+                          <p className="text-muted-foreground">PDF Document</p>
+                          <Button 
+                            className="mt-4" 
+                            onClick={() => window.open(selectedDoc.file_url, '_blank')}
+                          >
+                            <ExternalLink className="size-4 mr-2" />
+                            Open Document
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
       <BottomTabs role={role} />
