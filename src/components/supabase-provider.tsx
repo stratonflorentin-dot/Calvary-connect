@@ -9,6 +9,10 @@ interface User {
   email: string;
   name?: string;
   role: UserRole;
+  avatar?: string;
+  phone?: string;
+  employeeId?: string;
+  department?: string;
 }
 
 interface SupabaseContextType {
