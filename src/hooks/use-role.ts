@@ -9,22 +9,22 @@ export function useRole() {
   const { user } = useSupabase();
 
   useEffect(() => {
-    const savedRole = localStorage.getItem('fleet_command_role') as UserRole;
-    if (savedRole) {
-      setRole(savedRole);
-    } else if (user) {
-      // User has a role from Supabase profile
+    if (user) {
+      // Always use the actual user's role from Supabase first
       setRole(user.role);
     } else {
-      // Default to CEO for demo/access
+      // Default to CEO for demo/access only when no user
       setRole('CEO');
       localStorage.setItem('fleet_command_role', 'CEO');
     }
   }, [user]);
 
   const changeRole = (newRole: UserRole) => {
-    setRole(newRole);
-    localStorage.setItem('fleet_command_role', newRole);
+    // Only allow role switching if user is ADMIN
+    if (user?.role === 'ADMIN') {
+      setRole(newRole);
+      localStorage.setItem('fleet_command_role', newRole);
+    }
   };
 
   return { role, changeRole };
