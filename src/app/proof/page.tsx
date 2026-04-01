@@ -12,8 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, FileImage, CheckCircle2, Shield, FileText, Eye, ExternalLink } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Upload, FileImage, CheckCircle2, Shield, FileText, Eye, ExternalLink, Camera, X, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
 
 export default function DeliveryProofPage() {
@@ -25,6 +25,13 @@ export default function DeliveryProofPage() {
   const [loadingInsurance, setLoadingInsurance] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  
+  // Camera capture state
+  const [showCamera, setShowCamera] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   // Load driver's assigned vehicle and insurance documents
   useEffect(() => {
@@ -72,6 +79,61 @@ export default function DeliveryProofPage() {
     setViewDialogOpen(true);
   };
 
+  // Camera functions
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' }, // Use back camera on mobile
+        audio: false 
+      });
+      setStream(mediaStream);
+      setShowCamera(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      toast({
+        title: "Camera Error",
+        description: "Could not access camera. Please check permissions.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/jpeg', 0.9);
+        setCapturedImage(imageData);
+        stopCamera();
+      }
+    }
+  };
+
+  const retakePhoto = () => {
+    setCapturedImage(null);
+    startCamera();
+  };
+
+  const clearPhoto = () => {
+    setCapturedImage(null);
+  };
+
   if (!user || !role) return null;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -113,12 +175,103 @@ export default function DeliveryProofPage() {
                 
                 <div className="space-y-2">
                   <Label>Proof Document / Photo</Label>
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center hover:bg-muted/50 transition-colors cursor-pointer">
-                    <Upload className="size-8 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                    <p className="text-xs text-muted-foreground mt-1">SVG, PNG, JPG or PDF (max. 5MB)</p>
-                    <Input type="file" className="hidden" id="file-upload" accept="image/*,.pdf" />
-                  </div>
+                  
+                  {/* Camera Preview */}
+                  {showCamera && (
+                    <div className="relative bg-black rounded-xl overflow-hidden">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full h-64 object-cover"
+                      />
+                      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={stopCamera}
+                          className="bg-white/90"
+                        >
+                          <X className="size-4 mr-1" />
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={capturePhoto}
+                          className="bg-white text-black hover:bg-gray-100"
+                        >
+                          <Camera className="size-4 mr-1" />
+                          Capture
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Captured Image Preview */}
+                  {capturedImage && !showCamera && (
+                    <div className="relative rounded-xl overflow-hidden border">
+                      <img 
+                        src={capturedImage} 
+                        alt="Captured proof" 
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="absolute bottom-2 right-2 flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={retakePhoto}
+                          className="bg-white/90"
+                        >
+                          <RotateCcw className="size-4 mr-1" />
+                          Retake
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={clearPhoto}
+                        >
+                          <X className="size-4 mr-1" />
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* File Upload / Camera Button */}
+                  {!showCamera && !capturedImage && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div 
+                        className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                      >
+                        <Upload className="size-6 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Upload File</p>
+                        <p className="text-xs text-muted-foreground">PNG, JPG, PDF</p>
+                        <Input 
+                          type="file" 
+                          className="hidden" 
+                          id="file-upload" 
+                          accept="image/*,.pdf" 
+                        />
+                      </div>
+                      <div 
+                        className="border-2 border-dashed border-primary/25 rounded-xl p-6 text-center hover:bg-primary/5 transition-colors cursor-pointer bg-primary/5"
+                        onClick={startCamera}
+                      >
+                        <Camera className="size-6 mx-auto text-primary mb-2" />
+                        <p className="text-sm font-medium text-primary">Take Photo</p>
+                        <p className="text-xs text-muted-foreground">Use camera</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Hidden canvas for capturing */}
+                  <canvas ref={canvasRef} className="hidden" />
                 </div>
 
                 <div className="space-y-2">
