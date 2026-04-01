@@ -9,6 +9,11 @@ export function useRole() {
   const { user } = useSupabase();
 
   useEffect(() => {
+    // Clear any saved role from localStorage to use actual user role
+    if (user?.role === 'ADMIN') {
+      localStorage.removeItem('fleet_command_role');
+    }
+    
     if (user) {
       // Always use the actual user's role from Supabase first
       setRole(user.role);

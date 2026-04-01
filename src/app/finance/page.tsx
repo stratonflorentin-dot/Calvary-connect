@@ -193,7 +193,7 @@ export default function FinancePage() {
   };
 
   const handleDeleteEntry = async () => {
-    if (!editDialog.ledger || !editDialog.entry?.id || role !== 'CEO') return;
+    if (!editDialog.ledger || !editDialog.entry?.id || (role !== 'CEO' && role !== 'ADMIN')) return;
     
     try {
       switch (editDialog.ledger) {
@@ -684,7 +684,7 @@ export default function FinancePage() {
                 </Tabs>
               </DialogContent>
             </Dialog>
-            {(role === 'ACCOUNTANT' || role === 'CEO') && (
+            {(role === 'ACCOUNTANT' || role === 'CEO' || role === 'ADMIN') && (
               <Button
                 type="button"
                 variant="outline"

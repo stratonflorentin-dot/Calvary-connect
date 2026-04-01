@@ -31,6 +31,18 @@ export function Sidebar({ role }: { role: UserRole }) {
       { label: 'Audit Log', icon: Shield, href: '/audit' },
       { label: t.notifications, icon: Bell, href: '/notifications' },
     ],
+    ADMIN: [
+      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
+      { label: t.fleet, icon: Truck, href: '/fleet' },
+      { label: t.finance, icon: DollarSign, href: '/finance' },
+      { label: t.monthly_report, icon: BarChart2, href: '/reports' },
+      { label: t.users, icon: Users, href: '/users' },
+      { label: t.inventory, icon: Package, href: '/inventory' },
+      { label: t.map, icon: MapPin, href: '/map' },
+      { label: t.ai_insights, icon: Sparkles, href: '/ai-insights' },
+      { label: 'Audit Log', icon: Shield, href: '/audit' },
+      { label: t.notifications, icon: Bell, href: '/notifications' },
+    ],
     OPERATOR: [
       { label: t.dashboard, icon: LayoutDashboard, href: '/' },
       { label: t.trips, icon: Route, href: '/trips' },

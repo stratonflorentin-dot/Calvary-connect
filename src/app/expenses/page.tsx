@@ -378,7 +378,7 @@ export default function ExpensesPage() {
                                                             </form>
                                                         </DialogContent>
                                                     </Dialog>
-                                                    {role === 'CEO' && expense.status === 'pending' && (
+                                                    {(role === 'CEO' || role === 'ADMIN') && expense.status === 'pending' && (
                                                         <>
                                                             <Button
                                                                 variant="outline"
