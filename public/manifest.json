@@ -1,12 +1,17 @@
 {
   "name": "FleetCommand - Fleet Management System",
   "short_name": "FleetCommand",
-  "description": "Professional fleet management platform for logistics operations",
+  "description": "Professional fleet management platform for logistics operations, driver management, and vehicle tracking.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1e40af",
   "theme_color": "#1e40af",
-  "orientation": "portrait",
+  "orientation": "any",
+  "id": "/",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
       "src": "/favicon.png",
@@ -15,8 +20,26 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icon.png",
-      "sizes": "192x192",
+      "src": "/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-144.png",
+      "sizes": "144x144",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -27,15 +50,67 @@
       "purpose": "any maskable"
     },
     {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "productivity", "utilities"],
-  "lang": "en",
-  "dir": "ltr",
-  "scope": "/",
-  "prefer_related_applications": false
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "FleetCommand Desktop Dashboard"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "375x667",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "FleetCommand Mobile App"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View fleet dashboard",
+      "url": "/",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Fleet",
+      "short_name": "Fleet",
+      "description": "Manage fleet vehicles",
+      "url": "/fleet",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Map",
+      "short_name": "Map",
+      "description": "Live vehicle tracking",
+      "url": "/map",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "handle_links": "auto",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  }
 }

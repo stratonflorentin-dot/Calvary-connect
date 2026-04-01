@@ -3,6 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SupabaseProvider } from '@/components/supabase-provider';
 import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrapper';
+import { PWAProvider } from '@/components/pwa/pwa-provider';
+import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -67,11 +69,14 @@ export default function RootLayout({
         <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
-        <SupabaseProvider>
-          {children}
-          <Toaster />
-          <RoleSelectorWrapper />
-        </SupabaseProvider>
+        <PWAProvider>
+          <SupabaseProvider>
+            {children}
+            <Toaster />
+            <RoleSelectorWrapper />
+            <PWAInstallPrompt />
+          </SupabaseProvider>
+        </PWAProvider>
       </body>
     </html>
   );
