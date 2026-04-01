@@ -332,6 +332,16 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </TableCell>
+                  {(role === 'CEO' || role === 'ADMIN') && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-600">
+                          ••••••••
+                        </code>
+                        <span className="text-xs text-slate-400">Hidden</span>
+                      </div>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Badge variant="outline" className="font-headline tracking-tighter text-[10px]">
                       {u.role}
@@ -341,17 +351,19 @@ export default function UsersPage() {
                     <Badge className="bg-emerald-500">{u.status}</Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteUser(u.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {u.role !== 'CEO' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteUser(u.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
