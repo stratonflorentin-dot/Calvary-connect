@@ -13,6 +13,7 @@ import {
 
 const ROLE_ICONS = {
   CEO: User,
+  ADMIN: Shield,
   OPERATOR: Truck,
   DRIVER: Truck,
   MECHANIC: Wrench,
@@ -46,6 +47,13 @@ export function RoleSelector() {
               <div>
                 <div className="font-medium">CEO</div>
                 <div className="text-xs text-muted-foreground">Full access</div>
+              </div>
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="ADMIN" className="flex items-center gap-2">
+              <Shield className="size-4" />
+              <div>
+                <div className="font-medium">Admin</div>
+                <div className="text-xs text-muted-foreground">System administration</div>
               </div>
             </DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="OPERATOR" className="flex items-center gap-2">

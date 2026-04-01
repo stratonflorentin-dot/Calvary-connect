@@ -46,6 +46,7 @@ export default function Home() {
   const renderContent = () => {
     switch (role) {
       case 'CEO':
+      case 'ADMIN':
         return (
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             <div className="xl:col-span-2 space-y-8">
@@ -77,7 +78,7 @@ export default function Home() {
       <main className="min-h-screen bg-background pb-20 safe-area-padding">
         {renderContent()}
         <BottomTabs role={role} />
-        <RoleSelector />
+        {role === 'ADMIN' && <RoleSelector />}
       </main>
     );
   }
@@ -106,7 +107,7 @@ export default function Home() {
       </main>
 
       <BottomTabs role={role} />
-      <RoleSelector />
+      {role === 'ADMIN' && <RoleSelector />}
     </div>
   );
 }

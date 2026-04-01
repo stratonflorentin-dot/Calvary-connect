@@ -24,12 +24,11 @@ interface SupabaseContextType {
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
 
 export function SupabaseProvider({ children }: { children: ReactNode }) {
-  // Simple demo provider - no authentication calls
   const [user, setUser] = useState<User | null>({
-    id: 'demo-user',
+    id: 'admin-straton',
     email: 'stratonflorentin@gmail.com',
-    name: 'Demo User',
-    role: 'CEO'
+    name: 'straton florentin tesha',
+    role: 'ADMIN'
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -37,10 +36,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     setUser({
-      id: 'demo-user',
-      email: email,
-      name: 'Demo User',
-      role: 'CEO'
+      id: 'admin-straton',
+      email: ADMIN_EMAIL,
+      name: 'straton florentin tesha',
+      role: 'ADMIN'
     });
   };
 

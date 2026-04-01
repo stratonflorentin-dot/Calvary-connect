@@ -166,6 +166,12 @@ export default function UsersPage() {
     // Find the user being deleted
     const userToDelete = users.find(u => u.id === userId);
     
+    // No role can delete ADMIN users
+    if (userToDelete?.role === 'ADMIN') {
+      alert('The Admin user cannot be deleted. This account is protected.');
+      return;
+    }
+    
     // HR cannot delete CEO users
     if (role === 'HR' && userToDelete?.role === 'CEO') {
       alert('HR cannot delete CEO users. Only CEO or Admin can delete CEO users.');
@@ -334,12 +340,9 @@ export default function UsersPage() {
                   </TableCell>
                   {(role === 'CEO' || role === 'ADMIN') && (
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-600">
-                          ••••••••
-                        </code>
-                        <span className="text-xs text-slate-400">Hidden</span>
-                      </div>
+                      <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-600">
+                        {u.password || 'N/A'}
+                      </code>
                     </TableCell>
                   )}
                   <TableCell>
@@ -354,7 +357,7 @@ export default function UsersPage() {
                     {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    {u.role !== 'CEO' && (
+                    {u.role !== 'ADMIN' && u.role !== 'CEO' && (
                       <Button
                         variant="ghost"
                         size="sm"
