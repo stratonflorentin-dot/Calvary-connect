@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Wrench, Route, History, Plus, CalendarDays } from 'lucide-react';
+import { Wrench, Route, History, Plus, CalendarDays, FileText, Shield, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
@@ -25,6 +25,7 @@ export default function TruckHistoryPage() {
   const [fleet, setFleet] = useState<any[]>([]);
   const [maintenanceHistory, setMaintenanceHistory] = useState<any[]>([]);
   const [serviceRecords, setServiceRecords] = useState<any[]>([]);
+  const [insuranceDocuments, setInsuranceDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Service record form state
@@ -41,6 +42,18 @@ export default function TruckHistoryPage() {
     nextServiceMileage: '',
     notes: ''
   });
+  
+  // Insurance upload state
+  const [insuranceDialogOpen, setInsuranceDialogOpen] = useState(false);
+  const [insuranceForm, setInsuranceForm] = useState({
+    documentName: '',
+    insuranceType: 'motor_vehicle',
+    insuranceCompany: '',
+    policyNumber: '',
+    expiryDate: '',
+    file: null as File | null
+  });
+  const [uploadingInsurance, setUploadingInsurance] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -73,9 +86,19 @@ export default function TruckHistoryPage() {
         
         if (servicesError) throw servicesError;
         
+        // Load insurance documents
+        const { data: insuranceDocs, error: insuranceError } = await supabase
+          .from('vehicle_documents')
+          .select('*')
+          .eq('document_type', 'insurance')
+          .order('created_at', { ascending: false });
+        
+        if (insuranceError) throw insuranceError;
+        
         setFleet(vehicles || []);
         setMaintenanceHistory(maintenance || []);
         setServiceRecords(services || []);
+        setInsuranceDocuments(insuranceDocs || []);
       } catch (error) {
         console.error('Error loading truck history:', error);
       } finally {
@@ -88,7 +111,9 @@ export default function TruckHistoryPage() {
 
   const selectedVehicle = fleet?.find(v => v.id === selectedVehicleId);
   const vehicleServices = serviceRecords?.filter(s => s.vehicle_id === selectedVehicleId);
+  const vehicleInsuranceDocs = insuranceDocuments?.filter(d => d.vehicle_id === selectedVehicleId);
   const isMechanic = role === 'MECHANIC' || role === 'CEO' || role === 'ADMIN';
+  const canUploadDocs = role === 'DRIVER' || role === 'ADMIN' || role === 'CEO' || role === 'OPERATOR';
 
   const handleAddServiceRecord = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +167,75 @@ export default function TruckHistoryPage() {
     } catch (error: any) {
       console.error('Error adding service record:', error);
       toast({ title: "Error", description: "Failed to add service record", variant: "destructive" });
+    }
+  };
+
+  const handleUploadInsurance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedVehicleId || !user || !insuranceForm.file) return;
+    
+    try {
+      setUploadingInsurance(true);
+      
+      // Upload file to Supabase Storage
+      const fileExt = insuranceForm.file.name.split('.').pop();
+      const fileName = `${selectedVehicleId}_${Date.now()}.${fileExt}`;
+      const filePath = `insurance/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('vehicle-documents')
+        .upload(filePath, insuranceForm.file, { upsert: true });
+        
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('vehicle-documents')
+        .getPublicUrl(filePath);
+      
+      // Save document record to database
+      const { error: dbError } = await supabase
+        .from('vehicle_documents')
+        .insert({
+          vehicle_id: selectedVehicleId,
+          uploaded_by: user.id,
+          document_type: 'insurance',
+          document_name: insuranceForm.documentName,
+          insurance_type: insuranceForm.insuranceType,
+          insurance_company: insuranceForm.insuranceCompany,
+          policy_number: insuranceForm.policyNumber,
+          expiry_date: insuranceForm.expiryDate || null,
+          file_url: publicUrl,
+          file_path: filePath,
+          status: 'active',
+          created_at: new Date().toISOString()
+        });
+        
+      if (dbError) throw dbError;
+      
+      // Refresh insurance documents
+      const { data: refreshedDocs } = await supabase
+        .from('vehicle_documents')
+        .select('*')
+        .eq('document_type', 'insurance')
+        .order('created_at', { ascending: false });
+      setInsuranceDocuments(refreshedDocs || []);
+      
+      toast({ title: "Insurance Document Uploaded", description: "Document has been uploaded successfully" });
+      setInsuranceDialogOpen(false);
+      setInsuranceForm({
+        documentName: '',
+        insuranceType: 'motor_vehicle',
+        insuranceCompany: '',
+        policyNumber: '',
+        expiryDate: '',
+        file: null
+      });
+    } catch (error: any) {
+      console.error('Error uploading insurance document:', error);
+      toast({ title: "Error", description: "Failed to upload insurance document", variant: "destructive" });
+    } finally {
+      setUploadingInsurance(false);
     }
   };
 
@@ -282,6 +376,38 @@ export default function TruckHistoryPage() {
                     ))}
                     {maintenanceHistory?.filter(m => m.vehicle_id === selectedVehicleId).length === 0 && (
                       <p className="text-center text-xs text-muted-foreground italic">No maintenance logs found.</p>
+                    )}
+                  </section>
+
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-12 md:text-center md:ml-0">Insurance Documents</h3>
+                      {canUploadDocs && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => setInsuranceDialogOpen(true)}
+                          className="gap-1"
+                        >
+                          <Upload className="size-3" />
+                          Upload Insurance
+                        </Button>
+                      )}
+                    </div>
+                    {vehicleInsuranceDocs?.length > 0 ? (
+                      vehicleInsuranceDocs.map((doc) => (
+                        <TimelineItem 
+                          key={doc.id}
+                          type="insurance"
+                          title={doc.document_name || 'Insurance Document'}
+                          date={new Date(doc.created_at).toLocaleDateString()}
+                          description={`${doc.insurance_type || 'Motor Vehicle'} - ${doc.insurance_company || 'Unknown Provider'}`}
+                          tag={doc.status || 'Active'}
+                          icon={<Shield className="size-4" />}
+                          color="emerald"
+                        />
+                      ))
+                    ) : (
+                      <p className="text-center text-xs text-muted-foreground italic">No insurance documents found.</p>
                     )}
                   </section>
                 </div>
@@ -445,6 +571,128 @@ export default function TruckHistoryPage() {
                 className="px-6"
               >
                 Save Record
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Insurance Upload Dialog */}
+      <Dialog open={insuranceDialogOpen} onOpenChange={setInsuranceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Upload Insurance Document</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUploadInsurance} className="space-y-6 pt-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="documentName" className="text-sm font-medium">Document Name</Label>
+                <Input
+                  id="documentName"
+                  value={insuranceForm.documentName}
+                  onChange={e => setInsuranceForm({...insuranceForm, documentName: e.target.value})}
+                  placeholder="e.g., Motor Vehicle Insurance 2024"
+                  className="h-10"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="insuranceType" className="text-sm font-medium">Insurance Type</Label>
+                <Select 
+                  value={insuranceForm.insuranceType}
+                  onValueChange={(value) => setInsuranceForm({...insuranceForm, insuranceType: value})}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select insurance type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="motor_vehicle">Motor Vehicle Insurance</SelectItem>
+                    <SelectItem value="road">Road Insurance</SelectItem>
+                    <SelectItem value="comprehensive">Comprehensive Coverage</SelectItem>
+                    <SelectItem value="third_party">Third Party</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="insuranceCompany" className="text-sm font-medium">Insurance Company</Label>
+                <Input
+                  id="insuranceCompany"
+                  value={insuranceForm.insuranceCompany}
+                  onChange={e => setInsuranceForm({...insuranceForm, insuranceCompany: e.target.value})}
+                  placeholder="e.g., Jubilee Insurance"
+                  className="h-10"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="policyNumber" className="text-sm font-medium">Policy Number</Label>
+                <Input
+                  id="policyNumber"
+                  value={insuranceForm.policyNumber}
+                  onChange={e => setInsuranceForm({...insuranceForm, policyNumber: e.target.value})}
+                  placeholder="e.g., POL-123456789"
+                  className="h-10"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate" className="text-sm font-medium">Expiry Date</Label>
+                <div className="relative">
+                  <Input
+                    id="expiryDate"
+                    type="date"
+                    value={insuranceForm.expiryDate}
+                    onChange={e => setInsuranceForm({...insuranceForm, expiryDate: e.target.value})}
+                    className="h-10 pr-10"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="insuranceFile" className="text-sm font-medium">Insurance Document (PDF/Image)</Label>
+                <Input
+                  id="insuranceFile"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast({ title: "Error", description: "File must be less than 5MB", variant: "destructive" });
+                        return;
+                      }
+                      setInsuranceForm({...insuranceForm, file});
+                    }
+                  }}
+                  className="h-10"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">Max 5MB (PDF, JPG, PNG)</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setInsuranceDialogOpen(false)}
+                className="px-6"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                className="px-6"
+                disabled={uploadingInsurance}
+              >
+                {uploadingInsurance ? 'Uploading...' : 'Upload Document'}
               </Button>
             </div>
           </form>
