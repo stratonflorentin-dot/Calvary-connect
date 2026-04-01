@@ -415,21 +415,12 @@ export function CeoView() {
                       </div>
                       <div>
                         <Label htmlFor="client">Client</Label>
-                        <Select value={tripForm.client} onValueChange={(value) => setTripForm({...tripForm, client: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select client" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Samsung Kenya">Samsung Kenya</SelectItem>
-                            <SelectItem value="Bamburi Cement">Bamburi Cement</SelectItem>
-                            <SelectItem value="Kenya Tea Board">Kenya Tea Board</SelectItem>
-                            <SelectItem value="Carrefour Kenya">Carrefour Kenya</SelectItem>
-                            <SelectItem value="Maersk Kenya">Maersk Kenya</SelectItem>
-                            <SelectItem value="Safaricom">Safaricom</SelectItem>
-                            <SelectItem value="Coca-Cola Kenya">Coca-Cola Kenya</SelectItem>
-                            <SelectItem value="Unilever Kenya">Unilever Kenya</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          id="client"
+                          value={tripForm.client}
+                          onChange={(e) => setTripForm({...tripForm, client: e.target.value})}
+                          placeholder="Enter client name"
+                        />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
