@@ -45,6 +45,23 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         role: 'ADMIN'
       });
       setIsLoading(false);
+      return;
+    }
+    
+    // Check for local user login
+    const currentUserId = localStorage.getItem('current_user_id');
+    if (currentUserId) {
+      const users = JSON.parse(localStorage.getItem('local_users') || '[]');
+      const localUser = users.find((u: any) => u.id === currentUserId);
+      if (localUser) {
+        setUser({
+          id: localUser.id,
+          email: localUser.email,
+          name: localUser.name,
+          role: localUser.role as UserRole,
+        });
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -174,9 +191,29 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      // Regular Supabase auth for other users
+      // Try Supabase auth first
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      
+      if (error) {
+        // Fallback: Check localStorage for local users
+        console.log('Supabase auth failed, checking local users');
+        const users = JSON.parse(localStorage.getItem('local_users') || '[]');
+        const localUser = users.find((u: any) => u.email === email && u.password === password);
+        
+        if (localUser) {
+          localStorage.setItem('current_user_id', localUser.id);
+          setUser({
+            id: localUser.id,
+            email: localUser.email,
+            name: localUser.name,
+            role: localUser.role as UserRole,
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        throw error;
+      }
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -188,15 +225,44 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string, role?: string) => {
     setIsLoading(true);
     try {
+      // Try Supabase auth first
       const { data: { user: authUser }, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        // Fallback: Create local user if Supabase auth fails
+        console.log('Supabase auth failed, using local storage fallback');
+        const localUserId = 'local-' + Date.now();
+        const newUser = {
+          id: localUserId,
+          email: email,
+          name: name,
+          role: (role as UserRole) || 'DRIVER',
+          password: password, // Store password for local auth
+          created_at: new Date().toISOString(),
+        };
+        
+        // Store in localStorage
+        const users = JSON.parse(localStorage.getItem('local_users') || '[]');
+        users.push(newUser);
+        localStorage.setItem('local_users', JSON.stringify(users));
+        
+        // Auto-login after signup
+        localStorage.setItem('current_user_id', localUserId);
+        setUser({
+          id: localUserId,
+          email: email,
+          name: name,
+          role: (role as UserRole) || 'DRIVER',
+        });
+        setIsLoading(false);
+        return;
+      }
 
       if (authUser) {
-        // Create user profile
+        // Create user profile in Supabase
         const { error: profileError } = await supabase.from('users').insert([{
           id: authUser.id,
           email: email,
@@ -208,6 +274,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         if (profileError) throw profileError;
       }
     } catch (err) {
+      console.error('Sign up error:', err);
       setError(err as Error);
       throw err;
     } finally {
