@@ -53,9 +53,21 @@ export function CeoView() {
     estimated_time: ''
   });
 
+  // Function to identify and delete mock vehicles
+  const clearMockVehicles = async () => {
+    const mockPlates = ['KAB 123A', 'KCD 456B', 'KEF 789C', 'KGH 012D', 'KIJ 345E', 'KLM 678F', 'KNO 901G', 'KPQ 234H'];
+    
+    for (const plate of mockPlates) {
+      await supabase.from('vehicles').delete().eq('plate_number', plate);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // First, clear any mock vehicles
+        await clearMockVehicles();
+        
         const { data: vehiclesData } = await supabase.from('vehicles').select('*');
         const { data: tripsData } = await supabase.from('trips').select('*');
         const { data: driversData } = await supabase.from('users').select('id, name, role').eq('role', 'DRIVER');
