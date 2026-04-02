@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSupabase } from '@/components/supabase-provider';
-import { ADMIN_EMAIL } from '@/lib/supabase';
 
 export function AuthComponent() {
   const [loading, setLoading] = useState(false);
@@ -81,7 +80,7 @@ export function AuthComponent() {
                     id="signin-email"
                     name="email"
                     type="email"
-                    placeholder={ADMIN_EMAIL}
+                    placeholder="Enter your email"
                     required
                   />
                 </div>
@@ -168,10 +167,6 @@ export function AuthComponent() {
               </form>
             </TabsContent>
           </Tabs>
-          
-          <div className="mt-4 text-center text-xs text-muted-foreground">
-            Admin email: {ADMIN_EMAIL}
-          </div>
         </CardContent>
       </Card>
     </div>
