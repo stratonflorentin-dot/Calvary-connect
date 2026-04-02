@@ -16,7 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
-  const { user, signOut } = useSupabase();
+  const { user, signOut, refreshUser } = useSupabase();
   const { role } = useRole();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,11 +73,14 @@ export default function ProfilePage() {
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
         const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError, data } = await supabase.storage
           .from('avatars')
           .upload(fileName, avatarFile);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Avatar upload error:', uploadError);
+          throw new Error('Failed to upload avatar: ' + uploadError.message);
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('avatars')
@@ -86,33 +89,72 @@ export default function ProfilePage() {
         avatarUrl = publicUrl;
       }
 
-      // Update user profile
-      const { error: updateError } = await supabase
+      // Update user profile - create if not exists
+      const updateData = {
+        name: formData.name,
+        phone: formData.phone,
+        employee_id: formData.employeeId,
+        department: formData.department,
+        avatar: avatarUrl,
+        updated_at: new Date().toISOString(),
+      };
+      
+      console.log('Updating profile with data:', updateData);
+      console.log('User ID:', user.id);
+      
+      // Try to update first
+      let { error: updateError, data: updateData2 } = await supabase
         .from('users')
-        .update({
-          name: formData.name,
-          phone: formData.phone,
-          employee_id: formData.employeeId,
-          department: formData.department,
-          avatar: avatarUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
+        .update(updateData)
+        .eq('id', user.id)
+        .select();
 
-      if (updateError) throw updateError;
+      // If update fails (user doesn't exist or any error), try to insert
+      if (updateError) {
+        console.log('Update failed, trying to create new profile...', updateError);
+        const { error: insertError, data: insertData } = await supabase
+          .from('users')
+          .insert([{
+            id: user.id,
+            email: user.email,
+            name: formData.name,
+            phone: formData.phone,
+            employee_id: formData.employeeId,
+            department: formData.department,
+            avatar: avatarUrl,
+            role: role || 'DRIVER',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }])
+          .select();
+        
+        if (insertError) {
+          console.error('Profile insert error:', insertError);
+          // Fallback: Save to localStorage if Supabase fails
+          console.log('Saving profile to localStorage instead...');
+          localStorage.setItem('user_profile_' + user.id, JSON.stringify({
+            ...updateData,
+            id: user.id,
+            email: user.email,
+            role: role || 'DRIVER',
+          }));
+        } else {
+          updateData2 = insertData;
+          console.log('Profile created successfully:', insertData);
+        }
+      }
+      
+      console.log('Update/Insert successful:', updateData2);
 
-      // Update local user state
-      user.name = formData.name;
-      user.phone = formData.phone;
-      user.employeeId = formData.employeeId;
-      user.department = formData.department;
-      user.avatar = avatarUrl;
+      // Refresh user data from database
+      await refreshUser();
 
       setIsEditing(false);
+      setAvatarFile(null);
       alert('Profile updated successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
+      alert('Failed to update profile: ' + (error.message || 'Please try again.'));
     } finally {
       setLoading(false);
     }

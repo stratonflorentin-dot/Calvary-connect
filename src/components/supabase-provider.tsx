@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase, ADMIN_EMAIL, ADMIN_ROLE } from '@/lib/supabase';
+import { supabase, ADMIN_EMAIL, ADMIN_ROLE, DEMO_MODE } from '@/lib/supabase';
 import { UserRole } from '@/types/roles';
 
 interface User {
@@ -23,44 +23,187 @@ interface SupabaseContextType {
   signUp: (email: string, password: string, name: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateRole: (role: UserRole) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
 
 export function SupabaseProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>({
-    id: 'admin-straton',
-    email: 'stratonflorentin@gmail.com',
-    name: 'straton florentin tesha',
-    role: 'ADMIN'
-  });
-
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const signIn = async (email: string, password: string) => {
-    setUser({
-      id: 'admin-straton',
-      email: ADMIN_EMAIL,
-      name: 'straton florentin tesha',
-      role: 'ADMIN'
+  // Fetch user profile from Supabase
+  const fetchUserProfile = async (userId: string, email: string) => {
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !profile) {
+        // Check localStorage first before creating new profile
+        const localProfile = localStorage.getItem('user_profile_' + userId);
+        if (localProfile) {
+          return JSON.parse(localProfile);
+        }
+        
+        // If no profile exists, create one with default role
+        const { data: newProfile, error: createError } = await supabase
+          .from('users')
+          .insert([{
+            id: userId,
+            email: email,
+            name: email.split('@')[0],
+            role: 'DRIVER',
+            created_at: new Date().toISOString(),
+          }])
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        return newProfile;
+      }
+
+      return profile;
+    } catch (err) {
+      console.error('Error fetching/creating profile:', err);
+      // Fallback to localStorage
+      const localProfile = localStorage.getItem('user_profile_' + userId);
+      if (localProfile) {
+        return JSON.parse(localProfile);
+      }
+      return null;
+    }
+  };
+
+  // Listen for auth changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id, session.user.email!);
+        if (profile) {
+          setUser({
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            role: profile.role as UserRole,
+            avatar: profile.avatar,
+            phone: profile.phone,
+            employeeId: profile.employee_id,
+            department: profile.department,
+          });
+        }
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
     });
+
+    // Check initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id, session.user.email!);
+        if (profile) {
+          setUser({
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            role: profile.role as UserRole,
+            avatar: profile.avatar,
+            phone: profile.phone,
+            employeeId: profile.employee_id,
+            department: profile.department,
+          });
+        }
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const refreshUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const profile = await fetchUserProfile(session.user.id, session.user.email!);
+      if (profile) {
+        setUser({
+          id: profile.id,
+          email: profile.email,
+          name: profile.name,
+          role: profile.role as UserRole,
+          avatar: profile.avatar,
+          phone: profile.phone,
+          employeeId: profile.employee_id,
+          department: profile.department,
+        });
+      }
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signUp = async (email: string, password: string, name: string, role?: string) => {
-    setUser({
-      id: 'demo-user',
-      email: email,
-      name: name,
-      role: (role as UserRole) || 'DRIVER'
-    });
+    setIsLoading(true);
+    try {
+      const { data: { user: authUser }, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (authUser) {
+        // Create user profile
+        const { error: profileError } = await supabase.from('users').insert([{
+          id: authUser.id,
+          email: email,
+          name: name,
+          role: (role as UserRole) || 'DRIVER',
+          created_at: new Date().toISOString(),
+        }]);
+
+        if (profileError) throw profileError;
+      }
+    } catch (err) {
+      setError(err as Error);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signOut = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
   const updateRole = async (role: UserRole) => {
+    if (!user) return;
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Error updating role:', error);
+      return;
+    }
+
     setUser(prev => prev ? { ...prev, role } : null);
   };
 
@@ -72,7 +215,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
-      updateRole
+      updateRole,
+      refreshUser,
     }}>
       {children}
     </SupabaseContext.Provider>

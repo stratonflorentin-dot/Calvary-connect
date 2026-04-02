@@ -82,15 +82,40 @@ export default function DeliveryProofPage() {
   // Camera functions
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, // Use back camera on mobile
+      // Try environment camera first (back camera), fall back to any camera
+      const constraints = {
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
         audio: false 
-      });
+      };
+      
+      let mediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        // Fallback to any available camera
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false 
+        });
+      }
+      
       setStream(mediaStream);
       setShowCamera(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      
+      // Wait for next render then set video source
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play();
+          };
+        }
+      }, 100);
+      
     } catch (err) {
       console.error('Error accessing camera:', err);
       toast({
@@ -113,12 +138,28 @@ export default function DeliveryProofPage() {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      
+      // Ensure video is playing and has valid dimensions
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        toast({
+          title: "Camera not ready",
+          description: "Please wait for camera to initialize",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        // Draw the video frame to canvas
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Convert to JPEG with high quality
+        const imageData = canvas.toDataURL('image/jpeg', 0.95);
         setCapturedImage(imageData);
         stopCamera();
       }
@@ -178,13 +219,14 @@ export default function DeliveryProofPage() {
                   
                   {/* Camera Preview */}
                   {showCamera && (
-                    <div className="relative bg-black rounded-xl overflow-hidden">
+                    <div className="relative bg-black rounded-xl overflow-hidden" style={{ minHeight: '256px' }}>
                       <video
                         ref={videoRef}
                         autoPlay
                         playsInline
                         muted
                         className="w-full h-64 object-cover"
+                        style={{ transform: 'scaleX(1)' }}
                       />
                       <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
                         <Button
@@ -192,7 +234,7 @@ export default function DeliveryProofPage() {
                           variant="outline"
                           size="sm"
                           onClick={stopCamera}
-                          className="bg-white/90"
+                          className="bg-white/90 text-black"
                         >
                           <X className="size-4 mr-1" />
                           Cancel
@@ -201,7 +243,7 @@ export default function DeliveryProofPage() {
                           type="button"
                           size="sm"
                           onClick={capturePhoto}
-                          className="bg-white text-black hover:bg-gray-100"
+                          className="bg-white text-black hover:bg-gray-100 border-2 border-black"
                         >
                           <Camera className="size-4 mr-1" />
                           Capture
