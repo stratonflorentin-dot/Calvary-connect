@@ -515,3 +515,11 @@ export default function DeliveryProofPage() {
                     </div>
                   )}
                 </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
+    </div>
+  );
+}
