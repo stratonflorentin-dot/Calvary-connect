@@ -433,7 +433,7 @@ export function CeoView() {
                           </SelectTrigger>
                           <SelectContent>
                         {driverOptions.length === 0 ? (
-                          <SelectItem value="" disabled>No drivers available</SelectItem>
+                          <SelectItem value="no-drivers" disabled>No drivers available</SelectItem>
                         ) : (
                           driverOptions.map((driver) => (
                             <SelectItem key={driver.id} value={driver.id}>
@@ -452,7 +452,7 @@ export function CeoView() {
                           </SelectTrigger>
                           <SelectContent>
                         {vehicleOptions.length === 0 ? (
-                          <SelectItem value="" disabled>No vehicles available</SelectItem>
+                          <SelectItem value="no-vehicles" disabled>No vehicles available</SelectItem>
                         ) : (
                           vehicleOptions.map((vehicle) => (
                             <SelectItem key={vehicle.id} value={vehicle.id}>
