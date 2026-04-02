@@ -129,11 +129,31 @@ export function CeoView() {
 
   const handleAddTrip = async () => {
     try {
-      const { error } = await supabase.from('trips').insert([{
-        ...tripForm,
+      // Validate that driver and vehicle are selected
+      if (!tripForm.driver_id || tripForm.driver_id === 'no-drivers') {
+        toast({ title: 'Error', description: 'Please select a driver', variant: 'destructive' });
+        return;
+      }
+      if (!tripForm.vehicle_id || tripForm.vehicle_id === 'no-vehicles') {
+        toast({ title: 'Error', description: 'Please select a vehicle', variant: 'destructive' });
+        return;
+      }
+      
+      // Prepare trip data with proper types
+      const tripData = {
+        origin: tripForm.origin,
+        destination: tripForm.destination,
+        driver_id: tripForm.driver_id,
+        vehicle_id: tripForm.vehicle_id,
+        cargo: tripForm.cargo,
+        client: tripForm.client,
+        distance: tripForm.distance ? parseInt(tripForm.distance, 10) : null,
+        estimated_time: tripForm.estimated_time,
         status: 'PENDING',
         created_at: new Date().toISOString()
-      }]);
+      };
+      
+      const { error } = await supabase.from('trips').insert([tripData]);
       if (error) throw error;
       
       toast({ title: 'Success', description: 'Trip added successfully!' });
@@ -153,7 +173,8 @@ export function CeoView() {
       const { data } = await supabase.from('trips').select('*');
       setTrips(data || []);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      console.error('Add trip error:', error);
+      toast({ title: 'Error', description: error.message || 'Network error occurred', variant: 'destructive' });
     }
   };
 
