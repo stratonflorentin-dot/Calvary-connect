@@ -127,7 +127,7 @@ export default function LiveMapPage() {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden touch-none">
-      <Sidebar role={role!} />
+      <Sidebar />
       <main className="flex-1 md:ml-60 flex flex-col relative h-full">
         {/* Map Header Overlay */}
         <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row gap-2 pointer-events-none">

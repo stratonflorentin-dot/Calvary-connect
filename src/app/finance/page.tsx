@@ -616,7 +616,7 @@ export default function FinancePage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar role={role!} />
+      <Sidebar />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <header className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
           <div>

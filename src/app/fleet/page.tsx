@@ -32,7 +32,7 @@ export default function FleetPage() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar role={role!} />
+      <Sidebar />
       <main className="flex-1 md:ml-60 min-h-screen pb-24 md:pb-8 safe-area-padding">
         <div className="p-4 md:p-8">
           <SupabaseSetupAssistant />

@@ -26,14 +26,16 @@ const ROLE_CONFIG: Record<UserRole, { label: string; color: string }> = {
   HR: { label: 'HR', color: 'bg-pink-500' },
 };
 
-export function Sidebar({ role }: { role: UserRole }) {
+export function Sidebar() {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { signOut, user } = useSupabase();
-  const { changeRole, actualRole } = useRole();
+  const { role, changeRole } = useRole();
 
   // Check if current user is the admin (stratonflorentin@gmail.com)
   const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+  const currentRole = role || 'CEO';
 
   const ROLE_NAV: Record<UserRole, any[]> = {
     CEO: [
@@ -115,7 +117,7 @@ export function Sidebar({ role }: { role: UserRole }) {
     ]
   };
 
-  const navItems = ROLE_NAV[role] || [];
+  const navItems = ROLE_NAV[currentRole] || [];
 
   return (
     <aside className="hidden md:flex flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50">
@@ -159,12 +161,12 @@ export function Sidebar({ role }: { role: UserRole }) {
               {(['CEO', 'ADMIN', 'OPERATOR', 'DRIVER', 'MECHANIC', 'ACCOUNTANT', 'HR'] as UserRole[]).map((r) => (
                 <Button
                   key={r}
-                  variant={role === r ? 'default' : 'ghost'}
+                  variant={currentRole === r ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => changeRole(r)}
                   className={cn(
                     'text-xs h-7 px-2 justify-start',
-                    role === r 
+                    currentRole === r 
                       ? 'bg-primary text-white hover:bg-primary/90' 
                       : 'text-sidebar-foreground/60 hover:text-white hover:bg-sidebar-accent'
                   )}

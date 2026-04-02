@@ -98,7 +98,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar role={role} />
+      <Sidebar />
 
       <main className="flex-1 md:ml-60 min-h-screen pb-24 md:pb-8 p-4 md:p-8">
         <header className="sticky top-0 h-16 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 z-40 mb-6">

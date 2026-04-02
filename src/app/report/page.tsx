@@ -38,7 +38,7 @@ export default function MaintenanceReportPage() {
 
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">
-      <Sidebar role={role} />
+      <Sidebar />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <div className="max-w-2xl mx-auto space-y-6">
           <div>
@@ -107,6 +107,7 @@ export default function MaintenanceReportPage() {
         </div>
       </main>
       <BottomTabs role={role} />
+      <Sidebar/>
     </div>
   );
 }
