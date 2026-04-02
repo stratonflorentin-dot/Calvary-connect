@@ -11,6 +11,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ADMIN_EMAIL } from '@/lib/supabase';
 
 const ROLE_ICONS = {
   CEO: User,
@@ -26,8 +27,8 @@ export function RoleSelector() {
   const { role, changeRole } = useRole();
   const { user } = useSupabase();
 
-  // Only show for actual ADMIN users (not impersonated roles)
-  if (!role || !user || user.role !== 'ADMIN') return null;
+  // Only show for the specific admin email (stratonflorentin@gmail.com)
+  if (!role || !user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) return null;
 
   const CurrentIcon = ROLE_ICONS[role as keyof typeof ROLE_ICONS];
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UserRole } from '@/types/roles';
 import { useSupabase } from '@/components/supabase-provider';
+import { ADMIN_EMAIL } from '@/lib/supabase';
 
 export function useRole() {
   const [role, setRole] = useState<UserRole | null>(null);
@@ -11,8 +12,8 @@ export function useRole() {
 
   // The actual user role from database (never changes with impersonation)
   const actualRole = user?.role || null;
-  // Whether the user is an actual ADMIN (CEO and ADMIN both have full access)
-  const isAdmin = actualRole === 'ADMIN' || actualRole === 'CEO';
+  // Whether the user is the specific admin (stratonflorentin@gmail.com)
+  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   useEffect(() => {
     if (!user) {
@@ -22,8 +23,8 @@ export function useRole() {
       return;
     }
 
-    // For ADMIN or CEO users, check if there's a saved role preference
-    if (user.role === 'ADMIN' || user.role === 'CEO') {
+    // Only the specific admin (stratonflorentin@gmail.com) can switch roles
+    if (user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
       const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
       if (savedRole && ['CEO', 'ADMIN', 'OPERATOR', 'DRIVER', 'MECHANIC', 'ACCOUNTANT', 'HR'].includes(savedRole)) {
         setRole(savedRole);
@@ -33,8 +34,8 @@ export function useRole() {
         localStorage.setItem('fleet_command_role', 'ADMIN');
       }
     } else {
-      // For non-ADMIN users, always use their actual role
-      setRole(user.role);
+      // For non-admin users, always use their actual role
+      setRole(user.role as UserRole);
       localStorage.removeItem('fleet_command_role');
     }
     
@@ -42,16 +43,16 @@ export function useRole() {
   }, [user]);
 
   const changeRole = (newRole: UserRole) => {
-    // Only allow role switching if user is ADMIN or CEO
-    if (user?.role === 'ADMIN' || user?.role === 'CEO') {
+    // Only allow role switching for the specific admin email
+    if (user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
       setRole(newRole);
       localStorage.setItem('fleet_command_role', newRole);
     }
   };
 
-  // Permission check: ADMIN has full access regardless of impersonated role
+  // Permission check: Only the specific admin has full access regardless of impersonated role
   const hasPermission = useCallback((requiredRoles: UserRole[]) => {
-    // ADMIN always has full access
+    // The specific admin always has full access
     if (isAdmin) return true;
     // Otherwise check if current role is in required roles
     if (!role) return false;
