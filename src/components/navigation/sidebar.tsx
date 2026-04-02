@@ -12,11 +12,28 @@ import { UserRole } from '@/types/roles';
 import { useLanguage } from '@/hooks/use-language';
 import { useSupabase } from '@/components/supabase-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { useRole } from '@/hooks/use-role';
+import { ADMIN_EMAIL } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+
+const ROLE_CONFIG: Record<UserRole, { label: string; color: string }> = {
+  CEO: { label: 'CEO', color: 'bg-emerald-500' },
+  ADMIN: { label: 'Admin', color: 'bg-blue-500' },
+  OPERATOR: { label: 'Operator', color: 'bg-amber-500' },
+  DRIVER: { label: 'Driver', color: 'bg-orange-500' },
+  MECHANIC: { label: 'Mechanic', color: 'bg-purple-500' },
+  ACCOUNTANT: { label: 'Accountant', color: 'bg-cyan-500' },
+  HR: { label: 'HR', color: 'bg-pink-500' },
+};
 
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { signOut } = useSupabase();
+  const { signOut, user } = useSupabase();
+  const { changeRole, actualRole } = useRole();
+
+  // Check if current user is the admin (stratonflorentin@gmail.com)
+  const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const ROLE_NAV: Record<UserRole, any[]> = {
     CEO: [
@@ -131,7 +148,38 @@ export function Sidebar({ role }: { role: UserRole }) {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border space-y-3">
+        {/* Role Switcher - Only for Admin */}
+        {isAdminUser && (
+          <div className="bg-sidebar-accent/50 rounded-lg p-3 space-y-2">
+            <p className="text-xs font-medium text-sidebar-foreground/70 uppercase tracking-wider">
+              Switch Role
+            </p>
+            <div className="grid grid-cols-2 gap-1">
+              {(['CEO', 'ADMIN', 'OPERATOR', 'DRIVER', 'MECHANIC', 'ACCOUNTANT', 'HR'] as UserRole[]).map((r) => (
+                <Button
+                  key={r}
+                  variant={role === r ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => changeRole(r)}
+                  className={cn(
+                    'text-xs h-7 px-2 justify-start',
+                    role === r 
+                      ? 'bg-primary text-white hover:bg-primary/90' 
+                      : 'text-sidebar-foreground/60 hover:text-white hover:bg-sidebar-accent'
+                  )}
+                >
+                  <span className={cn('w-2 h-2 rounded-full mr-2', ROLE_CONFIG[r].color)} />
+                  {ROLE_CONFIG[r].label}
+                </Button>
+              ))}
+            </div>
+            <p className="text-[10px] text-sidebar-foreground/40">
+              You have full admin access in all roles
+            </p>
+          </div>
+        )}
+
         <button 
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-destructive hover:text-white transition-all"
           onClick={signOut}

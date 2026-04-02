@@ -2,7 +2,6 @@ import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SupabaseProvider } from '@/components/supabase-provider';
-import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrapper';
 import { PWAProvider } from '@/components/pwa/pwa-provider';
 import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
 
@@ -73,7 +72,6 @@ export default function RootLayout({
           <SupabaseProvider>
             {children}
             <Toaster />
-            <RoleSelectorWrapper />
             <PWAInstallPrompt />
           </SupabaseProvider>
         </PWAProvider>
