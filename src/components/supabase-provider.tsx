@@ -35,7 +35,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   // Check for admin auto-login on mount
   useEffect(() => {
-    // Check if admin is already logged in via localStorage
+    // Check if admin is already logged in via localStorage (admin only)
     const adminSession = localStorage.getItem('admin_session');
     if (adminSession) {
       setUser({
@@ -48,21 +48,27 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    // Check for local user login
-    const currentUserId = localStorage.getItem('current_user_id');
-    if (currentUserId) {
-      const users = JSON.parse(localStorage.getItem('local_users') || '[]');
-      const localUser = users.find((u: any) => u.id === currentUserId);
-      if (localUser) {
-        setUser({
-          id: localUser.id,
-          email: localUser.email,
-          name: localUser.name,
-          role: localUser.role as UserRole,
-        });
-        setIsLoading(false);
+    // Check for Supabase authenticated user
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await fetchUserProfile(session.user.id, session.user.email || '');
       }
-    }
+      setIsLoading(false);
+    };
+    
+    checkAuth();
+    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await fetchUserProfile(session.user.id, session.user.email || '');
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
   }, []);
 
   // Fetch user profile from Supabase
@@ -75,12 +81,6 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (profileError || !profile) {
-        // Check localStorage first before creating new profile
-        const localProfile = localStorage.getItem('user_profile_' + userId);
-        if (localProfile) {
-          return JSON.parse(localProfile);
-        }
-        
         // If no profile exists, create one with default role
         const { data: newProfile, error: createError } = await supabase
           .from('users')
@@ -101,11 +101,6 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return profile;
     } catch (err) {
       console.error('Error fetching/creating profile:', err);
-      // Fallback to localStorage
-      const localProfile = localStorage.getItem('user_profile_' + userId);
-      if (localProfile) {
-        return JSON.parse(localProfile);
-      }
       return null;
     }
   };
@@ -191,29 +186,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      // Try Supabase auth first
+      // Use Supabase auth for all other users
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      
-      if (error) {
-        // Fallback: Check localStorage for local users
-        console.log('Supabase auth failed, checking local users');
-        const users = JSON.parse(localStorage.getItem('local_users') || '[]');
-        const localUser = users.find((u: any) => u.email === email && u.password === password);
-        
-        if (localUser) {
-          localStorage.setItem('current_user_id', localUser.id);
-          setUser({
-            id: localUser.id,
-            email: localUser.email,
-            name: localUser.name,
-            role: localUser.role as UserRole,
-          });
-          setIsLoading(false);
-          return;
-        }
-        
-        throw error;
-      }
+      if (error) throw error;
     } catch (err) {
       setError(err as Error);
       throw err;
