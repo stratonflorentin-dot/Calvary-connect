@@ -11,8 +11,8 @@ export function useRole() {
 
   // The actual user role from database (never changes with impersonation)
   const actualRole = user?.role || null;
-  // Whether the user is an actual ADMIN
-  const isAdmin = actualRole === 'ADMIN';
+  // Whether the user is an actual ADMIN (CEO and ADMIN both have full access)
+  const isAdmin = actualRole === 'ADMIN' || actualRole === 'CEO';
 
   useEffect(() => {
     if (!user) {
@@ -22,8 +22,8 @@ export function useRole() {
       return;
     }
 
-    // For ADMIN users, check if there's a saved role preference
-    if (user.role === 'ADMIN') {
+    // For ADMIN or CEO users, check if there's a saved role preference
+    if (user.role === 'ADMIN' || user.role === 'CEO') {
       const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
       if (savedRole && ['CEO', 'ADMIN', 'OPERATOR', 'DRIVER', 'MECHANIC', 'ACCOUNTANT', 'HR'].includes(savedRole)) {
         setRole(savedRole);
@@ -42,8 +42,8 @@ export function useRole() {
   }, [user]);
 
   const changeRole = (newRole: UserRole) => {
-    // Only allow role switching if user is ADMIN
-    if (user?.role === 'ADMIN') {
+    // Only allow role switching if user is ADMIN or CEO
+    if (user?.role === 'ADMIN' || user?.role === 'CEO') {
       setRole(newRole);
       localStorage.setItem('fleet_command_role', newRole);
     }

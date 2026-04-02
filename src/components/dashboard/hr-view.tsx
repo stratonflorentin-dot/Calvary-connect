@@ -31,7 +31,7 @@ export function HrView() {
   const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
   const [meetingTitle, setMeetingTitle] = useState('');
   const [meetingDate, setMeetingDate] = useState<Date | undefined>(undefined);
-  const [selectedParticipant, setSelectedParticipant] = useState<string>('');
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
 
   // Employee management state
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
@@ -210,14 +210,14 @@ export function HrView() {
   // Create meeting handler
   const handleCreateMeeting = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!meetingTitle || !meetingDate || !selectedParticipant) return;
+    if (!meetingTitle || !meetingDate || selectedParticipants.length === 0) return;
     
     try {
       // Insert meeting into database
       const { error, data } = await supabase.from('meetings').insert({
         title: meetingTitle,
         date: meetingDate.toISOString(),
-        participants: [selectedParticipant],
+        participants: selectedParticipants,
         created_by: user?.id,
         created_at: new Date().toISOString(),
         status: 'scheduled'
@@ -225,15 +225,17 @@ export function HrView() {
       
       if (error) throw error;
       
-      // Create notification for meeting participant
-      const participant = users?.find(u => u.id === selectedParticipant);
-      if (participant) {
-        await NotificationService.createForUser(selectedParticipant, {
-          title: 'New Meeting Scheduled',
-          message: `You have been invited to a meeting: "${meetingTitle}" on ${format(new Date(meetingDate), 'PPP')} at ${format(new Date(meetingDate), 'p')}`,
-          type: 'meeting',
-          severity: 'info'
-        });
+      // Create notification for all meeting participants
+      for (const participantId of selectedParticipants) {
+        const participant = users?.find(u => u.id === participantId);
+        if (participant) {
+          await NotificationService.createForUser(participantId, {
+            title: 'New Meeting Scheduled',
+            message: `You have been invited to a meeting: "${meetingTitle}" on ${format(new Date(meetingDate), 'PPP')} at ${format(new Date(meetingDate), 'p')}`,
+            type: 'meeting',
+            severity: 'info'
+          });
+        }
       }
       
       // Refresh meetings
@@ -247,9 +249,9 @@ export function HrView() {
       setMeetingDialogOpen(false);
       setMeetingTitle('');
       setMeetingDate(undefined);
-      setSelectedParticipant('');
+      setSelectedParticipants([]);
       
-      toast({ title: "Meeting Created", description: "Meeting scheduled successfully" });
+      toast({ title: "Meeting Created", description: `Meeting scheduled with ${selectedParticipants.length} participant(s)` });
       
     } catch (error: any) {
       console.error('Error creating meeting:', error);
@@ -713,32 +715,60 @@ export function HrView() {
                                 <p className="text-xs text-red-500 font-medium">⚠️ Meeting date cannot be in the past</p>
                               )}
                             </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="participant" className="text-sm font-medium flex items-center gap-2">
-                                👥 Participant
-                                <span className="text-xs text-muted-foreground">(Select attendee)</span>
+                            <div className="space-y-2 md:col-span-2">
+                              <Label htmlFor="participants" className="text-sm font-medium flex items-center gap-2">
+                                👥 Participants
+                                <span className="text-xs text-muted-foreground">(Select attendees - click to add/remove)</span>
                               </Label>
-                              <Select value={selectedParticipant} onValueChange={setSelectedParticipant}>
-                                <SelectTrigger id="participant" className="h-10">
-                                  <SelectValue placeholder="Select participant for meeting" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {users?.map(u => (
-                                    <SelectItem key={u.id} value={u.id}>
-                                      <div className="flex items-center gap-2">
-                                        <span>{u.name || u.email}</span>
-                                        <span className="text-xs text-muted-foreground">({u.role})</span>
+                              <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+                                {selectedParticipants.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mb-2">
+                                    {selectedParticipants.map(participantId => {
+                                      const participant = users?.find(u => u.id === participantId);
+                                      return (
+                                        <Badge key={participantId} variant="secondary" className="flex items-center gap-1">
+                                          {participant?.name || participant?.email}
+                                          <button
+                                            type="button"
+                                            onClick={() => setSelectedParticipants(prev => prev.filter(id => id !== participantId))}
+                                            className="ml-1 hover:text-red-500"
+                                          >
+                                            ×
+                                          </button>
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {users?.filter(u => !selectedParticipants.includes(u.id)).map(u => (
+                                    <button
+                                      key={u.id}
+                                      type="button"
+                                      onClick={() => setSelectedParticipants(prev => [...prev, u.id])}
+                                      className="flex items-center gap-2 p-2 rounded hover:bg-muted text-left text-sm"
+                                    >
+                                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                                        {(u.name || u.email).charAt(0).toUpperCase()}
                                       </div>
-                                    </SelectItem>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{u.name || u.email}</p>
+                                        <p className="text-xs text-muted-foreground">{u.role}</p>
+                                      </div>
+                                      <Plus className="size-4 text-muted-foreground" />
+                                    </button>
                                   ))}
-                                </SelectContent>
-                              </Select>
+                                </div>
+                              </div>
+                              {selectedParticipants.length === 0 && (
+                                <p className="text-xs text-muted-foreground">Click users above to add them as participants</p>
+                              )}
                             </div>
                           </div>
                         </div>
                         
                         {/* Meeting Summary */}
-                        {meetingTitle && meetingDate && selectedParticipant && (
+                        {meetingTitle && meetingDate && selectedParticipants.length > 0 && (
                           <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <div className="flex items-center gap-2 mb-2">
                               <CalendarDays className="h-5 w-5 text-blue-600" />
@@ -747,7 +777,15 @@ export function HrView() {
                             <div className="space-y-1 text-sm">
                               <p className="text-blue-800"><strong>Title:</strong> {meetingTitle}</p>
                               <p className="text-blue-800"><strong>Date:</strong> {format(new Date(meetingDate), 'EEEE, MMMM d, yyyy')}</p>
-                              <p className="text-blue-800"><strong>Participant:</strong> {users?.find(u => u.id === selectedParticipant)?.name || 'Selected'}</p>
+                              <p className="text-blue-800"><strong>Participants ({selectedParticipants.length}):</strong></p>
+                              <ul className="ml-4 list-disc text-blue-700">
+                                {selectedParticipants.map(participantId => {
+                                  const participant = users?.find(u => u.id === participantId);
+                                  return (
+                                    <li key={participantId}>{participant?.name || participant?.email} ({participant?.role})</li>
+                                  );
+                                })}
+                              </ul>
                             </div>
                           </div>
                         )}

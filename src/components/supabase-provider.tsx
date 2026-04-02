@@ -33,6 +33,21 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Check for admin auto-login on mount
+  useEffect(() => {
+    // Check if admin is already logged in via localStorage
+    const adminSession = localStorage.getItem('admin_session');
+    if (adminSession) {
+      setUser({
+        id: 'admin-straton',
+        email: ADMIN_EMAIL,
+        name: 'straton florentin tesha',
+        role: 'ADMIN'
+      });
+      setIsLoading(false);
+    }
+  }, []);
+
   // Fetch user profile from Supabase
   const fetchUserProfile = async (userId: string, email: string) => {
     try {
@@ -146,6 +161,20 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      // Admin auto-login with any password
+      if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        localStorage.setItem('admin_session', 'true');
+        setUser({
+          id: 'admin-straton',
+          email: ADMIN_EMAIL,
+          name: 'straton florentin tesha',
+          role: 'ADMIN'
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Regular Supabase auth for other users
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } catch (err) {
@@ -187,12 +216,19 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    localStorage.removeItem('admin_session');
     await supabase.auth.signOut();
     setUser(null);
   };
 
   const updateRole = async (role: UserRole) => {
     if (!user) return;
+    
+    // Admin can switch roles locally without database update
+    if (user.email === ADMIN_EMAIL) {
+      setUser(prev => prev ? { ...prev, role } : null);
+      return;
+    }
     
     const { error } = await supabase
       .from('users')
