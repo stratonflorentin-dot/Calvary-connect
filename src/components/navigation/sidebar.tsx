@@ -32,6 +32,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       { label: t.notifications, icon: Bell, href: '/notifications' },
     ],
     ADMIN: [
+      // Admin has access to ALL pages from all roles
       { label: t.dashboard, icon: LayoutDashboard, href: '/' },
       { label: t.fleet, icon: Truck, href: '/fleet' },
       { label: t.trips, icon: Route, href: '/trips' },

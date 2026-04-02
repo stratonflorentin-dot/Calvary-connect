@@ -38,12 +38,17 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     // Check if admin is already logged in via localStorage (admin only)
     const adminSession = localStorage.getItem('admin_session');
     if (adminSession) {
-      setUser({
+      const adminUser = {
         id: 'admin-straton',
         email: ADMIN_EMAIL,
-        name: 'straton florentin tesha',
-        role: 'ADMIN'
-      });
+        name: 'Straton Florentin Tesha',
+        role: 'ADMIN' as UserRole
+      };
+      setUser(adminUser);
+      
+      // Also sync admin to Supabase for tracking
+      syncAdminToSupabase(adminUser).catch(console.error);
+      
       setIsLoading(false);
       return;
     }
@@ -70,6 +75,47 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     
     return () => subscription.unsubscribe();
   }, []);
+
+  // Sync admin user to Supabase for tracking
+  const syncAdminToSupabase = async (adminUser: User) => {
+    try {
+      // Check if admin already exists in Supabase
+      const { data: existingUser, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('email', adminUser.email)
+        .single();
+
+      if (checkError || !existingUser) {
+        // Create admin record in Supabase
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .insert([{
+            id: adminUser.id,
+            email: adminUser.email,
+            name: adminUser.name,
+            role: adminUser.role,
+            status: 'active',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }]);
+
+        if (insertError) {
+          console.error('Error creating admin in Supabase:', insertError);
+        } else {
+          console.log('Admin user synced to Supabase successfully');
+        }
+      } else {
+        // Update last login time
+        await supabase
+          .from('user_profiles')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('email', adminUser.email);
+      }
+    } catch (err) {
+      console.error('Error syncing admin to Supabase:', err);
+    }
+  };
 
   // Fetch user profile from Supabase
   const fetchUserProfile = async (userId: string, email: string) => {
