@@ -218,24 +218,34 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       // Admin auto-login with any password
-      if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      const normalizedEmail = email.toLowerCase().trim();
+      if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
+        console.log('Admin login detected for:', email);
         localStorage.setItem('admin_session', 'true');
-        setUser({
+        const adminUser = {
           id: 'admin-straton',
           email: ADMIN_EMAIL,
-          name: 'straton florentin tesha',
-          role: 'ADMIN'
-        });
-        setIsLoading(false);
+          name: 'Straton Florentin Tesha',
+          role: 'ADMIN' as UserRole
+        };
+        setUser(adminUser);
+        console.log('Admin user set successfully:', adminUser);
         return;
       }
       
       // Use Supabase auth for all other users
+      console.log('Attempting Supabase login for:', email);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase login error:', error);
+        throw error;
+      }
     } catch (err) {
+      console.error('Sign in error:', err);
       setError(err as Error);
       throw err;
     } finally {

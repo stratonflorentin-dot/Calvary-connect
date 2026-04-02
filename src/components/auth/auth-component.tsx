@@ -29,10 +29,15 @@ export function AuthComponent() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
+    console.log('Attempting login with email:', email);
+
     try {
       await signIn(email, password);
+      console.log('Sign in successful');
+      // Success - page will auto-redirect when user state updates
     } catch (err: any) {
-      setError(err.message);
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to sign in. Please check your credentials.');
     } finally {
       setLoading(false);
     }
