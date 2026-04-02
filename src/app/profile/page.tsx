@@ -104,7 +104,7 @@ export default function ProfilePage() {
       
       // Try to update first
       let { error: updateError, data: updateData2 } = await supabase
-        .from('users')
+        .from('user_profiles')
         .update(updateData)
         .eq('id', user.id)
         .select();
@@ -113,7 +113,7 @@ export default function ProfilePage() {
       if (updateError) {
         console.log('Update failed, trying to create new profile...', updateError);
         const { error: insertError, data: insertData } = await supabase
-          .from('users')
+          .from('user_profiles')
           .insert([{
             id: user.id,
             email: user.email,
