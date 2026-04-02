@@ -375,61 +375,32 @@ export function CeoView() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="origin">Origin</Label>
-                        <Select value={tripForm.origin} onValueChange={(value) => setTripForm({...tripForm, origin: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select origin" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Nairobi Industrial Area">Nairobi Industrial Area</SelectItem>
-                            <SelectItem value="Mombasa Port">Mombasa Port</SelectItem>
-                            <SelectItem value="Kisumu">Kisumu</SelectItem>
-                            <SelectItem value="Eldoret">Eldoret</SelectItem>
-                            <SelectItem value="Nakuru">Nakuru</SelectItem>
-                            <SelectItem value="Thika">Thika</SelectItem>
-                            <SelectItem value="Kitale">Kitale</SelectItem>
-                            <SelectItem value="Dar es Salaam">Dar es Salaam</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          id="origin"
+                          value={tripForm.origin}
+                          onChange={(e) => setTripForm({...tripForm, origin: e.target.value})}
+                          placeholder="Enter origin location"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="destination">Destination</Label>
-                        <Select value={tripForm.destination} onValueChange={(value) => setTripForm({...tripForm, destination: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select destination" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Nairobi Industrial Area">Nairobi Industrial Area</SelectItem>
-                            <SelectItem value="Mombasa Port">Mombasa Port</SelectItem>
-                            <SelectItem value="Kisumu">Kisumu</SelectItem>
-                            <SelectItem value="Eldoret">Eldoret</SelectItem>
-                            <SelectItem value="Nakuru">Nakuru</SelectItem>
-                            <SelectItem value="Thika">Thika</SelectItem>
-                            <SelectItem value="Kitale">Kitale</SelectItem>
-                            <SelectItem value="Dar es Salaam">Dar es Salaam</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          id="destination"
+                          value={tripForm.destination}
+                          onChange={(e) => setTripForm({...tripForm, destination: e.target.value})}
+                          placeholder="Enter destination location"
+                        />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="cargo">Cargo Type</Label>
-                        <Select value={tripForm.cargo} onValueChange={(value) => setTripForm({...tripForm, cargo: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select cargo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Electronics">Electronics</SelectItem>
-                            <SelectItem value="Building Materials">Building Materials</SelectItem>
-                            <SelectItem value="Agricultural Products">Agricultural Products</SelectItem>
-                            <SelectItem value="Consumer Goods">Consumer Goods</SelectItem>
-                            <SelectItem value="Container Goods">Container Goods</SelectItem>
-                            <SelectItem value="Perishable Goods">Perishable Goods</SelectItem>
-                            <SelectItem value="Machinery">Machinery</SelectItem>
-                            <SelectItem value="Textiles">Textiles</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          id="cargo"
+                          value={tripForm.cargo}
+                          onChange={(e) => setTripForm({...tripForm, cargo: e.target.value})}
+                          placeholder="Enter cargo type"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="client">Client</Label>
