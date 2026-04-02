@@ -72,7 +72,7 @@ export default function ProfilePage() {
       // Upload new avatar if changed
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
-        const fileName = `${user.uid}-${Date.now()}.${fileExt}`;
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(fileName, avatarFile);
@@ -97,7 +97,7 @@ export default function ProfilePage() {
           avatar: avatarUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq('uid', user.uid);
+        .eq('id', user.id);
 
       if (updateError) throw updateError;
 

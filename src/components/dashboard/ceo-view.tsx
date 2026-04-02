@@ -39,7 +39,9 @@ export function CeoView() {
     mileage: '0'
   });
   
-  // Trip form state
+  // Driver options state
+  const [driverOptions, setDriverOptions] = useState<{id: string, name: string}[]>([]);
+  const [vehicleOptions, setVehicleOptions] = useState<{id: string, plate: string, make: string, model: string}[]>([]);
   const [tripForm, setTripForm] = useState({
     origin: '',
     destination: '',
@@ -56,10 +58,26 @@ export function CeoView() {
       try {
         const { data: vehiclesData } = await supabase.from('vehicles').select('*');
         const { data: tripsData } = await supabase.from('trips').select('*');
+        const { data: driversData } = await supabase.from('users').select('id, name, role').eq('role', 'DRIVER');
         
         // Use only real data from database - no mock data
         setVehicles(vehiclesData || []);
         setTrips(tripsData || []);
+        
+        // Set driver options from real data
+        if (driversData) {
+          setDriverOptions(driversData.map(d => ({ id: d.id, name: d.name || 'Unknown' })));
+        }
+        
+        // Set vehicle options from real data
+        if (vehiclesData) {
+          setVehicleOptions(vehiclesData.map(v => ({ 
+            id: v.id, 
+            plate: v.plate_number, 
+            make: v.make, 
+            model: v.model 
+          })));
+        }
         
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -431,12 +449,16 @@ export function CeoView() {
                             <SelectValue placeholder="Select driver" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="driver-001">Driver 001 - John Kamau</SelectItem>
-                            <SelectItem value="driver-002">Driver 002 - Peter Mwangi</SelectItem>
-                            <SelectItem value="driver-003">Driver 003 - David Ochieng</SelectItem>
-                            <SelectItem value="driver-004">Driver 004 - James Njoroge</SelectItem>
-                            <SelectItem value="driver-005">Driver 005 - Samuel Kiprop</SelectItem>
-                          </SelectContent>
+                        {driverOptions.length === 0 ? (
+                          <SelectItem value="" disabled>No drivers available</SelectItem>
+                        ) : (
+                          driverOptions.map((driver) => (
+                            <SelectItem key={driver.id} value={driver.id}>
+                              {driver.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
                         </Select>
                       </div>
                       <div>
@@ -446,15 +468,16 @@ export function CeoView() {
                             <SelectValue placeholder="Select vehicle" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1">KAB 123A - Isuzu NPR 75</SelectItem>
-                            <SelectItem value="2">KCD 456B - Hino 500 Series</SelectItem>
-                            <SelectItem value="3">KEF 789C - Great Dane Drop Deck</SelectItem>
-                            <SelectItem value="4">KGH 012D - Toyota Land Cruiser</SelectItem>
-                            <SelectItem value="5">KIJ 345E - Manac Flatbed</SelectItem>
-                            <SelectItem value="6">KLM 678F - Kenworth T680</SelectItem>
-                            <SelectItem value="7">KNO 901G - Volvo FH16</SelectItem>
-                            <SelectItem value="8">KPQ 234H - Wabash Dry Van</SelectItem>
-                          </SelectContent>
+                        {vehicleOptions.length === 0 ? (
+                          <SelectItem value="" disabled>No vehicles available</SelectItem>
+                        ) : (
+                          vehicleOptions.map((vehicle) => (
+                            <SelectItem key={vehicle.id} value={vehicle.id}>
+                              {vehicle.plate} - {vehicle.make} {vehicle.model}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
                         </Select>
                       </div>
                     </div>
