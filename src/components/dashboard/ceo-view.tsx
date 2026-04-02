@@ -129,13 +129,13 @@ export function CeoView() {
 
   const handleAddTrip = async () => {
     try {
-      // Validate that driver and vehicle are selected
-      if (!tripForm.driver_id || tripForm.driver_id === 'no-drivers') {
-        toast({ title: 'Error', description: 'Please select a driver', variant: 'destructive' });
+      // Validate that driver and vehicle are entered
+      if (!tripForm.driver_id || tripForm.driver_id.trim() === '') {
+        toast({ title: 'Error', description: 'Please enter a driver ID', variant: 'destructive' });
         return;
       }
-      if (!tripForm.vehicle_id || tripForm.vehicle_id === 'no-vehicles') {
-        toast({ title: 'Error', description: 'Please select a vehicle', variant: 'destructive' });
+      if (!tripForm.vehicle_id || tripForm.vehicle_id.trim() === '') {
+        toast({ title: 'Error', description: 'Please enter a vehicle ID', variant: 'destructive' });
         return;
       }
       
@@ -448,41 +448,21 @@ export function CeoView() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="driver_id">Driver ID</Label>
-                        <Select value={tripForm.driver_id} onValueChange={(value) => setTripForm({...tripForm, driver_id: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select driver" />
-                          </SelectTrigger>
-                          <SelectContent>
-                        {driverOptions.length === 0 ? (
-                          <SelectItem value="no-drivers" disabled>No drivers available</SelectItem>
-                        ) : (
-                          driverOptions.map((driver) => (
-                            <SelectItem key={driver.id} value={driver.id}>
-                              {driver.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                        </Select>
+                        <Input
+                          id="driver_id"
+                          value={tripForm.driver_id}
+                          onChange={(e) => setTripForm({...tripForm, driver_id: e.target.value})}
+                          placeholder="Enter driver ID"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="vehicle_id">Vehicle ID</Label>
-                        <Select value={tripForm.vehicle_id} onValueChange={(value) => setTripForm({...tripForm, vehicle_id: value})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select vehicle" />
-                          </SelectTrigger>
-                          <SelectContent>
-                        {vehicleOptions.length === 0 ? (
-                          <SelectItem value="no-vehicles" disabled>No vehicles available</SelectItem>
-                        ) : (
-                          vehicleOptions.map((vehicle) => (
-                            <SelectItem key={vehicle.id} value={vehicle.id}>
-                              {vehicle.plate} - {vehicle.make} {vehicle.model}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                        </Select>
+                        <Input
+                          id="vehicle_id"
+                          value={tripForm.vehicle_id}
+                          onChange={(e) => setTripForm({...tripForm, vehicle_id: e.target.value})}
+                          placeholder="Enter vehicle ID"
+                        />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
