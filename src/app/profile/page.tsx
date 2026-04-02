@@ -146,8 +146,12 @@ export default function ProfilePage() {
       
       console.log('Update/Insert successful:', updateData2);
 
-      // Refresh user data from database
-      await refreshUser();
+      // Try to refresh user data - don't fail if this doesn't work
+      try {
+        await refreshUser();
+      } catch (refreshErr) {
+        console.log('Refresh failed, but profile was saved', refreshErr);
+      }
 
       setIsEditing(false);
       setAvatarFile(null);
