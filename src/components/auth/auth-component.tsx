@@ -107,6 +107,9 @@ export function AuthComponent() {
             </TabsContent>
             
             <TabsContent value="signup">
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                <strong>Invite-only system:</strong> You must be invited by an administrator (CEO, Admin, or HR) before you can sign up. If you haven't received an invitation, please contact your manager.
+              </div>
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>
@@ -160,7 +163,7 @@ export function AuthComponent() {
                   </div>
                 )}
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Sign Up'}
+                  {loading ? 'Creating account...' : 'Complete Registration'}
                 </Button>
               </form>
             </TabsContent>

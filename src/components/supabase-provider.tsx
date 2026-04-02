@@ -225,51 +225,33 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string, role?: string) => {
     setIsLoading(true);
     try {
-      // Try Supabase auth first
+      // Check if user was pre-added by admin/HR/CEO
+      const { data: pendingUser, error: checkError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .is('password', null)
+        .single();
+
+      if (checkError || !pendingUser) {
+        throw new Error('You must be invited by an administrator before signing up. Please contact HR or your manager.');
+      }
+
+      // Try Supabase auth
       const { data: { user: authUser }, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
 
-      if (signUpError) {
-        // Fallback: Create local user if Supabase auth fails
-        console.log('Supabase auth failed, using local storage fallback');
-        const localUserId = 'local-' + Date.now();
-        const newUser = {
-          id: localUserId,
-          email: email,
-          name: name,
-          role: (role as UserRole) || 'DRIVER',
-          password: password, // Store password for local auth
-          created_at: new Date().toISOString(),
-        };
-        
-        // Store in localStorage
-        const users = JSON.parse(localStorage.getItem('local_users') || '[]');
-        users.push(newUser);
-        localStorage.setItem('local_users', JSON.stringify(users));
-        
-        // Auto-login after signup
-        localStorage.setItem('current_user_id', localUserId);
-        setUser({
-          id: localUserId,
-          email: email,
-          name: name,
-          role: (role as UserRole) || 'DRIVER',
-        });
-        setIsLoading(false);
-        return;
-      }
+      if (signUpError) throw signUpError;
 
       if (authUser) {
-        // Create user profile in Supabase
-        const { error: profileError } = await supabase.from('users').insert([{
+        // Update the pre-created profile with password/auth info
+        const { error: profileError } = await supabase.from('users').update({
           id: authUser.id,
-          email: email,
           name: name,
-          role: (role as UserRole) || 'DRIVER',
-          created_at: new Date().toISOString(),
-        }]);
+          updated_at: new Date().toISOString(),
+        }).eq('email', email);
 
         if (profileError) throw profileError;
       }

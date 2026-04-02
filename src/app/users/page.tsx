@@ -278,12 +278,12 @@ export default function UsersPage() {
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-full gap-2">
-                <UserPlus className="size-4" /> Add User
+                <UserPlus className="size-4" /> Invite User
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Team Member</DialogTitle>
+                <DialogTitle>Invite New Team Member</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleAddUser} className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -350,7 +350,7 @@ export default function UsersPage() {
                   <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
                 </div>
                 <Button type="submit" className="w-full" disabled={uploading}>
-                  {uploading ? 'Uploading...' : 'Create Account'}
+                  {uploading ? 'Inviting...' : 'Send Invitation'}
                 </Button>
               </form>
             </DialogContent>
