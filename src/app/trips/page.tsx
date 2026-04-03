@@ -18,8 +18,8 @@ import { Route, Plus, MapPin, Truck as TruckIcon, User, ChevronDown, ChevronUp, 
 import { cn } from '@/lib/utils';
 
 export default function TripsPage() {
-  const { role } = useRole();
-  const { user } = useSupabase();
+  const { role, isInitialized } = useRole();
+  const { user, isLoading: isUserLoading } = useSupabase();
   const [expandedTripId, setExpandedTripId] = useState<string | null>(null);
   const [trips, setTrips] = useState<any[]>([]);
   const [fleet, setFleet] = useState<any[]>([]);
@@ -27,24 +27,20 @@ export default function TripsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for auth and role to be initialized
+    if (isUserLoading || !isInitialized) {
+      console.log('[TripsPage] Waiting for auth/role initialization...');
+      return;
+    }
+
     const loadData = async () => {
       if (!user) {
-        console.log('No user found, skipping data load');
+        console.log('[TripsPage] No user found, skipping data load');
         setIsLoading(false);
         return;
       }
       
-      // Skip Supabase calls in demo mode to prevent fetch errors
-      if (DEMO_MODE) {
-        console.log('Demo mode: skipping Supabase data fetch');
-        setTrips([]);
-        setFleet([]);
-        setDrivers([]);
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log('Loading data for user:', user.email);
+      console.log('[TripsPage] Loading data for user:', user.email, 'role:', role);
       setIsLoading(true);
       
       try {
@@ -54,8 +50,7 @@ export default function TripsPage() {
           .order('created_at', { ascending: false });
         
         if (tripsError) {
-          console.error('Error loading trips:', tripsError?.message || JSON.stringify(tripsError) || 'Unknown error');
-          // Continue with empty data instead of breaking
+          console.error('[TripsPage] Error loading trips:', tripsError?.message);
         }
         
         const { data: fleetData, error: fleetError } = await supabase
@@ -63,33 +58,32 @@ export default function TripsPage() {
           .select('*');
           
         if (fleetError) {
-          console.error('Error loading fleet:', fleetError?.message || JSON.stringify(fleetError) || 'Unknown error');
-          // Continue with empty data instead of breaking
+          console.error('[TripsPage] Error loading fleet:', fleetError?.message);
         }
         
         const { data: driversData, error: driversError } = await supabase
-          .from('user_profiles')
-          .select('*')
+          .from('users')
+          .select('id, name, role')
           .eq('role', 'DRIVER');
           
         if (driversError) {
-          console.error('Error loading drivers:', driversError?.message || JSON.stringify(driversError) || 'Unknown error');
-          // Continue with empty data instead of breaking
+          console.error('[TripsPage] Error loading drivers:', driversError?.message);
         }
         
-        console.log('Data loaded:', { tripsData, fleetData, driversData });
+        console.log('[TripsPage] Data loaded:', { tripsData: tripsData?.length || 0, fleetData: fleetData?.length || 0, driversData: driversData?.length || 0 });
+        
         setTrips(tripsData || []);
         setFleet(fleetData || []);
         setDrivers(driversData || []);
       } catch (error) {
-        console.error('Unexpected error loading data:', error);
+        console.error('[TripsPage] Error in loadData:', error);
       } finally {
         setIsLoading(false);
       }
     };
     
     loadData();
-  }, [user]);
+  }, [user, role, isUserLoading, isInitialized]);
 
   const handleCreateTrip = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
