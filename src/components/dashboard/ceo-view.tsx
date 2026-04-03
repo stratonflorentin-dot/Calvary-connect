@@ -525,6 +525,7 @@ export function CeoView() {
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => handleDeleteVehicle(vehicle.id)}
+                                aria-label={`Delete vehicle ${vehicle.make} ${vehicle.model}`}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -559,6 +560,7 @@ export function CeoView() {
                                 size="sm"
                                 variant="destructive"
                                 onClick={() => handleDeleteTrip(trip.id)}
+                                aria-label={`Delete trip from ${trip.origin} to ${trip.destination}`}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>

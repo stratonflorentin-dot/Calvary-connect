@@ -83,7 +83,7 @@ export function NotificationsBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative p-2 rounded-full hover:bg-accent transition-colors outline-none group">
+        <button aria-label="View notifications" className="relative p-2 rounded-full hover:bg-accent transition-colors outline-none group">
           <Bell className="size-6 text-foreground group-active:animate-bounce" />
           {unreadCount > 0 && (
             <Badge className="absolute -top-1 -right-1 size-5 flex items-center justify-center p-0 bg-destructive text-white border-2 border-background animate-in fade-in zoom-in">
@@ -135,7 +135,7 @@ export function NotificationsBell() {
           )}
         </div>
         <DropdownMenuSeparator className="m-0" />
-        <button className="w-full py-3 text-sm font-medium text-primary hover:bg-accent transition-colors">
+        <button aria-label="View all notifications" className="w-full py-3 text-sm font-medium text-primary hover:bg-accent transition-colors">
           View all notifications
         </button>
       </DropdownMenuContent>
