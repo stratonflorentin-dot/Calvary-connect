@@ -1,17 +1,34 @@
 "use client";
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { UserRole } from '@/types/roles';
 import { useSupabase } from '@/components/supabase-provider';
 import { ADMIN_EMAIL } from '@/lib/supabase';
 
 export function useRole() {
-  const { user, role, changeRole: supabaseChangeRole } = useSupabase();
+  const { user, role: contextRole, changeRole: supabaseChangeRole } = useSupabase();
+  const [localRole, setLocalRole] = useState<UserRole | null>(null);
+
+  // Enhanced console logging for role changes
+  useEffect(() => {
+    console.log("Role changed to:", contextRole || localRole);
+  }, [contextRole, localRole]);
 
   // The actual user role from database (never changes with impersonation)
   const actualRole = user?.role || null;
   // Whether the user is an actual ADMIN (check both role and email)
   const isAdmin = actualRole === 'ADMIN' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+  // Sync role from localStorage (for admin role switching)
+  useEffect(() => {
+    if (user?.email === ADMIN_EMAIL) {
+      const savedRole = localStorage.getItem('fleet_command_role') as UserRole;
+      if (savedRole && savedRole !== contextRole) {
+        setLocalRole(savedRole);
+        supabaseChangeRole(savedRole);
+      }
+    }
+  }, [user, contextRole, supabaseChangeRole]);
 
   // Sync role from localStorage on mount (for admin role impersonation)
   useEffect(() => {
@@ -25,10 +42,10 @@ export function useRole() {
       const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
       if (savedRole && ['CEO', 'ADMIN', 'OPERATOR', 'DRIVER', 'MECHANIC', 'ACCOUNTANT', 'HR'].includes(savedRole)) {
         // If saved role differs from current, update it
-        if (savedRole !== role) {
+        if (savedRole !== contextRole) {
           supabaseChangeRole(savedRole);
         }
-      } else if (role !== 'ADMIN') {
+      } else if (contextRole !== 'ADMIN') {
         // Default to ADMIN if no saved role
         localStorage.setItem('fleet_command_role', 'ADMIN');
         supabaseChangeRole('ADMIN');
@@ -36,11 +53,11 @@ export function useRole() {
     } else {
       // For non-ADMIN users, always use their actual role
       localStorage.removeItem('fleet_command_role');
-      if (user.role !== role) {
+      if (user.role !== contextRole) {
         supabaseChangeRole(user.role);
       }
     }
-  }, [user, isAdmin, role, supabaseChangeRole]);
+  }, [user, isAdmin, contextRole, supabaseChangeRole]);
 
   const changeRole = (newRole: UserRole) => {
     // Role switching is now handled directly in role-selector with localStorage
@@ -53,19 +70,19 @@ export function useRole() {
     // ADMIN always has full access
     if (isAdmin) return true;
     // Otherwise check if current role is in required roles
-    if (!role) return false;
-    return requiredRoles.includes(role);
-  }, [isAdmin, role]);
+    if (!contextRole) return false;
+    return requiredRoles.includes(contextRole);
+  }, [isAdmin, contextRole]);
 
   // Check if user can access a page/feature
   const canAccess = useCallback((allowedRoles: UserRole[]) => {
     if (isAdmin) return true;
-    if (!role) return false;
-    return allowedRoles.includes(role);
-  }, [isAdmin, role]);
+    if (!contextRole) return false;
+    return allowedRoles.includes(contextRole);
+  }, [isAdmin, contextRole]);
 
   return { 
-    role, 
+    role: contextRole, 
     actualRole,
     isAdmin,
     changeRole, 

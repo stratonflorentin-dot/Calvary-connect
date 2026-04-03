@@ -58,22 +58,43 @@ export function useRouteGuard() {
   const { user, isLoading: isUserLoading } = useSupabase();
   const { role, isAdmin, isInitialized } = useRole();
 
+  // Enhanced console logging for navigation tracking
+  useEffect(() => {
+    console.log("Navigated to:", pathname);
+  }, [pathname]);
+
   const checkAccess = useCallback(
     (path: string): boolean => {
-      // Owner (admin email) has full access to everything, even during role switching
-      if (user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-        console.log(`[RouteGuard] Owner access granted for ${path}`);
-        return true;
+      try {
+        // Owner (admin email) has full access to everything, even during role switching
+        if (user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+          console.log(`[RouteGuard] Owner access granted for ${path}`);
+          return true;
+        }
+        
+        if (!role) {
+          console.warn("[RouteGuard] No role provided for access check");
+          return false;
+        }
+
+        const route = ROUTE_CONFIG.find((r) => r.path === path);
+        if (!route) {
+          console.error("Route not found:", path);
+          return false;
+        }
+
+        const hasAccess = route.allowedRoles.includes(role);
+        if (!hasAccess) {
+          console.warn("Access denied:", role, path);
+        }
+        
+        return hasAccess;
+      } catch (error) {
+        console.error("[RouteGuard] Error checking access:", error);
+        return false;
       }
-      
-      if (!role) return false;
-
-      const route = ROUTE_CONFIG.find((r) => r.path === path);
-      if (!route) return false;
-
-      return route.allowedRoles.includes(role);
     },
-    [role, isAdmin, user?.email]
+    [role, user?.email]
   );
 
   const redirectToDefault = useCallback(
