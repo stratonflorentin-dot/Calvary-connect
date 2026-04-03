@@ -35,7 +35,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Finance', icon: DollarSign, href: '/finance', roles: ['CEO', 'ADMIN', 'ACCOUNTANT'] },
   { label: 'Expenses', icon: DollarSign, href: '/expenses', roles: ['ADMIN', 'ACCOUNTANT'] },
   { label: 'Income', icon: Calculator, href: '/income', roles: ['ADMIN', 'ACCOUNTANT'] },
-  { label: 'Monthly Report', icon: BarChart2, href: '/reports', roles: ['CEO', 'ADMIN', 'HR'] },
+  { label: 'Monthly Report', icon: BarChart2, href: '/monthly-report', roles: ['CEO', 'ADMIN', 'HR'] },
   { label: 'Users', icon: Users, href: '/users', roles: ['CEO', 'ADMIN', 'HR'] },
   { label: 'Inventory', icon: Package, href: '/inventory', roles: ['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'] },
   { label: 'Parts Requests', icon: Wrench, href: '/parts-requests', roles: ['ADMIN', 'OPERATOR'] },
