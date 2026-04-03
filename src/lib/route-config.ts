@@ -129,7 +129,7 @@ export function getMenuByRole(
   }
 
   // CEO and ADMIN see all routes
-  if (role === "CEO" || role === "ADMIN" || isAdmin) {
+  if (role === "CEO" || role === "ADMIN") {
     return ROUTE_CONFIG;
   }
 
