@@ -27,10 +27,18 @@ export function RoleSelector() {
   const { role, changeRole } = useRole();
   const { user } = useSupabase();
 
-  // Only show for the specific admin email (stratonflorentin@gmail.com)
-  if (!role || !user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) return null;
+  // Debug logging
+  console.log('RoleSelector - user:', user?.email, 'role:', role, 'ADMIN_EMAIL:', ADMIN_EMAIL);
 
-  const CurrentIcon = ROLE_ICONS[role as keyof typeof ROLE_ICONS];
+  // Only show for the specific admin email (stratonflorentin@gmail.com)
+  // Allow role to be null initially - use default icon
+  if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    console.log('RoleSelector - hiding: not admin');
+    return null;
+  }
+
+  // Use ADMIN as default icon if role is not set yet
+  const CurrentIcon = ROLE_ICONS[(role as keyof typeof ROLE_ICONS) || 'ADMIN'];
 
   return (
     <div className="fixed bottom-24 right-4 z-[9999] md:bottom-8">
