@@ -172,9 +172,33 @@ export function CeoView() {
 
   const handleAddVehicle = async () => {
     try {
-      const { error } = await supabase.from('vehicles').insert([vehicleForm]);
-      if (error) throw error;
+      // Validate required fields
+      if (!vehicleForm.plate_number?.trim()) {
+        toast({ title: 'Error', description: 'Plate number is required', variant: 'destructive' });
+        return;
+      }
+      if (!vehicleForm.make) {
+        toast({ title: 'Error', description: 'Make is required', variant: 'destructive' });
+        return;
+      }
       
+      const vehicleData = {
+        ...vehicleForm,
+        year: vehicleForm.year ? parseInt(vehicleForm.year, 10) : null,
+        mileage: vehicleForm.mileage ? parseInt(vehicleForm.mileage, 10) : 0,
+        status: 'available',
+        created_at: new Date().toISOString()
+      };
+      
+      console.log('Inserting vehicle:', vehicleData);
+      const { data, error } = await supabase.from('vehicles').insert([vehicleData]).select();
+      
+      if (error) {
+        console.error('Supabase error inserting vehicle:', error);
+        throw error;
+      }
+      
+      console.log('Vehicle inserted successfully:', data);
       toast({ title: 'Success', description: 'Vehicle added successfully!' });
       setShowVehicleDialog(false);
       setVehicleForm({ 
@@ -187,43 +211,58 @@ export function CeoView() {
         mileage: '0' 
       });
       
-      // Refresh vehicles
-      const { data } = await supabase.from('vehicles').select('*');
-      setVehicles(data || []);
+      // Refresh vehicles list
+      const { data: refreshedData } = await supabase.from('vehicles').select('*');
+      setVehicles(refreshedData || []);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      console.error('Add vehicle error:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to add vehicle', variant: 'destructive' });
     }
   };
 
   const handleAddTrip = async () => {
     try {
-      // Validate that driver and vehicle are entered
-      if (!tripForm.driver_id || tripForm.driver_id.trim() === '') {
+      // Validate required fields
+      if (!tripForm.origin?.trim()) {
+        toast({ title: 'Error', description: 'Origin is required', variant: 'destructive' });
+        return;
+      }
+      if (!tripForm.destination?.trim()) {
+        toast({ title: 'Error', description: 'Destination is required', variant: 'destructive' });
+        return;
+      }
+      if (!tripForm.driver_id?.trim()) {
         toast({ title: 'Error', description: 'Please enter a driver ID', variant: 'destructive' });
         return;
       }
-      if (!tripForm.vehicle_id || tripForm.vehicle_id.trim() === '') {
+      if (!tripForm.vehicle_id?.trim()) {
         toast({ title: 'Error', description: 'Please enter a vehicle ID', variant: 'destructive' });
         return;
       }
       
       // Prepare trip data with proper types
       const tripData = {
-        origin: tripForm.origin,
-        destination: tripForm.destination,
-        driver_id: tripForm.driver_id,
-        vehicle_id: tripForm.vehicle_id,
-        cargo: tripForm.cargo,
-        client: tripForm.client,
+        origin: tripForm.origin.trim(),
+        destination: tripForm.destination.trim(),
+        driver_id: tripForm.driver_id.trim(),
+        vehicle_id: tripForm.vehicle_id.trim(),
+        cargo: tripForm.cargo?.trim() || null,
+        client: tripForm.client?.trim() || null,
         distance: tripForm.distance ? parseInt(tripForm.distance, 10) : null,
-        estimated_time: tripForm.estimated_time,
+        estimated_time: tripForm.estimated_time?.trim() || null,
         status: 'PENDING',
         created_at: new Date().toISOString()
       };
       
-      const { error } = await supabase.from('trips').insert([tripData]);
-      if (error) throw error;
+      console.log('Inserting trip:', tripData);
+      const { data, error } = await supabase.from('trips').insert([tripData]).select();
       
+      if (error) {
+        console.error('Supabase error inserting trip:', error);
+        throw error;
+      }
+      
+      console.log('Trip inserted successfully:', data);
       toast({ title: 'Success', description: 'Trip added successfully!' });
       setShowTripDialog(false);
       setTripForm({ 
@@ -237,12 +276,12 @@ export function CeoView() {
         estimated_time: ''
       });
       
-      // Refresh trips
-      const { data } = await supabase.from('trips').select('*');
-      setTrips(data || []);
+      // Refresh trips list
+      const { data: refreshedData } = await supabase.from('trips').select('*');
+      setTrips(refreshedData || []);
     } catch (error: any) {
       console.error('Add trip error:', error);
-      toast({ title: 'Error', description: error.message || 'Network error occurred', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message || 'Failed to add trip', variant: 'destructive' });
     }
   };
 

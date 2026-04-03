@@ -5,6 +5,8 @@ import { SupabaseProvider } from '@/components/supabase-provider';
 import { PWAProvider } from '@/components/pwa/pwa-provider';
 import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
 
+import { RoleProvider } from '@/components/role-provider';
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -70,9 +72,11 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background text-foreground">
         <PWAProvider>
           <SupabaseProvider>
-            {children}
-            <Toaster />
-            <PWAInstallPrompt />
+            <RoleProvider>
+              {children}
+              <Toaster />
+              <PWAInstallPrompt />
+            </RoleProvider>
           </SupabaseProvider>
         </PWAProvider>
       </body>
