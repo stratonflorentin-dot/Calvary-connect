@@ -259,7 +259,7 @@ export function CeoView() {
               </div>
               
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="text-lg font-bold mb-2">🚛 Fleet Management System Ready</h4>
+                <h2 className="text-lg font-bold mb-2">🚛 Fleet Management System Ready</h2>
                 <p className="text-sm text-muted-foreground mb-2">
                   Your Fleet Management System is ready for your data. Add your vehicles and trips to get started.
                 </p>
@@ -503,7 +503,7 @@ export function CeoView() {
                   </DialogHeader>
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold mb-4">Vehicles ({vehicles.length})</h3>
+                      <h2 className="text-lg font-semibold mb-4">Vehicles ({vehicles.length})</h2>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {vehicles.map((vehicle) => (
                           <div key={vehicle.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -536,7 +536,7 @@ export function CeoView() {
                     </div>
                     
                     <div>
-                      <h3 className="text-lg font-semibold mb-4">Trips ({trips.length})</h3>
+                      <h2 className="text-lg font-semibold mb-4">Trips ({trips.length})</h2>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {trips.map((trip) => (
                           <div key={trip.id} className="flex items-center justify-between p-3 border rounded-lg">
