@@ -17,12 +17,14 @@ interface User {
 
 interface SupabaseContextType {
   user: User | null;
+  role: UserRole | null;
   isLoading: boolean;
   error: Error | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, role?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateRole: (role: UserRole) => Promise<void>;
+  changeRole: (role: UserRole) => void;
   refreshUser: () => Promise<void>;
 }
 
@@ -30,6 +32,7 @@ const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined
 
 export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -45,6 +48,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         role: 'ADMIN' as UserRole
       };
       setUser(adminUser);
+      setRole('ADMIN');
       
       // Also sync admin to Supabase for tracking
       syncAdminToSupabase(adminUser).catch(console.error);
@@ -70,6 +74,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         await fetchUserProfile(session.user.id, session.user.email || '');
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        setRole(null);
       }
     });
     
@@ -212,6 +217,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           employeeId: profile.employee_id,
           department: profile.department,
         });
+        setRole(profile.role as UserRole);
       }
     }
   };
@@ -301,18 +307,19 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const updateRole = async (role: UserRole) => {
+  const updateRole = async (newRole: UserRole) => {
     if (!user) return;
     
     // Admin can switch roles locally without database update
     if (user.email === ADMIN_EMAIL) {
-      setUser(prev => prev ? { ...prev, role } : null);
+      setUser(prev => prev ? { ...prev, role: newRole } : null);
+      setRole(newRole);
       return;
     }
     
     const { error } = await supabase
       .from('users')
-      .update({ role })
+      .update({ role: newRole })
       .eq('id', user.id);
 
     if (error) {
@@ -320,18 +327,30 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setUser(prev => prev ? { ...prev, role } : null);
+    setUser(prev => prev ? { ...prev, role: newRole } : null);
+    setRole(newRole);
+  };
+
+  // changeRole for admin role switching without DB update
+  const changeRole = (newRole: UserRole) => {
+    console.log('[SupabaseProvider] changeRole called:', newRole);
+    if (user?.email === ADMIN_EMAIL) {
+      setRole(newRole);
+      setUser(prev => prev ? { ...prev, role: newRole } : null);
+    }
   };
 
   return (
     <SupabaseContext.Provider value={{
       user,
+      role,
       isLoading,
       error,
       signIn,
       signUp,
       signOut,
       updateRole,
+      changeRole,
       refreshUser,
     }}>
       {children}

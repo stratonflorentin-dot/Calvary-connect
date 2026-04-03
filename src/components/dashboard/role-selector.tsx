@@ -1,111 +1,111 @@
 "use client";
 
-import { useRole } from '@/hooks/use-role';
-import { useSupabase } from '@/components/supabase-provider';
-import { UserRole } from '@/types/roles';
-import { Shield, User, Wrench, Calculator, Users, Truck } from 'lucide-react';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ADMIN_EMAIL } from '@/lib/supabase';
+import {
+  Shield,
+  UserCog,
+  Truck,
+  HardHat,
+  Wrench,
+  Calculator,
+  Users,
+  Crown,
+} from "lucide-react";
+import { useSupabase } from "@/components/supabase-provider";
+import { UserRole } from "@/types/roles";
+import { ADMIN_EMAIL } from "@/lib/supabase";
+import { ROLE_DEFAULT_ROUTES } from "@/lib/route-config";
 
 const ROLE_ICONS = {
-  CEO: User,
   ADMIN: Shield,
-  OPERATOR: Truck,
+  CEO: Crown,
+  OPERATOR: UserCog,
   DRIVER: Truck,
   MECHANIC: Wrench,
   ACCOUNTANT: Calculator,
   HR: Users,
 };
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: "Administrator",
+  CEO: "CEO",
+  OPERATOR: "Fleet Operator",
+  DRIVER: "Driver",
+  MECHANIC: "Mechanic",
+  ACCOUNTANT: "Accountant",
+  HR: "HR Manager",
+};
+
 export function RoleSelector() {
-  const { role, changeRole } = useRole();
-  const { user } = useSupabase();
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const { user, role, changeRole } = useSupabase();
 
   // Debug logging
-  console.log('RoleSelector - user:', user?.email, 'role:', role, 'ADMIN_EMAIL:', ADMIN_EMAIL);
+  console.log("[RoleSelector] user:", user?.email, "role:", role, "ADMIN_EMAIL:", ADMIN_EMAIL);
 
-  // Only show for the specific admin email (stratonflorentin@gmail.com)
-  // Allow role to be null initially - use default icon
+  // Only show for the specific admin email
   if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
-    console.log('RoleSelector - hiding: not admin');
+    console.log("[RoleSelector] hiding: not admin");
     return null;
   }
 
-  // Use ADMIN as default icon if role is not set yet
-  const CurrentIcon = ROLE_ICONS[(role as keyof typeof ROLE_ICONS) || 'ADMIN'];
+  const currentRole = (role as UserRole) || "ADMIN";
+  const CurrentIcon = ROLE_ICONS[currentRole] || Shield;
+
+  const handleRoleChange = (newRole: UserRole) => {
+    console.log(`[RoleSelector] Changing role from ${currentRole} to ${newRole}`);
+
+    // Save role
+    changeRole(newRole);
+    localStorage.setItem("fleet_command_role", newRole);
+
+    // Get default route for the new role
+    const defaultRoute = ROLE_DEFAULT_ROUTES[newRole];
+    console.log(`[RoleSelector] Redirecting to ${defaultRoute}`);
+
+    // Close dropdown and redirect
+    setOpen(false);
+    window.location.href = defaultRoute;
+  };
 
   return (
-    <div className="fixed bottom-24 right-4 z-[9999] md:bottom-8">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="size-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white">
-            <CurrentIcon className="size-6" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <div className="p-2 border-b">
-            <p className="text-sm font-medium">Admin View Mode</p>
-            <p className="text-xs text-muted-foreground">Viewing as: {role}</p>
-          </div>
-          <DropdownMenuRadioGroup value={role} onValueChange={(v) => changeRole(v as UserRole)}>
-            <DropdownMenuRadioItem value="CEO" className="flex items-center gap-2">
-              <User className="size-4" />
-              <div>
-                <div className="font-medium">CEO</div>
-                <div className="text-xs text-muted-foreground">Full access</div>
-              </div>
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="ADMIN" className="flex items-center gap-2">
-              <Shield className="size-4" />
-              <div>
-                <div className="font-medium">Admin</div>
-                <div className="text-xs text-muted-foreground">System administration</div>
-              </div>
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="OPERATOR" className="flex items-center gap-2">
-              <Truck className="size-4" />
-              <div>
-                <div className="font-medium">Operator</div>
-                <div className="text-xs text-muted-foreground">Fleet operations</div>
-              </div>
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="DRIVER" className="flex items-center gap-2">
-              <Truck className="size-4" />
-              <div>
-                <div className="font-medium">Driver</div>
-                <div className="text-xs text-muted-foreground">Trip management</div>
-              </div>
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="MECHANIC" className="flex items-center gap-2">
-              <Wrench className="size-4" />
-              <div>
-                <div className="font-medium">Mechanic</div>
-                <div className="text-xs text-muted-foreground">Maintenance</div>
-              </div>
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="ACCOUNTANT" className="flex items-center gap-2">
-              <Calculator className="size-4" />
-              <div>
-                <div className="font-medium">Accountant</div>
-                <div className="text-xs text-muted-foreground">Financial data</div>
-              </div>
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="HR" className="flex items-center gap-2">
-              <Users className="size-4" />
-              <div>
-                <div className="font-medium">HR Manager</div>
-                <div className="text-xs text-muted-foreground">Employee management</div>
-              </div>
-            </DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className="fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg bg-primary text-white hover:bg-primary/90 z-50"
+        >
+          <CurrentIcon className="h-5 w-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+          Switch Role (Current: {ROLE_LABELS[currentRole]})
+        </div>
+        {(Object.keys(ROLE_ICONS) as UserRole[]).map((r) => {
+          const Icon = ROLE_ICONS[r];
+          return (
+            <DropdownMenuItem
+              key={r}
+              onClick={() => handleRoleChange(r)}
+              className={r === currentRole ? "bg-accent" : ""}
+            >
+              <Icon className="mr-2 h-4 w-4" />
+              {ROLE_LABELS[r]}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
