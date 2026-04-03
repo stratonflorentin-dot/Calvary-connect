@@ -22,13 +22,14 @@ export default function TripsPage() {
     }
 
     const loadData = async () => {
-      if (!user) {
+      // Admin user (owner) should always be able to access
+      if (!user && !isAdminUser) {
         console.log('[TripsPage] No user found, skipping data load');
         setIsLoading(false);
         return;
       }
       
-      console.log('[TripsPage] Loading data for user:', user.email, 'role:', role);
+      console.log('[TripsPage] Loading data for user:', user?.email || 'Admin', 'role:', role);
       setIsLoading(true);
       
       try {
@@ -54,7 +55,10 @@ export default function TripsPage() {
     loadData();
   }, [user, role, isUserLoading, isInitialized]);
 
-  if (!user) {
+  // Check if admin user (owner) - should always have access
+  const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+
+  if (!user && !isAdminUser) {
     return (
       <div className="flex min-h-screen bg-background p-8">
         <div className="text-center py-12">

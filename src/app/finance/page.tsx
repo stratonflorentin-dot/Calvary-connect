@@ -401,7 +401,10 @@ export default function FinancePage() {
 
   // Load data from Supabase
   useEffect(() => {
-    if (!user) return;
+    // Check if admin user (owner) - should always have access
+    const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+    
+    if (!user && !isAdminUser) return;
     
     const loadData = async () => {
       try {
@@ -590,15 +593,23 @@ export default function FinancePage() {
   };
 
   const handleSaveReport = async () => {
-    if (!user || !reportTitle) {
-      console.error('Missing user or report title');
+    // Check if admin user (owner) - should always have access
+    const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+    
+    if (!user && !isAdminUser) {
+      console.error('Missing user');
+      return;
+    }
+    
+    if (!reportTitle) {
+      console.error('Missing report title');
       return;
     }
     try {
       await SupabaseService.createReport({
         title: reportTitle,
         content: reportContent,
-        authorId: user.id,
+        authorId: user?.id || 'admin-straton',
         status: 'draft',
         periodStart: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
         periodEnd: new Date().toISOString()
