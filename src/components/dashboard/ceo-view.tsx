@@ -2,7 +2,7 @@
 
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import { StatCards } from './stat-cards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,74 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { DriverLocationMap } from '@/components/driver-location-map';
+
+// Memoized vehicle item to prevent re-renders
+const VehicleItem = memo(function VehicleItem({ vehicle, onDelete }: { vehicle: any; onDelete: (id: string) => void }) {
+  const handleDelete = useCallback(() => onDelete(vehicle.id), [onDelete, vehicle.id]);
+  
+  return (
+    <div className="flex items-center justify-between p-3 border rounded-lg">
+      <div className="flex-1">
+        <p className="font-medium">{vehicle.make} {vehicle.model}</p>
+        <p className="text-sm text-muted-foreground">
+          {vehicle.plate_number} • {vehicle.type} • {vehicle.year}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {vehicle.capacity && `Capacity: ${vehicle.capacity} • `}
+          {vehicle.mileage && `Mileage: ${vehicle.mileage}km`}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={vehicle.status === 'available' ? 'secondary' : vehicle.status === 'in_transit' ? 'default' : 'destructive'}>
+          {vehicle.status}
+        </Badge>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={handleDelete}
+          aria-label={`Delete vehicle ${vehicle.make} ${vehicle.model}`}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+// Memoized trip item to prevent re-renders
+const TripItem = memo(function TripItem({ trip, onDelete }: { trip: any; onDelete: (id: string) => void }) {
+  const handleDelete = useCallback(() => onDelete(trip.id), [onDelete, trip.id]);
+  
+  return (
+    <div className="flex items-center justify-between p-3 border rounded-lg">
+      <div className="flex-1">
+        <p className="font-medium">{trip.origin} → {trip.destination}</p>
+        <p className="text-sm text-muted-foreground">
+          {trip.cargo && `Cargo: ${trip.cargo} • `}
+          {trip.client && `Client: ${trip.client}`}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {trip.distance && `Distance: ${trip.distance} • `}
+          {trip.estimated_time && `Est: ${trip.estimated_time} • `}
+          {trip.created_at && `Created: ${new Date(trip.created_at).toLocaleDateString()}`}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={trip.status === 'completed' ? 'secondary' : trip.status === 'in_transit' ? 'default' : 'destructive'}>
+          {trip.status}
+        </Badge>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={handleDelete}
+          aria-label={`Delete trip from ${trip.origin} to ${trip.destination}`}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+});
 
 export function CeoView() {
   const { user } = useSupabase();
@@ -178,29 +246,29 @@ export function CeoView() {
     }
   };
 
-  const handleDeleteVehicle = async (vehicleId: string) => {
+  const handleDeleteVehicle = useCallback(async (vehicleId: string) => {
     try {
       const { error } = await supabase.from('vehicles').delete().eq('id', vehicleId);
       if (error) throw error;
       
       toast({ title: 'Success', description: 'Vehicle deleted successfully!' });
-      setVehicles(vehicles.filter(v => v.id !== vehicleId));
+      setVehicles(prev => prev.filter(v => v.id !== vehicleId));
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
-  };
+  }, []);
 
-  const handleDeleteTrip = async (tripId: string) => {
+  const handleDeleteTrip = useCallback(async (tripId: string) => {
     try {
       const { error } = await supabase.from('trips').delete().eq('id', tripId);
       if (error) throw error;
       
       toast({ title: 'Success', description: 'Trip deleted successfully!' });
-      setTrips(trips.filter(t => t.id !== tripId));
+      setTrips(prev => prev.filter(t => t.id !== tripId));
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -506,31 +574,7 @@ export function CeoView() {
                       <h2 className="text-lg font-semibold mb-4">Vehicles ({vehicles.length})</h2>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {vehicles.map((vehicle) => (
-                          <div key={vehicle.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex-1">
-                              <p className="font-medium">{vehicle.make} {vehicle.model}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {vehicle.plate_number} • {vehicle.type} • {vehicle.year}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {vehicle.capacity && `Capacity: ${vehicle.capacity} • `}
-                                {vehicle.mileage && `Mileage: ${vehicle.mileage}km`}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={vehicle.status === 'available' ? 'secondary' : vehicle.status === 'in_transit' ? 'default' : 'destructive'}>
-                                {vehicle.status}
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeleteVehicle(vehicle.id)}
-                                aria-label={`Delete vehicle ${vehicle.make} ${vehicle.model}`}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
+                          <VehicleItem key={vehicle.id} vehicle={vehicle} onDelete={handleDeleteVehicle} />
                         ))}
                       </div>
                     </div>
@@ -539,33 +583,7 @@ export function CeoView() {
                       <h2 className="text-lg font-semibold mb-4">Trips ({trips.length})</h2>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {trips.map((trip) => (
-                          <div key={trip.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex-1">
-                              <p className="font-medium">{trip.origin} → {trip.destination}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {trip.cargo && `Cargo: ${trip.cargo} • `}
-                                {trip.client && `Client: ${trip.client}`}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {trip.distance && `Distance: ${trip.distance} • `}
-                                {trip.estimated_time && `Est: ${trip.estimated_time} • `}
-                                {trip.created_at && `Created: ${new Date(trip.created_at).toLocaleDateString()}`}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={trip.status === 'completed' ? 'secondary' : trip.status === 'in_transit' ? 'default' : 'destructive'}>
-                                {trip.status}
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleDeleteTrip(trip.id)}
-                                aria-label={`Delete trip from ${trip.origin} to ${trip.destination}`}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
+                          <TripItem key={trip.id} trip={trip} onDelete={handleDeleteTrip} />
                         ))}
                       </div>
                     </div>
