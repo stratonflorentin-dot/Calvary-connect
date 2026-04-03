@@ -70,7 +70,7 @@ export function CeoView() {
         
         const { data: vehiclesData } = await supabase.from('vehicles').select('*');
         const { data: tripsData } = await supabase.from('trips').select('*');
-        const { data: driversData } = await supabase.from('users').select('id, name, role').eq('role', 'DRIVER');
+        const { data: driversData } = await supabase.from('profiles').select('id, name, role').eq('role', 'DRIVER');
         
         // Use only real data from database - no mock data
         setVehicles(vehiclesData || []);

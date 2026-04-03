@@ -62,7 +62,7 @@ export default function TripsPage() {
         }
         
         const { data: driversData, error: driversError } = await supabase
-          .from('users')
+          .from('profiles')
           .select('id, name, role')
           .eq('role', 'DRIVER');
           
