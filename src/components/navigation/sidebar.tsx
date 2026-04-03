@@ -23,8 +23,15 @@ export function Sidebar({ role }: { role: UserRole }) {
   // Get menu items based on role and user email (owner gets full access)
   const menuItems = getMenuByRole(role, false, t, user?.email);
 
-  // Map route config to navigation items
-  const navItems = menuItems.map(route => ({
+  // Define type for navigation items
+interface NavItem {
+  label: string;
+  icon: any;
+  href: string;
+}
+
+// Map route config to navigation items
+  const navItems: NavItem[] = menuItems.map(route => ({
     label: route.label,
     icon: getIconForRoute(route.path),
     href: route.path
@@ -32,7 +39,7 @@ export function Sidebar({ role }: { role: UserRole }) {
 
   // Helper function to get icons for routes
   const getIconForRoute = (path: string) => {
-    const iconMap: Record<string, any> = {
+    const routeIconMap: Record<string, any> = {
       '/': LayoutDashboard,
       '/fleet': Truck,
       '/trips': Route,
@@ -56,7 +63,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       '/audit': Shield,
       '/notifications': Bell,
     };
-    return iconMap[path] || LayoutDashboard;
+    return routeIconMap[path] || LayoutDashboard;
   };
 
   return (
@@ -70,7 +77,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
-        {navItems.map((item: any) => (
+        {navItems.map((item: NavItem) => (
           <Link
             key={item.label}
             href={item.href}
