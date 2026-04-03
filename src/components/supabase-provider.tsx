@@ -121,7 +121,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = async (userId: string, email: string) => {
     try {
       const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
+        .from('users')
         .select('*')
         .eq('id', userId)
         .single();
@@ -129,7 +129,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (profileError || !profile) {
         // If no profile exists, create one with default role
         const { data: newProfile, error: createError } = await supabase
-          .from('user_profiles')
+          .from('users')
           .insert([{
             id: userId,
             email: email,
@@ -258,7 +258,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     try {
       // Check if user was pre-added by admin/HR/CEO
       const { data: pendingUser, error: checkError } = await supabase
-        .from('user_profiles')
+        .from('users')
         .select('*')
         .eq('email', email)
         .is('password', null)
@@ -278,7 +278,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (authUser) {
         // Update the pre-created profile with password/auth info
-        const { error: profileError } = await supabase.from('user_profiles').update({
+        const { error: profileError } = await supabase.from('users').update({
           id: authUser.id,
           name: name,
           updated_at: new Date().toISOString(),
@@ -311,7 +311,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     }
     
     const { error } = await supabase
-      .from('user_profiles')
+      .from('users')
       .update({ role })
       .eq('id', user.id);
 

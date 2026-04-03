@@ -2,16 +2,15 @@ import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SupabaseProvider } from '@/components/supabase-provider';
+import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrapper';
 import { PWAProvider } from '@/components/pwa/pwa-provider';
 import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
-
-import { RoleProvider } from '@/components/role-provider';
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  userScalable: true,
+  userScalable: false,
   viewportFit: 'cover',
   themeColor: '#1e40af',
 }
@@ -72,11 +71,10 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background text-foreground">
         <PWAProvider>
           <SupabaseProvider>
-            <RoleProvider>
-              {children}
-              <Toaster />
-              <PWAInstallPrompt />
-            </RoleProvider>
+            {children}
+            <Toaster />
+            <RoleSelectorWrapper />
+            <PWAInstallPrompt />
           </SupabaseProvider>
         </PWAProvider>
       </body>

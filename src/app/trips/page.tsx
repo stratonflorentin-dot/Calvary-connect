@@ -230,7 +230,7 @@ export default function TripsPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar />
+      <Sidebar role={role!} />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <div className="flex justify-between items-center mb-8">
           <div>

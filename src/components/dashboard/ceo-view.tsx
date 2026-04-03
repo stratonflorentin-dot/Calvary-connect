@@ -2,7 +2,7 @@
 
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
-import { useMemo, useState, useEffect, useCallback, memo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { StatCards } from './stat-cards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,74 +16,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { DriverLocationMap } from '@/components/driver-location-map';
-
-// Memoized vehicle item to prevent re-renders
-const VehicleItem = memo(function VehicleItem({ vehicle, onDelete }: { vehicle: any; onDelete: (id: string) => void }) {
-  const handleDelete = useCallback(() => onDelete(vehicle.id), [onDelete, vehicle.id]);
-  
-  return (
-    <div className="flex items-center justify-between p-3 border rounded-lg">
-      <div className="flex-1">
-        <p className="font-medium">{vehicle.make} {vehicle.model}</p>
-        <p className="text-sm text-muted-foreground">
-          {vehicle.plate_number} • {vehicle.type} • {vehicle.year}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {vehicle.capacity && `Capacity: ${vehicle.capacity} • `}
-          {vehicle.mileage && `Mileage: ${vehicle.mileage}km`}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Badge variant={vehicle.status === 'available' ? 'secondary' : vehicle.status === 'in_transit' ? 'default' : 'destructive'}>
-          {vehicle.status}
-        </Badge>
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={handleDelete}
-          aria-label={`Delete vehicle ${vehicle.make} ${vehicle.model}`}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-    </div>
-  );
-});
-
-// Memoized trip item to prevent re-renders
-const TripItem = memo(function TripItem({ trip, onDelete }: { trip: any; onDelete: (id: string) => void }) {
-  const handleDelete = useCallback(() => onDelete(trip.id), [onDelete, trip.id]);
-  
-  return (
-    <div className="flex items-center justify-between p-3 border rounded-lg">
-      <div className="flex-1">
-        <p className="font-medium">{trip.origin} → {trip.destination}</p>
-        <p className="text-sm text-muted-foreground">
-          {trip.cargo && `Cargo: ${trip.cargo} • `}
-          {trip.client && `Client: ${trip.client}`}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {trip.distance && `Distance: ${trip.distance} • `}
-          {trip.estimated_time && `Est: ${trip.estimated_time} • `}
-          {trip.created_at && `Created: ${new Date(trip.created_at).toLocaleDateString()}`}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Badge variant={trip.status === 'completed' ? 'secondary' : trip.status === 'in_transit' ? 'default' : 'destructive'}>
-          {trip.status}
-        </Badge>
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={handleDelete}
-          aria-label={`Delete trip from ${trip.origin} to ${trip.destination}`}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-    </div>
-  );
-});
 
 export function CeoView() {
   const { user } = useSupabase();
@@ -138,7 +70,7 @@ export function CeoView() {
         
         const { data: vehiclesData } = await supabase.from('vehicles').select('*');
         const { data: tripsData } = await supabase.from('trips').select('*');
-        const { data: driversData } = await supabase.from('user_profiles').select('id, name, role').eq('role', 'DRIVER');
+        const { data: driversData } = await supabase.from('users').select('id, name, role').eq('role', 'DRIVER');
         
         // Use only real data from database - no mock data
         setVehicles(vehiclesData || []);
@@ -172,33 +104,9 @@ export function CeoView() {
 
   const handleAddVehicle = async () => {
     try {
-      // Validate required fields
-      if (!vehicleForm.plate_number?.trim()) {
-        toast({ title: 'Error', description: 'Plate number is required', variant: 'destructive' });
-        return;
-      }
-      if (!vehicleForm.make) {
-        toast({ title: 'Error', description: 'Make is required', variant: 'destructive' });
-        return;
-      }
+      const { error } = await supabase.from('vehicles').insert([vehicleForm]);
+      if (error) throw error;
       
-      const vehicleData = {
-        ...vehicleForm,
-        year: vehicleForm.year ? parseInt(vehicleForm.year, 10) : null,
-        mileage: vehicleForm.mileage ? parseInt(vehicleForm.mileage, 10) : 0,
-        status: 'available',
-        created_at: new Date().toISOString()
-      };
-      
-      console.log('Inserting vehicle:', vehicleData);
-      const { data, error } = await supabase.from('vehicles').insert([vehicleData]).select();
-      
-      if (error) {
-        console.error('Supabase error inserting vehicle:', error);
-        throw error;
-      }
-      
-      console.log('Vehicle inserted successfully:', data);
       toast({ title: 'Success', description: 'Vehicle added successfully!' });
       setShowVehicleDialog(false);
       setVehicleForm({ 
@@ -211,58 +119,43 @@ export function CeoView() {
         mileage: '0' 
       });
       
-      // Refresh vehicles list
-      const { data: refreshedData } = await supabase.from('vehicles').select('*');
-      setVehicles(refreshedData || []);
+      // Refresh vehicles
+      const { data } = await supabase.from('vehicles').select('*');
+      setVehicles(data || []);
     } catch (error: any) {
-      console.error('Add vehicle error:', error);
-      toast({ title: 'Error', description: error.message || 'Failed to add vehicle', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
   const handleAddTrip = async () => {
     try {
-      // Validate required fields
-      if (!tripForm.origin?.trim()) {
-        toast({ title: 'Error', description: 'Origin is required', variant: 'destructive' });
-        return;
-      }
-      if (!tripForm.destination?.trim()) {
-        toast({ title: 'Error', description: 'Destination is required', variant: 'destructive' });
-        return;
-      }
-      if (!tripForm.driver_id?.trim()) {
+      // Validate that driver and vehicle are entered
+      if (!tripForm.driver_id || tripForm.driver_id.trim() === '') {
         toast({ title: 'Error', description: 'Please enter a driver ID', variant: 'destructive' });
         return;
       }
-      if (!tripForm.vehicle_id?.trim()) {
+      if (!tripForm.vehicle_id || tripForm.vehicle_id.trim() === '') {
         toast({ title: 'Error', description: 'Please enter a vehicle ID', variant: 'destructive' });
         return;
       }
       
       // Prepare trip data with proper types
       const tripData = {
-        origin: tripForm.origin.trim(),
-        destination: tripForm.destination.trim(),
-        driver_id: tripForm.driver_id.trim(),
-        vehicle_id: tripForm.vehicle_id.trim(),
-        cargo: tripForm.cargo?.trim() || null,
-        client: tripForm.client?.trim() || null,
+        origin: tripForm.origin,
+        destination: tripForm.destination,
+        driver_id: tripForm.driver_id,
+        vehicle_id: tripForm.vehicle_id,
+        cargo: tripForm.cargo,
+        client: tripForm.client,
         distance: tripForm.distance ? parseInt(tripForm.distance, 10) : null,
-        estimated_time: tripForm.estimated_time?.trim() || null,
+        estimated_time: tripForm.estimated_time,
         status: 'PENDING',
         created_at: new Date().toISOString()
       };
       
-      console.log('Inserting trip:', tripData);
-      const { data, error } = await supabase.from('trips').insert([tripData]).select();
+      const { error } = await supabase.from('trips').insert([tripData]);
+      if (error) throw error;
       
-      if (error) {
-        console.error('Supabase error inserting trip:', error);
-        throw error;
-      }
-      
-      console.log('Trip inserted successfully:', data);
       toast({ title: 'Success', description: 'Trip added successfully!' });
       setShowTripDialog(false);
       setTripForm({ 
@@ -276,38 +169,38 @@ export function CeoView() {
         estimated_time: ''
       });
       
-      // Refresh trips list
-      const { data: refreshedData } = await supabase.from('trips').select('*');
-      setTrips(refreshedData || []);
+      // Refresh trips
+      const { data } = await supabase.from('trips').select('*');
+      setTrips(data || []);
     } catch (error: any) {
       console.error('Add trip error:', error);
-      toast({ title: 'Error', description: error.message || 'Failed to add trip', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message || 'Network error occurred', variant: 'destructive' });
     }
   };
 
-  const handleDeleteVehicle = useCallback(async (vehicleId: string) => {
+  const handleDeleteVehicle = async (vehicleId: string) => {
     try {
       const { error } = await supabase.from('vehicles').delete().eq('id', vehicleId);
       if (error) throw error;
       
       toast({ title: 'Success', description: 'Vehicle deleted successfully!' });
-      setVehicles(prev => prev.filter(v => v.id !== vehicleId));
+      setVehicles(vehicles.filter(v => v.id !== vehicleId));
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
-  }, []);
+  };
 
-  const handleDeleteTrip = useCallback(async (tripId: string) => {
+  const handleDeleteTrip = async (tripId: string) => {
     try {
       const { error } = await supabase.from('trips').delete().eq('id', tripId);
       if (error) throw error;
       
       toast({ title: 'Success', description: 'Trip deleted successfully!' });
-      setTrips(prev => prev.filter(t => t.id !== tripId));
+      setTrips(trips.filter(t => t.id !== tripId));
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
-  }, []);
+  };
 
   if (loading) {
     return (
@@ -366,7 +259,7 @@ export function CeoView() {
               </div>
               
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h2 className="text-lg font-bold mb-2">🚛 Fleet Management System Ready</h2>
+                <h4 className="text-lg font-bold mb-2">🚛 Fleet Management System Ready</h4>
                 <p className="text-sm text-muted-foreground mb-2">
                   Your Fleet Management System is ready for your data. Add your vehicles and trips to get started.
                 </p>
@@ -610,19 +503,67 @@ export function CeoView() {
                   </DialogHeader>
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-semibold mb-4">Vehicles ({vehicles.length})</h2>
+                      <h3 className="text-lg font-semibold mb-4">Vehicles ({vehicles.length})</h3>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {vehicles.map((vehicle) => (
-                          <VehicleItem key={vehicle.id} vehicle={vehicle} onDelete={handleDeleteVehicle} />
+                          <div key={vehicle.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex-1">
+                              <p className="font-medium">{vehicle.make} {vehicle.model}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {vehicle.plate_number} • {vehicle.type} • {vehicle.year}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {vehicle.capacity && `Capacity: ${vehicle.capacity} • `}
+                                {vehicle.mileage && `Mileage: ${vehicle.mileage}km`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={vehicle.status === 'available' ? 'secondary' : vehicle.status === 'in_transit' ? 'default' : 'destructive'}>
+                                {vehicle.status}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteVehicle(vehicle.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
                     
                     <div>
-                      <h2 className="text-lg font-semibold mb-4">Trips ({trips.length})</h2>
+                      <h3 className="text-lg font-semibold mb-4">Trips ({trips.length})</h3>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {trips.map((trip) => (
-                          <TripItem key={trip.id} trip={trip} onDelete={handleDeleteTrip} />
+                          <div key={trip.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex-1">
+                              <p className="font-medium">{trip.origin} → {trip.destination}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {trip.cargo && `Cargo: ${trip.cargo} • `}
+                                {trip.client && `Client: ${trip.client}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {trip.distance && `Distance: ${trip.distance} • `}
+                                {trip.estimated_time && `Est: ${trip.estimated_time} • `}
+                                {trip.created_at && `Created: ${new Date(trip.created_at).toLocaleDateString()}`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={trip.status === 'completed' ? 'secondary' : trip.status === 'in_transit' ? 'default' : 'destructive'}>
+                                {trip.status}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteTrip(trip.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>

@@ -104,7 +104,7 @@ export default function ProfilePage() {
       
       // Try to update first
       let { error: updateError, data: updateData2 } = await supabase
-        .from('user_profiles')
+        .from('users')
         .update(updateData)
         .eq('id', user.id)
         .select();
@@ -113,7 +113,7 @@ export default function ProfilePage() {
       if (updateError) {
         console.log('Update failed, trying to create new profile...', updateError);
         const { error: insertError, data: insertData } = await supabase
-          .from('user_profiles')
+          .from('users')
           .insert([{
             id: user.id,
             email: user.email,
@@ -172,7 +172,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">
-      <Sidebar />
+      <Sidebar role={role} />
       <main className="flex-1 md:ml-60 p-4 md:p-8 flex items-center justify-center">
         <Card className="w-full max-w-md shadow-lg border-primary/10">
           <CardHeader className="text-center pb-2">
@@ -380,7 +380,7 @@ export default function ProfilePage() {
           </DialogContent>
         </Dialog>
       </main>
-      <BottomTabs/>
+      <BottomTabs role={role} />
     </div>
   );
 }

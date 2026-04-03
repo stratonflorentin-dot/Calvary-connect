@@ -8,7 +8,7 @@ async function getCurrentUser() {
   if (!user) return null;
   
   const { data: profile } = await supabase
-    .from('user_profiles')
+    .from('users')
     .select('full_name, role')
     .eq('id', user.id)
     .single();
