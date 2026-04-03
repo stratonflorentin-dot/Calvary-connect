@@ -13,98 +13,51 @@ import { useLanguage } from '@/hooks/use-language';
 import { useSupabase } from '@/components/supabase-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { ADMIN_EMAIL } from '@/lib/supabase';
+import { getMenuByRole } from '@/lib/route-config';
 
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { signOut, user } = useSupabase();
 
-  const ROLE_NAV: Record<UserRole, any[]> = {
-    CEO: [
-      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
-      { label: t.fleet, icon: Truck, href: '/fleet' },
-      { label: t.finance, icon: DollarSign, href: '/finance' },
-      { label: t.monthly_report, icon: BarChart2, href: '/reports' },
-      { label: t.users, icon: Users, href: '/users' },
-      { label: t.inventory, icon: Package, href: '/inventory' },
-      { label: t.map, icon: MapPin, href: '/map' },
-      { label: t.ai_insights, icon: Sparkles, href: '/ai-insights' },
-      { label: 'Audit Log', icon: Shield, href: '/audit' },
-      { label: t.notifications, icon: Bell, href: '/notifications' },
-    ],
-    ADMIN: [
-      // Admin has access to ALL pages from all roles
-      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
-      { label: t.fleet, icon: Truck, href: '/fleet' },
-      { label: t.trips, icon: Route, href: '/trips' },
-      { label: t.finance, icon: DollarSign, href: '/finance' },
-      { label: t.expenses, icon: DollarSign, href: '/expenses' },
-      { label: t.income, icon: Calculator, href: '/income' },
-      { label: t.fuel_approvals, icon: Truck, href: '/fuel-approvals' },
-      { label: t.allowances, icon: Users, href: '/allowances' },
-      { label: t.monthly_report, icon: BarChart2, href: '/reports' },
-      { label: t.users, icon: Users, href: '/users' },
-      { label: t.inventory, icon: Package, href: '/inventory' },
-      { label: t.parts_requests, icon: Wrench, href: '/parts-requests' },
-      { label: t.request_parts, icon: Package, href: '/spare-parts' },
-      { label: t.service_requests, icon: Wrench, href: '/service-requests' },
-      { label: t.truck_history, icon: History, href: '/truck-history' },
-      { label: t.map, icon: MapPin, href: '/map' },
-      { label: t.proof, icon: Home, href: '/proof' },
-      { label: t.report_maintenance, icon: History, href: '/report' },
-      { label: t.ai_insights, icon: Sparkles, href: '/ai-insights' },
-      { label: 'Audit Log', icon: Shield, href: '/audit' },
-      { label: t.notifications, icon: Bell, href: '/notifications' },
-    ],
-    OPERATOR: [
-      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
-      { label: t.trips, icon: Route, href: '/trips' },
-      { label: t.fleet_status, icon: Truck, href: '/fleet' },
-      { label: t.inventory, icon: Package, href: '/inventory' },
-      { label: t.parts_requests, icon: Wrench, href: '/parts-requests' },
-      { label: t.fleet_map, icon: MapPin, href: '/map' },
-      { label: t.notifications, icon: Bell, href: '/notifications' },
-    ],
-    MECHANIC: [
-      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
-      { label: t.service_requests, icon: Wrench, href: '/service-requests' },
-      { label: t.parts_requests, icon: Package, href: '/spare-parts' },
-      { label: t.inventory, icon: Package, href: '/inventory' },
-      { label: t.truck_history, icon: History, href: '/truck-history' },
-      { label: t.notifications, icon: Bell, href: '/notifications' },
-    ],
-    ACCOUNTANT: [
-      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
-      { label: t.expenses, icon: DollarSign, href: '/expenses' },
-      { label: t.income, icon: Calculator, href: '/income' },
-      { label: t.fuel_approvals, icon: Truck, href: '/fuel-approvals' },
-      { label: t.allowances, icon: Users, href: '/allowances' },
-      { label: t.monthly_report, icon: BarChart2, href: '/monthly-report' },
-    ],
-    DRIVER: [
-      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
-      { label: t.trips, icon: Route, href: '/trips' },
-      { label: t.fleet, icon: Truck, href: '/fleet' },
-      { label: t.map, icon: MapPin, href: '/map' },
-      { label: t.proof, icon: Home, href: '/proof' },
-      { label: t.report_maintenance, icon: History, href: '/report' },
-      { label: t.notifications, icon: Bell, href: '/notifications' },
-    ],
-    HR: [
-      { label: t.dashboard, icon: LayoutDashboard, href: '/' },
-      { label: t.users, icon: Users, href: '/users' },
-      { label: t.allowances, icon: Users, href: '/allowances' },
-      { label: t.monthly_report, icon: BarChart2, href: '/monthly-report' },
-      { label: t.notifications, icon: Bell, href: '/notifications' },
-    ]
+  // Get menu items based on role and user email (owner gets full access)
+  const menuItems = getMenuByRole(role, false, t, user?.email);
+
+  // Map route config to navigation items
+  const navItems = menuItems.map(route => ({
+    label: route.label,
+    icon: getIconForRoute(route.path),
+    href: route.path
+  }));
+
+  // Helper function to get icons for routes
+  const getIconForRoute = (path: string) => {
+    const iconMap: Record<string, any> = {
+      '/': LayoutDashboard,
+      '/fleet': Truck,
+      '/trips': Route,
+      '/finance': DollarSign,
+      '/expenses': DollarSign,
+      '/income': Calculator,
+      '/fuel-approvals': Truck,
+      '/allowances': Users,
+      '/reports': BarChart2,
+      '/monthly-report': BarChart2,
+      '/users': Users,
+      '/inventory': Package,
+      '/parts-requests': Wrench,
+      '/spare-parts': Package,
+      '/service-requests': Wrench,
+      '/truck-history': History,
+      '/map': MapPin,
+      '/proof': Home,
+      '/report': History,
+      '/ai-insights': Sparkles,
+      '/audit': Shield,
+      '/notifications': Bell,
+    };
+    return iconMap[path] || LayoutDashboard;
   };
-
-  const navItems = ROLE_NAV[role] || [];
-
-  // Admin sees all pages regardless of current role view
-  const visibleNavItems = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() 
-    ? ROLE_NAV.ADMIN 
-    : navItems;
 
   return (
     <aside className="hidden md:flex flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50">
@@ -117,7 +70,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
-        {visibleNavItems.map((item) => (
+        {navItems.map((item: any) => (
           <Link
             key={item.label}
             href={item.href}

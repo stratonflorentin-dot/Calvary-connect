@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
+import { ADMIN_EMAIL } from "@/lib/supabase";
 
 export interface RouteConfig {
   path: string;
@@ -60,6 +61,14 @@ export function useRouteGuard() {
   const checkAccess = useCallback(
     (path: string): boolean => {
       if (!role) return false;
+      
+      // Owner (admin email) has full access to everything
+      if (user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        console.log(`[RouteGuard] Owner access granted for ${path}`);
+        return true;
+      }
+      
+      // Admin role also has full access
       if (isAdmin) return true;
 
       const route = ROUTE_CONFIG.find((r) => r.path === path);
@@ -67,7 +76,7 @@ export function useRouteGuard() {
 
       return route.allowedRoles.includes(role);
     },
-    [role, isAdmin]
+    [role, isAdmin, user?.email]
   );
 
   const redirectToDefault = useCallback(
@@ -108,9 +117,16 @@ export function useRouteGuard() {
 export function getMenuByRole(
   role: UserRole | null,
   isAdmin: boolean,
-  t: Record<string, string>
+  t: Record<string, string>,
+  userEmail?: string | null
 ): RouteConfig[] {
-  if (!role) return [];
+  if (!role) return []
+
+  // Owner (admin email) gets full access to everything
+  if (userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    console.log("[RouteConfig] Owner gets full menu access");
+    return ROUTE_CONFIG;
+  }
 
   // CEO and ADMIN see all routes
   if (role === "CEO" || role === "ADMIN" || isAdmin) {
