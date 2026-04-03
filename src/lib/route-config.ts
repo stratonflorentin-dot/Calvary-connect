@@ -60,16 +60,13 @@ export function useRouteGuard() {
 
   const checkAccess = useCallback(
     (path: string): boolean => {
-      if (!role) return false;
-      
-      // Owner (admin email) has full access to everything
+      // Owner (admin email) has full access to everything, even during role switching
       if (user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
         console.log(`[RouteGuard] Owner access granted for ${path}`);
         return true;
       }
       
-      // Admin role also has full access
-      if (isAdmin) return true;
+      if (!role) return false;
 
       const route = ROUTE_CONFIG.find((r) => r.path === path);
       if (!route) return false;
@@ -91,22 +88,29 @@ export function useRouteGuard() {
   useEffect(() => {
     if (isUserLoading || !isInitialized) return;
 
-    if (!user) {
+    // Check if admin user (owner) - should always have access
+    const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    
+    if (!user && !isAdminUser) {
       console.log("[RouteGuard] No user, redirecting to /login");
       // router.push("/login");
       return;
     }
 
-    if (!role) {
+    if (!role && !isAdminUser) {
       console.log("[RouteGuard] No role, waiting...");
       return;
     }
 
     const hasAccess = checkAccess(pathname);
-    console.log(`[RouteGuard] ${pathname} access for ${role}: ${hasAccess}`);
+    console.log(`[RouteGuard] ${pathname} access for ${role || 'Admin'}: ${hasAccess}`);
 
     if (!hasAccess) {
-      redirectToDefault(role);
+      // Only redirect if not admin user
+      const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      if (!isAdminUser && role) {
+        redirectToDefault(role);
+      }
     }
   }, [user, role, pathname, isUserLoading, isInitialized, checkAccess, redirectToDefault]);
 
