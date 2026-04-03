@@ -43,10 +43,9 @@ export function useRole() {
   }, [user, isAdmin, role, supabaseChangeRole]);
 
   const changeRole = (newRole: UserRole) => {
-    // Only allow role switching if user is ADMIN (by role or email)
-    if (isAdmin) {
-      supabaseChangeRole(newRole);
-    }
+    // Role switching is now handled directly in role-selector with localStorage
+    // This function is kept for compatibility but no longer used
+    console.log('[useRole] changeRole called (deprecated):', newRole);
   };
 
   // Permission check: ADMIN has full access regardless of impersonated role

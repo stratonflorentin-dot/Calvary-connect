@@ -47,6 +47,18 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Sync role from localStorage when user changes (for role switching)
+  useEffect(() => {
+    if (user?.email === ADMIN_EMAIL) {
+      const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
+      if (savedRole && savedRole !== role) {
+        console.log('[SupabaseProvider] Syncing role from localStorage:', savedRole);
+        setRole(savedRole);
+        setUser(prev => prev ? { ...prev, role: savedRole } : null);
+      }
+    }
+  }, [user, role]);
+
   // Check for admin auto-login on mount
   useEffect(() => {
     // Check if admin is already logged in via localStorage (admin only)
@@ -353,17 +365,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   // changeRole for admin role switching without DB update
   const changeRole = (newRole: UserRole) => {
-    console.log('[SupabaseProvider] changeRole called:', newRole);
-    if (user?.email === ADMIN_EMAIL) {
-      // Save to localStorage for persistence
-      localStorage.setItem('fleet_command_role', newRole);
-      
-      // Update both role state and user role
-      setRole(newRole);
-      setUser(prev => prev ? { ...prev, role: newRole } : null);
-      
-      console.log('[SupabaseProvider] Role changed and persisted:', newRole);
-    }
+    console.log('[SupabaseProvider] changeRole called (deprecated):', newRole);
+    // Role switching is now handled directly in role-selector with localStorage
+    // This function is kept for compatibility but no longer used
   };
 
   return (
