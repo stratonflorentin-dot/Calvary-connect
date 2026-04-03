@@ -110,7 +110,7 @@ export default function Home() {
               <span className="font-medium">{currentRoleBadge.label}</span>
             </Badge>
             {isAdminUser && (
-              <span className="text-xs text-muted-foreground hidden md:inline">
+              <span className="text-xs text-foreground/80 hidden md:inline">
                 (Switch roles in sidebar)
               </span>
             )}

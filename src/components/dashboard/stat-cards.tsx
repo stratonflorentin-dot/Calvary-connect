@@ -158,7 +158,7 @@ export function StatCards() {
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.title}</p>
+              <p className="text-xs text-foreground/80">{stat.title}</p>
             </div>
           </div>
         </div>
