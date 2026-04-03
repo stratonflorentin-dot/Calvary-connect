@@ -1,7 +1,8 @@
 
 "use client";
 
-import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState, useCallback } from 'react';
 import { 
   LayoutDashboard, Truck, Route, DollarSign, BarChart2, 
@@ -53,11 +54,9 @@ const ALL_NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useLanguage();
   const { signOut, user } = useSupabase();
   const { role, changeRole } = useRole();
-  const [isNavigating, setIsNavigating] = useState(false);
 
   // Check if current user is the admin
   const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -69,32 +68,10 @@ export function Sidebar() {
     ? ALL_NAV_ITEMS 
     : ALL_NAV_ITEMS.filter(item => item.roles.includes(currentRole));
 
-  // Stable navigation handler
-  const handleNavClick = useCallback((href: string) => {
-    if (isNavigating) return; // Prevent double clicks
-    setIsNavigating(true);
-    
-    // Small delay to ensure role state is stable
-    setTimeout(() => {
-      router.push(href);
-      setIsNavigating(false);
-    }, 50);
-  }, [router, isNavigating]);
-
-  // Role change handler with navigation stability
+  // Role change handler - stay on current page if accessible
   const handleRoleChange = useCallback((newRole: UserRole) => {
     changeRole(newRole);
-    // Don't navigate away - stay on current page if accessible
-    // Otherwise go to dashboard
-    const currentPageAccessible = isAdminUser || ALL_NAV_ITEMS.some(
-      item => item.href === pathname && item.roles.includes(newRole)
-    );
-    
-    if (!currentPageAccessible) {
-      // Page not accessible in new role, navigate to dashboard
-      setTimeout(() => router.push('/'), 100);
-    }
-  }, [changeRole, pathname, router, isAdminUser]);
+  }, [changeRole]);
 
   return (
     <aside className="hidden md:flex flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50">
@@ -108,11 +85,11 @@ export function Sidebar() {
 
       <nav className="flex-1 px-3 space-y-1">
         {navItems.map((item) => (
-          <button
+          <Link
             key={item.href}
-            onClick={() => handleNavClick(item.href)}
+            href={item.href}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group w-full text-left",
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group",
               pathname === item.href 
                 ? "bg-primary text-white" 
                 : "hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-white"
@@ -123,7 +100,7 @@ export function Sidebar() {
               pathname === item.href ? "text-white" : "text-sidebar-foreground/50 group-hover:text-white"
             )} />
             <span>{item.label}</span>
-          </button>
+          </Link>
         ))}
       </nav>
 
