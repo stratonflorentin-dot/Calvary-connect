@@ -12,11 +12,12 @@ import { UserRole } from '@/types/roles';
 import { useLanguage } from '@/hooks/use-language';
 import { useSupabase } from '@/components/supabase-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { ADMIN_EMAIL } from '@/lib/supabase';
 
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { signOut } = useSupabase();
+  const { signOut, user } = useSupabase();
 
   const ROLE_NAV: Record<UserRole, any[]> = {
     CEO: [
@@ -100,6 +101,11 @@ export function Sidebar({ role }: { role: UserRole }) {
 
   const navItems = ROLE_NAV[role] || [];
 
+  // Admin sees all pages regardless of current role view
+  const visibleNavItems = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() 
+    ? ROLE_NAV.ADMIN 
+    : navItems;
+
   return (
     <aside className="hidden md:flex flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50">
       <div className="p-6 flex items-center justify-between">
@@ -111,7 +117,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <Link
             key={item.label}
             href={item.href}
