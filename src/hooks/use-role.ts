@@ -1,24 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { UserRole } from '@/types/roles';
 import { useSupabase } from '@/components/supabase-provider';
 import { ADMIN_EMAIL } from '@/lib/supabase';
 
 export function useRole() {
-  const [role, setRole] = useState<UserRole | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const { user } = useSupabase();
+  const { user, role, changeRole: supabaseChangeRole } = useSupabase();
 
   // The actual user role from database (never changes with impersonation)
   const actualRole = user?.role || null;
   // Whether the user is an actual ADMIN (check both role and email)
   const isAdmin = actualRole === 'ADMIN' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
+  // Sync role from localStorage on mount (for admin role impersonation)
   useEffect(() => {
     if (!user) {
-      // Default to CEO for demo/access only when no user
-      setRole('CEO');
       localStorage.setItem('fleet_command_role', 'CEO');
       return;
     }
@@ -27,26 +24,29 @@ export function useRole() {
     if (isAdmin) {
       const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
       if (savedRole && ['CEO', 'ADMIN', 'OPERATOR', 'DRIVER', 'MECHANIC', 'ACCOUNTANT', 'HR'].includes(savedRole)) {
-        setRole(savedRole);
-      } else {
+        // If saved role differs from current, update it
+        if (savedRole !== role) {
+          supabaseChangeRole(savedRole);
+        }
+      } else if (role !== 'ADMIN') {
         // Default to ADMIN if no saved role
-        setRole('ADMIN');
         localStorage.setItem('fleet_command_role', 'ADMIN');
+        supabaseChangeRole('ADMIN');
       }
     } else {
       // For non-ADMIN users, always use their actual role
-      setRole(user.role);
       localStorage.removeItem('fleet_command_role');
+      if (user.role !== role) {
+        supabaseChangeRole(user.role);
+      }
     }
-    
-    setIsInitialized(true);
-  }, [user, isAdmin]);
+  }, [user, isAdmin, role, supabaseChangeRole]);
 
   const changeRole = (newRole: UserRole) => {
     // Only allow role switching if user is ADMIN (by role or email)
     if (isAdmin) {
-      setRole(newRole);
       localStorage.setItem('fleet_command_role', newRole);
+      supabaseChangeRole(newRole);
     }
   };
 
@@ -71,7 +71,7 @@ export function useRole() {
     actualRole,
     isAdmin,
     changeRole, 
-    isInitialized,
+    isInitialized: true,
     hasPermission,
     canAccess
   };
