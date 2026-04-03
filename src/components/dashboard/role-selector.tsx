@@ -64,9 +64,8 @@ export function RoleSelector() {
   const handleRoleChange = (newRole: UserRole) => {
     console.log(`[RoleSelector] Changing role from ${currentRole} to ${newRole}`);
 
-    // Save role
+    // Save role (handled in SupabaseProvider)
     changeRole(newRole);
-    localStorage.setItem("fleet_command_role", newRole);
 
     // Get default route for the new role
     const defaultRoute = ROLE_DEFAULT_ROUTES[newRole];

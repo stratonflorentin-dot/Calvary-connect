@@ -45,7 +45,6 @@ export function useRole() {
   const changeRole = (newRole: UserRole) => {
     // Only allow role switching if user is ADMIN (by role or email)
     if (isAdmin) {
-      localStorage.setItem('fleet_command_role', newRole);
       supabaseChangeRole(newRole);
     }
   };

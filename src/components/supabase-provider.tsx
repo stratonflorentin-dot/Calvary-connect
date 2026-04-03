@@ -36,23 +36,32 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Initialize role from localStorage for admin on mount
+  useEffect(() => {
+    const adminSession = localStorage.getItem('admin_session');
+    const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
+    
+    if (adminSession === 'true' && savedRole) {
+      console.log('[SupabaseProvider] Initializing admin role from localStorage:', savedRole);
+      setRole(savedRole);
+    }
+  }, []);
+
   // Check for admin auto-login on mount
   useEffect(() => {
     // Check if admin is already logged in via localStorage (admin only)
     const adminSession = localStorage.getItem('admin_session');
+    const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
+    
     if (adminSession) {
       const adminUser = {
         id: 'admin-straton',
         email: ADMIN_EMAIL,
         name: 'Straton Florentin Tesha',
-        role: 'ADMIN' as UserRole
+        role: savedRole || 'ADMIN' as UserRole
       };
       setUser(adminUser);
-      setRole('ADMIN');
-      
-      // Also sync admin to Supabase for tracking
-      syncAdminToSupabase(adminUser).catch(console.error);
-      
+      setRole(savedRole || 'ADMIN');
       setIsLoading(false);
       return;
     }
@@ -172,9 +181,11 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             employeeId: profile.employee_id,
             department: profile.department,
           });
+          setRole(profile.role as UserRole);
         }
       } else {
         setUser(null);
+        setRole(null);
       }
       setIsLoading(false);
     });
@@ -194,6 +205,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             employeeId: profile.employee_id,
             department: profile.department,
           });
+          setRole(profile.role as UserRole);
         }
       }
       setIsLoading(false);
@@ -232,14 +244,20 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
         console.log('Admin login detected for:', email);
         localStorage.setItem('admin_session', 'true');
+        
+        // Get saved role or default to ADMIN
+        const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
+        const adminRole = savedRole || 'ADMIN' as UserRole;
+        
         const adminUser = {
           id: 'admin-straton',
           email: ADMIN_EMAIL,
           name: 'Straton Florentin Tesha',
-          role: 'ADMIN' as UserRole
+          role: adminRole
         };
         setUser(adminUser);
-        console.log('Admin user set successfully:', adminUser);
+        setRole(adminRole);
+        console.log('Admin user set successfully with role:', adminRole);
         return;
       }
       
@@ -303,8 +321,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     localStorage.removeItem('admin_session');
+    localStorage.removeItem('fleet_command_role');
     await supabase.auth.signOut();
     setUser(null);
+    setRole(null);
   };
 
   const updateRole = async (newRole: UserRole) => {
@@ -335,8 +355,14 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const changeRole = (newRole: UserRole) => {
     console.log('[SupabaseProvider] changeRole called:', newRole);
     if (user?.email === ADMIN_EMAIL) {
+      // Save to localStorage for persistence
+      localStorage.setItem('fleet_command_role', newRole);
+      
+      // Update both role state and user role
       setRole(newRole);
       setUser(prev => prev ? { ...prev, role: newRole } : null);
+      
+      console.log('[SupabaseProvider] Role changed and persisted:', newRole);
     }
   };
 
