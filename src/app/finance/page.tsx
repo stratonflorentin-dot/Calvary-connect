@@ -1110,7 +1110,6 @@ export default function FinancePage() {
             </div>
           </TabsContent>
         </Tabs>
-        </div>
       </main>
       <BottomTabs role={role!} />
       <RoleSelector />
