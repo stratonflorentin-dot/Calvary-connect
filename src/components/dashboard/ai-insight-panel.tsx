@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { getCeoAiInsights, CeoAiInsightsOutput } from '@/ai/flows/ceo-ai-insights';
 import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { useRole } from '@/hooks/use-role';
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -79,46 +80,47 @@ export function AiInsightPanel() {
       
       // Generate insights based only on real data
       const insights: CeoAiInsightsOutput = {
-        summary: `Fleet Analysis: ${totalVehicles} vehicles, ${completedTrips} completed trips, ${netProfit >= 0 ? 'profitable' : 'loss'} of ${Math.abs(netProfit)}`,
-        opportunities: [],
-        risks: [],
-        recommendations: []
+        keyHighlights: [],
+        areasOfConcern: [],
+        actionableRecommendations: []
       };
       
-      // Add opportunities based on real data
+      // Add key highlights based on real data
+      insights.keyHighlights.push(`Fleet: ${totalVehicles} vehicles, ${completedTrips} completed trips, ${netProfit >= 0 ? 'profit' : 'loss'} of ${Math.abs(netProfit)}`);
+      
       if (vehicleUtilization < 50 && totalVehicles > 0) {
-        insights.opportunities.push(`Low vehicle utilization (${vehicleUtilization.toFixed(1)}%) - consider increasing trip assignments`);
+        insights.keyHighlights.push(`Low vehicle utilization (${vehicleUtilization.toFixed(1)}%) - opportunity to increase trip assignments`);
       }
       
       if (totalRevenue > 0 && netProfit > 0) {
-        insights.opportunities.push(`Profitable operations (${netProfit} profit) - consider scaling successful routes`);
+        insights.keyHighlights.push(`Profitable operations with ${netProfit} net profit`);
       }
       
-      // Add risks based on real data
+      // Add areas of concern based on real data
       if (netProfit < 0) {
-        insights.risks.push(`Operating loss of ${Math.abs(netProfit)} - requires immediate cost review`);
+        insights.areasOfConcern.push(`Operating loss of ${Math.abs(netProfit)} - requires immediate cost review`);
       }
       
       if (maintenanceCount > totalVehicles * 0.3) {
-        insights.risks.push(`High maintenance volume (${maintenanceCount} requests) - may indicate vehicle aging issues`);
+        insights.areasOfConcern.push(`High maintenance volume (${maintenanceCount} requests) - may indicate vehicle aging issues`);
       }
       
-      // Add recommendations based on real data
+      // Add actionable recommendations based on real data
       if (totalVehicles === 0) {
-        insights.recommendations.push('Add vehicles to your fleet to begin operations');
+        insights.actionableRecommendations.push('Add vehicles to your fleet to begin operations');
       }
       
       if (completedTrips === 0 && totalVehicles > 0) {
-        insights.recommendations.push('Create and assign trips to generate revenue');
+        insights.actionableRecommendations.push('Create and assign trips to generate revenue');
       }
       
       if (totalExpenses > 0 && netProfit < 0) {
-        insights.recommendations.push('Review and optimize expense categories to improve profitability');
+        insights.actionableRecommendations.push('Review and optimize expense categories to improve profitability');
       }
       
-      // If no specific insights, provide factual summary
-      if (insights.opportunities.length === 0 && insights.risks.length === 0 && insights.recommendations.length === 0) {
-        insights.recommendations.push('Continue monitoring fleet performance metrics');
+      // If no specific insights, provide default
+      if (insights.keyHighlights.length === 0 && insights.areasOfConcern.length === 0 && insights.actionableRecommendations.length === 0) {
+        insights.actionableRecommendations.push('Continue monitoring fleet performance metrics');
       }
       
       setInsight(insights);
@@ -180,21 +182,17 @@ export function AiInsightPanel() {
 
         {insight && !loading && (
           <div className="space-y-6">
-            <div className="p-4 bg-primary/5 rounded-xl border-l-4 border-primary">
-              <p className="text-sm leading-relaxed">{insight.summary}</p>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-green-600">
                   <Target className="size-4" />
-                  <h4 className="font-semibold text-sm">Opportunities</h4>
+                  <h4 className="font-semibold text-sm">Key Highlights</h4>
                 </div>
                 <ul className="space-y-2">
-                  {insight.opportunities.map((opp, index) => (
+                  {insight.keyHighlights.map((highlight: string, index: number) => (
                     <li key={index} className="flex items-start gap-2 text-sm">
                       <CheckCircle2 className="size-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>{opp}</span>
+                      <span>{highlight}</span>
                     </li>
                   ))}
                 </ul>
@@ -203,13 +201,13 @@ export function AiInsightPanel() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-amber-600">
                   <AlertCircle className="size-4" />
-                  <h4 className="font-semibold text-sm">Risks</h4>
+                  <h4 className="font-semibold text-sm">Areas of Concern</h4>
                 </div>
                 <ul className="space-y-2">
-                  {insight.risks.map((risk, index) => (
+                  {insight.areasOfConcern.map((concern: string, index: number) => (
                     <li key={index} className="flex items-start gap-2 text-sm">
                       <AlertCircle className="size-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                      <span>{risk}</span>
+                      <span>{concern}</span>
                     </li>
                   ))}
                 </ul>
@@ -219,10 +217,10 @@ export function AiInsightPanel() {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-blue-600">
                 <Sparkles className="size-4" />
-                <h4 className="font-semibold text-sm">Recommendations</h4>
+                <h4 className="font-semibold text-sm">Actionable Recommendations</h4>
               </div>
               <ul className="space-y-2">
-                {insight.recommendations.map((rec, index) => (
+                {insight.actionableRecommendations.map((rec: string, index: number) => (
                   <li key={index} className="flex items-start gap-2 text-sm p-2 bg-blue-50 rounded-lg">
                     <CheckCircle2 className="size-4 text-blue-500 mt-0.5 flex-shrink-0" />
                     <span>{rec}</span>
