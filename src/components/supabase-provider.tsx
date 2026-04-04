@@ -147,21 +147,42 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = async (userId: string, email: string) => {
     try {
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
       if (profileError || !profile) {
-        // If no profile exists, create one with default role
+        // If no profile exists, check if there's one with this email (pre-added by admin)
+        const { data: existingByEmail, error: emailError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('email', email)
+          .single();
+
+        if (!emailError && existingByEmail) {
+          // Update the pre-added profile with the real auth ID
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('user_profiles')
+            .update({ id: userId, updated_at: new Date().toISOString() })
+            .eq('email', email)
+            .select()
+            .single();
+
+          if (!updateError) return updatedProfile;
+        }
+
+        // If still no profile, create one with default role
         const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
+          .from('user_profiles')
           .insert([{
             id: userId,
             email: email,
             name: email.split('@')[0], // Default name from email
             role: 'OPERATOR', // Default role
+            status: 'active',
             created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           }])
           .select()
           .single();
@@ -192,7 +213,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             email: profile.email,
             name: profile.name,
             role: profile.role as UserRole,
-            avatar: profile.avatar,
+            avatar: profile.avatar_url || profile.avatar,
             phone: profile.phone,
             employeeId: profile.employee_id,
             department: profile.department,
@@ -216,7 +237,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             email: profile.email,
             name: profile.name,
             role: profile.role as UserRole,
-            avatar: profile.avatar,
+            avatar: profile.avatar_url || profile.avatar,
             phone: profile.phone,
             employeeId: profile.employee_id,
             department: profile.department,
@@ -240,7 +261,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           email: profile.email,
           name: profile.name,
           role: profile.role as UserRole,
-          avatar: profile.avatar,
+          avatar: profile.avatar_url || profile.avatar,
           phone: profile.phone,
           employeeId: profile.employee_id,
           department: profile.department,
@@ -296,12 +317,11 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string, role?: string) => {
     setIsLoading(true);
     try {
-      // Check if user was pre-added by admin/HR/CEO
+      // Check if user was pre-added by admin/HR/CEO in user_profiles
       const { data: pendingUser, error: checkError } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('*')
-        .eq('email', email)
-        .is('password', null)
+        .eq('email', email.toLowerCase().trim())
         .single();
 
       if (checkError || !pendingUser) {
@@ -318,11 +338,11 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (authUser) {
         // Update the pre-created profile with password/auth info
-        const { error: profileError } = await supabase.from('profiles').update({
+        const { error: profileError } = await supabase.from('user_profiles').update({
           id: authUser.id,
           name: name,
           updated_at: new Date().toISOString(),
-        }).eq('email', email);
+        }).eq('email', email.toLowerCase().trim());
 
         if (profileError) throw profileError;
       }
@@ -354,7 +374,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     }
     
     const { error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .update({ role: newRole })
       .eq('id', user.id);
 
