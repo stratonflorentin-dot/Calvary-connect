@@ -162,6 +162,7 @@ export default function PartsRequestsPage() {
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead className="px-6">Requested Part</TableHead>
+                <TableHead>Requested By</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Urgency</TableHead>
                 <TableHead>Reason</TableHead>
@@ -171,14 +172,20 @@ export default function PartsRequestsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">Loading requests...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8">Loading requests...</TableCell></TableRow>
               ) : requests?.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">No maintenance requests found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8">No maintenance requests found.</TableCell></TableRow>
               ) : requests?.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="px-6 py-4 font-medium flex items-center gap-3">
                     <Wrench className="size-4 text-primary" />
                     {r.requestedPartName}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{r.mechanicName || 'Unknown'}</span>
+                      <span className="text-xs text-muted-foreground">{r.mechanicId?.slice(0, 8)}</span>
+                    </div>
                   </TableCell>
                   <TableCell>{r.quantityNeeded}</TableCell>
                   <TableCell>
