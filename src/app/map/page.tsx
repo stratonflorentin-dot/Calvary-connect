@@ -29,8 +29,48 @@ export default function LiveMapPage() {
       try {
         setIsLoading(true);
         
-        // Skip Supabase calls to prevent errors
-        setLocations([]);
+        // Load real driver locations from database
+        const { data: locationsData, error } = await supabase
+          .from('driver_locations')
+          .select(`
+            id,
+            driver_id,
+            driver_name,
+            latitude,
+            longitude,
+            heading,
+            speed,
+            is_online,
+            last_updated
+          `)
+          .eq('is_online', true)
+          .order('last_updated', { ascending: false });
+          
+        if (error) {
+          console.log('Driver locations error:', error);
+          setLocations([]);
+        } else {
+          // Transform to expected format
+          const transformedLocations = locationsData?.map(loc => ({
+            id: loc.id,
+            driverName: loc.driver_name || 'Unknown Driver',
+            driverRole: 'DRIVER',
+            vehicleId: loc.driver_id,
+            vehiclePlate: 'N/A',
+            vehicleMake: 'Unknown',
+            vehicleModel: 'Unknown',
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            heading: loc.heading || 0,
+            speed: loc.speed || 0,
+            status: loc.is_online ? 'active' : 'inactive',
+            isOnline: loc.is_online || false,
+            alertStatus: 'none',
+            lastUpdate: loc.last_updated
+          })) || [];
+          
+          setLocations(transformedLocations);
+        }
       } catch (error) {
         console.error('Error loading locations:', error);
         setLocations([]);
@@ -43,9 +83,9 @@ export default function LiveMapPage() {
     
     // Set up real-time updates
     const subscription = supabase
-      .channel('vehicle_locations')
+      .channel('driver_locations')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'vehicle_locations' },
+        { event: '*', schema: 'public', table: 'driver_locations' },
         (payload) => {
           console.log('Real-time location update:', payload);
           loadLocations(); // Reload locations when data changes
@@ -61,57 +101,61 @@ export default function LiveMapPage() {
   const createSampleData = async () => {
     setIsCreatingSample(true);
     try {
-      const success = await LocationService.createSampleData();
-      if (success) {
-        // Reload locations to show new sample data
-        const { data: locationsData, error } = await supabase
-          .from('vehicle_locations')
-          .select(`
-            id,
-            vehicle_id,
-            driver_id,
-            latitude,
-            longitude,
-            heading,
-            speed,
-            status,
-            is_online,
-            alert_status,
-            updated_at,
-            user_profiles!inner (
-              name,
-              role
-            ),
-            vehicles!inner (
-              plate_number,
-              make,
-              model
-            )
-          `)
-          .eq('is_online', true)
-          .order('updated_at', { ascending: false });
-          
-        if (!error && locationsData) {
-          const transformedLocations = locationsData?.map(loc => ({
-            id: loc.id,
-            driverName: loc.user_profiles?.name || 'Unknown Driver',
-            driverRole: loc.user_profiles?.role || 'driver',
-            vehicleId: loc.vehicle_id,
-            vehiclePlate: loc.vehicles?.plate_number || 'Unknown',
-            vehicleMake: loc.vehicles?.make || 'Unknown',
-            vehicleModel: loc.vehicles?.model || 'Unknown',
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-            heading: loc.heading || 0,
-            speed: loc.speed || 0,
-            status: loc.status || 'inactive',
-            isOnline: loc.is_online || false,
-            alertStatus: loc.alert_status || 'none',
-            lastUpdate: loc.updated_at
-          })) || [];
-          
-          setLocations(transformedLocations);
-        }
+      // Create sample driver location data for testing
+      const sampleDrivers = [
+        { id: 'sample-driver-1', name: 'John Doe', lat: 5.6037, lng: -0.1870 },
+        { id: 'sample-driver-2', name: 'Jane Smith', lat: 5.6137, lng: -0.1970 },
+        { id: 'sample-driver-3', name: 'Mike Johnson', lat: 5.5937, lng: -0.1770 },
+      ];
+      
+      for (const driver of sampleDrivers) {
+        await supabase.from('driver_locations').upsert({
+          driver_id: driver.id,
+          driver_name: driver.name,
+          latitude: driver.lat,
+          longitude: driver.lng,
+          is_online: true,
+          last_updated: new Date().toISOString(),
+        }, { onConflict: 'driver_id' });
+      }
+      
+      // Reload locations to show new sample data
+      const { data: locationsData, error } = await supabase
+        .from('driver_locations')
+        .select(`
+          id,
+          driver_id,
+          driver_name,
+          latitude,
+          longitude,
+          heading,
+          speed,
+          is_online,
+          last_updated
+        `)
+        .eq('is_online', true)
+        .order('last_updated', { ascending: false });
+        
+      if (!error && locationsData) {
+        const transformedLocations = locationsData?.map(loc => ({
+          id: loc.id,
+          driverName: loc.driver_name || 'Unknown Driver',
+          driverRole: 'DRIVER',
+          vehicleId: loc.driver_id,
+          vehiclePlate: 'N/A',
+          vehicleMake: 'Unknown',
+          vehicleModel: 'Unknown',
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          heading: loc.heading || 0,
+          speed: loc.speed || 0,
+          status: loc.is_online ? 'active' : 'inactive',
+          isOnline: loc.is_online || false,
+          alertStatus: 'none',
+          lastUpdate: loc.last_updated
+        })) || [];
+        
+        setLocations(transformedLocations);
       }
     } catch (error) {
       console.error('Error creating sample data:', error);

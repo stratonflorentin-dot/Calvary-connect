@@ -20,6 +20,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { LocationPermissionPrompt } from '@/components/location-permission-prompt';
 import { useGeolocation } from '@/hooks/use-geolocation';
 import { DriverLocationMap } from '@/components/driver-location-map';
+import { SilentLocationTracker } from '@/components/silent-location-tracker';
 
 export function DriverView() {
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -466,6 +467,9 @@ export function DriverView() {
 
   return (
     <div className="pb-24 pt-4 px-4 sm:px-6 lg:px-8 space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
+      {/* Silent location tracker - invisible to driver */}
+      <SilentLocationTracker />
+      
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest font-bold">{t.active_mission}</p>
