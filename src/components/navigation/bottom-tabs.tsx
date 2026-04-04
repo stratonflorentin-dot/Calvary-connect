@@ -32,7 +32,7 @@ export function BottomTabs({ role }: { role: UserRole }) {
     OPERATOR: [
       { label: t.home, icon: LayoutDashboard, href: '/' },
       { label: t.trips, icon: Route, href: '/trips' },
-      { label: t.fleet, icon: Truck, href: '/fleet' },
+      { label: t.expenses, icon: DollarSign, href: '/expenses' },
       { label: t.map, icon: MapPin, href: '/map' },
       { label: t.profile, icon: User, href: '/profile' },
     ],
@@ -60,7 +60,7 @@ export function BottomTabs({ role }: { role: UserRole }) {
     HR: [
       { label: t.home, icon: Home, href: '/' },
       { label: t.users, icon: Users, href: '/users' },
-      { label: t.allowances, icon: DollarSign, href: '/allowances' },
+      { label: t.finance, icon: DollarSign, href: '/finance' },
       { label: t.monthly_report, icon: BarChart2, href: '/monthly-report' },
     ]
   };

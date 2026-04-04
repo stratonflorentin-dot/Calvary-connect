@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase, ADMIN_EMAIL, ADMIN_ROLE, DEMO_MODE } from '@/lib/supabase';
 import { UserRole } from '@/types/roles';
+import { SyncManager } from '@/lib/offline-sync';
+import { toast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
@@ -220,6 +222,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   // Listen for auth changes
   useEffect(() => {
+    // Initialize offline sync
+    SyncManager.init();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const profile = await fetchUserProfile(session.user.id, session.user.email!);
@@ -416,6 +421,64 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setRole(newRole);
   };
 
+  const updateProfile = async (updates: Partial<{ name: string; avatar: string; phone: string }>) => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const dbUpdates: any = {};
+      if (updates.name) dbUpdates.name = updates.name;
+      if (updates.avatar) dbUpdates.avatar_url = updates.avatar;
+      if (updates.phone) dbUpdates.phone = updates.phone;
+      dbUpdates.updated_at = new Date().toISOString();
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(dbUpdates)
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Refresh local user state
+      await refreshUser();
+      toast({ title: "Profile Updated", description: "Your changes have been saved." });
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      toast({ title: "Error", description: "Failed to update profile", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const uploadAvatar = async (file: File) => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      await updateProfile({ avatar: publicUrl });
+      return publicUrl;
+    } catch (err) {
+      console.error('Error uploading avatar:', err);
+      toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // changeRole for admin role switching without DB update
   const changeRole = (newRole: UserRole) => {
     console.log('[SupabaseProvider] changeRole called (deprecated):', newRole);
@@ -435,6 +498,8 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       updateRole,
       changeRole,
       refreshUser,
+      updateProfile,
+      uploadAvatar,
     }}>
       {children}
     </SupabaseContext.Provider>

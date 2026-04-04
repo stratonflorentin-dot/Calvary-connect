@@ -7,9 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DriverLocationMap } from '@/components/driver-location-map';
+import { Receipt, Plus } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 export function OperatorView() {
     const { t } = useLanguage();
@@ -20,12 +23,45 @@ export function OperatorView() {
         reason: '',
         details: '',
     });
+    
+    const [expenseForm, setExpenseForm] = useState({
+        amount: '',
+        category: 'Maintenance',
+        description: '',
+        date: new Date().toISOString().split('T')[0]
+    });
+
     const [loading, setLoading] = useState(false);
+    const [expenseLoading, setExpenseLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const handleExpenseSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setExpenseLoading(true);
+        try {
+            const { error } = await supabase.from('expenses').insert([{
+                amount: parseFloat(expenseForm.amount),
+                category: expenseForm.category,
+                description: expenseForm.description,
+                created_at: new Date(expenseForm.date).toISOString(),
+                status: 'pending'
+            }]);
+
+            if (error) throw error;
+
+            toast({ title: "Expense Recorded", description: "Your expense report has been submitted." });
+            setExpenseForm({ amount: '', category: 'Maintenance', description: '', date: new Date().toISOString().split('T')[0] });
+        } catch (err) {
+            console.error(err);
+            toast({ title: "Error", description: "Failed to record expense", variant: "destructive" });
+        } finally {
+            setExpenseLoading(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -62,26 +98,68 @@ export function OperatorView() {
                 </div>
             </div>
             <StatCards />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>System Overview</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <Receipt className="size-5 text-primary" />
+                            Record Expense
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">Welcome, Operator! Here you can manage daily operations, view fleet status, and monitor assignments.</p>
-                        <div className="mt-4 space-y-2">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-sm">All systems operational</span>
+                        <form className="space-y-4" onSubmit={handleExpenseSubmit}>
+                            <div>
+                                <Label htmlFor="expAmount">Amount ($)</Label>
+                                <Input 
+                                    id="expAmount" 
+                                    type="number" 
+                                    value={expenseForm.amount} 
+                                    onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} 
+                                    required 
+                                />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span className="text-sm">Fleet status monitoring active</span>
+                            <div>
+                                <Label htmlFor="expCategory">Category</Label>
+                                <Select value={expenseForm.category} onValueChange={v => setExpenseForm({...expenseForm, category: v})}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                        <SelectItem value="Fuel">Fuel</SelectItem>
+                                        <SelectItem value="Tolls">Tolls</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-                        </div>
+                            <div>
+                                <Label htmlFor="expDate">Date</Label>
+                                <Input 
+                                    id="expDate" 
+                                    type="date" 
+                                    value={expenseForm.date} 
+                                    onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} 
+                                    required 
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="expDesc">Description</Label>
+                                <Textarea 
+                                    id="expDesc" 
+                                    value={expenseForm.description} 
+                                    onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} 
+                                    placeholder="What was this expense for?"
+                                    rows={2}
+                                />
+                            </div>
+                            <Button type="submit" disabled={expenseLoading} className="w-full">
+                                {expenseLoading ? 'Saving...' : 'Record Expense'}
+                            </Button>
+                        </form>
                     </CardContent>
                 </Card>
-                <Card>
+
+                <Card className="lg:col-span-2">
                     <CardHeader>
                         <CardTitle>Request Spare Parts / Service</CardTitle>
                     </CardHeader>
@@ -112,8 +190,8 @@ export function OperatorView() {
                                 <Textarea id="details" name="details" value={form.details} onChange={handleChange} rows={3} />
                             </div>
                             <Button type="submit" disabled={loading} className="w-full sm:w-auto">{loading ? 'Submitting...' : 'Submit Request'}</Button>
-                            {success && <p className="text-green-600">Request submitted successfully!</p>}
-                            {error && <p className="text-red-600">{error}</p>}
+                            {success && <p className="text-green-600 mt-2">Request submitted successfully!</p>}
+                            {error && <p className="text-red-600 mt-2">{error}</p>}
                         </form>
                     </CardContent>
                 </Card>

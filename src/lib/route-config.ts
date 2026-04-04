@@ -19,10 +19,10 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   { path: "/", label: "Dashboard", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"] },
   { path: "/fleet", label: "Fleet", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"] },
   { path: "/trips", label: "Trips", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
-  { path: "/expenses", label: "Expenses", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"] },
-  { path: "/income", label: "Income", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"] },
+  { path: "/expenses", label: "Expenses", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "OPERATOR", "HR"] },
+  { path: "/income", label: "Income", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"] },
   { path: "/fuel-approvals", label: "Fuel Approvals", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "OPERATOR"] },
-  { path: "/allowances", label: "Allowances", allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"] },
+  { path: "/allowances", label: "Allowances", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"] },
   { path: "/reports", label: "Monthly Report", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"] },
   { path: "/monthly-report", label: "Monthly Report", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"] },
   { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
@@ -34,7 +34,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   { path: "/map", label: "Fleet Map", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
   { path: "/proof", label: "Proof of Delivery", allowedRoles: ["CEO", "ADMIN", "DRIVER"] },
   { path: "/report", label: "Report Maintenance", allowedRoles: ["CEO", "ADMIN", "DRIVER", "MECHANIC"] },
-  { path: "/finance", label: "Finance", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"] },
+  { path: "/finance", label: "Finance", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"] },
   { path: "/ai-insights", label: "AI Insights", allowedRoles: ["CEO", "ADMIN"] },
   { path: "/audit", label: "Audit Log", allowedRoles: ["CEO", "ADMIN"] },
   { path: "/notifications", label: "Notifications", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"] },
@@ -48,7 +48,7 @@ export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
   DRIVER: "/trips",
   MECHANIC: "/service-requests",
   ACCOUNTANT: "/finance",
-  HR: "/users",
+  HR: "/finance",
 };
 
 // Route guard hook

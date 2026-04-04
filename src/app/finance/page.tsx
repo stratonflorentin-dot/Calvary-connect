@@ -137,6 +137,31 @@ const LEDGER_FIELDS: { [key: string]: { key: string; label: string; type: string
 import { cn } from '@/lib/utils';
 
 export default function FinancePage() {
+  const { role, isAdmin, isInitialized } = useRole();
+  const { user, isLoading: isUserLoading } = useSupabase();
+
+  if (isUserLoading || !isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAdmin && !['CEO', 'ADMIN', 'ACCOUNTANT'].includes(role || '')) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar role={role!} />
+        <main className="flex-1 md:ml-60 p-8 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You do not have permission to view this page.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Edit dialog state
   const [editDialog, setEditDialog] = useState<{ open: boolean, ledger: string | null, entry: any | null }>({ open: false, ledger: null, entry: null });
 
@@ -381,9 +406,8 @@ export default function FinancePage() {
     });
     handleSaveEdit(updated);
   };
-  const { role, isAdmin } = useRole();
   const { format, currency, toggleCurrency } = useCurrency();
-  const { user } = useSupabase();
+  const { user: supabaseUser } = useSupabase(); // Avoid name conflict with user from outer scope
 
   // State for the "Excel-like" report
   const [reportTitle, setReportTitle] = useState("");
@@ -406,7 +430,7 @@ export default function FinancePage() {
     // Check if admin user (owner) - should always have access
     const isAdminUser = isAdmin;
     
-    if (!user && !isAdminUser) return;
+    if (!supabaseUser && !isAdminUser) return;
     
     const loadData = async () => {
       try {
@@ -459,7 +483,7 @@ export default function FinancePage() {
     };
     
     loadData();
-  }, [user]);
+  }, [supabaseUser, role, isAdmin]);
 
   // Calculate totals from real data
   const totalSales = sales?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;

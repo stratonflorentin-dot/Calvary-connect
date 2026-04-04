@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Truck, Route, DollarSign, BarChart2, 
-  Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History, Home, Shield
+  Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History, Home, Shield, Camera, User as UserIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
@@ -14,6 +14,8 @@ import { useSupabase } from '@/components/supabase-provider';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { ADMIN_EMAIL } from '@/lib/supabase';
 import { getMenuByRole } from '@/lib/route-config';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { toast } from '@/hooks/use-toast';
 
 // ✅ Move icon map OUTSIDE the component so it's always available
 const routeIconMap: Record<string, any> = {
@@ -46,11 +48,32 @@ const getIconForRoute = (path: string) => routeIconMap[path] || LayoutDashboard;
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { signOut, user } = useSupabase();
+  const { signOut, user, uploadAvatar } = useSupabase();
   const isAdminEmail = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   // ✅ Track stored role reactively
   const [storedRole, setStoredRole] = useState<UserRole | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please upload an image smaller than 2MB.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await uploadAvatar(file);
+      toast({ title: "Photo Updated", description: "Your profile picture has been updated." });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   useEffect(() => {
     // Read initial value
@@ -131,7 +154,35 @@ export function Sidebar({ role }: { role: UserRole }) {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border space-y-4">
+        {/* Profile / Avatar Section */}
+        <div className="px-3 py-2 flex items-center gap-3 bg-sidebar-accent/30 rounded-xl group relative">
+          <div className="relative">
+            <Avatar className="size-10 border border-sidebar-border">
+              <AvatarImage src={user?.avatar} alt={user?.name || ''} />
+              <AvatarFallback className="bg-primary/20 text-primary">
+                {user?.name?.charAt(0).toUpperCase() || <UserIcon className="size-5" />}
+              </AvatarFallback>
+            </Avatar>
+            <label className="absolute -bottom-1 -right-1 size-5 bg-primary text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors shadow-sm">
+              <Camera className="size-3" />
+              <input 
+                type="file" 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleAvatarUpload}
+                disabled={isUploading}
+              />
+            </label>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-white truncate">{user?.name || 'User'}</p>
+            <p className="text-[10px] text-sidebar-foreground/50 uppercase tracking-wider font-medium truncate">
+              {effectiveRole}
+            </p>
+          </div>
+        </div>
+
         <button
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-destructive hover:text-white transition-all"
           onClick={signOut}

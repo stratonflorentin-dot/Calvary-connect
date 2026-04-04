@@ -76,10 +76,48 @@ export function HrView() {
     date: new Date()
   });
 
+  // Performance management handlers
+  const handleAddPerformance = () => {
+    setPerformanceForm({
+      employeeId: '',
+      rating: '',
+      review: '',
+      goals: '',
+      date: new Date()
+    });
+    setPerformanceDialogOpen(true);
+  };
+
+  const handleSavePerformance = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('performance_reviews').insert({
+        employee_id: performanceForm.employeeId,
+        rating: performanceForm.rating,
+        review_text: performanceForm.review,
+        goals: performanceForm.goals,
+        review_date: performanceForm.date.toISOString(),
+        created_by: user?.id,
+        created_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Appraisal Saved", description: "Performance review has been recorded." });
+      
+      // Refresh
+      const { data: refreshed } = await supabase.from('performance_reviews').select('*').order('review_date', { ascending: false });
+      setPerformanceReviews(refreshed || []);
+      setPerformanceDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error saving appraisal:', error);
+      toast({ title: "Error", description: "Failed to save appraisal", variant: "destructive" });
+    }
+  };
+
   // Real data for HR functionality
   const [users, setUsers] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
-  const [allowances, setAllowances] = useState<any[]>([]);
   const [performanceReviews, setPerformanceReviews] = useState<any[]>([]);
 
   useEffect(() => {
@@ -99,12 +137,6 @@ export function HrView() {
           .select('*')
           .order('date', { ascending: false });
         
-        // Load real allowances from database
-        const { data: realAllowances } = await supabase
-          .from('driver_allowances')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
         // Load real insurance policies from database
         const { data: realInsurancePolicies } = await supabase
           .from('insurance_policies')
@@ -119,7 +151,6 @@ export function HrView() {
         
         setUsers(realUsers || []);
         setMeetings(realMeetings || []);
-        setAllowances(realAllowances || []);
         setInsurancePolicies(realInsurancePolicies || []);
         setPerformanceReviews(realPerformanceReviews || []);
         
@@ -128,7 +159,6 @@ export function HrView() {
         // Set empty arrays on error
         setUsers([]);
         setMeetings([]);
-        setAllowances([]);
         setPerformanceReviews([]);
       }
     };
@@ -155,7 +185,6 @@ export function HrView() {
         ['total_staff', totalStaff],
         ['active_staff', activeStaff],
         ['meetings_scheduled', meetings?.length ?? 0],
-        ['allowance_records', allowances?.length ?? 0],
       ]
     );
 
@@ -182,23 +211,6 @@ export function HrView() {
         Array.isArray(m.participants) ? m.participants.join('; ') : String(m.participants ?? ''),
         m.createdBy ?? '',
         m.created_at ?? '',
-      ])
-    );
-
-    const allowancesSorted = [...(allowances || [])].sort((a, b) =>
-      String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))
-    );
-
-    push(
-      'ALLOWANCES (WORKER COMPENSATION)',
-      ['id', 'workerName', 'role', 'userId', 'amount', 'created_at'],
-      allowancesSorted.map((a) => [
-        a.id,
-        a.workerName ?? '',
-        a.role ?? '',
-        a.userId ?? '',
-        a.amount ?? '',
-        a.created_at ?? '',
       ])
     );
 
@@ -640,12 +652,13 @@ export function HrView() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="meetings">Meetings</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="insurance">Insurance</TabsTrigger>
+          <TabsTrigger value="finance" onClick={() => window.location.href = '/finance'}>Finance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -968,10 +981,52 @@ export function HrView() {
             <CardHeader>
               <CardTitle className="text-lg font-headline flex items-center justify-between">
                 Performance Management
-                <Button onClick={handleAddPerformanceReview} className="gap-2">
-                  <Award className="size-4" />
-                  Add Review
-                </Button>
+                <Dialog open={performanceDialogOpen} onOpenChange={setPerformanceDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Award className="size-4" />
+                      Add Review
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>New Performance Appraisal</DialogTitle></DialogHeader>
+                    <form onSubmit={handleSavePerformanceReview} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Employee</Label>
+                        <Select value={performanceForm.employeeId} onValueChange={v => setPerformanceForm({...performanceForm, employeeId: v})}>
+                          <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                          <SelectContent>
+                            {users?.map(u => (
+                              <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Rating (1-5)</Label>
+                        <Select value={performanceForm.rating} onValueChange={v => setPerformanceForm({...performanceForm, rating: v})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 - Poor</SelectItem>
+                            <SelectItem value="2">2 - Fair</SelectItem>
+                            <SelectItem value="3">3 - Good</SelectItem>
+                            <SelectItem value="4">4 - Very Good</SelectItem>
+                            <SelectItem value="5">5 - Excellent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Review Comments</Label>
+                        <Textarea value={performanceForm.review} onChange={e => setPerformanceForm({...performanceForm, review: e.target.value})} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Goals</Label>
+                        <Textarea value={performanceForm.goals} onChange={e => setPerformanceForm({...performanceForm, goals: e.target.value})} />
+                      </div>
+                      <Button type="submit" className="w-full">Save Review</Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1008,10 +1063,74 @@ export function HrView() {
             <CardHeader>
               <CardTitle className="text-lg font-headline flex items-center justify-between">
                 Insurance Management
-                <Button onClick={handleAddInsurance} className="gap-2">
-                  <Plus className="size-4" />
-                  Add Policy
-                </Button>
+                <Dialog open={insuranceDialogOpen} onOpenChange={setInsuranceDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={handleAddInsurance} className="gap-2">
+                      <Plus className="size-4" />
+                      Add Policy
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingInsurance ? 'Edit Insurance Policy' : 'New Insurance Policy'}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveInsurance} className="space-y-4 pt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Policy Name</Label>
+                          <Input value={insuranceForm.policyName} onChange={e => setInsuranceForm({...insuranceForm, policyName: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Policy Type</Label>
+                          <Select value={insuranceForm.policyType} onValueChange={v => setInsuranceForm({...insuranceForm, policyType: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="vehicle">Vehicle Insurance</SelectItem>
+                              <SelectItem value="health">Staff Health</SelectItem>
+                              <SelectItem value="property">Property/Office</SelectItem>
+                              <SelectItem value="liability">Liability</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Insurance Company</Label>
+                          <Input value={insuranceForm.insuranceCompany} onChange={e => setInsuranceForm({...insuranceForm, insuranceCompany: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Policy Number</Label>
+                          <Input value={insuranceForm.policyNumber} onChange={e => setInsuranceForm({...insuranceForm, policyNumber: e.target.value})} required />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Premium Amount ($)</Label>
+                          <Input type="number" value={insuranceForm.premiumAmount} onChange={e => setInsuranceForm({...insuranceForm, premiumAmount: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Coverage Amount ($)</Label>
+                          <Input type="number" value={insuranceForm.coverageAmount} onChange={e => setInsuranceForm({...insuranceForm, coverageAmount: e.target.value})} required />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Start Date</Label>
+                          <Input type="date" value={insuranceForm.startDate.toISOString().split('T')[0]} onChange={e => setInsuranceForm({...insuranceForm, startDate: new Date(e.target.value)})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>End Date</Label>
+                          <Input type="date" value={insuranceForm.endDate.toISOString().split('T')[0]} onChange={e => setInsuranceForm({...insuranceForm, endDate: new Date(e.target.value)})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Renewal Date</Label>
+                          <Input type="date" value={insuranceForm.renewalDate.toISOString().split('T')[0]} onChange={e => setInsuranceForm({...insuranceForm, renewalDate: new Date(e.target.value)})} required />
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full mt-4">Save Policy</Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </CardTitle>
             </CardHeader>
             <CardContent>

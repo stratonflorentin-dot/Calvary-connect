@@ -73,11 +73,32 @@ interface Budget {
   financial_categories?: { name: string; type: string };
 }
 
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  customer_name: string;
+  amount: number;
+  due_date: string;
+  status: 'pending' | 'paid' | 'overdue';
+  created_at: string;
+}
+
+interface TaxRecord {
+  id: string;
+  tax_name: string;
+  amount: number;
+  due_date: string;
+  status: 'pending' | 'paid';
+  type: 'VAT' | 'PAYE' | 'Income' | 'Road';
+}
+
 export function FinancialManagement() {
   const [activeTab, setActiveTab] = useState('overview');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [revenue, setRevenue] = useState<Revenue[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [taxes, setTaxes] = useState<TaxRecord[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +124,20 @@ export function FinancialManagement() {
     payment_method: 'bank_transfer',
     revenue_date: format(new Date(), 'yyyy-MM-dd'),
     notes: ''
+  });
+
+  const [invoiceForm, setInvoiceForm] = useState({
+    customer_name: '',
+    amount: '',
+    due_date: format(new Date(), 'yyyy-MM-dd'),
+    invoice_number: `INV-${Date.now()}`
+  });
+
+  const [taxForm, setTaxForm] = useState({
+    tax_name: '',
+    amount: '',
+    due_date: format(new Date(), 'yyyy-MM-dd'),
+    type: 'VAT'
   });
 
   useEffect(() => {
@@ -156,9 +191,23 @@ export function FinancialManagement() {
         .eq('status', 'active')
         .order('plate_number');
       
+      // Load invoices
+      const { data: invoicesData } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      // Load taxes
+      const { data: taxesData } = await supabase
+        .from('taxes')
+        .select('*')
+        .order('due_date', { ascending: true });
+      
       setExpenses(expensesData || []);
       setRevenue(revenueData || []);
       setBudgets(budgetsData || []);
+      setInvoices(invoicesData || []);
+      setTaxes(taxesData || []);
       setCategories(categoriesData || []);
       setVehicles(vehiclesData || []);
     } catch (error) {
@@ -253,6 +302,42 @@ export function FinancialManagement() {
     }
   };
 
+  const handleAddInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('invoices').insert({
+        ...invoiceForm,
+        amount: parseFloat(invoiceForm.amount),
+        status: 'pending',
+        created_by: (await supabase.auth.getUser()).data?.user?.id
+      });
+      if (error) throw error;
+      toast({ title: "Invoice Created", description: `Invoice ${invoiceForm.invoice_number} saved.` });
+      setInvoiceForm({ customer_name: '', amount: '', due_date: format(new Date(), 'yyyy-MM-dd'), invoice_number: `INV-${Date.now()}` });
+      loadFinancialData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleAddTax = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('taxes').insert({
+        ...taxForm,
+        amount: parseFloat(taxForm.amount),
+        status: 'pending',
+        created_by: (await supabase.auth.getUser()).data?.user?.id
+      });
+      if (error) throw error;
+      toast({ title: "Tax Record Added", description: "Tax obligation recorded." });
+      setTaxForm({ tax_name: '', amount: '', due_date: format(new Date(), 'yyyy-MM-dd'), type: 'VAT' });
+      loadFinancialData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const totalRevenue = revenue.reduce((sum, rev) => sum + rev.amount, 0);
   const netProfit = totalRevenue - totalExpenses;
@@ -328,9 +413,11 @@ export function FinancialManagement() {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="taxes">Taxes</TabsTrigger>
           <TabsTrigger value="budgets">Budgets</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
         </TabsList>
@@ -652,6 +739,126 @@ export function FinancialManagement() {
                 </TableBody>
               </Table>
             </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Invoices Tab */}
+        <TabsContent value="invoices" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Invoices</h2>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="gap-2"><Plus className="size-4" /> Create Invoice</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>New Invoice</DialogTitle></DialogHeader>
+                <form onSubmit={handleAddInvoice} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Customer Name</Label>
+                    <Input value={invoiceForm.customer_name} onChange={e => setInvoiceForm({...invoiceForm, customer_name: e.target.value})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Amount</Label>
+                    <Input type="number" value={invoiceForm.amount} onChange={e => setInvoiceForm({...invoiceForm, amount: e.target.value})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Due Date</Label>
+                    <Input type="date" value={invoiceForm.due_date} onChange={e => setInvoiceForm({...invoiceForm, due_date: e.target.value})} required />
+                  </div>
+                  <Button type="submit" className="w-full">Save Invoice</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Number</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoices.map(inv => (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-medium">{inv.invoice_number}</TableCell>
+                    <TableCell>{inv.customer_name}</TableCell>
+                    <TableCell>${inv.amount.toLocaleString()}</TableCell>
+                    <TableCell>{format(new Date(inv.due_date), 'PP')}</TableCell>
+                    <TableCell><Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>{inv.status}</Badge></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* Taxes Tab */}
+        <TabsContent value="taxes" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Tax Records</h2>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="gap-2"><Plus className="size-4" /> Record Tax</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>New Tax Entry</DialogTitle></DialogHeader>
+                <form onSubmit={handleAddTax} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Tax Name/Description</Label>
+                    <Input value={taxForm.tax_name} onChange={e => setTaxForm({...taxForm, tax_name: e.target.value})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={taxForm.type} onValueChange={v => setTaxForm({...taxForm, type: v as any})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="VAT">VAT</SelectItem>
+                        <SelectItem value="PAYE">PAYE</SelectItem>
+                        <SelectItem value="Income">Income Tax</SelectItem>
+                        <SelectItem value="Road">Road Tax</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Amount</Label>
+                    <Input type="number" value={taxForm.amount} onChange={e => setTaxForm({...taxForm, amount: e.target.value})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Due Date</Label>
+                    <Input type="date" value={taxForm.due_date} onChange={e => setTaxForm({...taxForm, due_date: e.target.value})} required />
+                  </div>
+                  <Button type="submit" className="w-full">Record Tax</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tax Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {taxes.map(tax => (
+                  <TableRow key={tax.id}>
+                    <TableCell className="font-medium">{tax.tax_name}</TableCell>
+                    <TableCell><Badge variant="outline">{tax.type}</Badge></TableCell>
+                    <TableCell>${tax.amount.toLocaleString()}</TableCell>
+                    <TableCell>{format(new Date(tax.due_date), 'PP')}</TableCell>
+                    <TableCell><Badge variant={tax.status === 'paid' ? 'default' : 'secondary'}>{tax.status}</Badge></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </Card>
         </TabsContent>
 
