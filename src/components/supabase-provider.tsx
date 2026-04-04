@@ -28,6 +28,8 @@ interface SupabaseContextType {
   updateRole: (role: UserRole) => Promise<void>;
   changeRole: (role: UserRole) => void;
   refreshUser: () => Promise<void>;
+  updateProfile: (updates: Partial<{ name: string; avatar: string; phone: string }>) => Promise<void>;
+  uploadAvatar: (file: File) => Promise<string | undefined>;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -240,6 +242,15 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             department: profile.department,
           });
           setRole(profile.role as UserRole);
+        } else {
+          // User profile deleted - sign out immediately
+          console.log('[SupabaseProvider] User profile not found, signing out deleted user');
+          await signOut();
+          toast({ 
+            title: "Account Deleted", 
+            description: "Your account has been removed from the system.", 
+            variant: "destructive" 
+          });
         }
       } else {
         setUser(null);
@@ -264,6 +275,15 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             department: profile.department,
           });
           setRole(profile.role as UserRole);
+        } else {
+          // User profile deleted - sign out immediately
+          console.log('[SupabaseProvider] User profile not found on init, signing out deleted user');
+          await signOut();
+          toast({ 
+            title: "Account Deleted", 
+            description: "Your account has been removed from the system.", 
+            variant: "destructive" 
+          });
         }
       }
       setIsLoading(false);
@@ -271,6 +291,45 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Periodic validation to catch deleted users during active sessions
+  useEffect(() => {
+    const validateUserExists = async () => {
+      if (!user?.id || user.email === ADMIN_EMAIL) return;
+      
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profile) {
+        console.log('[SupabaseProvider] User deleted during session, signing out');
+        await signOut();
+        toast({ 
+          title: "Account Deleted", 
+          description: "Your account has been removed from the system.", 
+          variant: "destructive" 
+        });
+      }
+    };
+
+    // Check every 30 seconds and on visibility change
+    const interval = setInterval(validateUserExists, 30000);
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        validateUserExists();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user]);
 
   const refreshUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
