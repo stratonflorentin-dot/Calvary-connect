@@ -1,8 +1,8 @@
-
 "use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Truck, Route, DollarSign, BarChart2, 
   Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History, Home, Shield
@@ -15,63 +15,94 @@ import { NotificationBell } from '@/components/notifications/notification-bell';
 import { ADMIN_EMAIL } from '@/lib/supabase';
 import { getMenuByRole } from '@/lib/route-config';
 
+// ✅ Move icon map OUTSIDE the component so it's always available
+const routeIconMap: Record<string, any> = {
+  '/': LayoutDashboard,
+  '/fleet': Truck,
+  '/trips': Route,
+  '/finance': DollarSign,
+  '/expenses': DollarSign,
+  '/income': Calculator,
+  '/fuel-approvals': Truck,
+  '/allowances': Users,
+  '/reports': BarChart2,
+  '/monthly-report': BarChart2,
+  '/users': Users,
+  '/inventory': Package,
+  '/parts-requests': Wrench,
+  '/spare-parts': Package,
+  '/service-requests': Wrench,
+  '/truck-history': History,
+  '/map': MapPin,
+  '/proof': Home,
+  '/report': History,
+  '/ai-insights': Sparkles,
+  '/audit': Shield,
+  '/notifications': Bell,
+};
+
+const getIconForRoute = (path: string) => routeIconMap[path] || LayoutDashboard;
+
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { signOut, user } = useSupabase();
+  const isAdminEmail = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
-  // For admin user, get role from localStorage to ensure latest selection
-  const effectiveRole = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() 
-    ? (localStorage.getItem('fleet_command_role') as UserRole || role || 'ADMIN')
+  // ✅ Track stored role reactively
+  const [storedRole, setStoredRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    // Read initial value
+    const saved = localStorage.getItem('fleet_command_role') as UserRole | null;
+    setStoredRole(saved);
+
+    // ✅ Listen for changes when role is switched elsewhere in the app
+    const handleStorageChange = () => {
+      const updated = localStorage.getItem('fleet_command_role') as UserRole | null;
+      setStoredRole(updated);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // ✅ Also listen for custom event (for same-tab changes)
+    window.addEventListener('roleChanged', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('roleChanged', handleStorageChange);
+    };
+  }, []);
+
+  const effectiveRole = isAdminEmail
+    ? (storedRole || role || 'ADMIN')
     : role;
 
-  console.log(`[Sidebar] User: ${user?.email}, Role: ${role}, EffectiveRole: ${effectiveRole}`);
+  // ✅ If admin has switched to a non-admin role, respect that role's menu
+  const isRoleSwitching = isAdminEmail &&
+    storedRole !== null &&
+    storedRole !== 'ADMIN' &&
+    storedRole !== 'CEO';
 
-  // Get menu items based on effective role and user email (owner gets full access)
-  const menuItems = getMenuByRole(effectiveRole, false, t, user?.email);
+  const menuItems = getMenuByRole(
+    effectiveRole,
+    false,
+    t,
+    user?.email,
+    isRoleSwitching  // ✅ Pass flag so menu reflects switched role
+  );
 
-  // Define type for navigation items
-interface NavItem {
-  label: string;
-  icon: any;
-  href: string;
-}
+  interface NavItem {
+    label: string;
+    icon: any;
+    href: string;
+  }
 
-// Map route config to navigation items
   const navItems: NavItem[] = menuItems.map(route => ({
     label: route.label,
     icon: getIconForRoute(route.path),
-    href: route.path
+    href: route.path,
   }));
-
-  // Helper function to get icons for routes
-  const getIconForRoute = (path: string) => {
-    const routeIconMap: Record<string, any> = {
-      '/': LayoutDashboard,
-      '/fleet': Truck,
-      '/trips': Route,
-      '/finance': DollarSign,
-      '/expenses': DollarSign,
-      '/income': Calculator,
-      '/fuel-approvals': Truck,
-      '/allowances': Users,
-      '/reports': BarChart2,
-      '/monthly-report': BarChart2,
-      '/users': Users,
-      '/inventory': Package,
-      '/parts-requests': Wrench,
-      '/spare-parts': Package,
-      '/service-requests': Wrench,
-      '/truck-history': History,
-      '/map': MapPin,
-      '/proof': Home,
-      '/report': History,
-      '/ai-insights': Sparkles,
-      '/audit': Shield,
-      '/notifications': Bell,
-    };
-    return routeIconMap[path] || LayoutDashboard;
-  };
 
   return (
     <aside className="hidden md:flex flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50">
@@ -86,12 +117,12 @@ interface NavItem {
       <nav className="flex-1 px-3 space-y-1">
         {navItems.map((item: NavItem) => (
           <Link
-            key={item.label}
+            key={item.href}  // ✅ Use href as key, not label (labels can duplicate)
             href={item.href}
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group",
-              pathname === item.href 
-                ? "bg-primary text-white" 
+              pathname === item.href
+                ? "bg-primary text-white"
                 : "hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-white"
             )}
           >
@@ -105,7 +136,7 @@ interface NavItem {
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <button 
+        <button
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-destructive hover:text-white transition-all"
           onClick={signOut}
         >

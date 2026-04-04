@@ -145,12 +145,16 @@ export function getMenuByRole(
   role: UserRole | null,
   isAdmin: boolean,
   t: Record<string, string>,
-  userEmail?: string | null
+  userEmail?: string | null,
+  respectRoleSwitch: boolean = false  // ✅ New flag 
 ): RouteConfig[] {
   if (!role) return []
 
-  // Owner (admin email) gets full access to everything
-  if (userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+  // Owner (admin email) gets full access UNLESS they are previewing another role
+  if (
+    userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase() &&
+    !respectRoleSwitch
+  ) {
     console.log("[RouteConfig] Owner gets full menu access");
     return ROUTE_CONFIG;
   }
