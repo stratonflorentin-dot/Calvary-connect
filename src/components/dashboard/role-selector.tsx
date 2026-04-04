@@ -69,11 +69,11 @@ export function RoleSelector() {
     
     // Get default route for the new role
     const defaultRoute = ROLE_DEFAULT_ROUTES[newRole];
-    console.log(`[RoleSelector] Redirecting to ${defaultRoute}`);
+    console.log(`[RoleSelector] Navigating to ${defaultRoute}`);
 
-    // Close dropdown and do full page reload to reset all state
+    // Close dropdown and use Next.js router for navigation (no full reload)
     setOpen(false);
-    window.location.href = defaultRoute;
+    router.push(defaultRoute);
   };
 
   return (

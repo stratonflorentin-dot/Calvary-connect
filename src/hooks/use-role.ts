@@ -16,8 +16,13 @@ export function useRole() {
 
   // The actual user role from database (never changes with impersonation)
   const actualRole = user?.role || null;
-  // Whether the user is an actual ADMIN (check both role and email)
+  // Whether user is an actual ADMIN (check both role and email)
   const isAdmin = actualRole === 'ADMIN' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+  // For admin user, always use localStorage role as current role
+  const currentRole = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()
+    ? (localStorage.getItem('fleet_command_role') as UserRole || contextRole || localRole || 'ADMIN')
+    : contextRole;
 
   // Sync role from localStorage (for admin role switching)
   useEffect(() => {
@@ -70,19 +75,19 @@ export function useRole() {
     // ADMIN always has full access
     if (isAdmin) return true;
     // Otherwise check if current role is in required roles
-    if (!contextRole) return false;
-    return requiredRoles.includes(contextRole);
-  }, [isAdmin, contextRole]);
+    if (!currentRole) return false;
+    return requiredRoles.includes(currentRole);
+  }, [isAdmin, currentRole]);
 
   // Check if user can access a page/feature
   const canAccess = useCallback((allowedRoles: UserRole[]) => {
     if (isAdmin) return true;
-    if (!contextRole) return false;
-    return allowedRoles.includes(contextRole);
-  }, [isAdmin, contextRole]);
+    if (!currentRole) return false;
+    return allowedRoles.includes(currentRole);
+  }, [isAdmin, currentRole]);
 
   return { 
-    role: contextRole, 
+    role: currentRole, 
     actualRole,
     isAdmin,
     changeRole, 

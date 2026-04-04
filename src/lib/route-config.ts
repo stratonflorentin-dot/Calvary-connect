@@ -109,7 +109,7 @@ export function useRouteGuard() {
   useEffect(() => {
     if (isUserLoading || !isInitialized) return;
 
-    // Check if admin user (owner) - should always have access
+    // Check if admin user (owner) - should always have access, no redirects
     const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
     
     if (!user && !isAdminUser) {
@@ -118,20 +118,22 @@ export function useRouteGuard() {
       return;
     }
 
-    if (!role && !isAdminUser) {
+    // Admin user should never be redirected, even without role
+    if (isAdminUser) {
+      console.log("[RouteGuard] Admin user detected, skipping all redirects");
+      return;
+    }
+
+    if (!role) {
       console.log("[RouteGuard] No role, waiting...");
       return;
     }
 
     const hasAccess = checkAccess(pathname);
-    console.log(`[RouteGuard] ${pathname} access for ${role || 'Admin'}: ${hasAccess}`);
+    console.log(`[RouteGuard] ${pathname} access for ${role}: ${hasAccess}`);
 
     if (!hasAccess) {
-      // Only redirect if not admin user
-      const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-      if (!isAdminUser && role) {
-        redirectToDefault(role);
-      }
+      redirectToDefault(role);
     }
   }, [user, role, pathname, isUserLoading, isInitialized, checkAccess, redirectToDefault]);
 

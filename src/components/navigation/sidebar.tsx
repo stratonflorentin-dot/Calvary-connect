@@ -20,8 +20,15 @@ export function Sidebar({ role }: { role: UserRole }) {
   const { t } = useLanguage();
   const { signOut, user } = useSupabase();
 
-  // Get menu items based on role and user email (owner gets full access)
-  const menuItems = getMenuByRole(role, false, t, user?.email);
+  // For admin user, get role from localStorage to ensure latest selection
+  const effectiveRole = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() 
+    ? (localStorage.getItem('fleet_command_role') as UserRole || role || 'ADMIN')
+    : role;
+
+  console.log(`[Sidebar] User: ${user?.email}, Role: ${role}, EffectiveRole: ${effectiveRole}`);
+
+  // Get menu items based on effective role and user email (owner gets full access)
+  const menuItems = getMenuByRole(effectiveRole, false, t, user?.email);
 
   // Define type for navigation items
 interface NavItem {
