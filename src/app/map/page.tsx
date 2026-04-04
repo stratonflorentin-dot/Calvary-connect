@@ -5,7 +5,6 @@ import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
-import { LocationService } from '@/lib/location-service';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Truck, Navigation, Search, Plus, Minus, AlertTriangle } from 'lucide-react';
@@ -14,11 +13,29 @@ import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-goog
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
+interface DriverLocation {
+  id: string;
+  driverName: string;
+  driverRole: string;
+  vehicleId: string;
+  vehiclePlate: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  latitude: number;
+  longitude: number;
+  heading: number;
+  speed: number;
+  status: string;
+  isOnline: boolean;
+  alertStatus: string;
+  lastUpdate: string;
+}
+
 export default function LiveMapPage() {
   const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-  const [locations, setLocations] = useState([]);
+  const [locations, setLocations] = useState<DriverLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingSample, setIsCreatingSample] = useState(false);
 
@@ -28,8 +45,9 @@ export default function LiveMapPage() {
       
       try {
         setIsLoading(true);
+        console.log('[LiveMap] Loading driver locations...');
         
-        // Load real driver locations from database
+        // Load real driver locations from database - try without is_online filter first
         const { data: locationsData, error } = await supabase
           .from('driver_locations')
           .select(`
@@ -43,16 +61,18 @@ export default function LiveMapPage() {
             is_online,
             last_updated
           `)
-          .eq('is_online', true)
           .order('last_updated', { ascending: false });
           
         if (error) {
-          console.log('Driver locations error:', error);
+          console.error('[LiveMap] Database error:', error);
           setLocations([]);
         } else {
+          console.log('[LiveMap] Loaded', locationsData?.length || 0, 'locations');
+          console.log('[LiveMap] Raw data:', locationsData);
+          
           // Transform to expected format
           const transformedLocations = locationsData?.map(loc => ({
-            id: loc.id,
+            id: loc.id || loc.driver_id,
             driverName: loc.driver_name || 'Unknown Driver',
             driverRole: 'DRIVER',
             vehicleId: loc.driver_id,
@@ -69,10 +89,11 @@ export default function LiveMapPage() {
             lastUpdate: loc.last_updated
           })) || [];
           
+          console.log('[LiveMap] Transformed locations:', transformedLocations);
           setLocations(transformedLocations);
         }
       } catch (error) {
-        console.error('Error loading locations:', error);
+        console.error('[LiveMap] Error loading locations:', error);
         setLocations([]);
       } finally {
         setIsLoading(false);
@@ -87,8 +108,8 @@ export default function LiveMapPage() {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'driver_locations' },
         (payload) => {
-          console.log('Real-time location update:', payload);
-          loadLocations(); // Reload locations when data changes
+          console.log('[LiveMap] Real-time update:', payload);
+          loadLocations();
         }
       )
       .subscribe();
@@ -101,6 +122,8 @@ export default function LiveMapPage() {
   const createSampleData = async () => {
     setIsCreatingSample(true);
     try {
+      console.log('[LiveMap] Creating sample driver data...');
+      
       // Create sample driver location data for testing
       const sampleDrivers = [
         { id: 'sample-driver-1', name: 'John Doe', lat: 5.6037, lng: -0.1870 },
@@ -109,7 +132,7 @@ export default function LiveMapPage() {
       ];
       
       for (const driver of sampleDrivers) {
-        await supabase.from('driver_locations').upsert({
+        const { error } = await supabase.from('driver_locations').upsert({
           driver_id: driver.id,
           driver_name: driver.name,
           latitude: driver.lat,
@@ -117,9 +140,15 @@ export default function LiveMapPage() {
           is_online: true,
           last_updated: new Date().toISOString(),
         }, { onConflict: 'driver_id' });
+        
+        if (error) {
+          console.error('[LiveMap] Error creating sample data for', driver.name, ':', error);
+        } else {
+          console.log('[LiveMap] Created sample data for', driver.name);
+        }
       }
       
-      // Reload locations to show new sample data
+      // Reload locations
       const { data: locationsData, error } = await supabase
         .from('driver_locations')
         .select(`
@@ -133,12 +162,15 @@ export default function LiveMapPage() {
           is_online,
           last_updated
         `)
-        .eq('is_online', true)
         .order('last_updated', { ascending: false });
         
-      if (!error && locationsData) {
+      if (error) {
+        console.error('[LiveMap] Error reloading after sample creation:', error);
+      } else {
+        console.log('[LiveMap] Reloaded', locationsData?.length || 0, 'locations after sample creation');
+        
         const transformedLocations = locationsData?.map(loc => ({
-          id: loc.id,
+          id: loc.id || loc.driver_id,
           driverName: loc.driver_name || 'Unknown Driver',
           driverRole: 'DRIVER',
           vehicleId: loc.driver_id,
@@ -158,7 +190,7 @@ export default function LiveMapPage() {
         setLocations(transformedLocations);
       }
     } catch (error) {
-      console.error('Error creating sample data:', error);
+      console.error('[LiveMap] Error creating sample data:', error);
     } finally {
       setIsCreatingSample(false);
     }

