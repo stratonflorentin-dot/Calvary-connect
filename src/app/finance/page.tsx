@@ -148,7 +148,7 @@ export default function FinancePage() {
     );
   }
 
-  if (!isAdmin && !['CEO', 'ADMIN', 'ACCOUNTANT'].includes(role || '')) {
+  if (!isAdmin && !['CEO', 'ADMIN', 'ACCOUNTANT', 'HR'].includes(role || '')) {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar role={role!} />
