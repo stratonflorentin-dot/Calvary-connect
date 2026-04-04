@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Package, Plus, AlertCircle } from 'lucide-react';
 
 export default function InventoryPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [inventory, setInventory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,7 +88,7 @@ export default function InventoryPage() {
       }
   };
 
-  if (!['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -178,3 +178,6 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+
+

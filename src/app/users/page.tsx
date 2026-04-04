@@ -16,7 +16,7 @@ import { Camera, Upload, X, UserPlus, Search, Trash2, Pencil } from 'lucide-reac
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function UsersPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState([]);
@@ -548,3 +548,6 @@ export default function UsersPage() {
     </div>
   );
 }
+
+
+

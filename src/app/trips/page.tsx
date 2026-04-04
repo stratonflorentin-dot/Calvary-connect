@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
+import { Sidebar } from '@/components/navigation/sidebar';
+import { BottomTabs } from '@/components/navigation/bottom-tabs';
+import { RoleSelector } from '@/components/dashboard/role-selector';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,50 +76,55 @@ export default function TripsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Trips Management</h1>
-            <p className="text-muted-foreground">Manage and monitor all fleet trips</p>
+    <div className="flex min-h-screen bg-background">
+      <Sidebar role={role!} />
+      <main className="flex-1 md:ml-60 p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Trips Management</h1>
+              <p className="text-muted-foreground">Manage and monitor all fleet trips</p>
+            </div>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Trip
+            </Button>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Trip
-          </Button>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Trips</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">Loading trips...</div>
-            ) : trips.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No trips found</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {trips.map((trip) => (
-                  <div key={trip.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold">{trip.origin} → {trip.destination}</h3>
-                        <p className="text-sm text-muted-foreground">Status: {trip.status}</p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Trips</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-8">Loading trips...</div>
+              ) : trips.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No trips found</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {trips.map((trip) => (
+                    <div key={trip.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-semibold">{trip.origin} → {trip.destination}</h3>
+                          <p className="text-sm text-muted-foreground">Status: {trip.status}</p>
+                        </div>
+                        <Badge variant={trip.status === 'COMPLETED' ? 'default' : 'secondary'}>
+                          {trip.status}
+                        </Badge>
                       </div>
-                      <Badge variant={trip.status === 'COMPLETED' ? 'default' : 'secondary'}>
-                        {trip.status}
-                      </Badge>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+      <BottomTabs role={role!} />
+      <RoleSelector />
     </div>
   );
 }

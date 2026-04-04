@@ -78,18 +78,14 @@ export function Sidebar({ role }: { role: UserRole }) {
     ? (storedRole || role || 'ADMIN')
     : role;
 
-  // ✅ If admin has switched to a non-admin role, respect that role's menu
-  const isRoleSwitching = isAdminEmail &&
-    storedRole !== null &&
-    storedRole !== 'ADMIN' &&
-    storedRole !== 'CEO';
-
+  // ✅ Admin always gets full menu access even when switching roles
+  // This allows them to view all features without restriction
   const menuItems = getMenuByRole(
     effectiveRole,
     false,
     t,
     user?.email,
-    isRoleSwitching  // ✅ Pass flag so menu reflects switched role
+    false  // ✅ Never restrict the menu for the admin/owner
   );
 
   interface NavItem {

@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 export default function LiveMapPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [locations, setLocations] = useState([]);
@@ -120,7 +120,7 @@ export default function LiveMapPage() {
     }
   };
 
-  if (!['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   // Default center: Accra, Ghana
   const defaultCenter = { lat: 5.6037, lng: -0.1870 };
@@ -270,3 +270,6 @@ export default function LiveMapPage() {
     </div>
   );
 }
+
+
+

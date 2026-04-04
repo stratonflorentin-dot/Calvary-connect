@@ -17,7 +17,7 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 export default function ServiceRequestsPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ export default function ServiceRequestsPage() {
     }
   };
 
-  if (!['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -213,3 +213,6 @@ export default function ServiceRequestsPage() {
     </div>
   );
 }
+
+
+

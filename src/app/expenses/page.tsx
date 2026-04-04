@@ -32,7 +32,7 @@ interface Expense {
 }
 
 export default function ExpensesPage() {
-    const { role } = useRole();
+    const { role, isAdmin } = useRole();
     const { format, currency } = useCurrency();
     const { user } = useSupabase();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -411,3 +411,6 @@ export default function ExpensesPage() {
         </div>
     );
 }
+
+
+

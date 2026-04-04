@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 
 export default function MonthlyReportPage() {
-    const { role } = useRole();
+    const { role, isAdmin } = useRole();
     const { format, currency } = useCurrency();
     const { user } = useSupabase();
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -297,3 +297,6 @@ export default function MonthlyReportPage() {
         </div>
     );
 }
+
+
+

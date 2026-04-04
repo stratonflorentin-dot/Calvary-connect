@@ -379,7 +379,7 @@ export default function FinancePage() {
     });
     handleSaveEdit(updated);
   };
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { format, currency, toggleCurrency } = useCurrency();
   const { user } = useSupabase();
 
@@ -1247,3 +1247,6 @@ function LedgerTable({ headers, data, onAddEntry }: { headers: string[], data: a
     </div>
   );
 }
+
+
+

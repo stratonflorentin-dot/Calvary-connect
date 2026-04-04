@@ -15,9 +15,9 @@ import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 
 export default function FleetPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
 
-  if (!['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) {
+  if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) {
     return (
       <main className="min-h-screen bg-background safe-area-padding">
         <div className="p-8">

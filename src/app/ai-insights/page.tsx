@@ -7,7 +7,7 @@ import { useRole } from '@/hooks/use-role';
 import { AiInsightPanel } from '@/components/dashboard/ai-insight-panel';
 
 export default function AiInsightsPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   if (!role) return null;
 
   return (
@@ -25,3 +25,6 @@ export default function AiInsightsPage() {
     </div>
   );
 }
+
+
+

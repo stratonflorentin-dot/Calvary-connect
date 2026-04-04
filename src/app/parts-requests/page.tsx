@@ -40,7 +40,7 @@ interface InventoryItem {
 }
 
 export default function PartsRequestsPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +114,7 @@ export default function PartsRequestsPage() {
     }
   };
 
-  if (!['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -230,3 +230,6 @@ export default function PartsRequestsPage() {
     </div>
   );
 }
+
+
+

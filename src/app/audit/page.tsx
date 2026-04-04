@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 
 export default function AuditPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
 
   if (!role) return <div className="p-8">Access Denied</div>;
 
@@ -18,3 +18,6 @@ export default function AuditPage() {
     </div>
   );
 }
+
+
+

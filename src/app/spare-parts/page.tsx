@@ -20,7 +20,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { cn } from '@/lib/utils';
 
 export default function MechanicSparePartsPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const { t } = useLanguage();
   const [parts, setParts] = useState<any[]>([]);
@@ -223,3 +223,6 @@ export default function MechanicSparePartsPage() {
     </div>
   );
 }
+
+
+

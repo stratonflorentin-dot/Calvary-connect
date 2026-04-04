@@ -28,7 +28,7 @@ interface Report {
 }
 
 export default function ReportsPage() {
-    const { role } = useRole();
+    const { role, isAdmin } = useRole();
     const { format, currency } = useCurrency();
 
     const { user } = useSupabase();
@@ -294,3 +294,6 @@ export default function ReportsPage() {
         </div>
     );
 }
+
+
+

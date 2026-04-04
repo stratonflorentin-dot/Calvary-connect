@@ -67,6 +67,9 @@ export function RoleSelector() {
     // Direct localStorage update for immediate persistence
     localStorage.setItem('fleet_command_role', newRole);
     
+    // ✅ Dispatch custom event for immediate sidebar update
+    window.dispatchEvent(new Event('roleChanged'));
+    
     // Get default route for the new role
     const defaultRoute = ROLE_DEFAULT_ROUTES[newRole];
     console.log(`[RoleSelector] Navigating to ${defaultRoute}`);

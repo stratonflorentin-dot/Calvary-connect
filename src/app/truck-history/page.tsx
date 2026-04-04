@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
 export default function TruckHistoryPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [fleet, setFleet] = useState<any[]>([]);
@@ -241,7 +241,7 @@ export default function TruckHistoryPage() {
     }
   };
 
-  if (!['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -839,3 +839,6 @@ function TimelineItem({ type, title, date, description, tag, icon, color }: any)
     </div>
   );
 }
+
+
+

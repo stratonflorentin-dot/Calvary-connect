@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Languages } from 'lucide-react';
 
 export default function Home() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user, isLoading } = useSupabase();
   const { toggleLanguage, lang } = useLanguage();
 
@@ -71,8 +71,8 @@ export default function Home() {
     }
   };
 
-  // Driver view is full-screen mobile only
-  if (role === 'DRIVER') {
+  // Driver view is full-screen mobile only, unless you are an admin (for testing)
+  if (role === 'DRIVER' && !isAdmin) {
     return (
       <main className="min-h-screen bg-background pb-20 safe-area-padding">
         {renderContent()}
@@ -102,9 +102,10 @@ export default function Home() {
         <div className="space-y-6">
           {renderContent()}
         </div>
-      </main>
 
-      <BottomTabs role={role} />
+        {/* Only show BottomTabs for non-admin on mobile */}
+        {!isAdmin && <BottomTabs role={role} />}
+      </main>
     </div>
   );
 }
