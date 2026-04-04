@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
+import { BottomTabs } from '@/components/navigation/bottom-tabs';
+import { RoleSelector } from '@/components/dashboard/role-selector';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
@@ -31,7 +33,7 @@ export default function UsersPage() {
   useEffect(() => {
     const loadUsers = async () => {
       // Admin user (owner) should always have access
-      const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+      const isAdminUser = isAdmin;
       
       if (!user && !isAdminUser) return;
       
@@ -545,9 +547,12 @@ export default function UsersPage() {
           </Table>
         </div>
       </main>
+      <BottomTabs role={role!} />
+      <RoleSelector />
     </div>
   );
 }
+
 
 
 

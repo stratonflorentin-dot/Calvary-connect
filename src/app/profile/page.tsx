@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
   const { user, signOut, refreshUser } = useSupabase();
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -378,3 +378,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

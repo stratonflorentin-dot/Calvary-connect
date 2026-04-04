@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
+import { BottomTabs } from '@/components/navigation/bottom-tabs';
+import { RoleSelector } from '@/components/dashboard/role-selector';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
@@ -175,9 +177,12 @@ export default function InventoryPage() {
           </Table>
         </div>
       </main>
+      <BottomTabs role={role!} />
+      <RoleSelector />
     </div>
   );
 }
+
 
 
 

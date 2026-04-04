@@ -18,7 +18,7 @@ import { toast } from '@/hooks/use-toast';
 
 export default function DeliveryProofPage() {
   const { user } = useSupabase();
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [insuranceDocuments, setInsuranceDocuments] = useState<any[]>([]);
   const [assignedVehicle, setAssignedVehicle] = useState<any>(null);
@@ -524,3 +524,4 @@ export default function DeliveryProofPage() {
     </div>
   );
 }
+

@@ -16,7 +16,7 @@ import { toast } from '@/hooks/use-toast';
 
 export default function MaintenanceReportPage() {
   const { user } = useSupabase();
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!user || !role) return null;
@@ -110,3 +110,4 @@ export default function MaintenanceReportPage() {
     </div>
   );
 }
+

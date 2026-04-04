@@ -7,7 +7,7 @@ import { useRole } from "@/hooks/use-role";
 export default function AuditPage() {
   const { role, isAdmin } = useRole();
 
-  if (!role) return <div className="p-8">Access Denied</div>;
+  if (!isAdmin && !role) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -18,6 +18,7 @@ export default function AuditPage() {
     </div>
   );
 }
+
 
 
 

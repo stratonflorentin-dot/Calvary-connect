@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 
 export default function NotificationsPage() {
-  const { role } = useRole();
+  const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -124,3 +124,4 @@ export default function NotificationsPage() {
     </div>
   );
 }
+

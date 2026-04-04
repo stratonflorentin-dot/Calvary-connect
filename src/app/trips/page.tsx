@@ -10,23 +10,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Route, Plus } from 'lucide-react';
+import { supabase, ADMIN_EMAIL } from '@/lib/supabase';
 
 export default function TripsPage() {
-  const { role, isInitialized } = useRole();
+  const { role, isAdmin, isInitialized } = useRole();
   const { user, isLoading: isUserLoading } = useSupabase();
   const [trips, setTrips] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Wait for auth and role to be initialized
-    if (isUserLoading || !isInitialized) {
-      console.log('[TripsPage] Waiting for auth/role initialization...');
-      return;
-    }
+  if (isUserLoading || !isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
+  useEffect(() => {
     const loadData = async () => {
       // Admin user (owner) should always be able to access
-      if (!user && !isAdminUser) {
+      if (!user && !isAdmin) {
         console.log('[TripsPage] No user found, skipping data load');
         setIsLoading(false);
         return;
@@ -59,18 +65,22 @@ export default function TripsPage() {
   }, [user, role, isUserLoading, isInitialized]);
 
   // Admin user (owner) should always have access - no authentication checks
-  const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+  const isAdminUser = isAdmin;
   
   console.log(`[TripsPage] User: ${user?.email}, isAdmin: ${isAdminUser}`);
 
   // Only show authentication required if not admin user AND no user
   if (!user && !isAdminUser) {
     return (
-      <div className="flex min-h-screen bg-background p-8">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
-          <p className="text-muted-foreground mb-4">Please sign in to access Trips page.</p>
-        </div>
+      <div className="flex min-h-screen bg-background">
+        <Sidebar role="CEO" />
+        <main className="flex-1 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+            <p className="text-muted-foreground mb-4">Please sign in to access Trips page.</p>
+            <p className="text-xs text-muted-foreground">User status: Not authenticated</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -128,3 +138,4 @@ export default function TripsPage() {
     </div>
   );
 }
+

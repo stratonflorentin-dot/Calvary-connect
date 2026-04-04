@@ -56,6 +56,8 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
+import { BottomTabs } from '@/components/navigation/bottom-tabs';
+import { RoleSelector } from '@/components/dashboard/role-selector';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
 import { useSupabase } from '@/components/supabase-provider';
@@ -402,7 +404,7 @@ export default function FinancePage() {
   // Load data from Supabase
   useEffect(() => {
     // Check if admin user (owner) - should always have access
-    const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+    const isAdminUser = isAdmin;
     
     if (!user && !isAdminUser) return;
     
@@ -594,7 +596,7 @@ export default function FinancePage() {
 
   const handleSaveReport = async () => {
     // Check if admin user (owner) - should always have access
-    const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+    const isAdminUser = isAdmin;
     
     if (!user && !isAdminUser) {
       console.error('Missing user');
@@ -623,7 +625,7 @@ export default function FinancePage() {
     setReportContent("");
   };
 
-  if (!role) return <div className="p-8">Access Denied</div>;
+  if (!isAdmin && !role) return <div className="p-8">Access Denied</div>;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -1108,7 +1110,10 @@ export default function FinancePage() {
             </div>
           </TabsContent>
         </Tabs>
+        </div>
       </main>
+      <BottomTabs role={role!} />
+      <RoleSelector />
     </div>
   );
 }
@@ -1247,6 +1252,7 @@ function LedgerTable({ headers, data, onAddEntry }: { headers: string[], data: a
     </div>
   );
 }
+
 
 
 
