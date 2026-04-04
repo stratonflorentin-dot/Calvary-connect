@@ -112,15 +112,14 @@ export function useRouteGuard() {
     // Check if admin user (owner) - should always have access, no redirects
     const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
     
-    if (!user && !isAdminUser) {
-      console.log("[RouteGuard] No user, redirecting to /login");
-      // router.push("/login");
+    // Admin user should never be redirected, even when switching roles
+    if (isAdminUser) {
+      console.log("[RouteGuard] Admin user detected, skipping all redirects");
       return;
     }
 
-    // Admin user should never be redirected, even without role
-    if (isAdminUser) {
-      console.log("[RouteGuard] Admin user detected, skipping all redirects");
+    if (!user) {
+      console.log("[RouteGuard] No user, waiting...");
       return;
     }
 
