@@ -467,6 +467,37 @@ export function DriverView() {
     );
   }
 
+  // Manual location test function for debugging
+  const testLocationSave = async () => {
+    if (!user?.id) return;
+    try {
+      const { error } = await supabase
+        .from('driver_locations')
+        .upsert({
+          driver_id: user.id,
+          driver_name: user.name || 'Test Driver',
+          latitude: 5.6037,
+          longitude: -0.1870,
+          accuracy: 10,
+          speed: 0,
+          heading: 0,
+          is_online: true,
+          last_updated: new Date().toISOString(),
+        }, { onConflict: 'driver_id' });
+      
+      if (error) {
+        console.error('Test location save failed:', error);
+        toast({ title: 'Location Test Failed', description: error.message, variant: 'destructive' });
+      } else {
+        console.log('Test location saved successfully');
+        toast({ title: 'Location Test', description: 'Test location saved to Accra' });
+      }
+    } catch (err: any) {
+      console.error('Test location error:', err);
+      toast({ title: 'Error', description: err?.message || 'Unknown error', variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="pb-24 pt-4 px-4 sm:px-6 lg:px-8 space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
       {/* Silent location tracker - invisible to driver, runs continuously */}
@@ -757,6 +788,14 @@ export function DriverView() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <button 
+          onClick={testLocationSave}
+          className="bg-white p-4 rounded-2xl shadow-sm border border-muted flex flex-col items-center gap-1 active:scale-90 transition-transform"
+        >
+          <MapPin className="size-5 text-emerald-500" />
+          <p className="text-[10px] font-bold">TEST LOC</p>
+        </button>
 
         <Dialog>
           <DialogTrigger asChild>
