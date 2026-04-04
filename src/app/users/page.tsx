@@ -30,7 +30,10 @@ export default function UsersPage() {
 
   useEffect(() => {
     const loadUsers = async () => {
-      if (!user) return;
+      // Admin user (owner) should always have access
+      const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+      
+      if (!user && !isAdminUser) return;
       
       try {
         setIsLoading(true);

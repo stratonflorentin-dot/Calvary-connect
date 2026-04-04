@@ -55,9 +55,12 @@ export default function TripsPage() {
     loadData();
   }, [user, role, isUserLoading, isInitialized]);
 
-  // Check if admin user (owner) - should always have access
+  // Admin user (owner) should always have access - no authentication checks
   const isAdminUser = user?.email?.toLowerCase() === 'stratonflorentin@gmail.com'.toLowerCase();
+  
+  console.log(`[TripsPage] User: ${user?.email}, isAdmin: ${isAdminUser}`);
 
+  // Only show authentication required if not admin user AND no user
   if (!user && !isAdminUser) {
     return (
       <div className="flex min-h-screen bg-background p-8">
