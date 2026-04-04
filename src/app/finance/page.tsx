@@ -139,6 +139,8 @@ import { cn } from '@/lib/utils';
 export default function FinancePage() {
   const { role, isAdmin, isInitialized } = useRole();
   const { user, isLoading: isUserLoading } = useSupabase();
+  const { format, currency, toggleCurrency } = useCurrency();
+  const { user: supabaseUser } = useSupabase(); // Avoid name conflict with user from outer scope
 
   if (isUserLoading || !isInitialized) {
     return (
@@ -406,8 +408,6 @@ export default function FinancePage() {
     });
     handleSaveEdit(updated);
   };
-  const { format, currency, toggleCurrency } = useCurrency();
-  const { user: supabaseUser } = useSupabase(); // Avoid name conflict with user from outer scope
 
   // State for the "Excel-like" report
   const [reportTitle, setReportTitle] = useState("");
