@@ -107,13 +107,6 @@ export class SupabaseService {
     await this.performAction('vehicles', 'DELETE', null, id);
     
     if (user && SyncManager.isOnline()) {
-       await AuditService.logCRUD(user, 'DELETE', 'vehicles', id, oldData, null,
-         `Deleted vehicle ${id}`);
-     }
-   }
-    
-    // Log audit
-    if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'vehicles', id, oldData, null,
         `Deleted vehicle ${oldData?.plateNumber || id}`);
     }
@@ -264,9 +257,9 @@ export class SupabaseService {
     return data || [];
   }
 
-  static async createMaintenanceRequest(request: Omit<MaintenanceRequest, \x27id\x27 | \x27created_at\x27>) {
+  static async createMaintenanceRequest(request: Omit<MaintenanceRequest, 'id' | 'created_at'>) {
     const user = await getCurrentUser();
-    const data = await this.performAction(\x27maintenance_requests\x27, \x27INSERT\x27, {
+    const data = await this.performAction('maintenance_requests', 'INSERT', {
       ...request,
       reported_at: new Date().toISOString()
     });
@@ -292,9 +285,9 @@ export class SupabaseService {
     return data || [];
   }
 
-  static async createSparePart(part: Omit<SparePart, \x27id\x27 | \x27created_at\x27>) {
+  static async createSparePart(part: Omit<SparePart, 'id' | 'created_at'>) {
     const user = await getCurrentUser();
-    const data = await this.performAction(\x27spare_parts\x27, \x27INSERT\x27, {
+    const data = await this.performAction('spare_parts', 'INSERT', {
       ...part,
       created_at: new Date().toISOString()
     });
@@ -320,9 +313,9 @@ export class SupabaseService {
     return data || [];
   }
 
-  static async createPartsRequest(request: Omit<PartsRequest, \x27id\x27 | \x27created_at\x27>) {
+  static async createPartsRequest(request: Omit<PartsRequest, 'id' | 'created_at'>) {
     const user = await getCurrentUser();
-    const data = await this.performAction(\x27parts_requests\x27, \x27INSERT\x27, {
+    const data = await this.performAction('parts_requests', 'INSERT', {
       ...request,
       created_at: new Date().toISOString()
     });
@@ -348,9 +341,9 @@ export class SupabaseService {
     return data || [];
   }
 
-  static async createAllowance(allowance: Omit<Allowance, \x27id\x27 | \x27created_at\x27>) {
+  static async createAllowance(allowance: Omit<Allowance, 'id' | 'created_at'>) {
     const user = await getCurrentUser();
-    const data = await this.performAction(\x27allowances\x27, \x27INSERT\x27, {
+    const data = await this.performAction('allowances', 'INSERT', {
       ...allowance,
       created_at: new Date().toISOString()
     });
