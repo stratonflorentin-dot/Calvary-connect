@@ -146,6 +146,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   // Fetch user profile from Supabase
   const fetchUserProfile = async (userId: string, email: string) => {
     try {
+      const normalizedEmail = email.toLowerCase().trim();
+      console.log('[SupabaseProvider] Fetching profile for:', normalizedEmail, 'ID:', userId);
+
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
@@ -153,31 +156,43 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (profileError || !profile) {
-        // If no profile exists, check if there's one with this email (pre-added by admin)
+        console.log('[SupabaseProvider] Profile not found by ID, searching by email:', normalizedEmail);
+        
+        // If no profile exists by ID, check if there's one with this email (pre-added by admin)
+        // Use ilike for case-insensitive matching if possible, or just normalize
         const { data: existingByEmail, error: emailError } = await supabase
           .from('user_profiles')
           .select('*')
-          .eq('email', email)
+          .ilike('email', normalizedEmail)
           .single();
 
         if (!emailError && existingByEmail) {
+          console.log('[SupabaseProvider] Found profile by email, linking to auth ID:', userId);
           // Update the pre-added profile with the real auth ID
           const { data: updatedProfile, error: updateError } = await supabase
             .from('user_profiles')
-            .update({ id: userId, updated_at: new Date().toISOString() })
-            .eq('email', email)
+            .update({ 
+              id: userId, 
+              updated_at: new Date().toISOString() 
+            })
+            .eq('email', existingByEmail.email) // Use the exact email from DB
             .select()
             .single();
 
-          if (!updateError) return updatedProfile;
+          if (!updateError) {
+            console.log('[SupabaseProvider] Profile linked successfully');
+            return updatedProfile;
+          }
+          console.error('[SupabaseProvider] Error linking profile:', updateError);
         }
 
+        console.log('[SupabaseProvider] No pre-existing profile found, creating new one');
         // If still no profile, create one with default role
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
           .insert([{
             id: userId,
-            email: email,
+            email: normalizedEmail,
             name: email.split('@')[0], // Default name from email
             role: 'OPERATOR', // Default role
             status: 'active',
@@ -188,16 +203,17 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           .single();
 
         if (createError) {
-          console.error('Error creating profile:', createError);
+          console.error('[SupabaseProvider] Error creating profile:', createError);
           return null;
         }
 
         return newProfile;
       }
 
+      console.log('[SupabaseProvider] Profile found by ID:', profile.role);
       return profile;
     } catch (err) {
-      console.error('Error fetching/creating profile:', err);
+      console.error('[SupabaseProvider] Error fetching/creating profile:', err);
       return null;
     }
   };
@@ -317,37 +333,50 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name: string, role?: string) => {
     setIsLoading(true);
     try {
+      const normalizedEmail = email.toLowerCase().trim();
+      console.log('[SupabaseProvider] Starting sign up for:', normalizedEmail);
+
       // Check if user was pre-added by admin/HR/CEO in user_profiles
       const { data: pendingUser, error: checkError } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('email', email.toLowerCase().trim())
+        .ilike('email', normalizedEmail)
         .single();
 
       if (checkError || !pendingUser) {
+        console.warn('[SupabaseProvider] Sign up blocked: No invitation found for', normalizedEmail);
         throw new Error('You must be invited by an administrator before signing up. Please contact HR or your manager.');
       }
 
+      console.log('[SupabaseProvider] Invitation found, creating Supabase auth account');
       // Try Supabase auth
       const { data: { user: authUser }, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error('[SupabaseProvider] Supabase auth signUp error:', signUpError);
+        throw signUpError;
+      }
 
       if (authUser) {
+        console.log('[SupabaseProvider] Auth account created, updating profile');
         // Update the pre-created profile with password/auth info
         const { error: profileError } = await supabase.from('user_profiles').update({
           id: authUser.id,
           name: name,
           updated_at: new Date().toISOString(),
-        }).eq('email', email.toLowerCase().trim());
+        }).ilike('email', normalizedEmail);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('[SupabaseProvider] Error updating profile after signUp:', profileError);
+          throw profileError;
+        }
+        console.log('[SupabaseProvider] Sign up process complete');
       }
     } catch (err) {
-      console.error('Sign up error:', err);
+      console.error('[SupabaseProvider] Sign up failed:', err);
       setError(err as Error);
       throw err;
     } finally {

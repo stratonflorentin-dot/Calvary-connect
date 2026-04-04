@@ -78,6 +78,9 @@ export function AuthComponent() {
             </TabsList>
             
             <TabsContent value="signin">
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                <strong>First time here?</strong> If an administrator added you, please use the <strong>Sign Up</strong> tab to set your password and complete your registration.
+              </div>
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email">Email</Label>
