@@ -120,84 +120,6 @@ export default function LiveMapPage() {
     };
   }, [user]);
 
-  const createSampleData = async () => {
-    setIsCreatingSample(true);
-    try {
-      console.log('[LiveMap] Creating sample driver data...');
-      
-      // Create sample driver location data for testing
-      const sampleDrivers = [
-        { id: 'sample-driver-1', lat: 5.6037, lng: -0.1870 },
-        { id: 'sample-driver-2', lat: 5.6137, lng: -0.1970 },
-        { id: 'sample-driver-3', lat: 5.5937, lng: -0.1770 },
-      ];
-      
-      for (const driver of sampleDrivers) {
-        const { error } = await supabase.from('driver_locations').upsert({
-          driver_id: driver.id,
-          latitude: driver.lat,
-          longitude: driver.lng,
-          is_online: true,
-          last_updated: new Date().toISOString(),
-        }, { onConflict: 'driver_id' });
-        
-        if (error) {
-          console.error('[LiveMap] Error creating sample data for', driver.id, ':', error);
-        } else {
-          console.log('[LiveMap] Created sample data for', driver.id);
-        }
-      }
-      
-      // Reload locations with user_profiles join
-      const { data: locationsData, error } = await supabase
-        .from('driver_locations')
-        .select(`
-          id,
-          driver_id,
-          latitude,
-          longitude,
-          heading,
-          speed,
-          is_online,
-          last_updated,
-          user_profiles!inner (
-            name
-          )
-        `)
-        .order('last_updated', { ascending: false });
-        
-      if (error) {
-        console.error('[LiveMap] Error reloading after sample creation:', error);
-      } else {
-        console.log('[LiveMap] Reloaded', locationsData?.length || 0, 'locations after sample creation');
-        
-        const transformedLocations = locationsData?.map(loc => ({
-          id: loc.id || loc.driver_id,
-          driverName: (loc.user_profiles as any)?.name || 'Unknown Driver',
-          driverRole: 'DRIVER',
-          vehicleId: loc.driver_id,
-          vehiclePlate: 'N/A',
-          vehicleMake: 'Unknown',
-          vehicleModel: 'Unknown',
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          heading: loc.heading || 0,
-          speed: loc.speed || 0,
-          status: loc.is_online ? 'active' : 'inactive',
-          isOnline: loc.is_online || false,
-          alertStatus: 'none',
-          lastUpdate: loc.last_updated
-        })) || [];
-        
-        setLocations(transformedLocations);
-      }
-    } catch (error) {
-      console.error('[LiveMap] Error creating sample data:', error);
-    } finally {
-      setIsCreatingSample(false);
-    }
-  };
-
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
   // Default center: Accra, Ghana
@@ -225,15 +147,6 @@ export default function LiveMapPage() {
             <Badge className="bg-primary text-white whitespace-nowrap gap-2 py-1.5 md:py-2 px-3 md:px-4 shadow-lg h-fit border-none">
               <Truck className="size-3 md:size-4" /> {locations?.length || 0} Assets
             </Badge>
-            {locations?.length === 0 && (
-              <button
-                onClick={createSampleData}
-                disabled={isCreatingSample}
-                className="bg-amber-500 text-white whitespace-nowrap gap-2 py-1.5 md:py-2 px-3 md:px-4 shadow-lg h-fit border-none rounded-full text-xs md:text-sm hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isCreatingSample ? 'Creating...' : 'Create Sample Data'}
-              </button>
-            )}
           </div>
         </div>
 
