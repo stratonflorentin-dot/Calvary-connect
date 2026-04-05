@@ -445,6 +445,17 @@ export function DriverView() {
   if (!locationEnabled) {
     return (
       <div className="p-6 h-[100dvh] flex flex-col items-center justify-center text-center space-y-8 bg-white">
+        {/* Show location permission prompt first */}
+        <LocationPermissionPrompt 
+          onGranted={() => {
+            setLocationEnabled(true);
+          }}
+          onDenied={() => {
+            // Still allow access but location won't be tracked
+            setLocationEnabled(true);
+          }}
+          required={false}
+        />
         <div className="relative">
           <div className="absolute inset-0 bg-amber-500/20 rounded-full animate-ping scale-150" />
           <div className="relative size-24 rounded-full bg-amber-500 flex items-center justify-center">
@@ -461,8 +472,6 @@ export function DriverView() {
         >
           Continue to Dashboard
         </Button>
-        {/* Silent tracker attempts to start in background */}
-        <SilentLocationTracker />
       </div>
     );
   }
