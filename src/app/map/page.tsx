@@ -47,19 +47,21 @@ export default function LiveMapPage() {
         setIsLoading(true);
         console.log('[LiveMap] Loading driver locations...');
         
-        // Load real driver locations from database - try without is_online filter first
+        // Load driver locations joined with user_profiles to get driver names
         const { data: locationsData, error } = await supabase
           .from('driver_locations')
           .select(`
             id,
             driver_id,
-            driver_name,
             latitude,
             longitude,
             heading,
             speed,
             is_online,
-            last_updated
+            last_updated,
+            user_profiles!inner (
+              name
+            )
           `)
           .order('last_updated', { ascending: false });
           
@@ -68,12 +70,11 @@ export default function LiveMapPage() {
           setLocations([]);
         } else {
           console.log('[LiveMap] Loaded', locationsData?.length || 0, 'locations');
-          console.log('[LiveMap] Raw data:', locationsData);
           
-          // Transform to expected format
+          // Transform to expected format with driver names from joined table
           const transformedLocations = locationsData?.map(loc => ({
             id: loc.id || loc.driver_id,
-            driverName: loc.driver_name || 'Unknown Driver',
+            driverName: (loc.user_profiles as any)?.name || 'Unknown Driver',
             driverRole: 'DRIVER',
             vehicleId: loc.driver_id,
             vehiclePlate: 'N/A',
@@ -126,15 +127,14 @@ export default function LiveMapPage() {
       
       // Create sample driver location data for testing
       const sampleDrivers = [
-        { id: 'sample-driver-1', name: 'John Doe', lat: 5.6037, lng: -0.1870 },
-        { id: 'sample-driver-2', name: 'Jane Smith', lat: 5.6137, lng: -0.1970 },
-        { id: 'sample-driver-3', name: 'Mike Johnson', lat: 5.5937, lng: -0.1770 },
+        { id: 'sample-driver-1', lat: 5.6037, lng: -0.1870 },
+        { id: 'sample-driver-2', lat: 5.6137, lng: -0.1970 },
+        { id: 'sample-driver-3', lat: 5.5937, lng: -0.1770 },
       ];
       
       for (const driver of sampleDrivers) {
         const { error } = await supabase.from('driver_locations').upsert({
           driver_id: driver.id,
-          driver_name: driver.name,
           latitude: driver.lat,
           longitude: driver.lng,
           is_online: true,
@@ -142,25 +142,27 @@ export default function LiveMapPage() {
         }, { onConflict: 'driver_id' });
         
         if (error) {
-          console.error('[LiveMap] Error creating sample data for', driver.name, ':', error);
+          console.error('[LiveMap] Error creating sample data for', driver.id, ':', error);
         } else {
-          console.log('[LiveMap] Created sample data for', driver.name);
+          console.log('[LiveMap] Created sample data for', driver.id);
         }
       }
       
-      // Reload locations
+      // Reload locations with user_profiles join
       const { data: locationsData, error } = await supabase
         .from('driver_locations')
         .select(`
           id,
           driver_id,
-          driver_name,
           latitude,
           longitude,
           heading,
           speed,
           is_online,
-          last_updated
+          last_updated,
+          user_profiles!inner (
+            name
+          )
         `)
         .order('last_updated', { ascending: false });
         
@@ -171,7 +173,7 @@ export default function LiveMapPage() {
         
         const transformedLocations = locationsData?.map(loc => ({
           id: loc.id || loc.driver_id,
-          driverName: loc.driver_name || 'Unknown Driver',
+          driverName: (loc.user_profiles as any)?.name || 'Unknown Driver',
           driverRole: 'DRIVER',
           vehicleId: loc.driver_id,
           vehiclePlate: 'N/A',

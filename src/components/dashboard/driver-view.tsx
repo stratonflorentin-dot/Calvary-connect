@@ -475,7 +475,6 @@ export function DriverView() {
         .from('driver_locations')
         .upsert({
           driver_id: user.id,
-          driver_name: user.name || 'Test Driver',
           latitude: 5.6037,
           longitude: -0.1870,
           accuracy: 10,

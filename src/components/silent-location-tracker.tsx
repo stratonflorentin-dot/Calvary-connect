@@ -32,7 +32,6 @@ export function SilentLocationTracker() {
         .from('driver_locations')
         .upsert({
           driver_id: user.id,
-          driver_name: user.name || 'Unknown Driver',
           latitude: pos.latitude,
           longitude: pos.longitude,
           accuracy: pos.accuracy,
@@ -48,7 +47,7 @@ export function SilentLocationTracker() {
         console.error('[SilentLocationTracker] Supabase error:', error);
         setDebug(`DB Error: ${error.message}`);
       } else {
-        console.log('[SilentLocationTracker] Location saved for', user.name);
+        console.log('[SilentLocationTracker] Location saved for', user.id);
         setDebug(`Saved: ${pos.latitude.toFixed(4)}, ${pos.longitude.toFixed(4)}`);
       }
     } catch (err: any) {
