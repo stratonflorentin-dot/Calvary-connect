@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Sidebar } from '@/components/navigation/sidebar';
@@ -37,7 +36,6 @@ export default function LiveMapPage() {
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [locations, setLocations] = useState<DriverLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreatingSample, setIsCreatingSample] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>('Loading...');
   const [showDebug, setShowDebug] = useState(true);
 
@@ -49,8 +47,6 @@ export default function LiveMapPage() {
         setIsLoading(true);
         console.log('[LiveMap] Loading driver locations...');
         
-        // Load driver locations joined with user_profiles to get driver names
-        // Use left join so drivers show even without profile entries
         const { data: locationsData, error } = await supabase
           .from('driver_locations')
           .select(`
@@ -77,7 +73,6 @@ export default function LiveMapPage() {
           console.log('[LiveMap] Loaded', locationsData?.length || 0, 'locations');
           setDebugInfo(`Loaded ${locationsData?.length || 0} drivers from DB`);
           
-          // Transform to expected format with driver names from joined table
           const transformedLocations = locationsData?.map(loc => {
             const profileName = (loc.user_profiles as any)?.name;
             console.log(`[LiveMap] Driver ${loc.driver_id}: profile name =`, profileName);
@@ -89,8 +84,9 @@ export default function LiveMapPage() {
               vehiclePlate: 'N/A',
               vehicleMake: 'Unknown',
               vehicleModel: 'Unknown',
-              latitude: loc.latitude,
-              longitude: loc.longitude,
+              // ✅ FIX: Cast to Number to ensure lat/lng are never strings
+              latitude: Number(loc.latitude),
+              longitude: Number(loc.longitude),
               heading: loc.heading || 0,
               speed: loc.speed || 0,
               status: loc.is_online ? 'active' : 'inactive',
@@ -115,7 +111,6 @@ export default function LiveMapPage() {
 
     loadLocations();
     
-    // Set up real-time updates
     const subscription = supabase
       .channel('driver_locations')
       .on('postgres_changes', 
@@ -135,8 +130,8 @@ export default function LiveMapPage() {
 
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
-  // Default center: Accra, Ghana
-  const defaultCenter = { lat: 5.6037, lng: -0.1870 };
+  // ✅ FIX: Changed from Ghana to Arusha, Tanzania
+  const defaultCenter = { lat: -3.3869, lng: 36.6830 };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden touch-none">
@@ -186,13 +181,15 @@ export default function LiveMapPage() {
               )}
             </div>
           )}
+
+          {/* ✅ FIX: Updated mapId to match your Google Cloud Console Map ID */}
           <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
             <Map
               defaultCenter={defaultCenter}
               defaultZoom={12}
               gestureHandling={'greedy'}
               disableDefaultUI={true}
-              mapId={'bf50a91341416e8'}
+              mapId={'37adbb2b5d29be3388ca0e2d'}
               className="w-full h-full"
             >
               {locations?.map((loc) => (
@@ -295,7 +292,3 @@ export default function LiveMapPage() {
     </div>
   );
 }
-
-
-
-
