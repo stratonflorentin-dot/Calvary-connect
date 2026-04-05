@@ -189,7 +189,7 @@ export class LocationService {
       const { data: drivers, error: driverError } = await supabase
         .from('user_profiles')
         .select('id, name')
-        .eq('role', 'driver');
+        .eq('role', 'DRIVER');
 
       if (vehicleError || driverError || !vehicles || !drivers) {
         console.error('Error fetching vehicles or drivers:', vehicleError || driverError);

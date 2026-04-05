@@ -47,10 +47,10 @@ export function AiInsightPanel() {
         .lte('created_at', monthEnd);
       
       // Real driver data
-      const { data: drivers } = await supabase
+      const { data: drivers, error: driverError } = await supabase
         .from('user_profiles')
-        .select('id, created_at')
-        .eq('role', 'driver');
+        .select('id, name')
+        .eq('role', 'DRIVER');
       
       // Real maintenance data
       const { data: maintenanceRequests } = await supabase

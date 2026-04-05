@@ -57,11 +57,17 @@ export function StatCards() {
           return sum + Number(tripRevenue);
         }, 0) || 0;
         
-        // Get real driver count
-        const { data: drivers } = await supabase
+        // Get real driver count - use uppercase DRIVER to match role values
+        const { data: drivers, error: driverError } = await supabase
           .from('user_profiles')
-          .select('id')
-          .eq('role', 'driver');
+          .select('id, role')
+          .eq('role', 'DRIVER');
+        
+        if (driverError) {
+          console.error('[StatCards] Driver query error:', driverError);
+        } else {
+          console.log('[StatCards] Found', drivers?.length || 0, 'drivers');
+        }
         
         // Get real parts inventory
         const { data: parts } = await supabase
