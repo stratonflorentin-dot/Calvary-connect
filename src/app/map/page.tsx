@@ -48,6 +48,7 @@ export default function LiveMapPage() {
         console.log('[LiveMap] Loading driver locations...');
         
         // Load driver locations joined with user_profiles to get driver names
+        // Use left join so drivers show even without profile entries
         const { data: locationsData, error } = await supabase
           .from('driver_locations')
           .select(`
@@ -59,7 +60,7 @@ export default function LiveMapPage() {
             speed,
             is_online,
             last_updated,
-            user_profiles!inner (
+            user_profiles (
               name
             )
           `)
@@ -69,26 +70,31 @@ export default function LiveMapPage() {
           console.error('[LiveMap] Database error:', error);
           setLocations([]);
         } else {
+          console.log('[LiveMap] Raw locations data:', locationsData);
           console.log('[LiveMap] Loaded', locationsData?.length || 0, 'locations');
           
           // Transform to expected format with driver names from joined table
-          const transformedLocations = locationsData?.map(loc => ({
-            id: loc.id || loc.driver_id,
-            driverName: (loc.user_profiles as any)?.name || 'Unknown Driver',
-            driverRole: 'DRIVER',
-            vehicleId: loc.driver_id,
-            vehiclePlate: 'N/A',
-            vehicleMake: 'Unknown',
-            vehicleModel: 'Unknown',
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-            heading: loc.heading || 0,
-            speed: loc.speed || 0,
-            status: loc.is_online ? 'active' : 'inactive',
-            isOnline: loc.is_online || false,
-            alertStatus: 'none',
-            lastUpdate: loc.last_updated
-          })) || [];
+          const transformedLocations = locationsData?.map(loc => {
+            const profileName = (loc.user_profiles as any)?.name;
+            console.log(`[LiveMap] Driver ${loc.driver_id}: profile name =`, profileName);
+            return {
+              id: loc.id || loc.driver_id,
+              driverName: profileName || `Driver ${loc.driver_id?.slice(0, 8)}`,
+              driverRole: 'DRIVER',
+              vehicleId: loc.driver_id,
+              vehiclePlate: 'N/A',
+              vehicleMake: 'Unknown',
+              vehicleModel: 'Unknown',
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              heading: loc.heading || 0,
+              speed: loc.speed || 0,
+              status: loc.is_online ? 'active' : 'inactive',
+              isOnline: loc.is_online || false,
+              alertStatus: 'none',
+              lastUpdate: loc.last_updated
+            };
+          }) || [];
           
           console.log('[LiveMap] Transformed locations:', transformedLocations);
           setLocations(transformedLocations);

@@ -24,9 +24,11 @@ export function CeoView() {
   const [loading, setLoading] = useState(true);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [showVehicleDialog, setShowVehicleDialog] = useState(false);
   const [showTripDialog, setShowTripDialog] = useState(false);
   const [showReportsDialog, setShowReportsDialog] = useState(false);
+  const [showDriverDialog, setShowDriverDialog] = useState(false);
   
   // Vehicle form state
   const [vehicleForm, setVehicleForm] = useState({
@@ -70,11 +72,12 @@ export function CeoView() {
         
         const { data: vehiclesData } = await supabase.from('vehicles').select('*');
         const { data: tripsData } = await supabase.from('trips').select('*');
-        const { data: driversData } = await supabase.from('profiles').select('id, name, role').eq('role', 'DRIVER');
+        const { data: driversData } = await supabase.from('user_profiles').select('*').eq('role', 'DRIVER');
         
         // Use only real data from database - no mock data
         setVehicles(vehiclesData || []);
         setTrips(tripsData || []);
+        setDrivers(driversData || []);
         
         // Set driver options from real data
         if (driversData) {
@@ -243,6 +246,10 @@ export function CeoView() {
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                   <span className="text-sm font-medium">{vehicles.length} Vehicles Ready</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                  <span className="text-sm font-medium">{drivers.length} Drivers</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-purple-500"></div>
@@ -502,6 +509,30 @@ export function CeoView() {
                     <DialogTitle>Fleet Reports</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Drivers ({drivers.length})</h3>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {drivers.map((driver) => (
+                          <div key={driver.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex-1">
+                              <p className="font-medium">{driver.name || 'Unknown'}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {driver.email} • {driver.phone || 'No phone'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                ID: {driver.id?.slice(0, 8)}... • Status: {driver.status || 'active'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={driver.is_online ? 'default' : 'secondary'}>
+                                {driver.is_online ? 'Online' : 'Offline'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <div>
                       <h3 className="text-lg font-semibold mb-4">Vehicles ({vehicles.length})</h3>
                       <div className="space-y-2 max-h-48 overflow-y-auto">

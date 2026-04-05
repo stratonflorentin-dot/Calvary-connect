@@ -27,8 +27,10 @@ export function SilentLocationTracker() {
     if (now - lastUpdateRef.current < 10000) return;
     lastUpdateRef.current = now;
 
+    console.log('[SilentLocationTracker] Saving location for', user.id, ':', pos.latitude, pos.longitude);
+
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('driver_locations')
         .upsert({
           driver_id: user.id,
@@ -41,14 +43,15 @@ export function SilentLocationTracker() {
           last_updated: new Date().toISOString(),
         }, {
           onConflict: 'driver_id'
-        });
+        })
+        .select();
 
       if (error) {
         console.error('[SilentLocationTracker] Supabase error:', error);
         setDebug(`DB Error: ${error.message}`);
       } else {
-        console.log('[SilentLocationTracker] Location saved for', user.id);
-        setDebug(`Saved: ${pos.latitude.toFixed(4)}, ${pos.longitude.toFixed(4)}`);
+        console.log('[SilentLocationTracker] Location saved successfully:', data);
+        setDebug(`Saved: ${pos.latitude.toFixed(4)}, ${pos.longitude.toFixed(4)} at ${new Date().toLocaleTimeString()}`);
       }
     } catch (err: any) {
       console.error('[SilentLocationTracker] Save error:', err);
@@ -56,8 +59,23 @@ export function SilentLocationTracker() {
     }
   }, [user]);
 
-  // Mark driver offline when leaving
+  // Mark driver online when component mounts
   useEffect(() => {
+    if (!user?.id) return;
+    
+    // Mark as online immediately
+    supabase
+      .from('driver_locations')
+      .upsert({
+        driver_id: user.id,
+        is_online: true,
+        last_updated: new Date().toISOString(),
+      }, { onConflict: 'driver_id' })
+      .then(({ error }) => {
+        if (error) console.error('[SilentLocationTracker] Failed to mark online:', error);
+        else console.log('[SilentLocationTracker] Marked online on mount');
+      });
+
     return () => {
       if (user?.id) {
         supabase
