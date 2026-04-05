@@ -38,6 +38,8 @@ export default function LiveMapPage() {
   const [locations, setLocations] = useState<DriverLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingSample, setIsCreatingSample] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>('Loading...');
+  const [showDebug, setShowDebug] = useState(true);
 
   useEffect(() => {
     const loadLocations = async () => {
@@ -68,10 +70,12 @@ export default function LiveMapPage() {
           
         if (error) {
           console.error('[LiveMap] Database error:', error);
+          setDebugInfo(`Error: ${error.message}`);
           setLocations([]);
         } else {
           console.log('[LiveMap] Raw locations data:', locationsData);
           console.log('[LiveMap] Loaded', locationsData?.length || 0, 'locations');
+          setDebugInfo(`Loaded ${locationsData?.length || 0} drivers from DB`);
           
           // Transform to expected format with driver names from joined table
           const transformedLocations = locationsData?.map(loc => {
@@ -96,11 +100,13 @@ export default function LiveMapPage() {
             };
           }) || [];
           
+          setDebugInfo(`Showing ${transformedLocations.length} drivers on map`);
           console.log('[LiveMap] Transformed locations:', transformedLocations);
           setLocations(transformedLocations);
         }
       } catch (error) {
         console.error('[LiveMap] Error loading locations:', error);
+        setDebugInfo(`Exception: ${error}`);
         setLocations([]);
       } finally {
         setIsLoading(false);
@@ -116,6 +122,7 @@ export default function LiveMapPage() {
         { event: '*', schema: 'public', table: 'driver_locations' },
         (payload) => {
           console.log('[LiveMap] Real-time update:', payload);
+          setDebugInfo(`Real-time update received`);
           loadLocations();
         }
       )
@@ -153,11 +160,32 @@ export default function LiveMapPage() {
             <Badge className="bg-primary text-white whitespace-nowrap gap-2 py-1.5 md:py-2 px-3 md:px-4 shadow-lg h-fit border-none">
               <Truck className="size-3 md:size-4" /> {locations?.length || 0} Assets
             </Badge>
+            <button 
+              onClick={() => setShowDebug(!showDebug)}
+              className="bg-amber-500 text-white whitespace-nowrap gap-2 py-1.5 md:py-2 px-3 md:px-4 shadow-lg h-fit border-none rounded-full text-xs md:text-sm hover:bg-amber-600 transition-colors"
+            >
+              {showDebug ? 'Hide Debug' : 'Show Debug'}
+            </button>
           </div>
         </div>
 
         {/* Google Map Container */}
         <div className="flex-1 relative w-full h-full">
+          {/* Debug Panel */}
+          {showDebug && (
+            <div className="absolute top-4 right-4 z-20 bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-xl border pointer-events-auto max-w-xs">
+              <p className="text-xs font-bold mb-1">Debug Info</p>
+              <p className="text-xs text-muted-foreground">{debugInfo}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Drivers in DB: {locations.length} | Online: {locations.filter(l => l.isOnline).length}
+              </p>
+              {locations.length === 0 && (
+                <p className="text-xs text-amber-600 mt-2">
+                  No drivers found. Driver must grant location permission first.
+                </p>
+              )}
+            </div>
+          )}
           <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
             <Map
               defaultCenter={defaultCenter}
