@@ -77,27 +77,30 @@ export default function LiveMapPage() {
           // Create lookup map for profiles
           const profileMap = new Map(profilesData?.map(p => [p.id, p.name]) || []);
           
-          const transformedLocations = locationsData?.map(loc => {
-            const profileName = profileMap.get(loc.driver_id);
-            console.log(`[LiveMap] Driver ${loc.driver_id}: profile name =`, profileName);
-            return {
-              id: loc.id || loc.driver_id,
-              driverName: profileName || `Driver ${loc.driver_id?.slice(0, 8)}`,
-              driverRole: 'DRIVER',
-              vehicleId: loc.driver_id,
-              vehiclePlate: 'N/A',
-              vehicleMake: 'Unknown',
-              vehicleModel: 'Unknown',
-              latitude: Number(loc.latitude),
-              longitude: Number(loc.longitude),
-              heading: loc.heading || 0,
-              speed: loc.speed || 0,
-              status: loc.is_online ? 'active' : 'inactive',
-              isOnline: loc.is_online || false,
-              alertStatus: 'none',
-              lastUpdate: loc.last_updated
-            };
-          }) || [];
+          // Only show locations for drivers that exist in user_profiles
+          const transformedLocations = locationsData
+            ?.filter(loc => profileMap.has(loc.driver_id)) // Filter out deleted drivers
+            ?.map(loc => {
+              const profileName = profileMap.get(loc.driver_id);
+              console.log(`[LiveMap] Driver ${loc.driver_id}: profile name =`, profileName);
+              return {
+                id: loc.id || loc.driver_id,
+                driverName: profileName || `Driver ${loc.driver_id?.slice(0, 8)}`,
+                driverRole: 'DRIVER',
+                vehicleId: loc.driver_id,
+                vehiclePlate: 'N/A',
+                vehicleMake: 'Unknown',
+                vehicleModel: 'Unknown',
+                latitude: Number(loc.latitude),
+                longitude: Number(loc.longitude),
+                heading: loc.heading || 0,
+                speed: loc.speed || 0,
+                status: loc.is_online ? 'active' : 'inactive',
+                isOnline: loc.is_online || false,
+                alertStatus: 'none',
+                lastUpdate: loc.last_updated
+              };
+            }) || [];
           
           setDebugInfo(`Showing ${transformedLocations.length} drivers on map`);
           console.log('[LiveMap] Transformed locations:', transformedLocations);
