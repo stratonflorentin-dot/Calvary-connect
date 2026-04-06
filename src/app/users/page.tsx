@@ -43,7 +43,7 @@ export default function UsersPage() {
         const { data: usersData } = await supabase
           .from('user_profiles')
           .select('*')
-          .is('is_deleted', false)  // Only show non-deleted users
+          .or('is_deleted.is.null,is_deleted.eq.false')  // Show non-deleted (null or false)
           .order('created_at', { ascending: false });
         
         setUsers(usersData || []);
