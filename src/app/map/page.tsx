@@ -179,7 +179,7 @@ export default function LiveMapPage() {
         </div>
 
         {/* Leaflet Map Container */}
-        <div className="flex-1 relative w-full h-full z-0">
+        <div className="flex-1 relative w-full h-full z-0 min-h-[calc(100vh-80px)]">
           <LeafletMap locations={leafletLocations} defaultCenter={defaultCenter} />
 
           {/* Debug Panel */}
