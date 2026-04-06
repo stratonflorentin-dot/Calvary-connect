@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
@@ -8,9 +8,14 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Truck, Navigation, Search, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for Leaflet map (no SSR)
+const LeafletMap = dynamic(
+  () => import('@/components/leaflet-map').then(mod => mod.LeafletMap),
+  { ssr: false, loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading map...</div> }
+);
 
 interface DriverLocation {
   id: string;
@@ -33,7 +38,6 @@ interface DriverLocation {
 export default function LiveMapPage() {
   const { role, isAdmin } = useRole();
   const { user } = useSupabase();
-  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [locations, setLocations] = useState<DriverLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugInfo, setDebugInfo] = useState<string>('Loading...');
@@ -84,7 +88,6 @@ export default function LiveMapPage() {
               vehiclePlate: 'N/A',
               vehicleMake: 'Unknown',
               vehicleModel: 'Unknown',
-              // ✅ FIX: Cast to Number to ensure lat/lng are never strings
               latitude: Number(loc.latitude),
               longitude: Number(loc.longitude),
               heading: loc.heading || 0,
@@ -130,15 +133,26 @@ export default function LiveMapPage() {
 
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
 
-  // ✅ FIX: Changed from Ghana to Arusha, Tanzania
-  const defaultCenter = { lat: -3.3869, lng: 36.6830 };
+  const defaultCenter: [number, number] = [-3.3869, 36.6830];
+
+  const leafletLocations = locations.map(loc => ({
+    id: loc.id,
+    driverName: loc.driverName,
+    latitude: loc.latitude,
+    longitude: loc.longitude,
+    speed: loc.speed,
+    status: loc.status,
+    isOnline: loc.isOnline,
+    vehiclePlate: loc.vehiclePlate,
+    lastUpdate: loc.lastUpdate
+  }));
 
   return (
     <div className="flex h-screen bg-background overflow-hidden touch-none">
       <Sidebar role={role!} />
       <main className="flex-1 md:ml-60 flex flex-col relative h-full">
         {/* Map Header Overlay */}
-        <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row gap-2 pointer-events-none">
+        <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col md:flex-row gap-2 pointer-events-none">
           <div className="bg-white/95 backdrop-blur-md p-3 md:p-4 rounded-2xl shadow-xl border flex-1 md:max-w-sm pointer-events-auto">
             <h2 className="text-base md:text-lg font-headline tracking-tighter mb-1 md:mb-2">Fleet Command Center</h2>
             <div className="relative">
@@ -164,121 +178,44 @@ export default function LiveMapPage() {
           </div>
         </div>
 
-        {/* Google Map Container */}
-        <div className="flex-1 relative w-full h-full">
+        {/* Leaflet Map Container */}
+        <div className="flex-1 relative w-full h-full z-0">
+          <LeafletMap locations={leafletLocations} defaultCenter={defaultCenter} />
+
           {/* Debug Panel */}
           {showDebug && (
-            <div className="absolute top-4 right-4 z-20 bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-xl border pointer-events-auto max-w-xs">
+            <div className="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-xl border pointer-events-auto max-w-xs">
               <p className="text-xs font-bold mb-1">Debug Info</p>
               <p className="text-xs text-muted-foreground">{debugInfo}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Drivers in DB: {locations.length} | Online: {locations.filter(l => l.isOnline).length}
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Drivers: {locations.length} | Online: {locations.filter(l => l.isOnline).length}</p>
               {locations.length === 0 && (
-                <p className="text-xs text-amber-600 mt-2">
-                  No drivers found. Driver must grant location permission first.
-                </p>
+                <p className="text-xs text-amber-600 mt-2">No drivers. Driver must grant location permission.</p>
               )}
+              <button 
+                onClick={async () => {
+                  const { data, error } = await supabase.from('driver_locations').select('*');
+                  console.log('DB check:', { data, error });
+                  setDebugInfo(`DB: ${data?.length || 0} records. ${error?.message || 'OK'}`);
+                }}
+                className="mt-2 w-full py-1 px-2 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+              >Check DB</button>
             </div>
           )}
 
-          {/* ✅ FIX: Updated mapId to match your Google Cloud Console Map ID */}
-          <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}>
-            <Map
-              defaultCenter={defaultCenter}
-              defaultZoom={12}
-              gestureHandling={'greedy'}
-              disableDefaultUI={true}
-              mapId={'37adbb2b5d29be3388ca0e2d'}
-              className="w-full h-full"
-            >
-              {locations?.map((loc) => (
-                <AdvancedMarker
-                  key={loc.id}
-                  position={{ lat: loc.latitude, lng: loc.longitude }}
-                  onClick={() => setSelectedDriverId(loc.id)}
-                >
-                  <div className="relative">
-                    {loc.alertStatus === 'breakdown' && (
-                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-rose-500 text-white p-1.5 rounded-full shadow-lg animate-bounce z-20">
-                        <AlertTriangle className="size-5" />
-                      </div>
-                    )}
-                    <div className={cn(
-                      "size-10 md:size-12 rounded-full border-2 bg-white shadow-2xl flex items-center justify-center transition-all hover:scale-125 cursor-pointer",
-                      loc.isOnline ? "border-emerald-500" : "border-muted-foreground grayscale"
-                    )}>
-                      <Navigation 
-                        className={cn("size-5 md:size-6", loc.isOnline ? "text-emerald-600" : "text-muted-foreground")} 
-                        style={{ transform: `rotate(${loc.heading || 0}deg)` }} 
-                      />
-                    </div>
-                  </div>
-                </AdvancedMarker>
-              ))}
-
-              {selectedDriverId && locations?.find(l => l.id === selectedDriverId) && (
-                <InfoWindow
-                  position={{ 
-                    lat: locations.find(l => l.id === selectedDriverId)!.latitude, 
-                    lng: locations.find(l => l.id === selectedDriverId)!.longitude 
-                  }}
-                  onCloseClick={() => setSelectedDriverId(null)}
-                >
-                  <div className="p-1 min-w-[140px]">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-0.5">Asset Status</p>
-                    <p className="text-xs font-headline text-primary mb-1">{locations.find(l => l.id === selectedDriverId)?.vehiclePlate || 'Unknown'}</p>
-                    <p className="text-[9px] text-muted-foreground mb-1">{locations.find(l => l.id === selectedDriverId)?.driverName || 'Unknown Driver'}</p>
-                    <div className="flex items-center justify-between gap-4">
-                      <p className="text-xs text-emerald-600 font-bold">
-                        {locations.find(l => l.id === selectedDriverId)?.speed || 0} KM/H
-                      </p>
-                      <Badge className={cn(
-                        "text-[9px] h-4 px-1 border-none",
-                        locations.find(l => l.id === selectedDriverId)?.isOnline 
-                          ? "bg-emerald-100 text-emerald-700" 
-                          : "bg-gray-100 text-gray-700"
-                      )}>
-                        {locations.find(l => l.id === selectedDriverId)?.isOnline ? "Online" : "Offline"}
-                      </Badge>
-                    </div>
-                    <p className="text-[9px] text-muted-foreground mt-2 border-t pt-1">
-                      Status: {locations.find(l => l.id === selectedDriverId)?.status || 'Unknown'}
-                    </p>
-                    <p className="text-[9px] text-muted-foreground">
-                      Last Update: {locations.find(l => l.id === selectedDriverId)?.lastUpdate 
-                        ? new Date(locations.find(l => l.id === selectedDriverId)!.lastUpdate).toLocaleTimeString()
-                        : 'Unknown'
-                      }
-                    </p>
-                  </div>
-                </InfoWindow>
-              )}
-            </Map>
-          </APIProvider>
-
           {/* Map Controls */}
-          <div className="absolute bottom-24 md:bottom-10 right-4 md:right-6 flex flex-col gap-2 pointer-events-auto">
-            <button className="size-10 md:size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted active:scale-90 transition-transform">
-              <Plus className="size-5" />
-            </button>
-            <button className="size-10 md:size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted active:scale-90 transition-transform">
-              <Minus className="size-5" />
-            </button>
-            <button className="size-10 md:size-12 rounded-xl bg-primary shadow-xl flex items-center justify-center text-white active:scale-95 transition-transform">
-              <MapPin className="size-5" />
-            </button>
+          <div className="absolute bottom-24 md:bottom-10 right-4 md:right-6 flex flex-col gap-2 pointer-events-auto z-[1000]">
+            <button className="size-10 md:size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted active:scale-90 transition-transform"><Plus className="size-5" /></button>
+            <button className="size-10 md:size-12 rounded-xl bg-white shadow-xl border flex items-center justify-center hover:bg-muted active:scale-90 transition-transform"><Minus className="size-5" /></button>
+            <button className="size-10 md:size-12 rounded-xl bg-primary shadow-xl flex items-center justify-center text-white active:scale-95 transition-transform"><MapPin className="size-5" /></button>
           </div>
         </div>
 
         {/* Active Alerts Panel */}
-        <div className="absolute bottom-28 md:bottom-10 left-4 right-4 md:right-auto md:w-80 space-y-2 pointer-events-none">
+        <div className="absolute bottom-28 md:bottom-10 left-4 right-4 md:right-auto md:w-80 space-y-2 pointer-events-none z-[1000]">
           {locations?.filter(l => l.alertStatus && l.alertStatus !== 'none').map(l => (
             <Card key={l.id} className="p-3 border-l-4 border-l-rose-500 shadow-2xl bg-white/95 backdrop-blur-md animate-in slide-in-from-left pointer-events-auto">
               <div className="flex items-center gap-3">
-                <div className="size-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
-                  <AlertTriangle className="size-4" />
-                </div>
+                <div className="size-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600"><AlertTriangle className="size-4" /></div>
                 <div>
                   <p className="text-xs font-bold">{l.alertStatus?.toUpperCase().replace('_', ' ') || 'ALERT'}</p>
                   <p className="text-[10px] text-muted-foreground">{l.vehiclePlate || 'Unknown'} • {l.driverName || 'Unknown Driver'}</p>
