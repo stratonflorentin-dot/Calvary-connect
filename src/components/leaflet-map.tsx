@@ -6,6 +6,9 @@ import L from 'leaflet';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// Leaflet CSS - REQUIRED for tiles to display correctly
+import 'leaflet/dist/leaflet.css';
+
 // Fix default marker icons
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
