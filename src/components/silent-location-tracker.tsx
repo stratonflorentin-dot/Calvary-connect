@@ -39,7 +39,7 @@ export function SilentLocationTracker() {
           accuracy: pos.accuracy,
           speed: pos.speed,
           heading: pos.heading,
-          is_online: true,
+          is_active: true,
           last_updated: new Date().toISOString(),
         }, {
           onConflict: 'driver_id'
@@ -68,7 +68,7 @@ export function SilentLocationTracker() {
       .from('driver_locations')
       .upsert({
         driver_id: user.id,
-        is_online: true,
+        is_active: true,
         last_updated: new Date().toISOString(),
       }, { onConflict: 'driver_id' })
       .then(({ error }) => {
@@ -80,7 +80,7 @@ export function SilentLocationTracker() {
       if (user?.id) {
         supabase
           .from('driver_locations')
-          .update({ is_online: false })
+          .update({ is_active: false })
           .eq('driver_id', user.id)
           .then(() => console.log('[SilentLocationTracker] Marked offline'));
       }

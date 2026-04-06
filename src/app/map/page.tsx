@@ -96,8 +96,8 @@ export default function LiveMapPage() {
                 longitude: Number(loc.longitude),
                 heading: loc.heading || 0,
                 speed: loc.speed || 0,
-                status: loc.is_online ? 'active' : 'inactive',
-                isOnline: loc.is_online || false,
+                status: loc.is_active ? 'active' : 'inactive',
+                isOnline: loc.is_active || false,
                 alertStatus: 'none',
                 lastUpdate: loc.last_updated
               };
