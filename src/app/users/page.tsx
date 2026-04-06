@@ -39,10 +39,11 @@ export default function UsersPage() {
       
       try {
         setIsLoading(true);
-        // Load real data from Supabase
+        // Load real data from Supabase - exclude deleted users
         const { data: usersData } = await supabase
           .from('user_profiles')
           .select('*')
+          .is('is_deleted', false)  // Only show non-deleted users
           .order('created_at', { ascending: false });
         
         setUsers(usersData || []);
@@ -185,24 +186,26 @@ export default function UsersPage() {
       return;
     }
     
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this user? They will be marked as deleted but remain in the database.')) return;
     
     try {
+      // Soft delete - mark as deleted instead of removing
       const { error } = await supabase
         .from('user_profiles')
-        .delete()
+        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
         .eq('id', userId);
         
       if (error) throw error;
       
-      // Refresh users list
+      // Refresh users list - exclude deleted after soft delete
       const { data: updatedUsers } = await supabase
         .from('user_profiles')
         .select('*')
+        .is('is_deleted', false)
         .order('created_at', { ascending: false });
       
       setUsers(updatedUsers || []);
-      console.log('User deleted successfully');
+      console.log('User soft-deleted successfully');
     } catch (error: any) {
       console.error('Error deleting user:', error);
       alert('Failed to delete user: ' + error.message);
