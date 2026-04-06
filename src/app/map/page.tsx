@@ -51,22 +51,18 @@ export default function LiveMapPage() {
         setIsLoading(true);
         console.log('[LiveMap] Loading driver locations...');
         
-        const { data: locationsData, error } = await supabase
-          .from('driver_locations')
-          .select(`
-            id,
-            driver_id,
-            latitude,
-            longitude,
-            heading,
-            speed,
-            is_online,
-            last_updated,
-            user_profiles (
-              name
-            )
-          `)
-          .order('last_updated', { ascending: false });
+        // Fetch locations and profiles separately (no foreign key relationship in DB)
+        const [{ data: locationsData, error: locError }, { data: profilesData }] = await Promise.all([
+          supabase
+            .from('driver_locations')
+            .select('*')
+            .order('last_updated', { ascending: false }),
+          supabase
+            .from('user_profiles')
+            .select('id, name')
+        ]);
+        
+        const error = locError;
           
         if (error) {
           console.error('[LiveMap] Database error:', error);
@@ -74,11 +70,15 @@ export default function LiveMapPage() {
           setLocations([]);
         } else {
           console.log('[LiveMap] Raw locations data:', locationsData);
+          console.log('[LiveMap] Profiles data:', profilesData);
           console.log('[LiveMap] Loaded', locationsData?.length || 0, 'locations');
           setDebugInfo(`Loaded ${locationsData?.length || 0} drivers from DB`);
           
+          // Create lookup map for profiles
+          const profileMap = new Map(profilesData?.map(p => [p.id, p.name]) || []);
+          
           const transformedLocations = locationsData?.map(loc => {
-            const profileName = (loc.user_profiles as any)?.name;
+            const profileName = profileMap.get(loc.driver_id);
             console.log(`[LiveMap] Driver ${loc.driver_id}: profile name =`, profileName);
             return {
               id: loc.id || loc.driver_id,
