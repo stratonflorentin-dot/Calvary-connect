@@ -78,13 +78,14 @@ export function LeafletMap({ locations, defaultCenter }: LeafletMapProps) {
   }
 
   return (
-    <MapContainer
-      center={defaultCenter}
-      zoom={12}
-      scrollWheelZoom={true}
-      style={{ height: '100%', width: '100%', minHeight: '100%' }}
-      className="z-0"
-    >
+    <div className="w-full h-full absolute inset-0">
+      <MapContainer
+        center={defaultCenter}
+        zoom={12}
+        scrollWheelZoom={true}
+        style={{ height: '100%', width: '100%' }}
+        className="z-0"
+      >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -114,6 +115,7 @@ export function LeafletMap({ locations, defaultCenter }: LeafletMapProps) {
           </Popup>
         </Marker>
       ))}
-    </MapContainer>
+      </MapContainer>
+    </div>
   );
 }
