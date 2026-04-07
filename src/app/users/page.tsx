@@ -32,21 +32,23 @@ export default function UsersPage() {
 
   useEffect(() => {
     const loadUsers = async () => {
-      // Admin user (owner) should always have access
       const isAdminUser = isAdmin;
-      
       if (!user && !isAdminUser) return;
       
       try {
         setIsLoading(true);
-        // Load real data from Supabase - exclude deleted users
-        const { data: usersData } = await supabase
+        // Fetch all users - soft delete filter removed temporarily
+        const { data: usersData, error } = await supabase
           .from('user_profiles')
           .select('*')
-          .or('is_deleted.is.null,is_deleted.eq.false')  // Show non-deleted (null or false)
           .order('created_at', { ascending: false });
         
-        setUsers(usersData || []);
+        if (error) {
+          console.error('Error loading users:', error);
+        } else {
+          console.log('Loaded users:', usersData?.length || 0);
+          setUsers(usersData || []);
+        }
       } catch (error) {
         console.error('Error loading users:', error);
       } finally {
@@ -186,26 +188,25 @@ export default function UsersPage() {
       return;
     }
     
-    if (!confirm('Are you sure you want to delete this user? They will be marked as deleted but remain in the database.')) return;
+    if (!confirm('Are you sure you want to delete this user?')) return;
     
     try {
-      // Soft delete - mark as deleted instead of removing
+      // Hard delete - remove user completely
       const { error } = await supabase
         .from('user_profiles')
-        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+        .delete()
         .eq('id', userId);
         
       if (error) throw error;
       
-      // Refresh users list - exclude deleted after soft delete
+      // Refresh users list
       const { data: updatedUsers } = await supabase
         .from('user_profiles')
         .select('*')
-        .is('is_deleted', false)
         .order('created_at', { ascending: false });
       
       setUsers(updatedUsers || []);
-      console.log('User soft-deleted successfully');
+      console.log('User deleted successfully');
     } catch (error: any) {
       console.error('Error deleting user:', error);
       alert('Failed to delete user: ' + error.message);
