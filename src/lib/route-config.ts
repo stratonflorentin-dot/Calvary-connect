@@ -20,7 +20,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   { path: "/fleet", label: "Fleet", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"] },
   { path: "/trips", label: "Trips", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
   { path: "/expenses", label: "Expenses", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR", "OPERATOR"] },
-  { path: "/allowances", label: "Allowances", allowedRoles: ["CEO", "ADMIN"] },
   { path: "/monthly-report", label: "Monthly Report", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"] },
   { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
   { path: "/inventory", label: "Inventory", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"] },

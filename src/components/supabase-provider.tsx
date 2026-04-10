@@ -58,10 +58,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (savedRole && savedRole !== role) {
         console.log('[SupabaseProvider] Syncing role from localStorage:', savedRole);
         setRole(savedRole);
-        setUser(prev => prev ? { ...prev, role: savedRole } : null);
       }
     }
-  }, [user, role]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email, role]);
 
   // Check for admin auto-login on mount
   useEffect(() => {

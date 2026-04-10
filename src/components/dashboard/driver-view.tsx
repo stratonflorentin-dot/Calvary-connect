@@ -69,9 +69,18 @@ export function DriverView() {
           .eq('driver_id', user.id)
           .order('created_at', { ascending: false });
         
-        // Separate active and completed trips
-        const active = driverTrips?.filter(trip => trip.status === 'in_transit' || trip.status === 'loading') || [];
-        const completed = driverTrips?.filter(trip => trip.status === 'completed' || trip.status === 'delivered') || [];
+        // Separate active and completed trips (include PENDING status)
+        const active = driverTrips?.filter(trip => 
+          trip.status === 'PENDING' || 
+          trip.status === 'IN_PROGRESS' || 
+          trip.status === 'in_transit' || 
+          trip.status === 'loading'
+        ) || [];
+        const completed = driverTrips?.filter(trip => 
+          trip.status === 'COMPLETED' || 
+          trip.status === 'completed' || 
+          trip.status === 'delivered'
+        ) || [];
         
         setActiveTrips(active);
         setMyTrips(completed);
@@ -84,7 +93,7 @@ export function DriverView() {
               allowance.trip_id === trip.id
             );
             
-            if (!hasAllowance && (trip.status === 'in_transit' || trip.status === 'loading')) {
+            if (!hasAllowance && (trip.status === 'PENDING' || trip.status === 'IN_PROGRESS' || trip.status === 'in_transit' || trip.status === 'loading')) {
               // Calculate allowance based on trip distance/duration
               const allowanceAmount = calculateAllowance(trip);
               

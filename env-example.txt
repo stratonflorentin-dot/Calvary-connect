@@ -2,8 +2,17 @@
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
-# For development, you can get these from:
+# AI Configuration (Groq)
+GROQ_API_KEY=your-groq-api-key
+
+# For Supabase setup:
 # 1. Go to https://supabase.com
 # 2. Create a new project
 # 3. Go to Settings > API
 # 4. Copy the Project URL and Anon Key
+#
+# For Groq setup:
+# 1. Go to https://console.groq.com
+# 2. Create an account or sign in
+# 3. Go to API Keys section
+# 4. Generate a new API key

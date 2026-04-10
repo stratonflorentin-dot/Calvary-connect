@@ -60,7 +60,6 @@ export default function LiveMapPage() {
           supabase
             .from('user_profiles')
             .select('id, name')
-            .is('is_deleted', false) // Exclude deleted users
         ]);
         
         const error = locError;

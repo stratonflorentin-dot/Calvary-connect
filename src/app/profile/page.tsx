@@ -69,24 +69,38 @@ export default function ProfilePage() {
     try {
       let avatarUrl = user.avatar;
 
-      // Upload new avatar if changed
+      // Upload new avatar if changed - handle missing bucket gracefully
       if (avatarFile) {
-        const fileExt = avatarFile.name.split('.').pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError, data } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, avatarFile);
+        try {
+          const fileExt = avatarFile.name.split('.').pop();
+          const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+          const { error: uploadError, data } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, avatarFile);
 
-        if (uploadError) {
-          console.error('Avatar upload error:', uploadError);
-          throw new Error('Failed to upload avatar: ' + uploadError.message);
+          if (uploadError) {
+            if (uploadError.message?.includes('Bucket not found')) {
+              console.warn('Avatar bucket not found in Supabase. Skipping avatar upload.');
+              // Continue without avatar - don't block profile update
+            } else {
+              console.error('Avatar upload error:', uploadError);
+              throw new Error('Failed to upload avatar: ' + uploadError.message);
+            }
+          } else {
+            const { data: { publicUrl } } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(fileName);
+            
+            avatarUrl = publicUrl;
+          }
+        } catch (uploadErr: any) {
+          if (uploadErr.message?.includes('Bucket not found')) {
+            console.warn('Storage bucket not configured. Skipping avatar upload.');
+            // Continue without avatar
+          } else {
+            throw uploadErr;
+          }
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
-        
-        avatarUrl = publicUrl;
       }
 
       // Update user profile - create if not exists

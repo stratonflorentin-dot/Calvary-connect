@@ -212,8 +212,9 @@ export default function TripsPage() {
     setShowManageAccessDialog(true);
   };
 
-  // Role-based permissions
-  const canEditTrip = role === 'DRIVER' || role === 'CEO' || role === 'ADMIN' || role === 'OPERATOR';
+  // Role-based permissions - only CEO/ADMIN/OPERATOR can create/edit/manage trips
+  const canCreateTrip = role === 'CEO' || role === 'ADMIN' || role === 'OPERATOR';
+  const canEditTrip = role === 'CEO' || role === 'ADMIN' || role === 'OPERATOR';
   const canManageAccess = role === 'CEO' || role === 'ADMIN' || role === 'OPERATOR';
   const canDeleteTrip = role === 'CEO' || role === 'ADMIN' || role === 'OPERATOR';
 
@@ -243,13 +244,14 @@ export default function TripsPage() {
               <p className="text-muted-foreground">Manage and monitor all fleet trips</p>
             </div>
             
-            <Dialog open={showTripDialog} onOpenChange={setShowTripDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Trip
-                </Button>
-              </DialogTrigger>
+            {canCreateTrip && (
+              <Dialog open={showTripDialog} onOpenChange={setShowTripDialog}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Trip
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Trip</DialogTitle>
@@ -371,6 +373,7 @@ export default function TripsPage() {
                 </form>
               </DialogContent>
             </Dialog>
+            )}
 
             {/* Edit Trip Dialog */}
             <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
