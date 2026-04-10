@@ -71,10 +71,10 @@ export default function Home() {
     }
   };
 
-  // Driver view is full-screen mobile only, unless you are an admin (for testing)
+  // Driver view is full-screen mobile only
   if (role === 'DRIVER' && !isAdmin) {
     return (
-      <main className="min-h-screen bg-background pb-20 safe-area-padding">
+      <main className="min-h-screen bg-background safe-area-padding">
         {renderContent()}
         <BottomTabs role={role} />
       </main>
@@ -85,13 +85,14 @@ export default function Home() {
     <div className="min-h-screen bg-background flex">
       <Sidebar role={role} />
 
-      <main className="flex-1 md:ml-60 min-h-screen pb-24 md:pb-8 p-4 md:p-8">
-        <header className="sticky top-0 h-16 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 z-40 mb-6">
-          <div className="md:hidden font-headline tracking-tighter text-primary">Calvary Connect</div>
+      <main className="flex-1 md:ml-60 min-h-screen pb-24 md:pb-8 p-4 md:p-8 overflow-x-hidden">
+        {/* Sticky top header */}
+        <header className="sticky top-0 h-14 md:h-16 bg-white/90 backdrop-blur-md border-b flex items-center justify-between px-4 md:px-6 z-40 mb-4 md:mb-6 -mx-4 md:-mx-8">
+          <div className="md:hidden font-headline tracking-tighter text-primary text-lg font-bold">Calvary Connect</div>
           <div className="hidden md:block" />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <CurrencyDisplay />
-            <Button variant="ghost" size="sm" onClick={toggleLanguage} className="rounded-full gap-2 border text-primary">
+            <Button variant="ghost" size="sm" onClick={toggleLanguage} className="rounded-full gap-2 border text-primary h-9 px-3">
               <Languages className="size-4" />
               <span className="font-bold text-xs">{lang === 'en' ? 'SW' : 'EN'}</span>
             </Button>
@@ -103,8 +104,8 @@ export default function Home() {
           {renderContent()}
         </div>
 
-        {/* Only show BottomTabs for non-admin on mobile */}
-        {!isAdmin && <BottomTabs role={role} />}
+        {/* Always show BottomTabs on mobile for all roles */}
+        <BottomTabs role={role} />
       </main>
     </div>
   );

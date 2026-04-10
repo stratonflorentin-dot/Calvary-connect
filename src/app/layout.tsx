@@ -9,19 +9,19 @@ import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: 'cover',
-  themeColor: '#1e40af',
+  themeColor: '#2952A3',
 }
 
 export const metadata: Metadata = {
-  title: 'FleetCommand | Fleet Management System',
-  description: 'Professional fleet management platform for logistics operations, driver management, and vehicle tracking. Available on iOS, Android, Mac, Windows, and Web.',
-  keywords: ['fleet management', 'logistics', 'driver management', 'vehicle tracking', 'fleet operations'],
-  authors: [{ name: 'FleetCommand' }],
-  creator: 'FleetCommand',
-  publisher: 'FleetCommand',
+  title: 'Calvary Connect | Fleet Management',
+  description: 'Professional fleet management platform for Calvary Connect — manage logistics, drivers, vehicles, and operations on iOS, Android, or Web.',
+  keywords: ['fleet management', 'logistics', 'driver management', 'vehicle tracking', 'Calvary Connect'],
+  authors: [{ name: 'Calvary Connect' }],
+  creator: 'Calvary Connect',
+  publisher: 'Calvary Connect',
   icons: {
     icon: '/favicon.svg',
     apple: '/apple-touch-icon.png',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
       {
         rel: 'mask-icon',
         url: '/favicon.svg',
-        color: '#1e40af',
+        color: '#2952A3',
       },
     ],
   },
@@ -37,21 +37,21 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'FleetCommand',
+    title: 'Calvary Connect',
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: 'website',
-    siteName: 'FleetCommand',
-    title: 'FleetCommand | Fleet Management System',
-    description: 'Professional fleet management platform for logistics operations',
+    siteName: 'Calvary Connect',
+    title: 'Calvary Connect | Fleet Management',
+    description: 'Professional fleet management platform for Calvary Connect',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FleetCommand | Fleet Management System',
-    description: 'Professional fleet management platform for logistics operations',
+    title: 'Calvary Connect | Fleet Management',
+    description: 'Professional fleet management platform for Calvary Connect',
   },
 };
 

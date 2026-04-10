@@ -65,6 +65,7 @@
   body {
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
   }
   
   /* Prevent double-tap zoom */
@@ -75,6 +76,19 @@
   /* Better button touch targets */
   button, a, input, textarea, select {
     min-height: 44px;
+  }
+}
+
+/* Utility: push content above the mobile bottom tab bar (60px) + device safe area */
+.safe-area-padding,
+.mobile-content {
+  padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Standalone PWA — extra top safe area for status bar on notched devices */
+@media all and (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 }
 

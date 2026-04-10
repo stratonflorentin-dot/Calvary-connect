@@ -1,11 +1,11 @@
 {
-  "name": "FleetCommand - Fleet Management System",
-  "short_name": "FleetCommand",
-  "description": "Professional fleet management platform for logistics operations, driver management, and vehicle tracking.",
+  "name": "Calvary Connect",
+  "short_name": "Calvary",
+  "description": "Professional fleet management platform for Calvary Connect — manage logistics, drivers, vehicles, and operations.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e40af",
-  "theme_color": "#1e40af",
+  "background_color": "#2952A3",
+  "theme_color": "#2952A3",
   "orientation": "any",
   "id": "/",
   "scope": "/",
@@ -17,7 +17,7 @@
       "src": "/favicon.png",
       "sizes": "32x32",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-72.png",
@@ -68,26 +68,10 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshot-desktop.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "FleetCommand Desktop Dashboard"
-    },
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "375x667",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "FleetCommand Mobile App"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Dashboard",
-      "short_name": "Dashboard",
+      "short_name": "Home",
       "description": "View fleet dashboard",
       "url": "/",
       "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
