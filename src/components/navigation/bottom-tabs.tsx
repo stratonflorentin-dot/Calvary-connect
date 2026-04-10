@@ -1,83 +1,68 @@
 
 "use client";
 
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Home, Truck, DollarSign, MapPin, User, Users, Route, Package, Wrench, History, Calculator, LayoutDashboard, BarChart2
+import {
+  LayoutDashboard, Truck, Route, DollarSign, BarChart2, Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History, Home, Shield, Camera, User as UserIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
 import { useLanguage } from '@/hooks/use-language';
+import { getMenuByRole } from '@/lib/route-config';
+import { useSupabase } from '@/components/supabase-provider';
+
+// Map route paths to icons
+const routeIconMap: Record<string, any> = {
+  '/': LayoutDashboard,
+  '/fleet': Truck,
+  '/trips': Route,
+  '/finance': DollarSign,
+  '/expenses': DollarSign,
+  '/income': Calculator,
+  '/fuel-approvals': Truck,
+  '/allowances': Users,
+  '/reports': BarChart2,
+  '/monthly-report': BarChart2,
+  '/users': Users,
+  '/inventory': Package,
+  '/parts-requests': Wrench,
+  '/spare-parts': Package,
+  '/service-requests': Wrench,
+  '/truck-history': History,
+  '/map': MapPin,
+  '/proof': Home,
+  '/report': History,
+  '/ai-insights': Sparkles,
+  '/audit': Shield,
+  '/notifications': Bell,
+  '/profile': UserIcon,
+};
 
 export function BottomTabs({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { user } = useSupabase();
 
-  const ROLE_TABS: Record<UserRole, any[]> = {
-    CEO: [
-      { label: t.home, icon: Home, href: '/' },
-      { label: t.fleet, icon: Truck, href: '/fleet' },
-      { label: t.finance, icon: DollarSign, href: '/finance' },
-      { label: t.map, icon: MapPin, href: '/map' },
-      { label: t.profile, icon: User, href: '/profile' },
-    ],
-    ADMIN: [
-      { label: t.home, icon: Home, href: '/' },
-      { label: t.trips, icon: Route, href: '/trips' },
-      { label: t.fleet, icon: Truck, href: '/fleet' },
-      { label: t.expenses, icon: DollarSign, href: '/expenses' },
-      { label: t.profile, icon: User, href: '/profile' },
-    ],
-    OPERATOR: [
-      { label: t.home, icon: LayoutDashboard, href: '/' },
-      { label: t.trips, icon: Route, href: '/trips' },
-      { label: t.expenses, icon: DollarSign, href: '/expenses' },
-      { label: t.map, icon: MapPin, href: '/map' },
-      { label: t.profile, icon: User, href: '/profile' },
-    ],
-    DRIVER: [
-      { label: t.home, icon: LayoutDashboard, href: '/' },
-      { label: t.trips, icon: Route, href: '/trips' },
-      { label: t.proof, icon: Home, href: '/proof' },
-      { label: t.report_maintenance, icon: History, href: '/report' },
-      { label: t.profile, icon: User, href: '/profile' },
-    ],
-    MECHANIC: [
-      { label: t.home, icon: LayoutDashboard, href: '/' },
-      { label: t.service_requests, icon: Wrench, href: '/service-requests' },
-      { label: t.parts_requests, icon: Package, href: '/spare-parts' },
-      { label: t.truck_history, icon: History, href: '/truck-history' },
-      { label: t.profile, icon: User, href: '/profile' },
-    ],
-    ACCOUNTANT: [
-      { label: t.home, icon: LayoutDashboard, href: '/' },
-      { label: t.expenses, icon: DollarSign, href: '/expenses' },
-      { label: t.income, icon: Calculator, href: '/income' },
-      { label: t.fuel, icon: Truck, href: '/fuel-approvals' },
-      { label: t.profile, icon: User, href: '/profile' },
-    ],
-    HR: [
-      { label: t.home, icon: Home, href: '/' },
-      { label: t.users, icon: Users, href: '/users' },
-      { label: t.finance, icon: DollarSign, href: '/finance' },
-      { label: t.monthly_report, icon: BarChart2, href: '/monthly-report' },
-    ]
-  };
+  // Get menu items for the current role
+  const menuItems = getMenuByRole(role, false, t, user?.email);
 
-  const tabs = ROLE_TABS[role] || [];
+  // Only show up to 5 main items (customize as needed)
+  const tabs = menuItems.slice(0, 5);
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(60px+env(safe-area-inset-bottom))] bg-white border-t border-border flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)] z-50">
       {tabs.map((tab) => {
-        const isActive = pathname === tab.href;
+        const isActive = pathname === tab.path;
+        const Icon = routeIconMap[tab.path] || LayoutDashboard;
         return (
           <Link
-            key={tab.label}
-            href={tab.href}
+            key={tab.path}
+            href={tab.path}
             className="flex flex-col items-center justify-center gap-1 w-full relative transition-transform active:scale-95 duration-150 py-2"
           >
-            <tab.icon className={cn(
+            <Icon className={cn(
               "size-6 transition-colors",
               isActive ? "text-primary" : "text-muted-foreground"
             )} />
