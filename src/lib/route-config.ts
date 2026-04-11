@@ -16,7 +16,7 @@ export interface RouteConfig {
 
 // Central route configuration
 export const ROUTE_CONFIG: RouteConfig[] = [
-  { path: "/drivers", label: "Drivers", allowedRoles: ["CEO", "ADMIN", "OPERATOR"] },
+  // { path: "/drivers", label: "Drivers", allowedRoles: ["CEO", "ADMIN", "OPERATOR"] },
   { path: "/", label: "Dashboard", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"] },
   { path: "/fleet", label: "Fleet", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"] },
   { path: "/trips", label: "Trips", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
