@@ -7,7 +7,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
-          .register('/sw.js')
+          .register('/service-worker.js')
           .then((registration) => {
             console.log('SW registered:', registration.scope);
           })

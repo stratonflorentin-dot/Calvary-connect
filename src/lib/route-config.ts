@@ -16,6 +16,7 @@ export interface RouteConfig {
 
 // Central route configuration
 export const ROUTE_CONFIG: RouteConfig[] = [
+  { path: "/drivers", label: "Drivers", allowedRoles: ["CEO", "ADMIN", "OPERATOR"] },
   { path: "/", label: "Dashboard", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"] },
   { path: "/fleet", label: "Fleet", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"] },
   { path: "/trips", label: "Trips", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
@@ -67,7 +68,7 @@ export function useRouteGuard() {
           console.log(`[RouteGuard] Owner access granted for ${path}`);
           return true;
         }
-        
+
         if (!role) {
           console.warn("[RouteGuard] No role provided for access check");
           return false;
@@ -83,7 +84,7 @@ export function useRouteGuard() {
         if (!hasAccess) {
           console.warn("Access denied:", role, path);
         }
-        
+
         return hasAccess;
       } catch (error) {
         console.error("[RouteGuard] Error checking access:", error);
@@ -107,7 +108,7 @@ export function useRouteGuard() {
 
     // Check if admin user (owner) - should always have access, no redirects
     const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-    
+
     // Admin user should never be redirected, even when switching roles
     if (isAdminUser) {
       console.log("[RouteGuard] Admin user detected, skipping all redirects");

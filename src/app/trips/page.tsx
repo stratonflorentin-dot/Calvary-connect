@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { getSafeRoute, getDistance } from '@/lib/grok';
 import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
 import { Sidebar } from '@/components/navigation/sidebar';
@@ -29,7 +30,7 @@ export default function TripsPage() {
   const [managingTrip, setManagingTrip] = useState<any>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
-  
+
   const [tripForm, setTripForm] = useState({
     origin: '',
     destination: '',
@@ -58,16 +59,16 @@ export default function TripsPage() {
         setIsLoading(false);
         return;
       }
-      
+
       setIsLoading(true);
-      
+
       try {
         const [{ data: tripsData }, { data: vehiclesData }, { data: driversData }] = await Promise.all([
           supabase.from('trips').select('*').order('created_at', { ascending: false }),
           supabase.from('vehicles').select('*'),
           supabase.from('user_profiles').select('*').eq('role', 'DRIVER')
         ]);
-        
+
         setTrips(tripsData || []);
         setVehicles(vehiclesData || []);
         setDrivers(driversData || []);
@@ -77,13 +78,13 @@ export default function TripsPage() {
         setIsLoading(false);
       }
     };
-    
+
     loadData();
   }, [user, isAdmin]);
 
   const handleAddTrip = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (!tripForm.driver_id) {
         toast({ title: 'Error', description: 'Please select a driver', variant: 'destructive' });
@@ -93,7 +94,7 @@ export default function TripsPage() {
         toast({ title: 'Error', description: 'Please select a vehicle', variant: 'destructive' });
         return;
       }
-      
+
       const tripData = {
         origin: tripForm.origin,
         destination: tripForm.destination,
@@ -106,23 +107,23 @@ export default function TripsPage() {
         status: 'PENDING',
         created_at: new Date().toISOString()
       };
-      
+
       const { error } = await supabase.from('trips').insert([tripData]);
       if (error) throw error;
-      
+
       toast({ title: 'Success', description: 'Trip created successfully!' });
       setShowTripDialog(false);
-      setTripForm({ 
-        origin: '', 
-        destination: '', 
-        driver_id: '', 
+      setTripForm({
+        origin: '',
+        destination: '',
+        driver_id: '',
         vehicle_id: '',
         cargo: '',
         client: '',
         distance: '',
         estimated_time: ''
       });
-      
+
       // Refresh trips
       const { data } = await supabase.from('trips').select('*').order('created_at', { ascending: false });
       setTrips(data || []);
@@ -134,11 +135,11 @@ export default function TripsPage() {
 
   const handleDeleteTrip = async (tripId: string) => {
     if (!confirm('Are you sure you want to delete this trip?')) return;
-    
+
     try {
       const { error } = await supabase.from('trips').delete().eq('id', tripId);
       if (error) throw error;
-      
+
       toast({ title: 'Success', description: 'Trip deleted successfully!' });
       setTrips(trips.filter(t => t.id !== tripId));
     } catch (error: any) {
@@ -149,7 +150,7 @@ export default function TripsPage() {
   const handleEditTrip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTrip) return;
-    
+
     try {
       const updateData = {
         origin: editingTrip.origin,
@@ -159,18 +160,18 @@ export default function TripsPage() {
         status: editingTrip.status,
         updated_at: new Date().toISOString()
       };
-      
+
       const { error } = await supabase
         .from('trips')
         .update(updateData)
         .eq('id', editingTrip.id);
-        
+
       if (error) throw error;
-      
+
       toast({ title: 'Success', description: 'Trip updated successfully!' });
       setShowEditDialog(false);
       setEditingTrip(null);
-      
+
       // Refresh trips
       const { data } = await supabase.from('trips').select('*').order('created_at', { ascending: false });
       setTrips(data || []);
@@ -181,19 +182,19 @@ export default function TripsPage() {
 
   const handleRemoveDriverAccess = async () => {
     if (!managingTrip) return;
-    
+
     try {
       const { error } = await supabase
         .from('trips')
         .update({ driver_id: null, updated_at: new Date().toISOString() })
         .eq('id', managingTrip.id);
-        
+
       if (error) throw error;
-      
+
       toast({ title: 'Success', description: 'Driver access removed successfully!' });
       setShowManageAccessDialog(false);
       setManagingTrip(null);
-      
+
       // Refresh trips
       const { data } = await supabase.from('trips').select('*').order('created_at', { ascending: false });
       setTrips(data || []);
@@ -243,7 +244,7 @@ export default function TripsPage() {
               <h1 className="text-3xl font-bold tracking-tight">Trips Management</h1>
               <p className="text-muted-foreground">Manage and monitor all fleet trips</p>
             </div>
-            
+
             {canCreateTrip && (
               <Dialog open={showTripDialog} onOpenChange={setShowTripDialog}>
                 <DialogTrigger asChild>
@@ -252,127 +253,162 @@ export default function TripsPage() {
                     New Trip
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Trip</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleAddTrip} className="space-y-4 pt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="origin">Origin *</Label>
-                      <Input
-                        id="origin"
-                        value={tripForm.origin}
-                        onChange={(e) => setTripForm({ ...tripForm, origin: e.target.value })}
-                        placeholder="Nairobi"
-                        required
-                      />
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Create New Trip</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleAddTrip} className="space-y-4 pt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="origin">Origin *</Label>
+                        <Input
+                          id="origin"
+                          value={tripForm.origin}
+                          onChange={(e) => setTripForm({ ...tripForm, origin: e.target.value })}
+                          placeholder="Nairobi"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="destination">Destination *</Label>
+                        <Input
+                          id="destination"
+                          value={tripForm.destination}
+                          onChange={(e) => setTripForm({ ...tripForm, destination: e.target.value })}
+                          placeholder="Mombasa"
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="destination">Destination *</Label>
-                      <Input
-                        id="destination"
-                        value={tripForm.destination}
-                        onChange={(e) => setTripForm({ ...tripForm, destination: e.target.value })}
-                        placeholder="Mombasa"
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="driver">Driver *</Label>
-                      <Select 
-                        value={tripForm.driver_id} 
-                        onValueChange={(value) => setTripForm({ ...tripForm, driver_id: value })}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={async () => {
+                          if (!tripForm.origin || !tripForm.destination) {
+                            toast({ title: 'Error', description: 'Enter origin and destination', variant: 'destructive' });
+                            return;
+                          }
+                          toast({ title: 'AI', description: 'Calculating safe route...', variant: 'default' });
+                          const route = await getSafeRoute(tripForm.origin, tripForm.destination);
+                          toast({ title: 'Safe Route', description: route, variant: 'default', duration: 10000 });
+                        }}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select driver" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {drivers.map((driver) => (
-                            <SelectItem key={driver.id} value={driver.id}>
-                              {driver.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="vehicle">Vehicle *</Label>
-                      <Select 
-                        value={tripForm.vehicle_id} 
-                        onValueChange={(value) => setTripForm({ ...tripForm, vehicle_id: value })}
+                        Get Safe Route (AI)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={async () => {
+                          if (!tripForm.origin || !tripForm.destination) {
+                            toast({ title: 'Error', description: 'Enter origin and destination', variant: 'destructive' });
+                            return;
+                          }
+                          toast({ title: 'AI', description: 'Calculating distance...', variant: 'default' });
+                          const distance = await getDistance(tripForm.origin, tripForm.destination);
+                          setTripForm(f => ({ ...f, distance: distance.match(/\d+/)?.[0] || '' }));
+                          toast({ title: 'Distance', description: distance, variant: 'default', duration: 10000 });
+                        }}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select vehicle" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vehicles.map((vehicle) => (
-                            <SelectItem key={vehicle.id} value={vehicle.id}>
-                              {vehicle.plate_number} - {vehicle.make} {vehicle.model}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        Get Distance (AI)
+                      </Button>
                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="cargo">Cargo Type</Label>
-                      <Input
-                        id="cargo"
-                        value={tripForm.cargo}
-                        onChange={(e) => setTripForm({ ...tripForm, cargo: e.target.value })}
-                        placeholder="General Cargo"
-                      />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="driver">Driver *</Label>
+                        <Select
+                          value={tripForm.driver_id}
+                          onValueChange={(value) => setTripForm({ ...tripForm, driver_id: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select driver" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {drivers.map((driver) => (
+                              <SelectItem key={driver.id} value={driver.id}>
+                                {driver.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vehicle">Vehicle *</Label>
+                        <Select
+                          value={tripForm.vehicle_id}
+                          onValueChange={(value) => setTripForm({ ...tripForm, vehicle_id: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select vehicle" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vehicles.map((vehicle) => (
+                              <SelectItem key={vehicle.id} value={vehicle.id}>
+                                {vehicle.plate_number} - {vehicle.make} {vehicle.model}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="client">Client Name</Label>
-                      <Input
-                        id="client"
-                        value={tripForm.client}
-                        onChange={(e) => setTripForm({ ...tripForm, client: e.target.value })}
-                        placeholder="Client name"
-                      />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cargo">Cargo Type</Label>
+                        <Input
+                          id="cargo"
+                          value={tripForm.cargo}
+                          onChange={(e) => setTripForm({ ...tripForm, cargo: e.target.value })}
+                          placeholder="General Cargo"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="client">Client Name</Label>
+                        <Input
+                          id="client"
+                          value={tripForm.client}
+                          onChange={(e) => setTripForm({ ...tripForm, client: e.target.value })}
+                          placeholder="Client name"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="distance">Distance (km)</Label>
-                      <Input
-                        id="distance"
-                        type="number"
-                        value={tripForm.distance}
-                        onChange={(e) => setTripForm({ ...tripForm, distance: e.target.value })}
-                        placeholder="500"
-                      />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="distance">Distance (km)</Label>
+                        <Input
+                          id="distance"
+                          type="number"
+                          value={tripForm.distance}
+                          onChange={(e) => setTripForm({ ...tripForm, distance: e.target.value })}
+                          placeholder="500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="estimated_time">Estimated Time (hours)</Label>
+                        <Input
+                          id="estimated_time"
+                          value={tripForm.estimated_time}
+                          onChange={(e) => setTripForm({ ...tripForm, estimated_time: e.target.value })}
+                          placeholder="8 hours"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="estimated_time">Estimated Time (hours)</Label>
-                      <Input
-                        id="estimated_time"
-                        value={tripForm.estimated_time}
-                        onChange={(e) => setTripForm({ ...tripForm, estimated_time: e.target.value })}
-                        placeholder="8 hours"
-                      />
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button type="button" variant="outline" onClick={() => setShowTripDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit">
+                        Create Trip
+                      </Button>
                     </div>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setShowTripDialog(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit">
-                      Create Trip
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                  </form>
+                </DialogContent>
+              </Dialog>
             )}
 
             {/* Edit Trip Dialog */}
@@ -403,7 +439,7 @@ export default function TripsPage() {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="edit-cargo">Cargo Type</Label>
@@ -422,11 +458,11 @@ export default function TripsPage() {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="edit-status">Status</Label>
-                      <Select 
-                        value={editingTrip.status} 
+                      <Select
+                        value={editingTrip.status}
                         onValueChange={(value) => setEditingTrip({ ...editingTrip, status: value })}
                       >
                         <SelectTrigger>
@@ -440,7 +476,7 @@ export default function TripsPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="flex justify-end gap-2 pt-4">
                       <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
                         Cancel
@@ -468,20 +504,20 @@ export default function TripsPage() {
                         Current Driver: {drivers.find(d => d.id === managingTrip.driver_id)?.name || 'Unassigned'}
                       </p>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <p className="text-sm">Remove driver access from this trip?</p>
                       <p className="text-xs text-muted-foreground">
                         This will unassign the current driver. The trip will remain but without a driver.
                       </p>
                     </div>
-                    
+
                     <div className="flex justify-end gap-2 pt-4">
                       <Button type="button" variant="outline" onClick={() => setShowManageAccessDialog(false)}>
                         Cancel
                       </Button>
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         variant="destructive"
                         onClick={handleRemoveDriverAccess}
                       >
@@ -505,8 +541,8 @@ export default function TripsPage() {
               ) : trips.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No trips found</p>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="mt-4"
                     onClick={() => setShowTripDialog(true)}
                   >
@@ -536,8 +572,8 @@ export default function TripsPage() {
                             {trip.status}
                           </Badge>
                           {canEditTrip && (
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="ghost"
                               onClick={() => openEditDialog(trip)}
                             >
@@ -545,8 +581,8 @@ export default function TripsPage() {
                             </Button>
                           )}
                           {canManageAccess && trip.driver_id && (
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="ghost"
                               className="text-orange-500 hover:text-orange-700"
                               onClick={() => openManageAccessDialog(trip)}
@@ -555,9 +591,9 @@ export default function TripsPage() {
                             </Button>
                           )}
                           {canDeleteTrip && (
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               className="text-red-500 hover:text-red-700"
                               onClick={() => handleDeleteTrip(trip.id)}
                             >
