@@ -35,8 +35,24 @@ export default function Home() {
     );
   }
 
+
   if (!user) {
-    return <AuthComponent />;
+    // Show a public landing page with login/signup prompt, but do not block manifest/service worker
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="max-w-xl w-full p-8 bg-white rounded-xl shadow-xl mt-16">
+          <h1 className="text-3xl font-bold mb-4 text-center">Welcome to Calvary Connect</h1>
+          <p className="text-muted-foreground mb-6 text-center">
+            Professional fleet management platform for logistics, drivers, vehicles, and operations.<br />
+            Sign in or create an account to get started.
+          </p>
+          <AuthComponent />
+        </div>
+        <footer className="mt-8 text-xs text-muted-foreground text-center opacity-70">
+          &copy; {new Date().getFullYear()} Calvary Connect. All rights reserved.
+        </footer>
+      </div>
+    );
   }
 
   if (!role) return null;
