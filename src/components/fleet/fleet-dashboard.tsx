@@ -65,7 +65,15 @@ export function FleetDashboard() {
       let query = supabase.from('vehicles').select('*');
       
       if (filter !== 'all') {
-        query = query.eq('type', filter);
+        if (filter === 'truck') {
+          query = query.in('type', ['DUMP_TRUCK', 'TRUCK_HEAD']);
+        } else if (filter === 'car') {
+          query = query.eq('type', 'ESCORT_CAR');
+        } else if (filter === 'trailer') {
+          query = query.eq('type', 'TRAILER');
+        } else {
+          query = query.eq('type', filter);
+        }
       }
       
       const { data, error, status } = await query.order('created_at', { ascending: false });
@@ -218,9 +226,9 @@ export function FleetDashboard() {
     maintenance: vehicles.filter(v => v.status === 'maintenance').length,
     sold: vehicles.filter(v => v.status === 'sold').length,
     decommissioned: vehicles.filter(v => v.status === 'decommissioned').length,
-    trucks: vehicles.filter(v => v.type === 'truck').length,
-    escortCars: vehicles.filter(v => v.type === 'car').length,
-    trailers: vehicles.filter(v => v.type === 'trailer').length,
+    trucks: vehicles.filter(v => v.type === 'DUMP_TRUCK' || v.type === 'TRUCK_HEAD').length,
+    escortCars: vehicles.filter(v => v.type === 'ESCORT_CAR').length,
+    trailers: vehicles.filter(v => v.type === 'TRAILER').length,
   };
 
   if (loading) {
