@@ -2,5 +2,5 @@
   "workbench.startupEditor": "readme",
   "editor.tabCompletion": "on",
   "diffEditor.codeLens": true,
-  "MutableAI.upsell": true
+  "MutableAI.upsell": false
 }

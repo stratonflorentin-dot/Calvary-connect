@@ -21,7 +21,7 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
     make: '',
     model: '',
     year: new Date().getFullYear(),
-    type: 'truck',
+    type: 'TRUCK',
     status: 'active',
     mileage: 0,
     fuelCapacity: 0
@@ -32,7 +32,20 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
     setLoading(true);
 
     try {
-      await SupabaseService.createVehicle(formData);
+      // Map camelCase form fields to snake_case for Supabase
+      const vehicleData = {
+        plate_number: formData.plateNumber,
+        make: formData.make,
+        model: formData.model,
+        year: formData.year,
+        type: formData.type.toUpperCase(), // Convert 'truck' to 'TRUCK'
+        status: formData.status,
+        mileage: formData.mileage,
+        fuel_capacity: formData.fuelCapacity,
+      };
+      
+      console.log('Submitting vehicle data:', vehicleData);
+      await SupabaseService.createVehicle(vehicleData);
       
       setOpen(false);
       setFormData({
@@ -47,9 +60,10 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
       });
       
       onVehicleAdded?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding vehicle:', error);
-      alert('❌ Error adding vehicle. Please check the console for details.');
+      const errorMessage = error?.message || error?.error_description || 'Unknown error';
+      alert(`❌ Error adding vehicle: ${errorMessage}\n\nPlease check the console for more details.`);
     } finally {
       setLoading(false);
     }
@@ -126,9 +140,10 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="truck">Truck</SelectItem>
-                  <SelectItem value="trailer">Trailer</SelectItem>
-                  <SelectItem value="car">Escort Car</SelectItem>
+                  <SelectItem value="TRUCK">Truck</SelectItem>
+                  <SelectItem value="TRAILER">Trailer</SelectItem>
+                  <SelectItem value="ESCORT_CAR">Escort Car</SelectItem>
+                  <SelectItem value="HOSE">Hose</SelectItem>
                 </SelectContent>
               </Select>
             </div>
