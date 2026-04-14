@@ -120,6 +120,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role, onVehi
           make: editForm.make,
           model: editForm.model,
           year: editForm.year,
+          type: editForm.type,
           status: editForm.status,
           mileage: editForm.mileage,
           fuel_capacity: editForm.fuel_capacity,
