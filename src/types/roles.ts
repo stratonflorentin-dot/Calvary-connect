@@ -15,11 +15,12 @@ export interface UserProfile {
 }
 
 // Fleet Management Types
-export type FleetType = 'TRUCK' | 'TRAILER' | 'HOSE' | 'ESCORT_CAR';
+export type FleetType = 'DUMP_TRUCK' | 'TRUCK_HEAD' | 'TRAILER' | 'ESCORT_CAR';
 
 export interface FleetVehicle {
   id: string;
   type: FleetType;
+  trailerSubType?: 'LOWBED' | 'FLATBED'; // Only for TRAILER type
   plateNumber: string;
   make: string;
   model: string;
@@ -64,6 +65,13 @@ export interface Trip {
   fuelExpense?: number;
   otherExpenses?: number;
   revenue?: number;
+  // Trip Type & VAT
+  tripType?: 'transit' | 'local';
+  tripCategory?: 'town' | 'regional';
+  salesAmount?: number;
+  vatRate?: number;
+  vatAmount?: number;
+  totalAmount?: number;
   startTime?: any;
   endTime?: any;
   created_at: any;

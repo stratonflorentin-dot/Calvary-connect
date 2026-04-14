@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { SupabaseService } from '@/services/supabase-service';
+import { FleetType } from '@/types/roles';
 import { Plus } from 'lucide-react';
 
 interface AddVehicleDialogProps {
@@ -17,14 +18,17 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    type: 'DUMP_TRUCK' as FleetType,
+    trailerSubType: '' as 'LOWBED' | 'FLATBED' | '',
     plateNumber: '',
     make: '',
     model: '',
     year: new Date().getFullYear(),
-    type: 'TRUCK',
-    status: 'active',
+    status: 'active' as const,
     mileage: 0,
-    fuelCapacity: 0
+    fuelCapacity: 0,
+    fuelType: 'diesel' as const,
+    nextServiceDate: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,11 +38,12 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
     try {
       // Map camelCase form fields to snake_case for Supabase
       const vehicleData = {
+        type: formData.type,
+        trailer_sub_type: formData.type === 'TRAILER' ? formData.trailerSubType : null,
         plate_number: formData.plateNumber,
         make: formData.make,
         model: formData.model,
         year: formData.year,
-        type: formData.type.toUpperCase(), // Convert 'truck' to 'TRUCK'
         status: formData.status,
         mileage: formData.mileage,
         fuel_capacity: formData.fuelCapacity,
@@ -53,10 +58,13 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
         make: '',
         model: '',
         year: new Date().getFullYear(),
-        type: 'truck',
+        type: 'DUMP_TRUCK',
+        trailerSubType: '',
         status: 'active',
         mileage: 0,
-        fuelCapacity: 0
+        fuelCapacity: 0,
+        fuelType: 'diesel',
+        nextServiceDate: '',
       });
       
       onVehicleAdded?.();
@@ -140,13 +148,33 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TRUCK">Truck</SelectItem>
+                  <SelectItem value="DUMP_TRUCK">Dump Truck</SelectItem>
+                  <SelectItem value="TRUCK_HEAD">Truck Head (Hose)</SelectItem>
                   <SelectItem value="TRAILER">Trailer</SelectItem>
                   <SelectItem value="ESCORT_CAR">Escort Car</SelectItem>
-                  <SelectItem value="HOSE">Hose</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Trailer Sub-type - only shown when TRAILER is selected */}
+            {formData.type === 'TRAILER' && (
+              <div className="space-y-2">
+                <Label htmlFor="trailerSubType">Trailer Type *</Label>
+                <Select
+                  value={formData.trailerSubType}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, trailerSubType: value as 'LOWBED' | 'FLATBED' }))}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select trailer type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LOWBED">Lowbed</SelectItem>
+                    <SelectItem value="FLATBED">Flatbed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>

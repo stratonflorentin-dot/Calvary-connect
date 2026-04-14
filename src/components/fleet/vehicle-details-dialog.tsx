@@ -323,10 +323,10 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role, onVehi
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="TRUCK">Truck</SelectItem>
+                          <SelectItem value="DUMP_TRUCK">Dump Truck</SelectItem>
+                          <SelectItem value="TRUCK_HEAD">Truck Head (Hose)</SelectItem>
                           <SelectItem value="TRAILER">Trailer</SelectItem>
                           <SelectItem value="ESCORT_CAR">Escort Car</SelectItem>
-                          <SelectItem value="HOSE">Hose</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

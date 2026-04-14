@@ -367,10 +367,10 @@ export function CeoView() {
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="TRUCK">Truck</SelectItem>
+                            <SelectItem value="DUMP_TRUCK">Dump Truck</SelectItem>
+                            <SelectItem value="TRUCK_HEAD">Truck Head (Hose)</SelectItem>
                             <SelectItem value="TRAILER">Trailer</SelectItem>
                             <SelectItem value="ESCORT_CAR">Escort Car</SelectItem>
-                            <SelectItem value="HOSE">Hose/Equipment</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

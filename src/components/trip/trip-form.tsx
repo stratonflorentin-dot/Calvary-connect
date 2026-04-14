@@ -20,15 +20,15 @@ interface TripFormProps {
 
 export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
   const [vehicles, setVehicles] = useState<{
-    trucks: FleetVehicle[];
+    dumpTrucks: FleetVehicle[];
+    truckHeads: FleetVehicle[];
     trailers: FleetVehicle[];
     escortCars: FleetVehicle[];
-    hoses: FleetVehicle[];
   }>({
-    trucks: [],
+    dumpTrucks: [],
+    truckHeads: [],
     trailers: [],
-    escortCars: [],
-    hoses: []
+    escortCars: []
   });
 
   const [formData, setFormData] = useState({
@@ -39,12 +39,15 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
     truckId: '',
     trailerId: '',
     escortCarId: '',
-    hoseId: '',
     cargoType: '',
     cargoWeight: '',
     estimatedDistance: '',
     estimatedDuration: '',
-    notes: ''
+    notes: '',
+    tripType: 'local', // 'transit' or 'local'
+    tripCategory: 'town', // 'town' or 'regional' (only for local trips)
+    salesAmount: '',
+    vatRate: 18, // 18% for local, 0% for transit
   });
 
   useEffect(() => {
@@ -56,14 +59,14 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
 
   const loadVehicles = async () => {
     try {
-      const [trucks, trailers, escortCars, hoses] = await Promise.all([
-        FleetService.getAvailableVehicles('TRUCK'),
+      const [dumpTrucks, truckHeads, trailers, escortCars] = await Promise.all([
+        FleetService.getAvailableVehicles('DUMP_TRUCK'),
+        FleetService.getAvailableVehicles('TRUCK_HEAD'),
         FleetService.getAvailableVehicles('TRAILER'),
-        FleetService.getAvailableVehicles('ESCORT_CAR'),
-        FleetService.getAvailableVehicles('HOSE')
+        FleetService.getAvailableVehicles('ESCORT_CAR')
       ]);
 
-      setVehicles({ trucks, trailers, escortCars, hoses });
+      setVehicles({ Dumptrucks, truckHeads, trailers, escortCars });
     } catch (error) {
       console.error('Error loading vehicles:', error);
     }
@@ -75,25 +78,28 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
   };
 
   const getFleetIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'truck': return <Truck className="size-5" />;
-      case 'trailer': return <Package className="size-5" />;
-      case 'car': return <Car className="size-5" />;
-      case 'motorcycle': return <Wrench className="size-5" />;
-      case 'van': return <Package className="size-5" />;
-      case 'bus': return <Truck className="size-5" />;
+    switch (type.toUpperCase()) {
+      case 'DUMP_TRUCK':
+      case 'TRUCK_HEAD':
+        return <Truck className="size-5" />;
+      case 'TRAILER':
+        return <Package className="size-5" />;
+      case 'ESCORT_CAR':
+        return <Car className="size-5" />;
       default: return <Truck className="size-5" />;
     }
   };
 
   const getFleetColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'truck': return 'bg-blue-100 text-blue-800';
-      case 'trailer': return 'bg-green-100 text-green-800';
-      case 'car': return 'bg-yellow-100 text-yellow-800';
-      case 'motorcycle': return 'bg-purple-100 text-purple-800';
-      case 'van': return 'bg-green-100 text-green-800';
-      case 'bus': return 'bg-blue-100 text-blue-800';
+    switch (type.toUpperCase()) {
+      case 'DUMP_TRUCK':
+        return 'bg-orange-100 text-orange-800';
+      case 'TRUCK_HEAD':
+        return 'bg-blue-100 text-blue-800';
+      case 'TRAILER':
+        return 'bg-green-100 text-green-800';
+      case 'ESCORT_CAR':
+        return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -147,6 +153,52 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
                 required
               />
             </div>
+            <div>
+              <Label htmlFor="tripType">Trip Type</Label>
+              <Select 
+                value={formData.tripType} 
+                onValueChange={(value) => setFormData({ 
+                  ...formData, 
+                  tripType: value,
+                  vatRate: value === 'transit' ? 0 : 18 
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select trip type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transit">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-blue-50">0% VAT</Badge>
+                      <span>Transit (International)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="local">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-green-50">18% VAT</Badge>
+                      <span>Local (Domestic)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {formData.tripType === 'local' && (
+              <div>
+                <Label htmlFor="tripCategory">Trip Category</Label>
+                <Select 
+                  value={formData.tripCategory} 
+                  onValueChange={(value) => setFormData({ ...formData, tripCategory: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="town">Town Trip</SelectItem>
+                    <SelectItem value="regional">Regional Trip</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -189,6 +241,55 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Sales & VAT */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Sales & VAT</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="salesAmount">Sales Amount</Label>
+              <Input
+                id="salesAmount"
+                type="number"
+                step="0.01"
+                value={formData.salesAmount}
+                onChange={(e) => setFormData({ ...formData, salesAmount: e.target.value })}
+                placeholder="1000.00"
+              />
+            </div>
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+              <div>
+                <p className="text-sm text-muted-foreground">Trip Type</p>
+                <p className="font-medium capitalize">{formData.tripType}</p>
+                {formData.tripType === 'local' && (
+                  <p className="text-xs text-muted-foreground capitalize">({formData.tripCategory})</p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">VAT Rate</p>
+                <p className="font-medium">{formData.vatRate}%</p>
+              </div>
+            </div>
+            {formData.salesAmount && (
+              <div className="p-3 bg-blue-50 rounded-md space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>{parseFloat(formData.salesAmount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>VAT ({formData.vatRate}%):</span>
+                  <span>{(parseFloat(formData.salesAmount) * (formData.vatRate / 100)).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold pt-1 border-t border-blue-200">
+                  <span>Total:</span>
+                  <span>{(parseFloat(formData.salesAmount) * (1 + formData.vatRate / 100)).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Fleet Assignment */}
@@ -198,19 +299,39 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Truck Selection */}
+            {/* Dump Truck Selection */}
             <div>
-              <Label htmlFor="truckId">Truck *</Label>
-              <Select value={formData.truckId} onValueChange={(value) => setFormData({ ...formData, truckId: value })}>
+              <Label>Dump Truck</Label>
+              <Select value={formData.truckId} onValueChange={(value) => setFormData({...formData, truckId: value})}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select truck" />
+                  <SelectValue placeholder="Select dump truck" />
                 </SelectTrigger>
                 <SelectContent>
-                  {vehicles.trucks.map((truck) => (
-                    <SelectItem key={truck.id} value={truck.id}>
+                  {vehicles.dumpTrucks.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
                       <div className="flex items-center gap-2">
-                        {getFleetIcon('truck')}
-                        <span>{truck.plateNumber} - {truck.make} {truck.model}</span>
+                        {getFleetIcon(v.type)}
+                        <span>{v.plateNumber} - {v.make} {v.model}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Truck Head (Hose) Selection */}
+            <div>
+              <Label>Truck Head (Hose)</Label>
+              <Select value={formData.hoseId} onValueChange={(value) => setFormData({...formData, hoseId: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select truck head" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vehicles.truckHeads.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      <div className="flex items-center gap-2">
+                        {getFleetIcon(v.type)}
+                        <span>{v.plateNumber} - {v.make} {v.model}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -220,17 +341,18 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
 
             {/* Trailer Selection */}
             <div>
-              <Label htmlFor="trailerId">Trailer</Label>
-              <Select value={formData.trailerId} onValueChange={(value) => setFormData({ ...formData, trailerId: value })}>
+              <Label>Trailer</Label>
+              <Select value={formData.trailerId} onValueChange={(value) => setFormData({...formData, trailerId: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select trailer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {vehicles.trailers.map((trailer) => (
-                    <SelectItem key={trailer.id} value={trailer.id}>
+                  {vehicles.trailers.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
                       <div className="flex items-center gap-2">
-                        {getFleetIcon('trailer')}
-                        <span>{trailer.plateNumber} - {trailer.make} {trailer.model}</span>
+                        {getFleetIcon(v.type)}
+                        <span>{v.plateNumber} - {v.make} {v.model}</span>
+                        {v.trailerSubType && <Badge variant="outline" className="ml-2">{v.trailerSubType}</Badge>}
                       </div>
                     </SelectItem>
                   ))}
@@ -240,37 +362,17 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
 
             {/* Escort Car Selection */}
             <div>
-              <Label htmlFor="escortCarId">Escort Car</Label>
-              <Select value={formData.escortCarId} onValueChange={(value) => setFormData({ ...formData, escortCarId: value })}>
+              <Label>Escort Car</Label>
+              <Select value={formData.escortCarId} onValueChange={(value) => setFormData({...formData, escortCarId: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select escort car" />
                 </SelectTrigger>
                 <SelectContent>
-                  {vehicles.escortCars.map((car) => (
-                    <SelectItem key={car.id} value={car.id}>
+                  {vehicles.escortCars.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
                       <div className="flex items-center gap-2">
-                        {getFleetIcon('car')}
-                        <span>{car.plateNumber} - {car.make} {car.model}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Hose Selection */}
-            <div>
-              <Label htmlFor="hoseId">Hose Equipment</Label>
-              <Select value={formData.hoseId} onValueChange={(value) => setFormData({ ...formData, hoseId: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select hose" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehicles.hoses.map((hose) => (
-                    <SelectItem key={hose.id} value={hose.id}>
-                      <div className="flex items-center gap-2">
-                        {getFleetIcon('motorcycle')}
-                        <span>{hose.plateNumber} - {hose.make} {hose.model}</span>
+                        {getFleetIcon(v.type)}
+                        <span>{v.plateNumber} - {v.make} {v.model}</span>
                       </div>
                     </SelectItem>
                   ))}

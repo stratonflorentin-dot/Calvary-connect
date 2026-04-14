@@ -39,7 +39,10 @@ export default function TripsPage() {
     cargo: '',
     client: '',
     distance: '',
-    estimated_time: ''
+    estimated_time: '',
+    tripType: 'local',
+    tripCategory: 'town',
+    salesAmount: '',
   });
 
   if (isUserLoading || !isInitialized) {
@@ -95,6 +98,11 @@ export default function TripsPage() {
         return;
       }
 
+      const salesAmount = tripForm.salesAmount ? parseFloat(tripForm.salesAmount) : null;
+      const vatRate = tripForm.tripType === 'transit' ? 0 : 18;
+      const vatAmount = salesAmount ? salesAmount * (vatRate / 100) : null;
+      const totalAmount = salesAmount ? salesAmount + vatAmount : null;
+
       const tripData = {
         origin: tripForm.origin,
         destination: tripForm.destination,
@@ -105,7 +113,14 @@ export default function TripsPage() {
         distance: tripForm.distance ? parseInt(tripForm.distance, 10) : null,
         estimated_time: tripForm.estimated_time,
         status: 'PENDING',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        // Trip type & VAT
+        tripType: tripForm.tripType,
+        tripCategory: tripForm.tripType === 'local' ? tripForm.tripCategory : null,
+        salesAmount: salesAmount,
+        vatRate: vatRate,
+        vatAmount: vatAmount,
+        totalAmount: totalAmount,
       };
 
       const { error } = await supabase.from('trips').insert([tripData]);
@@ -121,7 +136,10 @@ export default function TripsPage() {
         cargo: '',
         client: '',
         distance: '',
-        estimated_time: ''
+        estimated_time: '',
+        tripType: 'local',
+        tripCategory: 'town',
+        salesAmount: '',
       });
 
       // Refresh trips
@@ -398,6 +416,70 @@ export default function TripsPage() {
                       </div>
                     </div>
 
+                    {/* Trip Type & VAT */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tripType">Trip Type</Label>
+                        <Select
+                          value={tripForm.tripType}
+                          onValueChange={(value) => setTripForm({ 
+                            ...tripForm, 
+                            tripType: value,
+                            tripCategory: value === 'transit' ? '' : 'town'
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select trip type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="transit">
+                              <Badge variant="outline" className="bg-blue-50 mr-2">0% VAT</Badge>
+                              Transit (International)
+                            </SelectItem>
+                            <SelectItem value="local">
+                              <Badge variant="outline" className="bg-green-50 mr-2">18% VAT</Badge>
+                              Local (Domestic)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {tripForm.tripType === 'local' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="tripCategory">Category</Label>
+                          <Select
+                            value={tripForm.tripCategory}
+                            onValueChange={(value) => setTripForm({ ...tripForm, tripCategory: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="town">Town Trip</SelectItem>
+                              <SelectItem value="regional">Regional Trip</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="salesAmount">Sales Amount</Label>
+                      <Input
+                        id="salesAmount"
+                        type="number"
+                        step="0.01"
+                        value={tripForm.salesAmount}
+                        onChange={(e) => setTripForm({ ...tripForm, salesAmount: e.target.value })}
+                        placeholder="1000.00"
+                      />
+                      {tripForm.salesAmount && (
+                        <div className="text-sm text-muted-foreground">
+                          VAT ({tripForm.tripType === 'transit' ? '0%' : '18%'}): {(parseFloat(tripForm.salesAmount) * (tripForm.tripType === 'transit' ? 0 : 0.18)).toFixed(2)} | 
+                          Total: {(parseFloat(tripForm.salesAmount) * (tripForm.tripType === 'transit' ? 1 : 1.18)).toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex justify-end gap-2 pt-4">
                       <Button type="button" variant="outline" onClick={() => setShowTripDialog(false)}>
                         Cancel
@@ -563,8 +645,29 @@ export default function TripsPage() {
                           <p className="text-sm text-muted-foreground mt-1">
                             Status: {trip.status} | Cargo: {trip.cargo || 'N/A'}
                           </p>
+                          <div className="flex gap-2 mt-1">
+                            {trip.tripType && (
+                              <Badge 
+                                variant="outline" 
+                                className={trip.tripType === 'transit' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}
+                              >
+                                {trip.tripType === 'transit' ? '🌐 Transit' : '🏠 Local'}
+                                {trip.tripType === 'local' && trip.tripCategory && ` (${trip.tripCategory})`}
+                              </Badge>
+                            )}
+                            {trip.vatRate !== undefined && (
+                              <Badge variant="outline" className="bg-gray-50">
+                                VAT: {trip.vatRate}%
+                              </Badge>
+                            )}
+                          </div>
                           {trip.client && (
                             <p className="text-sm text-muted-foreground">Client: {trip.client}</p>
+                          )}
+                          {trip.salesAmount && (
+                            <p className="text-sm text-muted-foreground">
+                              Sales: {parseFloat(trip.salesAmount).toFixed(2)} | VAT: {trip.vatAmount?.toFixed(2) || (parseFloat(trip.salesAmount) * (trip.vatRate || 0) / 100).toFixed(2)} | Total: {trip.totalAmount?.toFixed(2) || (parseFloat(trip.salesAmount) * (1 + (trip.vatRate || 0) / 100)).toFixed(2)}
+                            </p>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
