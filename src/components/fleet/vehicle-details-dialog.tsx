@@ -357,31 +357,35 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role, onVehi
                         onChange={(e) => setEditForm({ ...editForm, mileage: parseInt(e.target.value) || 0 })}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fuel_capacity">Fuel Capacity (L)</Label>
-                      <Input
-                        id="fuel_capacity"
-                        type="number"
-                        value={editForm.fuel_capacity}
-                        onChange={(e) => setEditForm({ ...editForm, fuel_capacity: parseInt(e.target.value) || 0 })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fuel_type">Fuel Type</Label>
-                      <Select
-                        value={editForm.fuel_type}
-                        onValueChange={(value) => setEditForm({ ...editForm, fuel_type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="diesel">Diesel</SelectItem>
-                          <SelectItem value="petrol">Petrol</SelectItem>
-                          <SelectItem value="electric">Electric</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {editForm.type !== 'TRAILER' && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="fuel_capacity">Fuel Capacity (L)</Label>
+                          <Input
+                            id="fuel_capacity"
+                            type="number"
+                            value={editForm.fuel_capacity}
+                            onChange={(e) => setEditForm({ ...editForm, fuel_capacity: parseInt(e.target.value) || 0 })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="fuel_type">Fuel Type</Label>
+                          <Select
+                            value={editForm.fuel_type}
+                            onValueChange={(value) => setEditForm({ ...editForm, fuel_type: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="diesel">Diesel</SelectItem>
+                              <SelectItem value="petrol">Petrol</SelectItem>
+                              <SelectItem value="electric">Electric</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="next_service_date">Next Service Date</Label>
                       <Input
@@ -417,14 +421,18 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role, onVehi
                     <p className="text-muted-foreground">Type</p>
                     <p className="font-medium capitalize">{vehicle.type}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Fuel Type</p>
-                    <p className="font-medium capitalize">{vehicle.fuel_type || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Fuel Capacity</p>
-                    <p className="font-medium">{vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : 'N/A'}</p>
-                  </div>
+                  {vehicle.type !== 'TRAILER' && (
+                    <>
+                      <div>
+                        <p className="text-muted-foreground">Fuel Type</p>
+                        <p className="font-medium capitalize">{vehicle.fuel_type || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Fuel Capacity</p>
+                        <p className="font-medium">{vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : 'N/A'}</p>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}

@@ -45,6 +45,33 @@ export default function TripsPage() {
     salesAmount: '',
   });
 
+  // Calculate driver allowance based on trip details
+  const calculateAllowance = (trip: any) => {
+    let baseAmount = 500; // Base amount for any trip
+    
+    // Distance-based allowance (0.5 per km)
+    if (trip.distance) {
+      const distance = parseInt(trip.distance.toString().replace(/[^0-9]/g, ''));
+      baseAmount += Math.floor(distance * 0.5);
+    }
+    
+    // Time-based allowance (100 per hour)
+    if (trip.estimated_time) {
+      const hours = parseInt(trip.estimated_time.toString().replace(/[^0-9]/g, ''));
+      baseAmount += hours * 100;
+    }
+    
+    // Cargo type adjustments
+    if (trip.cargo) {
+      const cargoType = trip.cargo.toLowerCase();
+      if (cargoType.includes('perishable')) baseAmount += 200;
+      if (cargoType.includes('hazardous') || cargoType.includes('dangerous')) baseAmount += 300;
+      if (cargoType.includes('heavy') || cargoType.includes('machinery')) baseAmount += 150;
+    }
+    
+    return baseAmount;
+  };
+
   if (isUserLoading || !isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -123,10 +150,23 @@ export default function TripsPage() {
         totalAmount: totalAmount,
       };
 
-      const { error } = await supabase.from('trips').insert([tripData]);
+      const { data: newTrip, error } = await supabase.from('trips').insert([tripData]).select().single();
       if (error) throw error;
 
-      toast({ title: 'Success', description: 'Trip created successfully!' });
+      // Create driver allowance for the trip
+      if (newTrip && tripForm.driver_id) {
+        const allowanceAmount = calculateAllowance(newTrip);
+        await supabase.from('driver_allowances').insert({
+          driver_id: tripForm.driver_id,
+          trip_id: newTrip.id,
+          amount: allowanceAmount,
+          status: 'approved',
+          created_at: new Date().toISOString(),
+          reason: `Trip allowance: ${tripForm.origin} → ${tripForm.destination}`
+        });
+      }
+
+      toast({ title: 'Success', description: 'Trip and driver allowance created successfully!' });
       setShowTripDialog(false);
       setTripForm({
         origin: '',
