@@ -8,7 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Wrench, FileText, Shield, Calendar, Milestone, History, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Wrench, FileText, Shield, Calendar, Milestone, History, AlertCircle, CheckCircle2, Clock, Edit2, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface VehicleDetailsDialogProps {
@@ -18,15 +21,47 @@ interface VehicleDetailsDialogProps {
   role?: string;
 }
 
-export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role }: VehicleDetailsDialogProps) {
+export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role, onVehicleUpdated }: VehicleDetailsDialogProps & { onVehicleUpdated?: () => void }) {
   const { user } = useSupabase();
   const [serviceRecords, setServiceRecords] = useState<any[]>([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState<any[]>([]);
   const [insuranceDocs, setInsuranceDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    plate_number: '',
+    make: '',
+    model: '',
+    year: 0,
+    type: '',
+    status: '',
+    mileage: 0,
+    fuel_capacity: 0,
+    fuel_type: '',
+    next_service_date: '',
+  });
 
-  const isAdminOrMechanic = role === 'ADMIN' || role === 'MECHANIC' || role === 'CEO';
+  const isAdminOrMechanic = role === 'ADMIN' || role === 'MECHANIC' || role === 'CEO' || role === 'OPERATOR';
+
+  // Initialize edit form when vehicle changes
+  useEffect(() => {
+    if (vehicle) {
+      setEditForm({
+        plate_number: vehicle.plate_number || '',
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        year: vehicle.year || new Date().getFullYear(),
+        type: vehicle.type || 'TRUCK',
+        status: vehicle.status || 'active',
+        mileage: vehicle.mileage || 0,
+        fuel_capacity: vehicle.fuel_capacity || 0,
+        fuel_type: vehicle.fuel_type || 'diesel',
+        next_service_date: vehicle.next_service_date || '',
+      });
+    }
+  }, [vehicle]);
 
   useEffect(() => {
     if (!open || !vehicle?.id) return;
@@ -71,6 +106,66 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role }: Vehi
     loadVehicleData();
   }, [open, vehicle?.id]);
 
+  // Save vehicle changes
+  const handleSave = async () => {
+    if (!vehicle?.id) return;
+    
+    try {
+      setSaving(true);
+      
+      const { error } = await supabase
+        .from('vehicles')
+        .update({
+          plate_number: editForm.plate_number,
+          make: editForm.make,
+          model: editForm.model,
+          year: editForm.year,
+          status: editForm.status,
+          mileage: editForm.mileage,
+          fuel_capacity: editForm.fuel_capacity,
+          fuel_type: editForm.fuel_type,
+          next_service_date: editForm.next_service_date || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', vehicle.id);
+      
+      if (error) throw error;
+      
+      // Update local vehicle object
+      Object.assign(vehicle, editForm);
+      
+      setIsEditing(false);
+      onVehicleUpdated?.();
+      
+      alert('✅ Vehicle updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating vehicle:', error);
+      alert(`❌ Error updating vehicle: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Cancel editing
+  const handleCancel = () => {
+    setIsEditing(false);
+    // Reset form to original values
+    if (vehicle) {
+      setEditForm({
+        plate_number: vehicle.plate_number || '',
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        year: vehicle.year || new Date().getFullYear(),
+        type: vehicle.type || 'TRUCK',
+        status: vehicle.status || 'active',
+        mileage: vehicle.mileage || 0,
+        fuel_capacity: vehicle.fuel_capacity || 0,
+        fuel_type: vehicle.fuel_type || 'diesel',
+        next_service_date: vehicle.next_service_date || '',
+      });
+    }
+  };
+
   if (!vehicle) return null;
 
   const lastService = serviceRecords[0];
@@ -83,14 +178,34 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role }: Vehi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <span className="font-bold">{vehicle.plate_number}</span>
-            <span className="text-muted-foreground">-</span>
-            <span className="text-lg">{vehicle.make} {vehicle.model}</span>
-            <Badge className={vehicle.status === 'active' ? 'bg-green-500' : vehicle.status === 'maintenance' ? 'bg-yellow-500' : 'bg-gray-500'}>
-              {vehicle.status}
-            </Badge>
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <span className="font-bold">{vehicle.plate_number}</span>
+              <span className="text-muted-foreground">-</span>
+              <span className="text-lg">{vehicle.make} {vehicle.model}</span>
+              <Badge className={vehicle.status === 'active' ? 'bg-green-500' : vehicle.status === 'maintenance' ? 'bg-yellow-500' : 'bg-gray-500'}>
+                {vehicle.status}
+              </Badge>
+            </DialogTitle>
+            {isAdminOrMechanic && !isEditing && (
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Edit2 className="size-4 mr-2" />
+                Edit
+              </Button>
+            )}
+            {isEditing && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleCancel} disabled={saving}>
+                  <X className="size-4 mr-2" />
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleSave} disabled={saving}>
+                  <Save className="size-4 mr-2" />
+                  {saving ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -154,37 +269,164 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role }: Vehi
               </Card>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Vehicle Information</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Plate Number</p>
-                  <p className="font-medium">{vehicle.plate_number}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Make & Model</p>
-                  <p className="font-medium">{vehicle.make} {vehicle.model}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Year</p>
-                  <p className="font-medium">{vehicle.year}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Type</p>
-                  <p className="font-medium capitalize">{vehicle.type}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Fuel Type</p>
-                  <p className="font-medium capitalize">{vehicle.fuel_type || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Fuel Capacity</p>
-                  <p className="font-medium">{vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : 'N/A'}</p>
-                </div>
-              </CardContent>
-            </Card>
+            {isEditing ? (
+              // Edit Form
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Edit Vehicle Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="plate_number">Plate Number</Label>
+                      <Input
+                        id="plate_number"
+                        value={editForm.plate_number}
+                        onChange={(e) => setEditForm({ ...editForm, plate_number: e.target.value })}
+                        placeholder="e.g., T 123 ABC"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="make">Make</Label>
+                      <Input
+                        id="make"
+                        value={editForm.make}
+                        onChange={(e) => setEditForm({ ...editForm, make: e.target.value })}
+                        placeholder="e.g., HINO"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="model">Model</Label>
+                      <Input
+                        id="model"
+                        value={editForm.model}
+                        onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                        placeholder="e.g., Cl1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="year">Year</Label>
+                      <Input
+                        id="year"
+                        type="number"
+                        value={editForm.year}
+                        onChange={(e) => setEditForm({ ...editForm, year: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="type">Type</Label>
+                      <Select
+                        value={editForm.type}
+                        onValueChange={(value) => setEditForm({ ...editForm, type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="TRUCK">Truck</SelectItem>
+                          <SelectItem value="TRAILER">Trailer</SelectItem>
+                          <SelectItem value="ESCORT_CAR">Escort Car</SelectItem>
+                          <SelectItem value="HOSE">Hose</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select
+                        value={editForm.status}
+                        onValueChange={(value) => setEditForm({ ...editForm, status: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="sold">Sold</SelectItem>
+                          <SelectItem value="decommissioned">Decommissioned</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="mileage">Mileage (km)</Label>
+                      <Input
+                        id="mileage"
+                        type="number"
+                        value={editForm.mileage}
+                        onChange={(e) => setEditForm({ ...editForm, mileage: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fuel_capacity">Fuel Capacity (L)</Label>
+                      <Input
+                        id="fuel_capacity"
+                        type="number"
+                        value={editForm.fuel_capacity}
+                        onChange={(e) => setEditForm({ ...editForm, fuel_capacity: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fuel_type">Fuel Type</Label>
+                      <Select
+                        value={editForm.fuel_type}
+                        onValueChange={(value) => setEditForm({ ...editForm, fuel_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="diesel">Diesel</SelectItem>
+                          <SelectItem value="petrol">Petrol</SelectItem>
+                          <SelectItem value="electric">Electric</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="next_service_date">Next Service Date</Label>
+                      <Input
+                        id="next_service_date"
+                        type="date"
+                        value={editForm.next_service_date}
+                        onChange={(e) => setEditForm({ ...editForm, next_service_date: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              // View Mode
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Vehicle Information</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Plate Number</p>
+                    <p className="font-medium">{vehicle.plate_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Make & Model</p>
+                    <p className="font-medium">{vehicle.make} {vehicle.model}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Year</p>
+                    <p className="font-medium">{vehicle.year}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Type</p>
+                    <p className="font-medium capitalize">{vehicle.type}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Fuel Type</p>
+                    <p className="font-medium capitalize">{vehicle.fuel_type || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Fuel Capacity</p>
+                    <p className="font-medium">{vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : 'N/A'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {lastService && (
               <Card>

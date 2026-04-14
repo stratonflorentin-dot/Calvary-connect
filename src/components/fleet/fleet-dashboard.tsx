@@ -4,12 +4,16 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
+import { useRole } from '@/hooks/use-role';
 import { AddVehicleDialog } from '@/components/fleet/add-vehicle-dialog';
 import { VehicleDetailsDialog } from '@/components/fleet/vehicle-details-dialog';
 import { 
   Truck, Package, Car, Wrench, AlertTriangle, 
-  CheckCircle, Clock, Database, AlertCircle
+  CheckCircle, Clock, Database, AlertCircle, User
 } from 'lucide-react';
 
 interface Vehicle {
@@ -31,6 +35,7 @@ interface Vehicle {
 }
 
 export function FleetDashboard() {
+  const { role } = useRole();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -38,6 +43,12 @@ export function FleetDashboard() {
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  
+  // Assign dialog state
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<string>('');
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     loadFleetData();
@@ -93,6 +104,73 @@ export function FleetDashboard() {
       setVehicles([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Open assign dialog and load available drivers
+  const openAssignDialog = async () => {
+    try {
+      // Load available drivers (users with DRIVER role who are not assigned to a vehicle)
+      const { data: driversData, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('role', 'DRIVER');
+      
+      if (error) {
+        console.error('Error loading drivers:', error);
+        // Try alternative query if table structure is different
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (profiles) {
+          const driverProfiles = profiles.filter((p: any) => 
+            p.role === 'DRIVER' || p.user_role === 'DRIVER'
+          );
+          setDrivers(driverProfiles);
+        }
+      } else {
+        setDrivers(driversData || []);
+      }
+      
+      setAssignOpen(true);
+    } catch (error) {
+      console.error('Error opening assign dialog:', error);
+      alert('Error loading drivers. Please try again.');
+    }
+  };
+
+  // Handle vehicle assignment to driver
+  const handleAssign = async () => {
+    if (!selectedVehicle?.id || !selectedDriver) {
+      alert('Please select a driver to assign');
+      return;
+    }
+    
+    try {
+      setAssigning(true);
+      
+      // Update vehicle with assigned driver
+      const { error } = await supabase
+        .from('vehicles')
+        .update({
+          assigned_driver_id: selectedDriver,
+          status: 'assigned',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedVehicle.id);
+      
+      if (error) throw error;
+      
+      alert('✅ Vehicle assigned successfully!');
+      setAssignOpen(false);
+      setSelectedDriver('');
+      loadFleetData(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error assigning vehicle:', error);
+      alert(`❌ Error assigning vehicle: ${error.message}`);
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -420,7 +498,26 @@ export function FleetDashboard() {
                 >
                   View Details
                 </Button>
-                <Button size="sm" className="flex-1">
+                <VehicleDetailsDialog
+                  vehicle={selectedVehicle}
+                  open={detailsOpen}
+                  onOpenChange={(open) => {
+                    setDetailsOpen(open);
+                    if (!open) {
+                      loadFleetData();
+                    }
+                  }}
+                  onVehicleUpdated={loadFleetData}
+                  role={role}
+                />
+                <Button 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedVehicle(vehicle);
+                    openAssignDialog();
+                  }}
+                >
                   Assign
                 </Button>
               </div>
@@ -444,6 +541,70 @@ export function FleetDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Assign Vehicle Dialog */}
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="size-5" />
+              Assign Vehicle
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Vehicle</Label>
+              <div className="p-3 bg-gray-50 rounded-md">
+                <p className="font-medium">{selectedVehicle?.plate_number}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedVehicle?.make} {selectedVehicle?.model}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Select Driver</Label>
+              <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a driver..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {drivers.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      No drivers available
+                    </SelectItem>
+                  ) : (
+                    drivers.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.full_name || driver.email || driver.id}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setAssignOpen(false);
+                  setSelectedDriver('');
+                }}
+                disabled={assigning}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleAssign}
+                disabled={!selectedDriver || assigning}
+              >
+                {assigning ? 'Assigning...' : 'Assign Vehicle'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
     );
   }
