@@ -425,11 +425,9 @@ export function ChartOfAccountsPage() {
                 </TableBody>
               </Table>
             </Card>
-          </div>
-        </div>
 
-    {/* View Account Dialog */}
-    <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+            {/* View Account Dialog */}
+            <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Account Details</DialogTitle>
@@ -571,7 +569,9 @@ export function ChartOfAccountsPage() {
             <Button type="submit" className="flex-1">Update Account</Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
-  </div>
-);
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+}
