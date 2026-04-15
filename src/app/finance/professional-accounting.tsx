@@ -54,6 +54,11 @@ interface Expense {
   amount: number;
   date: string;
   status: 'pending' | 'approved' | 'rejected' | 'reimbursed';
+  vehicle_id?: string;
+  trip_id?: string;
+  vendor_name?: string;
+  payment_method?: string;
+  created_at?: string;
 }
 
 interface JournalEntry {
@@ -225,6 +230,10 @@ export function ProfessionalAccounting() {
   const [showAddBankAccount, setShowAddBankAccount] = useState(false);
   const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [showEditExpense, setShowEditExpense] = useState(false);
+  const [showViewExpense, setShowViewExpense] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   
   // Form states
   const [invoiceForm, setInvoiceForm] = useState({ 
@@ -542,6 +551,64 @@ export function ProfessionalAccounting() {
         currency: 'TZS',
         opening_balance: ''
       });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // Expense Action Handlers
+  const handleViewExpense = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setShowViewExpense(true);
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setExpenseForm({
+      category: expense.category,
+      description: expense.description,
+      amount: expense.amount.toString(),
+      date: expense.date,
+      vehicle_id: expense.vehicle_id || ''
+    });
+    setShowEditExpense(true);
+  };
+
+  const handleUpdateExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExpense) return;
+    
+    try {
+      const { error } = await supabase.from('expenses').update({
+        category: expenseForm.category,
+        description: expenseForm.description,
+        amount: parseFloat(expenseForm.amount),
+        date: expenseForm.date,
+        vehicle_id: expenseForm.vehicle_id || null,
+        updated_at: new Date().toISOString()
+      }).eq('id', editingExpense.id);
+
+      if (error) throw error;
+
+      toast({ title: 'Success', description: 'Expense updated successfully' });
+      setShowEditExpense(false);
+      setEditingExpense(null);
+      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '' });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteExpense = async (expense: Expense) => {
+    if (!confirm(`Are you sure you want to delete expense ${expense.expense_number}?`)) return;
+    
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', expense.id);
+      if (error) throw error;
+      
+      toast({ title: 'Success', description: `Expense ${expense.expense_number} deleted` });
       loadData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -915,20 +982,123 @@ export function ProfessionalAccounting() {
                           <TableHead>Description</TableHead>
                           <TableHead>Amount</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {expenses.map((exp) => (
+                        {filteredExpenses.map((exp) => (
                           <TableRow key={exp.id}>
                             <TableCell className="font-medium">{exp.expense_number}</TableCell>
                             <TableCell><Badge variant="outline">{exp.category}</Badge></TableCell>
                             <TableCell>{exp.description}</TableCell>
                             <TableCell className="font-semibold">{formatCurrency(exp.amount)}</TableCell>
                             <TableCell><Badge className={getStatusBadge(exp.status)}>{exp.status}</Badge></TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleViewExpense(exp)} title="View">
+                                  <BookOpen className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleEditExpense(exp)} title="Edit">
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(exp)} title="Delete" className="text-red-600 hover:text-red-700">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
+                    
+                    {/* View Expense Dialog */}
+                    <Dialog open={showViewExpense} onOpenChange={setShowViewExpense}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Expense Details</DialogTitle>
+                        </DialogHeader>
+                        {selectedExpense && (
+                          <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label className="text-muted-foreground">Expense Number</Label>
+                                <p className="font-semibold">{selectedExpense.expense_number}</p>
+                              </div>
+                              <div>
+                                <Label className="text-muted-foreground">Date</Label>
+                                <p className="font-semibold">{formatDate(selectedExpense.date)}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-muted-foreground">Category</Label>
+                              <p className="font-semibold"><Badge variant="outline">{selectedExpense.category}</Badge></p>
+                            </div>
+                            <div>
+                              <Label className="text-muted-foreground">Description</Label>
+                              <p className="font-semibold">{selectedExpense.description}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label className="text-muted-foreground">Amount</Label>
+                                <p className="font-semibold text-lg">{formatCurrency(selectedExpense.amount)}</p>
+                              </div>
+                              <div>
+                                <Label className="text-muted-foreground">Status</Label>
+                                <p><Badge className={getStatusBadge(selectedExpense.status)}>{selectedExpense.status}</Badge></p>
+                              </div>
+                            </div>
+                            {selectedExpense.vehicle_id && (
+                              <div>
+                                <Label className="text-muted-foreground">Vehicle ID</Label>
+                                <p className="font-semibold">{selectedExpense.vehicle_id}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    
+                    {/* Edit Expense Dialog */}
+                    <Dialog open={showEditExpense} onOpenChange={setShowEditExpense}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Edit Expense</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleUpdateExpense} className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <Label>Category</Label>
+                            <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({...expenseForm, category: v})} required>
+                              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Fuel">Fuel</SelectItem>
+                                <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                <SelectItem value="Spare Parts">Spare Parts</SelectItem>
+                                <SelectItem value="Insurance">Insurance</SelectItem>
+                                <SelectItem value="License">License</SelectItem>
+                                <SelectItem value="Tolls">Tolls</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Description</Label>
+                            <Input value={expenseForm.description} onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} required />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Amount</Label>
+                            <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} required />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Date</Label>
+                            <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})} required />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button type="button" variant="outline" className="flex-1" onClick={() => setShowEditExpense(false)}>Cancel</Button>
+                            <Button type="submit" className="flex-1">Update Expense</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                   </CardContent>
                 </Card>
               </TabsContent>
