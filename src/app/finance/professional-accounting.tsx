@@ -85,20 +85,27 @@ export function ProfessionalAccounting() {
 
   const loadData = async () => {
     setIsLoading(true);
-    const [{ data: invoicesData }, { data: expensesData }, { data: jeData }, { data: bankData }, { data: tripsData }] = await Promise.all([
-      supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(20),
-      supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(20),
-      supabase.from('journal_entries').select('*').order('created_at', { ascending: false }).limit(20),
-      supabase.from('bank_accounts').select('*'),
-      supabase.from('trips').select('id, origin, destination, client, salesAmount, status, created_at')
-        .eq('payment_status', 'PENDING')
-        .order('created_at', { ascending: false }).limit(50)
-    ]);
-    setInvoices(invoicesData || []);
-    setExpenses(expensesData || []);
-    setJournalEntries(jeData || []);
-    setBankAccounts(bankData || []);
-    setTrips(tripsData || []);
+    try {
+      const [{ data: invoicesData }, { data: expensesData }, { data: jeData }, { data: bankData }, { data: tripsData }] = await Promise.all([
+        supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(20).catch(() => ({ data: [] })),
+        supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(20).catch(() => ({ data: [] })),
+        supabase.from('journal_entries').select('*').order('created_at', { ascending: false }).limit(20).catch(() => ({ data: [] })),
+        supabase.from('bank_accounts').select('*').catch(() => ({ data: [] })),
+        supabase.from('trips').select('id, origin, destination, client, salesAmount, status, created_at, payment_status')
+          .order('created_at', { ascending: false }).limit(50).catch(() => ({ data: [] }))
+      ]);
+      
+      setInvoices(invoicesData || []);
+      setExpenses(expensesData || []);
+      setJournalEntries(jeData || []);
+      setBankAccounts(bankData || []);
+      // Filter trips with pending payment status on client side
+      const pendingTrips = (tripsData || []).filter((t: any) => t.payment_status === 'PENDING' || !t.payment_status);
+      setTrips(pendingTrips);
+    } catch (error) {
+      console.error('Error loading financial data:', error);
+      toast({ title: 'Warning', description: 'Some data could not be loaded. Tables may need to be created.', variant: 'destructive' });
+    }
     setIsLoading(false);
   };
 
@@ -333,12 +340,12 @@ export function ProfessionalAccounting() {
                       {/* Trip Linking */}
                       <div className="space-y-2">
                         <Label>Link to Trip (Optional)</Label>
-                        <Select value={invoiceForm.trip_id} onValueChange={handleTripSelect}>
+                        <Select value={invoiceForm.trip_id || 'none'} onValueChange={(v) => v === 'none' ? setInvoiceForm({...invoiceForm, trip_id: ''}) : handleTripSelect(v)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select pending trip..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None - Standalone Invoice</SelectItem>
+                            <SelectItem value="none">None - Standalone Invoice</SelectItem>
                             {trips.map((trip) => (
                               <SelectItem key={trip.id} value={trip.id}>
                                 {trip.origin} → {trip.destination} | {trip.client || 'No client'} | Tsh {trip.salesAmount?.toLocaleString() || 0}
@@ -346,7 +353,7 @@ export function ProfessionalAccounting() {
                             ))}
                           </SelectContent>
                         </Select>
-                        {invoiceForm.trip_id && (
+                        {invoiceForm.trip_id && invoiceForm.trip_id !== 'none' && (
                           <p className="text-xs text-green-600">✓ Auto-filled from trip data</p>
                         )}
                       </div>
