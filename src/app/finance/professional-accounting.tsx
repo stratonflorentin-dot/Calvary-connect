@@ -1247,15 +1247,212 @@ export function ProfessionalAccounting() {
               </TabsContent>
 
               <TabsContent value="bank_accounts">
-                <Card className="p-8 text-center">
-                  <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold">Cash & Bank Accounts</h3>
-                  <p className="text-muted-foreground">Manage bank accounts, mobile money, petty cash</p>
-                  <div className="flex justify-center gap-2 mt-4">
-                    <Link href="/finance/bank-statement">
-                      <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Import Statement</Button>
-                    </Link>
-                  </div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Cash & Bank Accounts</CardTitle>
+                      <p className="text-sm text-muted-foreground">Manage bank accounts, mobile money, petty cash</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href="/finance/bank-statement">
+                        <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Import Statement</Button>
+                      </Link>
+                      <Dialog open={showAddBankAccount} onOpenChange={setShowAddBankAccount}>
+                        <DialogTrigger asChild>
+                          <Button><Plus className="h-4 w-4 mr-2" /> Add Account</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Add New Bank Account</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleAddBankAccount} className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                              <Label>Account Name *</Label>
+                              <Input 
+                                value={bankForm.account_name} 
+                                onChange={(e) => setBankForm({...bankForm, account_name: e.target.value})} 
+                                placeholder="e.g. CRDB Main Operating"
+                                required 
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Bank Name *</Label>
+                              <Input 
+                                value={bankForm.bank_name} 
+                                onChange={(e) => setBankForm({...bankForm, bank_name: e.target.value})} 
+                                placeholder="e.g. CRDB Bank"
+                                required 
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Account Number *</Label>
+                                <Input 
+                                  value={bankForm.account_number} 
+                                  onChange={(e) => setBankForm({...bankForm, account_number: e.target.value})} 
+                                  placeholder="e.g. 1234567890"
+                                  required 
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Branch</Label>
+                                <Input 
+                                  value={bankForm.branch} 
+                                  onChange={(e) => setBankForm({...bankForm, branch: e.target.value})} 
+                                  placeholder="e.g. Dar es Salaam"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Account Type *</Label>
+                                <Select 
+                                  value={bankForm.account_type} 
+                                  onValueChange={(v) => setBankForm({...bankForm, account_type: v})}
+                                  required
+                                >
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="current">Current Account</SelectItem>
+                                    <SelectItem value="savings">Savings Account</SelectItem>
+                                    <SelectItem value="fixed_deposit">Fixed Deposit</SelectItem>
+                                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                                    <SelectItem value="petty_cash">Petty Cash</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Currency *</Label>
+                                <Select 
+                                  value={bankForm.currency} 
+                                  onValueChange={(v) => setBankForm({...bankForm, currency: v})}
+                                  required
+                                >
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="TZS">TSH (Tanzanian Shilling)</SelectItem>
+                                    <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Opening Balance</Label>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                value={bankForm.opening_balance} 
+                                onChange={(e) => setBankForm({...bankForm, opening_balance: e.target.value})} 
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddBankAccount(false)}>Cancel</Button>
+                              <Button type="submit" className="flex-1">Create Account</Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Account Name</TableHead>
+                          <TableHead>Bank</TableHead>
+                          <TableHead>Account Number</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Currency</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bankAccounts.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No bank accounts found. Click "Add Account" to create your first account.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          bankAccounts.map((acc) => (
+                            <TableRow key={acc.id}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <Landmark className="h-4 w-4 text-blue-500" />
+                                  {acc.account_name}
+                                </div>
+                              </TableCell>
+                              <TableCell>{acc.bank_name}</TableCell>
+                              <TableCell>{acc.account_number}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="capitalize">
+                                  {acc.account_type.replace('_', ' ')}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={acc.currency === 'USD' ? 'default' : 'secondary'}>
+                                  {acc.currency}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {acc.currency === 'USD' 
+                                  ? `$ ${acc.current_balance?.toLocaleString() || '0.00'}`
+                                  : `Tsh ${acc.current_balance?.toLocaleString() || '0'}`
+                                }
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => {
+                                      // View account details
+                                      toast({ title: 'Account Details', description: `${acc.account_name} - ${acc.bank_name}` });
+                                    }}
+                                    title="View Details"
+                                  >
+                                    <BookOpen className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => {
+                                      // Edit functionality would go here
+                                      toast({ title: 'Edit', description: 'Edit functionality coming soon' });
+                                    }}
+                                    title="Edit"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="text-red-600 hover:text-red-700"
+                                    onClick={async () => {
+                                      if (!confirm(`Delete ${acc.account_name}? This action cannot be undone.`)) return;
+                                      try {
+                                        const { error } = await supabase.from('bank_accounts').delete().eq('id', acc.id);
+                                        if (error) throw error;
+                                        toast({ title: 'Success', description: 'Account deleted successfully' });
+                                        loadData();
+                                      } catch (error: any) {
+                                        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                      }
+                                    }}
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
                 </Card>
               </TabsContent>
 
