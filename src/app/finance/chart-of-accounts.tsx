@@ -27,6 +27,19 @@ interface Account {
   description?: string;
 }
 
+interface LedgerTransaction {
+  id: string;
+  journal_entry_id: string;
+  entry_number: string;
+  entry_date: string;
+  description: string;
+  reference?: string;
+  debit: number;
+  credit: number;
+  running_balance: number;
+  created_at: string;
+}
+
 const categoryColors: Record<string, { bg: string; text: string; border: string }> = {
   ASSETS: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
   LIABILITIES: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
@@ -64,6 +77,22 @@ export function ChartOfAccountsPage() {
     type: 'debit' as 'debit' | 'credit',
     description: '',
     is_active: true
+  });
+
+  // Ledger view states
+  const [showLedgerDialog, setShowLedgerDialog] = useState(false);
+  const [ledgerAccount, setLedgerAccount] = useState<Account | null>(null);
+  const [ledgerTransactions, setLedgerTransactions] = useState<LedgerTransaction[]>([]);
+  const [isLoadingLedger, setIsLoadingLedger] = useState(false);
+  
+  // Manual entry form for ledger
+  const [showAddEntryDialog, setShowAddEntryDialog] = useState(false);
+  const [entryForm, setEntryForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    reference: '',
+    amount: '',
+    type: 'debit' as 'debit' | 'credit'
   });
 
   useEffect(() => {
@@ -186,6 +215,146 @@ export function ChartOfAccountsPage() {
 
       toast({ title: 'Success', description: `Account ${editAccount.code} updated` });
       setShowEditDialog(false);
+      loadAccounts();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // Ledger view functions
+  const handleViewLedger = async (account: Account) => {
+    setLedgerAccount(account);
+    setShowLedgerDialog(true);
+    setIsLoadingLedger(true);
+    
+    try {
+      // Fetch journal entry lines for this account
+      const { data, error } = await supabase
+        .from('journal_entry_lines')
+        .select(`
+          id,
+          journal_entry_id,
+          description,
+          debit,
+          credit,
+          created_at,
+          journal_entries!inner(entry_number, entry_date, reference)
+        `)
+        .eq('account_code', account.code)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      // Calculate running balance
+      let runningBalance = 0;
+      const transactions = (data || []).map((t: any) => {
+        const debit = parseFloat(t.debit) || 0;
+        const credit = parseFloat(t.credit) || 0;
+        
+        // For debit accounts: increase with debit, decrease with credit
+        // For credit accounts: increase with credit, decrease with debit
+        if (account.type === 'debit') {
+          runningBalance += debit - credit;
+        } else {
+          runningBalance += credit - debit;
+        }
+        
+        return {
+          id: t.id,
+          journal_entry_id: t.journal_entry_id,
+          entry_number: t.journal_entries?.entry_number || 'N/A',
+          entry_date: t.journal_entries?.entry_date || t.created_at,
+          description: t.description,
+          reference: t.journal_entries?.reference,
+          debit: debit,
+          credit: credit,
+          running_balance: runningBalance,
+          created_at: t.created_at
+        };
+      });
+
+      setLedgerTransactions(transactions.reverse()); // Show newest first
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsLoadingLedger(false);
+    }
+  };
+
+  const handleCreateLedgerEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ledgerAccount) return;
+
+    try {
+      const amount = parseFloat(entryForm.amount);
+      if (isNaN(amount) || amount <= 0) {
+        toast({ title: 'Error', description: 'Please enter a valid amount', variant: 'destructive' });
+        return;
+      }
+
+      // Create journal entry
+      const entryNumber = `JE-${Date.now()}`;
+      const { data: jeData, error: jeError } = await supabase.from('journal_entries').insert({
+        entry_number: entryNumber,
+        entry_date: entryForm.date,
+        description: entryForm.description,
+        reference: entryForm.reference,
+        total_debit: entryForm.type === 'debit' ? amount : amount,
+        total_credit: entryForm.type === 'credit' ? amount : amount,
+        is_posted: true,
+        source: 'manual',
+        created_by: 'Super Admin',
+        created_at: new Date().toISOString()
+      }).select().single();
+
+      if (jeError) throw jeError;
+
+      // Create journal entry line for this account
+      const { error: lineError } = await supabase.from('journal_entry_lines').insert({
+        journal_entry_id: jeData.id,
+        account_code: ledgerAccount.code,
+        account_name: ledgerAccount.name,
+        description: entryForm.description,
+        debit: entryForm.type === 'debit' ? amount : 0,
+        credit: entryForm.type === 'credit' ? amount : 0
+      });
+
+      if (lineError) throw lineError;
+
+      // Also create balancing line for Cash & Bank (1002) or suspense account
+      const balancingAccountCode = '1002'; // Bank Account as default balancing
+      const balancingAccount = accounts.find(a => a.code === balancingAccountCode);
+      
+      await supabase.from('journal_entry_lines').insert({
+        journal_entry_id: jeData.id,
+        account_code: balancingAccountCode,
+        account_name: balancingAccount?.name || 'Bank Account',
+        description: `Balancing entry for ${ledgerAccount.name}`,
+        debit: entryForm.type === 'credit' ? amount : 0,
+        credit: entryForm.type === 'debit' ? amount : 0
+      });
+
+      // Update account balance
+      const balanceChange = entryForm.type === 'debit' ? amount : -amount;
+      const { error: updateError } = await supabase.from('accounts').update({
+        current_balance: ledgerAccount.current_balance + balanceChange,
+        updated_at: new Date().toISOString()
+      }).eq('id', ledgerAccount.id);
+
+      if (updateError) throw updateError;
+
+      toast({ title: 'Success', description: `Entry ${entryNumber} created` });
+      setShowAddEntryDialog(false);
+      setEntryForm({
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        reference: '',
+        amount: '',
+        type: 'debit'
+      });
+      
+      // Refresh ledger and accounts
+      handleViewLedger(ledgerAccount);
       loadAccounts();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -396,7 +565,7 @@ export function ChartOfAccountsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewAccount(account)} title="View">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewLedger(account)} title="View Ledger">
                             <BookOpen className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEditClick(account)} title="Edit">
@@ -569,6 +738,152 @@ export function ChartOfAccountsPage() {
             <Button type="submit" className="flex-1">Update Account</Button>
           </div>
         </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Ledger View Dialog */}
+        <Dialog open={showLedgerDialog} onOpenChange={setShowLedgerDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <DialogTitle className="text-xl">Account Ledger</DialogTitle>
+                  {ledgerAccount && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {ledgerAccount.code} - {ledgerAccount.name} | Current Balance: {formatCurrency(ledgerAccount.current_balance)}
+                    </p>
+                  )}
+                </div>
+                <Button onClick={() => setShowAddEntryDialog(true)} className="bg-red-600 hover:bg-red-700">
+                  <Plus className="h-4 w-4 mr-2" /> Add Entry
+                </Button>
+              </div>
+            </DialogHeader>
+            
+            {isLoadingLedger ? (
+              <div className="py-8 text-center">Loading transactions...</div>
+            ) : ledgerTransactions.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <p>No transactions found for this account.</p>
+                <p className="text-sm mt-2">Click "Add Entry" to create a manual journal entry.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Entry #</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Reference</TableHead>
+                      <TableHead className="text-right">Debit</TableHead>
+                      <TableHead className="text-right">Credit</TableHead>
+                      <TableHead className="text-right">Balance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ledgerTransactions.map((tx) => (
+                      <TableRow key={tx.id}>
+                        <TableCell>{new Date(tx.entry_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="font-mono text-sm">{tx.entry_number}</TableCell>
+                        <TableCell>{tx.description}</TableCell>
+                        <TableCell className="text-muted-foreground">{tx.reference || '-'}</TableCell>
+                        <TableCell className="text-right">{tx.debit > 0 ? formatCurrency(tx.debit) : '-'}</TableCell>
+                        <TableCell className="text-right">{tx.credit > 0 ? formatCurrency(tx.credit) : '-'}</TableCell>
+                        <TableCell className="text-right font-semibold">{formatCurrency(tx.running_balance)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Total Transactions: {ledgerTransactions.length}
+                  </p>
+                  <p className="text-lg font-semibold">
+                    Final Balance: {formatCurrency(ledgerTransactions[0]?.running_balance || 0)}
+                  </p>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Manual Entry Dialog */}
+        <Dialog open={showAddEntryDialog} onOpenChange={setShowAddEntryDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add Manual Entry</DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                {ledgerAccount?.code} - {ledgerAccount?.name}
+              </p>
+            </DialogHeader>
+            <form onSubmit={handleCreateLedgerEntry} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input 
+                  type="date"
+                  value={entryForm.date}
+                  onChange={(e) => setEntryForm({...entryForm, date: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input 
+                  value={entryForm.description}
+                  onChange={(e) => setEntryForm({...entryForm, description: e.target.value})}
+                  placeholder="e.g., Petty cash purchase of office supplies"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Reference (Optional)</Label>
+                <Input 
+                  value={entryForm.reference}
+                  onChange={(e) => setEntryForm({...entryForm, reference: e.target.value})}
+                  placeholder="e.g., Receipt #123"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Amount</Label>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={entryForm.amount}
+                    onChange={(e) => setEntryForm({...entryForm, amount: e.target.value})}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select 
+                    value={entryForm.type}
+                    onValueChange={(v) => setEntryForm({...entryForm, type: v as 'debit' | 'credit'})}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="debit">Debit</SelectItem>
+                      <SelectItem value="credit">Credit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="bg-muted p-3 rounded text-sm text-muted-foreground">
+                <p><strong>Note:</strong> This will create a journal entry balanced against Bank Account (1002).</p>
+                <p className="mt-1">For more complex entries, use the Journal Entries tab.</p>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddEntryDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
+                  Create Entry
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
