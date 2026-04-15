@@ -29,13 +29,16 @@ export default function TripsPage() {
   const [editingTrip, setEditingTrip] = useState<any>(null);
   const [managingTrip, setManagingTrip] = useState<any>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [trailers, setTrailers] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [selectedVehicleType, setSelectedVehicleType] = useState<string>('');
 
   const [tripForm, setTripForm] = useState({
     origin: '',
     destination: '',
     driver_id: '',
     vehicle_id: '',
+    trailer_id: '',
     cargo: '',
     client: '',
     distance: '',
@@ -93,14 +96,16 @@ export default function TripsPage() {
       setIsLoading(true);
 
       try {
-        const [{ data: tripsData }, { data: vehiclesData }, { data: driversData }] = await Promise.all([
+        const [{ data: tripsData }, { data: vehiclesData }, { data: trailersData }, { data: driversData }] = await Promise.all([
           supabase.from('trips').select('*').order('created_at', { ascending: false }),
-          supabase.from('vehicles').select('*'),
+          supabase.from('vehicles').select('*').in('type', ['DUMP_TRUCK', 'TRUCK_HEAD', 'ESCORT_CAR']),
+          supabase.from('vehicles').select('*').eq('type', 'TRAILER'),
           supabase.from('user_profiles').select('*').eq('role', 'DRIVER')
         ]);
 
         setTrips(tripsData || []);
         setVehicles(vehiclesData || []);
+        setTrailers(trailersData || []);
         setDrivers(driversData || []);
       } catch (error) {
         console.error('[TripsPage] Error loading data:', error);
@@ -121,7 +126,13 @@ export default function TripsPage() {
         return;
       }
       if (!tripForm.vehicle_id) {
-        toast({ title: 'Error', description: 'Please select a vehicle', variant: 'destructive' });
+        toast({ title: 'Error', description: 'Please select a truck', variant: 'destructive' });
+        return;
+      }
+      // Validate trailer selection for Truck Head
+      const selectedVehicle = vehicles.find(v => v.id === tripForm.vehicle_id);
+      if (selectedVehicle?.type === 'TRUCK_HEAD' && !tripForm.trailer_id) {
+        toast({ title: 'Error', description: 'Please select a trailer for Truck Head', variant: 'destructive' });
         return;
       }
 
@@ -135,6 +146,7 @@ export default function TripsPage() {
         destination: tripForm.destination,
         driver_id: tripForm.driver_id,
         vehicle_id: tripForm.vehicle_id,
+        trailer_id: tripForm.trailer_id || null,
         cargo: tripForm.cargo,
         client: tripForm.client,
         distance: tripForm.distance ? parseInt(tripForm.distance, 10) : null,
@@ -168,11 +180,13 @@ export default function TripsPage() {
 
       toast({ title: 'Success', description: 'Trip and driver allowance created successfully!' });
       setShowTripDialog(false);
+      setSelectedVehicleType('');
       setTripForm({
         origin: '',
         destination: '',
         driver_id: '',
         vehicle_id: '',
+        trailer_id: '',
         cargo: '',
         client: '',
         distance: '',
@@ -394,23 +408,48 @@ export default function TripsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="vehicle">Vehicle *</Label>
+                        <Label htmlFor="vehicle">Truck Selection *</Label>
                         <Select
                           value={tripForm.vehicle_id}
-                          onValueChange={(value) => setTripForm({ ...tripForm, vehicle_id: value })}
+                          onValueChange={(value) => {
+                            const selectedVehicle = vehicles.find(v => v.id === value);
+                            setSelectedVehicleType(selectedVehicle?.type || '');
+                            setTripForm({ ...tripForm, vehicle_id: value, trailer_id: '' });
+                          }}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select vehicle" />
+                            <SelectValue placeholder="Select truck" />
                           </SelectTrigger>
                           <SelectContent>
                             {vehicles.map((vehicle) => (
                               <SelectItem key={vehicle.id} value={vehicle.id}>
-                                {vehicle.plate_number} - {vehicle.make} {vehicle.model}
+                                {vehicle.plate_number} - {vehicle.make} {vehicle.model} ({vehicle.type === 'DUMP_TRUCK' ? 'Dump Truck' : vehicle.type === 'TRUCK_HEAD' ? 'Truck Head' : vehicle.type === 'ESCORT_CAR' ? 'Escort Car' : vehicle.type})
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+                      {/* Show trailer selection only for Truck Head */}
+                      {selectedVehicleType === 'TRUCK_HEAD' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="trailer">Trailer *</Label>
+                          <Select
+                            value={tripForm.trailer_id}
+                            onValueChange={(value) => setTripForm({ ...tripForm, trailer_id: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select trailer" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {trailers.map((trailer) => (
+                                <SelectItem key={trailer.id} value={trailer.id}>
+                                  {trailer.plate_number} - {trailer.make} {trailer.model} {trailer.trailer_sub_type && `(${trailer.trailer_sub_type})`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
