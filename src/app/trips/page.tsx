@@ -46,6 +46,7 @@ export default function TripsPage() {
     tripType: 'local',
     tripCategory: 'town',
     salesAmount: '',
+    payment_status: 'PENDING',
   });
 
   // Calculate driver allowance based on trip details
@@ -160,6 +161,7 @@ export default function TripsPage() {
         vatRate: vatRate,
         vatAmount: vatAmount,
         totalAmount: totalAmount,
+        payment_status: tripForm.payment_status || 'PENDING',
       };
 
       const { data: newTrip, error } = await supabase.from('trips').insert([tripData]).select().single();
@@ -194,6 +196,7 @@ export default function TripsPage() {
         tripType: 'local',
         tripCategory: 'town',
         salesAmount: '',
+        payment_status: 'PENDING',
       });
 
       // Refresh trips
@@ -230,6 +233,7 @@ export default function TripsPage() {
         cargo: editingTrip.cargo,
         client: editingTrip.client,
         status: editingTrip.status,
+        payment_status: editingTrip.payment_status || 'PENDING',
         updated_at: new Date().toISOString()
       };
 
@@ -541,22 +545,55 @@ export default function TripsPage() {
                       )}
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="salesAmount">Sales Amount</Label>
-                      <Input
-                        id="salesAmount"
-                        type="number"
-                        step="0.01"
-                        value={tripForm.salesAmount}
-                        onChange={(e) => setTripForm({ ...tripForm, salesAmount: e.target.value })}
-                        placeholder="1000.00"
-                      />
-                      {tripForm.salesAmount && (
-                        <div className="text-sm text-muted-foreground">
-                          VAT ({tripForm.tripType === 'transit' ? '0%' : '18%'}): {(parseFloat(tripForm.salesAmount) * (tripForm.tripType === 'transit' ? 0 : 0.18)).toFixed(2)} | 
-                          Total: {(parseFloat(tripForm.salesAmount) * (tripForm.tripType === 'transit' ? 1 : 1.18)).toFixed(2)}
-                        </div>
-                      )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="salesAmount">Sales Amount</Label>
+                        <Input
+                          id="salesAmount"
+                          type="number"
+                          step="0.01"
+                          value={tripForm.salesAmount}
+                          onChange={(e) => setTripForm({ ...tripForm, salesAmount: e.target.value })}
+                          placeholder="1000.00"
+                        />
+                        {tripForm.salesAmount && (
+                          <div className="text-sm text-muted-foreground">
+                            VAT ({tripForm.tripType === 'transit' ? '0%' : '18%'}): {(parseFloat(tripForm.salesAmount) * (tripForm.tripType === 'transit' ? 0 : 0.18)).toFixed(2)} | 
+                            Total: {(parseFloat(tripForm.salesAmount) * (tripForm.tripType === 'transit' ? 1 : 1.18)).toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="payment_status">Payment Status</Label>
+                        <Select
+                          value={tripForm.payment_status}
+                          onValueChange={(value) => setTripForm({ ...tripForm, payment_status: value })}
+                        >
+                          <SelectTrigger id="payment_status">
+                            <SelectValue placeholder="Select payment status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PENDING">
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+                                PENDING
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="ADVANCE">
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.8)]"></span>
+                                ADVANCE PAYMENT
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="PAID">
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
+                                PAID (Full)
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-4">
@@ -621,7 +658,7 @@ export default function TripsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="edit-status">Status</Label>
+                      <Label htmlFor="edit-status">Trip Status</Label>
                       <Select
                         value={editingTrip.status}
                         onValueChange={(value) => setEditingTrip({ ...editingTrip, status: value })}
@@ -634,6 +671,38 @@ export default function TripsPage() {
                           <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
                           <SelectItem value="COMPLETED">Completed</SelectItem>
                           <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-payment-status">Payment Status</Label>
+                      <Select
+                        value={editingTrip.payment_status || 'PENDING'}
+                        onValueChange={(value) => setEditingTrip({ ...editingTrip, payment_status: value })}
+                      >
+                        <SelectTrigger id="edit-payment-status">
+                          <SelectValue placeholder="Select payment status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PENDING">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+                              💳 PENDING
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="ADVANCE">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.8)]"></span>
+                              💰 ADVANCE PAYMENT
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="PAID">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
+                              ✅ PAID (Full)
+                            </span>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -724,7 +793,7 @@ export default function TripsPage() {
                           <p className="text-sm text-muted-foreground mt-1">
                             Status: {trip.status} | Cargo: {trip.cargo || 'N/A'}
                           </p>
-                          <div className="flex gap-2 mt-1">
+                          <div className="flex gap-2 mt-1 flex-wrap">
                             {trip.tripType && (
                               <Badge 
                                 variant="outline" 
@@ -737,6 +806,32 @@ export default function TripsPage() {
                             {trip.vatRate !== undefined && (
                               <Badge variant="outline" className="bg-gray-50">
                                 VAT: {trip.vatRate}%
+                              </Badge>
+                            )}
+                            {/* Payment Status Badge with Glow */}
+                            {trip.payment_status && (
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  trip.payment_status === 'PENDING' 
+                                    ? 'bg-red-50 text-red-700 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+                                    : trip.payment_status === 'ADVANCE'
+                                    ? 'bg-yellow-50 text-yellow-700 border-yellow-200 shadow-[0_0_8px_rgba(234,179,8,0.4)]'
+                                    : 'bg-green-50 text-green-700 border-green-200 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
+                                }
+                              >
+                                <span className="flex items-center gap-1">
+                                  <span className={`w-2 h-2 rounded-full ${
+                                    trip.payment_status === 'PENDING' 
+                                      ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]'
+                                      : trip.payment_status === 'ADVANCE'
+                                      ? 'bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.8)]'
+                                      : 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]'
+                                  }`}></span>
+                                  {trip.payment_status === 'PENDING' && '💳 PENDING'}
+                                  {trip.payment_status === 'ADVANCE' && '💰 ADVANCE'}
+                                  {trip.payment_status === 'PAID' && '✅ PAID'}
+                                </span>
                               </Badge>
                             )}
                           </div>
