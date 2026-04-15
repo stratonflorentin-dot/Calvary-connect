@@ -44,6 +44,9 @@ export function ChartOfAccountsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [newAccount, setNewAccount] = useState({
     code: '',
     name: '',
@@ -51,6 +54,16 @@ export function ChartOfAccountsPage() {
     sub_category: '',
     type: 'debit',
     description: ''
+  });
+  const [editAccount, setEditAccount] = useState({
+    id: '',
+    code: '',
+    name: '',
+    category: 'ASSETS',
+    sub_category: '',
+    type: 'debit' as 'debit' | 'credit',
+    description: '',
+    is_active: true
   });
 
   useEffect(() => {
@@ -130,6 +143,49 @@ export function ChartOfAccountsPage() {
       const { error } = await supabase.from('accounts').delete().eq('id', id);
       if (error) throw error;
       toast({ title: 'Success', description: 'Account deleted' });
+      loadAccounts();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleViewAccount = (account: Account) => {
+    setSelectedAccount(account);
+    setShowViewDialog(true);
+  };
+
+  const handleEditClick = (account: Account) => {
+    setEditAccount({
+      id: account.id,
+      code: account.code,
+      name: account.name,
+      category: account.category,
+      sub_category: account.sub_category,
+      type: account.type,
+      description: account.description || '',
+      is_active: account.is_active
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('accounts').update({
+        code: editAccount.code,
+        name: editAccount.name,
+        category: editAccount.category,
+        sub_category: editAccount.sub_category,
+        type: editAccount.type,
+        description: editAccount.description,
+        is_active: editAccount.is_active,
+        updated_at: new Date().toISOString()
+      }).eq('id', editAccount.id);
+
+      if (error) throw error;
+
+      toast({ title: 'Success', description: `Account ${editAccount.code} updated` });
+      setShowEditDialog(false);
       loadAccounts();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -339,18 +395,19 @@ export function ChartOfAccountsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewAccount(account)} title="View">
                             <BookOpen className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(account)} title="Edit">
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="ghost" 
-                            size="sm" 
-                            className="text-red-600"
+                            size="icon" 
+                            className="text-red-600 hover:text-red-700"
                             onClick={() => handleDeleteAccount(account.id, account.code)}
+                            title="Delete"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -370,5 +427,151 @@ export function ChartOfAccountsPage() {
             </Card>
           </div>
         </div>
-      );
-    }
+
+    {/* View Account Dialog */}
+    <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Account Details</DialogTitle>
+        </DialogHeader>
+        {selectedAccount && (
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">Account Code</Label>
+                <p className="font-semibold font-mono">{selectedAccount.code}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Type</Label>
+                <p className="font-semibold capitalize">{selectedAccount.type}</p>
+              </div>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Account Name</Label>
+              <p className="font-semibold text-lg">{selectedAccount.name}</p>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">Category</Label>
+              <p className="font-semibold">{selectedAccount.category.replace(/_/g, ' ')}</p>
+            </div>
+            {selectedAccount.sub_category && (
+              <div>
+                <Label className="text-muted-foreground">Sub Category</Label>
+                <p className="font-semibold">{selectedAccount.sub_category}</p>
+              </div>
+            )}
+            {selectedAccount.description && (
+              <div>
+                <Label className="text-muted-foreground">Description</Label>
+                <p className="font-semibold">{selectedAccount.description}</p>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">Current Balance</Label>
+                <p className="font-semibold text-lg">{formatCurrency(selectedAccount.current_balance)}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Status</Label>
+                <p><Badge className={selectedAccount.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                  {selectedAccount.is_active ? 'Active' : 'Inactive'}
+                </Badge></p>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+
+    {/* Edit Account Dialog */}
+    <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Account</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleUpdateAccount} className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label>Account Code</Label>
+            <Input 
+              value={editAccount.code} 
+              onChange={(e) => setEditAccount({...editAccount, code: e.target.value})} 
+              required 
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Account Name</Label>
+            <Input 
+              value={editAccount.name} 
+              onChange={(e) => setEditAccount({...editAccount, name: e.target.value})} 
+              required 
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Select 
+              value={editAccount.category} 
+              onValueChange={(v) => setEditAccount({...editAccount, category: v as Account['category']})}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ASSETS">ASSETS</SelectItem>
+                <SelectItem value="LIABILITIES">LIABILITIES</SelectItem>
+                <SelectItem value="EQUITY">EQUITY</SelectItem>
+                <SelectItem value="REVENUE">REVENUE</SelectItem>
+                <SelectItem value="COST_OF_SALES">COST OF SALES</SelectItem>
+                <SelectItem value="OPERATING_EXPENSES">OPERATING EXPENSES</SelectItem>
+                <SelectItem value="OTHER_EXPENSES">OTHER EXPENSES</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Sub Category</Label>
+            <Input 
+              value={editAccount.sub_category} 
+              onChange={(e) => setEditAccount({...editAccount, sub_category: e.target.value})} 
+              placeholder="e.g., Current Assets"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Account Type</Label>
+            <Select 
+              value={editAccount.type} 
+              onValueChange={(v) => setEditAccount({...editAccount, type: v as 'debit' | 'credit'})}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="debit">Debit</SelectItem>
+                <SelectItem value="credit">Credit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Input 
+              value={editAccount.description} 
+              onChange={(e) => setEditAccount({...editAccount, description: e.target.value})} 
+              placeholder="Optional description"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select 
+              value={editAccount.is_active ? 'active' : 'inactive'} 
+              onValueChange={(v) => setEditAccount({...editAccount, is_active: v === 'active'})}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setShowEditDialog(false)}>Cancel</Button>
+            <Button type="submit" className="flex-1">Update Account</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  </div>
+);
