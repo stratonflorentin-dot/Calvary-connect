@@ -66,7 +66,7 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
         FleetService.getAvailableVehicles('ESCORT_CAR')
       ]);
 
-      setVehicles({ Dumptrucks, truckHeads, trailers, escortCars });
+      setVehicles({ dumpTrucks, truckHeads, trailers, escortCars });
     } catch (error) {
       console.error('Error loading vehicles:', error);
     }
@@ -319,10 +319,10 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
               </Select>
             </div>
 
-            {/* Truck Head (Hose) Selection */}
+            {/* Truck Head Selection - Alternative to Dump Truck */}
             <div>
               <Label>Truck Head (Hose)</Label>
-              <Select value={formData.hoseId} onValueChange={(value) => setFormData({...formData, hoseId: value})}>
+              <Select value={formData.truckId} onValueChange={(value) => setFormData({...formData, truckId: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select truck head" />
                 </SelectTrigger>
@@ -382,14 +382,14 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
           </div>
 
           {/* Selected Fleet Summary */}
-          {(formData.truckId || formData.trailerId || formData.escortCarId || formData.hoseId) && (
+          {(formData.truckId || formData.trailerId || formData.escortCarId) && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium mb-2">Selected Fleet:</h4>
               <div className="flex flex-wrap gap-2">
                 {formData.truckId && (
-                  <Badge className={getFleetColor('TRUCK')}>
+                  <Badge className={getFleetColor('DUMP_TRUCK')}>
                     <Truck className="size-3 mr-1" />
-                    Truck: {vehicles.trucks.find(t => t.id === formData.truckId)?.plateNumber}
+                    Truck: {[...vehicles.dumpTrucks, ...vehicles.truckHeads].find(t => t.id === formData.truckId)?.plateNumber}
                   </Badge>
                 )}
                 {formData.trailerId && (
@@ -402,12 +402,6 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
                   <Badge className={getFleetColor('ESCORT_CAR')}>
                     <Car className="size-3 mr-1" />
                     Escort: {vehicles.escortCars.find(c => c.id === formData.escortCarId)?.plateNumber}
-                  </Badge>
-                )}
-                {formData.hoseId && (
-                  <Badge className={getFleetColor('HOSE')}>
-                    <Wrench className="size-3 mr-1" />
-                    Hose: {vehicles.hoses.find(h => h.id === formData.hoseId)?.plateNumber}
                   </Badge>
                 )}
               </div>
