@@ -22,6 +22,16 @@ import {
   ArrowLeft, LayoutDashboard, ChevronLeft
 } from 'lucide-react';
 
+interface Trip {
+  id: string;
+  origin: string;
+  destination: string;
+  client: string;
+  salesAmount: number;
+  status: string;
+  created_at: string;
+}
+
 interface Invoice {
   id: string;
   invoice_number: string;
@@ -29,6 +39,7 @@ interface Invoice {
   total_amount: number;
   due_date: string;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  trip_id?: string;
 }
 
 interface Expense {
@@ -65,6 +76,7 @@ export function ProfessionalAccounting() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -73,16 +85,20 @@ export function ProfessionalAccounting() {
 
   const loadData = async () => {
     setIsLoading(true);
-    const [{ data: invoicesData }, { data: expensesData }, { data: jeData }, { data: bankData }] = await Promise.all([
+    const [{ data: invoicesData }, { data: expensesData }, { data: jeData }, { data: bankData }, { data: tripsData }] = await Promise.all([
       supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(20),
       supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(20),
       supabase.from('journal_entries').select('*').order('created_at', { ascending: false }).limit(20),
-      supabase.from('bank_accounts').select('*')
+      supabase.from('bank_accounts').select('*'),
+      supabase.from('trips').select('id, origin, destination, client, salesAmount, status, created_at')
+        .eq('payment_status', 'PENDING')
+        .order('created_at', { ascending: false }).limit(50)
     ]);
     setInvoices(invoicesData || []);
     setExpenses(expensesData || []);
     setJournalEntries(jeData || []);
     setBankAccounts(bankData || []);
+    setTrips(tripsData || []);
     setIsLoading(false);
   };
 
@@ -111,8 +127,28 @@ export function ProfessionalAccounting() {
 
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
   const [showCreateExpense, setShowCreateExpense] = useState(false);
-  const [invoiceForm, setInvoiceForm] = useState({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30' });
+  const [invoiceForm, setInvoiceForm] = useState({ 
+    client_name: '', 
+    amount: '', 
+    vat_rate: '18', 
+    description: '', 
+    due_days: '30',
+    trip_id: ''
+  });
   const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0] });
+
+  const handleTripSelect = (tripId: string) => {
+    const selectedTrip = trips.find(t => t.id === tripId);
+    if (selectedTrip) {
+      setInvoiceForm({
+        ...invoiceForm,
+        trip_id: tripId,
+        client_name: selectedTrip.client || '',
+        amount: selectedTrip.salesAmount?.toString() || '',
+        description: `Trip: ${selectedTrip.origin} → ${selectedTrip.destination}`
+      });
+    }
+  };
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,19 +171,28 @@ export function ProfessionalAccounting() {
         due_date: dueDate.toISOString().split('T')[0],
         status: 'draft',
         description: invoiceForm.description,
+        trip_id: invoiceForm.trip_id || null,
         created_at: new Date().toISOString()
       });
 
       if (error) throw error;
 
+      // Update trip payment status if linked
+      if (invoiceForm.trip_id) {
+        await supabase.from('trips').update({
+          payment_status: 'PAID',
+          updated_at: new Date().toISOString()
+        }).eq('id', invoiceForm.trip_id);
+      }
+
       toast({ title: 'Success', description: `Invoice ${invoiceNumber} created` });
       setShowCreateInvoice(false);
-      setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30' });
+      setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30', trip_id: '' });
       loadData();
 
       // Create journal entry
       await supabase.rpc('create_trip_revenue_entry', {
-        p_trip_id: null,
+        p_trip_id: invoiceForm.trip_id || null,
         p_revenue_amount: totalAmount,
         p_client_name: invoiceForm.client_name
       });
@@ -284,6 +329,28 @@ export function ProfessionalAccounting() {
                         <Label>Description</Label>
                         <Input value={invoiceForm.description} onChange={(e) => setInvoiceForm({...invoiceForm, description: e.target.value})} />
                       </div>
+                      
+                      {/* Trip Linking */}
+                      <div className="space-y-2">
+                        <Label>Link to Trip (Optional)</Label>
+                        <Select value={invoiceForm.trip_id} onValueChange={handleTripSelect}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select pending trip..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">None - Standalone Invoice</SelectItem>
+                            {trips.map((trip) => (
+                              <SelectItem key={trip.id} value={trip.id}>
+                                {trip.origin} → {trip.destination} | {trip.client || 'No client'} | Tsh {trip.salesAmount?.toLocaleString() || 0}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {invoiceForm.trip_id && (
+                          <p className="text-xs text-green-600">✓ Auto-filled from trip data</p>
+                        )}
+                      </div>
+                      
                       <Button type="submit" className="w-full">Create Invoice</Button>
                     </form>
                   </DialogContent>
@@ -413,6 +480,7 @@ export function ProfessionalAccounting() {
                           <TableHead>Amount</TableHead>
                           <TableHead>Due Date</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Trip</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -423,6 +491,15 @@ export function ProfessionalAccounting() {
                             <TableCell className="font-semibold">{formatCurrency(inv.total_amount)}</TableCell>
                             <TableCell>{new Date(inv.due_date).toLocaleDateString()}</TableCell>
                             <TableCell><Badge className={getStatusBadge(inv.status)}>{inv.status}</Badge></TableCell>
+                            <TableCell>
+                              {inv.trip_id ? (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                  Linked
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -595,7 +672,9 @@ export function ProfessionalAccounting() {
                   <Card className="p-8 text-center">
                     <h3 className="text-lg font-semibold">Bank Statement Import</h3>
                     <p className="text-muted-foreground">Import and reconcile bank statements</p>
-                    <Button className="mt-4"><Download className="h-4 w-4 mr-2" /> Import Statement</Button>
+                    <Link href="/finance/bank-statement">
+                      <Button className="mt-4"><Download className="h-4 w-4 mr-2" /> Import Statement</Button>
+                    </Link>
                   </Card>
                 </div>
               </TabsContent>
@@ -639,7 +718,9 @@ export function ProfessionalAccounting() {
                   <Calculator className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold">Chart of Accounts</h3>
                   <p className="text-muted-foreground">Manage your 1001-7004 account structure</p>
-                  <Button className="mt-4"><Plus className="h-4 w-4 mr-2" /> Add Account</Button>
+                  <Link href="/finance/chart-of-accounts">
+                    <Button className="mt-4"><Plus className="h-4 w-4 mr-2" /> Manage Accounts</Button>
+                  </Link>
                 </Card>
               </TabsContent>
 
@@ -648,6 +729,11 @@ export function ProfessionalAccounting() {
                   <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold">Cash & Bank Accounts</h3>
                   <p className="text-muted-foreground">Manage bank accounts, mobile money, petty cash</p>
+                  <div className="flex justify-center gap-2 mt-4">
+                    <Link href="/finance/bank-statement">
+                      <Button variant="outline"><Download className="h-4 w-4 mr-2" /> Import Statement</Button>
+                    </Link>
+                  </div>
                 </Card>
               </TabsContent>
 
