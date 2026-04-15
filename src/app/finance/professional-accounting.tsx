@@ -86,25 +86,31 @@ export function ProfessionalAccounting() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [{ data: invoicesData }, { data: expensesData }, { data: jeData }, { data: bankData }, { data: tripsData }] = await Promise.all([
-        supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(20).catch(() => ({ data: [] })),
-        supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(20).catch(() => ({ data: [] })),
-        supabase.from('journal_entries').select('*').order('created_at', { ascending: false }).limit(20).catch(() => ({ data: [] })),
-        supabase.from('bank_accounts').select('*').catch(() => ({ data: [] })),
+      const [invoicesRes, expensesRes, jeRes, bankRes, tripsRes] = await Promise.all([
+        supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(20),
+        supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(20),
+        supabase.from('journal_entries').select('*').order('created_at', { ascending: false }).limit(20),
+        supabase.from('bank_accounts').select('*'),
         supabase.from('trips').select('id, origin, destination, client, salesAmount, status, created_at, payment_status')
-          .order('created_at', { ascending: false }).limit(50).catch(() => ({ data: [] }))
+          .order('created_at', { ascending: false }).limit(50)
       ]);
       
-      setInvoices(invoicesData || []);
-      setExpenses(expensesData || []);
-      setJournalEntries(jeData || []);
-      setBankAccounts(bankData || []);
+      setInvoices(invoicesRes.data || []);
+      setExpenses(expensesRes.data || []);
+      setJournalEntries(jeRes.data || []);
+      setBankAccounts(bankRes.data || []);
       // Filter trips with pending payment status on client side
-      const pendingTrips = (tripsData || []).filter((t: any) => t.payment_status === 'PENDING' || !t.payment_status);
+      const tripsData = tripsRes.data || [];
+      const pendingTrips = tripsData.filter((t: any) => t.payment_status === 'PENDING' || !t.payment_status);
       setTrips(pendingTrips);
+      
+      // Check for errors
+      const errors = [invoicesRes.error, expensesRes.error, jeRes.error, bankRes.error, tripsRes.error].filter(Boolean);
+      if (errors.length > 0) {
+        console.warn('Some tables may not exist yet:', errors);
+      }
     } catch (error) {
       console.error('Error loading financial data:', error);
-      toast({ title: 'Warning', description: 'Some data could not be loaded. Tables may need to be created.', variant: 'destructive' });
     }
     setIsLoading(false);
   };

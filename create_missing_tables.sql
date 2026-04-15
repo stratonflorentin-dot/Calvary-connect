@@ -70,13 +70,6 @@ CREATE TABLE IF NOT EXISTS expenses (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Insert sample bank accounts
-INSERT INTO bank_accounts (account_name, account_number, bank_name, branch, account_type, currency, opening_balance, current_balance) VALUES
-('Main Operating Account', '1234567890', 'CRDB Bank', 'Dar es Salaam', 'current', 'TZS', 5000000, 5000000),
-('USD Account', '0987654321', 'CRDB Bank', 'Dar es Salaam', 'current', 'USD', 10000, 10000),
-('Petty Cash', 'PETTY001', 'Internal', 'Head Office', 'mobile_money', 'TZS', 500000, 500000)
-ON CONFLICT DO NOTHING;
-
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_bank_statements_account ON bank_statements(bank_account_id);
 CREATE INDEX IF NOT EXISTS idx_bank_statements_date ON bank_statements(transaction_date);
