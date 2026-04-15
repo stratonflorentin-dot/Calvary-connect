@@ -1,20 +1,25 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Sidebar } from '@/components/navigation/sidebar';
 import {
   FileText, Receipt, Wallet, CreditCard, Banknote, ArrowRightLeft, Landmark,
   TrendingUp, TrendingDown, Plus, Search, Download, BookOpen, Calculator,
-  Building2, Clock, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, BarChart3
+  Building2, Clock, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, BarChart3,
+  ArrowLeft, LayoutDashboard, ChevronLeft
 } from 'lucide-react';
 
 interface Invoice {
@@ -104,25 +109,191 @@ export function ProfessionalAccounting() {
   const monthlyRevenue = invoices.filter(i => i.status === 'paid').reduce((a, b) => a + b.total_amount, 0);
   const monthlyExpenses = expenses.reduce((a, b) => a + b.amount, 0);
 
-  if (isLoading) return <div className="p-8 text-center">Loading...</div>;
+  const [showCreateInvoice, setShowCreateInvoice] = useState(false);
+  const [showCreateExpense, setShowCreateExpense] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30' });
+  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0] });
+
+  const handleCreateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const amount = parseFloat(invoiceForm.amount);
+      const vatAmount = amount * (parseInt(invoiceForm.vat_rate) / 100);
+      const totalAmount = amount + vatAmount;
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + parseInt(invoiceForm.due_days));
+
+      const invoiceNumber = `INV-${Date.now()}`;
+
+      const { error } = await supabase.from('invoices').insert({
+        invoice_number: invoiceNumber,
+        client_name: invoiceForm.client_name,
+        amount: amount,
+        vat_amount: vatAmount,
+        total_amount: totalAmount,
+        issue_date: new Date().toISOString().split('T')[0],
+        due_date: dueDate.toISOString().split('T')[0],
+        status: 'draft',
+        description: invoiceForm.description,
+        created_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+
+      toast({ title: 'Success', description: `Invoice ${invoiceNumber} created` });
+      setShowCreateInvoice(false);
+      setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30' });
+      loadData();
+
+      // Create journal entry
+      await supabase.rpc('create_trip_revenue_entry', {
+        p_trip_id: null,
+        p_revenue_amount: totalAmount,
+        p_client_name: invoiceForm.client_name
+      });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleCreateExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const expenseNumber = `EXP-${Date.now()}`;
+
+      const { error } = await supabase.from('expenses').insert({
+        expense_number: expenseNumber,
+        category: expenseForm.category,
+        description: expenseForm.description,
+        amount: parseFloat(expenseForm.amount),
+        date: expenseForm.date,
+        status: 'pending',
+        payment_method: 'cash',
+        created_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+
+      toast({ title: 'Success', description: `Expense ${expenseNumber} recorded` });
+      setShowCreateExpense(false);
+      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0] });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const updateInvoiceStatus = async (id: string, status: string) => {
+    try {
+      const { error } = await supabase.from('invoices').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) throw error;
+      toast({ title: 'Success', description: `Invoice status updated to ${status}` });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const updateExpenseStatus = async (id: string, status: string) => {
+    try {
+      const { error } = await supabase.from('expenses').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) throw error;
+      toast({ title: 'Success', description: `Expense status updated to ${status}` });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  if (isLoading) return (
+    <div className="flex min-h-screen">
+      <Sidebar role={role || 'CEO'} />
+      <main className="flex-1 md:ml-60 p-8 text-center">Loading...</main>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-white border-b p-6">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Financial Command Center</h1>
-            <p className="text-muted-foreground">Full ledger management for fleet logistics and corporate accounting</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline"><BarChart3 className="h-4 w-4 mr-2" /> Reports</Button>
-            <Button><Plus className="h-4 w-4 mr-2" /> Quick Entry</Button>
+    <div className="flex min-h-screen bg-background">
+      <Sidebar role={role || 'CEO'} />
+      <main className="flex-1 md:ml-60">
+        {/* Header */}
+        <div className="bg-white border-b p-6">
+          <div className="max-w-7xl mx-auto">
+            {/* Back Navigation */}
+            <div className="flex items-center gap-4 mb-4">
+              <Link href="/">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ChevronLeft className="h-4 w-4" /> Back to Dashboard
+                </Button>
+              </Link>
+              <Link href="/">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <LayoutDashboard className="h-4 w-4" /> Dashboard
+                </Button>
+              </Link>
+            </div>
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold">Financial Command Center</h1>
+                <p className="text-muted-foreground">Full ledger management for fleet logistics and corporate accounting</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setActiveTab('reports')}>
+                  <BarChart3 className="h-4 w-4 mr-2" /> Reports
+                </Button>
+                <Dialog open={showCreateInvoice} onOpenChange={setShowCreateInvoice}>
+                  <DialogTrigger asChild>
+                    <Button><Plus className="h-4 w-4 mr-2" /> Quick Entry</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Create Quick Invoice</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateInvoice} className="space-y-4 pt-4">
+                      <div className="space-y-2">
+                        <Label>Client Name</Label>
+                        <Input value={invoiceForm.client_name} onChange={(e) => setInvoiceForm({...invoiceForm, client_name: e.target.value})} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Amount (excl. VAT)</Label>
+                        <Input type="number" step="0.01" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({...invoiceForm, amount: e.target.value})} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>VAT Rate (%)</Label>
+                        <Select value={invoiceForm.vat_rate} onValueChange={(v) => setInvoiceForm({...invoiceForm, vat_rate: v})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">0% (Transit)</SelectItem>
+                            <SelectItem value="18">18% (Local)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Payment Due (days)</Label>
+                        <Select value={invoiceForm.due_days} onValueChange={(v) => setInvoiceForm({...invoiceForm, due_days: v})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="7">7 days</SelectItem>
+                            <SelectItem value="14">14 days</SelectItem>
+                            <SelectItem value="30">30 days</SelectItem>
+                            <SelectItem value="60">60 days</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Input value={invoiceForm.description} onChange={(e) => setInvoiceForm({...invoiceForm, description: e.target.value})} />
+                      </div>
+                      <Button type="submit" className="w-full">Create Invoice</Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <main className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto p-6">
         {/* Financial Overview */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <Card>
@@ -265,7 +436,46 @@ export function ProfessionalAccounting() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Expenses</CardTitle>
-                    <Button><Plus className="h-4 w-4 mr-2" /> New Expense</Button>
+                    <Dialog open={showCreateExpense} onOpenChange={setShowCreateExpense}>
+                      <DialogTrigger asChild>
+                        <Button><Plus className="h-4 w-4 mr-2" /> New Expense</Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Record New Expense</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateExpense} className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <Label>Category</Label>
+                            <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({...expenseForm, category: v})} required>
+                              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Fuel">Fuel</SelectItem>
+                                <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                <SelectItem value="Spare Parts">Spare Parts</SelectItem>
+                                <SelectItem value="Insurance">Insurance</SelectItem>
+                                <SelectItem value="License">License</SelectItem>
+                                <SelectItem value="Tolls">Tolls</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Description</Label>
+                            <Input value={expenseForm.description} onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} required />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Amount</Label>
+                            <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} required />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Date</Label>
+                            <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})} required />
+                          </div>
+                          <Button type="submit" className="w-full">Record Expense</Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                   </CardHeader>
                   <CardContent>
                     <Table>
@@ -467,6 +677,7 @@ export function ProfessionalAccounting() {
             </Tabs>
           </TabsContent>
         </Tabs>
+        </div>
       </main>
     </div>
   );
