@@ -38,8 +38,12 @@ interface Invoice {
   client_name: string;
   total_amount: number;
   due_date: string;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'awaiting-payment' | 'part-paid';
   trip_id?: string;
+  amount?: number;
+  vat_amount?: number;
+  balance?: number;
+  booking_reference?: string;
 }
 
 interface Expense {
@@ -60,13 +64,63 @@ interface JournalEntry {
   total_debit: number;
   total_credit: number;
   is_posted: boolean;
+  source?: string;
+  created_by?: string;
+}
+
+interface JournalEntryLine {
+  id: string;
+  journal_entry_id: string;
+  account_code: string;
+  account_name: string;
+  partner?: string;
+  description: string;
+  debit: number;
+  credit: number;
+}
+
+interface CreditNote {
+  id: string;
+  credit_note_number: string;
+  invoice_id: string;
+  invoice_number: string;
+  client_name: string;
+  amount: number;
+  reason: string;
+  status: 'draft' | 'issued' | 'applied' | 'voided';
+  issue_date: string;
+  created_at: string;
+}
+
+interface BankStatementEntry {
+  id: string;
+  bank_account_id: string;
+  transaction_date: string;
+  description: string;
+  reference_number?: string;
+  debit_amount?: number;
+  credit_amount?: number;
+  balance?: number;
+  reconciled: boolean;
 }
 
 interface BankAccount {
   id: string;
   account_name: string;
   bank_name: string;
+  account_number: string;
+  branch?: string;
+  account_type: string;
+  currency: string;
   current_balance: number;
+  is_active: boolean;
+}
+
+interface ChartAccount {
+  code: string;
+  name: string;
+  type: string;
+  balance: number;
 }
 
 export function ProfessionalAccounting() {
@@ -75,9 +129,19 @@ export function ProfessionalAccounting() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [journalEntryLines, setJournalEntryLines] = useState<JournalEntryLine[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [chartAccounts, setChartAccounts] = useState<ChartAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Search and filter states
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
+  const [expenseSearch, setExpenseSearch] = useState('');
+  const [jeSearch, setJeSearch] = useState('');
+  const [cnSearch, setCnSearch] = useState('');
 
   useEffect(() => {
     loadData();
@@ -115,11 +179,21 @@ export function ProfessionalAccounting() {
     setIsLoading(false);
   };
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-TZ', { style: 'currency', currency: 'TZS' }).format(amount);
+  const formatCurrency = (amount: number) => {
+    if (!amount || isNaN(amount)) return 'Tsh 0';
+    return 'Tsh ' + amount.toLocaleString('en-TZ');
+  };
+  
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      paid: 'bg-green-100 text-green-700',
+      paid: 'bg-green-100 text-green-700 border-green-200',
+      'part-paid': 'bg-amber-100 text-amber-700 border-amber-200',
+      'awaiting-payment': 'bg-blue-100 text-blue-700 border-blue-200',
       approved: 'bg-green-100 text-green-700',
       posted: 'bg-green-100 text-green-700',
       pending: 'bg-yellow-100 text-yellow-700',
@@ -127,6 +201,10 @@ export function ProfessionalAccounting() {
       sent: 'bg-blue-100 text-blue-700',
       overdue: 'bg-red-100 text-red-700',
       rejected: 'bg-red-100 text-red-700',
+      voided: 'bg-red-100 text-red-700',
+      issued: 'bg-purple-100 text-purple-700',
+      applied: 'bg-green-100 text-green-700',
+      reimbursed: 'bg-green-100 text-green-700',
       cancelled: 'bg-red-100 text-red-700',
     };
     return styles[status] || 'bg-gray-100';
@@ -138,8 +216,17 @@ export function ProfessionalAccounting() {
   const monthlyRevenue = invoices.filter(i => i.status === 'paid').reduce((a, b) => a + b.total_amount, 0);
   const monthlyExpenses = expenses.reduce((a, b) => a + b.amount, 0);
 
+  // Dialog states
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
   const [showCreateExpense, setShowCreateExpense] = useState(false);
+  const [showCreateJournalEntry, setShowCreateJournalEntry] = useState(false);
+  const [showCreateCreditNote, setShowCreateCreditNote] = useState(false);
+  const [showBankStatementImport, setShowBankStatementImport] = useState(false);
+  const [showAddBankAccount, setShowAddBankAccount] = useState(false);
+  const [selectedJournalEntry, setSelectedJournalEntry] = useState<JournalEntry | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  
+  // Form states
   const [invoiceForm, setInvoiceForm] = useState({ 
     client_name: '', 
     amount: '', 
@@ -148,7 +235,40 @@ export function ProfessionalAccounting() {
     due_days: '30',
     trip_id: ''
   });
-  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0] });
+  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '' });
+  
+  // Journal Entry Form
+  const [jeForm, setJeForm] = useState({
+    description: '',
+    reference: '',
+    date: new Date().toISOString().split('T')[0],
+    lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+  });
+  
+  // Credit Note Form
+  const [cnForm, setCnForm] = useState({
+    invoice_id: '',
+    amount: '',
+    reason: '',
+    description: ''
+  });
+  
+  // Bank Account Form
+  const [bankForm, setBankForm] = useState({
+    account_name: '',
+    bank_name: '',
+    account_number: '',
+    branch: '',
+    account_type: 'current',
+    currency: 'TZS',
+    opening_balance: ''
+  });
+  
+  // Bank Statement Import
+  const [selectedBankAccount, setSelectedBankAccount] = useState('');
+  const [statementPeriodFrom, setStatementPeriodFrom] = useState('');
+  const [statementPeriodTo, setStatementPeriodTo] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const handleTripSelect = (tripId: string) => {
     const selectedTrip = trips.find(t => t.id === tripId);
@@ -234,7 +354,7 @@ export function ProfessionalAccounting() {
 
       toast({ title: 'Success', description: `Expense ${expenseNumber} recorded` });
       setShowCreateExpense(false);
-      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0] });
+      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '' });
       loadData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -261,6 +381,225 @@ export function ProfessionalAccounting() {
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
+  };
+
+  // Journal Entry Handlers
+  const addJournalEntryLine = () => {
+    setJeForm({
+      ...jeForm,
+      lines: [...jeForm.lines, { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+    });
+  };
+
+  const updateJournalEntryLine = (index: number, field: string, value: string) => {
+    const updatedLines = [...jeForm.lines];
+    updatedLines[index] = { ...updatedLines[index], [field]: value };
+    setJeForm({ ...jeForm, lines: updatedLines });
+  };
+
+  const removeJournalEntryLine = (index: number) => {
+    if (jeForm.lines.length > 1) {
+      const updatedLines = jeForm.lines.filter((_, i) => i !== index);
+      setJeForm({ ...jeForm, lines: updatedLines });
+    }
+  };
+
+  const calculateJournalEntryTotals = () => {
+    const totalDebit = jeForm.lines.reduce((sum, line) => sum + (parseFloat(line.debit) || 0), 0);
+    const totalCredit = jeForm.lines.reduce((sum, line) => sum + (parseFloat(line.credit) || 0), 0);
+    return { totalDebit, totalCredit, balanced: Math.abs(totalDebit - totalCredit) < 0.01 };
+  };
+
+  const handleCreateJournalEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { totalDebit, totalCredit, balanced } = calculateJournalEntryTotals();
+    
+    if (!balanced) {
+      toast({ title: 'Error', description: 'Debits must equal credits. Difference: ' + formatCurrency(Math.abs(totalDebit - totalCredit)), variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const entryNumber = `MJE-${Date.now()}`;
+      
+      const { data: jeData, error: jeError } = await supabase.from('journal_entries').insert({
+        entry_number: entryNumber,
+        entry_date: jeForm.date,
+        description: jeForm.description,
+        reference: jeForm.reference,
+        total_debit: totalDebit,
+        total_credit: totalCredit,
+        is_posted: true,
+        source: 'manual',
+        created_by: 'Super Admin',
+        created_at: new Date().toISOString()
+      }).select().single();
+
+      if (jeError) throw jeError;
+
+      // Insert journal entry lines
+      const linesToInsert = jeForm.lines.map(line => ({
+        journal_entry_id: jeData.id,
+        account_code: line.account_code,
+        account_name: line.account_name,
+        partner: line.partner,
+        description: line.description,
+        debit: parseFloat(line.debit) || 0,
+        credit: parseFloat(line.credit) || 0
+      }));
+
+      const { error: linesError } = await supabase.from('journal_entry_lines').insert(linesToInsert);
+      if (linesError) throw linesError;
+
+      toast({ title: 'Success', description: `Journal Entry ${entryNumber} created and posted` });
+      setShowCreateJournalEntry(false);
+      setJeForm({
+        description: '',
+        reference: '',
+        date: new Date().toISOString().split('T')[0],
+        lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+      });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // Credit Note Handlers
+  const handleCreateCreditNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const invoice = invoices.find(i => i.id === cnForm.invoice_id);
+      if (!invoice) {
+        toast({ title: 'Error', description: 'Please select an invoice', variant: 'destructive' });
+        return;
+      }
+
+      const cnNumber = `CN-${Date.now()}`;
+      
+      const { error } = await supabase.from('credit_notes').insert({
+        credit_note_number: cnNumber,
+        invoice_id: cnForm.invoice_id,
+        invoice_number: invoice.invoice_number,
+        client_name: invoice.client_name,
+        amount: parseFloat(cnForm.amount),
+        reason: cnForm.reason,
+        description: cnForm.description,
+        status: 'draft',
+        issue_date: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+
+      toast({ title: 'Success', description: `Credit Note ${cnNumber} created` });
+      setShowCreateCreditNote(false);
+      setCnForm({ invoice_id: '', amount: '', reason: '', description: '' });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const updateCreditNoteStatus = async (id: string, status: string) => {
+    try {
+      const { error } = await supabase.from('credit_notes').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+      if (error) throw error;
+      toast({ title: 'Success', description: `Credit Note status updated to ${status}` });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // Bank Account Handlers
+  const handleAddBankAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('bank_accounts').insert({
+        account_name: bankForm.account_name,
+        bank_name: bankForm.bank_name,
+        account_number: bankForm.account_number,
+        branch: bankForm.branch,
+        account_type: bankForm.account_type,
+        currency: bankForm.currency,
+        opening_balance: parseFloat(bankForm.opening_balance) || 0,
+        current_balance: parseFloat(bankForm.opening_balance) || 0,
+        is_active: true,
+        created_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+
+      toast({ title: 'Success', description: `Bank account ${bankForm.account_name} created` });
+      setShowAddBankAccount(false);
+      setBankForm({
+        account_name: '',
+        bank_name: '',
+        account_number: '',
+        branch: '',
+        account_type: 'current',
+        currency: 'TZS',
+        opening_balance: ''
+      });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // Filtered data
+  const filteredInvoices = invoices.filter(inv => {
+    const matchesSearch = !invoiceSearch || 
+      inv.invoice_number.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+      inv.client_name.toLowerCase().includes(invoiceSearch.toLowerCase());
+    const matchesStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredExpenses = expenses.filter(exp => 
+    !expenseSearch || 
+    exp.expense_number?.toLowerCase().includes(expenseSearch.toLowerCase()) ||
+    exp.description?.toLowerCase().includes(expenseSearch.toLowerCase()) ||
+    exp.category?.toLowerCase().includes(expenseSearch.toLowerCase())
+  );
+
+  const filteredJournalEntries = journalEntries.filter(je =>
+    !jeSearch ||
+    je.entry_number?.toLowerCase().includes(jeSearch.toLowerCase()) ||
+    je.description?.toLowerCase().includes(jeSearch.toLowerCase())
+  );
+
+  const filteredCreditNotes = creditNotes.filter(cn =>
+    !cnSearch ||
+    cn.credit_note_number?.toLowerCase().includes(cnSearch.toLowerCase()) ||
+    cn.client_name?.toLowerCase().includes(cnSearch.toLowerCase()) ||
+    cn.invoice_number?.toLowerCase().includes(cnSearch.toLowerCase())
+  );
+
+  // Invoice statistics
+  const invoiceStats = {
+    total: invoices.length,
+    awaiting: invoices.filter(i => i.status === 'sent' || i.status === 'awaiting-payment').length,
+    partPaid: invoices.filter(i => i.status === 'part-paid').length,
+    overdue: invoices.filter(i => i.status === 'overdue').length,
+    paid: invoices.filter(i => i.status === 'paid').length,
+    outstandingBalance: invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled').reduce((sum, i) => sum + (i.total_amount || 0), 0)
+  };
+
+  // Journal Entry statistics
+  const jeStats = {
+    total: journalEntries.length,
+    draft: journalEntries.filter(j => !j.is_posted).length,
+    posted: journalEntries.filter(j => j.is_posted).length
+  };
+
+  // Credit Note statistics
+  const cnStats = {
+    draft: creditNotes.filter(c => c.status === 'draft').length,
+    issued: creditNotes.filter(c => c.status === 'issued').length,
+    applied: creditNotes.filter(c => c.status === 'applied').length,
+    voided: creditNotes.filter(c => c.status === 'voided').length
   };
 
   if (isLoading) return (
