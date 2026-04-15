@@ -25,7 +25,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
   { path: "/inventory", label: "Inventory", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"] },
   { path: "/parts-requests", label: "Parts Requests", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"] },
-  { path: "/spare-parts", label: "Spare Parts", allowedRoles: ["MECHANIC"] },
   { path: "/service-requests", label: "Service Requests", allowedRoles: ["CEO", "ADMIN", "MECHANIC", "DRIVER"] },
   { path: "/truck-history", label: "Truck History", allowedRoles: ["CEO", "ADMIN", "MECHANIC", "DRIVER", "OPERATOR"] },
   { path: "/map", label: "Fleet Map", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
