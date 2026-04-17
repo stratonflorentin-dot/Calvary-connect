@@ -85,15 +85,13 @@ export function ChartOfAccountsPage() {
   const [ledgerTransactions, setLedgerTransactions] = useState<LedgerTransaction[]>([]);
   const [isLoadingLedger, setIsLoadingLedger] = useState(false);
   
-  // Manual entry form for ledger
+  // Manual entry form for ledger - multi-line journal entry
   const [showAddEntryDialog, setShowAddEntryDialog] = useState(false);
-  const [entryForm, setEntryForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    reference: '',
-    amount: '',
-    type: 'debit' as 'debit' | 'credit'
-  });
+  const [entryLines, setEntryLines] = useState([
+    { date: new Date().toISOString().split('T')[0], account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }
+  ]);
+  const [entryReference, setEntryReference] = useState('');
+  const [entryDescription, setEntryDescription] = useState('');
 
   useEffect(() => {
     loadAccounts();
@@ -235,8 +233,8 @@ export function ChartOfAccountsPage() {
           id,
           journal_entry_id,
           description,
-          debit,
-          credit,
+          debit_amount,
+          credit_amount,
           created_at,
           journal_entries!inner(entry_number, entry_date)
         `)
@@ -248,8 +246,8 @@ export function ChartOfAccountsPage() {
       // Calculate running balance
       let runningBalance = 0;
       const transactions = (data || []).map((t: any) => {
-        const debit = parseFloat(t.debit) || 0;
-        const credit = parseFloat(t.credit) || 0;
+        const debit = parseFloat(t.debit_amount) || 0;
+        const credit = parseFloat(t.credit_amount) || 0;
         
         // For debit accounts: increase with debit, decrease with credit
         // For credit accounts: increase with credit, decrease with debit
@@ -281,26 +279,70 @@ export function ChartOfAccountsPage() {
     }
   };
 
+  // Multi-line journal entry handlers
+  const addEntryLine = () => {
+    setEntryLines([...entryLines, { 
+      date: entryLines[0]?.date || new Date().toISOString().split('T')[0], 
+      account_code: '', 
+      account_name: '', 
+      partner: '', 
+      description: '', 
+      debit: '', 
+      credit: '' 
+    }]);
+  };
+
+  const removeEntryLine = (index: number) => {
+    if (entryLines.length > 1) {
+      setEntryLines(entryLines.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateEntryLine = (index: number, field: string, value: string) => {
+    const updated = [...entryLines];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    // Auto-fill account name when code is entered
+    if (field === 'account_code') {
+      const account = accounts.find(a => a.code === value);
+      updated[index].account_name = account?.name || '';
+    }
+    
+    setEntryLines(updated);
+  };
+
+  const calculateEntryTotals = () => {
+    const totalDebit = entryLines.reduce((sum, line) => sum + (parseFloat(line.debit) || 0), 0);
+    const totalCredit = entryLines.reduce((sum, line) => sum + (parseFloat(line.credit) || 0), 0);
+    return { totalDebit, totalCredit, balanced: Math.abs(totalDebit - totalCredit) < 0.01 };
+  };
+
   const handleCreateLedgerEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ledgerAccount) return;
 
-    try {
-      const amount = parseFloat(entryForm.amount);
-      if (isNaN(amount) || amount <= 0) {
-        toast({ title: 'Error', description: 'Please enter a valid amount', variant: 'destructive' });
-        return;
-      }
+    const { totalDebit, totalCredit, balanced } = calculateEntryTotals();
 
+    if (!balanced) {
+      toast({ title: 'Error', description: `Debits (${formatCurrency(totalDebit)}) must equal Credits (${formatCurrency(totalCredit)})`, variant: 'destructive' });
+      return;
+    }
+
+    if (totalDebit === 0) {
+      toast({ title: 'Error', description: 'Please enter at least one transaction', variant: 'destructive' });
+      return;
+    }
+
+    try {
       // Create journal entry
       const entryNumber = `JE-${Date.now()}`;
       const { data: jeData, error: jeError } = await supabase.from('journal_entries').insert({
         entry_number: entryNumber,
-        entry_date: entryForm.date,
-        description: entryForm.description,
-        reference: entryForm.reference,
-        total_debit: entryForm.type === 'debit' ? amount : amount,
-        total_credit: entryForm.type === 'credit' ? amount : amount,
+        entry_date: entryLines[0]?.date || new Date().toISOString().split('T')[0],
+        description: entryDescription || `Manual entry for ${ledgerAccount.name}`,
+        reference: entryReference,
+        total_debit: totalDebit,
+        total_credit: totalCredit,
         is_posted: true,
         source: 'manual',
         created_by: 'Super Admin',
@@ -309,49 +351,41 @@ export function ChartOfAccountsPage() {
 
       if (jeError) throw jeError;
 
-      // Create journal entry line for this account
-      const { error: lineError } = await supabase.from('journal_entry_lines').insert({
-        journal_entry_id: jeData.id,
-        account_code: ledgerAccount.code,
-        account_name: ledgerAccount.name,
-        description: entryForm.description,
-        debit: entryForm.type === 'debit' ? amount : 0,
-        credit: entryForm.type === 'credit' ? amount : 0
-      });
+      // Create journal entry lines
+      const linesToInsert = entryLines
+        .filter(line => line.account_code && (parseFloat(line.debit) > 0 || parseFloat(line.credit) > 0))
+        .map((line, index) => ({
+          journal_entry_id: jeData.id,
+          account_code: line.account_code,
+          description: line.description || entryDescription,
+          debit_amount: parseFloat(line.debit) || 0,
+          credit_amount: parseFloat(line.credit) || 0,
+          line_order: index
+        }));
 
-      if (lineError) throw lineError;
+      const { error: linesError } = await supabase.from('journal_entry_lines').insert(linesToInsert);
+      if (linesError) throw linesError;
 
-      // Also create balancing line for Cash & Bank (1002) or suspense account
-      const balancingAccountCode = '1002'; // Bank Account as default balancing
-      const balancingAccount = accounts.find(a => a.code === balancingAccountCode);
-      
-      await supabase.from('journal_entry_lines').insert({
-        journal_entry_id: jeData.id,
-        account_code: balancingAccountCode,
-        account_name: balancingAccount?.name || 'Bank Account',
-        description: `Balancing entry for ${ledgerAccount.name}`,
-        debit: entryForm.type === 'credit' ? amount : 0,
-        credit: entryForm.type === 'debit' ? amount : 0
-      });
+      // Update account balances
+      for (const line of linesToInsert) {
+        const account = accounts.find(a => a.code === line.account_code);
+        if (account) {
+          const balanceChange = account.type === 'debit' 
+            ? line.debit_amount - line.credit_amount
+            : line.credit_amount - line.debit_amount;
+          
+          await supabase.from('accounts').update({
+            current_balance: account.current_balance + balanceChange,
+            updated_at: new Date().toISOString()
+          }).eq('id', account.id);
+        }
+      }
 
-      // Update account balance
-      const balanceChange = entryForm.type === 'debit' ? amount : -amount;
-      const { error: updateError } = await supabase.from('accounts').update({
-        current_balance: ledgerAccount.current_balance + balanceChange,
-        updated_at: new Date().toISOString()
-      }).eq('id', ledgerAccount.id);
-
-      if (updateError) throw updateError;
-
-      toast({ title: 'Success', description: `Entry ${entryNumber} created` });
+      toast({ title: 'Success', description: `Journal Entry ${entryNumber} created` });
       setShowAddEntryDialog(false);
-      setEntryForm({
-        date: new Date().toISOString().split('T')[0],
-        description: '',
-        reference: '',
-        amount: '',
-        type: 'debit'
-      });
+      setEntryLines([{ date: new Date().toISOString().split('T')[0], account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]);
+      setEntryReference('');
+      setEntryDescription('');
       
       // Refresh ledger and accounts
       handleViewLedger(ledgerAccount);
@@ -911,78 +945,205 @@ export function ChartOfAccountsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Add Manual Entry Dialog */}
+        {/* Add Manual Entry Dialog - Professional Journal Entry Form */}
         <Dialog open={showAddEntryDialog} onOpenChange={setShowAddEntryDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Manual Entry</DialogTitle>
-              <p className="text-sm text-muted-foreground">
-                {ledgerAccount?.code} - {ledgerAccount?.name}
-              </p>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="border-b pb-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <DialogTitle className="text-xl">Journal Entry</DialogTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Ledger: {ledgerAccount?.code} - {ledgerAccount?.name}
+                  </p>
+                </div>
+              </div>
             </DialogHeader>
+            
             <form onSubmit={handleCreateLedgerEntry} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input 
-                  type="date"
-                  value={entryForm.date}
-                  onChange={(e) => setEntryForm({...entryForm, date: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input 
-                  value={entryForm.description}
-                  onChange={(e) => setEntryForm({...entryForm, description: e.target.value})}
-                  placeholder="e.g., Petty cash purchase of office supplies"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Reference (Optional)</Label>
-                <Input 
-                  value={entryForm.reference}
-                  onChange={(e) => setEntryForm({...entryForm, reference: e.target.value})}
-                  placeholder="e.g., Receipt #123"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              {/* Header Fields */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Amount</Label>
+                  <Label>Entry Date</Label>
                   <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={entryForm.amount}
-                    onChange={(e) => setEntryForm({...entryForm, amount: e.target.value})}
-                    placeholder="0.00"
+                    type="date"
+                    value={entryLines[0]?.date || new Date().toISOString().split('T')[0]}
+                    onChange={(e) => {
+                      const updated = entryLines.map(line => ({ ...line, date: e.target.value }));
+                      setEntryLines(updated);
+                    }}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select 
-                    value={entryForm.type}
-                    onValueChange={(v) => setEntryForm({...entryForm, type: v as 'debit' | 'credit'})}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="debit">Debit</SelectItem>
-                      <SelectItem value="credit">Credit</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Reference</Label>
+                  <Input 
+                    value={entryReference}
+                    onChange={(e) => setEntryReference(e.target.value)}
+                    placeholder="e.g., Receipt #123"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input 
+                    value={entryDescription}
+                    onChange={(e) => setEntryDescription(e.target.value)}
+                    placeholder="Overall description for this entry"
+                  />
                 </div>
               </div>
-              <div className="bg-muted p-3 rounded text-sm text-muted-foreground">
-                <p><strong>Note:</strong> This will create a journal entry balanced against Bank Account (1002).</p>
-                <p className="mt-1">For more complex entries, use the Journal Entries tab.</p>
+
+              {/* Journal Entry Lines Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-slate-100">
+                    <TableRow>
+                      <TableHead className="w-32">Date</TableHead>
+                      <TableHead className="w-24">Account</TableHead>
+                      <TableHead className="w-32">Partner</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="w-28 text-right">Dr (Tsh)</TableHead>
+                      <TableHead className="w-28 text-right">Cr (Tsh)</TableHead>
+                      <TableHead className="w-8"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entryLines.map((line, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="p-2">
+                          <Input 
+                            type="date"
+                            value={line.date}
+                            onChange={(e) => updateEntryLine(index, 'date', e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Select 
+                            value={line.account_code}
+                            onValueChange={(v) => updateEntryLine(index, 'account_code', v)}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60">
+                              {accounts.filter(a => a.is_active).map(acc => (
+                                <SelectItem key={acc.code} value={acc.code}>
+                                  {acc.code} - {acc.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input 
+                            value={line.partner}
+                            onChange={(e) => updateEntryLine(index, 'partner', e.target.value)}
+                            placeholder="Customer/Supplier"
+                            className="h-8 text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input 
+                            value={line.description}
+                            onChange={(e) => updateEntryLine(index, 'description', e.target.value)}
+                            placeholder="Line description"
+                            className="h-8 text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={line.debit}
+                            onChange={(e) => updateEntryLine(index, 'debit', e.target.value)}
+                            placeholder="0.00"
+                            className="h-8 text-sm text-right"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={line.credit}
+                            onChange={(e) => updateEntryLine(index, 'credit', e.target.value)}
+                            placeholder="0.00"
+                            className="h-8 text-sm text-right"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Button 
+                            type="button"
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-red-600"
+                            onClick={() => removeEntryLine(index)}
+                            disabled={entryLines.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              <div className="flex gap-2 pt-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddEntryDialog(false)}>
+
+              {/* Add Row Button */}
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={addEntryLine}
+                className="text-red-600 border-red-600 hover:bg-red-50"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add Row
+              </Button>
+
+              {/* Totals */}
+              {(() => {
+                const { totalDebit, totalCredit, balanced } = calculateEntryTotals();
+                return (
+                  <div className="flex justify-end">
+                    <div className="bg-slate-100 p-4 rounded-lg flex gap-8">
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground uppercase">Total Debits</p>
+                        <p className={`text-lg font-bold ${balanced ? 'text-slate-900' : 'text-red-600'}`}>
+                          {formatCurrency(totalDebit)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground uppercase">Total Credits</p>
+                        <p className={`text-lg font-bold ${balanced ? 'text-slate-900' : 'text-red-600'}`}>
+                          {formatCurrency(totalCredit)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground uppercase">Difference</p>
+                        <p className={`text-lg font-bold ${balanced ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(Math.abs(totalDebit - totalCredit))}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4 border-t">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setShowAddEntryDialog(false)}
+                >
                   Cancel
                 </Button>
-                <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
+                <Button 
+                  type="submit" 
+                  className="flex-1 bg-red-600 hover:bg-red-700"
+                  disabled={!calculateEntryTotals().balanced}
+                >
                   Create Entry
                 </Button>
               </div>
