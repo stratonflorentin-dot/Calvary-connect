@@ -265,7 +265,7 @@ export function ChartOfAccountsPage() {
           entry_number: t.journal_entries?.entry_number || 'N/A',
           entry_date: t.journal_entries?.entry_date || t.created_at,
           description: t.description,
-          reference: null,
+          reference: undefined,
           debit: debit,
           credit: credit,
           running_balance: runningBalance,
@@ -743,68 +743,171 @@ export function ChartOfAccountsPage() {
 
         {/* Ledger View Dialog */}
         <Dialog open={showLedgerDialog} onOpenChange={setShowLedgerDialog}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <div className="flex justify-between items-center">
+          <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto p-0">
+            {/* Professional Ledger Header */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6">
+              <div className="flex justify-between items-start">
                 <div>
-                  <DialogTitle className="text-xl">Account Ledger</DialogTitle>
-                  {ledgerAccount && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {ledgerAccount.code} - {ledgerAccount.name} | Current Balance: {formatCurrency(ledgerAccount.current_balance)}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="bg-white/10 p-2 rounded-lg">
+                      <BookOpen className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">General Ledger</h2>
+                      <p className="text-slate-400 text-sm">Account Transaction History</p>
+                    </div>
+                  </div>
                 </div>
-                <Button onClick={() => setShowAddEntryDialog(true)} className="bg-red-600 hover:bg-red-700">
+                <Button 
+                  onClick={() => setShowAddEntryDialog(true)} 
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
                   <Plus className="h-4 w-4 mr-2" /> Add Entry
                 </Button>
               </div>
-            </DialogHeader>
-            
-            {isLoadingLedger ? (
-              <div className="py-8 text-center">Loading transactions...</div>
-            ) : ledgerTransactions.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                <p>No transactions found for this account.</p>
-                <p className="text-sm mt-2">Click "Add Entry" to create a manual journal entry.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Entry #</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Reference</TableHead>
-                      <TableHead className="text-right">Debit</TableHead>
-                      <TableHead className="text-right">Credit</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ledgerTransactions.map((tx) => (
-                      <TableRow key={tx.id}>
-                        <TableCell>{new Date(tx.entry_date).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-mono text-sm">{tx.entry_number}</TableCell>
-                        <TableCell>{tx.description}</TableCell>
-                        <TableCell className="text-muted-foreground">{tx.reference || '-'}</TableCell>
-                        <TableCell className="text-right">{tx.debit > 0 ? formatCurrency(tx.debit) : '-'}</TableCell>
-                        <TableCell className="text-right">{tx.credit > 0 ? formatCurrency(tx.credit) : '-'}</TableCell>
-                        <TableCell className="text-right font-semibold">{formatCurrency(tx.running_balance)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="flex justify-between items-center pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    Total Transactions: {ledgerTransactions.length}
-                  </p>
-                  <p className="text-lg font-semibold">
-                    Final Balance: {formatCurrency(ledgerTransactions[0]?.running_balance || 0)}
-                  </p>
+            </div>
+
+            {/* Account Details Card */}
+            {ledgerAccount && (
+              <div className="px-6 py-4 bg-slate-50 border-b">
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-lg shadow-sm border">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Code</p>
+                    <p className="text-xl font-mono font-bold text-slate-900">{ledgerAccount.code}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm border col-span-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Name</p>
+                    <p className="text-lg font-semibold text-slate-900">{ledgerAccount.name}</p>
+                    {ledgerAccount.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{ledgerAccount.description}</p>
+                    )}
+                  </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm border">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Current Balance</p>
+                    <p className={`text-xl font-bold ${ledgerAccount.current_balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(ledgerAccount.current_balance)}
+                    </p>
+                    <Badge variant="outline" className="mt-1 text-xs">
+                      {ledgerAccount.type === 'debit' ? 'Debit Account' : 'Credit Account'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* Ledger Content */}
+            <div className="p-6">
+              {isLoadingLedger ? (
+                <div className="py-12 text-center">
+                  <div className="animate-spin h-8 w-8 border-4 border-red-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading transactions...</p>
+                </div>
+              ) : ledgerTransactions.length === 0 ? (
+                <div className="py-12 text-center bg-slate-50 rounded-lg border-2 border-dashed">
+                  <BookOpen className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-slate-600">No transactions found</p>
+                  <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+                    This account has no transaction history yet. Click "Add Entry" to create your first journal entry.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Ledger Table */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-slate-100">
+                        <TableRow className="hover:bg-slate-100">
+                          <TableHead className="w-24 font-semibold text-slate-700">Date</TableHead>
+                          <TableHead className="w-28 font-semibold text-slate-700">Entry #</TableHead>
+                          <TableHead className="font-semibold text-slate-700">Description</TableHead>
+                          <TableHead className="w-28 text-right font-semibold text-slate-700">Debit</TableHead>
+                          <TableHead className="w-28 text-right font-semibold text-slate-700">Credit</TableHead>
+                          <TableHead className="w-32 text-right font-semibold text-slate-700">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {/* Opening Balance Row */}
+                        {ledgerTransactions.length > 0 && (
+                          <TableRow className="bg-slate-50/50 font-medium">
+                            <TableCell colSpan={5} className="text-right text-slate-600">
+                              Opening Balance
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-slate-700">
+                              {formatCurrency(ledgerTransactions[ledgerTransactions.length - 1]?.running_balance - 
+                                (ledgerTransactions[ledgerTransactions.length - 1]?.debit - ledgerTransactions[ledgerTransactions.length - 1]?.credit)) || formatCurrency(0)}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {/* Transaction Rows */}
+                        {[...ledgerTransactions].reverse().map((tx, index) => (
+                          <TableRow key={tx.id} className="hover:bg-slate-50/80">
+                            <TableCell className="text-sm">
+                              {new Date(tx.entry_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </TableCell>
+                            <TableCell className="font-mono text-sm text-blue-600 font-medium">
+                              {tx.entry_number}
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium text-slate-900">{tx.description}</div>
+                              {tx.reference && (
+                                <div className="text-xs text-muted-foreground">Ref: {tx.reference}</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {tx.debit > 0 ? (
+                                <span className="text-slate-900 font-medium">{formatCurrency(tx.debit)}</span>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {tx.credit > 0 ? (
+                                <span className="text-slate-900 font-medium">{formatCurrency(tx.credit)}</span>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-bold bg-slate-50/30">
+                              <span className={tx.running_balance >= 0 ? 'text-green-700' : 'text-red-700'}>
+                                {formatCurrency(tx.running_balance)}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Summary Footer */}
+                  <div className="bg-slate-900 text-white p-4 rounded-lg flex justify-between items-center">
+                    <div className="flex gap-6">
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Total Debits</p>
+                        <p className="text-lg font-semibold">
+                          {formatCurrency(ledgerTransactions.reduce((sum, tx) => sum + tx.debit, 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Total Credits</p>
+                        <p className="text-lg font-semibold">
+                          {formatCurrency(ledgerTransactions.reduce((sum, tx) => sum + tx.credit, 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Transactions</p>
+                        <p className="text-lg font-semibold">{ledgerTransactions.length}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-400 uppercase">Closing Balance</p>
+                      <p className="text-2xl font-bold text-green-400">
+                        {formatCurrency(ledgerTransactions[0]?.running_balance || 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 
