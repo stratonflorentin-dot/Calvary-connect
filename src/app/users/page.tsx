@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, X, UserPlus, Search, Trash2, Pencil } from 'lucide-react';
+import { Camera, Upload, X, UserPlus, Search, Trash2, Pencil, RefreshCw } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface UserProfile {
@@ -49,32 +49,54 @@ export default function UsersPage() {
 
   useEffect(() => {
     const loadUsers = async () => {
-      const isAdminUser = isAdmin;
-      if (!user && !isAdminUser) return;
+      console.log('[UsersPage] Loading users... user:', user?.email, 'isAdmin:', isAdmin);
+      
+      if (!user) {
+        console.log('[UsersPage] No user available, skipping load');
+        return;
+      }
       
       try {
         setIsLoading(true);
-        // Fetch all users - soft delete filter removed temporarily
+        console.log('[UsersPage] Fetching from user_profiles...');
+        
+        // Fetch all users
         const { data: usersData, error } = await supabase
           .from('user_profiles')
           .select('*')
           .order('created_at', { ascending: false });
         
         if (error) {
-          console.error('Error loading users:', error);
+          console.error('[UsersPage] Error loading users:', error);
+          console.error('[UsersPage] Error details:', error.message, error.details);
+          // Try fetching without ordering as fallback
+          console.log('[UsersPage] Trying fallback query...');
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('user_profiles')
+            .select('id, email, name, role, status, created_at, avatar_url, last_login_at, login_count, status_reason');
+          
+          if (fallbackError) {
+            console.error('[UsersPage] Fallback also failed:', fallbackError);
+          } else {
+            console.log('[UsersPage] Fallback succeeded, loaded:', fallbackData?.length || 0);
+            setUsers(fallbackData || []);
+          }
         } else {
-          console.log('Loaded users:', usersData?.length || 0);
+          console.log('[UsersPage] Loaded users:', usersData?.length || 0);
+          if (usersData && usersData.length > 0) {
+            console.log('[UsersPage] First user:', usersData[0].email, usersData[0].name);
+          }
           setUsers(usersData || []);
         }
-      } catch (error) {
-        console.error('Error loading users:', error);
+      } catch (error: any) {
+        console.error('[UsersPage] Exception loading users:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     loadUsers();
-  }, [user]);
+  }, [user, isAdmin]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -312,13 +334,48 @@ export default function UsersPage() {
             <p className="text-muted-foreground text-sm">Add and manage employee access.</p>
           </div>
 
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-full gap-2">
-                <UserPlus className="size-4" /> Invite User
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="rounded-full gap-2"
+              onClick={() => {
+                console.log('[UsersPage] Manual refresh triggered');
+                // Force reload users
+                const loadUsers = async () => {
+                  if (!user) return;
+                  try {
+                    setIsLoading(true);
+                    const { data: usersData, error } = await supabase
+                      .from('user_profiles')
+                      .select('*')
+                      .order('created_at', { ascending: false });
+                    
+                    if (error) {
+                      console.error('[UsersPage] Refresh error:', error);
+                      alert('Error loading users: ' + error.message);
+                    } else {
+                      console.log('[UsersPage] Refreshed, loaded:', usersData?.length || 0);
+                      setUsers(usersData || []);
+                    }
+                  } catch (error: any) {
+                    console.error('[UsersPage] Refresh exception:', error);
+                    alert('Error: ' + error.message);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                };
+                loadUsers();
+              }}
+            >
+              <RefreshCw className="size-4" /> Refresh
+            </Button>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="rounded-full gap-2">
+                  <UserPlus className="size-4" /> Invite User
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
               <DialogHeader>
                 <DialogTitle>Invite New Team Member</DialogTitle>
               </DialogHeader>
@@ -354,7 +411,7 @@ export default function UsersPage() {
                       <div className="relative">
                         <Avatar className="h-16 w-16">
                           <AvatarImage src={photoPreview} />
-                          <AvatarFallback>{getInitials(formData.get('name') as string || 'U')}</AvatarFallback>
+                          <AvatarFallback>U</AvatarFallback>
                         </Avatar>
                         <button
                           type="button"
@@ -392,6 +449,7 @@ export default function UsersPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
 
           {/* Edit User Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -609,7 +667,7 @@ export default function UsersPage() {
                           Login: {new Date(u.last_login_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                         </span>
                       )}
-                      {u.login_count > 0 && (
+                      {(u.login_count ?? 0) > 0 && (
                         <span className="text-[10px] text-slate-400">
                           {u.login_count} logins
                         </span>
