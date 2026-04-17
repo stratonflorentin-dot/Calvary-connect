@@ -153,17 +153,22 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       const normalizedEmail = email.toLowerCase().trim();
       console.log('[SupabaseProvider] Fetching profile for:', normalizedEmail, 'ID:', userId);
 
+      // Try to get profile by ID first
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (profileError || !profile) {
+      if (profile && !profileError) {
+        console.log('[SupabaseProvider] Profile found by ID:', profile.role);
+        return profile;
+      }
+
+      // If not found by ID, try to find by email (for pre-added users)
+      if (profileError) {
         console.log('[SupabaseProvider] Profile not found by ID, searching by email:', normalizedEmail);
         
-        // If no profile exists by ID, check if there's one with this email (pre-added by admin)
-        // Use ilike for case-insensitive matching if possible, or just normalize
         const { data: existingByEmail, error: emailError } = await supabase
           .from('user_profiles')
           .select('*')
@@ -172,6 +177,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
         if (!emailError && existingByEmail) {
           console.log('[SupabaseProvider] Found profile by email, linking to auth ID:', userId);
+          
           // Update the pre-added profile with the real auth ID
           const { data: updatedProfile, error: updateError } = await supabase
             .from('user_profiles')
@@ -179,43 +185,55 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
               id: userId, 
               updated_at: new Date().toISOString() 
             })
-            .eq('email', existingByEmail.email) // Use the exact email from DB
+            .eq('email', existingByEmail.email)
             .select()
             .single();
 
-          if (!updateError) {
+          if (!updateError && updatedProfile) {
             console.log('[SupabaseProvider] Profile linked successfully');
             return updatedProfile;
           }
+          
           console.error('[SupabaseProvider] Error linking profile:', updateError);
+          // Return the existing profile even if update failed (RLS might block update)
+          return existingByEmail;
         }
+      }
 
-        console.log('[SupabaseProvider] No pre-existing profile found, creating new one');
-        // If still no profile, create one with default role
-        const { data: newProfile, error: createError } = await supabase
+      // No profile found - create new one
+      console.log('[SupabaseProvider] No profile found, creating new one');
+      const { data: newProfile, error: createError } = await supabase
+        .from('user_profiles')
+        .insert([{
+          id: userId,
+          email: normalizedEmail,
+          name: email.split('@')[0],
+          role: 'OPERATOR',
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('[SupabaseProvider] Error creating profile:', createError);
+        // Try once more with minimal data
+        const { data: minimalProfile } = await supabase
           .from('user_profiles')
           .insert([{
             id: userId,
             email: normalizedEmail,
-            name: email.split('@')[0], // Default name from email
-            role: 'OPERATOR', // Default role
+            name: 'User',
+            role: 'OPERATOR',
             status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           }])
           .select()
           .single();
-
-        if (createError) {
-          console.error('[SupabaseProvider] Error creating profile:', createError);
-          return null;
-        }
-
-        return newProfile;
+        return minimalProfile || null;
       }
 
-      console.log('[SupabaseProvider] Profile found by ID:', profile.role);
-      return profile;
+      return newProfile;
     } catch (err) {
       console.error('[SupabaseProvider] Error fetching/creating profile:', err);
       return null;
