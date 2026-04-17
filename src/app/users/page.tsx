@@ -17,11 +17,28 @@ import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, X, UserPlus, Search, Trash2, Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: 'active' | 'invited' | 'dormant' | 'suspended' | 'inactive';
+  status_reason?: string;
+  password?: string;
+  avatar_url?: string;
+  created_at: string;
+  last_login_at?: string;
+  last_activity_at?: string;
+  login_count?: number;
+  invited_at?: string;
+  invited_by?: string;
+}
+
 export default function UsersPage() {
   const { role, isAdmin } = useRole();
   const { user } = useSupabase();
   const [searchTerm, setSearchTerm] = useState('');
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -122,7 +139,10 @@ export default function UsersPage() {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         role: formData.get('role') as string,
-        status: 'active',
+        status: 'invited',
+        status_reason: 'Waiting for user to complete signup',
+        invited_at: new Date().toISOString(),
+        invited_by: user?.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -219,13 +239,21 @@ export default function UsersPage() {
 
     try {
       const formData = new FormData(e.currentTarget);
-      const updateData = {
+      const newStatus = formData.get('status') as string;
+      const updateData: any = {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         role: formData.get('role') as string,
-        status: formData.get('status') as string,
+        status: newStatus,
+        status_reason: formData.get('status_reason') as string,
         updated_at: new Date().toISOString(),
       };
+      
+      // If reactivating a user, update activity timestamp
+      if (newStatus === 'active' && editingUser?.status !== 'active') {
+        updateData.last_activity_at = new Date().toISOString();
+        updateData.status_reason = updateData.status_reason || 'Manually reactivated';
+      }
 
       // Only CEO and ADMIN can change role to CEO
       if (updateData.role === 'CEO' && role !== 'CEO' && role !== 'ADMIN') {
@@ -404,10 +432,47 @@ export default function UsersPage() {
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="active">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          <span>Active - Currently using system</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="invited">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-amber-400"></div>
+                          <span>Invited - Pre-added, pending signup</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="dormant">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                          <span>Dormant - No activity for 30+ days</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="suspended">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                          <span>Suspended - Access revoked</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="inactive">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                          <span>Inactive - Manually deactivated</span>
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status-reason">Status Reason (Optional)</Label>
+                  <Input 
+                    id="edit-status-reason" 
+                    name="status_reason" 
+                    defaultValue={editingUser?.status_reason} 
+                    placeholder="e.g., No login for 45 days, left company, etc."
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-photo">Profile Photo</Label>
@@ -513,10 +578,43 @@ export default function UsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className="bg-emerald-500">{u.status}</Badge>
+                    {(() => {
+                      const statusConfig = {
+                        active: { bg: 'bg-emerald-500', text: 'text-white', label: 'Active' },
+                        invited: { bg: 'bg-amber-400', text: 'text-slate-900', label: 'Invited' },
+                        dormant: { bg: 'bg-slate-400', text: 'text-white', label: 'Dormant' },
+                        suspended: { bg: 'bg-red-500', text: 'text-white', label: 'Suspended' },
+                        inactive: { bg: 'bg-gray-300', text: 'text-slate-700', label: 'Inactive' }
+                      };
+                      const config = statusConfig[u.status as keyof typeof statusConfig] || statusConfig.active;
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <Badge className={`${config.bg} ${config.text} text-xs font-medium`}>
+                            {config.label}
+                          </Badge>
+                          {u.status_reason && (
+                            <span className="text-[10px] text-muted-foreground max-w-[150px] truncate" title={u.status_reason}>
+                              {u.status_reason}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    <div className="flex flex-col gap-1">
+                      <span>{u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                      {u.last_login_at && (
+                        <span className="text-[10px] text-slate-500">
+                          Login: {new Date(u.last_login_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                        </span>
+                      )}
+                      {u.login_count > 0 && (
+                        <span className="text-[10px] text-slate-400">
+                          {u.login_count} logins
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
