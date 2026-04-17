@@ -238,7 +238,7 @@ export function ChartOfAccountsPage() {
           debit,
           credit,
           created_at,
-          journal_entries!inner(entry_number, entry_date, reference)
+          journal_entries!inner(entry_number, entry_date)
         `)
         .eq('account_code', account.code)
         .order('created_at', { ascending: true });
@@ -265,7 +265,7 @@ export function ChartOfAccountsPage() {
           entry_number: t.journal_entries?.entry_number || 'N/A',
           entry_date: t.journal_entries?.entry_date || t.created_at,
           description: t.description,
-          reference: t.journal_entries?.reference,
+          reference: null,
           debit: debit,
           credit: credit,
           running_balance: runningBalance,
