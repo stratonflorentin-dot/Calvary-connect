@@ -7,6 +7,7 @@ import { useRole } from '@/hooks/use-role';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { RoleSelector } from '@/components/dashboard/role-selector';
+import { RouteMapDialog } from '@/components/route-map-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Route, Plus, Trash2, Pencil, UserX } from 'lucide-react';
+import { Route, Plus, Trash2, Pencil, UserX, MapPin, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
+import { africanCities, City, getCityByName, calculateDistance, getEstimatedTime } from '@/lib/african-cities';
 
 export default function TripsPage() {
   const { role, isAdmin, isInitialized } = useRole();
@@ -32,6 +34,18 @@ export default function TripsPage() {
   const [trailers, setTrailers] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [selectedVehicleType, setSelectedVehicleType] = useState<string>('');
+  
+  // Route map dialog state
+  const [showRouteMap, setShowRouteMap] = useState(false);
+  const [isSafeRoute, setIsSafeRoute] = useState(false);
+  const [selectedOrigin, setSelectedOrigin] = useState<City | null>(null);
+  const [selectedDestination, setSelectedDestination] = useState<City | null>(null);
+  
+  // City search state
+  const [originSearch, setOriginSearch] = useState('');
+  const [destinationSearch, setDestinationSearch] = useState('');
+  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
+  const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
 
   const [tripForm, setTripForm] = useState({
     origin: '',
@@ -335,42 +349,150 @@ export default function TripsPage() {
                   </DialogHeader>
                   <form onSubmit={handleAddTrip} className="space-y-4 pt-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
+                      {/* Origin City Dropdown */}
+                      <div className="space-y-2 relative">
                         <Label htmlFor="origin">Origin *</Label>
-                        <Input
-                          id="origin"
-                          value={tripForm.origin}
-                          onChange={(e) => setTripForm({ ...tripForm, origin: e.target.value })}
-                          placeholder="Nairobi"
-                          required
-                        />
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="origin"
+                            value={originSearch || tripForm.origin}
+                            onChange={(e) => {
+                              setOriginSearch(e.target.value);
+                              setShowOriginDropdown(true);
+                              if (selectedOrigin && selectedOrigin.name !== e.target.value) {
+                                setSelectedOrigin(null);
+                              }
+                            }}
+                            onFocus={() => setShowOriginDropdown(true)}
+                            placeholder="Search city (e.g., Dar es Salaam)"
+                            required
+                            className="pl-10"
+                          />
+                          {showOriginDropdown && originSearch && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                              {africanCities
+                                .filter(city => 
+                                  city.name.toLowerCase().includes(originSearch.toLowerCase()) ||
+                                  city.country.toLowerCase().includes(originSearch.toLowerCase())
+                                )
+                                .slice(0, 10)
+                                .map((city) => (
+                                  <button
+                                    key={`${city.name}-${city.country}`}
+                                    type="button"
+                                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2"
+                                    onClick={() => {
+                                      setTripForm({ ...tripForm, origin: city.name });
+                                      setOriginSearch(city.name);
+                                      setSelectedOrigin(city);
+                                      setShowOriginDropdown(false);
+                                      
+                                      // Auto-fill distance and time if destination is also selected
+                                      if (selectedDestination) {
+                                        const dist = calculateDistance(city, selectedDestination);
+                                        const time = getEstimatedTime(city, selectedDestination);
+                                        setTripForm(prev => ({
+                                          ...prev,
+                                          origin: city.name,
+                                          distance: dist.toString(),
+                                          estimated_time: `${time} hours`
+                                        }));
+                                      }
+                                    }}
+                                  >
+                                    <MapPin className="h-4 w-4 text-slate-400" />
+                                    <div>
+                                      <div className="font-medium">{city.name}</div>
+                                      <div className="text-xs text-slate-500">{city.country} {city.isMajorHub && '• Major Hub'}</div>
+                                    </div>
+                                  </button>
+                                ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="space-y-2">
+                      
+                      {/* Destination City Dropdown */}
+                      <div className="space-y-2 relative">
                         <Label htmlFor="destination">Destination *</Label>
-                        <Input
-                          id="destination"
-                          value={tripForm.destination}
-                          onChange={(e) => setTripForm({ ...tripForm, destination: e.target.value })}
-                          placeholder="Mombasa"
-                          required
-                        />
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="destination"
+                            value={destinationSearch || tripForm.destination}
+                            onChange={(e) => {
+                              setDestinationSearch(e.target.value);
+                              setShowDestinationDropdown(true);
+                              if (selectedDestination && selectedDestination.name !== e.target.value) {
+                                setSelectedDestination(null);
+                              }
+                            }}
+                            onFocus={() => setShowDestinationDropdown(true)}
+                            placeholder="Search city (e.g., Arusha)"
+                            required
+                            className="pl-10"
+                          />
+                          {showDestinationDropdown && destinationSearch && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                              {africanCities
+                                .filter(city => 
+                                  city.name.toLowerCase().includes(destinationSearch.toLowerCase()) ||
+                                  city.country.toLowerCase().includes(destinationSearch.toLowerCase())
+                                )
+                                .slice(0, 10)
+                                .map((city) => (
+                                  <button
+                                    key={`${city.name}-${city.country}`}
+                                    type="button"
+                                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2"
+                                    onClick={() => {
+                                      setTripForm({ ...tripForm, destination: city.name });
+                                      setDestinationSearch(city.name);
+                                      setSelectedDestination(city);
+                                      setShowDestinationDropdown(false);
+                                      
+                                      // Auto-fill distance and time if origin is also selected
+                                      if (selectedOrigin) {
+                                        const dist = calculateDistance(selectedOrigin, city);
+                                        const time = getEstimatedTime(selectedOrigin, city);
+                                        setTripForm(prev => ({
+                                          ...prev,
+                                          destination: city.name,
+                                          distance: dist.toString(),
+                                          estimated_time: `${time} hours`
+                                        }));
+                                      }
+                                    }}
+                                  >
+                                    <MapPin className="h-4 w-4 text-slate-400" />
+                                    <div>
+                                      <div className="font-medium">{city.name}</div>
+                                      <div className="text-xs text-slate-500">{city.country} {city.isMajorHub && '• Major Hub'}</div>
+                                    </div>
+                                  </button>
+                                ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    
                     <div className="flex gap-2 pt-2">
                       <Button
                         type="button"
                         variant="secondary"
                         size="sm"
-                        onClick={async () => {
-                          if (!tripForm.origin || !tripForm.destination) {
-                            toast({ title: 'Error', description: 'Enter origin and destination', variant: 'destructive' });
+                        onClick={() => {
+                          if (!selectedOrigin || !selectedDestination) {
+                            toast({ title: 'Error', description: 'Please select both origin and destination cities first', variant: 'destructive' });
                             return;
                           }
-                          toast({ title: 'AI', description: 'Calculating safe route...', variant: 'default' });
-                          const route = await getSafeRoute(tripForm.origin, tripForm.destination);
-                          toast({ title: 'Safe Route', description: route, variant: 'default', duration: 10000 });
+                          setIsSafeRoute(true);
+                          setShowRouteMap(true);
                         }}
                       >
+                        <Route className="h-4 w-4 mr-2" />
                         Get Safe Route (AI)
                       </Button>
                       <Button
@@ -378,16 +500,33 @@ export default function TripsPage() {
                         variant="secondary"
                         size="sm"
                         onClick={async () => {
-                          if (!tripForm.origin || !tripForm.destination) {
-                            toast({ title: 'Error', description: 'Enter origin and destination', variant: 'destructive' });
+                          if (!selectedOrigin || !selectedDestination) {
+                            toast({ title: 'Error', description: 'Please select both origin and destination cities first', variant: 'destructive' });
                             return;
                           }
-                          toast({ title: 'AI', description: 'Calculating distance...', variant: 'default' });
-                          const distance = await getDistance(tripForm.origin, tripForm.destination);
-                          setTripForm(f => ({ ...f, distance: distance.match(/\d+/)?.[0] || '' }));
-                          toast({ title: 'Distance', description: distance, variant: 'default', duration: 10000 });
+                          
+                          // Calculate distance automatically
+                          const dist = calculateDistance(selectedOrigin, selectedDestination);
+                          const time = getEstimatedTime(selectedOrigin, selectedDestination);
+                          
+                          setTripForm(prev => ({
+                            ...prev,
+                            distance: dist.toString(),
+                            estimated_time: `${time} hours`
+                          }));
+                          
+                          toast({ 
+                            title: 'Distance Calculated', 
+                            description: `${dist} km from ${selectedOrigin.name} to ${selectedDestination.name}. Estimated time: ${time} hours.`, 
+                            variant: 'default' 
+                          });
+                          
+                          // Also show the map
+                          setIsSafeRoute(false);
+                          setShowRouteMap(true);
                         }}
                       >
+                        <MapPin className="h-4 w-4 mr-2" />
                         Get Distance (AI)
                       </Button>
                     </div>
@@ -886,6 +1025,16 @@ export default function TripsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Route Map Dialog */}
+        <RouteMapDialog
+          isOpen={showRouteMap}
+          onClose={() => setShowRouteMap(false)}
+          origin={selectedOrigin}
+          destination={selectedDestination}
+          cargoType={tripForm.cargo}
+          isSafeRoute={isSafeRoute}
+        />
       </main>
       <BottomTabs role={role!} />
       <RoleSelector />
