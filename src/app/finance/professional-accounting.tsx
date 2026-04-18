@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,7 +20,7 @@ import {
   FileText, Receipt, Wallet, CreditCard, Banknote, ArrowRightLeft, Landmark,
   TrendingUp, TrendingDown, Plus, Search, Download, BookOpen, Calculator,
   Building2, Clock, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, BarChart3,
-  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2
+  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2, Save
 } from 'lucide-react';
 
 interface Trip {
@@ -387,9 +388,9 @@ export function ProfessionalAccounting() {
       if (error) throw error;
 
       toast({ title: 'Success', description: `Expense ${expenseNumber} recorded` });
-      setShowCreateExpense(false);
       setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '' });
       loadData();
+      setActiveTab('operations');
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -1373,48 +1374,12 @@ export function ProfessionalAccounting() {
                           <Button variant="outline">
                             <Download className="h-4 w-4 mr-2" /> Export Excel
                           </Button>
-                          <Dialog open={showCreateExpense} onOpenChange={setShowCreateExpense}>
-                            <DialogTrigger asChild>
-                              <Button className="bg-blue-600 hover:bg-blue-700">
-                                <Plus className="h-4 w-4 mr-2" /> New Expense
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                              <DialogHeader>
-                                <DialogTitle>Record New Expense</DialogTitle>
-                              </DialogHeader>
-                              <form onSubmit={handleCreateExpense} className="space-y-4 pt-4">
-                                <div className="space-y-2">
-                                  <Label>Category</Label>
-                                  <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({...expenseForm, category: v})} required>
-                                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Fuel">Fuel</SelectItem>
-                                      <SelectItem value="Maintenance">Maintenance</SelectItem>
-                                      <SelectItem value="Spare Parts">Spare Parts</SelectItem>
-                                      <SelectItem value="Insurance">Insurance</SelectItem>
-                                      <SelectItem value="License">License</SelectItem>
-                                      <SelectItem value="Tolls">Tolls</SelectItem>
-                                      <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Description</Label>
-                                  <Input value={expenseForm.description} onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} required />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Amount</Label>
-                                  <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} required />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Date</Label>
-                                  <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})} required />
-                                </div>
-                                <Button type="submit" className="w-full">Record Expense</Button>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
+                          <Button 
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={() => setActiveTab('create_expense')}
+                          >
+                            <Plus className="h-4 w-4 mr-2" /> New Expense
+                          </Button>
                         </div>
                       </div>
                       <div className="flex gap-2 mt-3">
@@ -1587,6 +1552,134 @@ export function ProfessionalAccounting() {
                 </div>
               </TabsContent>
 
+              {/* Create Expense Form - Full Page */}
+              <TabsContent value="create_expense">
+                <div className="max-w-2xl mx-auto">
+                  {/* Header */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setActiveTab('operations')}
+                      className="text-muted-foreground"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back to Expenses
+                    </Button>
+                    <div>
+                      <h2 className="text-xl font-semibold">Record New Expense</h2>
+                      <p className="text-sm text-muted-foreground">Enter expense details below</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleCreateExpense} className="space-y-6">
+                    <Card>
+                      <CardContent className="p-6 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="expense_category">Category *</Label>
+                          <Select 
+                            value={expenseForm.category} 
+                            onValueChange={(v) => setExpenseForm({...expenseForm, category: v})} 
+                            required
+                          >
+                            <SelectTrigger id="expense_category">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Fuel">Fuel</SelectItem>
+                              <SelectItem value="Maintenance">Maintenance</SelectItem>
+                              <SelectItem value="Spare Parts">Spare Parts</SelectItem>
+                              <SelectItem value="Insurance">Insurance</SelectItem>
+                              <SelectItem value="License">License</SelectItem>
+                              <SelectItem value="Tolls">Tolls</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="expense_description">Description *</Label>
+                          <Textarea 
+                            id="expense_description"
+                            value={expenseForm.description} 
+                            onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} 
+                            placeholder="Enter expense description..."
+                            rows={3}
+                            required 
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="expense_amount">Amount (Tsh) *</Label>
+                            <Input 
+                              id="expense_amount"
+                              type="number" 
+                              step="0.01" 
+                              value={expenseForm.amount} 
+                              onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} 
+                              placeholder="0.00"
+                              required 
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="expense_date">Date *</Label>
+                            <Input 
+                              id="expense_date"
+                              type="date" 
+                              value={expenseForm.date} 
+                              onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})} 
+                              required 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="expense_vehicle">Vehicle (Optional)</Label>
+                          <Select 
+                            value={expenseForm.vehicle_id || 'none'} 
+                            onValueChange={(v) => setExpenseForm({...expenseForm, vehicle_id: v === 'none' ? '' : v})}
+                          >
+                            <SelectTrigger id="expense_vehicle">
+                              <SelectValue placeholder="Select vehicle" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {/* Vehicle options would be populated here */}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Actions */}
+                    <div className="flex justify-end gap-4">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => {
+                          setActiveTab('operations');
+                          setExpenseForm({ 
+                            category: '', 
+                            description: '', 
+                            amount: '', 
+                            date: new Date().toISOString().split('T')[0], 
+                            vehicle_id: '' 
+                          });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Record Expense
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              </TabsContent>
+
               {/* Cash Requests */}
               <TabsContent value="cash_requests">
                 <Card className="p-8 text-center">
@@ -1698,7 +1791,7 @@ export function ProfessionalAccounting() {
                           <Button variant="outline" onClick={exportJournalEntriesToExcel}>
                             <Download className="h-4 w-4 mr-2" /> Export Excel
                           </Button>
-                          <Button onClick={() => setShowCreateJournalEntry(true)}>
+                          <Button onClick={() => setActiveTab('create_journal_entry')}>
                             <Plus className="h-4 w-4 mr-2" /> Manual Entry
                           </Button>
                         </div>
@@ -1826,6 +1919,234 @@ export function ProfessionalAccounting() {
                       </Table>
                     </CardContent>
                   </Card>
+                </div>
+              </TabsContent>
+
+              {/* Create Journal Entry Form - Full Page */}
+              <TabsContent value="create_journal_entry">
+                <div className="max-w-5xl mx-auto">
+                  {/* Header */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setActiveTab('operations')}
+                      className="text-muted-foreground"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back to Journal Entries
+                    </Button>
+                    <div>
+                      <h2 className="text-xl font-semibold">Manual Journal Entry</h2>
+                      <p className="text-sm text-muted-foreground">Debits must equal credits</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleCreateJournalEntry} className="space-y-6">
+                    {/* Entry Info Card */}
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="entry_date">Entry Date *</Label>
+                            <Input 
+                              id="entry_date"
+                              type="date" 
+                              value={jeForm.date}
+                              onChange={(e) => setJeForm({...jeForm, date: e.target.value})}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="reference">Reference</Label>
+                            <Input 
+                              id="reference"
+                              value={jeForm.reference}
+                              onChange={(e) => setJeForm({...jeForm, reference: e.target.value})}
+                              placeholder="Auto-generated if left empty"
+                            />
+                            <p className="text-xs text-muted-foreground">Auto-generated — you may edit if needed</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 space-y-2">
+                          <Label htmlFor="notes">Notes</Label>
+                          <Textarea 
+                            id="notes"
+                            value={jeForm.description}
+                            onChange={(e) => setJeForm({...jeForm, description: e.target.value})}
+                            placeholder="Enter journal entry description..."
+                            rows={3}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Entry Lines Card */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">Entry Lines</CardTitle>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={addJournalEntryLine}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> Add Line
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/50">
+                                <TableHead className="w-[200px]">Account *</TableHead>
+                                <TableHead className="w-[150px]">Partner</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="w-[120px] text-right">Dr (Tsh)</TableHead>
+                                <TableHead className="w-[120px] text-right">Cr (Tsh)</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {jeForm.lines.map((line, index) => (
+                                <TableRow key={index}>
+                                  <TableCell className="p-2">
+                                    <Select 
+                                      value={line.account_code} 
+                                      onValueChange={(v) => {
+                                        const account = accounts.find(a => a.code === v);
+                                        updateJournalEntryLine(index, 'account_code', v);
+                                        if (account) {
+                                          updateJournalEntryLine(index, 'account_name', account.name);
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Select account..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {accounts.map((account) => (
+                                          <SelectItem key={account.code} value={account.code}>
+                                            {account.code} - {account.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                  <TableCell className="p-2">
+                                    <Input 
+                                      value={line.partner}
+                                      onChange={(e) => updateJournalEntryLine(index, 'partner', e.target.value)}
+                                      placeholder="Partner..."
+                                      className="h-9"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="p-2">
+                                    <Input 
+                                      value={line.description}
+                                      onChange={(e) => updateJournalEntryLine(index, 'description', e.target.value)}
+                                      placeholder="Description..."
+                                      className="h-9"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="p-2">
+                                    <Input 
+                                      type="number"
+                                      step="0.01"
+                                      value={line.debit}
+                                      onChange={(e) => updateJournalEntryLine(index, 'debit', e.target.value)}
+                                      placeholder="0.00"
+                                      className="h-9 text-right"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="p-2">
+                                    <Input 
+                                      type="number"
+                                      step="0.01"
+                                      value={line.credit}
+                                      onChange={(e) => updateJournalEntryLine(index, 'credit', e.target.value)}
+                                      placeholder="0.00"
+                                      className="h-9 text-right"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="p-2 text-center">
+                                    {jeForm.lines.length > 1 && (
+                                      <Button 
+                                        type="button"
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={() => removeJournalEntryLine(index)}
+                                        className="h-8 w-8 text-muted-foreground hover:text-red-600"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+
+                        {/* Totals */}
+                        <div className="border-t bg-muted/30 p-4">
+                          <div className="flex justify-end gap-8">
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Total Debit</p>
+                              <p className="text-lg font-semibold">
+                                {formatCurrency(calculateJournalEntryTotals().totalDebit)}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Total Credit</p>
+                              <p className="text-lg font-semibold">
+                                {formatCurrency(calculateJournalEntryTotals().totalCredit)}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Difference</p>
+                              <p className={`text-lg font-semibold ${calculateJournalEntryTotals().balanced ? 'text-green-600' : 'text-red-600'}`}>
+                                {formatCurrency(Math.abs(calculateJournalEntryTotals().totalDebit - calculateJournalEntryTotals().totalCredit))}
+                              </p>
+                            </div>
+                          </div>
+                          {!calculateJournalEntryTotals().balanced && (
+                            <p className="text-center text-red-600 text-sm mt-2">
+                              Debits and credits must balance before posting
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Actions */}
+                    <div className="flex justify-end gap-4">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => {
+                          setActiveTab('operations');
+                          setJeForm({
+                            description: '',
+                            reference: '',
+                            date: new Date().toISOString().split('T')[0],
+                            lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+                          });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit"
+                        disabled={!calculateJournalEntryTotals().balanced}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Post Journal Entry
+                      </Button>
+                    </div>
+                  </form>
                 </div>
               </TabsContent>
 
