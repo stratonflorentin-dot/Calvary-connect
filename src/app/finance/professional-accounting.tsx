@@ -476,7 +476,6 @@ export function ProfessionalAccounting() {
         total_credit: totalCredit,
         is_posted: true,
         source: 'manual',
-        created_by: 'Super Admin',
         created_at: new Date().toISOString()
       }).select().single();
 
