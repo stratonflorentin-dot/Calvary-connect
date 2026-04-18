@@ -255,6 +255,7 @@ export function ProfessionalAccounting() {
   const [showCreateExpense, setShowCreateExpense] = useState(false);
   const [showInlineExpenseAdd, setShowInlineExpenseAdd] = useState(false);
   const [showInlineInvoiceAdd, setShowInlineInvoiceAdd] = useState(false);
+  const [showInlineJEAdd, setShowInlineJEAdd] = useState(false);
   const [showCreateJournalEntry, setShowCreateJournalEntry] = useState(false);
   const [showCreateCreditNote, setShowCreateCreditNote] = useState(false);
   const [showBankStatementImport, setShowBankStatementImport] = useState(false);
@@ -497,6 +498,7 @@ export function ProfessionalAccounting() {
 
       toast({ title: 'Success', description: `Journal Entry ${entryNumber} created and posted` });
       setShowCreateJournalEntry(false);
+      setShowInlineJEAdd(false);
       setJeForm({
         description: '',
         reference: '',
@@ -2005,7 +2007,7 @@ export function ProfessionalAccounting() {
                           <Button variant="outline" onClick={exportJournalEntriesToExcel}>
                             <Download className="h-4 w-4 mr-2" /> Export Excel
                           </Button>
-                          <Button onClick={() => setActiveTab('create_journal_entry')}>
+                          <Button onClick={() => setShowInlineJEAdd(true)}>
                             <Plus className="h-4 w-4 mr-2" /> Manual Entry
                           </Button>
                         </div>
@@ -2047,7 +2049,129 @@ export function ProfessionalAccounting() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredJournalEntries.length === 0 ? (
+                          {/* Inline Add Form */}
+                          {showInlineJEAdd && (
+                            <TableRow className="bg-blue-50/50">
+                              <TableCell className="p-2">
+                                <Input 
+                                  placeholder="Auto-generated"
+                                  disabled
+                                  className="h-9 text-sm bg-muted"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  type="date"
+                                  value={jeForm.date}
+                                  onChange={(e) => setJeForm({...jeForm, date: e.target.value})}
+                                  className="h-9 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  value={jeForm.description}
+                                  onChange={(e) => setJeForm({...jeForm, description: e.target.value})}
+                                  placeholder="Description..."
+                                  className="h-9 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Select 
+                                  value={jeForm.lines[0]?.account_code || ''} 
+                                  onValueChange={(v) => {
+                                    const account = accounts.find(a => a.code === v);
+                                    updateJournalEntryLine(0, 'account_code', v);
+                                    updateJournalEntryLine(0, 'account_name', account?.name || '');
+                                  }}
+                                >
+                                  <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue placeholder="Select account" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {accounts.map(acc => (
+                                      <SelectItem key={acc.id} value={acc.code}>
+                                        {acc.code} - {acc.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <div className="flex gap-2">
+                                  <Select 
+                                    value={jeForm.lines[0]?.debit ? 'debit' : 'credit'} 
+                                    onValueChange={(v) => {
+                                      if (v === 'debit') {
+                                        updateJournalEntryLine(0, 'debit', jeForm.lines[0]?.credit || '0');
+                                        updateJournalEntryLine(0, 'credit', '');
+                                      } else {
+                                        updateJournalEntryLine(0, 'credit', jeForm.lines[0]?.debit || '0');
+                                        updateJournalEntryLine(0, 'debit', '');
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9 text-sm w-20">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="debit">DR</SelectItem>
+                                      <SelectItem value="credit">CR</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input 
+                                    type="number"
+                                    step="0.01"
+                                    value={jeForm.lines[0]?.debit || jeForm.lines[0]?.credit || ''}
+                                    onChange={(e) => {
+                                      if (jeForm.lines[0]?.debit) {
+                                        updateJournalEntryLine(0, 'debit', e.target.value);
+                                      } else {
+                                        updateJournalEntryLine(0, 'credit', e.target.value);
+                                      }
+                                    }}
+                                    placeholder="0.00"
+                                    className="h-9 text-sm text-right flex-1"
+                                  />
+                                </div>
+                              </TableCell>
+                              <TableCell className="p-2 text-right">
+                                <span className="text-sm font-medium">
+                                  {formatCurrency(parseFloat(jeForm.lines[0]?.debit || jeForm.lines[0]?.credit || '0'))}
+                                </span>
+                              </TableCell>
+                              <TableCell className="p-2 text-center">
+                                <Badge className="bg-yellow-100 text-yellow-700">Draft</Badge>
+                              </TableCell>
+                              <TableCell className="p-2 text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    className="h-8 bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={handleCreateJournalEntry}
+                                  >
+                                    <Save className="h-3 w-3 mr-1" /> Save
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    className="h-8"
+                                    onClick={() => {
+                                      setShowInlineJEAdd(false);
+                                      setJeForm({
+                                        description: '',
+                                        reference: '',
+                                        date: new Date().toISOString().split('T')[0],
+                                        lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+                                      });
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {filteredJournalEntries.length === 0 && !showInlineJEAdd ? (
                             <TableRow>
                               <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                 No journal entries found matching your criteria
