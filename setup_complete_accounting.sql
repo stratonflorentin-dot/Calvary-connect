@@ -29,8 +29,9 @@ CREATE TABLE IF NOT EXISTS journal_entries (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     entry_number VARCHAR(50) UNIQUE,
     entry_date DATE NOT NULL,
-    reference_type VARCHAR(50),
-    reference_id UUID,
+    reference VARCHAR(100), -- User-provided reference (e.g., Receipt #123)
+    reference_type VARCHAR(50), -- System reference type (e.g., 'trip', 'invoice')
+    reference_id UUID, -- System reference ID
     description TEXT NOT NULL,
     notes TEXT,
     total_debit DECIMAL(15, 2) NOT NULL DEFAULT 0,
@@ -181,15 +182,24 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- TRIGGERS
+-- TRIGGERS (drop if exists first to prevent errors)
+DROP TRIGGER IF EXISTS update_accounts_updated_at ON accounts;
 CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON accounts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_journal_entries_updated_at ON journal_entries;
 CREATE TRIGGER update_journal_entries_updated_at BEFORE UPDATE ON journal_entries
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_client_balances_updated_at ON client_balances;
 CREATE TRIGGER update_client_balances_updated_at BEFORE UPDATE ON client_balances
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_vendor_balances_updated_at ON vendor_balances;
 CREATE TRIGGER update_vendor_balances_updated_at BEFORE UPDATE ON vendor_balances
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_trip_accounting_updated_at ON trip_accounting;
 CREATE TRIGGER update_trip_accounting_updated_at BEFORE UPDATE ON trip_accounting
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -212,7 +222,8 @@ INSERT INTO accounts (code, name, category, sub_category, type, description) VAL
 ('1501', 'Trailers', 'ASSETS', 'Non-Current Assets', 'debit', 'Trailer assets'),
 ('1502', 'Office Equipment', 'ASSETS', 'Non-Current Assets', 'debit', 'Office furniture and equipment'),
 ('1503', 'IT Systems', 'ASSETS', 'Non-Current Assets', 'debit', 'Computers, servers, software'),
-('1600', 'Accumulated Depreciation', 'ASSETS', 'Non-Current Assets', 'credit', 'Total depreciation of fixed assets');
+('1600', 'Accumulated Depreciation', 'ASSETS', 'Non-Current Assets', 'credit', 'Total depreciation of fixed assets')
+ON CONFLICT (code) DO NOTHING;
 
 -- LIABILITIES
 INSERT INTO accounts (code, name, category, sub_category, type, description) VALUES
@@ -223,13 +234,15 @@ INSERT INTO accounts (code, name, category, sub_category, type, description) VAL
 ('2005', 'Taxes Payable', 'LIABILITIES', 'Current Liabilities', 'credit', 'VAT, PAYE, and other taxes owed'),
 ('2006', 'Customs Duties Payable', 'LIABILITIES', 'Current Liabilities', 'credit', 'Import duties and customs fees owed'),
 ('2500', 'Vehicle Loans', 'LIABILITIES', 'Long-Term Liabilities', 'credit', 'Loans for vehicle purchases'),
-('2501', 'Bank Loans', 'LIABILITIES', 'Long-Term Liabilities', 'credit', 'General bank loans and overdrafts');
+('2501', 'Bank Loans', 'LIABILITIES', 'Long-Term Liabilities', 'credit', 'General bank loans and overdrafts')
+ON CONFLICT (code) DO NOTHING;
 
 -- EQUITY
 INSERT INTO accounts (code, name, category, sub_category, type, description) VALUES
 ('3001', 'Owner Capital', 'EQUITY', 'Equity', 'credit', 'Owner investments in the business'),
 ('3002', 'Retained Earnings', 'EQUITY', 'Equity', 'credit', 'Accumulated profits retained in business'),
-('3003', 'Drawings', 'EQUITY', 'Equity', 'debit', 'Owner withdrawals from business');
+('3003', 'Drawings', 'EQUITY', 'Equity', 'debit', 'Owner withdrawals from business')
+ON CONFLICT (code) DO NOTHING;
 
 -- REVENUE
 INSERT INTO accounts (code, name, category, sub_category, type, description) VALUES
@@ -239,7 +252,8 @@ INSERT INTO accounts (code, name, category, sub_category, type, description) VAL
 ('4004', 'Warehousing Fees', 'REVENUE', 'Core Revenue', 'credit', 'Storage and warehousing charges'),
 ('4100', 'Fuel Surcharge Income', 'REVENUE', 'Other Income', 'credit', 'Additional charges for fuel price fluctuations'),
 ('4101', 'Demurrage Charges', 'REVENUE', 'Other Income', 'credit', 'Charges for delays at loading/unloading'),
-('4102', 'Late Delivery Penalties Collected', 'REVENUE', 'Other Income', 'credit', 'Penalties charged for late deliveries');
+('4102', 'Late Delivery Penalties Collected', 'REVENUE', 'Other Income', 'credit', 'Penalties charged for late deliveries')
+ON CONFLICT (code) DO NOTHING;
 
 -- COST OF SALES
 INSERT INTO accounts (code, name, category, sub_category, type, description) VALUES
@@ -249,7 +263,8 @@ INSERT INTO accounts (code, name, category, sub_category, type, description) VAL
 ('5004', 'Tolls & Road Charges', 'COST_OF_SALES', 'Direct Costs', 'debit', 'Highway tolls and road fees'),
 ('5005', 'Vehicle Maintenance - Trip', 'COST_OF_SALES', 'Direct Costs', 'debit', 'Maintenance costs directly from trips'),
 ('5006', 'Customs Clearing Costs', 'COST_OF_SALES', 'Direct Costs', 'debit', 'Customs fees for transit goods'),
-('5007', 'Insurance per Trip', 'COST_OF_SALES', 'Direct Costs', 'debit', 'Insurance costs allocated per trip');
+('5007', 'Insurance per Trip', 'COST_OF_SALES', 'Direct Costs', 'debit', 'Insurance costs allocated per trip')
+ON CONFLICT (code) DO NOTHING;
 
 -- OPERATING EXPENSES
 INSERT INTO accounts (code, name, category, sub_category, type, description) VALUES
@@ -262,14 +277,16 @@ INSERT INTO accounts (code, name, category, sub_category, type, description) VAL
 ('6102', 'Licensing & Permits', 'OPERATING_EXPENSES', 'Transport Overheads', 'debit', 'Vehicle licenses, road permits, certifications'),
 ('6103', 'Tracking System Costs', 'OPERATING_EXPENSES', 'Transport Overheads', 'debit', 'GPS tracking and fleet management systems'),
 ('6200', 'Marketing & Advertising', 'OPERATING_EXPENSES', 'Sales & Marketing', 'debit', 'Advertising, promotions, website'),
-('6201', 'Client Entertainment', 'OPERATING_EXPENSES', 'Sales & Marketing', 'debit', 'Client meetings, entertainment expenses');
+('6201', 'Client Entertainment', 'OPERATING_EXPENSES', 'Sales & Marketing', 'debit', 'Client meetings, entertainment expenses')
+ON CONFLICT (code) DO NOTHING;
 
 -- OTHER EXPENSES
 INSERT INTO accounts (code, name, category, sub_category, type, description) VALUES
 ('7001', 'Bank Charges', 'OTHER_EXPENSES', 'Financial', 'debit', 'Bank fees, transaction charges'),
 ('7002', 'Interest Expense', 'OTHER_EXPENSES', 'Financial', 'debit', 'Interest on loans and overdrafts'),
 ('7003', 'Fines & Penalties', 'OTHER_EXPENSES', 'Financial', 'debit', 'Traffic fines, regulatory penalties'),
-('7004', 'Loss on Damaged Goods', 'OTHER_EXPENSES', 'Financial', 'debit', 'Claims paid for damaged cargo');
+('7004', 'Loss on Damaged Goods', 'OTHER_EXPENSES', 'Financial', 'debit', 'Claims paid for damaged cargo')
+ON CONFLICT (code) DO NOTHING;
 
 -- ============================================
 -- PART 3: FUNCTIONS (from accounting_functions.sql)

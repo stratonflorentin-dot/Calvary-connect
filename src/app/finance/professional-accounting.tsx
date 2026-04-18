@@ -66,11 +66,14 @@ interface JournalEntry {
   entry_number: string;
   entry_date: string;
   description: string;
+  reference?: string;
+  reference_type?: string;
   total_debit: number;
   total_credit: number;
   is_posted: boolean;
   source?: string;
   created_by?: string;
+  created_at: string;
 }
 
 interface JournalEntryLine {
@@ -147,10 +150,23 @@ export function ProfessionalAccounting() {
   const [expenseSearch, setExpenseSearch] = useState('');
   const [jeSearch, setJeSearch] = useState('');
   const [cnSearch, setCnSearch] = useState('');
+  
+  // Journal Entry filter states
+  const [jeSearchQuery, setJeSearchQuery] = useState('');
+  const [jeStatusFilter, setJeStatusFilter] = useState('all');
+  const [jeSourceFilter, setJeSourceFilter] = useState('all');
+  const [jeDateFrom, setJeDateFrom] = useState('');
+  const [jeDateTo, setJeDateTo] = useState('');
+  const [filteredJournalEntries, setFilteredJournalEntries] = useState<JournalEntry[]>([]);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Sync filtered entries when journalEntries changes
+  useEffect(() => {
+    setFilteredJournalEntries(journalEntries);
+  }, [journalEntries]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -167,7 +183,12 @@ export function ProfessionalAccounting() {
       setInvoices(invoicesRes.data || []);
       setExpenses(expensesRes.data || []);
       setJournalEntries(jeRes.data || []);
+      setFilteredJournalEntries(jeRes.data || []);
       setBankAccounts(bankRes.data || []);
+      
+      // Load journal entry lines
+      const { data: jeLinesData } = await supabase.from('journal_entry_lines').select('*');
+      setJournalEntryLines(jeLinesData || []);
       // Filter trips with pending payment status on client side
       const tripsData = tripsRes.data || [];
       const pendingTrips = tripsData.filter((t: any) => t.payment_status === 'PENDING' || !t.payment_status);
@@ -468,6 +489,124 @@ export function ProfessionalAccounting() {
         date: new Date().toISOString().split('T')[0],
         lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
       });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // Journal Entry Filter & Action Handlers
+  const filterJournalEntries = () => {
+    let filtered = [...journalEntries];
+    
+    // Search filter
+    if (jeSearchQuery) {
+      const query = jeSearchQuery.toLowerCase();
+      filtered = filtered.filter(je => 
+        je.entry_number?.toLowerCase().includes(query) ||
+        je.description?.toLowerCase().includes(query) ||
+        je.reference?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Status filter
+    if (jeStatusFilter !== 'all') {
+      filtered = filtered.filter(je => 
+        jeStatusFilter === 'posted' ? je.is_posted : !je.is_posted
+      );
+    }
+    
+    // Source filter
+    if (jeSourceFilter !== 'all') {
+      filtered = filtered.filter(je => 
+        (je.reference_type || 'manual').toLowerCase() === jeSourceFilter
+      );
+    }
+    
+    // Date range filter
+    if (jeDateFrom) {
+      filtered = filtered.filter(je => new Date(je.entry_date) >= new Date(jeDateFrom));
+    }
+    if (jeDateTo) {
+      filtered = filtered.filter(je => new Date(je.entry_date) <= new Date(jeDateTo));
+    }
+    
+    setFilteredJournalEntries(filtered);
+  };
+
+  const resetJournalEntryFilters = () => {
+    setJeSearchQuery('');
+    setJeStatusFilter('all');
+    setJeSourceFilter('all');
+    setJeDateFrom('');
+    setJeDateTo('');
+    setFilteredJournalEntries(journalEntries);
+  };
+
+  const viewJournalEntry = (je: JournalEntry) => {
+    setSelectedJournalEntry(je);
+    // Show a detailed view dialog
+    toast({ 
+      title: `Journal Entry ${je.entry_number}`, 
+      description: `Date: ${new Date(je.entry_date).toLocaleDateString()} | Amount: ${formatCurrency(je.total_debit)}` 
+    });
+  };
+
+  const exportJournalEntriesToExcel = () => {
+    const dataToExport = filteredJournalEntries.map(je => ({
+      'Entry #': je.entry_number,
+      'Date': new Date(je.entry_date).toLocaleDateString(),
+      'Description': je.description,
+      'Reference': je.reference,
+      'Source': je.reference_type || 'Manual',
+      'Total Debit': je.total_debit,
+      'Total Credit': je.total_credit,
+      'Status': je.is_posted ? 'Posted' : 'Draft',
+      'Created At': new Date(je.created_at).toLocaleString()
+    }));
+    
+    // Convert to CSV
+    const headers = Object.keys(dataToExport[0] || {});
+    const csv = [
+      headers.join(','),
+      ...dataToExport.map(row => headers.map(h => row[h as keyof typeof row]).join(','))
+    ].join('\n');
+    
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `journal-entries-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast({ title: 'Success', description: `${dataToExport.length} journal entries exported to CSV` });
+  };
+
+  const forceDeleteJournalEntry = async (je: JournalEntry) => {
+    if (!confirm(`Are you sure you want to delete Journal Entry ${je.entry_number}? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      // First delete the lines
+      const { error: linesError } = await supabase
+        .from('journal_entry_lines')
+        .delete()
+        .eq('journal_entry_id', je.id);
+      
+      if (linesError) throw linesError;
+      
+      // Then delete the entry
+      const { error: entryError } = await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('id', je.id);
+      
+      if (entryError) throw entryError;
+      
+      toast({ title: 'Success', description: `Journal Entry ${je.entry_number} has been deleted` });
       loadData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -1135,42 +1274,214 @@ export function ProfessionalAccounting() {
 
               {/* Journal Entries */}
               <TabsContent value="journal">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Journal Entries</CardTitle>
-                    <Button><Plus className="h-4 w-4 mr-2" /> New Entry</Button>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Entry #</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Debit</TableHead>
-                          <TableHead>Credit</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {journalEntries.map((je) => (
-                          <TableRow key={je.id}>
-                            <TableCell className="font-medium">{je.entry_number}</TableCell>
-                            <TableCell>{new Date(je.entry_date).toLocaleDateString()}</TableCell>
-                            <TableCell>{je.description}</TableCell>
-                            <TableCell>{formatCurrency(je.total_debit)}</TableCell>
-                            <TableCell>{formatCurrency(je.total_credit)}</TableCell>
-                            <TableCell>
-                              <Badge className={je.is_posted ? getStatusBadge('posted') : getStatusBadge('draft')}>
-                                {je.is_posted ? 'Posted' : 'Draft'}
-                              </Badge>
-                            </TableCell>
+                <div className="space-y-4">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Entries</p>
+                        <p className="text-3xl font-bold mt-1">{journalEntries.length}</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Draft</p>
+                        <p className="text-3xl font-bold mt-1 text-yellow-600">
+                          {journalEntries.filter(je => !je.is_posted).length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Posted</p>
+                        <p className="text-3xl font-bold mt-1 text-green-600">
+                          {journalEntries.filter(je => je.is_posted).length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Filters & Actions */}
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                        <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full lg:w-auto">
+                          <Input 
+                            placeholder="JE number, description..." 
+                            className="max-w-xs"
+                            value={jeSearchQuery}
+                            onChange={(e) => setJeSearchQuery(e.target.value)}
+                          />
+                          <Select value={jeStatusFilter} onValueChange={setJeStatusFilter}>
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              <SelectItem value="posted">Posted</SelectItem>
+                              <SelectItem value="draft">Draft</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Select value={jeSourceFilter} onValueChange={setJeSourceFilter}>
+                            <SelectTrigger className="w-[160px]">
+                              <SelectValue placeholder="All Sources" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Sources</SelectItem>
+                              <SelectItem value="manual">Manual Entry</SelectItem>
+                              <SelectItem value="bank">Bank Statement</SelectItem>
+                              <SelectItem value="trip">Trip Invoice</SelectItem>
+                              <SelectItem value="expense">Expense</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <div className="flex gap-2">
+                            <Input 
+                              type="date" 
+                              placeholder="From"
+                              value={jeDateFrom}
+                              onChange={(e) => setJeDateFrom(e.target.value)}
+                            />
+                            <Input 
+                              type="date" 
+                              placeholder="To"
+                              value={jeDateTo}
+                              onChange={(e) => setJeDateTo(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 w-full lg:w-auto">
+                          <Button variant="outline" onClick={exportJournalEntriesToExcel}>
+                            <Download className="h-4 w-4 mr-2" /> Export Excel
+                          </Button>
+                          <Button onClick={() => setShowCreateJournalEntry(true)}>
+                            <Plus className="h-4 w-4 mr-2" /> Manual Entry
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={filterJournalEntries}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                        >
+                          Filter
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={resetJournalEntryFilters}
+                        >
+                          Reset
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Journal Entries Table */}
+                  <Card>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[100px]">Entry #</TableHead>
+                            <TableHead className="w-[100px]">Date</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Nature / Source</TableHead>
+                            <TableHead className="w-[200px]">Accounts (COA)</TableHead>
+                            <TableHead className="text-right">Total Dr</TableHead>
+                            <TableHead className="text-center">Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredJournalEntries.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                No journal entries found matching your criteria
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredJournalEntries.map((je) => {
+                              const lines = journalEntryLines.filter(l => l.journal_entry_id === je.id);
+                              const debitAccounts = lines.filter(l => l.debit > 0).map(l => l.account_code);
+                              const creditAccounts = lines.filter(l => l.credit > 0).map(l => l.account_code);
+                              const accounts = [...new Set([...debitAccounts, ...creditAccounts])];
+                              
+                              return (
+                                <TableRow key={je.id} className="hover:bg-muted/50">
+                                  <TableCell className="font-medium text-sm">{je.entry_number}</TableCell>
+                                  <TableCell className="text-sm">{new Date(je.entry_date).toLocaleDateString('en-GB')}</TableCell>
+                                  <TableCell className="max-w-[200px] truncate" title={je.description}>
+                                    {je.description}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="text-xs">
+                                      {je.reference_type || 'Manual'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-xs">
+                                    <div className="space-y-1">
+                                      {lines.slice(0, 2).map((line, idx) => (
+                                        <div key={idx} className="flex items-center gap-1">
+                                          <span className={line.debit > 0 ? 'text-blue-600' : 'text-green-600'}>
+                                            {line.debit > 0 ? 'DR' : 'CR'}
+                                          </span>
+                                          <span className="text-muted-foreground truncate max-w-[150px]">
+                                            {line.account_code} {line.account_name && `- ${line.account_name}`}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {lines.length > 2 && (
+                                        <div className="text-muted-foreground text-xs">
+                                          +{lines.length - 2} more
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium">
+                                    {formatCurrency(je.total_debit)}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge 
+                                      className={je.is_posted 
+                                        ? 'bg-green-100 text-green-700 hover:bg-green-100' 
+                                        : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100'
+                                      }
+                                    >
+                                      {je.is_posted ? 'Posted' : 'Draft'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        onClick={() => viewJournalEntry(je)}
+                                      >
+                                        View
+                                      </Button>
+                                      {je.is_posted && (
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="text-red-600 hover:text-red-700"
+                                          onClick={() => forceDeleteJournalEntry(je)}
+                                        >
+                                          Force Delete
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               {/* Bank Statements */}
