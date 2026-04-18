@@ -254,6 +254,7 @@ export function ProfessionalAccounting() {
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
   const [showCreateExpense, setShowCreateExpense] = useState(false);
   const [showInlineExpenseAdd, setShowInlineExpenseAdd] = useState(false);
+  const [showInlineInvoiceAdd, setShowInlineInvoiceAdd] = useState(false);
   const [showCreateJournalEntry, setShowCreateJournalEntry] = useState(false);
   const [showCreateCreditNote, setShowCreateCreditNote] = useState(false);
   const [showBankStatementImport, setShowBankStatementImport] = useState(false);
@@ -272,7 +273,8 @@ export function ProfessionalAccounting() {
     vat_rate: '18', 
     description: '', 
     due_days: '30',
-    trip_id: ''
+    trip_id: '',
+    status: 'draft'
   });
   const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending' });
   
@@ -341,7 +343,7 @@ export function ProfessionalAccounting() {
         total_amount: totalAmount,
         issue_date: new Date().toISOString().split('T')[0],
         due_date: dueDate.toISOString().split('T')[0],
-        status: 'draft',
+        status: invoiceForm.status || 'draft',
         description: invoiceForm.description,
         trip_id: invoiceForm.trip_id || null,
         created_at: new Date().toISOString()
@@ -358,8 +360,8 @@ export function ProfessionalAccounting() {
       }
 
       toast({ title: 'Success', description: `Invoice ${invoiceNumber} created` });
-      setShowCreateInvoice(false);
-      setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30', trip_id: '' });
+      setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30', trip_id: '', status: 'draft' });
+      setShowInlineInvoiceAdd(false);
       loadData();
 
       // Create journal entry
@@ -1116,65 +1118,12 @@ export function ProfessionalAccounting() {
                           >
                             <span className="text-muted-foreground mr-2">/</span> Voided / Cancelled
                           </Button>
-                          <Dialog open={showCreateInvoice} onOpenChange={setShowCreateInvoice}>
-                            <DialogTrigger asChild>
-                              <Button className="bg-blue-600 hover:bg-blue-700">
-                                <Plus className="h-4 w-4 mr-2" /> New Invoice
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-lg">
-                              <DialogHeader>
-                                <DialogTitle>Create New Invoice</DialogTitle>
-                              </DialogHeader>
-                              <form onSubmit={handleCreateInvoice} className="space-y-4 pt-4">
-                                <div className="space-y-2">
-                                  <Label>Client</Label>
-                                  <Input 
-                                    value={invoiceForm.client_name} 
-                                    onChange={(e) => setInvoiceForm({...invoiceForm, client_name: e.target.value})} 
-                                    placeholder="Enter client name"
-                                    required 
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Linked Trip (Optional)</Label>
-                                  <Select value={invoiceForm.trip_id || 'none'} onValueChange={(v) => {
-                                    const tripId = v === 'none' ? '' : v;
-                                    setInvoiceForm({...invoiceForm, trip_id: tripId});
-                                    const trip = trips.find(t => t.id === tripId);
-                                    if (trip) {
-                                      setInvoiceForm(prev => ({...prev, amount: trip.salesAmount?.toString() || ''}));
-                                    }
-                                  }}>
-                                    <SelectTrigger><SelectValue placeholder="Select trip" /></SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">None</SelectItem>
-                                      {trips.map(trip => (
-                                        <SelectItem key={trip.id} value={trip.id}>
-                                          {trip.origin} → {trip.destination} ({formatCurrency(trip.salesAmount || 0)})
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <Label>Amount</Label>
-                                    <Input type="number" step="0.01" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({...invoiceForm, amount: e.target.value})} required />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>VAT %</Label>
-                                    <Input type="number" value={invoiceForm.vat_percent} onChange={(e) => setInvoiceForm({...invoiceForm, vat_percent: e.target.value})} />
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Due Date</Label>
-                                  <Input type="date" value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({...invoiceForm, due_date: e.target.value})} required />
-                                </div>
-                                <Button type="submit" className="w-full">Create Invoice</Button>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
+                          <Button 
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={() => setShowInlineInvoiceAdd(true)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" /> New Invoice
+                          </Button>
                         </div>
                       </div>
                       <div className="flex gap-2 mt-3">
@@ -1220,6 +1169,146 @@ export function ProfessionalAccounting() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
+                          {/* Inline Add Form */}
+                          {showInlineInvoiceAdd && (
+                            <TableRow className="bg-blue-50/50">
+                              <TableCell className="p-2">
+                                <Input 
+                                  placeholder="Auto-generated"
+                                  disabled
+                                  className="h-9 text-sm bg-muted"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  value={invoiceForm.client_name}
+                                  onChange={(e) => setInvoiceForm({...invoiceForm, client_name: e.target.value})}
+                                  placeholder="Client name..."
+                                  className="h-9 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Select 
+                                  value={invoiceForm.trip_id || 'none'} 
+                                  onValueChange={(v) => {
+                                    const tripId = v === 'none' ? '' : v;
+                                    setInvoiceForm({...invoiceForm, trip_id: tripId});
+                                    const trip = trips.find(t => t.id === tripId);
+                                    if (trip) {
+                                      setInvoiceForm(prev => ({...prev, amount: trip.salesAmount?.toString() || ''}));
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue placeholder="Trip" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    {trips.map(trip => (
+                                      <SelectItem key={trip.id} value={trip.id}>
+                                        {trip.origin} → {trip.destination}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="p-2 text-center">
+                                <Select 
+                                  value={invoiceForm.status || 'draft'} 
+                                  onValueChange={(v) => setInvoiceForm({...invoiceForm, status: v})}
+                                >
+                                  <SelectTrigger className="h-9 text-sm w-full">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="draft">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-gray-500"></span> Draft
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="sent">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> Sent
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="awaiting-payment">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-yellow-500"></span> Awaiting
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="paid">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-green-500"></span> Paid
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="overdue">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-red-500"></span> Overdue
+                                      </span>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  type="number"
+                                  step="0.01"
+                                  value={invoiceForm.amount}
+                                  onChange={(e) => setInvoiceForm({...invoiceForm, amount: e.target.value})}
+                                  placeholder="0.00"
+                                  className="h-9 text-sm text-right"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  type="number"
+                                  step="0.01"
+                                  value={invoiceForm.balance || invoiceForm.amount}
+                                  onChange={(e) => setInvoiceForm({...invoiceForm, balance: e.target.value})}
+                                  placeholder="0.00"
+                                  className="h-9 text-sm text-right"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  type="date"
+                                  value={invoiceForm.due_date}
+                                  onChange={(e) => setInvoiceForm({...invoiceForm, due_date: e.target.value})}
+                                  className="h-9 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2 text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    className="h-8 bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={handleCreateInvoice}
+                                  >
+                                    <Save className="h-3 w-3 mr-1" /> Save
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    className="h-8"
+                                    onClick={() => {
+                                      setShowInlineInvoiceAdd(false);
+                                      setInvoiceForm({ 
+                                        client_name: '', 
+                                        amount: '', 
+                                        vat_rate: '18', 
+                                        description: '', 
+                                        due_days: '30', 
+                                        trip_id: '',
+                                        status: 'draft'
+                                      });
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
                           {invoices.filter(inv => {
                             const matchesSearch = !invoiceSearch || 
                               inv.invoice_number?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
@@ -1227,7 +1316,7 @@ export function ProfessionalAccounting() {
                               inv.booking_reference?.toLowerCase().includes(invoiceSearch.toLowerCase());
                             const matchesStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
                             return matchesSearch && matchesStatus;
-                          }).length === 0 ? (
+                          }).length === 0 && !showInlineInvoiceAdd ? (
                             <TableRow>
                               <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                 No invoices found matching your criteria
