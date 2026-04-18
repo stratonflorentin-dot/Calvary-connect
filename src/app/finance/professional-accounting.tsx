@@ -2084,10 +2084,10 @@ export function ProfessionalAccounting() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="p-2">
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
                                   {/* Credit Account (From) */}
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs text-red-600 font-medium w-8">CR</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-gray-500 w-6">CR</span>
                                     <Select 
                                       value={jeForm.lines[0]?.account_code || ''} 
                                       onValueChange={(v) => {
@@ -2096,21 +2096,27 @@ export function ProfessionalAccounting() {
                                         updateJournalEntryLine(0, 'account_name', account?.name || '');
                                       }}
                                     >
-                                      <SelectTrigger className="h-8 text-sm w-[140px]">
-                                        <SelectValue placeholder="From (Credit)" />
+                                      <SelectTrigger className="h-7 text-xs w-full">
+                                        <SelectValue placeholder="Select credit account">
+                                          {jeForm.lines[0]?.account_code && (
+                                            <span className="truncate">
+                                              {jeForm.lines[0]?.account_code} - {accounts.find(a => a.code === jeForm.lines[0]?.account_code)?.name}
+                                            </span>
+                                          )}
+                                        </SelectValue>
                                       </SelectTrigger>
                                       <SelectContent>
                                         {accounts.map(acc => (
-                                          <SelectItem key={acc.id} value={acc.code}>
-                                            {acc.code}
+                                          <SelectItem key={acc.id} value={acc.code} className="text-xs">
+                                            <span className="font-medium">{acc.code}</span> - {acc.name}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
                                     </Select>
                                   </div>
                                   {/* Debit Account (To) */}
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs text-blue-600 font-medium w-8">DR</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-gray-500 w-6">DR</span>
                                     <Select 
                                       value={jeForm.lines[1]?.account_code || ''} 
                                       onValueChange={(v) => {
@@ -2119,13 +2125,19 @@ export function ProfessionalAccounting() {
                                         updateJournalEntryLine(1, 'account_name', account?.name || '');
                                       }}
                                     >
-                                      <SelectTrigger className="h-8 text-sm w-[140px]">
-                                        <SelectValue placeholder="To (Debit)" />
+                                      <SelectTrigger className="h-7 text-xs w-full">
+                                        <SelectValue placeholder="Select debit account">
+                                          {jeForm.lines[1]?.account_code && (
+                                            <span className="truncate">
+                                              {jeForm.lines[1]?.account_code} - {accounts.find(a => a.code === jeForm.lines[1]?.account_code)?.name}
+                                            </span>
+                                          )}
+                                        </SelectValue>
                                       </SelectTrigger>
                                       <SelectContent>
                                         {accounts.map(acc => (
-                                          <SelectItem key={acc.id} value={acc.code}>
-                                            {acc.code}
+                                          <SelectItem key={acc.id} value={acc.code} className="text-xs">
+                                            <span className="font-medium">{acc.code}</span> - {acc.name}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -2141,14 +2153,14 @@ export function ProfessionalAccounting() {
                                       updateJournalEntryLine(0, 'credit', amount);
                                       updateJournalEntryLine(1, 'debit', amount);
                                     }}
-                                    placeholder="Amount"
-                                    className="h-8 text-sm text-right"
+                                    placeholder="Enter amount"
+                                    className="h-7 text-xs text-right mt-1"
                                   />
                                 </div>
                               </TableCell>
                               <TableCell className="p-2 text-right">
                                 <span className="text-sm font-medium">
-                                  {formatCurrency(parseFloat(jeForm.lines[0]?.debit || jeForm.lines[0]?.credit || '0'))}
+                                  {formatCurrency(parseFloat(jeForm.lines[1]?.debit || '0'))}
                                 </span>
                               </TableCell>
                               <TableCell className="p-2 text-center">
