@@ -20,7 +20,7 @@ import {
   FileText, Receipt, Wallet, CreditCard, Banknote, ArrowRightLeft, Landmark,
   TrendingUp, TrendingDown, Plus, Search, Download, BookOpen, Calculator,
   Building2, Clock, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, BarChart3,
-  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2, Save
+  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2, Save, X
 } from 'lucide-react';
 
 interface Trip {
@@ -253,6 +253,7 @@ export function ProfessionalAccounting() {
   // Dialog states
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
   const [showCreateExpense, setShowCreateExpense] = useState(false);
+  const [showInlineExpenseAdd, setShowInlineExpenseAdd] = useState(false);
   const [showCreateJournalEntry, setShowCreateJournalEntry] = useState(false);
   const [showCreateCreditNote, setShowCreateCreditNote] = useState(false);
   const [showBankStatementImport, setShowBankStatementImport] = useState(false);
@@ -273,7 +274,7 @@ export function ProfessionalAccounting() {
     due_days: '30',
     trip_id: ''
   });
-  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '' });
+  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending' });
   
   // Journal Entry Form
   const [jeForm, setJeForm] = useState({
@@ -383,7 +384,7 @@ export function ProfessionalAccounting() {
         description: expenseForm.description,
         amount: parseFloat(expenseForm.amount),
         date: expenseForm.date,
-        status: 'pending',
+        status: expenseForm.status || 'pending',
         payment_method: 'cash',
         created_at: new Date().toISOString()
       });
@@ -391,9 +392,9 @@ export function ProfessionalAccounting() {
       if (error) throw error;
 
       toast({ title: 'Success', description: `Expense ${expenseNumber} recorded` });
-      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '' });
+      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending' });
+      setShowInlineExpenseAdd(false);
       loadData();
-      setActiveTab('operations');
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -1379,7 +1380,7 @@ export function ProfessionalAccounting() {
                           </Button>
                           <Button 
                             className="bg-blue-600 hover:bg-blue-700"
-                            onClick={() => setActiveTab('create_expense')}
+                            onClick={() => setShowInlineExpenseAdd(true)}
                           >
                             <Plus className="h-4 w-4 mr-2" /> New Expense
                           </Button>
@@ -1426,7 +1427,125 @@ export function ProfessionalAccounting() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredExpenses.length === 0 ? (
+                          {/* Inline Add Form */}
+                          {showInlineExpenseAdd && (
+                            <TableRow className="bg-blue-50/50">
+                              <TableCell className="p-2">
+                                <Input 
+                                  placeholder="Auto-generated"
+                                  disabled
+                                  className="h-9 text-sm bg-muted"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  type="date"
+                                  value={expenseForm.date}
+                                  onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})}
+                                  className="h-9 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  value={expenseForm.description}
+                                  onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})}
+                                  placeholder="Description..."
+                                  className="h-9 text-sm"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Select 
+                                  value={expenseForm.category} 
+                                  onValueChange={(v) => setExpenseForm({...expenseForm, category: v})}
+                                >
+                                  <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue placeholder="Category" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Fuel">Fuel</SelectItem>
+                                    <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                    <SelectItem value="Spare Parts">Spare Parts</SelectItem>
+                                    <SelectItem value="Insurance">Insurance</SelectItem>
+                                    <SelectItem value="License">License</SelectItem>
+                                    <SelectItem value="Tolls">Tolls</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="p-2">
+                                <Input 
+                                  type="number"
+                                  step="0.01"
+                                  value={expenseForm.amount}
+                                  onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
+                                  placeholder="0.00"
+                                  className="h-9 text-sm text-right"
+                                />
+                              </TableCell>
+                              <TableCell className="p-2 text-center">
+                                <Select 
+                                  value={expenseForm.status || 'pending'} 
+                                  onValueChange={(v) => setExpenseForm({...expenseForm, status: v})}
+                                >
+                                  <SelectTrigger className="h-9 text-sm w-full">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pending">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-yellow-500"></span> Pending
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="approved">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> Approved
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="paid">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-green-500"></span> Paid
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="rejected">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-red-500"></span> Rejected
+                                      </span>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="p-2 text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    className="h-8 bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={handleCreateExpense}
+                                  >
+                                    <Save className="h-3 w-3 mr-1" /> Save
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    className="h-8"
+                                    onClick={() => {
+                                      setShowInlineExpenseAdd(false);
+                                      setExpenseForm({ 
+                                        category: '', 
+                                        description: '', 
+                                        amount: '', 
+                                        date: new Date().toISOString().split('T')[0], 
+                                        vehicle_id: '',
+                                        status: 'pending'
+                                      });
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {filteredExpenses.length === 0 && !showInlineExpenseAdd ? (
                             <TableRow>
                               <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                 No expenses found matching your criteria
