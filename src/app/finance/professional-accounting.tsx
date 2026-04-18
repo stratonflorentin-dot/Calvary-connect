@@ -1018,52 +1018,268 @@ export function ProfessionalAccounting() {
 
               {/* Invoices */}
               <TabsContent value="invoices">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Invoices</CardTitle>
-                    <div className="flex gap-2">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Search..." className="pl-10 w-64" />
+                <div className="space-y-4">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Total</p>
+                        <p className="text-3xl font-bold mt-1">{invoices.length}</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Awaiting</p>
+                        <p className="text-3xl font-bold mt-1 text-blue-600">
+                          {invoices.filter(i => i.status === 'sent' || i.status === 'awaiting-payment').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Part Paid</p>
+                        <p className="text-3xl font-bold mt-1 text-yellow-600">
+                          {invoices.filter(i => i.status === 'part-paid').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Overdue</p>
+                        <p className="text-3xl font-bold mt-1 text-red-600">
+                          {invoices.filter(i => i.status === 'overdue').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Paid</p>
+                        <p className="text-3xl font-bold mt-1 text-green-600">
+                          {invoices.filter(i => i.status === 'paid').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Outstanding Balance Banner */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-amber-800 font-medium">Outstanding Balance</p>
+                        <p className="text-xs text-amber-600">Total unpaid across all open invoices</p>
                       </div>
-                      <Button><Plus className="h-4 w-4 mr-2" /> New Invoice</Button>
+                      <p className="text-2xl font-bold text-amber-800">
+                        {formatCurrency(invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled').reduce((sum, i) => sum + (i.balance || i.total_amount || 0), 0))}
+                      </p>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Invoice #</TableHead>
-                          <TableHead>Client</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Due Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Trip</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {invoices.map((inv) => (
-                          <TableRow key={inv.id}>
-                            <TableCell className="font-medium">{inv.invoice_number}</TableCell>
-                            <TableCell>{inv.client_name}</TableCell>
-                            <TableCell className="font-semibold">{formatCurrency(inv.total_amount)}</TableCell>
-                            <TableCell>{new Date(inv.due_date).toLocaleDateString()}</TableCell>
-                            <TableCell><Badge className={getStatusBadge(inv.status)}>{inv.status}</Badge></TableCell>
-                            <TableCell>
-                              {inv.trip_id ? (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                                  Linked
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
+                  </div>
+
+                  {/* Filters & Actions */}
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                        <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full lg:w-auto">
+                          <Input 
+                            placeholder="Invoice #, client, booking #..." 
+                            className="max-w-xs"
+                            value={invoiceSearch}
+                            onChange={(e) => setInvoiceSearch(e.target.value)}
+                          />
+                          <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+                            <SelectTrigger className="w-[160px]">
+                              <SelectValue placeholder="All Statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Statuses</SelectItem>
+                              <SelectItem value="draft">Draft</SelectItem>
+                              <SelectItem value="sent">Sent</SelectItem>
+                              <SelectItem value="awaiting-payment">Awaiting Payment</SelectItem>
+                              <SelectItem value="part-paid">Part Paid</SelectItem>
+                              <SelectItem value="paid">Paid</SelectItem>
+                              <SelectItem value="overdue">Overdue</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex gap-2 w-full lg:w-auto">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => {
+                              const voidedCount = invoices.filter(i => i.status === 'cancelled').length;
+                              toast({ title: 'Info', description: `${voidedCount} voided/cancelled invoices` });
+                            }}
+                          >
+                            <span className="text-muted-foreground mr-2">/</span> Voided / Cancelled
+                          </Button>
+                          <Dialog open={showCreateInvoice} onOpenChange={setShowCreateInvoice}>
+                            <DialogTrigger asChild>
+                              <Button className="bg-blue-600 hover:bg-blue-700">
+                                <Plus className="h-4 w-4 mr-2" /> New Invoice
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-lg">
+                              <DialogHeader>
+                                <DialogTitle>Create New Invoice</DialogTitle>
+                              </DialogHeader>
+                              <form onSubmit={handleCreateInvoice} className="space-y-4 pt-4">
+                                <div className="space-y-2">
+                                  <Label>Client</Label>
+                                  <Select value={invoiceForm.client_id} onValueChange={(v) => setInvoiceForm({...invoiceForm, client_id: v})} required>
+                                    <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                                    <SelectContent>
+                                      {trips.filter(t => t.client).map(trip => (
+                                        <SelectItem key={trip.id} value={trip.client}>{trip.client}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Linked Trip (Optional)</Label>
+                                  <Select value={invoiceForm.trip_id} onValueChange={(v) => {
+                                    setInvoiceForm({...invoiceForm, trip_id: v});
+                                    const trip = trips.find(t => t.id === v);
+                                    if (trip) {
+                                      setInvoiceForm(prev => ({...prev, amount: trip.salesAmount?.toString() || ''}));
+                                    }
+                                  }}>
+                                    <SelectTrigger><SelectValue placeholder="Select trip" /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="">None</SelectItem>
+                                      {trips.map(trip => (
+                                        <SelectItem key={trip.id} value={trip.id}>
+                                          {trip.origin} → {trip.destination} ({formatCurrency(trip.salesAmount || 0)})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Amount</Label>
+                                    <Input type="number" step="0.01" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({...invoiceForm, amount: e.target.value})} required />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>VAT %</Label>
+                                    <Input type="number" value={invoiceForm.vat_percent} onChange={(e) => setInvoiceForm({...invoiceForm, vat_percent: e.target.value})} />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Due Date</Label>
+                                  <Input type="date" value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({...invoiceForm, due_date: e.target.value})} required />
+                                </div>
+                                <Button type="submit" className="w-full">Create Invoice</Button>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
+                          onClick={() => {
+                            // Apply filters logic
+                            toast({ title: 'Filtered', description: 'Invoice list filtered' });
+                          }}
+                        >
+                          Filter
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setInvoiceSearch('');
+                            setInvoiceStatusFilter('all');
+                          }}
+                        >
+                          Reset
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Invoices Table */}
+                  <Card>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[120px]">Invoice #</TableHead>
+                            <TableHead>Client</TableHead>
+                            <TableHead className="w-[100px]">Booking</TableHead>
+                            <TableHead className="w-[120px]">Status</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
+                            <TableHead className="text-right">Balance Due</TableHead>
+                            <TableHead className="w-[100px]">Due Date</TableHead>
+                            <TableHead className="text-right w-[80px]">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {invoices.filter(inv => {
+                            const matchesSearch = !invoiceSearch || 
+                              inv.invoice_number?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+                              inv.client_name?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+                              inv.booking_reference?.toLowerCase().includes(invoiceSearch.toLowerCase());
+                            const matchesStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
+                            return matchesSearch && matchesStatus;
+                          }).length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                No invoices found matching your criteria
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            invoices.filter(inv => {
+                              const matchesSearch = !invoiceSearch || 
+                                inv.invoice_number?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+                                inv.client_name?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+                                inv.booking_reference?.toLowerCase().includes(invoiceSearch.toLowerCase());
+                              const matchesStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
+                              return matchesSearch && matchesStatus;
+                            }).map((inv) => (
+                              <TableRow key={inv.id} className="hover:bg-muted/50">
+                                <TableCell className="font-medium text-sm">
+                                  <div className="text-blue-600">{inv.invoice_number}</div>
+                                  <div className="text-xs text-muted-foreground">{new Date(inv.created_at || inv.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                </TableCell>
+                                <TableCell className="font-medium">{inv.client_name}</TableCell>
+                                <TableCell>
+                                  {inv.trip_id ? (
+                                    <span className="text-xs text-muted-foreground">{inv.booking_reference || 'BK-' + inv.trip_id?.slice(0, 8)}</span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    className={
+                                      inv.status === 'paid' ? 'bg-blue-100 text-blue-700 hover:bg-blue-100' :
+                                      inv.status === 'overdue' ? 'bg-red-100 text-red-700 hover:bg-red-100' :
+                                      inv.status === 'sent' || inv.status === 'awaiting-payment' ? 'bg-purple-100 text-purple-700 hover:bg-purple-100' :
+                                      inv.status === 'part-paid' ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100' :
+                                      'bg-gray-100 text-gray-700 hover:bg-gray-100'
+                                    }
+                                  >
+                                    {inv.status === 'sent' ? 'Sent — Awaiting Payment' : inv.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-semibold">{formatCurrency(inv.total_amount)}</TableCell>
+                                <TableCell className="text-right font-semibold text-blue-600">{formatCurrency(inv.balance || inv.total_amount)}</TableCell>
+                                <TableCell className="text-sm">{new Date(inv.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(inv)}>
+                                    View
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               {/* Expenses */}
@@ -1160,7 +1376,7 @@ export function ProfessionalAccounting() {
                           </Button>
                           <Dialog open={showCreateExpense} onOpenChange={setShowCreateExpense}>
                             <DialogTrigger asChild>
-                              <Button className="bg-red-600 hover:bg-red-700">
+                              <Button className="bg-blue-600 hover:bg-blue-700">
                                 <Plus className="h-4 w-4 mr-2" /> New Expense
                               </Button>
                             </DialogTrigger>
@@ -1206,7 +1422,7 @@ export function ProfessionalAccounting() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
                         >
                           Filter
                         </Button>
@@ -1268,7 +1484,7 @@ export function ProfessionalAccounting() {
                                     <Button variant="ghost" size="icon" onClick={() => handleEditExpense(exp)} title="Edit">
                                       <FileText className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(exp)} title="Delete" className="text-red-600 hover:text-red-700">
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(exp)} title="Delete" className="text-blue-600 hover:text-blue-700">
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </div>
@@ -1493,7 +1709,7 @@ export function ProfessionalAccounting() {
                           variant="outline" 
                           size="sm" 
                           onClick={filterJournalEntries}
-                          className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
                         >
                           Filter
                         </Button>
@@ -1595,7 +1811,7 @@ export function ProfessionalAccounting() {
                                         <Button 
                                           variant="ghost" 
                                           size="sm" 
-                                          className="text-red-600 hover:text-red-700"
+                                          className="text-blue-600 hover:text-blue-700"
                                           onClick={() => forceDeleteJournalEntry(je)}
                                         >
                                           Force Delete
@@ -1870,7 +2086,7 @@ export function ProfessionalAccounting() {
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    className="text-red-600 hover:text-red-700"
+                                    className="text-blue-600 hover:text-blue-700"
                                     onClick={async () => {
                                       if (!confirm(`Delete ${acc.account_name}? This action cannot be undone.`)) return;
                                       try {
