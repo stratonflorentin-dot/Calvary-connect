@@ -1124,27 +1124,26 @@ export function ProfessionalAccounting() {
                               <form onSubmit={handleCreateInvoice} className="space-y-4 pt-4">
                                 <div className="space-y-2">
                                   <Label>Client</Label>
-                                  <Select value={invoiceForm.client_id} onValueChange={(v) => setInvoiceForm({...invoiceForm, client_id: v})} required>
-                                    <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                                    <SelectContent>
-                                      {trips.filter(t => t.client).map(trip => (
-                                        <SelectItem key={trip.id} value={trip.client}>{trip.client}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <Input 
+                                    value={invoiceForm.client_name} 
+                                    onChange={(e) => setInvoiceForm({...invoiceForm, client_name: e.target.value})} 
+                                    placeholder="Enter client name"
+                                    required 
+                                  />
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Linked Trip (Optional)</Label>
-                                  <Select value={invoiceForm.trip_id} onValueChange={(v) => {
-                                    setInvoiceForm({...invoiceForm, trip_id: v});
-                                    const trip = trips.find(t => t.id === v);
+                                  <Select value={invoiceForm.trip_id || 'none'} onValueChange={(v) => {
+                                    const tripId = v === 'none' ? '' : v;
+                                    setInvoiceForm({...invoiceForm, trip_id: tripId});
+                                    const trip = trips.find(t => t.id === tripId);
                                     if (trip) {
                                       setInvoiceForm(prev => ({...prev, amount: trip.salesAmount?.toString() || ''}));
                                     }
                                   }}>
                                     <SelectTrigger><SelectValue placeholder="Select trip" /></SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="">None</SelectItem>
+                                      <SelectItem value="none">None</SelectItem>
                                       {trips.map(trip => (
                                         <SelectItem key={trip.id} value={trip.id}>
                                           {trip.origin} → {trip.destination} ({formatCurrency(trip.salesAmount || 0)})
