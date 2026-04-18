@@ -339,6 +339,7 @@ export function ProfessionalAccounting() {
         invoice_number: invoiceNumber,
         client_name: invoiceForm.client_name,
         amount: amount,
+        subtotal: amount,
         vat_amount: vatAmount,
         total_amount: totalAmount,
         issue_date: new Date().toISOString().split('T')[0],
