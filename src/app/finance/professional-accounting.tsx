@@ -19,7 +19,7 @@ import {
   FileText, Receipt, Wallet, CreditCard, Banknote, ArrowRightLeft, Landmark,
   TrendingUp, TrendingDown, Plus, Search, Download, BookOpen, Calculator,
   Building2, Clock, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, BarChart3,
-  ArrowLeft, LayoutDashboard, ChevronLeft
+  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2
 } from 'lucide-react';
 
 interface Trip {
@@ -148,6 +148,10 @@ export function ProfessionalAccounting() {
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
   const [expenseSearch, setExpenseSearch] = useState('');
+  const [expenseStatusFilter, setExpenseStatusFilter] = useState('all');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('all');
+  const [expenseDateFrom, setExpenseDateFrom] = useState('');
+  const [expenseDateTo, setExpenseDateTo] = useState('');
   const [jeSearch, setJeSearch] = useState('');
   const [cnSearch, setCnSearch] = useState('');
   
@@ -1064,87 +1068,216 @@ export function ProfessionalAccounting() {
 
               {/* Expenses */}
               <TabsContent value="expenses">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Expenses</CardTitle>
-                    <Dialog open={showCreateExpense} onOpenChange={setShowCreateExpense}>
-                      <DialogTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" /> New Expense</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Record New Expense</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleCreateExpense} className="space-y-4 pt-4">
-                          <div className="space-y-2">
-                            <Label>Category</Label>
-                            <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({...expenseForm, category: v})} required>
-                              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Fuel">Fuel</SelectItem>
-                                <SelectItem value="Maintenance">Maintenance</SelectItem>
-                                <SelectItem value="Spare Parts">Spare Parts</SelectItem>
-                                <SelectItem value="Insurance">Insurance</SelectItem>
-                                <SelectItem value="License">License</SelectItem>
-                                <SelectItem value="Tolls">Tolls</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
+                <div className="space-y-4">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">This Month</p>
+                        <p className="text-3xl font-bold mt-1">
+                          {formatCurrency(expenses.filter(e => {
+                            const expenseMonth = new Date(e.date).getMonth();
+                            const currentMonth = new Date().getMonth();
+                            return expenseMonth === currentMonth;
+                          }).reduce((sum, e) => sum + e.amount, 0))}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Pending Approval</p>
+                        <p className="text-3xl font-bold mt-1 text-yellow-600">
+                          {expenses.filter(e => e.status === 'pending').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Posted to Ledger</p>
+                        <p className="text-3xl font-bold mt-1 text-green-600">
+                          {expenses.filter(e => e.status === 'approved' || e.status === 'reimbursed').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Filters & Actions */}
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                        <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full lg:w-auto">
+                          <Input 
+                            placeholder="Expense #, description..." 
+                            className="max-w-xs"
+                            value={expenseSearch}
+                            onChange={(e) => setExpenseSearch(e.target.value)}
+                          />
+                          <Select value={expenseStatusFilter} onValueChange={setExpenseStatusFilter}>
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Statuses</SelectItem>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="approved">Approved</SelectItem>
+                              <SelectItem value="rejected">Rejected</SelectItem>
+                              <SelectItem value="reimbursed">Reimbursed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Select value={expenseCategoryFilter} onValueChange={setExpenseCategoryFilter}>
+                            <SelectTrigger className="w-[160px]">
+                              <SelectValue placeholder="Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Categories</SelectItem>
+                              <SelectItem value="Fuel">Fuel</SelectItem>
+                              <SelectItem value="Maintenance">Maintenance</SelectItem>
+                              <SelectItem value="Spare Parts">Spare Parts</SelectItem>
+                              <SelectItem value="Insurance">Insurance</SelectItem>
+                              <SelectItem value="License">License</SelectItem>
+                              <SelectItem value="Tolls">Tolls</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <div className="flex gap-2">
+                            <Input 
+                              type="date" 
+                              placeholder="From"
+                              value={expenseDateFrom}
+                              onChange={(e) => setExpenseDateFrom(e.target.value)}
+                            />
+                            <Input 
+                              type="date" 
+                              placeholder="To"
+                              value={expenseDateTo}
+                              onChange={(e) => setExpenseDateTo(e.target.value)}
+                            />
                           </div>
-                          <div className="space-y-2">
-                            <Label>Description</Label>
-                            <Input value={expenseForm.description} onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} required />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Amount</Label>
-                            <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} required />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Date</Label>
-                            <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})} required />
-                          </div>
-                          <Button type="submit" className="w-full">Record Expense</Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Expense #</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredExpenses.map((exp) => (
-                          <TableRow key={exp.id}>
-                            <TableCell className="font-medium">{exp.expense_number}</TableCell>
-                            <TableCell><Badge variant="outline">{exp.category}</Badge></TableCell>
-                            <TableCell>{exp.description}</TableCell>
-                            <TableCell className="font-semibold">{formatCurrency(exp.amount)}</TableCell>
-                            <TableCell><Badge className={getStatusBadge(exp.status)}>{exp.status}</Badge></TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
-                                <Button variant="ghost" size="icon" onClick={() => handleViewExpense(exp)} title="View">
-                                  <BookOpen className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleEditExpense(exp)} title="Edit">
-                                  <FileText className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(exp)} title="Delete" className="text-red-600 hover:text-red-700">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
+                        </div>
+                        <div className="flex gap-2 w-full lg:w-auto">
+                          <Button variant="outline">
+                            <Download className="h-4 w-4 mr-2" /> Export Excel
+                          </Button>
+                          <Dialog open={showCreateExpense} onOpenChange={setShowCreateExpense}>
+                            <DialogTrigger asChild>
+                              <Button className="bg-red-600 hover:bg-red-700">
+                                <Plus className="h-4 w-4 mr-2" /> New Expense
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Record New Expense</DialogTitle>
+                              </DialogHeader>
+                              <form onSubmit={handleCreateExpense} className="space-y-4 pt-4">
+                                <div className="space-y-2">
+                                  <Label>Category</Label>
+                                  <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({...expenseForm, category: v})} required>
+                                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Fuel">Fuel</SelectItem>
+                                      <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                      <SelectItem value="Spare Parts">Spare Parts</SelectItem>
+                                      <SelectItem value="Insurance">Insurance</SelectItem>
+                                      <SelectItem value="License">License</SelectItem>
+                                      <SelectItem value="Tolls">Tolls</SelectItem>
+                                      <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Description</Label>
+                                  <Input value={expenseForm.description} onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} required />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Amount</Label>
+                                  <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} required />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Date</Label>
+                                  <Input type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})} required />
+                                </div>
+                                <Button type="submit" className="w-full">Record Expense</Button>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                        >
+                          Filter
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setExpenseSearch('');
+                            setExpenseStatusFilter('all');
+                            setExpenseCategoryFilter('all');
+                            setExpenseDateFrom('');
+                            setExpenseDateTo('');
+                          }}
+                        >
+                          Reset
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Expenses Table */}
+                  <Card>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Expense #</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="text-center">Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredExpenses.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                No expenses found matching your criteria
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredExpenses.map((exp) => (
+                              <TableRow key={exp.id}>
+                                <TableCell className="font-medium text-sm">{exp.expense_number}</TableCell>
+                                <TableCell className="text-sm">{new Date(exp.date).toLocaleDateString('en-GB')}</TableCell>
+                                <TableCell className="max-w-[200px] truncate">{exp.description}</TableCell>
+                                <TableCell><Badge variant="outline">{exp.category}</Badge></TableCell>
+                                <TableCell className="text-right font-semibold">{formatCurrency(exp.amount)}</TableCell>
+                                <TableCell className="text-center">
+                                  <Badge className={getStatusBadge(exp.status)}>{exp.status}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-1">
+                                    <Button variant="ghost" size="icon" onClick={() => handleViewExpense(exp)} title="View">
+                                      <BookOpen className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditExpense(exp)} title="Edit">
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteExpense(exp)} title="Delete" className="text-red-600 hover:text-red-700">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
                     
                     {/* View Expense Dialog */}
                     <Dialog open={showViewExpense} onOpenChange={setShowViewExpense}>
@@ -1236,6 +1369,7 @@ export function ProfessionalAccounting() {
                     </Dialog>
                   </CardContent>
                 </Card>
+                </div>
               </TabsContent>
 
               {/* Cash Requests */}
