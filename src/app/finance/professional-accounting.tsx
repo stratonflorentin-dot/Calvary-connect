@@ -770,11 +770,7 @@ export function ProfessionalAccounting() {
     exp.category?.toLowerCase().includes(expenseSearch.toLowerCase())
   );
 
-  const filteredJournalEntries = journalEntries.filter(je =>
-    !jeSearch ||
-    je.entry_number?.toLowerCase().includes(jeSearch.toLowerCase()) ||
-    je.description?.toLowerCase().includes(jeSearch.toLowerCase())
-  );
+  // Note: filteredJournalEntries is now a state variable managed by filterJournalEntries()
 
   const filteredCreditNotes = creditNotes.filter(cn =>
     !cnSearch ||
