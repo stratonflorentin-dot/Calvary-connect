@@ -1234,11 +1234,6 @@ export function ProfessionalAccounting() {
                                         <span className="w-2 h-2 rounded-full bg-blue-500"></span> Sent
                                       </span>
                                     </SelectItem>
-                                    <SelectItem value="awaiting-payment">
-                                      <span className="flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-yellow-500"></span> Awaiting
-                                      </span>
-                                    </SelectItem>
                                     <SelectItem value="paid">
                                       <span className="flex items-center gap-2">
                                         <span className="w-2 h-2 rounded-full bg-green-500"></span> Paid
@@ -1247,6 +1242,11 @@ export function ProfessionalAccounting() {
                                     <SelectItem value="overdue">
                                       <span className="flex items-center gap-2">
                                         <span className="w-2 h-2 rounded-full bg-red-500"></span> Overdue
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="cancelled">
+                                      <span className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-gray-700"></span> Cancelled
                                       </span>
                                     </SelectItem>
                                   </SelectContent>
