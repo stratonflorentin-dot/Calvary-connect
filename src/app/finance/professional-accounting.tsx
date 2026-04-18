@@ -284,7 +284,10 @@ export function ProfessionalAccounting() {
     description: '',
     reference: '',
     date: new Date().toISOString().split('T')[0],
-    lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+    lines: [
+      { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' },
+      { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }
+    ]
   });
   
   // Credit Note Form
@@ -500,7 +503,10 @@ export function ProfessionalAccounting() {
         description: '',
         reference: '',
         date: new Date().toISOString().split('T')[0],
-        lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+        lines: [
+          { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' },
+          { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }
+        ]
       });
       loadData();
     } catch (error: any) {
@@ -2078,66 +2084,64 @@ export function ProfessionalAccounting() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="p-2">
-                                <div className="space-y-1">
-                                  <Select 
-                                    value={jeForm.lines[0]?.account_code || ''} 
-                                    onValueChange={(v) => {
-                                      const account = accounts.find(a => a.code === v);
-                                      updateJournalEntryLine(0, 'account_code', v);
-                                      updateJournalEntryLine(0, 'account_name', account?.name || '');
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-8 text-sm w-full">
-                                      <SelectValue placeholder="Select account" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {accounts.map(acc => (
-                                        <SelectItem key={acc.id} value={acc.code}>
-                                          {acc.code} - {acc.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant={jeForm.lines[0]?.debit ? 'default' : 'outline'}
-                                      className="h-7 text-xs flex-1"
-                                      onClick={() => {
-                                        const currentAmount = jeForm.lines[0]?.credit || '0';
-                                        updateJournalEntryLine(0, 'debit', currentAmount);
-                                        updateJournalEntryLine(0, 'credit', '');
+                                <div className="space-y-2">
+                                  {/* Credit Account (From) */}
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-red-600 font-medium w-8">CR</span>
+                                    <Select 
+                                      value={jeForm.lines[0]?.account_code || ''} 
+                                      onValueChange={(v) => {
+                                        const account = accounts.find(a => a.code === v);
+                                        updateJournalEntryLine(0, 'account_code', v);
+                                        updateJournalEntryLine(0, 'account_name', account?.name || '');
                                       }}
                                     >
-                                      DR
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant={jeForm.lines[0]?.credit ? 'default' : 'outline'}
-                                      className="h-7 text-xs flex-1"
-                                      onClick={() => {
-                                        const currentAmount = jeForm.lines[0]?.debit || '0';
-                                        updateJournalEntryLine(0, 'credit', currentAmount);
-                                        updateJournalEntryLine(0, 'debit', '');
-                                      }}
-                                    >
-                                      CR
-                                    </Button>
+                                      <SelectTrigger className="h-8 text-sm w-[140px]">
+                                        <SelectValue placeholder="From (Credit)" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {accounts.map(acc => (
+                                          <SelectItem key={acc.id} value={acc.code}>
+                                            {acc.code}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </div>
+                                  {/* Debit Account (To) */}
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs text-blue-600 font-medium w-8">DR</span>
+                                    <Select 
+                                      value={jeForm.lines[1]?.account_code || ''} 
+                                      onValueChange={(v) => {
+                                        const account = accounts.find(a => a.code === v);
+                                        updateJournalEntryLine(1, 'account_code', v);
+                                        updateJournalEntryLine(1, 'account_name', account?.name || '');
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-sm w-[140px]">
+                                        <SelectValue placeholder="To (Debit)" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {accounts.map(acc => (
+                                          <SelectItem key={acc.id} value={acc.code}>
+                                            {acc.code}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  {/* Amount */}
                                   <Input 
                                     type="number"
                                     step="0.01"
-                                    value={jeForm.lines[0]?.debit || jeForm.lines[0]?.credit || ''}
+                                    value={jeForm.lines[0]?.credit || ''}
                                     onChange={(e) => {
-                                      if (jeForm.lines[0]?.debit !== undefined && jeForm.lines[0]?.debit !== '') {
-                                        updateJournalEntryLine(0, 'debit', e.target.value);
-                                      } else {
-                                        updateJournalEntryLine(0, 'credit', e.target.value);
-                                      }
+                                      const amount = e.target.value;
+                                      updateJournalEntryLine(0, 'credit', amount);
+                                      updateJournalEntryLine(1, 'debit', amount);
                                     }}
-                                    placeholder="0.00"
+                                    placeholder="Amount"
                                     className="h-8 text-sm text-right"
                                   />
                                 </div>
@@ -2169,7 +2173,10 @@ export function ProfessionalAccounting() {
                                         description: '',
                                         reference: '',
                                         date: new Date().toISOString().split('T')[0],
-                                        lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+                                        lines: [
+                                          { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' },
+                                          { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }
+                                        ]
                                       });
                                     }}
                                   >
