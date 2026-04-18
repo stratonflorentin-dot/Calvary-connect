@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS journal_entries (
     reference VARCHAR(100), -- User-provided reference (e.g., Receipt #123)
     reference_type VARCHAR(50), -- System reference type (e.g., 'trip', 'invoice')
     reference_id UUID, -- System reference ID
+    source VARCHAR(50), -- Source of entry (e.g., 'manual', 'auto', 'import')
     description TEXT NOT NULL,
     notes TEXT,
     total_debit DECIMAL(15, 2) NOT NULL DEFAULT 0,

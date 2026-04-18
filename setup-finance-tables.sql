@@ -91,10 +91,16 @@ CREATE POLICY "sales_delete_authenticated"
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS invoices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    invoice_number VARCHAR(50) UNIQUE,
     client_name TEXT NOT NULL,
     amount NUMERIC NOT NULL,
+    vat_amount NUMERIC DEFAULT 0,
+    total_amount NUMERIC,
     due_date DATE NOT NULL,
+    issue_date DATE DEFAULT CURRENT_DATE,
     status TEXT DEFAULT 'pending',
+    description TEXT,
+    trip_id UUID,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
