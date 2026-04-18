@@ -346,6 +346,7 @@ export function ProfessionalAccounting() {
         status: invoiceForm.status || 'draft',
         description: invoiceForm.description,
         trip_id: invoiceForm.trip_id || null,
+        items: [],
         created_at: new Date().toISOString()
       });
 
@@ -383,6 +384,7 @@ export function ProfessionalAccounting() {
       const { error } = await supabase.from('expenses').insert({
         expense_number: expenseNumber,
         category: expenseForm.category,
+        type: expenseForm.category?.toUpperCase() || 'OTHER',
         description: expenseForm.description,
         amount: parseFloat(expenseForm.amount),
         date: expenseForm.date,
