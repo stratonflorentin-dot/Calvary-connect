@@ -143,6 +143,7 @@ export function ProfessionalAccounting() {
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [chartAccounts, setChartAccounts] = useState<ChartAccount[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Search and filter states
@@ -176,13 +177,14 @@ export function ProfessionalAccounting() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [invoicesRes, expensesRes, jeRes, bankRes, tripsRes] = await Promise.all([
+      const [invoicesRes, expensesRes, jeRes, bankRes, tripsRes, accountsRes] = await Promise.all([
         supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(20),
         supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(20),
         supabase.from('journal_entries').select('*').order('created_at', { ascending: false }).limit(20),
         supabase.from('bank_accounts').select('*'),
         supabase.from('trips').select('id, origin, destination, client, salesAmount, status, created_at, payment_status')
-          .order('created_at', { ascending: false }).limit(50)
+          .order('created_at', { ascending: false }).limit(50),
+        supabase.from('accounts').select('*').order('code')
       ]);
       
       setInvoices(invoicesRes.data || []);
@@ -190,6 +192,7 @@ export function ProfessionalAccounting() {
       setJournalEntries(jeRes.data || []);
       setFilteredJournalEntries(jeRes.data || []);
       setBankAccounts(bankRes.data || []);
+      setAccounts(accountsRes.data || []);
       
       // Load journal entry lines
       const { data: jeLinesData } = await supabase.from('journal_entry_lines').select('*');
