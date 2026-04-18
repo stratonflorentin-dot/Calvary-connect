@@ -945,19 +945,41 @@ export function ChartOfAccountsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Add Manual Entry Dialog - Professional Journal Entry Form */}
+        {/* Add Manual Entry Dialog - Professional Journal Entry Form - Full Screen */}
         <Dialog open={showAddEntryDialog} onOpenChange={setShowAddEntryDialog}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="border-b pb-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <DialogTitle className="text-xl">Journal Entry</DialogTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Ledger: {ledgerAccount?.code} - {ledgerAccount?.name}
-                  </p>
+          <DialogContent className="max-w-[95vw] w-full min-h-[95vh] max-h-[95vh] overflow-y-auto p-0">
+            {/* Header with Back Button */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-white hover:bg-white/20"
+                    onClick={() => setShowAddEntryDialog(false)}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to Chart of Accounts
+                  </Button>
+                  <div className="h-6 w-px bg-white/30"></div>
+                  <div>
+                    <DialogTitle className="text-xl text-white">Journal Entry</DialogTitle>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Ledger: {ledgerAccount?.code} - {ledgerAccount?.name}
+                    </p>
+                  </div>
                 </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="text-white hover:bg-white/20"
+                  onClick={() => setShowAddEntryDialog(false)}
+                >
+                  <span className="text-2xl">&times;</span>
+                </Button>
               </div>
-            </DialogHeader>
+            </div>
+            
+            <div className="p-6">
             
             <form onSubmit={handleCreateLedgerEntry} className="space-y-4 pt-4">
               {/* Header Fields */}
@@ -1148,6 +1170,7 @@ export function ChartOfAccountsPage() {
                 </Button>
               </div>
             </form>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
