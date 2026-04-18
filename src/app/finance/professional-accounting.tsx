@@ -489,8 +489,8 @@ export function ProfessionalAccounting() {
         journal_entry_id: jeData.id,
         account_code: line.account_code,
         description: line.description || line.account_name,
-        debit: parseFloat(line.debit) || 0,
-        credit: parseFloat(line.credit) || 0
+        debit_amount: parseFloat(line.debit) || 0,
+        credit_amount: parseFloat(line.credit) || 0
       }));
 
       const { error: linesError } = await supabase.from('journal_entry_lines').insert(linesToInsert);
