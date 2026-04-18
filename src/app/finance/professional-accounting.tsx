@@ -485,9 +485,7 @@ export function ProfessionalAccounting() {
       const linesToInsert = jeForm.lines.map(line => ({
         journal_entry_id: jeData.id,
         account_code: line.account_code,
-        account_name: line.account_name,
-        partner: line.partner,
-        description: line.description,
+        description: line.description || line.account_name,
         debit: parseFloat(line.debit) || 0,
         credit: parseFloat(line.credit) || 0
       }));
