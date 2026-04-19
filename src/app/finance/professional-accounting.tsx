@@ -2177,8 +2177,14 @@ export function ProfessionalAccounting() {
                                         console.log('Selected account code:', v);
                                         const account = accounts.find(a => a.code === v);
                                         console.log('Found account:', account);
-                                        updateJournalEntryLine(index, 'account_code', v);
-                                        updateJournalEntryLine(index, 'account_name', account?.name || '');
+                                        // Update both fields in single state update
+                                        const updatedLines = [...jeForm.lines];
+                                        updatedLines[index] = { 
+                                          ...updatedLines[index], 
+                                          account_code: v,
+                                          account_name: account?.name || ''
+                                        };
+                                        setJeForm({ ...jeForm, lines: updatedLines });
                                       }}
                                     >
                                       <SelectTrigger className="h-7 text-xs w-full">
