@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
@@ -2158,7 +2158,15 @@ export function ProfessionalAccounting() {
                               </TableRow>
                               {/* Line Items */}
                               {jeForm.lines.map((line, index) => (
-                                <TableRow key={index} className="bg-blue-50/50">
+                                <React.Fragment key={index}>
+                                <TableRow className="bg-gray-100">
+                                  <TableCell colSpan={7} className="p-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      Debug: {accounts.length} accounts loaded | Line {index + 1} account_code: &quot;{line.account_code || 'EMPTY'}&quot;
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                                <TableRow className="bg-blue-50/50">
                                   <TableCell className="p-1 text-center">
                                     <span className="text-xs text-muted-foreground">{index + 1}</span>
                                   </TableCell>
@@ -2296,6 +2304,7 @@ export function ProfessionalAccounting() {
                                     )}
                                   </TableCell>
                                 </TableRow>
+                                </React.Fragment>
                               ))}
                               {/* Add Row & Totals */}
                               <TableRow className="bg-blue-50/30">
