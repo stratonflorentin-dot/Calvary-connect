@@ -407,8 +407,6 @@ export function ProfessionalAccounting() {
         amount: parseFloat(expenseForm.amount),
         date: expenseForm.date,
         status: 'approved', // Auto-approve to create journal entry
-        payment_method: expenseForm.payment_method || 'cash',
-        account_code: expenseForm.account_code, // Link to chart of accounts
         created_at: new Date().toISOString()
       }).select().single();
 
