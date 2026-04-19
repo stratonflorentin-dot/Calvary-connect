@@ -514,14 +514,20 @@ export function ProfessionalAccounting() {
 
       if (jeError) throw jeError;
 
-      // Insert journal entry lines
-      const linesToInsert = jeForm.lines.map(line => ({
-        journal_entry_id: jeData.id,
-        account_code: line.account_code,
-        description: line.description || line.account_name,
-        debit_amount: parseFloat(line.debit) || 0,
-        credit_amount: parseFloat(line.credit) || 0
-      }));
+      // Insert journal entry lines - filter out empty lines
+      const linesToInsert = jeForm.lines
+        .filter(line => line.account_code && line.account_code.trim() !== '')
+        .map(line => ({
+          journal_entry_id: jeData.id,
+          account_code: line.account_code,
+          description: line.description || line.account_name,
+          debit_amount: parseFloat(line.debit) || 0,
+          credit_amount: parseFloat(line.credit) || 0
+        }));
+
+      if (linesToInsert.length === 0) {
+        throw new Error('No valid journal entry lines. Please select accounts for at least one line.');
+      }
 
       const { error: linesError } = await supabase.from('journal_entry_lines').insert(linesToInsert);
       if (linesError) throw linesError;
