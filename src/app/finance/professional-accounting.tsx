@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Sidebar } from '@/components/navigation/sidebar';
 import {
@@ -2168,12 +2168,69 @@ export function ProfessionalAccounting() {
                                       <SelectTrigger className="h-7 text-xs w-full">
                                         <SelectValue placeholder="Select account..." />
                                       </SelectTrigger>
-                                      <SelectContent>
-                                        {accounts.map(acc => (
-                                          <SelectItem key={acc.id} value={acc.code} className="text-xs">
-                                            <span className="font-medium">{acc.code}</span> - {acc.name}
-                                          </SelectItem>
-                                        ))}
+                                      <SelectContent className="max-h-[300px]">
+                                        <SelectGroup>
+                                          <SelectLabel className="text-xs font-bold text-blue-600">Assets (1000-1600)</SelectLabel>
+                                          {accounts.filter(a => a.category === 'ASSETS').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                              <span className="font-medium">{acc.code}</span> - {acc.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                        <SelectSeparator />
+                                        <SelectGroup>
+                                          <SelectLabel className="text-xs font-bold text-red-600">Liabilities (2000-2500)</SelectLabel>
+                                          {accounts.filter(a => a.category === 'LIABILITIES').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                              <span className="font-medium">{acc.code}</span> - {acc.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                        <SelectSeparator />
+                                        <SelectGroup>
+                                          <SelectLabel className="text-xs font-bold text-purple-600">Equity (3000)</SelectLabel>
+                                          {accounts.filter(a => a.category === 'EQUITY').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                              <span className="font-medium">{acc.code}</span> - {acc.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                        <SelectSeparator />
+                                        <SelectGroup>
+                                          <SelectLabel className="text-xs font-bold text-green-600">Revenue (4000-4100)</SelectLabel>
+                                          {accounts.filter(a => a.category === 'REVENUE').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                              <span className="font-medium">{acc.code}</span> - {acc.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                        <SelectSeparator />
+                                        <SelectGroup>
+                                          <SelectLabel className="text-xs font-bold text-orange-600">Cost of Sales (5000)</SelectLabel>
+                                          {accounts.filter(a => a.category === 'COST_OF_SALES').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                              <span className="font-medium">{acc.code}</span> - {acc.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                        <SelectSeparator />
+                                        <SelectGroup>
+                                          <SelectLabel className="text-xs font-bold text-yellow-600">Operating Expenses (6000)</SelectLabel>
+                                          {accounts.filter(a => a.category === 'OPERATING_EXPENSES').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                              <span className="font-medium">{acc.code}</span> - {acc.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                        <SelectSeparator />
+                                        <SelectGroup>
+                                          <SelectLabel className="text-xs font-bold text-gray-600">Other Expenses (7000)</SelectLabel>
+                                          {accounts.filter(a => a.category === 'OTHER_EXPENSES').map(acc => (
+                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                              <span className="font-medium">{acc.code}</span> - {acc.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectGroup>
                                       </SelectContent>
                                     </Select>
                                   </TableCell>
