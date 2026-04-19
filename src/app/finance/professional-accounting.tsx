@@ -2160,19 +2160,23 @@ export function ProfessionalAccounting() {
                                     <Select 
                                       value={line.account_code || ''} 
                                       onValueChange={(v) => {
+                                        console.log('Selected account code:', v);
                                         const account = accounts.find(a => a.code === v);
+                                        console.log('Found account:', account);
                                         updateJournalEntryLine(index, 'account_code', v);
                                         updateJournalEntryLine(index, 'account_name', account?.name || '');
                                       }}
                                     >
                                       <SelectTrigger className="h-7 text-xs w-full">
-                                        <SelectValue placeholder="Select account..." />
+                                        <SelectValue placeholder="Select account...">
+                                          {line.account_code ? `${line.account_code} - ${line.account_name || 'Unknown'}` : 'Select account...'}
+                                        </SelectValue>
                                       </SelectTrigger>
                                       <SelectContent className="max-h-[300px]">
                                         <SelectGroup>
                                           <SelectLabel className="text-xs font-bold text-blue-600">Assets (1000-1600)</SelectLabel>
                                           {accounts.filter(a => a.category === 'ASSETS').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                            <SelectItem key={`asset-${acc.code}`} value={acc.code} className="text-xs pl-4">
                                               <span className="font-medium">{acc.code}</span> - {acc.name}
                                             </SelectItem>
                                           ))}
@@ -2181,7 +2185,7 @@ export function ProfessionalAccounting() {
                                         <SelectGroup>
                                           <SelectLabel className="text-xs font-bold text-red-600">Liabilities (2000-2500)</SelectLabel>
                                           {accounts.filter(a => a.category === 'LIABILITIES').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                            <SelectItem key={`liab-${acc.code}`} value={acc.code} className="text-xs pl-4">
                                               <span className="font-medium">{acc.code}</span> - {acc.name}
                                             </SelectItem>
                                           ))}
@@ -2190,7 +2194,7 @@ export function ProfessionalAccounting() {
                                         <SelectGroup>
                                           <SelectLabel className="text-xs font-bold text-purple-600">Equity (3000)</SelectLabel>
                                           {accounts.filter(a => a.category === 'EQUITY').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                            <SelectItem key={`equity-${acc.code}`} value={acc.code} className="text-xs pl-4">
                                               <span className="font-medium">{acc.code}</span> - {acc.name}
                                             </SelectItem>
                                           ))}
@@ -2199,7 +2203,7 @@ export function ProfessionalAccounting() {
                                         <SelectGroup>
                                           <SelectLabel className="text-xs font-bold text-green-600">Revenue (4000-4100)</SelectLabel>
                                           {accounts.filter(a => a.category === 'REVENUE').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                            <SelectItem key={`rev-${acc.code}`} value={acc.code} className="text-xs pl-4">
                                               <span className="font-medium">{acc.code}</span> - {acc.name}
                                             </SelectItem>
                                           ))}
@@ -2208,7 +2212,7 @@ export function ProfessionalAccounting() {
                                         <SelectGroup>
                                           <SelectLabel className="text-xs font-bold text-orange-600">Cost of Sales (5000)</SelectLabel>
                                           {accounts.filter(a => a.category === 'COST_OF_SALES').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                            <SelectItem key={`cos-${acc.code}`} value={acc.code} className="text-xs pl-4">
                                               <span className="font-medium">{acc.code}</span> - {acc.name}
                                             </SelectItem>
                                           ))}
@@ -2217,7 +2221,7 @@ export function ProfessionalAccounting() {
                                         <SelectGroup>
                                           <SelectLabel className="text-xs font-bold text-yellow-600">Operating Expenses (6000)</SelectLabel>
                                           {accounts.filter(a => a.category === 'OPERATING_EXPENSES').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                            <SelectItem key={`opex-${acc.code}`} value={acc.code} className="text-xs pl-4">
                                               <span className="font-medium">{acc.code}</span> - {acc.name}
                                             </SelectItem>
                                           ))}
@@ -2226,7 +2230,7 @@ export function ProfessionalAccounting() {
                                         <SelectGroup>
                                           <SelectLabel className="text-xs font-bold text-gray-600">Other Expenses (7000)</SelectLabel>
                                           {accounts.filter(a => a.category === 'OTHER_EXPENSES').map(acc => (
-                                            <SelectItem key={acc.id} value={acc.code} className="text-xs pl-4">
+                                            <SelectItem key={`other-${acc.code}`} value={acc.code} className="text-xs pl-4">
                                               <span className="font-medium">{acc.code}</span> - {acc.name}
                                             </SelectItem>
                                           ))}
