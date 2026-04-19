@@ -52,28 +52,30 @@ export function BottomTabs({ role }: { role: UserRole }) {
   const tabs = menuItems.slice(0, 5);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(60px+env(safe-area-inset-bottom))] bg-white border-t border-border flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)] z-50">
-      {tabs.map((tab) => {
-        const isActive = pathname === tab.path;
-        const Icon = routeIconMap[tab.path] || LayoutDashboard;
-        return (
-          <Link
-            key={tab.path}
-            href={tab.path}
-            className="flex flex-col items-center justify-center gap-1 w-full relative transition-transform active:scale-95 duration-150 py-2"
-          >
-            <Icon className={cn(
-              "size-6 transition-colors",
-              isActive ? "text-primary" : "text-muted-foreground"
-            )} />
-            <span className={cn(
-              "text-xs transition-colors",
-              isActive ? "text-primary font-medium" : "text-muted-foreground"
-            )}>{tab.label}</span>
-            {isActive && <div className="size-1 rounded-full bg-primary absolute -bottom-1" />}
-          </Link>
-        );
-      })}
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(60px+env(safe-area-inset-bottom))] bg-white border-t border-border flex items-center px-2 pb-[env(safe-area-inset-bottom)] z-50 overflow-x-auto scrollbar-hide">
+      <div className="flex items-center min-w-full">
+        {menuItems.map((tab) => {
+          const isActive = pathname === tab.path;
+          const Icon = routeIconMap[tab.path] || LayoutDashboard;
+          return (
+            <Link
+              key={tab.path}
+              href={tab.path}
+              className="flex flex-col items-center justify-center gap-1 min-w-[72px] px-3 relative transition-transform active:scale-95 duration-150 py-2"
+            >
+              <Icon className={cn(
+                "size-5 transition-colors",
+                isActive ? "text-primary" : "text-muted-foreground"
+              )} />
+              <span className={cn(
+                "text-[10px] whitespace-nowrap transition-colors",
+                isActive ? "text-primary font-medium" : "text-muted-foreground"
+              )}>{tab.label}</span>
+              {isActive && <div className="size-1 rounded-full bg-primary absolute bottom-0" />}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

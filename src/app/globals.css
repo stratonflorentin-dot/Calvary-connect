@@ -101,6 +101,30 @@
   scrollbar-width: none;
 }
 
+/* Scrollbar hide utility - for mobile bottom nav */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Thin scrollbar for sidebar navigation */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--sidebar-border) / 0.5);
+  border-radius: 2px;
+}
+.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: hsl(var(--sidebar-border) / 0.8);
+}
+
 .story-snap {
   scroll-snap-type: x mandatory;
 }

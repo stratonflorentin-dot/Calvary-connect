@@ -133,7 +133,7 @@ export function Sidebar({ role }: { role: UserRole }) {
         <NotificationBell />
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-border scrollbar-track-transparent">
         {navItems.map((item: NavItem) => (
           <Link
             key={item.href}  // ✅ Use href as key, not label (labels can duplicate)

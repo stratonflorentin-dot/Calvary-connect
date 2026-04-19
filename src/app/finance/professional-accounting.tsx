@@ -277,7 +277,7 @@ export function ProfessionalAccounting() {
     trip_id: '',
     status: 'draft'
   });
-  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending' });
+  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending', payment_method: 'cash', account_code: '' });
   
   // Journal Entry Form
   const [jeForm, setJeForm] = useState({
@@ -339,7 +339,8 @@ export function ProfessionalAccounting() {
 
       const invoiceNumber = `INV-${Date.now()}`;
 
-      const { error } = await supabase.from('invoices').insert({
+      // Insert invoice
+      const { data: invoiceData, error } = await supabase.from('invoices').insert({
         invoice_number: invoiceNumber,
         client_name: invoiceForm.client_name,
         amount: amount,
@@ -353,7 +354,7 @@ export function ProfessionalAccounting() {
         trip_id: invoiceForm.trip_id || null,
         items: [],
         created_at: new Date().toISOString()
-      });
+      }).select().single();
 
       if (error) throw error;
 
@@ -365,17 +366,28 @@ export function ProfessionalAccounting() {
         }).eq('id', invoiceForm.trip_id);
       }
 
-      toast({ title: 'Success', description: `Invoice ${invoiceNumber} created` });
+      // Create journal entry for invoice with proper accounting entries
+      const { data: journalId, error: jeError } = await supabase.rpc('create_invoice_journal_entry', {
+        p_invoice_id: invoiceData.id,
+        p_invoice_number: invoiceNumber,
+        p_client_name: invoiceForm.client_name,
+        p_amount: amount,
+        p_vat_amount: vatAmount,
+        p_total_amount: totalAmount,
+        p_description: invoiceForm.description
+      });
+
+      if (jeError) {
+        console.warn('Journal entry creation failed:', jeError);
+      }
+
+      toast({ 
+        title: 'Success', 
+        description: `Invoice ${invoiceNumber} created${journalId ? ' with journal entry' : ''}` 
+      });
       setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30', trip_id: '', status: 'draft' });
       setShowInlineInvoiceAdd(false);
       loadData();
-
-      // Create journal entry
-      await supabase.rpc('create_trip_revenue_entry', {
-        p_trip_id: invoiceForm.trip_id || null,
-        p_revenue_amount: totalAmount,
-        p_client_name: invoiceForm.client_name
-      });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -386,22 +398,42 @@ export function ProfessionalAccounting() {
     try {
       const expenseNumber = `EXP-${Date.now()}`;
 
-      const { error } = await supabase.from('expenses').insert({
+      // Insert expense with approved status to trigger journal entry
+      const { data: expenseData, error } = await supabase.from('expenses').insert({
         expense_number: expenseNumber,
         category: expenseForm.category,
         type: expenseForm.category?.toUpperCase() || 'OTHER',
         description: expenseForm.description,
         amount: parseFloat(expenseForm.amount),
         date: expenseForm.date,
-        status: expenseForm.status || 'pending',
-        payment_method: 'cash',
+        status: 'approved', // Auto-approve to create journal entry
+        payment_method: expenseForm.payment_method || 'cash',
+        account_code: expenseForm.account_code, // Link to chart of accounts
         created_at: new Date().toISOString()
-      });
+      }).select().single();
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: `Expense ${expenseNumber} recorded` });
-      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending' });
+      // Create journal entry for this expense via RPC
+      const { data: journalId, error: rpcError } = await supabase.rpc('create_expense_journal_entry', {
+        p_expense_id: expenseData.id,
+        p_expense_number: expenseNumber,
+        p_category: expenseForm.category,
+        p_amount: parseFloat(expenseForm.amount),
+        p_description: expenseForm.description,
+        p_payment_method: expenseForm.payment_method || 'cash'
+      });
+
+      if (rpcError) {
+        console.warn('Journal entry creation failed:', rpcError);
+        // Don't throw - expense is still created
+      }
+
+      toast({ 
+        title: 'Success', 
+        description: `Expense ${expenseNumber} recorded${journalId ? ' with journal entry' : ''}` 
+      });
+      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending', payment_method: 'cash', account_code: '' });
       setShowInlineExpenseAdd(false);
       loadData();
     } catch (error: any) {
@@ -1570,6 +1602,40 @@ export function ProfessionalAccounting() {
                                 </Select>
                               </TableCell>
                               <TableCell className="p-2">
+                                <div className="space-y-1">
+                                  <Select 
+                                    value={expenseForm.account_code || ''} 
+                                    onValueChange={(v) => setExpenseForm({...expenseForm, account_code: v})}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs">
+                                      <SelectValue placeholder="Chart of Accounts">
+                                        {expenseForm.account_code && accounts.find(a => a.code === expenseForm.account_code)?.code}
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {accounts.filter(a => ['OPERATING_EXPENSES', 'COST_OF_SALES', 'OTHER_EXPENSES'].includes(a.category)).map(acc => (
+                                        <SelectItem key={acc.id} value={acc.code} className="text-xs">
+                                          {acc.code} - {acc.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select 
+                                    value={expenseForm.payment_method || 'cash'} 
+                                    onValueChange={(v) => setExpenseForm({...expenseForm, payment_method: v})}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs">
+                                      <SelectValue placeholder="Payment" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="cash" className="text-xs">Cash</SelectItem>
+                                      <SelectItem value="bank" className="text-xs">Bank</SelectItem>
+                                      <SelectItem value="mobile" className="text-xs">Mobile Money</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </TableCell>
+                              <TableCell className="p-2">
                                 <Input 
                                   type="number"
                                   step="0.01"
@@ -1632,7 +1698,9 @@ export function ProfessionalAccounting() {
                                         amount: '', 
                                         date: new Date().toISOString().split('T')[0], 
                                         vehicle_id: '',
-                                        status: 'pending'
+                                        status: 'pending',
+                                        payment_method: 'cash',
+                                        account_code: ''
                                       });
                                     }}
                                   >
