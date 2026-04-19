@@ -239,7 +239,7 @@ export function ChartOfAccountsPage() {
           journal_entries!inner(entry_number, entry_date)
         `)
         .eq('account_code', account.code)
-        .order('created_at', { ascending: true });
+        .order('journal_entries(entry_date)', { ascending: true });
 
       if (error) throw error;
 
