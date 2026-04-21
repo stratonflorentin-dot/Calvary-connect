@@ -244,7 +244,9 @@ export function ProfessionalAccounting() {
     return styles[status] || 'bg-gray-100';
   };
 
-  const totalCash = bankAccounts.reduce((a, b) => a + b.current_balance, 0);
+  // Split cash totals by currency - do NOT mix currencies
+  const totalCashTSH = bankAccounts.filter(a => a.currency === 'TZS').reduce((a, b) => a + b.current_balance, 0);
+  const totalCashUSD = bankAccounts.filter(a => a.currency === 'USD').reduce((a, b) => a + b.current_balance, 0);
   const totalReceivables = invoices.filter(i => i.status !== 'paid').reduce((a, b) => a + b.total_amount, 0);
   const totalPayables = 0; // From supplier_payments
   const monthlyRevenue = invoices.filter(i => i.status === 'paid').reduce((a, b) => a + b.total_amount, 0);
@@ -977,7 +979,17 @@ export function ProfessionalAccounting() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Cash & Bank</p>
-                  <p className="text-2xl font-bold">{formatCurrency(totalCash)}</p>
+                  <div className="space-y-1">
+                    {totalCashTSH > 0 && (
+                      <p className="text-xl font-bold">Tsh {totalCashTSH.toLocaleString('en-TZ')}</p>
+                    )}
+                    {totalCashUSD > 0 && (
+                      <p className="text-lg font-bold text-blue-600">$ {totalCashUSD.toLocaleString('en-US')}</p>
+                    )}
+                    {totalCashTSH === 0 && totalCashUSD === 0 && (
+                      <p className="text-2xl font-bold">Tsh 0</p>
+                    )}
+                  </div>
                 </div>
                 <Wallet className="h-8 w-8 text-green-500" />
               </div>
