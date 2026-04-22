@@ -509,7 +509,17 @@ export function ProfessionalAccounting() {
     }
 
     try {
-      const entryNumber = asDraft ? `DRAFT-${Date.now()}` : `MJE-${Date.now()}`;
+      const entryNumber = editingJournalEntry 
+        ? editingJournalEntry.entry_number.replace('DRAFT-', 'MJE-')
+        : (asDraft ? `DRAFT-${Date.now()}` : `MJE-${Date.now()}`);
+      
+      // If editing a draft and posting, delete the old draft first
+      if (editingJournalEntry && !asDraft) {
+        // Delete old journal entry lines
+        await supabase.from('journal_entry_lines').delete().eq('journal_entry_id', editingJournalEntry.id);
+        // Delete old journal entry
+        await supabase.from('journal_entries').delete().eq('id', editingJournalEntry.id);
+      }
       
       const { data: jeData, error: jeError } = await supabase.from('journal_entries').insert({
         entry_number: entryNumber,
@@ -547,8 +557,13 @@ export function ProfessionalAccounting() {
 
       toast({ 
         title: 'Success', 
-        description: asDraft ? `Draft ${entryNumber} saved` : `Journal Entry ${entryNumber} created and posted` 
+        description: editingJournalEntry && !asDraft
+          ? `Draft converted to Journal Entry ${entryNumber} and posted`
+          : (asDraft ? `Draft ${entryNumber} saved` : `Journal Entry ${entryNumber} created and posted`)
       });
+      
+      // Clear editing state
+      setEditingJournalEntry(null);
       setShowCreateJournalEntry(false);
       setShowInlineJEAdd(false);
       setJeForm({
@@ -621,6 +636,60 @@ export function ProfessionalAccounting() {
     toast({ 
       title: `Journal Entry ${je.entry_number}`, 
       description: `Date: ${new Date(je.entry_date).toLocaleDateString()} | Amount: ${formatCurrency(je.total_debit, je.currency)}` 
+    });
+  };
+
+  // State for editing journal entries
+  const [editingJournalEntry, setEditingJournalEntry] = useState<JournalEntry | null>(null);
+
+  const editJournalEntry = async (je: JournalEntry) => {
+    // Load the journal entry lines
+    const { data: lines, error } = await supabase
+      .from('journal_entry_lines')
+      .select('*')
+      .eq('journal_entry_id', je.id);
+    
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to load journal entry lines', variant: 'destructive' });
+      return;
+    }
+
+    // Populate the form with the draft data
+    setJeForm({
+      description: je.description || '',
+      reference: je.reference || '',
+      date: je.entry_date.split('T')[0],
+      currency: je.currency || 'TZS',
+      lines: lines?.map(line => ({
+        account_code: line.account_code || '',
+        account_name: line.account_name || '',
+        partner: line.partner || '',
+        description: line.description || '',
+        debit: line.debit_amount?.toString() || '',
+        credit: line.credit_amount?.toString() || ''
+      })) || [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
+    });
+
+    setEditingJournalEntry(je);
+    setActiveTab('create_journal_entry');
+    
+    toast({ 
+      title: 'Editing Draft', 
+      description: `Editing ${je.entry_number}. Make changes and click "Post Entry" to finalize.` 
+    });
+  };
+
+  const cancelEditJournalEntry = () => {
+    setEditingJournalEntry(null);
+    setJeForm({
+      description: '',
+      reference: '',
+      date: new Date().toISOString().split('T')[0],
+      currency: 'TZS',
+      lines: [
+        { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' },
+        { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }
+      ]
     });
   };
 
@@ -2414,14 +2483,16 @@ export function ProfessionalAccounting() {
                               <TableRow className="bg-blue-50/50">
                                 <TableCell className="p-2" colSpan={5}>
                                   <div className="flex gap-2">
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      className="h-8"
-                                      onClick={(e) => handleCreateJournalEntry(e, true)}
-                                    >
-                                      <FileText className="h-3 w-3 mr-1" /> Save Draft
-                                    </Button>
+                                    {!editingJournalEntry && (
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        className="h-8"
+                                        onClick={(e) => handleCreateJournalEntry(e, true)}
+                                      >
+                                        <FileText className="h-3 w-3 mr-1" /> Save Draft
+                                      </Button>
+                                    )}
                                     <Button 
                                       size="sm" 
                                       className="h-8 bg-green-600 hover:bg-green-700 text-white"
@@ -2432,7 +2503,7 @@ export function ProfessionalAccounting() {
                                         return totalDr !== totalCr || totalDr === 0;
                                       })()}
                                     >
-                                      <Save className="h-3 w-3 mr-1" /> Post Entry
+                                      <Save className="h-3 w-3 mr-1" /> {editingJournalEntry ? 'Update & Post' : 'Post Entry'}
                                     </Button>
                                     <Button 
                                       size="sm" 
@@ -2440,6 +2511,7 @@ export function ProfessionalAccounting() {
                                       className="h-8"
                                       onClick={() => {
                                         setShowInlineJEAdd(false);
+                                        setEditingJournalEntry(null);
                                         setJeForm({
                                           description: '',
                                           reference: '',
@@ -2449,7 +2521,7 @@ export function ProfessionalAccounting() {
                                         });
                                       }}
                                     >
-                                      <X className="h-3 w-3 mr-1" /> Cancel
+                                      <X className="h-3 w-3 mr-1" /> {editingJournalEntry ? 'Cancel Edit' : 'Cancel'}
                                     </Button>
                                   </div>
                                 </TableCell>
@@ -2525,6 +2597,16 @@ export function ProfessionalAccounting() {
                                       >
                                         View
                                       </Button>
+                                      {!je.is_posted && (
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="text-amber-600 hover:text-amber-700"
+                                          onClick={() => editJournalEntry(je)}
+                                        >
+                                          Edit
+                                        </Button>
+                                      )}
                                       {je.is_posted && (
                                         <Button 
                                           variant="ghost" 
@@ -2754,6 +2836,7 @@ export function ProfessionalAccounting() {
                         onClick={() => {
                           setShowCreateJournalEntry(false);
                           setActiveTab('operations');
+                          setEditingJournalEntry(null);
                           setJeForm({
                             description: '',
                             reference: '',
@@ -2763,7 +2846,7 @@ export function ProfessionalAccounting() {
                           });
                         }}
                       >
-                        Cancel
+                        {editingJournalEntry ? 'Cancel Edit' : 'Cancel'}
                       </Button>
                       <Button 
                         type="button"
