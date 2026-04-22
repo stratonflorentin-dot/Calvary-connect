@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRole } from '@/hooks/use-role';
+import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -134,8 +135,9 @@ interface ChartAccount {
   balance: number;
 }
 
-export function ProfessionalAccounting() {
+export function FinancialOperations() {
   const { role } = useRole();
+  const { user } = useSupabase();
   const [activeTab, setActiveTab] = useState('operations');
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -251,10 +253,16 @@ export function ProfessionalAccounting() {
   // Split cash totals by currency - do NOT mix currencies
   const totalCashTSH = bankAccounts.filter(a => a.currency === 'TZS').reduce((a, b) => a + b.current_balance, 0);
   const totalCashUSD = bankAccounts.filter(a => a.currency === 'USD').reduce((a, b) => a + b.current_balance, 0);
-  const totalReceivables = invoices.filter(i => i.status !== 'paid').reduce((a, b) => a + b.total_amount, 0);
+  // Split receivables by currency
+  const totalReceivablesTSH = invoices.filter(i => i.status !== 'paid' && i.currency === 'TZS').reduce((a, b) => a + b.total_amount, 0);
+  const totalReceivablesUSD = invoices.filter(i => i.status !== 'paid' && i.currency === 'USD').reduce((a, b) => a + b.total_amount, 0);
   const totalPayables = 0; // From supplier_payments
-  const monthlyRevenue = invoices.filter(i => i.status === 'paid').reduce((a, b) => a + b.total_amount, 0);
-  const monthlyExpenses = expenses.reduce((a, b) => a + b.amount, 0);
+  // Split revenue by currency
+  const monthlyRevenueTSH = invoices.filter(i => i.status === 'paid' && i.currency === 'TZS').reduce((a, b) => a + b.total_amount, 0);
+  const monthlyRevenueUSD = invoices.filter(i => i.status === 'paid' && i.currency === 'USD').reduce((a, b) => a + b.total_amount, 0);
+  // Split expenses by currency
+  const monthlyExpensesTSH = expenses.filter(e => e.currency === 'TZS').reduce((a, b) => a + b.amount, 0);
+  const monthlyExpensesUSD = expenses.filter(e => e.currency === 'USD').reduce((a, b) => a + b.amount, 0);
 
   // Dialog states
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
@@ -342,12 +350,42 @@ export function ProfessionalAccounting() {
       const amount = parseFloat(invoiceForm.amount);
       const vatAmount = amount * (parseInt(invoiceForm.vat_rate) / 100);
       const totalAmount = amount + vatAmount;
+      
+      if (editingInvoice) {
+        // Update existing invoice
+        const { error } = await supabase.from('invoices').update({
+          client_name: invoiceForm.client_name,
+          amount: amount,
+          subtotal: amount,
+          vat_amount: vatAmount,
+          total_amount: totalAmount,
+          currency: invoiceForm.currency || 'TZS',
+          status: invoiceForm.status || 'draft',
+          description: invoiceForm.description,
+          trip_id: invoiceForm.trip_id || null,
+          updated_at: new Date().toISOString()
+        }).eq('id', editingInvoice.id);
+
+        if (error) throw error;
+
+        toast({ 
+          title: 'Success', 
+          description: `Invoice ${editingInvoice.invoice_number} updated successfully` 
+        });
+        
+        setEditingInvoice(null);
+        setShowCreateInvoice(false);
+        setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30', trip_id: '', status: 'draft', currency: 'TZS' });
+        loadData();
+        return;
+      }
+
+      // Create new invoice
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + parseInt(invoiceForm.due_days));
 
       const invoiceNumber = `INV-${Date.now()}`;
 
-      // Insert invoice
       const { data: invoiceData, error } = await supabase.from('invoices').insert({
         invoice_number: invoiceNumber,
         client_name: invoiceForm.client_name,
@@ -362,7 +400,8 @@ export function ProfessionalAccounting() {
         description: invoiceForm.description,
         trip_id: invoiceForm.trip_id || null,
         items: [],
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        created_by: user?.id
       }).select().single();
 
       if (error) throw error;
@@ -396,6 +435,7 @@ export function ProfessionalAccounting() {
       });
       setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30', trip_id: '', status: 'draft', currency: 'TZS' });
       setShowInlineInvoiceAdd(false);
+      setEditingInvoice(null);
       loadData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -417,7 +457,8 @@ export function ProfessionalAccounting() {
         currency: expenseForm.currency || 'TZS',
         date: expenseForm.date,
         status: 'approved', // Auto-approve to create journal entry
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        created_by: user?.id
       }).select().single();
 
       if (error) throw error;
@@ -532,7 +573,8 @@ export function ProfessionalAccounting() {
         is_posted: !asDraft,
         status: asDraft ? 'draft' : 'posted',
         source: 'manual',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        created_by: user?.id
       }).select().single();
 
       if (jeError) throw jeError;
@@ -641,6 +683,9 @@ export function ProfessionalAccounting() {
 
   // State for editing journal entries
   const [editingJournalEntry, setEditingJournalEntry] = useState<JournalEntry | null>(null);
+  
+  // State for editing invoices
+  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
 
   const editJournalEntry = async (je: JournalEntry) => {
     // Load the journal entry lines
@@ -691,6 +736,66 @@ export function ProfessionalAccounting() {
         { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }
       ]
     });
+  };
+
+  const editInvoice = (inv: any) => {
+    // Populate the form with the invoice data
+    setInvoiceForm({
+      client_name: inv.client_name || '',
+      amount: inv.amount?.toString() || '',
+      vat_rate: '18',
+      description: inv.description || '',
+      due_days: '30',
+      trip_id: inv.trip_id || '',
+      status: inv.status || 'draft',
+      currency: inv.currency || 'TZS'
+    });
+
+    setEditingInvoice(inv);
+    setActiveTab('invoices');
+    setShowCreateInvoice(true);
+    
+    toast({ 
+      title: 'Editing Draft Invoice', 
+      description: `Editing ${inv.invoice_number}. Make changes and save.` 
+    });
+  };
+
+  const cancelEditInvoice = () => {
+    setEditingInvoice(null);
+    setInvoiceForm({
+      client_name: '',
+      amount: '',
+      vat_rate: '18',
+      description: '',
+      due_days: '30',
+      trip_id: '',
+      status: 'draft',
+      currency: 'TZS'
+    });
+  };
+
+  // Soft delete function for audit trail compliance
+  const softDeleteRecord = async (table: string, id: string, recordName: string) => {
+    try {
+      const { error } = await supabase
+        .from(table)
+        .update({ 
+          deleted_at: new Date().toISOString(),
+          updated_by: user?.id 
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({ 
+        title: 'Deleted', 
+        description: `${recordName} has been soft deleted and logged for audit.` 
+      });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
   };
 
   const exportJournalEntriesToExcel = () => {
@@ -974,8 +1079,8 @@ export function ProfessionalAccounting() {
             </div>
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-3xl font-bold">Financial Command Center</h1>
-                <p className="text-muted-foreground">Full ledger management for fleet logistics and corporate accounting</p>
+                <h1 className="text-3xl font-bold">Financial Operations</h1>
+                <p className="text-muted-foreground">Capture and manage all financial transactions with full audit trail</p>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setActiveTab('reports')}>
@@ -985,9 +1090,9 @@ export function ProfessionalAccounting() {
                   <DialogTrigger asChild>
                     <Button><Plus className="h-4 w-4 mr-2" /> Quick Entry</Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md">
+                  <DialogContent className="max-w-md" onInteractOutside={() => { if (editingInvoice) cancelEditInvoice(); }}>
                     <DialogHeader>
-                      <DialogTitle>Create Quick Invoice</DialogTitle>
+                      <DialogTitle>{editingInvoice ? 'Edit Invoice' : 'Create Quick Invoice'}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleCreateInvoice} className="space-y-4 pt-4">
                       <div className="space-y-2">
@@ -1046,7 +1151,22 @@ export function ProfessionalAccounting() {
                         )}
                       </div>
                       
-                      <Button type="submit" className="w-full">Create Invoice</Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => {
+                            setShowCreateInvoice(false);
+                            cancelEditInvoice();
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" className="flex-1">
+                          {editingInvoice ? 'Update Invoice' : 'Create Invoice'}
+                        </Button>
+                      </div>
                     </form>
                   </DialogContent>
                 </Dialog>
@@ -1084,7 +1204,17 @@ export function ProfessionalAccounting() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Receivables</p>
-                  <p className="text-2xl font-bold">{formatCurrency(totalReceivables)}</p>
+                  <div className="space-y-1">
+                    {totalReceivablesTSH > 0 && (
+                      <p className="text-xl font-bold">Tsh {totalReceivablesTSH.toLocaleString('en-TZ')}</p>
+                    )}
+                    {totalReceivablesUSD > 0 && (
+                      <p className="text-xl font-bold text-blue-600">$ {totalReceivablesUSD.toLocaleString('en-US')}</p>
+                    )}
+                    {totalReceivablesTSH === 0 && totalReceivablesUSD === 0 && (
+                      <p className="text-xl font-bold">Tsh 0</p>
+                    )}
+                  </div>
                 </div>
                 <ArrowUpRight className="h-8 w-8 text-blue-500" />
               </div>
@@ -1106,7 +1236,17 @@ export function ProfessionalAccounting() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Revenue</p>
-                  <p className="text-2xl font-bold">{formatCurrency(monthlyRevenue)}</p>
+                  <div className="space-y-1">
+                    {monthlyRevenueTSH > 0 && (
+                      <p className="text-xl font-bold">Tsh {monthlyRevenueTSH.toLocaleString('en-TZ')}</p>
+                    )}
+                    {monthlyRevenueUSD > 0 && (
+                      <p className="text-xl font-bold text-blue-600">$ {monthlyRevenueUSD.toLocaleString('en-US')}</p>
+                    )}
+                    {monthlyRevenueTSH === 0 && monthlyRevenueUSD === 0 && (
+                      <p className="text-xl font-bold">Tsh 0</p>
+                    )}
+                  </div>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-500" />
               </div>
@@ -1117,7 +1257,17 @@ export function ProfessionalAccounting() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Expenses</p>
-                  <p className="text-2xl font-bold">{formatCurrency(monthlyExpenses)}</p>
+                  <div className="space-y-1">
+                    {monthlyExpensesTSH > 0 && (
+                      <p className="text-xl font-bold">Tsh {monthlyExpensesTSH.toLocaleString('en-TZ')}</p>
+                    )}
+                    {monthlyExpensesUSD > 0 && (
+                      <p className="text-xl font-bold text-blue-600">$ {monthlyExpensesUSD.toLocaleString('en-US')}</p>
+                    )}
+                    {monthlyExpensesTSH === 0 && monthlyExpensesUSD === 0 && (
+                      <p className="text-xl font-bold">Tsh 0</p>
+                    )}
+                  </div>
                 </div>
                 <TrendingDown className="h-8 w-8 text-red-500" />
               </div>
@@ -1516,9 +1666,21 @@ export function ProfessionalAccounting() {
                                 <TableCell className="text-right font-semibold text-blue-600">{formatCurrency(inv.balance || inv.total_amount)}</TableCell>
                                 <TableCell className="text-sm">{new Date(inv.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</TableCell>
                                 <TableCell className="text-right">
-                                  <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(inv)}>
-                                    View
-                                  </Button>
+                                  <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => handleViewInvoice(inv)}>
+                                      View
+                                    </Button>
+                                    {(inv.status === 'draft' || inv.status === 'pending') && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="text-amber-600 hover:text-amber-700"
+                                        onClick={() => editInvoice(inv)}
+                                      >
+                                        Edit
+                                      </Button>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))

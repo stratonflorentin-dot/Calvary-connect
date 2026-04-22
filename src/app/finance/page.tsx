@@ -1,7 +1,7 @@
 "use client";
 
-import { ProfessionalAccounting } from "./professional-accounting";
+import { FinancialOperations } from "./professional-accounting";
 
-export default function FinancePage() {
-  return <ProfessionalAccounting />;
+export default function FinancialOperationsPage() {
+  return <FinancialOperations />;
 }

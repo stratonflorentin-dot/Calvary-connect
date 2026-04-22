@@ -127,9 +127,9 @@ export default function MonthlyReportPage() {
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">Monthly Report</h1>
+                            <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">Financial Reporting</h1>
                             <p className="text-muted-foreground">
-                                Comprehensive overview for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                Financial Dashboard and Period Reports for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                             </p>
                         </div>
                         <div className="flex gap-2">
