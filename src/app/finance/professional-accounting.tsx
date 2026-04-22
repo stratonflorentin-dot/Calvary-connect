@@ -72,6 +72,8 @@ interface JournalEntry {
   total_debit: number;
   total_credit: number;
   is_posted: boolean;
+  status?: string;
+  currency?: string;
   source?: string;
   created_by?: string;
   created_at: string;
@@ -213,9 +215,11 @@ export function ProfessionalAccounting() {
     setIsLoading(false);
   };
 
-  const formatCurrency = (amount: number) => {
-    if (!amount || isNaN(amount)) return 'Tsh 0';
-    return 'Tsh ' + amount.toLocaleString('en-TZ');
+  const formatCurrency = (amount: number, currency: string = 'TZS') => {
+    if (!amount || isNaN(amount)) return `${currency === 'USD' ? '$' : 'Tsh'} 0`;
+    const symbol = currency === 'USD' ? '$' : 'Tsh';
+    const locale = currency === 'USD' ? 'en-US' : 'en-TZ';
+    return `${symbol} ${amount.toLocaleString(locale)}`;
   };
   
   const formatDate = (dateString: string) => {
@@ -277,15 +281,17 @@ export function ProfessionalAccounting() {
     description: '', 
     due_days: '30',
     trip_id: '',
-    status: 'draft'
+    status: 'draft',
+    currency: 'TZS'
   });
-  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending', payment_method: 'cash', account_code: '' });
+  const [expenseForm, setExpenseForm] = useState({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending', payment_method: 'cash', account_code: '', currency: 'TZS' });
   
   // Journal Entry Form
   const [jeForm, setJeForm] = useState({
     description: '',
     reference: '',
     date: new Date().toISOString().split('T')[0],
+    currency: 'TZS',
     lines: [
       { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' },
       { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }
@@ -349,6 +355,7 @@ export function ProfessionalAccounting() {
         subtotal: amount,
         vat_amount: vatAmount,
         total_amount: totalAmount,
+        currency: invoiceForm.currency || 'TZS',
         issue_date: new Date().toISOString().split('T')[0],
         due_date: dueDate.toISOString().split('T')[0],
         status: invoiceForm.status || 'draft',
@@ -387,7 +394,7 @@ export function ProfessionalAccounting() {
         title: 'Success', 
         description: `Invoice ${invoiceNumber} created${journalId ? ' with journal entry' : ''}` 
       });
-      setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30', trip_id: '', status: 'draft' });
+      setInvoiceForm({ client_name: '', amount: '', vat_rate: '18', description: '', due_days: '30', trip_id: '', status: 'draft', currency: 'TZS' });
       setShowInlineInvoiceAdd(false);
       loadData();
     } catch (error: any) {
@@ -407,6 +414,7 @@ export function ProfessionalAccounting() {
         type: expenseForm.category?.toUpperCase() || 'OTHER',
         description: expenseForm.description,
         amount: parseFloat(expenseForm.amount),
+        currency: expenseForm.currency || 'TZS',
         date: expenseForm.date,
         status: 'approved', // Auto-approve to create journal entry
         created_at: new Date().toISOString()
@@ -433,7 +441,7 @@ export function ProfessionalAccounting() {
         title: 'Success', 
         description: `Expense ${expenseNumber} recorded${journalId ? ' with journal entry' : ''}` 
       });
-      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending', payment_method: 'cash', account_code: '' });
+      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', status: 'pending', payment_method: 'cash', account_code: '', currency: 'TZS' });
       setShowInlineExpenseAdd(false);
       loadData();
     } catch (error: any) {
@@ -490,26 +498,29 @@ export function ProfessionalAccounting() {
     return { totalDebit, totalCredit, balanced: Math.abs(totalDebit - totalCredit) < 0.01 };
   };
 
-  const handleCreateJournalEntry = async (e: React.FormEvent) => {
+  const handleCreateJournalEntry = async (e: React.FormEvent, asDraft: boolean = false) => {
     e.preventDefault();
     const { totalDebit, totalCredit, balanced } = calculateJournalEntryTotals();
     
-    if (!balanced) {
-      toast({ title: 'Error', description: 'Debits must equal credits. Difference: ' + formatCurrency(Math.abs(totalDebit - totalCredit)), variant: 'destructive' });
+    // Only require balance check when posting (not for drafts)
+    if (!asDraft && !balanced) {
+      toast({ title: 'Error', description: 'Debits must equal credits. Difference: ' + formatCurrency(Math.abs(totalDebit - totalCredit), jeForm.currency), variant: 'destructive' });
       return;
     }
 
     try {
-      const entryNumber = `MJE-${Date.now()}`;
+      const entryNumber = asDraft ? `DRAFT-${Date.now()}` : `MJE-${Date.now()}`;
       
       const { data: jeData, error: jeError } = await supabase.from('journal_entries').insert({
         entry_number: entryNumber,
         entry_date: jeForm.date,
         description: jeForm.description,
         reference: jeForm.reference,
+        currency: jeForm.currency || 'TZS',
         total_debit: totalDebit,
         total_credit: totalCredit,
-        is_posted: true,
+        is_posted: !asDraft,
+        status: asDraft ? 'draft' : 'posted',
         source: 'manual',
         created_at: new Date().toISOString()
       }).select().single();
@@ -534,13 +545,17 @@ export function ProfessionalAccounting() {
       const { error: linesError } = await supabase.from('journal_entry_lines').insert(linesToInsert);
       if (linesError) throw linesError;
 
-      toast({ title: 'Success', description: `Journal Entry ${entryNumber} created and posted` });
+      toast({ 
+        title: 'Success', 
+        description: asDraft ? `Draft ${entryNumber} saved` : `Journal Entry ${entryNumber} created and posted` 
+      });
       setShowCreateJournalEntry(false);
       setShowInlineJEAdd(false);
       setJeForm({
         description: '',
         reference: '',
         date: new Date().toISOString().split('T')[0],
+        currency: 'TZS',
         lines: [
           { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' },
           { account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }
@@ -605,7 +620,7 @@ export function ProfessionalAccounting() {
     // Show a detailed view dialog
     toast({ 
       title: `Journal Entry ${je.entry_number}`, 
-      description: `Date: ${new Date(je.entry_date).toLocaleDateString()} | Amount: ${formatCurrency(je.total_debit)}` 
+      description: `Date: ${new Date(je.entry_date).toLocaleDateString()} | Amount: ${formatCurrency(je.total_debit, je.currency)}` 
     });
   };
 
@@ -790,7 +805,7 @@ export function ProfessionalAccounting() {
       toast({ title: 'Success', description: 'Expense updated successfully' });
       setShowEditExpense(false);
       setEditingExpense(null);
-      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '' });
+      setExpenseForm({ category: '', description: '', amount: '', date: new Date().toISOString().split('T')[0], vehicle_id: '', currency: 'TZS' });
       loadData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -1306,14 +1321,28 @@ export function ProfessionalAccounting() {
                                 </Select>
                               </TableCell>
                               <TableCell className="p-2">
-                                <Input 
-                                  type="number"
-                                  step="0.01"
-                                  value={invoiceForm.amount}
-                                  onChange={(e) => setInvoiceForm({...invoiceForm, amount: e.target.value})}
-                                  placeholder="0.00"
-                                  className="h-9 text-sm text-right"
-                                />
+                                <div className="flex gap-1">
+                                  <Select 
+                                    value={invoiceForm.currency} 
+                                    onValueChange={(v) => setInvoiceForm({...invoiceForm, currency: v})}
+                                  >
+                                    <SelectTrigger className="h-9 w-20 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="TZS">TSH</SelectItem>
+                                      <SelectItem value="USD">USD</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input 
+                                    type="number"
+                                    step="0.01"
+                                    value={invoiceForm.amount}
+                                    onChange={(e) => setInvoiceForm({...invoiceForm, amount: e.target.value})}
+                                    placeholder="0.00"
+                                    className="h-9 text-sm text-right flex-1"
+                                  />
+                                </div>
                               </TableCell>
                               <TableCell className="p-2">
                                 <Input 
@@ -1355,7 +1384,8 @@ export function ProfessionalAccounting() {
                                         description: '', 
                                         due_days: '30', 
                                         trip_id: '',
-                                        status: 'draft'
+                                        status: 'draft',
+                                        currency: 'TZS'
                                       });
                                     }}
                                   >
@@ -1652,14 +1682,28 @@ export function ProfessionalAccounting() {
                                 </div>
                               </TableCell>
                               <TableCell className="p-2">
-                                <Input 
-                                  type="number"
-                                  step="0.01"
-                                  value={expenseForm.amount}
-                                  onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
-                                  placeholder="0.00"
-                                  className="h-9 text-sm text-right"
-                                />
+                                <div className="flex gap-1">
+                                  <Select 
+                                    value={expenseForm.currency} 
+                                    onValueChange={(v) => setExpenseForm({...expenseForm, currency: v})}
+                                  >
+                                    <SelectTrigger className="h-9 w-20 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="TZS">TSH</SelectItem>
+                                      <SelectItem value="USD">USD</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input 
+                                    type="number"
+                                    step="0.01"
+                                    value={expenseForm.amount}
+                                    onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
+                                    placeholder="0.00"
+                                    className="h-9 text-sm text-right flex-1"
+                                  />
+                                </div>
                               </TableCell>
                               <TableCell className="p-2 text-center">
                                 <Select 
@@ -1711,7 +1755,8 @@ export function ProfessionalAccounting() {
                                       setExpenseForm({ 
                                         category: '', 
                                         description: '', 
-                                        amount: '', 
+                                        amount: '',
+                                        currency: 'TZS', 
                                         date: new Date().toISOString().split('T')[0], 
                                         vehicle_id: '',
                                         status: 'pending',
@@ -2129,8 +2174,8 @@ export function ProfessionalAccounting() {
                             <TableHead className="w-[120px]">Account</TableHead>
                             <TableHead className="w-[100px]">Partner</TableHead>
                             <TableHead>Description</TableHead>
-                            <TableHead className="text-right w-[100px]">Dr (Tsh)</TableHead>
-                            <TableHead className="text-right w-[100px]">Cr (Tsh)</TableHead>
+                            <TableHead className="text-right w-[100px]">Dr</TableHead>
+                            <TableHead className="text-right w-[100px]">Cr</TableHead>
                             <TableHead className="w-[60px]"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -2146,14 +2191,26 @@ export function ProfessionalAccounting() {
                                       type="date"
                                       value={jeForm.date}
                                       onChange={(e) => setJeForm({...jeForm, date: e.target.value})}
-                                      className="h-8 text-xs w-32"
+                                      className="h-8 text-xs w-28"
                                     />
                                     <Input 
                                       value={jeForm.reference}
                                       onChange={(e) => setJeForm({...jeForm, reference: e.target.value})}
                                       placeholder="Ref #"
-                                      className="h-8 text-xs w-24"
+                                      className="h-8 text-xs w-20"
                                     />
+                                    <Select 
+                                      value={jeForm.currency}
+                                      onValueChange={(v) => setJeForm({...jeForm, currency: v})}
+                                    >
+                                      <SelectTrigger className="h-8 w-20 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="TZS">TSH</SelectItem>
+                                        <SelectItem value="USD">USD</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                 </TableCell>
                                 <TableCell className="p-2" colSpan={3}>
@@ -2328,16 +2385,16 @@ export function ProfessionalAccounting() {
                                   </Button>
                                 </TableCell>
                                 <TableCell className="p-2 text-right" colSpan={2}>
-                                  <span className="text-xs font-medium">Totals:</span>
+                                  <span className="text-xs font-medium">Totals ({jeForm.currency || 'TZS'}):</span>
                                 </TableCell>
                                 <TableCell className="p-2 text-right">
                                   <span className="text-xs font-medium text-blue-600">
-                                    {formatCurrency(jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.debit) || 0), 0))}
+                                    {formatCurrency(jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.debit) || 0), 0), jeForm.currency)}
                                   </span>
                                 </TableCell>
                                 <TableCell className="p-2 text-right">
                                   <span className="text-xs font-medium text-blue-600">
-                                    {formatCurrency(jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.credit) || 0), 0))}
+                                    {formatCurrency(jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.credit) || 0), 0), jeForm.currency)}
                                   </span>
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
@@ -2347,7 +2404,7 @@ export function ProfessionalAccounting() {
                                     const diff = totalDr - totalCr;
                                     return (
                                       <span className={`text-xs font-medium ${diff === 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {diff === 0 ? '✓ Balanced' : `Diff: ${formatCurrency(Math.abs(diff))}`}
+                                        {diff === 0 ? '✓ Balanced' : `Diff: ${formatCurrency(Math.abs(diff), jeForm.currency)}`}
                                       </span>
                                     );
                                   })()}
@@ -2359,15 +2416,23 @@ export function ProfessionalAccounting() {
                                   <div className="flex gap-2">
                                     <Button 
                                       size="sm" 
+                                      variant="outline"
+                                      className="h-8"
+                                      onClick={(e) => handleCreateJournalEntry(e, true)}
+                                    >
+                                      <FileText className="h-3 w-3 mr-1" /> Save Draft
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
                                       className="h-8 bg-green-600 hover:bg-green-700 text-white"
-                                      onClick={handleCreateJournalEntry}
+                                      onClick={(e) => handleCreateJournalEntry(e, false)}
                                       disabled={(() => {
                                         const totalDr = jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.debit) || 0), 0);
                                         const totalCr = jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.credit) || 0), 0);
                                         return totalDr !== totalCr || totalDr === 0;
                                       })()}
                                     >
-                                      <Save className="h-3 w-3 mr-1" /> Create Entry
+                                      <Save className="h-3 w-3 mr-1" /> Post Entry
                                     </Button>
                                     <Button 
                                       size="sm" 
@@ -2379,6 +2444,7 @@ export function ProfessionalAccounting() {
                                           description: '',
                                           reference: '',
                                           date: new Date().toISOString().split('T')[0],
+                                          currency: 'TZS',
                                           lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
                                         });
                                       }}
@@ -2438,7 +2504,7 @@ export function ProfessionalAccounting() {
                                     </div>
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
-                                    {formatCurrency(je.total_debit)}
+                                    {formatCurrency(je.total_debit, je.currency)}
                                   </TableCell>
                                   <TableCell className="text-center">
                                     <Badge 
@@ -2563,8 +2629,8 @@ export function ProfessionalAccounting() {
                                 <TableHead className="w-[200px]">Account *</TableHead>
                                 <TableHead className="w-[150px]">Partner</TableHead>
                                 <TableHead>Description</TableHead>
-                                <TableHead className="w-[120px] text-right">Dr (Tsh)</TableHead>
-                                <TableHead className="w-[120px] text-right">Cr (Tsh)</TableHead>
+                                <TableHead className="w-[120px] text-right">Dr</TableHead>
+                                <TableHead className="w-[120px] text-right">Cr</TableHead>
                                 <TableHead className="w-[50px]"></TableHead>
                               </TableRow>
                             </TableHeader>
@@ -2653,21 +2719,21 @@ export function ProfessionalAccounting() {
                         <div className="border-t bg-muted/30 p-4">
                           <div className="flex justify-end gap-8">
                             <div className="text-right">
-                              <p className="text-sm text-muted-foreground">Total Debit</p>
+                              <p className="text-sm text-muted-foreground">Total Debit ({jeForm.currency || 'TZS'})</p>
                               <p className="text-lg font-semibold">
-                                {formatCurrency(calculateJournalEntryTotals().totalDebit)}
+                                {formatCurrency(calculateJournalEntryTotals().totalDebit, jeForm.currency)}
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm text-muted-foreground">Total Credit</p>
+                              <p className="text-sm text-muted-foreground">Total Credit ({jeForm.currency || 'TZS'})</p>
                               <p className="text-lg font-semibold">
-                                {formatCurrency(calculateJournalEntryTotals().totalCredit)}
+                                {formatCurrency(calculateJournalEntryTotals().totalCredit, jeForm.currency)}
                               </p>
                             </div>
                             <div className="text-right">
                               <p className="text-sm text-muted-foreground">Difference</p>
                               <p className={`text-lg font-semibold ${calculateJournalEntryTotals().balanced ? 'text-green-600' : 'text-red-600'}`}>
-                                {formatCurrency(Math.abs(calculateJournalEntryTotals().totalDebit - calculateJournalEntryTotals().totalCredit))}
+                                {formatCurrency(Math.abs(calculateJournalEntryTotals().totalDebit - calculateJournalEntryTotals().totalCredit), jeForm.currency)}
                               </p>
                             </div>
                           </div>
@@ -2686,16 +2752,26 @@ export function ProfessionalAccounting() {
                         type="button" 
                         variant="outline"
                         onClick={() => {
+                          setShowCreateJournalEntry(false);
                           setActiveTab('operations');
                           setJeForm({
                             description: '',
                             reference: '',
                             date: new Date().toISOString().split('T')[0],
+                            currency: 'TZS',
                             lines: [{ account_code: '', account_name: '', partner: '', description: '', debit: '', credit: '' }]
                           });
                         }}
                       >
                         Cancel
+                      </Button>
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        onClick={(e) => handleCreateJournalEntry(e, true)}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Save as Draft
                       </Button>
                       <Button 
                         type="submit"

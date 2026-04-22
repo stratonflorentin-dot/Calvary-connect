@@ -25,6 +25,7 @@ interface Account {
   current_balance: number;
   is_active: boolean;
   description?: string;
+  currency: 'TZS' | 'USD';
 }
 
 interface LedgerTransaction {
@@ -66,7 +67,8 @@ export function ChartOfAccountsPage() {
     category: 'ASSETS',
     sub_category: '',
     type: 'debit',
-    description: ''
+    description: '',
+    currency: 'TZS'
   });
   const [editAccount, setEditAccount] = useState({
     id: '',
@@ -76,7 +78,8 @@ export function ChartOfAccountsPage() {
     sub_category: '',
     type: 'debit' as 'debit' | 'credit',
     description: '',
-    is_active: true
+    is_active: true,
+    currency: 'TZS' as 'TZS' | 'USD'
   });
 
   // Ledger view states
@@ -125,8 +128,11 @@ export function ChartOfAccountsPage() {
     setFilteredAccounts(filtered);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-TZ', { style: 'currency', currency: 'TZS', maximumFractionDigits: 0 }).format(amount);
+  const formatCurrency = (amount: number, currency: string = 'TZS') => {
+    if (!amount || isNaN(amount)) return `${currency === 'USD' ? '$' : 'Tsh'} 0`;
+    const symbol = currency === 'USD' ? '$' : 'Tsh';
+    const locale = currency === 'USD' ? 'en-US' : 'en-TZ';
+    return `${symbol} ${amount.toLocaleString(locale)}`;
   };
 
   const getCategoryTotal = (category: string) => {
@@ -156,7 +162,7 @@ export function ChartOfAccountsPage() {
 
       toast({ title: 'Success', description: `Account ${newAccount.code} created` });
       setShowCreateDialog(false);
-      setNewAccount({ code: '', name: '', category: 'ASSETS', sub_category: '', type: 'debit', description: '' });
+      setNewAccount({ code: '', name: '', category: 'ASSETS', sub_category: '', type: 'debit', description: '', currency: 'TZS' });
       loadAccounts();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -188,6 +194,7 @@ export function ChartOfAccountsPage() {
       name: account.name,
       category: account.category,
       sub_category: account.sub_category,
+      currency: account.currency,
       type: account.type,
       description: account.description || '',
       is_active: account.is_active
@@ -324,7 +331,7 @@ export function ChartOfAccountsPage() {
     const { totalDebit, totalCredit, balanced } = calculateEntryTotals();
 
     if (!balanced) {
-      toast({ title: 'Error', description: `Debits (${formatCurrency(totalDebit)}) must equal Credits (${formatCurrency(totalCredit)})`, variant: 'destructive' });
+      toast({ title: 'Error', description: `Debits (${formatCurrency(totalDebit, ledgerAccount?.currency)}) must equal Credits (${formatCurrency(totalCredit, ledgerAccount?.currency)})`, variant: 'destructive' });
       return;
     }
 
@@ -491,6 +498,19 @@ export function ChartOfAccountsPage() {
                     placeholder="Optional description"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Currency</Label>
+                  <Select 
+                    value={newAccount.currency} 
+                    onValueChange={(v) => setNewAccount({...newAccount, currency: v as 'TZS' | 'USD'})}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="TZS">TSH (TZS)</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button type="submit" className="w-full">Create Account</Button>
               </form>
             </DialogContent>
@@ -560,6 +580,7 @@ export function ChartOfAccountsPage() {
                     <TableHead>Type</TableHead>
                     <TableHead>Parent</TableHead>
                     <TableHead className="text-right">Balance</TableHead>
+                    <TableHead>Currency</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -585,12 +606,17 @@ export function ChartOfAccountsPage() {
                           ? account.type === 'debit' ? 'text-blue-600' : 'text-red-600'
                           : ''
                       }`}>
-                        {formatCurrency(account.current_balance)}
+                        {formatCurrency(account.current_balance, account.currency)}
                         {account.current_balance !== 0 && (
                           <span className="text-xs text-muted-foreground ml-1">
                             ({account.type === 'debit' ? 'Dr' : 'Cr'})
                           </span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={account.currency === 'USD' ? 'text-blue-600' : 'text-gray-600'}>
+                          {account.currency || 'TZS'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={account.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
@@ -620,7 +646,7 @@ export function ChartOfAccountsPage() {
                   ))}
                   {filteredAccounts.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         No accounts found. {searchQuery && 'Try a different search term.'}
                       </TableCell>
                     </TableRow>
@@ -667,10 +693,16 @@ export function ChartOfAccountsPage() {
                 <p className="font-semibold">{selectedAccount.description}</p>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label className="text-muted-foreground">Current Balance</Label>
-                <p className="font-semibold text-lg">{formatCurrency(selectedAccount.current_balance)}</p>
+                <p className="font-semibold text-lg">{formatCurrency(selectedAccount.current_balance, selectedAccount.currency)}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Currency</Label>
+                <p><Badge variant="outline" className={selectedAccount.currency === 'USD' ? 'text-blue-600' : 'text-gray-600'}>
+                  {selectedAccount.currency || 'TZS'}
+                </Badge></p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Status</Label>
@@ -755,6 +787,19 @@ export function ChartOfAccountsPage() {
             />
           </div>
           <div className="space-y-2">
+            <Label>Currency</Label>
+            <Select 
+              value={editAccount.currency} 
+              onValueChange={(v) => setEditAccount({...editAccount, currency: v as 'TZS' | 'USD'})}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TZS">TSH (TZS)</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label>Status</Label>
             <Select 
               value={editAccount.is_active ? 'active' : 'inactive'} 
@@ -819,7 +864,7 @@ export function ChartOfAccountsPage() {
                   <div className="bg-white p-4 rounded-lg shadow-sm border">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Current Balance</p>
                     <p className={`text-xl font-bold ${ledgerAccount.current_balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(ledgerAccount.current_balance)}
+                      {formatCurrency(ledgerAccount.current_balance, ledgerAccount.currency)}
                     </p>
                     <Badge variant="outline" className="mt-1 text-xs">
                       {ledgerAccount.type === 'debit' ? 'Debit Account' : 'Credit Account'}
@@ -868,7 +913,7 @@ export function ChartOfAccountsPage() {
                             </TableCell>
                             <TableCell className="text-right font-bold text-slate-700">
                               {formatCurrency(ledgerTransactions[ledgerTransactions.length - 1]?.running_balance - 
-                                (ledgerTransactions[ledgerTransactions.length - 1]?.debit - ledgerTransactions[ledgerTransactions.length - 1]?.credit)) || formatCurrency(0)}
+                                (ledgerTransactions[ledgerTransactions.length - 1]?.debit - ledgerTransactions[ledgerTransactions.length - 1]?.credit), ledgerAccount?.currency) || formatCurrency(0, ledgerAccount?.currency)}
                             </TableCell>
                           </TableRow>
                         )}
@@ -889,21 +934,21 @@ export function ChartOfAccountsPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               {tx.debit > 0 ? (
-                                <span className="text-slate-900 font-medium">{formatCurrency(tx.debit)}</span>
+                                <span className="text-slate-900 font-medium">{formatCurrency(tx.debit, ledgerAccount?.currency)}</span>
                               ) : (
                                 <span className="text-slate-400">—</span>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
                               {tx.credit > 0 ? (
-                                <span className="text-slate-900 font-medium">{formatCurrency(tx.credit)}</span>
+                                <span className="text-slate-900 font-medium">{formatCurrency(tx.credit, ledgerAccount?.currency)}</span>
                               ) : (
                                 <span className="text-slate-400">—</span>
                               )}
                             </TableCell>
                             <TableCell className="text-right font-bold bg-slate-50/30">
                               <span className={tx.running_balance >= 0 ? 'text-green-700' : 'text-red-700'}>
-                                {formatCurrency(tx.running_balance)}
+                                {formatCurrency(tx.running_balance, ledgerAccount?.currency)}
                               </span>
                             </TableCell>
                           </TableRow>
@@ -918,13 +963,13 @@ export function ChartOfAccountsPage() {
                       <div>
                         <p className="text-xs text-slate-400 uppercase">Total Debits</p>
                         <p className="text-lg font-semibold">
-                          {formatCurrency(ledgerTransactions.reduce((sum, tx) => sum + tx.debit, 0))}
+                          {formatCurrency(ledgerTransactions.reduce((sum, tx) => sum + tx.debit, 0), ledgerAccount?.currency)}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-400 uppercase">Total Credits</p>
                         <p className="text-lg font-semibold">
-                          {formatCurrency(ledgerTransactions.reduce((sum, tx) => sum + tx.credit, 0))}
+                          {formatCurrency(ledgerTransactions.reduce((sum, tx) => sum + tx.credit, 0), ledgerAccount?.currency)}
                         </p>
                       </div>
                       <div>
@@ -935,7 +980,7 @@ export function ChartOfAccountsPage() {
                     <div className="text-right">
                       <p className="text-xs text-slate-400 uppercase">Closing Balance</p>
                       <p className="text-2xl font-bold text-green-400">
-                        {formatCurrency(ledgerTransactions[0]?.running_balance || 0)}
+                        {formatCurrency(ledgerTransactions[0]?.running_balance || 0, ledgerAccount?.currency)}
                       </p>
                     </div>
                   </div>
@@ -1131,19 +1176,19 @@ export function ChartOfAccountsPage() {
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground uppercase">Total Debits</p>
                         <p className={`text-lg font-bold ${balanced ? 'text-slate-900' : 'text-red-600'}`}>
-                          {formatCurrency(totalDebit)}
+                          {formatCurrency(totalDebit, ledgerAccount?.currency)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground uppercase">Total Credits</p>
                         <p className={`text-lg font-bold ${balanced ? 'text-slate-900' : 'text-red-600'}`}>
-                          {formatCurrency(totalCredit)}
+                          {formatCurrency(totalCredit, ledgerAccount?.currency)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground uppercase">Difference</p>
                         <p className={`text-lg font-bold ${balanced ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(Math.abs(totalDebit - totalCredit))}
+                          {formatCurrency(Math.abs(totalDebit - totalCredit), ledgerAccount?.currency)}
                         </p>
                       </div>
                     </div>
