@@ -21,7 +21,7 @@ import {
   FileText, Receipt, Wallet, CreditCard, Banknote, ArrowRightLeft, Landmark,
   TrendingUp, TrendingDown, Plus, Search, Download, BookOpen, Calculator,
   Building2, Clock, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, BarChart3,
-  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2, Save, X
+  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2, Save, X, Edit2
 } from 'lucide-react';
 
 interface Trip {
@@ -135,6 +135,16 @@ interface ChartAccount {
   balance: number;
 }
 
+const categoryColors: Record<string, { bg: string; text: string; border: string }> = {
+  ASSETS: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  LIABILITIES: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+  EQUITY: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+  REVENUE: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+  COST_OF_SALES: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+  OPERATING_EXPENSES: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+  OTHER_EXPENSES: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
+};
+
 export function FinancialOperations() {
   const { role } = useRole();
   const { user } = useSupabase();
@@ -177,6 +187,22 @@ export function FinancialOperations() {
   useEffect(() => {
     setFilteredJournalEntries(journalEntries);
   }, [journalEntries]);
+  
+  // Filter accounts when search or category changes
+  useEffect(() => {
+    let filtered = accounts;
+    if (accountCategoryFilter !== 'All') {
+      filtered = filtered.filter(acc => acc.category === accountCategoryFilter);
+    }
+    if (accountSearchQuery) {
+      const query = accountSearchQuery.toLowerCase();
+      filtered = filtered.filter(acc => 
+        acc.code?.toLowerCase().includes(query) || 
+        acc.name?.toLowerCase().includes(query)
+      );
+    }
+    setFilteredAccounts(filtered);
+  }, [accounts, accountSearchQuery, accountCategoryFilter]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -280,6 +306,38 @@ export function FinancialOperations() {
   const [showEditExpense, setShowEditExpense] = useState(false);
   const [showViewExpense, setShowViewExpense] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  
+  // Chart of Accounts states
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [showViewAccount, setShowViewAccount] = useState(false);
+  const [showEditAccount, setShowEditAccount] = useState(false);
+  const [showAccountLedger, setShowAccountLedger] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
+  const [accountSearchQuery, setAccountSearchQuery] = useState('');
+  const [accountCategoryFilter, setAccountCategoryFilter] = useState('All');
+  const [filteredAccounts, setFilteredAccounts] = useState<any[]>([]);
+  const [accountLedgerTransactions, setAccountLedgerTransactions] = useState<any[]>([]);
+  const [accountLedgerLoading, setAccountLedgerLoading] = useState(false);
+  const [accountForm, setAccountForm] = useState({
+    code: '',
+    name: '',
+    category: 'ASSETS',
+    sub_category: '',
+    type: 'debit' as 'debit' | 'credit',
+    description: '',
+    currency: 'TZS' as 'TZS' | 'USD'
+  });
+  const [editAccountForm, setEditAccountForm] = useState({
+    id: '',
+    code: '',
+    name: '',
+    category: 'ASSETS',
+    sub_category: '',
+    type: 'debit' as 'debit' | 'credit',
+    description: '',
+    is_active: true,
+    currency: 'TZS' as 'TZS' | 'USD'
+  });
   
   // Form states
   const [invoiceForm, setInvoiceForm] = useState({ 
@@ -986,6 +1044,123 @@ export function FinancialOperations() {
     }
   };
 
+  // Chart of Accounts handlers
+  const handleAddAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('accounts').insert({
+        code: accountForm.code,
+        name: accountForm.name,
+        category: accountForm.category,
+        sub_category: accountForm.sub_category,
+        type: accountForm.type,
+        description: accountForm.description,
+        currency: accountForm.currency,
+        current_balance: 0,
+        is_active: true,
+        created_at: new Date().toISOString()
+      });
+      if (error) throw error;
+      toast({ title: 'Success', description: `Account ${accountForm.code} created` });
+      setShowAddAccount(false);
+      setAccountForm({ code: '', name: '', category: 'ASSETS', sub_category: '', type: 'debit', description: '', currency: 'TZS' });
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+  
+  const handleEditAccount = (account: any) => {
+    setSelectedAccount(account);
+    setEditAccountForm({
+      id: account.id,
+      code: account.code,
+      name: account.name,
+      category: account.category,
+      sub_category: account.sub_category || '',
+      type: account.type,
+      description: account.description || '',
+      is_active: account.is_active,
+      currency: account.currency || 'TZS'
+    });
+    setShowEditAccount(true);
+  };
+  
+  const handleViewAccount = (account: any) => {
+    setSelectedAccount(account);
+    setShowViewAccount(true);
+  };
+  
+  const handleUpdateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('accounts').update({
+        code: editAccountForm.code,
+        name: editAccountForm.name,
+        category: editAccountForm.category,
+        sub_category: editAccountForm.sub_category,
+        type: editAccountForm.type,
+        description: editAccountForm.description,
+        is_active: editAccountForm.is_active,
+        updated_at: new Date().toISOString()
+      }).eq('id', editAccountForm.id);
+      if (error) throw error;
+      toast({ title: 'Success', description: `Account ${editAccountForm.code} updated` });
+      setShowEditAccount(false);
+      loadData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+  
+  const handleViewAccountLedger = async (account: any) => {
+    setSelectedAccount(account);
+    setShowAccountLedger(true);
+    setAccountLedgerLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('journal_entry_lines')
+        .select(`
+          id,
+          journal_entry_id,
+          description,
+          debit_amount,
+          credit_amount,
+          created_at,
+          journal_entries!inner(entry_number, entry_date)
+        `)
+        .eq('account_code', account.code)
+        .order('journal_entries(entry_date)', { ascending: true });
+      if (error) throw error;
+      let runningBalance = 0;
+      const transactions = (data || []).map((t: any) => {
+        const debit = parseFloat(t.debit_amount) || 0;
+        const credit = parseFloat(t.credit_amount) || 0;
+        if (account.type === 'debit') {
+          runningBalance += debit - credit;
+        } else {
+          runningBalance += credit - debit;
+        }
+        return {
+          id: t.id,
+          journal_entry_id: t.journal_entry_id,
+          entry_number: t.journal_entries?.entry_number || 'N/A',
+          entry_date: t.journal_entries?.entry_date || t.created_at,
+          description: t.description,
+          debit: debit,
+          credit: credit,
+          running_balance: runningBalance,
+          created_at: t.created_at
+        };
+      });
+      setAccountLedgerTransactions(transactions.reverse());
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setAccountLedgerLoading(false);
+    }
+  };
+  
   const handleDeleteExpense = async (expense: Expense) => {
     if (!confirm(`Are you sure you want to delete expense ${expense.expense_number}?`)) return;
     
@@ -3094,14 +3269,346 @@ export function FinancialOperations() {
               </TabsContent>
 
               <TabsContent value="coa">
-                <Card className="p-8 text-center">
-                  <Calculator className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold">Chart of Accounts</h3>
-                  <p className="text-muted-foreground">Manage your 1001-7004 account structure</p>
-                  <Link href="/finance/chart-of-accounts">
-                    <Button className="mt-4"><Plus className="h-4 w-4 mr-2" /> Manage Accounts</Button>
-                  </Link>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Chart of Accounts</CardTitle>
+                      <p className="text-sm text-muted-foreground">Manage your 1001-7004 account structure with ledger integration</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Dialog open={showAddAccount} onOpenChange={setShowAddAccount}>
+                        <DialogTrigger asChild>
+                          <Button><Plus className="h-4 w-4 mr-2" /> Add Account</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Add New Account</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleAddAccount} className="space-y-4 pt-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Account Code *</Label>
+                                <Input value={accountForm.code} onChange={(e) => setAccountForm({...accountForm, code: e.target.value})} placeholder="e.g. 1001" required />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Category *</Label>
+                                <Select value={accountForm.category} onValueChange={(v) => setAccountForm({...accountForm, category: v})}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ASSETS">ASSETS</SelectItem>
+                                    <SelectItem value="LIABILITIES">LIABILITIES</SelectItem>
+                                    <SelectItem value="EQUITY">EQUITY</SelectItem>
+                                    <SelectItem value="REVENUE">REVENUE</SelectItem>
+                                    <SelectItem value="COST_OF_SALES">COST OF SALES</SelectItem>
+                                    <SelectItem value="OPERATING_EXPENSES">OPERATING EXPENSES</SelectItem>
+                                    <SelectItem value="OTHER_EXPENSES">OTHER EXPENSES</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Account Name *</Label>
+                              <Input value={accountForm.name} onChange={(e) => setAccountForm({...accountForm, name: e.target.value})} placeholder="e.g. Cash and Bank" required />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Sub Category</Label>
+                              <Input value={accountForm.sub_category} onChange={(e) => setAccountForm({...accountForm, sub_category: e.target.value})} placeholder="e.g. Current Assets" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Type *</Label>
+                                <Select value={accountForm.type} onValueChange={(v: 'debit' | 'credit') => setAccountForm({...accountForm, type: v})}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="debit">Debit</SelectItem>
+                                    <SelectItem value="credit">Credit</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Currency</Label>
+                                <Select value={accountForm.currency} onValueChange={(v: 'TZS' | 'USD') => setAccountForm({...accountForm, currency: v})}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="TZS">TZS</SelectItem>
+                                    <SelectItem value="USD">USD</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Description</Label>
+                              <Textarea value={accountForm.description} onChange={(e) => setAccountForm({...accountForm, description: e.target.value})} placeholder="Account description..." />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddAccount(false)}>Cancel</Button>
+                              <Button type="submit" className="flex-1">Create Account</Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Search and Filter */}
+                    <div className="flex gap-4 mb-4">
+                      <div className="flex-1">
+                        <Input 
+                          placeholder="Search accounts by code or name..." 
+                          value={accountSearchQuery}
+                          onChange={(e) => setAccountSearchQuery(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <Select value={accountCategoryFilter} onValueChange={setAccountCategoryFilter}>
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Filter by category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="All">All Categories</SelectItem>
+                          <SelectItem value="ASSETS">Assets</SelectItem>
+                          <SelectItem value="LIABILITIES">Liabilities</SelectItem>
+                          <SelectItem value="EQUITY">Equity</SelectItem>
+                          <SelectItem value="REVENUE">Revenue</SelectItem>
+                          <SelectItem value="COST_OF_SALES">Cost of Sales</SelectItem>
+                          <SelectItem value="OPERATING_EXPENSES">Operating Expenses</SelectItem>
+                          <SelectItem value="OTHER_EXPENSES">Other Expenses</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Accounts Table */}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAccounts.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No accounts found. Create your first account to get started.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredAccounts.map((account) => (
+                            <TableRow key={account.id}>
+                              <TableCell className="font-medium">{account.code}</TableCell>
+                              <TableCell>{account.name}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={categoryColors[account.category]?.bg + ' ' + categoryColors[account.category]?.text}>
+                                  {account.category}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{account.type}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {account.currency} {account.current_balance?.toLocaleString() || '0'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={account.is_active ? 'default' : 'secondary'}>
+                                  {account.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => handleViewAccountLedger(account)} title="View Ledger">
+                                    <BookOpen className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleEditAccount(account)} title="Edit">
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleViewAccount(account)} title="View Details">
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
                 </Card>
+                
+                {/* View Account Dialog */}
+                <Dialog open={showViewAccount} onOpenChange={setShowViewAccount}>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Account Details</DialogTitle>
+                    </DialogHeader>
+                    {selectedAccount && (
+                      <div className="space-y-4 pt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-muted-foreground">Account Code</Label>
+                            <p className="font-medium text-lg">{selectedAccount.code}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Category</Label>
+                            <p className="font-medium">{selectedAccount.category}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Account Name</Label>
+                          <p className="font-medium text-lg">{selectedAccount.name}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-muted-foreground">Type</Label>
+                            <Badge variant="secondary" className="mt-1">{selectedAccount.type}</Badge>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Currency</Label>
+                            <p className="font-medium">{selectedAccount.currency}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Current Balance</Label>
+                          <p className="font-medium text-xl">{selectedAccount.currency} {selectedAccount.current_balance?.toLocaleString() || '0'}</p>
+                        </div>
+                        {selectedAccount.description && (
+                          <div>
+                            <Label className="text-muted-foreground">Description</Label>
+                            <p className="text-sm">{selectedAccount.description}</p>
+                          </div>
+                        )}
+                        <div className="flex gap-2 pt-4">
+                          <Button variant="outline" className="flex-1" onClick={() => setShowViewAccount(false)}>Close</Button>
+                          <Button className="flex-1" onClick={() => { setShowViewAccount(false); handleViewAccountLedger(selectedAccount); }}>
+                            <BookOpen className="h-4 w-4 mr-2" /> View Ledger
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+                
+                {/* Edit Account Dialog */}
+                <Dialog open={showEditAccount} onOpenChange={setShowEditAccount}>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Edit Account</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleUpdateAccount} className="space-y-4 pt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Account Code</Label>
+                          <Input value={editAccountForm.code} onChange={(e) => setEditAccountForm({...editAccountForm, code: e.target.value})} required />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Category</Label>
+                          <Select value={editAccountForm.category} onValueChange={(v) => setEditAccountForm({...editAccountForm, category: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ASSETS">ASSETS</SelectItem>
+                              <SelectItem value="LIABILITIES">LIABILITIES</SelectItem>
+                              <SelectItem value="EQUITY">EQUITY</SelectItem>
+                              <SelectItem value="REVENUE">REVENUE</SelectItem>
+                              <SelectItem value="COST_OF_SALES">COST OF SALES</SelectItem>
+                              <SelectItem value="OPERATING_EXPENSES">OPERATING EXPENSES</SelectItem>
+                              <SelectItem value="OTHER_EXPENSES">OTHER EXPENSES</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Account Name</Label>
+                        <Input value={editAccountForm.name} onChange={(e) => setEditAccountForm({...editAccountForm, name: e.target.value})} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Sub Category</Label>
+                        <Input value={editAccountForm.sub_category} onChange={(e) => setEditAccountForm({...editAccountForm, sub_category: e.target.value})} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Type</Label>
+                          <Select value={editAccountForm.type} onValueChange={(v: 'debit' | 'credit') => setEditAccountForm({...editAccountForm, type: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="debit">Debit</SelectItem>
+                              <SelectItem value="credit">Credit</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <Select value={editAccountForm.is_active ? 'active' : 'inactive'} onValueChange={(v) => setEditAccountForm({...editAccountForm, is_active: v === 'active'})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Textarea value={editAccountForm.description} onChange={(e) => setEditAccountForm({...editAccountForm, description: e.target.value})} />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" className="flex-1" onClick={() => setShowEditAccount(false)}>Cancel</Button>
+                        <Button type="submit" className="flex-1">Update Account</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+                
+                {/* Account Ledger Dialog */}
+                <Dialog open={showAccountLedger} onOpenChange={setShowAccountLedger}>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Account Ledger - {selectedAccount?.code} {selectedAccount?.name}</DialogTitle>
+                    </DialogHeader>
+                    <div className="pt-4">
+                      {accountLedgerLoading ? (
+                        <div className="text-center py-8">Loading ledger...</div>
+                      ) : accountLedgerTransactions.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No transactions found for this account.
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Entry #</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right">Debit</TableHead>
+                              <TableHead className="text-right">Credit</TableHead>
+                              <TableHead className="text-right">Balance</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {accountLedgerTransactions.map((tx) => (
+                              <TableRow key={tx.id}>
+                                <TableCell>{new Date(tx.entry_date).toLocaleDateString()}</TableCell>
+                                <TableCell className="font-medium">{tx.entry_number}</TableCell>
+                                <TableCell>{tx.description}</TableCell>
+                                <TableCell className="text-right">{tx.debit > 0 ? tx.debit.toLocaleString() : '-'}</TableCell>
+                                <TableCell className="text-right">{tx.credit > 0 ? tx.credit.toLocaleString() : '-'}</TableCell>
+                                <TableCell className="text-right font-semibold">{tx.running_balance.toLocaleString()}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                      <div className="flex justify-end mt-4">
+                        <Button variant="outline" onClick={() => setActiveTab('entries')}>
+                          <Plus className="h-4 w-4 mr-2" /> Create Journal Entry
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </TabsContent>
 
               <TabsContent value="bank_accounts">

@@ -18,6 +18,7 @@ import {
   Calculator,
   Users,
   Crown,
+  Briefcase,
 } from "lucide-react";
 import { useSupabase } from "@/components/supabase-provider";
 import { UserRole } from "@/types/roles";
@@ -32,6 +33,7 @@ const ROLE_ICONS = {
   MECHANIC: Wrench,
   ACCOUNTANT: Calculator,
   HR: Users,
+  SALESMAN: Briefcase,
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -42,6 +44,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   MECHANIC: "Mechanic",
   ACCOUNTANT: "Accountant",
   HR: "HR Manager",
+  SALESMAN: "Sales Representative",
 };
 
 export function RoleSelector() {

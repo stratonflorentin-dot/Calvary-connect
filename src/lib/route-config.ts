@@ -6,12 +6,14 @@ import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
 import { ADMIN_EMAIL } from "@/lib/supabase";
+import { Briefcase, BarChart2, Building2, Users } from "lucide-react";
 
 export interface RouteConfig {
   path: string;
   label: string;
   allowedRoles: UserRole[];
   defaultRedirect?: string;
+  icon?: any;
 }
 
 // Central route configuration
@@ -20,8 +22,10 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   { path: "/", label: "Dashboard", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"] },
   { path: "/fleet", label: "Fleet", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"] },
   { path: "/trips", label: "Trips", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
+  { path: "/customers", label: "Customers", allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"], icon: Building2 },
+  { path: "/sales", label: "Sales", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"], icon: Briefcase },
   { path: "/expenses", label: "Expenses", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR", "OPERATOR"] },
-  { path: "/monthly-report", label: "Financial Reporting", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"] },
+  { path: "/monthly-report", label: "Financial Reporting", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"], icon: BarChart2 },
   { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
   { path: "/inventory", label: "Inventory", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"] },
   { path: "/parts-requests", label: "Parts Requests", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"] },
@@ -33,7 +37,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   { path: "/finance", label: "Financial Operations", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"] },
   { path: "/ai-insights", label: "AI Insights", allowedRoles: ["CEO", "ADMIN"] },
   { path: "/audit", label: "Audit Log", allowedRoles: ["CEO", "ADMIN"] },
-  { path: "/notifications", label: "Notifications", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"] },
+  { path: "/notifications", label: "Notifications", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR", "SALESMAN"] },
 ];
 
 // Role-specific default landing pages
@@ -43,6 +47,7 @@ export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
   OPERATOR: "/trips",
   DRIVER: "/trips",
   MECHANIC: "/service-requests",
+  SALESMAN: "/sales",
   ACCOUNTANT: "/finance",
   HR: "/finance",
 };
