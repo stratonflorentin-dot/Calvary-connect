@@ -179,6 +179,38 @@ export function FinancialOperations() {
   const [jeDateTo, setJeDateTo] = useState('');
   const [filteredJournalEntries, setFilteredJournalEntries] = useState<JournalEntry[]>([]);
 
+  // Chart of Accounts states - MUST be declared before effects that use them
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [showViewAccount, setShowViewAccount] = useState(false);
+  const [showEditAccount, setShowEditAccount] = useState(false);
+  const [showAccountLedger, setShowAccountLedger] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
+  const [accountSearchQuery, setAccountSearchQuery] = useState('');
+  const [accountCategoryFilter, setAccountCategoryFilter] = useState('All');
+  const [filteredAccounts, setFilteredAccounts] = useState<any[]>([]);
+  const [accountLedgerTransactions, setAccountLedgerTransactions] = useState<any[]>([]);
+  const [accountLedgerLoading, setAccountLedgerLoading] = useState(false);
+  const [accountForm, setAccountForm] = useState({
+    code: '',
+    name: '',
+    category: 'ASSETS',
+    sub_category: '',
+    type: 'debit' as 'debit' | 'credit',
+    description: '',
+    currency: 'TZS' as 'TZS' | 'USD'
+  });
+  const [editAccountForm, setEditAccountForm] = useState({
+    id: '',
+    code: '',
+    name: '',
+    category: 'ASSETS',
+    sub_category: '',
+    type: 'debit' as 'debit' | 'credit',
+    description: '',
+    is_active: true,
+    currency: 'TZS' as 'TZS' | 'USD'
+  });
+
   useEffect(() => {
     loadData();
   }, []);
@@ -306,38 +338,6 @@ export function FinancialOperations() {
   const [showEditExpense, setShowEditExpense] = useState(false);
   const [showViewExpense, setShowViewExpense] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  
-  // Chart of Accounts states
-  const [showAddAccount, setShowAddAccount] = useState(false);
-  const [showViewAccount, setShowViewAccount] = useState(false);
-  const [showEditAccount, setShowEditAccount] = useState(false);
-  const [showAccountLedger, setShowAccountLedger] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
-  const [accountSearchQuery, setAccountSearchQuery] = useState('');
-  const [accountCategoryFilter, setAccountCategoryFilter] = useState('All');
-  const [filteredAccounts, setFilteredAccounts] = useState<any[]>([]);
-  const [accountLedgerTransactions, setAccountLedgerTransactions] = useState<any[]>([]);
-  const [accountLedgerLoading, setAccountLedgerLoading] = useState(false);
-  const [accountForm, setAccountForm] = useState({
-    code: '',
-    name: '',
-    category: 'ASSETS',
-    sub_category: '',
-    type: 'debit' as 'debit' | 'credit',
-    description: '',
-    currency: 'TZS' as 'TZS' | 'USD'
-  });
-  const [editAccountForm, setEditAccountForm] = useState({
-    id: '',
-    code: '',
-    name: '',
-    category: 'ASSETS',
-    sub_category: '',
-    type: 'debit' as 'debit' | 'credit',
-    description: '',
-    is_active: true,
-    currency: 'TZS' as 'TZS' | 'USD'
-  });
   
   // Form states
   const [invoiceForm, setInvoiceForm] = useState({ 
