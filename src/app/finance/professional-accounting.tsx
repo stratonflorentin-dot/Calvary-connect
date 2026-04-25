@@ -211,31 +211,7 @@ export function FinancialOperations() {
     currency: 'TZS' as 'TZS' | 'USD'
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Sync filtered entries when journalEntries changes
-  useEffect(() => {
-    setFilteredJournalEntries(journalEntries);
-  }, [journalEntries]);
-  
-  // Filter accounts when search or category changes
-  useEffect(() => {
-    let filtered = accounts;
-    if (accountCategoryFilter !== 'All') {
-      filtered = filtered.filter(acc => acc.category === accountCategoryFilter);
-    }
-    if (accountSearchQuery) {
-      const query = accountSearchQuery.toLowerCase();
-      filtered = filtered.filter(acc => 
-        acc.code?.toLowerCase().includes(query) || 
-        acc.name?.toLowerCase().includes(query)
-      );
-    }
-    setFilteredAccounts(filtered);
-  }, [accounts, accountSearchQuery, accountCategoryFilter]);
-
+  // Load data function - declared before useEffect to avoid TDZ
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -274,6 +250,32 @@ export function FinancialOperations() {
     }
     setIsLoading(false);
   };
+
+  // useEffect hooks - declared after loadData to avoid TDZ
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Sync filtered entries when journalEntries changes
+  useEffect(() => {
+    setFilteredJournalEntries(journalEntries);
+  }, [journalEntries]);
+  
+  // Filter accounts when search or category changes
+  useEffect(() => {
+    let filtered = accounts;
+    if (accountCategoryFilter !== 'All') {
+      filtered = filtered.filter(acc => acc.category === accountCategoryFilter);
+    }
+    if (accountSearchQuery) {
+      const query = accountSearchQuery.toLowerCase();
+      filtered = filtered.filter(acc => 
+        acc.code?.toLowerCase().includes(query) || 
+        acc.name?.toLowerCase().includes(query)
+      );
+    }
+    setFilteredAccounts(filtered);
+  }, [accounts, accountSearchQuery, accountCategoryFilter]);
 
   const formatCurrency = (amount: number, currency: string = 'TZS') => {
     if (!amount || isNaN(amount)) return `${currency === 'USD' ? '$' : 'Tsh'} 0`;
