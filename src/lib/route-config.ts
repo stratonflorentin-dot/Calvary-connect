@@ -170,7 +170,7 @@ export function getMenuByRole(
 
 // Validate role
 export function isValidRole(role: string): role is UserRole {
-  return ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"].includes(role);
+  return ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR", "SALESMAN"].includes(role);
 }
 
 // Normalize role to uppercase

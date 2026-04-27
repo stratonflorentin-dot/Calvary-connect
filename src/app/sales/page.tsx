@@ -100,6 +100,11 @@ export default function SalesModule() {
   const { user } = useSupabase();
   const [activeTab, setActiveTab] = useState('customers');
   
+  // Permission checks - CEO, ADMIN, and SALESMAN can create quotations
+  const canCreateQuotation = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
+  const canCreateContract = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
+  const canCreateCustomer = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
+  
   // Data states
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -456,6 +461,7 @@ export default function SalesModule() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Customer Database</CardTitle>
+                  {canCreateCustomer && (
                   <Dialog open={showAddCustomer} onOpenChange={setShowAddCustomer}>
                     <DialogTrigger asChild>
                       <Button><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
@@ -563,6 +569,7 @@ export default function SalesModule() {
                       </form>
                     </DialogContent>
                   </Dialog>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -610,6 +617,7 @@ export default function SalesModule() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Quotations & RFQ</CardTitle>
+                  {canCreateQuotation && (
                   <Dialog open={showAddQuotation} onOpenChange={setShowAddQuotation}>
                     <DialogTrigger asChild>
                       <Button><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
@@ -707,6 +715,7 @@ export default function SalesModule() {
                       </form>
                     </DialogContent>
                   </Dialog>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -766,6 +775,7 @@ export default function SalesModule() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Contracts</CardTitle>
+                  {canCreateContract && (
                   <div className="flex gap-2">
                     <Dialog>
                       <DialogTrigger asChild>
@@ -907,6 +917,7 @@ export default function SalesModule() {
                     </DialogContent>
                   </Dialog>
                   </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <Table>
