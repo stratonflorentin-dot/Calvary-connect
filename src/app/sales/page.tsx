@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ContractGenerator } from './contract-generator';
+import { QuoteGenerator } from './quote-generator';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
@@ -20,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Building2, FileText, Users, Plus, Search, Phone, Mail, MapPin, 
   Calendar, DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle,
-  ArrowRight, Briefcase, FileSignature, PhoneCall, Printer
+  ArrowRight, Briefcase, FileSignature, PhoneCall, Printer, FileText
 } from 'lucide-react';
 
 interface Customer {
@@ -114,6 +115,8 @@ export default function SalesModule() {
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddQuotation, setShowAddQuotation] = useState(false);
   const [showAddContract, setShowAddContract] = useState(false);
+  const [showQuoteGenerator, setShowQuoteGenerator] = useState(false);
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [showAddFollowUp, setShowAddFollowUp] = useState(false);
   
   // Form states
@@ -609,16 +612,24 @@ export default function SalesModule() {
             <TabsContent value="quotations">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Quotations & RFQ</CardTitle>
-                  <Dialog open={showAddQuotation} onOpenChange={setShowAddQuotation}>
-                    <DialogTrigger asChild>
-                      <Button><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>Create Quotation</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleCreateQuotation} className="space-y-4 pt-4">
+                  <CardTitle>Quotations</CardTitle>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={() => setShowQuoteGenerator(true)}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generate Professional Quote
+                    </Button>
+                    <Dialog open={showAddQuotation} onOpenChange={setShowAddQuotation}>
+                      <DialogTrigger asChild>
+                        <Button><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-lg">
+                        <DialogHeader>
+                          <DialogTitle>Create Quotation</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateQuotation} className="space-y-4 pt-4">
                         <div className="space-y-2">
                           <Label>Customer *</Label>
                           <Select 
@@ -740,7 +751,17 @@ export default function SalesModule() {
                           <TableCell>{q.expiry_date ? new Date(q.expiry_date).toLocaleDateString() : '-'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">View</Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedQuotation(q);
+                                  setShowQuoteGenerator(true);
+                                }}
+                              >
+                                <FileText className="size-4 mr-1" />
+                                View Quote
+                              </Button>
                               {q.status === 'accepted' && (
                                 <Button 
                                   variant="ghost" 
@@ -1039,6 +1060,41 @@ export default function SalesModule() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Quote Generator Dialog */}
+          <Dialog open={showQuoteGenerator} onOpenChange={setShowQuoteGenerator}>
+            <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedQuotation ? `Quote ${selectedQuotation.quotation_number}` : 'Transport Price Quote'}
+                </DialogTitle>
+              </DialogHeader>
+              <QuoteGenerator 
+                initialData={selectedQuotation ? {
+                  quoteNumber: selectedQuotation.quotation_number,
+                  issueDate: selectedQuotation.quotation_date,
+                  validThrough: selectedQuotation.expiry_date,
+                  receiverName: selectedQuotation.company_name,
+                  receiverAddress1: selectedQuotation.origin,
+                  receiverAddress2: selectedQuotation.destination,
+                  lineItems: [
+                    { 
+                      id: '1', 
+                      description: `Transport Services: ${selectedQuotation.origin} to ${selectedQuotation.destination}`,
+                      quantity: 1, 
+                      unitPrice: selectedQuotation.subtotal,
+                      discount: 0 
+                    }
+                  ],
+                  taxRate: 10
+                } : undefined}
+                onClose={() => {
+                  setShowQuoteGenerator(false);
+                  setSelectedQuotation(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
     </div>
