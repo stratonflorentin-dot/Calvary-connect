@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Route, Plus, Trash2, Pencil, UserX, MapPin, Search } from 'lucide-react';
+import { Route, Plus, Trash2, Pencil, UserX, MapPin, Search, CalendarDays } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { africanCities, City, getCityByName, calculateDistance, getEstimatedTime } from '@/lib/african-cities';
@@ -987,6 +987,14 @@ export default function TripsPage() {
                           <Badge variant={trip.status === 'COMPLETED' ? 'default' : 'secondary'}>
                             {trip.status}
                           </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => window.location.href = `/bookings?trip=${trip.id}&client=${encodeURIComponent(trip.client || '')}&origin=${encodeURIComponent(trip.origin || '')}&destination=${encodeURIComponent(trip.destination || '')}&amount=${trip.salesAmount || trip.fare || 0}`}
+                            title="Create Booking from Trip"
+                          >
+                            <CalendarDays className="h-4 w-4" />
+                          </Button>
                           {canEditTrip && (
                             <Button
                               size="sm"

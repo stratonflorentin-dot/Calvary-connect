@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Plus, Search, Phone, Mail, MapPin, FileText, DollarSign, TrendingUp, Briefcase } from 'lucide-react';
+import { Building2, Plus, Search, Phone, Mail, MapPin, FileText, DollarSign, TrendingUp, Briefcase, Route, CalendarDays } from 'lucide-react';
 
 interface Customer {
   id: string;
@@ -323,10 +323,19 @@ export default function CustomersPage() {
                       <TableCell>{getStatusBadge(customer.status)}</TableCell>
                       <TableCell>Tsh {customer.credit_limit?.toLocaleString()}</TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-1">
                           <Button variant="ghost" size="sm">View</Button>
+                          <Button variant="ghost" size="sm" onClick={() => window.location.href = `/trips?customer=${customer.id}&name=${encodeURIComponent(customer.company_name)}`}>
+                            <Route className="size-3 mr-1" />
+                            Trip
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => window.location.href = `/bookings?customer=${customer.id}&name=${encodeURIComponent(customer.company_name)}&email=${encodeURIComponent(customer.email)}&phone=${encodeURIComponent(customer.phone)}`}>
+                            <CalendarDays className="size-3 mr-1" />
+                            Booking
+                          </Button>
                           <Button variant="ghost" size="sm" onClick={() => window.location.href = `/sales?customer=${customer.id}`}>
-                            New Quote
+                            <FileText className="size-3 mr-1" />
+                            Quote
                           </Button>
                         </div>
                       </TableCell>

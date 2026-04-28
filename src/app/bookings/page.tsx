@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
 import { supabase } from '@/lib/supabase';
@@ -73,6 +74,7 @@ export default function BookingsPage() {
   const { role } = useRole();
   const { format: formatCurrency } = useCurrency();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,7 +104,31 @@ export default function BookingsPage() {
 
   useEffect(() => {
     loadBookings();
-  }, []);
+    
+    // Check for URL parameters from Trips or Customers page
+    const customerName = searchParams.get('name');
+    const customerEmail = searchParams.get('email');
+    const customerPhone = searchParams.get('phone');
+    const origin = searchParams.get('origin');
+    const destination = searchParams.get('destination');
+    const amount = searchParams.get('amount');
+    
+    if (customerName || origin || destination) {
+      // Pre-fill form with data from URL
+      setFormData(prev => ({
+        ...prev,
+        clientName: customerName || prev.clientName,
+        clientEmail: customerEmail || prev.clientEmail,
+        clientPhone: customerPhone || prev.clientPhone,
+        origin: origin || prev.origin,
+        destination: destination || prev.destination,
+        amount: amount ? Number(amount) : prev.amount
+      }));
+      
+      // Auto-open the add dialog
+      setIsAddDialogOpen(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     filterBookings();
