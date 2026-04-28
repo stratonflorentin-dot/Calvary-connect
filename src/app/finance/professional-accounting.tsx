@@ -461,7 +461,7 @@ export function FinancialOperations() {
         trip_id: invoiceForm.trip_id || null,
         items: [],
         created_at: new Date().toISOString(),
-        created_by: user?.id
+        created_by: (await supabase.auth.getUser()).data?.user?.id
       }).select().single();
 
       if (error) throw error;
@@ -518,7 +518,7 @@ export function FinancialOperations() {
         date: expenseForm.date,
         status: 'approved', // Auto-approve to create journal entry
         created_at: new Date().toISOString(),
-        created_by: user?.id
+        created_by: (await supabase.auth.getUser()).data?.user?.id
       }).select().single();
 
       if (error) throw error;
@@ -634,7 +634,7 @@ export function FinancialOperations() {
         status: asDraft ? 'draft' : 'posted',
         source: 'manual',
         created_at: new Date().toISOString(),
-        created_by: user?.id
+        created_by: (await supabase.auth.getUser()).data?.user?.id
       }).select().single();
 
       if (jeError) throw jeError;
@@ -842,7 +842,7 @@ export function FinancialOperations() {
         .from(table)
         .update({ 
           deleted_at: new Date().toISOString(),
-          updated_by: user?.id 
+          updated_by: (await supabase.auth.getUser()).data?.user?.id 
         })
         .eq('id', id);
 

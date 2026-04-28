@@ -7,6 +7,7 @@ import { RoleSelector } from '@/components/dashboard/role-selector';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ interface UserProfile {
 export default function UsersPage() {
   const { role, isAdmin } = useRole();
   const { user } = useSupabase();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -164,7 +166,7 @@ export default function UsersPage() {
         status: 'invited',
         status_reason: 'Waiting for user to complete signup',
         invited_at: new Date().toISOString(),
-        invited_by: user?.id,
+        invited_by: (await supabase.auth.getUser()).data?.user?.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -183,6 +185,11 @@ export default function UsersPage() {
 
       if (error) {
         console.error('Error adding user:', error);
+        toast({ 
+          title: 'Error', 
+          description: error.message || 'Failed to invite user. Please try again.',
+          variant: 'destructive'
+        });
         return;
       }
 
@@ -199,6 +206,10 @@ export default function UsersPage() {
       }
 
       console.log('User added successfully:', data);
+      toast({ 
+        title: 'Success', 
+        description: `Invitation sent to ${userData.email}`
+      });
       // Refresh users list
       const { data: updatedUsers } = await supabase
         .from('user_profiles')
@@ -209,8 +220,13 @@ export default function UsersPage() {
       setIsAddDialogOpen(false);
       clearPhoto();
       e.currentTarget.reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding user:', error);
+      toast({ 
+        title: 'Error', 
+        description: error?.message || 'An unexpected error occurred. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
 
