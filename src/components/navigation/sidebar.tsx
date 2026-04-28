@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Truck, Route, DollarSign, BarChart2, 
   Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History, Home, Shield, Camera, User as UserIcon,
-  Briefcase, Building2
+  Briefcase, Building2, CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
@@ -23,6 +23,7 @@ const routeIconMap: Record<string, any> = {
   '/': LayoutDashboard,
   '/fleet': Truck,
   '/trips': Route,
+  '/bookings': CalendarDays,
   '/customers': Building2,
   '/sales': Briefcase,
   '/finance': DollarSign,

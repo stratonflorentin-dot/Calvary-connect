@@ -6,7 +6,7 @@ import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
 import { ADMIN_EMAIL } from "@/lib/supabase";
-import { Briefcase, BarChart2, Building2, Users } from "lucide-react";
+import { Briefcase, BarChart2, Building2, Users, CalendarDays } from "lucide-react";
 
 export interface RouteConfig {
   path: string;
@@ -22,6 +22,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   { path: "/", label: "Dashboard", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"] },
   { path: "/fleet", label: "Fleet", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"] },
   { path: "/trips", label: "Trips", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
+  { path: "/bookings", label: "Bookings", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"], icon: CalendarDays },
   { path: "/customers", label: "Customers", allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"], icon: Building2 },
   { path: "/sales", label: "Sales", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"], icon: Briefcase },
   { path: "/expenses", label: "Expenses", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR", "OPERATOR"] },
