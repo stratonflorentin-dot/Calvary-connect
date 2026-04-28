@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ContractGenerator } from './contract-generator';
 import { QuoteGenerator } from './quote-generator';
+import { TransportAgreementGenerator } from './transport-agreement-generator';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
@@ -114,8 +114,8 @@ export default function SalesModule() {
   // Dialog states
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddQuotation, setShowAddQuotation] = useState(false);
-  const [showAddContract, setShowAddContract] = useState(false);
   const [showQuoteGenerator, setShowQuoteGenerator] = useState(false);
+  const [showTransportAgreement, setShowTransportAgreement] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [showAddFollowUp, setShowAddFollowUp] = useState(false);
   
@@ -619,7 +619,14 @@ export default function SalesModule() {
                       onClick={() => setShowQuoteGenerator(true)}
                     >
                       <FileText className="h-4 w-4 mr-2" />
-                      Generate Professional Quote
+                      Generate Quote
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setShowTransportAgreement(true)}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Transport Agreement
                     </Button>
                     <Dialog open={showAddQuotation} onOpenChange={setShowAddQuotation}>
                       <DialogTrigger asChild>
@@ -1092,6 +1099,24 @@ export default function SalesModule() {
                   setShowQuoteGenerator(false);
                   setSelectedQuotation(null);
                 }}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* Transport Agreement Dialog */}
+          <Dialog open={showTransportAgreement} onOpenChange={setShowTransportAgreement}>
+            <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Transportation Agreement</DialogTitle>
+              </DialogHeader>
+              <TransportAgreementGenerator 
+                initialData={{
+                  clientCompany: selectedCustomer?.company_name || '',
+                  clientAddress: selectedCustomer?.address || '',
+                  clientEmail: selectedCustomer?.email || '',
+                  clientTel: selectedCustomer?.phone || ''
+                }}
+                onClose={() => setShowTransportAgreement(false)}
               />
             </DialogContent>
           </Dialog>
