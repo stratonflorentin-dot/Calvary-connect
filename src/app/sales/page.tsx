@@ -18,8 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Building2, FileText, Users, Plus, Search, Phone, Mail, MapPin, 
+import {
+  Building2, FileText, Users, Plus, Search, Phone, Mail, MapPin,
   Calendar, DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle,
   ArrowRight, Briefcase, FileSignature, PhoneCall, Printer
 } from 'lucide-react';
@@ -100,22 +100,22 @@ export default function SalesModule() {
   const { role } = useRole();
   const { user } = useSupabase();
   const [activeTab, setActiveTab] = useState('customers');
-  
+
   // Permission checks - CEO, ADMIN, and SALESMAN can create quotations
   const canCreateQuotation = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
   const canCreateContract = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
   const canCreateCustomer = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
-  
+
   // Data states
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  
+
   // Loading states
   const [loading, setLoading] = useState(true);
-  
+
   // Dialog states
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddQuotation, setShowAddQuotation] = useState(false);
@@ -123,7 +123,7 @@ export default function SalesModule() {
   const [showTransportAgreement, setShowTransportAgreement] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [showAddFollowUp, setShowAddFollowUp] = useState(false);
-  
+
   // Form states
   const [customerForm, setCustomerForm] = useState({
     company_name: '',
@@ -137,7 +137,7 @@ export default function SalesModule() {
     payment_terms: '30 days',
     notes: ''
   });
-  
+
   const [quotationForm, setQuotationForm] = useState({
     customer_id: '',
     origin: '',
@@ -149,7 +149,7 @@ export default function SalesModule() {
     validity_days: '30',
     notes: ''
   });
-  
+
   const [contractForm, setContractForm] = useState({
     customer_id: '',
     quotation_id: '',
@@ -169,7 +169,7 @@ export default function SalesModule() {
   useEffect(() => {
     loadData();
   }, []);
-  
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -180,7 +180,7 @@ export default function SalesModule() {
         supabase.from('follow_ups').select('*, customers(company_name)').order('scheduled_date', { ascending: true }),
         supabase.from('sales_opportunities').select('*, customers(company_name)').is('deleted_at', null).order('created_at', { ascending: false })
       ]);
-      
+
       setCustomers(customersRes.data || []);
       setQuotations(quotationsRes.data?.map(q => ({ ...q, company_name: q.customers?.company_name })) || []);
       setContracts(contractsRes.data?.map(c => ({ ...c, company_name: c.customers?.company_name })) || []);
@@ -192,7 +192,7 @@ export default function SalesModule() {
       setLoading(false);
     }
   };
-  
+
   // Create customer
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,9 +202,9 @@ export default function SalesModule() {
         credit_limit: parseFloat(customerForm.credit_limit) || 0,
         created_by: user?.id
       }).select().single();
-      
+
       if (error) throw error;
-      
+
       toast({ title: 'Success', description: `Customer ${data.customer_code} created` });
       setShowAddCustomer(false);
       setCustomerForm({
@@ -224,7 +224,7 @@ export default function SalesModule() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
-  
+
   // Create quotation
   const handleCreateQuotation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,7 +233,7 @@ export default function SalesModule() {
       const vatRate = parseFloat(quotationForm.vat_rate) || 18;
       const vatAmount = subtotal * (vatRate / 100);
       const totalAmount = subtotal + vatAmount;
-      
+
       const { data, error } = await supabase.from('quotations').insert({
         customer_id: quotationForm.customer_id,
         origin: quotationForm.origin,
@@ -248,9 +248,9 @@ export default function SalesModule() {
         notes: quotationForm.notes,
         created_by: user?.id
       }).select().single();
-      
+
       if (error) throw error;
-      
+
       toast({ title: 'Success', description: `Quotation ${data.quotation_number} created` });
       setShowAddQuotation(false);
       setQuotationForm({
@@ -269,7 +269,7 @@ export default function SalesModule() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
-  
+
   // Create contract
   const handleCreateContract = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,9 +289,9 @@ export default function SalesModule() {
         notes: contractForm.notes,
         created_by: user?.id
       }).select().single();
-      
+
       if (error) throw error;
-      
+
       toast({ title: 'Success', description: `Contract ${data.contract_number} created` });
       setShowAddContract(false);
       setContractForm({
@@ -313,7 +313,7 @@ export default function SalesModule() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
-  
+
   // Convert quotation to contract
   const convertQuotationToContract = async (quotation: Quotation) => {
     try {
@@ -330,23 +330,23 @@ export default function SalesModule() {
         status: 'draft',
         created_by: user?.id
       }).select().single();
-      
+
       if (error) throw error;
-      
+
       // Update quotation status
       await supabase.from('quotations').update({
         status: 'converted',
         converted_to_contract_id: contract.id,
         converted_at: new Date().toISOString()
       }).eq('id', quotation.id);
-      
+
       toast({ title: 'Success', description: `Quotation converted to contract ${contract.contract_number}` });
       loadData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
-  
+
   // Status badges
   const getCustomerStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -356,7 +356,7 @@ export default function SalesModule() {
     };
     return <Badge className={styles[status] || 'bg-gray-100'}>{status}</Badge>;
   };
-  
+
   const getQuotationStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-700',
@@ -368,7 +368,7 @@ export default function SalesModule() {
     };
     return <Badge className={styles[status] || 'bg-gray-100'}>{status}</Badge>;
   };
-  
+
   const getContractStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-700',
@@ -380,14 +380,14 @@ export default function SalesModule() {
     };
     return <Badge className={styles[status] || 'bg-gray-100'}>{status}</Badge>;
   };
-  
+
   // Stats
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter(c => c.status === 'active').length;
   const pendingQuotations = quotations.filter(q => q.status === 'sent').length;
   const activeContracts = contracts.filter(c => c.status === 'active').length;
   const totalPipelineValue = opportunities.reduce((sum, o) => sum + (o.estimated_value || 0), 0);
-  
+
   if (!role) return null;
 
   return (
@@ -400,7 +400,7 @@ export default function SalesModule() {
             <h1 className="text-3xl font-bold">Sales Module</h1>
             <p className="text-muted-foreground">Customer management, quotations, contracts, and pipeline</p>
           </div>
-          
+
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
@@ -448,7 +448,7 @@ export default function SalesModule() {
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-5">
@@ -458,120 +458,120 @@ export default function SalesModule() {
               <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
               <TabsTrigger value="followups">Follow-ups</TabsTrigger>
             </TabsList>
-            
+
             {/* Customers Tab */}
             <TabsContent value="customers">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Customer Database</CardTitle>
                   {canCreateCustomer && (
-                  <Dialog open={showAddCustomer} onOpenChange={setShowAddCustomer}>
-                    <DialogTrigger asChild>
-                      <Button><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>Add New Customer</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleCreateCustomer} className="space-y-4 pt-4">
-                        <div className="grid grid-cols-2 gap-4">
+                    <Dialog open={showAddCustomer} onOpenChange={setShowAddCustomer}>
+                      <DialogTrigger asChild>
+                        <Button><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-lg">
+                        <DialogHeader>
+                          <DialogTitle>Add New Customer</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateCustomer} className="space-y-4 pt-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Company Name *</Label>
+                              <Input
+                                value={customerForm.company_name}
+                                onChange={(e) => setCustomerForm({ ...customerForm, company_name: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Contact Person</Label>
+                              <Input
+                                value={customerForm.contact_person}
+                                onChange={(e) => setCustomerForm({ ...customerForm, contact_person: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Email</Label>
+                              <Input
+                                type="email"
+                                value={customerForm.email}
+                                onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Phone</Label>
+                              <Input
+                                value={customerForm.phone}
+                                onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
+                              />
+                            </div>
+                          </div>
                           <div className="space-y-2">
-                            <Label>Company Name *</Label>
-                            <Input 
-                              value={customerForm.company_name} 
-                              onChange={(e) => setCustomerForm({...customerForm, company_name: e.target.value})}
-                              required 
+                            <Label>Address</Label>
+                            <Textarea
+                              value={customerForm.address}
+                              onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
                             />
                           </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>City</Label>
+                              <Input
+                                value={customerForm.city}
+                                onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Tax ID (TIN)</Label>
+                              <Input
+                                value={customerForm.tax_id}
+                                onChange={(e) => setCustomerForm({ ...customerForm, tax_id: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Credit Limit (Tsh)</Label>
+                              <Input
+                                type="number"
+                                value={customerForm.credit_limit}
+                                onChange={(e) => setCustomerForm({ ...customerForm, credit_limit: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Payment Terms</Label>
+                              <Select
+                                value={customerForm.payment_terms}
+                                onValueChange={(v) => setCustomerForm({ ...customerForm, payment_terms: v })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="15 days">15 days</SelectItem>
+                                  <SelectItem value="30 days">30 days</SelectItem>
+                                  <SelectItem value="45 days">45 days</SelectItem>
+                                  <SelectItem value="60 days">60 days</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
                           <div className="space-y-2">
-                            <Label>Contact Person</Label>
-                            <Input 
-                              value={customerForm.contact_person} 
-                              onChange={(e) => setCustomerForm({...customerForm, contact_person: e.target.value})}
+                            <Label>Notes</Label>
+                            <Textarea
+                              value={customerForm.notes}
+                              onChange={(e) => setCustomerForm({ ...customerForm, notes: e.target.value })}
                             />
                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Email</Label>
-                            <Input 
-                              type="email"
-                              value={customerForm.email} 
-                              onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})}
-                            />
+                          <div className="flex gap-2">
+                            <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddCustomer(false)}>Cancel</Button>
+                            <Button type="submit" className="flex-1">Create Customer</Button>
                           </div>
-                          <div className="space-y-2">
-                            <Label>Phone</Label>
-                            <Input 
-                              value={customerForm.phone} 
-                              onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Address</Label>
-                          <Textarea 
-                            value={customerForm.address} 
-                            onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>City</Label>
-                            <Input 
-                              value={customerForm.city} 
-                              onChange={(e) => setCustomerForm({...customerForm, city: e.target.value})}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Tax ID (TIN)</Label>
-                            <Input 
-                              value={customerForm.tax_id} 
-                              onChange={(e) => setCustomerForm({...customerForm, tax_id: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Credit Limit (Tsh)</Label>
-                            <Input 
-                              type="number"
-                              value={customerForm.credit_limit} 
-                              onChange={(e) => setCustomerForm({...customerForm, credit_limit: e.target.value})}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Payment Terms</Label>
-                            <Select 
-                              value={customerForm.payment_terms}
-                              onValueChange={(v) => setCustomerForm({...customerForm, payment_terms: v})}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="15 days">15 days</SelectItem>
-                                <SelectItem value="30 days">30 days</SelectItem>
-                                <SelectItem value="45 days">45 days</SelectItem>
-                                <SelectItem value="60 days">60 days</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Notes</Label>
-                          <Textarea 
-                            value={customerForm.notes} 
-                            onChange={(e) => setCustomerForm({...customerForm, notes: e.target.value})}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddCustomer(false)}>Cancel</Button>
-                          <Button type="submit" className="flex-1">Create Customer</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </CardHeader>
                 <CardContent>
@@ -614,21 +614,21 @@ export default function SalesModule() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Quotations Tab */}
             <TabsContent value="quotations">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Quotations & RFQ</CardTitle>
                   <div className="flex gap-2">
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={() => setShowQuoteGenerator(true)}
                     >
                       <FileText className="h-4 w-4 mr-2" />
                       Generate Quote
                     </Button>
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={() => setShowTransportAgreement(true)}
                     >
@@ -636,104 +636,104 @@ export default function SalesModule() {
                       Transport Agreement
                     </Button>
                     {canCreateQuotation && (
-                    <Dialog open={showAddQuotation} onOpenChange={setShowAddQuotation}>
-                      <DialogTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle>Create Quotation</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleCreateQuotation} className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                          <Label>Customer *</Label>
-                          <Select 
-                            value={quotationForm.customer_id}
-                            onValueChange={(v) => setQuotationForm({...quotationForm, customer_id: v})}
-                            required
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select customer..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {customers.filter(c => c.status === 'active').map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>
-                                  {customer.company_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Origin</Label>
-                            <Input 
-                              value={quotationForm.origin} 
-                              onChange={(e) => setQuotationForm({...quotationForm, origin: e.target.value})}
-                              placeholder="e.g. Dar es Salaam"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Destination</Label>
-                            <Input 
-                              value={quotationForm.destination} 
-                              onChange={(e) => setQuotationForm({...quotationForm, destination: e.target.value})}
-                              placeholder="e.g. Mwanza"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Cargo Type</Label>
-                            <Input 
-                              value={quotationForm.cargo_type} 
-                              onChange={(e) => setQuotationForm({...quotationForm, cargo_type: e.target.value})}
-                              placeholder="e.g. Container"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Cargo Weight (kg)</Label>
-                            <Input 
-                              type="number"
-                              value={quotationForm.cargo_weight_kg} 
-                              onChange={(e) => setQuotationForm({...quotationForm, cargo_weight_kg: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Amount (excl. VAT) *</Label>
-                            <Input 
-                              type="number"
-                              value={quotationForm.subtotal} 
-                              onChange={(e) => setQuotationForm({...quotationForm, subtotal: e.target.value})}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Valid for (days)</Label>
-                            <Input 
-                              type="number"
-                              value={quotationForm.validity_days} 
-                              onChange={(e) => setQuotationForm({...quotationForm, validity_days: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Notes</Label>
-                          <Textarea 
-                            value={quotationForm.notes} 
-                            onChange={(e) => setQuotationForm({...quotationForm, notes: e.target.value})}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddQuotation(false)}>Cancel</Button>
-                          <Button type="submit" className="flex-1">Create Quotation</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                  )}
+                      <Dialog open={showAddQuotation} onOpenChange={setShowAddQuotation}>
+                        <DialogTrigger asChild>
+                          <Button><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg">
+                          <DialogHeader>
+                            <DialogTitle>Create Quotation</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleCreateQuotation} className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                              <Label>Customer *</Label>
+                              <Select
+                                value={quotationForm.customer_id}
+                                onValueChange={(v) => setQuotationForm({ ...quotationForm, customer_id: v })}
+                                required
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select customer..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {customers.filter(c => c.status === 'active').map((customer) => (
+                                    <SelectItem key={customer.id} value={customer.id}>
+                                      {customer.company_name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Origin</Label>
+                                <Input
+                                  value={quotationForm.origin}
+                                  onChange={(e) => setQuotationForm({ ...quotationForm, origin: e.target.value })}
+                                  placeholder="e.g. Dar es Salaam"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Destination</Label>
+                                <Input
+                                  value={quotationForm.destination}
+                                  onChange={(e) => setQuotationForm({ ...quotationForm, destination: e.target.value })}
+                                  placeholder="e.g. Mwanza"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Cargo Type</Label>
+                                <Input
+                                  value={quotationForm.cargo_type}
+                                  onChange={(e) => setQuotationForm({ ...quotationForm, cargo_type: e.target.value })}
+                                  placeholder="e.g. Container"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Cargo Weight (kg)</Label>
+                                <Input
+                                  type="number"
+                                  value={quotationForm.cargo_weight_kg}
+                                  onChange={(e) => setQuotationForm({ ...quotationForm, cargo_weight_kg: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Amount (excl. VAT) *</Label>
+                                <Input
+                                  type="number"
+                                  value={quotationForm.subtotal}
+                                  onChange={(e) => setQuotationForm({ ...quotationForm, subtotal: e.target.value })}
+                                  required
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Valid for (days)</Label>
+                                <Input
+                                  type="number"
+                                  value={quotationForm.validity_days}
+                                  onChange={(e) => setQuotationForm({ ...quotationForm, validity_days: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Notes</Label>
+                              <Textarea
+                                value={quotationForm.notes}
+                                onChange={(e) => setQuotationForm({ ...quotationForm, notes: e.target.value })}
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddQuotation(false)}>Cancel</Button>
+                              <Button type="submit" className="flex-1">Create Quotation</Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -768,8 +768,8 @@ export default function SalesModule() {
                           <TableCell>{q.expiry_date ? new Date(q.expiry_date).toLocaleDateString() : '-'}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => {
                                   setSelectedQuotation(q);
@@ -780,9 +780,9 @@ export default function SalesModule() {
                                 View Quote
                               </Button>
                               {q.status === 'accepted' && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="text-green-600"
                                   onClick={() => convertQuotationToContract(q)}
                                 >
@@ -798,154 +798,154 @@ export default function SalesModule() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Contracts Tab */}
             <TabsContent value="contracts">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Contracts</CardTitle>
                   {canCreateContract && (
-                  <div className="flex gap-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline"><Printer className="h-4 w-4 mr-2" /> Generate Agreement</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Generate Transportation Agreement</DialogTitle>
-                        </DialogHeader>
-                        <ContractGenerator onClose={() => {}} />
-                      </DialogContent>
-                    </Dialog>
-                    <Dialog open={showAddContract} onOpenChange={setShowAddContract}>
-                      <DialogTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" /> New Contract</Button>
-                      </DialogTrigger>
-                    <DialogContent className="max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>Create Contract</DialogTitle>
-                      </DialogHeader>
-                      <form onSubmit={handleCreateContract} className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                          <Label>Customer *</Label>
-                          <Select 
-                            value={contractForm.customer_id}
-                            onValueChange={(v) => setContractForm({...contractForm, customer_id: v})}
-                            required
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select customer..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {customers.filter(c => c.status === 'active').map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>
-                                  {customer.company_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Contract Type</Label>
-                          <Select 
-                            value={contractForm.contract_type}
-                            onValueChange={(v) => setContractForm({...contractForm, contract_type: v})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="one_time">One Time</SelectItem>
-                              <SelectItem value="recurring">Recurring</SelectItem>
-                              <SelectItem value="retainer">Retainer</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Start Date *</Label>
-                            <Input 
-                              type="date"
-                              value={contractForm.start_date} 
-                              onChange={(e) => setContractForm({...contractForm, start_date: e.target.value})}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>End Date</Label>
-                            <Input 
-                              type="date"
-                              value={contractForm.end_date} 
-                              onChange={(e) => setContractForm({...contractForm, end_date: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Origin</Label>
-                            <Input 
-                              value={contractForm.origin} 
-                              onChange={(e) => setContractForm({...contractForm, origin: e.target.value})}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Destination</Label>
-                            <Input 
-                              value={contractForm.destination} 
-                              onChange={(e) => setContractForm({...contractForm, destination: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Contract Value *</Label>
-                            <Input 
-                              type="number"
-                              value={contractForm.contract_value} 
-                              onChange={(e) => setContractForm({...contractForm, contract_value: e.target.value})}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Trips per Month</Label>
-                            <Input 
-                              type="number"
-                              value={contractForm.trips_per_month} 
-                              onChange={(e) => setContractForm({...contractForm, trips_per_month: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Payment Schedule</Label>
-                          <Select 
-                            value={contractForm.payment_schedule}
-                            onValueChange={(v) => setContractForm({...contractForm, payment_schedule: v})}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="upfront">Upfront</SelectItem>
-                              <SelectItem value="per_delivery">Per Delivery</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Notes</Label>
-                          <Textarea 
-                            value={contractForm.notes} 
-                            onChange={(e) => setContractForm({...contractForm, notes: e.target.value})}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddContract(false)}>Cancel</Button>
-                          <Button type="submit" className="flex-1">Create Contract</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                  </div>
+                    <div className="flex gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline"><Printer className="h-4 w-4 mr-2" /> Generate Agreement</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Generate Transportation Agreement</DialogTitle>
+                          </DialogHeader>
+                          <ContractGenerator onClose={() => { }} />
+                        </DialogContent>
+                      </Dialog>
+                      <Dialog open={showAddContract} onOpenChange={setShowAddContract}>
+                        <DialogTrigger asChild>
+                          <Button><Plus className="h-4 w-4 mr-2" /> New Contract</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg">
+                          <DialogHeader>
+                            <DialogTitle>Create Contract</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleCreateContract} className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                              <Label>Customer *</Label>
+                              <Select
+                                value={contractForm.customer_id}
+                                onValueChange={(v) => setContractForm({ ...contractForm, customer_id: v })}
+                                required
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select customer..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {customers.filter(c => c.status === 'active').map((customer) => (
+                                    <SelectItem key={customer.id} value={customer.id}>
+                                      {customer.company_name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Contract Type</Label>
+                              <Select
+                                value={contractForm.contract_type}
+                                onValueChange={(v) => setContractForm({ ...contractForm, contract_type: v })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="one_time">One Time</SelectItem>
+                                  <SelectItem value="recurring">Recurring</SelectItem>
+                                  <SelectItem value="retainer">Retainer</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Start Date *</Label>
+                                <Input
+                                  type="date"
+                                  value={contractForm.start_date}
+                                  onChange={(e) => setContractForm({ ...contractForm, start_date: e.target.value })}
+                                  required
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>End Date</Label>
+                                <Input
+                                  type="date"
+                                  value={contractForm.end_date}
+                                  onChange={(e) => setContractForm({ ...contractForm, end_date: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Origin</Label>
+                                <Input
+                                  value={contractForm.origin}
+                                  onChange={(e) => setContractForm({ ...contractForm, origin: e.target.value })}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Destination</Label>
+                                <Input
+                                  value={contractForm.destination}
+                                  onChange={(e) => setContractForm({ ...contractForm, destination: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Contract Value *</Label>
+                                <Input
+                                  type="number"
+                                  value={contractForm.contract_value}
+                                  onChange={(e) => setContractForm({ ...contractForm, contract_value: e.target.value })}
+                                  required
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Trips per Month</Label>
+                                <Input
+                                  type="number"
+                                  value={contractForm.trips_per_month}
+                                  onChange={(e) => setContractForm({ ...contractForm, trips_per_month: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Payment Schedule</Label>
+                              <Select
+                                value={contractForm.payment_schedule}
+                                onValueChange={(v) => setContractForm({ ...contractForm, payment_schedule: v })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="upfront">Upfront</SelectItem>
+                                  <SelectItem value="per_delivery">Per Delivery</SelectItem>
+                                  <SelectItem value="monthly">Monthly</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Notes</Label>
+                              <Textarea
+                                value={contractForm.notes}
+                                onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddContract(false)}>Cancel</Button>
+                              <Button type="submit" className="flex-1">Create Contract</Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   )}
                 </CardHeader>
                 <CardContent>
@@ -976,7 +976,7 @@ export default function SalesModule() {
                           <TableCell>{getContractStatusBadge(contract.status)}</TableCell>
                           <TableCell>
                             <span className="text-sm">
-                              {new Date(contract.start_date).toLocaleDateString()} - 
+                              {new Date(contract.start_date).toLocaleDateString()} -
                               {contract.end_date ? new Date(contract.end_date).toLocaleDateString() : 'Ongoing'}
                             </span>
                           </TableCell>
@@ -993,7 +993,7 @@ export default function SalesModule() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Pipeline Tab */}
             <TabsContent value="pipeline">
               <Card>
@@ -1027,7 +1027,7 @@ export default function SalesModule() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Follow-ups Tab */}
             <TabsContent value="followups">
               <Card>
@@ -1061,9 +1061,9 @@ export default function SalesModule() {
                           <TableCell>
                             <Badge className={
                               followUp.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              followUp.status === 'pending' ? 'bg-blue-100 text-blue-700' :
-                              followUp.status === 'overdue' ? 'bg-red-100 text-red-700' :
-                              'bg-gray-100 text-gray-700'
+                                followUp.status === 'pending' ? 'bg-blue-100 text-blue-700' :
+                                  followUp.status === 'overdue' ? 'bg-red-100 text-red-700' :
+                                    'bg-gray-100 text-gray-700'
                             }>
                               {followUp.status}
                             </Badge>
@@ -1088,7 +1088,7 @@ export default function SalesModule() {
                   {selectedQuotation ? `Quote ${selectedQuotation.quotation_number}` : 'Transport Price Quote'}
                 </DialogTitle>
               </DialogHeader>
-              <QuoteGenerator 
+              <QuoteGenerator
                 initialData={selectedQuotation ? {
                   quoteNumber: selectedQuotation.quotation_number,
                   issueDate: selectedQuotation.quotation_date,
@@ -1097,12 +1097,12 @@ export default function SalesModule() {
                   receiverAddress1: selectedQuotation.origin,
                   receiverAddress2: selectedQuotation.destination,
                   lineItems: [
-                    { 
-                      id: '1', 
+                    {
+                      id: '1',
                       description: `Transport Services: ${selectedQuotation.origin} to ${selectedQuotation.destination}`,
-                      quantity: 1, 
+                      quantity: 1,
                       unitPrice: selectedQuotation.subtotal,
-                      discount: 0 
+                      discount: 0
                     }
                   ],
                   taxRate: 10
@@ -1121,7 +1121,7 @@ export default function SalesModule() {
               <DialogHeader>
                 <DialogTitle>Transportation Agreement</DialogTitle>
               </DialogHeader>
-              <TransportAgreementGenerator 
+              <TransportAgreementGenerator
                 initialData={{
                   clientCompany: selectedCustomer?.company_name || '',
                   clientAddress: selectedCustomer?.address || '',

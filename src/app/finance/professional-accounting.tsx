@@ -3027,27 +3027,41 @@ export function FinancialOperations() {
                                   </Button>
                                 </TableCell>
                                 <TableCell className="p-2 text-right" colSpan={2}>
-                                  <span className="text-xs font-medium">Totals ({jeForm.currency || 'TZS'}):</span>
+                                  <span className="text-xs font-semibold text-slate-600">Entry Totals:</span>
                                 </TableCell>
                                 <TableCell className="p-2 text-right">
-                                  <span className="text-xs font-medium text-blue-600">
-                                    {formatCurrency(jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.debit) || 0), 0), jeForm.currency)}
-                                  </span>
+                                  <div className="inline-block bg-blue-50 border border-blue-200 rounded px-2 py-1">
+                                    <span className="text-xs font-bold text-blue-700">
+                                      {formatCurrency(jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.debit) || 0), 0), jeForm.currency)}
+                                    </span>
+                                    <span className="text-xs text-blue-500 ml-1">Dr</span>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="p-2 text-right">
-                                  <span className="text-xs font-medium text-blue-600">
-                                    {formatCurrency(jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.credit) || 0), 0), jeForm.currency)}
-                                  </span>
+                                  <div className="inline-block bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
+                                    <span className="text-xs font-bold text-emerald-700">
+                                      {formatCurrency(jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.credit) || 0), 0), jeForm.currency)}
+                                    </span>
+                                    <span className="text-xs text-emerald-500 ml-1">Cr</span>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="p-2 text-center">
                                   {(() => {
                                     const totalDr = jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.debit) || 0), 0);
                                     const totalCr = jeForm.lines.reduce((sum, l) => sum + (parseFloat(l.credit) || 0), 0);
                                     const diff = totalDr - totalCr;
+                                    const isBalanced = Math.abs(diff) < 0.01;
                                     return (
-                                      <span className={`text-xs font-medium ${diff === 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {diff === 0 ? '✓ Balanced' : `Diff: ${formatCurrency(Math.abs(diff), jeForm.currency)}`}
-                                      </span>
+                                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${isBalanced ? 'bg-green-100 border border-green-200' : 'bg-red-100 border border-red-200'}`}>
+                                        {isBalanced ? (
+                                          <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                        ) : (
+                                          <AlertCircle className="h-3 w-3 text-red-600" />
+                                        )}
+                                        <span className={`text-xs font-semibold ${isBalanced ? 'text-green-700' : 'text-red-700'}`}>
+                                          {isBalanced ? 'Balanced' : `Diff: ${formatCurrency(Math.abs(diff), jeForm.currency)}`}
+                                        </span>
+                                      </div>
                                     );
                                   })()}
                                 </TableCell>
@@ -3371,31 +3385,44 @@ export function FinancialOperations() {
                         </div>
 
                         {/* Totals */}
-                        <div className="border-t bg-muted/30 p-4">
-                          <div className="flex justify-end gap-8">
-                            <div className="text-right">
-                              <p className="text-sm text-muted-foreground">Total Debit ({jeForm.currency || 'TZS'})</p>
-                              <p className="text-lg font-semibold">
+                        <div className="border-t bg-gradient-to-r from-slate-50 to-slate-100 p-4">
+                          <div className="flex justify-end items-center gap-6">
+                            {/* Debit Total */}
+                            <div className="text-right bg-white rounded-lg px-4 py-2 shadow-sm border border-blue-100">
+                              <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Total Debit</p>
+                              <p className="text-xl font-bold text-blue-700">
                                 {formatCurrency(calculateJournalEntryTotals().totalDebit, jeForm.currency)}
                               </p>
+                              <p className="text-xs text-muted-foreground">{jeForm.currency || 'TZS'}</p>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm text-muted-foreground">Total Credit ({jeForm.currency || 'TZS'})</p>
-                              <p className="text-lg font-semibold">
+                            
+                            {/* Credit Total */}
+                            <div className="text-right bg-white rounded-lg px-4 py-2 shadow-sm border border-emerald-100">
+                              <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide">Total Credit</p>
+                              <p className="text-xl font-bold text-emerald-700">
                                 {formatCurrency(calculateJournalEntryTotals().totalCredit, jeForm.currency)}
                               </p>
+                              <p className="text-xs text-muted-foreground">{jeForm.currency || 'TZS'}</p>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm text-muted-foreground">Difference</p>
-                              <p className={`text-lg font-semibold ${calculateJournalEntryTotals().balanced ? 'text-green-600' : 'text-red-600'}`}>
+                            
+                            {/* Balance Indicator */}
+                            <div className={`text-right rounded-lg px-4 py-2 shadow-sm border ${calculateJournalEntryTotals().balanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                              <p className={`text-xs font-medium uppercase tracking-wide ${calculateJournalEntryTotals().balanced ? 'text-green-600' : 'text-red-600'}`}>
+                                {calculateJournalEntryTotals().balanced ? '✓ Balanced' : '⚠ Unbalanced'}
+                              </p>
+                              <p className={`text-xl font-bold ${calculateJournalEntryTotals().balanced ? 'text-green-700' : 'text-red-700'}`}>
                                 {formatCurrency(Math.abs(calculateJournalEntryTotals().totalDebit - calculateJournalEntryTotals().totalCredit), jeForm.currency)}
                               </p>
+                              <p className="text-xs text-muted-foreground">Difference</p>
                             </div>
                           </div>
                           {!calculateJournalEntryTotals().balanced && (
-                            <p className="text-center text-red-600 text-sm mt-2">
-                              Debits and credits must balance before posting
-                            </p>
+                            <div className="flex items-center justify-center gap-2 mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                              <p className="text-red-700 text-sm font-medium">
+                                Debits and credits must balance before posting. Review your entries.
+                              </p>
+                            </div>
                           )}
                         </div>
                       </CardContent>
