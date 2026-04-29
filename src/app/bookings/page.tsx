@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
@@ -70,7 +70,7 @@ const serviceTypeLabels: Record<string, string> = {
   other: 'Other'
 };
 
-export default function BookingsPage() {
+function BookingsContent() {
   const { role } = useRole();
   const { format: formatCurrency } = useCurrency();
   const { toast } = useToast();
@@ -835,6 +835,30 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+export default function BookingsPage() {
+  return (
+    <Suspense fallback={<BookingsLoading />}>
+      <BookingsContent />
+    </Suspense>
+  );
+}
+
+function BookingsLoading() {
+  return (
+    <div className="flex min-h-screen bg-background">
+      <div className="flex-1 md:ml-60 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-muted rounded w-48" />
+            <div className="h-4 bg-muted rounded w-72" />
+            <div className="h-64 bg-muted rounded" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
