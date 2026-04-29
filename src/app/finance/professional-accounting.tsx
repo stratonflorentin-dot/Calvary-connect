@@ -21,7 +21,8 @@ import {
   FileText, Receipt, Wallet, CreditCard, Banknote, ArrowRightLeft, Landmark,
   TrendingUp, TrendingDown, Plus, Search, Download, BookOpen, Calculator,
   Building2, Clock, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, BarChart3,
-  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2, Save, X, Edit2
+  ArrowLeft, LayoutDashboard, ChevronLeft, Trash2, Save, X, Edit2,
+  AlertCircle, CheckCircle2
 } from 'lucide-react';
 
 interface Trip {
@@ -310,19 +311,103 @@ export function FinancialOperations() {
     return styles[status] || 'bg-gray-100';
   };
 
-  // Split cash totals by currency - do NOT mix currencies
-  const totalCashTSH = bankAccounts.filter(a => a.currency === 'TZS').reduce((a, b) => a + b.current_balance, 0);
-  const totalCashUSD = bankAccounts.filter(a => a.currency === 'USD').reduce((a, b) => a + b.current_balance, 0);
-  // Split receivables by currency
-  const totalReceivablesTSH = invoices.filter(i => i.status !== 'paid' && i.currency === 'TZS').reduce((a, b) => a + b.total_amount, 0);
-  const totalReceivablesUSD = invoices.filter(i => i.status !== 'paid' && i.currency === 'USD').reduce((a, b) => a + b.total_amount, 0);
-  const totalPayables = 0; // From supplier_payments
-  // Split revenue by currency
-  const monthlyRevenueTSH = invoices.filter(i => i.status === 'paid' && i.currency === 'TZS').reduce((a, b) => a + b.total_amount, 0);
-  const monthlyRevenueUSD = invoices.filter(i => i.status === 'paid' && i.currency === 'USD').reduce((a, b) => a + b.total_amount, 0);
-  // Split expenses by currency
-  const monthlyExpensesTSH = expenses.filter(e => e.currency === 'TZS').reduce((a, b) => a + b.amount, 0);
-  const monthlyExpensesUSD = expenses.filter(e => e.currency === 'USD').reduce((a, b) => a + b.amount, 0);
+  // ========================================
+  // FINANCIAL SUMMARY CALCULATIONS
+  // Calculate from actual data sources for accuracy
+  // ========================================
+  
+  // CASH & BANK - from bank account balances
+  const totalCashTSH = bankAccounts
+    .filter(a => a.currency === 'TZS')
+    .reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
+  const totalCashUSD = bankAccounts
+    .filter(a => a.currency === 'USD')
+    .reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
+  
+  // RECEIVABLES - unpaid/partial invoices (amounts still owed by customers)
+  const totalReceivablesTSH = invoices
+    .filter(i => ['pending', 'sent', 'partial', 'overdue'].includes(i.status) && i.currency === 'TZS')
+    .reduce((sum, inv) => sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)), 0);
+  const totalReceivablesUSD = invoices
+    .filter(i => ['pending', 'sent', 'partial', 'overdue'].includes(i.status) && i.currency === 'USD')
+    .reduce((sum, inv) => sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)), 0);
+  
+  // PAYABLES - unpaid supplier invoices/payments (amounts owed to suppliers)
+  const totalPayablesTSH = supplierPayments
+    .filter((sp: any) => ['pending', 'partial'].includes(sp.status) && (sp.currency === 'TZS' || !sp.currency))
+    .reduce((sum: number, sp: any) => sum + ((sp.amount || 0) - (sp.paid_amount || 0)), 0);
+  const totalPayablesUSD = supplierPayments
+    .filter((sp: any) => ['pending', 'partial'].includes(sp.status) && sp.currency === 'USD')
+    .reduce((sum: number, sp: any) => sum + ((sp.amount || 0) - (sp.paid_amount || 0)), 0);
+  
+  // REVENUE - from paid invoices this month
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthlyRevenueTSH = invoices
+    .filter(i => {
+      const invDate = new Date(i.invoice_date || i.created_at);
+      return i.status === 'paid' && 
+             i.currency === 'TZS' && 
+             invDate.getMonth() === currentMonth && 
+             invDate.getFullYear() === currentYear;
+    })
+    .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+  const monthlyRevenueUSD = invoices
+    .filter(i => {
+      const invDate = new Date(i.invoice_date || i.created_at);
+      return i.status === 'paid' && 
+             i.currency === 'USD' && 
+             invDate.getMonth() === currentMonth && 
+             invDate.getFullYear() === currentYear;
+    })
+    .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+  
+  // EXPENSES - from expenses this month
+  const monthlyExpensesTSH = expenses
+    .filter(e => {
+      const expDate = new Date(e.expense_date || e.created_at);
+      return (e.currency === 'TZS' || !e.currency) && 
+             expDate.getMonth() === currentMonth && 
+             expDate.getFullYear() === currentYear;
+    })
+    .reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  const monthlyExpensesUSD = expenses
+    .filter(e => {
+      const expDate = new Date(e.expense_date || e.created_at);
+      return e.currency === 'USD' && 
+             expDate.getMonth() === currentMonth && 
+             expDate.getFullYear() === currentYear;
+    })
+    .reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  
+  // Calculate last month for comparison (trend indicators)
+  const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const lastMonthRevenueTSH = invoices
+    .filter(i => {
+      const invDate = new Date(i.invoice_date || i.created_at);
+      return i.status === 'paid' && 
+             i.currency === 'TZS' && 
+             invDate.getMonth() === lastMonth && 
+             invDate.getFullYear() === lastMonthYear;
+    })
+    .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+  const lastMonthExpensesTSH = expenses
+    .filter(e => {
+      const expDate = new Date(e.expense_date || e.created_at);
+      return (e.currency === 'TZS' || !e.currency) && 
+             expDate.getMonth() === lastMonth && 
+             expDate.getFullYear() === lastMonthYear;
+    })
+    .reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  
+  // Calculate percentage changes for trend indicators
+  const revenueChange = lastMonthRevenueTSH > 0 
+    ? ((monthlyRevenueTSH - lastMonthRevenueTSH) / lastMonthRevenueTSH * 100).toFixed(1)
+    : monthlyRevenueTSH > 0 ? '+100' : '0';
+  const expenseChange = lastMonthExpensesTSH > 0 
+    ? ((monthlyExpensesTSH - lastMonthExpensesTSH) / lastMonthExpensesTSH * 100).toFixed(1)
+    : monthlyExpensesTSH > 0 ? '+100' : '0';
 
   // Dialog states
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
@@ -610,9 +695,13 @@ export function FinancialOperations() {
     }
 
     try {
+      // Generate professional entry number format: JE-YYYY-NNNN
+      const year = new Date().getFullYear();
+      const timestamp = Date.now().toString().slice(-4);
+      const sequenceNum = String(journalEntries.length + 1).padStart(4, '0');
       const entryNumber = editingJournalEntry 
-        ? editingJournalEntry.entry_number.replace('DRAFT-', 'MJE-')
-        : (asDraft ? `DRAFT-${Date.now()}` : `MJE-${Date.now()}`);
+        ? editingJournalEntry.entry_number.replace(/^DRAFT-/, `JE-${year}-`)
+        : (asDraft ? `DRAFT-${year}-${timestamp}` : `JE-${year}-${sequenceNum}`);
       
       // If editing a draft and posting, delete the old draft first
       if (editingJournalEntry && !asDraft) {
@@ -1254,18 +1343,25 @@ export function FinancialOperations() {
                 </Button>
               </Link>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b">
               <div>
-                <h1 className="text-3xl font-bold">Financial Operations</h1>
-                <p className="text-muted-foreground">Capture and manage all financial transactions with full audit trail</p>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
+                    <Calculator className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Financial Operations</h1>
+                    <p className="text-sm text-muted-foreground">Double-entry accounting with full audit trail</p>
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setActiveTab('reports')}>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setActiveTab('reports')}>
                   <BarChart3 className="h-4 w-4 mr-2" /> Reports
                 </Button>
                 <Dialog open={showCreateInvoice} onOpenChange={setShowCreateInvoice}>
                   <DialogTrigger asChild>
-                    <Button><Plus className="h-4 w-4 mr-2" /> Quick Entry</Button>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" /> Quick Entry</Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md" onInteractOutside={() => { if (editingInvoice) cancelEditInvoice(); }}>
                     <DialogHeader>
@@ -1353,100 +1449,151 @@ export function FinancialOperations() {
         </div>
 
         <div className="max-w-7xl mx-auto p-6">
-        {/* Financial Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Cash & Bank</p>
-                  <div className="space-y-1">
-                    {totalCashTSH > 0 && (
-                      <p className="text-xl font-bold">Tsh {totalCashTSH.toLocaleString('en-TZ')}</p>
-                    )}
+        {/* Financial Overview - Professional Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          {/* Cash & Bank */}
+          <Card className="relative overflow-hidden border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Cash & Bank</p>
+                  <div className="space-y-0.5">
+                    <p className="text-2xl font-bold tracking-tight">
+                      Tsh {totalCashTSH.toLocaleString('en-TZ')}
+                    </p>
                     {totalCashUSD > 0 && (
-                      <p className="text-lg font-bold text-blue-600">$ {totalCashUSD.toLocaleString('en-US')}</p>
-                    )}
-                    {totalCashTSH === 0 && totalCashUSD === 0 && (
-                      <p className="text-2xl font-bold">Tsh 0</p>
+                      <p className="text-sm font-semibold text-blue-600">
+                        $ {totalCashUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </p>
                     )}
                   </div>
+                  <p className="text-xs text-muted-foreground">{bankAccounts.length} account{bankAccounts.length !== 1 ? 's' : ''}</p>
                 </div>
-                <Wallet className="h-8 w-8 text-green-500" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                  <Wallet className="h-5 w-5 text-emerald-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Receivables</p>
-                  <div className="space-y-1">
-                    {totalReceivablesTSH > 0 && (
-                      <p className="text-xl font-bold">Tsh {totalReceivablesTSH.toLocaleString('en-TZ')}</p>
-                    )}
+
+          {/* Receivables */}
+          <Card className="relative overflow-hidden border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Receivables</p>
+                  <div className="space-y-0.5">
+                    <p className="text-2xl font-bold tracking-tight">
+                      Tsh {totalReceivablesTSH.toLocaleString('en-TZ')}
+                    </p>
                     {totalReceivablesUSD > 0 && (
-                      <p className="text-xl font-bold text-blue-600">$ {totalReceivablesUSD.toLocaleString('en-US')}</p>
-                    )}
-                    {totalReceivablesTSH === 0 && totalReceivablesUSD === 0 && (
-                      <p className="text-xl font-bold">Tsh 0</p>
+                      <p className="text-sm font-semibold text-blue-600">
+                        $ {totalReceivablesUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </p>
                     )}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    {invoices.filter(i => ['pending', 'sent', 'partial', 'overdue'].includes(i.status)).length} unpaid invoice{invoices.filter(i => ['pending', 'sent', 'partial', 'overdue'].includes(i.status)).length !== 1 ? 's' : ''}
+                  </p>
                 </div>
-                <ArrowUpRight className="h-8 w-8 text-blue-500" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                  <ArrowUpRight className="h-5 w-5 text-blue-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Payables</p>
-                  <p className="text-2xl font-bold">{formatCurrency(totalPayables)}</p>
-                </div>
-                <ArrowDownLeft className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Revenue</p>
-                  <div className="space-y-1">
-                    {monthlyRevenueTSH > 0 && (
-                      <p className="text-xl font-bold">Tsh {monthlyRevenueTSH.toLocaleString('en-TZ')}</p>
+
+          {/* Payables */}
+          <Card className="relative overflow-hidden border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Payables</p>
+                  <div className="space-y-0.5">
+                    <p className="text-2xl font-bold tracking-tight">
+                      Tsh {totalPayablesTSH.toLocaleString('en-TZ')}
+                    </p>
+                    {totalPayablesUSD > 0 && (
+                      <p className="text-sm font-semibold text-blue-600">
+                        $ {totalPayablesUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </p>
                     )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {supplierPayments.filter((sp: any) => ['pending', 'partial'].includes(sp.status)).length} pending payment{supplierPayments.filter((sp: any) => ['pending', 'partial'].includes(sp.status)).length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                  <ArrowDownLeft className="h-5 w-5 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Revenue */}
+          <Card className="relative overflow-hidden border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Revenue (This Month)</p>
+                  <div className="space-y-0.5">
+                    <p className="text-2xl font-bold tracking-tight">
+                      Tsh {monthlyRevenueTSH.toLocaleString('en-TZ')}
+                    </p>
                     {monthlyRevenueUSD > 0 && (
-                      <p className="text-xl font-bold text-blue-600">$ {monthlyRevenueUSD.toLocaleString('en-US')}</p>
-                    )}
-                    {monthlyRevenueTSH === 0 && monthlyRevenueUSD === 0 && (
-                      <p className="text-xl font-bold">Tsh 0</p>
+                      <p className="text-sm font-semibold text-blue-600">
+                        $ {monthlyRevenueUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </p>
                     )}
                   </div>
+                  <div className="flex items-center gap-1">
+                    {Number(revenueChange) >= 0 ? (
+                      <TrendingUp className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3 text-red-500" />
+                    )}
+                    <span className={`text-xs font-medium ${Number(revenueChange) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {Number(revenueChange) >= 0 ? '+' : ''}{revenueChange}% vs last month
+                    </span>
+                  </div>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-500" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Expenses</p>
-                  <div className="space-y-1">
-                    {monthlyExpensesTSH > 0 && (
-                      <p className="text-xl font-bold">Tsh {monthlyExpensesTSH.toLocaleString('en-TZ')}</p>
-                    )}
+
+          {/* Expenses */}
+          <Card className="relative overflow-hidden border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Expenses (This Month)</p>
+                  <div className="space-y-0.5">
+                    <p className="text-2xl font-bold tracking-tight">
+                      Tsh {monthlyExpensesTSH.toLocaleString('en-TZ')}
+                    </p>
                     {monthlyExpensesUSD > 0 && (
-                      <p className="text-xl font-bold text-blue-600">$ {monthlyExpensesUSD.toLocaleString('en-US')}</p>
-                    )}
-                    {monthlyExpensesTSH === 0 && monthlyExpensesUSD === 0 && (
-                      <p className="text-xl font-bold">Tsh 0</p>
+                      <p className="text-sm font-semibold text-blue-600">
+                        $ {monthlyExpensesUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </p>
                     )}
                   </div>
+                  <div className="flex items-center gap-1">
+                    {Number(expenseChange) <= 0 ? (
+                      <TrendingDown className="h-3 w-3 text-green-500" />
+                    ) : (
+                      <TrendingUp className="h-3 w-3 text-red-500" />
+                    )}
+                    <span className={`text-xs font-medium ${Number(expenseChange) <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {Number(expenseChange) >= 0 ? '+' : ''}{expenseChange}% vs last month
+                    </span>
+                  </div>
                 </div>
-                <TrendingDown className="h-8 w-8 text-red-500" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -2469,28 +2616,115 @@ export function FinancialOperations() {
               {/* Journal Entries */}
               <TabsContent value="journal">
                 <div className="space-y-4">
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
+                  {/* Summary Cards - Professional Accounting Style */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <Card className="border-l-4 border-l-slate-400">
                       <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Entries</p>
-                        <p className="text-3xl font-bold mt-1">{journalEntries.length}</p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Entries</p>
+                            <p className="text-2xl font-bold mt-1">{journalEntries.length}</p>
+                          </div>
+                          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
+                            <BookOpen className="h-4 w-4 text-slate-600" />
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="border-l-4 border-l-amber-400">
                       <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Draft</p>
-                        <p className="text-3xl font-bold mt-1 text-yellow-600">
-                          {journalEntries.filter(je => !je.is_posted).length}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Draft</p>
+                            <p className="text-2xl font-bold mt-1 text-amber-600">
+                              {journalEntries.filter(je => !je.is_posted).length}
+                            </p>
+                          </div>
+                          <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                            <Clock className="h-4 w-4 text-amber-600" />
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="border-l-4 border-l-green-400">
                       <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground uppercase tracking-wide">Posted</p>
-                        <p className="text-3xl font-bold mt-1 text-green-600">
-                          {journalEntries.filter(je => je.is_posted).length}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Posted</p>
+                            <p className="text-2xl font-bold mt-1 text-green-600">
+                              {journalEntries.filter(je => je.is_posted).length}
+                            </p>
+                          </div>
+                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-blue-400">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Debits</p>
+                            <p className="text-lg font-bold mt-1 text-blue-600">
+                              Tsh {journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_debit || 0), 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <ArrowUpRight className="h-4 w-4 text-blue-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-emerald-400">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Credits</p>
+                            <p className="text-lg font-bold mt-1 text-emerald-600">
+                              Tsh {journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_credit || 0), 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className={`border-l-4 ${
+                      journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_debit || 0), 0) === 
+                      journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_credit || 0), 0)
+                        ? 'border-l-green-400' 
+                        : 'border-l-red-400'
+                    }`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Balance Check</p>
+                            <p className={`text-lg font-bold mt-1 ${
+                              journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_debit || 0), 0) === 
+                              journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_credit || 0), 0)
+                                ? 'text-green-600' 
+                                : 'text-red-600'
+                            }`}>
+                              {journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_debit || 0), 0) === 
+                               journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_credit || 0), 0)
+                                ? 'Balanced' 
+                                : 'Unbalanced'}
+                            </p>
+                          </div>
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                            journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_debit || 0), 0) === 
+                            journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_credit || 0), 0)
+                              ? 'bg-green-100' 
+                              : 'bg-red-100'
+                          }`}>
+                            {journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_debit || 0), 0) === 
+                             journalEntries.filter(je => je.is_posted).reduce((sum, je) => sum + (je.total_credit || 0), 0)
+                              ? <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              : <AlertCircle className="h-4 w-4 text-red-600" />}
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
                   </div>
@@ -2573,17 +2807,17 @@ export function FinancialOperations() {
                   </Card>
 
                   {/* Journal Entries Table */}
-                  <Card>
+                  <Card className="border shadow-sm">
                     <CardContent className="p-0">
                       <Table>
-                        <TableHeader>
+                        <TableHeader className="bg-slate-50">
                           <TableRow>
-                            <TableHead className="w-[40px]">#</TableHead>
-                            <TableHead className="w-[120px]">Account</TableHead>
-                            <TableHead className="w-[100px]">Partner</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead className="text-right w-[100px]">Dr</TableHead>
-                            <TableHead className="text-right w-[100px]">Cr</TableHead>
+                            <TableHead className="w-[40px] font-semibold">#</TableHead>
+                            <TableHead className="w-[180px] font-semibold">Account</TableHead>
+                            <TableHead className="w-[100px] font-semibold">Partner</TableHead>
+                            <TableHead className="font-semibold">Description</TableHead>
+                            <TableHead className="text-right w-[110px] font-semibold bg-blue-50 text-blue-700">Debit (Dr)</TableHead>
+                            <TableHead className="text-right w-[110px] font-semibold bg-emerald-50 text-emerald-700">Credit (Cr)</TableHead>
                             <TableHead className="w-[60px]"></TableHead>
                           </TableRow>
                         </TableHeader>
