@@ -159,6 +159,7 @@ export function FinancialOperations() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [chartAccounts, setChartAccounts] = useState<ChartAccount[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [supplierPayments, setSupplierPayments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Search and filter states
@@ -232,6 +233,7 @@ export function FinancialOperations() {
       setFilteredJournalEntries(jeRes.data || []);
       setBankAccounts(bankRes.data || []);
       setAccounts(accountsRes.data || []);
+      setSupplierPayments([]); // Initialize empty - TODO: load from supplier_payments table
       
       // Load journal entry lines
       const { data: jeLinesData } = await supabase.from('journal_entry_lines').select('*');

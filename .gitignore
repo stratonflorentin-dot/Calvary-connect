@@ -47,3 +47,4 @@ firestore-debug.log
 .netlify
 
 .vercel
+.env*.local
