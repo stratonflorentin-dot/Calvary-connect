@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Building2, FileText, Users, Plus, Search, Phone, Mail, MapPin, 
   Calendar, DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle,
-  ArrowRight, Briefcase, FileSignature, PhoneCall, Printer, FileText
+  ArrowRight, Briefcase, FileSignature, PhoneCall, Printer
 } from 'lucide-react';
 
 interface Customer {
