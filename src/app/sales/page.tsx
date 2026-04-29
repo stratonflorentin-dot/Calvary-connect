@@ -734,6 +734,7 @@ export default function SalesModule() {
                     </DialogContent>
                   </Dialog>
                   )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Table>
