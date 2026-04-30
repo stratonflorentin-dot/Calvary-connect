@@ -839,6 +839,7 @@ export default function TripsPage() {
                         </SelectContent>
                       </Select>
                       </div>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
