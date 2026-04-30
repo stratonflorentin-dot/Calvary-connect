@@ -821,9 +821,8 @@ export default function TripsPage() {
                           onChange={(e) => setEditingTrip({ ...editingTrip, client: e.target.value })}
                         />
                       </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-status">Trip Status</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-status">Trip Status</Label>
                       <Select
                         value={editingTrip.status}
                         onValueChange={(value) => setEditingTrip({ ...editingTrip, status: value })}
