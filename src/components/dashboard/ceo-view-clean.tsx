@@ -1,6 +1,7 @@
 "use client";
 
 import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { useMemo, useState, useEffect } from 'react';
 import { StatCards } from './stat-cards';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Clock, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { ComprehensiveAIAnalysis } from './comprehensive-ai-analysis';
 
 export function CeoView() {
   const { user } = useSupabase();
@@ -117,6 +119,9 @@ export function CeoView() {
       </div>
 
       <StatCards />
+
+      {/* AI Company Analysis */}
+      <ComprehensiveAIAnalysis />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Vehicle Management */}
