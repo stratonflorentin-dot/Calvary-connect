@@ -837,6 +837,7 @@ export default function TripsPage() {
                           <SelectItem value="CANCELLED">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -869,6 +870,7 @@ export default function TripsPage() {
                           </SelectItem>
                         </SelectContent>
                       </Select>
+                      </div>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-4">
