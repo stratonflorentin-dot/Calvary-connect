@@ -27,7 +27,6 @@ const routeIconMap: Record<string, any> = {
   '/customers': Building2,
   '/sales': Briefcase,
   '/finance': DollarSign,
-  '/expenses': DollarSign,
   '/income': Calculator,
   '/fuel-approvals': Truck,
   '/allowances': Users,

@@ -219,7 +219,9 @@ export default function UsersPage() {
       setUsers(updatedUsers || []);
       setIsAddDialogOpen(false);
       clearPhoto();
-      e.currentTarget.reset();
+      if (e.currentTarget && typeof e.currentTarget.reset === 'function') {
+        e.currentTarget.reset();
+      }
     } catch (error: any) {
       console.error('Error adding user:', error);
       toast({ 

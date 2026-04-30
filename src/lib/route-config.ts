@@ -25,7 +25,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   { path: "/bookings", label: "Bookings", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"], icon: CalendarDays },
   { path: "/customers", label: "Customers", allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"], icon: Building2 },
   { path: "/sales", label: "Sales", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"], icon: Briefcase },
-  { path: "/expenses", label: "Expenses", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR", "OPERATOR"] },
   { path: "/monthly-report", label: "Financial Reporting", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"], icon: BarChart2 },
   { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
   { path: "/inventory", label: "Inventory", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"] },
