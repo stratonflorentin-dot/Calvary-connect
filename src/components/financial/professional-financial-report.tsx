@@ -7,11 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase';
 import { 
   Calendar, TrendingUp, TrendingDown, DollarSign, Truck, Fuel, Wrench,
-  ArrowUpRight, ArrowDownRight, Download, FileText, PieChart, BarChart3
+  ArrowUpRight, ArrowDownRight, Download, FileText, PieChart as PieChartIcon, BarChart3
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
+  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend
 } from 'recharts';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
@@ -133,7 +133,7 @@ export function ProfessionalFinancialReport() {
         netProfit: totalRevenue - totalExpenses,
         profitMargin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0,
         totalTrips: trips?.length || 0,
-        averageRevenuePerTrip: trips?.length > 0 ? totalRevenue / trips.length : 0,
+        averageRevenuePerTrip: trips && trips.length > 0 ? totalRevenue / trips.length : 0,
         fuelCost,
         maintenanceCost,
         driverCost,
@@ -314,7 +314,7 @@ export function ProfessionalFinancialReport() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <PieChart className="h-5 w-5" />
+              <PieChartIcon className="h-5 w-5" />
               Expense Breakdown
             </CardTitle>
           </CardHeader>
