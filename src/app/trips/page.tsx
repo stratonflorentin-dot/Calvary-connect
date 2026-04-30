@@ -54,6 +54,7 @@ export default function TripsPage() {
     vehicle_id: '',
     trailer_id: '',
     cargo: '',
+    cargoWeight: '',
     client: '',
     distance: '',
     estimated_time: '',
@@ -163,6 +164,7 @@ export default function TripsPage() {
         vehicle_id: tripForm.vehicle_id,
         trailer_id: tripForm.trailer_id || null,
         cargo: tripForm.cargo,
+        cargoWeight: tripForm.cargoWeight ? parseFloat(tripForm.cargoWeight) : null,
         client: tripForm.client,
         distance: tripForm.distance ? parseInt(tripForm.distance, 10) : null,
         estimated_time: tripForm.estimated_time,
@@ -245,6 +247,7 @@ export default function TripsPage() {
         origin: editingTrip.origin,
         destination: editingTrip.destination,
         cargo: editingTrip.cargo,
+        cargoWeight: editingTrip.cargoWeight,
         client: editingTrip.client,
         status: editingTrip.status,
         payment_status: editingTrip.payment_status || 'PENDING',
@@ -606,6 +609,20 @@ export default function TripsPage() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="cargoWeight">Cargo Weight (tons)</Label>
+                        <Input
+                          id="cargoWeight"
+                          type="number"
+                          step="0.1"
+                          value={tripForm.cargoWeight}
+                          onChange={(e) => setTripForm({ ...tripForm, cargoWeight: e.target.value })}
+                          placeholder="25.5"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
                         <Label htmlFor="client">Client Name</Label>
                         <Input
                           id="client"
@@ -614,9 +631,6 @@ export default function TripsPage() {
                           placeholder="Client name"
                         />
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="distance">Distance (km)</Label>
                         <Input
@@ -787,6 +801,19 @@ export default function TripsPage() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="edit-cargoWeight">Cargo Weight (tons)</Label>
+                        <Input
+                          id="edit-cargoWeight"
+                          type="number"
+                          step="0.1"
+                          value={editingTrip.cargoWeight || ''}
+                          onChange={(e) => setEditingTrip({ ...editingTrip, cargoWeight: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
                         <Label htmlFor="edit-client">Client Name</Label>
                         <Input
                           id="edit-client"
@@ -794,7 +821,6 @@ export default function TripsPage() {
                           onChange={(e) => setEditingTrip({ ...editingTrip, client: e.target.value })}
                         />
                       </div>
-                    </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="edit-status">Trip Status</Label>

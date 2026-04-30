@@ -14,7 +14,7 @@ import { HrView } from '@/components/dashboard/hr-view';
 import { OperatorView } from '@/components/dashboard/operator-view';
 import { NotificationsBell } from '@/components/shared/notifications-bell';
 import { CurrencyDisplay } from '@/components/shared/currency-display';
-import { AiInsightPanel } from '@/components/dashboard/ai-insight-panel';
+import { ComprehensiveAIAnalysis } from '@/components/dashboard/comprehensive-ai-analysis';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Languages } from 'lucide-react';
@@ -63,13 +63,9 @@ export default function Home() {
       case 'CEO':
       case 'ADMIN':
         return (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            <div className="xl:col-span-2 space-y-8">
-              <CeoView />
-            </div>
-            <div className="space-y-8">
-              <AiInsightPanel />
-            </div>
+          <div className="space-y-8">
+            <CeoView />
+            <ComprehensiveAIAnalysis />
           </div>
         );
       case 'DRIVER':
