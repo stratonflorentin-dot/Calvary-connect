@@ -60,10 +60,7 @@ export function ComprehensiveAIAnalysis() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const currentYear = new Date().getFullYear();
-      const startOfYear = new Date(currentYear, 0, 1).toISOString();
-      
-      // Fetch only the tables we need for metrics (faster)
+      // Fetch ALL data - no date restrictions
       const [
         { data: trips },
         { data: vehicles },
@@ -73,13 +70,13 @@ export function ComprehensiveAIAnalysis() {
         { data: fuelRecords },
         { data: maintenance }
       ] = await Promise.all([
-        supabase.from('trips').select('*').gte('created_at', startOfYear),
+        supabase.from('trips').select('*'),
         supabase.from('fleet_vehicles').select('*'),
         supabase.from('drivers').select('*').eq('status', 'active'),
-        supabase.from('expenses').select('*').gte('created_at', startOfYear),
+        supabase.from('expenses').select('*'),
         supabase.from('invoices').select('*'),
-        supabase.from('fuel_records').select('*').gte('created_at', startOfYear),
-        supabase.from('maintenance_requests').select('*').gte('created_at', startOfYear),
+        supabase.from('fuel_records').select('*'),
+        supabase.from('maintenance_requests').select('*'),
       ]);
 
       const tripsData = trips || [];
@@ -105,28 +102,45 @@ export function ComprehensiveAIAnalysis() {
         maintenanceCount: (maintenance || []).length
       });
 
-      // Generate monthly chart data
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const currentMonth = new Date().getMonth();
+      // Get the latest year with data for chart display
+      const allDates = [
+        ...tripsData.map(t => t.created_at || t.startDate),
+        ...expensesData.map(e => e.created_at || e.date)
+      ].filter(Boolean);
       
-      const monthlyData = months.slice(0, currentMonth + 1).map((month, idx) => {
+      const years = [...new Set(allDates.map(d => new Date(d).getFullYear()))].sort((a, b) => b - a);
+      const latestYear = years[0] || new Date().getFullYear();
+      
+      // Generate monthly chart data for the latest year with data
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      const monthlyData = months.map((month, idx) => {
         const monthTrips = tripsData.filter(t => {
-          const date = new Date(t.created_at || t.startDate);
-          return date.getMonth() === idx;
+          const dateStr = t.created_at || t.startDate || t.date;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
+          return date.getFullYear() === latestYear && date.getMonth() === idx;
         });
         
         const monthExpenses = expensesData.filter(e => {
-          const date = new Date(e.created_at || e.date);
-          return date.getMonth() === idx;
+          const dateStr = e.created_at || e.date || e.expense_date;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
+          return date.getFullYear() === latestYear && date.getMonth() === idx;
         });
 
         return {
           month,
-          revenue: monthTrips.reduce((sum, t) => sum + (t.salesAmount || t.revenue || 0), 0),
+          revenue: monthTrips.reduce((sum, t) => sum + (t.salesAmount || t.revenue || t.price || 0), 0),
           expenses: monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0),
           trips: monthTrips.length,
           fuel: (fuelRecords || [])
-            .filter(f => new Date(f.created_at || f.date).getMonth() === idx)
+            .filter(f => {
+              const dateStr = f.created_at || f.date || f.fuel_date;
+              if (!dateStr) return false;
+              const date = new Date(dateStr);
+              return date.getFullYear() === latestYear && date.getMonth() === idx;
+            })
             .reduce((sum, f) => sum + (f.liters || 0), 0),
         };
       });

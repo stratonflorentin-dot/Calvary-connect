@@ -70,29 +70,43 @@ export function ProfessionalCEODashboard() {
         supabase.from('fuel_records').select('*'),
       ]);
 
-      const currentYear = new Date().getFullYear();
+      // Get all unique years from data for historical view
+      const allDates = [
+        ...(trips || []).map(t => t.created_at || t.startDate),
+        ...(expenses || []).map(e => e.created_at || e.date),
+        ...(invoices || []).map(i => i.created_at || i.date)
+      ].filter(Boolean);
+      
+      const years = [...new Set(allDates.map(d => new Date(d).getFullYear()))].sort((a, b) => b - a);
+      const currentYear = years[0] || new Date().getFullYear();
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       
-      // Calculate monthly data
+      // Calculate monthly data for current/latest year with data
       const monthlyStats: MonthlyData[] = months.map((month, idx) => {
         const monthTrips = trips?.filter(t => {
-          const date = new Date(t.created_at || t.startDate);
+          const dateStr = t.created_at || t.startDate || t.date;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
           return date.getFullYear() === currentYear && date.getMonth() === idx;
         }) || [];
         
         const monthExpenses = expenses?.filter(e => {
-          const date = new Date(e.created_at || e.date);
+          const dateStr = e.created_at || e.date || e.expense_date;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
           return date.getFullYear() === currentYear && date.getMonth() === idx;
         }) || [];
 
         const monthInvoices = invoices?.filter(i => {
-          const date = new Date(i.created_at || i.date);
+          const dateStr = i.created_at || i.date || i.invoice_date;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
           return date.getFullYear() === currentYear && date.getMonth() === idx;
         }) || [];
 
         const revenue = monthInvoices.reduce((sum, i) => sum + (i.total || i.amount || 0), 0);
         const expensesTotal = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-        const tripRevenue = monthTrips.reduce((sum, t) => sum + (t.salesAmount || t.revenue || 0), 0);
+        const tripRevenue = monthTrips.reduce((sum, t) => sum + (t.salesAmount || t.revenue || t.price || 0), 0);
 
         return {
           month,
@@ -105,8 +119,8 @@ export function ProfessionalCEODashboard() {
 
       setMonthlyData(monthlyStats);
 
-      // Calculate overall metrics
-      const totalRevenue = trips?.reduce((sum, t) => sum + (t.salesAmount || t.revenue || 0), 0) || 0;
+      // Calculate overall metrics (ALL TIME - not filtered by year)
+      const totalRevenue = trips?.reduce((sum, t) => sum + (t.salesAmount || t.revenue || t.price || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       const totalFuelCost = fuelRecords?.reduce((sum, f) => sum + (f.cost || 0), 0) || 0;
       const totalFuelLiters = fuelRecords?.reduce((sum, f) => sum + (f.liters || 0), 0) || 0;
