@@ -641,15 +641,16 @@ export default function TripsPage() {
                           placeholder="500"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="estimated_time">Estimated Time (hours)</Label>
-                        <Input
-                          id="estimated_time"
-                          value={tripForm.estimated_time}
-                          onChange={(e) => setTripForm({ ...tripForm, estimated_time: e.target.value })}
-                          placeholder="8 hours"
-                        />
-                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="estimated_time">Estimated Time (hours)</Label>
+                      <Input
+                        id="estimated_time"
+                        value={tripForm.estimated_time}
+                        onChange={(e) => setTripForm({ ...tripForm, estimated_time: e.target.value })}
+                        placeholder="8 hours"
+                      />
                     </div>
 
                     {/* Trip Type & VAT */}
