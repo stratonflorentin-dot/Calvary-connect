@@ -14,7 +14,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Wrench, Route, History, Plus, CalendarDays, FileText, Shield, Upload, ExternalLink, Eye } from 'lucide-react';
+import { 
+  Wrench, Route, History, Plus, CalendarDays, FileText, Shield, Upload, ExternalLink, Eye,
+  DollarSign, TrendingUp, TrendingDown, Wallet, Receipt, Fuel, Calculator, BarChart3, Download
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
@@ -26,7 +29,11 @@ export default function TruckHistoryPage() {
   const [maintenanceHistory, setMaintenanceHistory] = useState<any[]>([]);
   const [serviceRecords, setServiceRecords] = useState<any[]>([]);
   const [insuranceDocuments, setInsuranceDocuments] = useState<any[]>([]);
+  const [vehicleTrips, setVehicleTrips] = useState<any[]>([]);
+  const [vehicleExpenses, setVehicleExpenses] = useState<any[]>([]);
+  const [vehicleFuel, setVehicleFuel] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'financial' | 'maintenance'>('overview');
   
   // Service record form state
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
@@ -97,10 +104,37 @@ export default function TruckHistoryPage() {
         
         if (insuranceError) throw insuranceError;
         
+        // Load trips with vehicle assignments
+        const { data: trips, error: tripsError } = await supabase
+          .from('trips')
+          .select('id, vehicle_id, salesAmount, revenue, price, totalAmount, status, created_at, startDate, origin, destination')
+          .order('created_at', { ascending: false });
+        
+        if (tripsError) throw tripsError;
+        
+        // Load expenses by vehicle
+        const { data: expenses, error: expensesError } = await supabase
+          .from('expenses')
+          .select('id, vehicle_id, amount, total, category, description, created_at, date')
+          .order('created_at', { ascending: false });
+        
+        if (expensesError) throw expensesError;
+        
+        // Load fuel records by vehicle
+        const { data: fuelRecords, error: fuelError } = await supabase
+          .from('fuel_records')
+          .select('id, vehicle_id, cost, totalCost, amount, liters, quantity, created_at, date')
+          .order('created_at', { ascending: false });
+        
+        if (fuelError) throw fuelError;
+        
         setFleet(vehicles || []);
         setMaintenanceHistory(maintenance || []);
         setServiceRecords(services || []);
         setInsuranceDocuments(insuranceDocs || []);
+        setVehicleTrips(trips || []);
+        setVehicleExpenses(expenses || []);
+        setVehicleFuel(fuelRecords || []);
       } catch (error) {
         console.error('Error loading truck history:', error);
       } finally {
@@ -116,6 +150,42 @@ export default function TruckHistoryPage() {
   const vehicleInsuranceDocs = insuranceDocuments?.filter(d => d.vehicle_id === selectedVehicleId);
   const isMechanic = role === 'MECHANIC' || role === 'CEO' || role === 'ADMIN';
   const canUploadDocs = role === 'DRIVER' || role === 'ADMIN' || role === 'CEO' || role === 'OPERATOR';
+
+  // Filter financial data for selected vehicle
+  const vehicleTripRecords = vehicleTrips?.filter(t => t.vehicle_id === selectedVehicleId);
+  const vehicleExpenseRecords = vehicleExpenses?.filter(e => e.vehicle_id === selectedVehicleId);
+  const vehicleFuelRecords = vehicleFuel?.filter(f => f.vehicle_id === selectedVehicleId);
+
+  // Calculate financial metrics
+  const totalIncome = vehicleTripRecords?.reduce((sum: number, t: any) => 
+    sum + (t.salesAmount || t.revenue || t.price || t.totalAmount || 0), 0) || 0;
+  
+  const totalServiceCosts = vehicleServices?.reduce((sum: number, s: any) => 
+    sum + (s.total_cost || 0), 0) || 0;
+  
+  const totalExpenses = vehicleExpenseRecords?.reduce((sum: number, e: any) => 
+    sum + (e.amount || e.total || 0), 0) || 0;
+  
+  const totalFuelCosts = vehicleFuelRecords?.reduce((sum: number, f: any) => 
+    sum + (f.cost || f.totalCost || f.amount || 0), 0) || 0;
+  
+  const totalFuelLiters = vehicleFuelRecords?.reduce((sum: number, f: any) => 
+    sum + (f.liters || f.quantity || 0), 0) || 0;
+  
+  const totalCosts = totalServiceCosts + totalExpenses + totalFuelCosts;
+  const netProfit = totalIncome - totalCosts;
+  const profitMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
+  const tripsCount = vehicleTripRecords?.length || 0;
+  const avgRevenuePerTrip = tripsCount > 0 ? totalIncome / tripsCount : 0;
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-TZ', {
+      style: 'currency',
+      currency: 'TZS',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  };
 
   const handleAddServiceRecord = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,8 +319,8 @@ export default function TruckHistoryPage() {
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-headline tracking-tighter">Truck Lifecycle History</h1>
-            <p className="text-muted-foreground text-sm font-sans">Audit maintenance logs and trip history per asset.</p>
+            <h1 className="text-3xl font-headline tracking-tighter">Vehicle Income & Expenses</h1>
+            <p className="text-muted-foreground text-sm font-sans">Complete financial history: trips, revenue, costs, fuel & maintenance per vehicle.</p>
           </div>
           
           <div className="w-full md:w-64">
@@ -301,16 +371,53 @@ export default function TruckHistoryPage() {
                 </CardContent>
               </Card>
 
+              {/* Financial Summary Card */}
+              <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
+                <div className={`p-4 ${netProfit >= 0 ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white' : 'bg-gradient-to-br from-red-500 to-red-600 text-white'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <Wallet className="size-5" />
+                    <Badge className="bg-white/20 text-white border-0 text-[10px]">
+                      {profitMargin >= 0 ? '+' : ''}{profitMargin.toFixed(1)}%
+                    </Badge>
+                  </div>
+                  <p className="text-[10px] uppercase opacity-80">Net Profit</p>
+                  <p className="text-2xl font-headline">{formatCurrency(netProfit)}</p>
+                </div>
+                <div className="p-3 space-y-2 bg-white">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Income</span>
+                    <span className="font-medium text-emerald-600">{formatCurrency(totalIncome)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Costs</span>
+                    <span className="font-medium text-red-600">{formatCurrency(totalCosts)}</span>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
+                  <DollarSign className="size-5 text-emerald-500 mb-2" />
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Income</p>
+                  <p className="text-lg font-headline">{formatCurrency(totalIncome)}</p>
+                </Card>
+                <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
+                  <Route className="size-5 text-blue-500 mb-2" />
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Trips</p>
+                  <p className="text-lg font-headline">{tripsCount}</p>
+                </Card>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
                   <Wrench className="size-5 text-primary mb-2" />
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Services</p>
-                  <p className="text-2xl font-headline">{vehicleServices?.length || 0}</p>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Services</p>
+                  <p className="text-lg font-headline">{vehicleServices?.length || 0}</p>
                 </Card>
                 <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
-                  <Route className="size-5 text-emerald-500 mb-2" />
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Trips Done</p>
-                  <p className="text-2xl font-headline">0</p>
+                  <Fuel className="size-5 text-amber-500 mb-2" />
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Fuel</p>
+                  <p className="text-lg font-headline">{totalFuelLiters.toFixed(0)}L</p>
                 </Card>
               </div>
               
@@ -360,6 +467,176 @@ export default function TruckHistoryPage() {
                     ) : (
                       <p className="text-center text-xs text-muted-foreground italic">No service records found.</p>
                     )}
+                  </section>
+
+                  {/* Financial Breakdown Section */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between ml-12 md:ml-0">
+                      <h3 className="text-xs uppercase tracking-widest font-bold text-muted-foreground flex items-center gap-2">
+                        <Calculator className="size-4" />
+                        Income & Expenses Summary
+                      </h3>
+                      <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                        <Download className="size-3" />
+                        Export
+                      </Button>
+                    </div>
+                    
+                    {/* Income Table */}
+                    <Card className="ml-12 md:ml-0 overflow-hidden">
+                      <div className="bg-emerald-50 px-4 py-2 border-b flex items-center gap-2">
+                        <TrendingUp className="size-4 text-emerald-600" />
+                        <span className="text-sm font-medium text-emerald-700">Income from Trips ({vehicleTripRecords?.length || 0} records)</span>
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 sticky top-0">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Date</th>
+                              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Route</th>
+                              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Amount</th>
+                              <th className="px-3 py-2 text-center font-medium text-muted-foreground">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {vehicleTripRecords?.length > 0 ? (
+                              vehicleTripRecords.map((trip: any) => (
+                                <tr key={trip.id} className="border-t hover:bg-slate-50">
+                                  <td className="px-3 py-2">{new Date(trip.created_at || trip.startDate).toLocaleDateString()}</td>
+                                  <td className="px-3 py-2">{trip.origin || 'N/A'} → {trip.destination || 'N/A'}</td>
+                                  <td className="px-3 py-2 text-right font-medium text-emerald-600">
+                                    {formatCurrency(trip.salesAmount || trip.revenue || trip.price || trip.totalAmount || 0)}
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    <Badge variant="outline" className="text-[9px]">{trip.status || 'N/A'}</Badge>
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={4} className="px-3 py-4 text-center text-muted-foreground italic">No trip records found</td>
+                              </tr>
+                            )}
+                            <tr className="bg-emerald-50 font-medium">
+                              <td colSpan={2} className="px-3 py-2 text-right">Total Income:</td>
+                              <td className="px-3 py-2 text-right text-emerald-700">{formatCurrency(totalIncome)}</td>
+                              <td></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+
+                    {/* Expenses Table */}
+                    <Card className="ml-12 md:ml-0 overflow-hidden">
+                      <div className="bg-red-50 px-4 py-2 border-b flex items-center gap-2">
+                        <TrendingDown className="size-4 text-red-600" />
+                        <span className="text-sm font-medium text-red-700">Expenses ({vehicleExpenseRecords?.length || 0} records)</span>
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 sticky top-0">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Date</th>
+                              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Category</th>
+                              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Description</th>
+                              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {vehicleExpenseRecords?.length > 0 ? (
+                              vehicleExpenseRecords.map((expense: any) => (
+                                <tr key={expense.id} className="border-t hover:bg-slate-50">
+                                  <td className="px-3 py-2">{new Date(expense.created_at || expense.date).toLocaleDateString()}</td>
+                                  <td className="px-3 py-2">
+                                    <Badge variant="outline" className="text-[9px]">{expense.category || 'General'}</Badge>
+                                  </td>
+                                  <td className="px-3 py-2 text-muted-foreground">{expense.description || '-'}</td>
+                                  <td className="px-3 py-2 text-right font-medium text-red-600">
+                                    {formatCurrency(expense.amount || expense.total || 0)}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={4} className="px-3 py-4 text-center text-muted-foreground italic">No expense records found</td>
+                              </tr>
+                            )}
+                            <tr className="bg-red-50 font-medium">
+                              <td colSpan={3} className="px-3 py-2 text-right">Total Expenses:</td>
+                              <td className="px-3 py-2 text-right text-red-700">{formatCurrency(totalExpenses)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+
+                    {/* Fuel Records Table */}
+                    <Card className="ml-12 md:ml-0 overflow-hidden">
+                      <div className="bg-amber-50 px-4 py-2 border-b flex items-center gap-2">
+                        <Fuel className="size-4 text-amber-600" />
+                        <span className="text-sm font-medium text-amber-700">Fuel Records ({vehicleFuelRecords?.length || 0} records)</span>
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 sticky top-0">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Date</th>
+                              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Liters</th>
+                              <th className="px-3 py-2 text-right font-medium text-muted-foreground">Cost</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {vehicleFuelRecords?.length > 0 ? (
+                              vehicleFuelRecords.map((fuel: any) => (
+                                <tr key={fuel.id} className="border-t hover:bg-slate-50">
+                                  <td className="px-3 py-2">{new Date(fuel.created_at || fuel.date).toLocaleDateString()}</td>
+                                  <td className="px-3 py-2 text-right">{fuel.liters || fuel.quantity || 0} L</td>
+                                  <td className="px-3 py-2 text-right font-medium text-amber-600">
+                                    {formatCurrency(fuel.cost || fuel.totalCost || fuel.amount || 0)}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={3} className="px-3 py-4 text-center text-muted-foreground italic">No fuel records found</td>
+                              </tr>
+                            )}
+                            <tr className="bg-amber-50 font-medium">
+                              <td className="px-3 py-2 text-right">Total Fuel:</td>
+                              <td className="px-3 py-2 text-right text-amber-700">{totalFuelLiters.toFixed(0)} L</td>
+                              <td className="px-3 py-2 text-right text-amber-700">{formatCurrency(totalFuelCosts)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+
+                    {/* Summary Card */}
+                    <Card className="ml-12 md:ml-0 bg-gradient-to-r from-slate-50 to-slate-100">
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Total Income</p>
+                            <p className="text-lg font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Total Costs</p>
+                            <p className="text-lg font-bold text-red-600">{formatCurrency(totalCosts)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Net Profit</p>
+                            <p className={`text-lg font-bold ${netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              {formatCurrency(netProfit)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Avg/Trip</p>
+                            <p className="text-lg font-bold text-blue-600">{formatCurrency(avgRevenuePerTrip)}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </section>
 
                   <section className="space-y-4">

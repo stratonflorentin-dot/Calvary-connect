@@ -59,10 +59,24 @@ interface CompanyMetrics {
 }
 
 interface DatabaseQuery {
-  table: string;
+  table: 'trips' | 'fleet_vehicles' | 'drivers' | 'expenses' | 'invoices' | 'fuel_records' | 'maintenance_requests' | 'vehicle_service_records' | 'vehicle_expenses' | 'vehicle_financial_summary';
   filters?: { column: string; operator: string; value: any }[];
   orderBy?: { column: string; ascending: boolean };
   limit?: number;
+}
+
+interface VehicleFinancialData {
+  vehicle_id: string;
+  plate_number: string;
+  vehicle_name: string;
+  total_income: number;
+  total_costs: number;
+  net_profit: number;
+  profit_margin_percent: number;
+  trip_count: number;
+  service_count: number;
+  fuel_count: number;
+  total_fuel_liters: number;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
@@ -231,6 +245,82 @@ export function AIAnalysisDashboard() {
       return `Vehicles in maintenance: ${maintenance.length}\n${maintenance.map((m: any) => `• Vehicle ID: ${m.vehicle_id} - Status: ${m.status}`).join('\n')}`;
     }
     
+    // Vehicle financial analysis - profit per vehicle
+    if (lowerMsg.includes('vehicle') && (lowerMsg.includes('profit') || lowerMsg.includes('income') || lowerMsg.includes('revenue') || lowerMsg.includes('earning'))) {
+      try {
+        // Query vehicle financial summary view
+        const vehicleFinancials = await queryDatabase({ 
+          table: 'vehicle_financial_summary', 
+          orderBy: { column: 'net_profit', ascending: false } 
+        });
+        
+        if (vehicleFinancials && vehicleFinancials.length > 0) {
+          const topVehicles = vehicleFinancials.slice(0, 5);
+          return `🏆 Top Performing Vehicles by Profit:\n\n${topVehicles.map((v: VehicleFinancialData, idx: number) => 
+            `${idx + 1}. ${v.vehicle_name} (${v.plate_number})\n   💰 Profit: ${formatCurrency(v.net_profit)} | Margin: ${v.profit_margin_percent.toFixed(1)}%\n   📊 Income: ${formatCurrency(v.total_income)} | Costs: ${formatCurrency(v.total_costs)}\n   🚛 Trips: ${v.trip_count} | Fuel: ${v.total_fuel_liters.toFixed(0)}L`
+          ).join('\n\n')}\n\n📈 Total Fleet Profit: ${formatCurrency(vehicleFinancials.reduce((sum: number, v: VehicleFinancialData) => sum + v.net_profit, 0))}`;
+        } else {
+          // Fallback to calculating from individual tables
+          const vehicles = await queryDatabase({ table: 'fleet_vehicles', limit: 10 });
+          const trips = await queryDatabase({ table: 'trips' });
+          const services = await queryDatabase({ table: 'vehicle_service_records' });
+          const fuel = await queryDatabase({ table: 'fuel_records' });
+          
+          const vehicleStats = vehicles.map((v: any) => {
+            const vTrips = trips.filter((t: any) => t.vehicle_id === v.id);
+            const vServices = services.filter((s: any) => s.vehicle_id === v.id);
+            const vFuel = fuel.filter((f: any) => f.vehicle_id === v.id);
+            
+            const income = vTrips.reduce((sum: number, t: any) => sum + (t.salesAmount || t.revenue || t.price || 0), 0);
+            const serviceCost = vServices.reduce((sum: number, s: any) => sum + (s.total_cost || 0), 0);
+            const fuelCost = vFuel.reduce((sum: number, f: any) => sum + (f.cost || f.total_cost || 0), 0);
+            const profit = income - serviceCost - fuelCost;
+            
+            return {
+              name: v.name || v.plateNumber || 'Unknown',
+              plate: v.plateNumber || v.plate_number,
+              income,
+              costs: serviceCost + fuelCost,
+              profit,
+              trips: vTrips.length,
+              margin: income > 0 ? ((profit / income) * 100).toFixed(1) : '0'
+            };
+          }).sort((a: any, b: any) => b.profit - a.profit);
+          
+          return `📊 Vehicle Financial Performance:\n\n${vehicleStats.slice(0, 5).map((v: any, idx: number) => 
+            `${idx + 1}. ${v.name} (${v.plate})\n   💰 Profit: ${formatCurrency(v.profit)} (${v.margin}% margin)\n   💵 Income: ${formatCurrency(v.income)} | Costs: ${formatCurrency(v.costs)}\n   🚛 Trips: ${v.trips}`
+          ).join('\n\n')}`;
+        }
+      } catch (error) {
+        return 'I can analyze vehicle profitability. Please ensure the vehicle financial data is properly synced.';
+      }
+    }
+    
+    // Vehicle expenses breakdown
+    if (lowerMsg.includes('vehicle') && lowerMsg.includes('expense')) {
+      try {
+        const expenses = await queryDatabase({ table: 'vehicle_expenses', orderBy: { column: 'expense_date', ascending: false }, limit: 10 });
+        const fuel = await queryDatabase({ table: 'fuel_records', orderBy: { column: 'fuel_date', ascending: false }, limit: 10 });
+        const services = await queryDatabase({ table: 'vehicle_service_records', orderBy: { column: 'service_date', ascending: false }, limit: 10 });
+        
+        const totalExpenses = expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
+        const totalFuel = fuel.reduce((sum: number, f: any) => sum + (f.cost || f.total_cost || 0), 0);
+        const totalService = services.reduce((sum: number, s: any) => sum + (s.total_cost || 0), 0);
+        
+        return `🚗 Vehicle Expense Breakdown:\n\n` +
+          `🔧 Services: ${formatCurrency(totalService)} (${services.length} records)\n` +
+          `⛽ Fuel: ${formatCurrency(totalFuel)} (${fuel.length} records)\n` +
+          `📋 Other: ${formatCurrency(totalExpenses)} (${expenses.length} records)\n` +
+          `━━━━━━━━━━━━━━━━━━━\n` +
+          `💰 Total: ${formatCurrency(totalService + totalFuel + totalExpenses)}\n\n` +
+          `Recent expenses:\n${expenses.slice(0, 3).map((e: any) => 
+            `• ${e.category}: ${formatCurrency(e.amount)} - ${e.description || 'N/A'}`
+          ).join('\n')}`;
+      } catch (error) {
+        return 'Vehicle expense data is being synced. Try again shortly.';
+      }
+    }
+    
     if (lowerMsg.includes('fuel') && lowerMsg.includes('consumption')) {
       const fuel = await queryDatabase({ table: 'fuel_records', orderBy: { column: 'created_at', ascending: false }, limit: 10 });
       const totalLiters = fuel.reduce((sum: number, f: any) => sum + (f.liters || 0), 0);
@@ -254,9 +344,9 @@ export function AIAnalysisDashboard() {
       return `Driver Statistics:\n• Total Drivers: ${metrics.totalDrivers}\n• Active: ${metrics.activeDrivers}\n• Completed Trips: ${metrics.completedTrips}\n• Pending Trips: ${metrics.pendingTrips}`;
     }
     
-    if (lowerMsg.includes('expense')) {
+    if (lowerMsg.includes('expense') && !lowerMsg.includes('vehicle')) {
       if (!metrics) return 'Loading metrics...';
-      const expenses = await queryDatabase({ table: 'expenses', orderBy: { column: 'created_at', ascending: false }, limit: 5 });
+      const expenses = await queryDatabase({ table: 'vehicle_expenses', orderBy: { column: 'created_at', ascending: false }, limit: 5 });
       return `Recent Expenses:\n${expenses.map((e: any) => `• ${e.category || 'General'}: ${formatCurrency(e.amount || 0)}`).join('\n')}\n\nTotal Expenses: ${formatCurrency(metrics.totalExpenses + metrics.fuelCosts)}`;
     }
     
