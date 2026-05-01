@@ -9,6 +9,7 @@
 DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
 DROP POLICY IF EXISTS "Users can view own profile by email" ON user_profiles;
 DROP POLICY IF EXISTS "Admins can manage all profiles" ON user_profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 
 -- Create new policy: Users can view their own profile by ID OR EMAIL
 CREATE POLICY "Users can view own profile" ON user_profiles
