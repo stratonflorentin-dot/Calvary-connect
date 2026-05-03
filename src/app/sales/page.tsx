@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
@@ -154,7 +154,7 @@ const LOCAL_ROUTES = [
 
 // ─── Main Component ────────────────────────────────────────────────
 
-export default function SalesModule() {
+function SalesModuleContent() {
   const { role } = useRole();
   const { user } = useSupabase();
   const searchParams = useSearchParams();
@@ -1041,5 +1041,23 @@ export default function SalesModule() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+// Wrapper with Suspense boundary for useSearchParams
+export default function SalesModule() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen bg-gray-100">
+        <Sidebar />
+        <div className="flex-1 p-8">
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <SalesModuleContent />
+    </Suspense>
   );
 }
