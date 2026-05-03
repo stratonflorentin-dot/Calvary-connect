@@ -414,55 +414,63 @@ function SalesModuleContent() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-6 overflow-x-hidden">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Sales & Commercial</h1>
-          <p className="text-gray-600">Manage customers, quotations, contracts, and sales pipeline</p>
+          <p className="text-gray-600 mt-1">Manage customers, quotations, contracts, and sales pipeline</p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Customers</p>
-                  <p className="text-2xl font-bold">{totalCustomers}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-500 truncate">Total Customers</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalCustomers}</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0 ml-2">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Active Quotations</p>
-                  <p className="text-2xl font-bold">{totalQuotations}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-500 truncate">Active Quotations</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalQuotations}</p>
                 </div>
-                <FileText className="h-8 w-8 text-yellow-600" />
+                <div className="bg-amber-100 p-2 rounded-lg flex-shrink-0 ml-2">
+                  <FileText className="h-6 w-6 text-amber-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Contracts</p>
-                  <p className="text-2xl font-bold">{totalContracts}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-500 truncate">Contracts</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalContracts}</p>
                 </div>
-                <FileSignature className="h-8 w-8 text-green-600" />
+                <div className="bg-emerald-100 p-2 rounded-lg flex-shrink-0 ml-2">
+                  <FileSignature className="h-6 w-6 text-emerald-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white shadow-sm border border-gray-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Pipeline Value</p>
-                  <p className="text-2xl font-bold">TZS {pipelineValue.toLocaleString()}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-500 truncate">Pipeline Value</p>
+                  <p className="text-2xl font-bold text-gray-900">TZS {pipelineValue.toLocaleString()}</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-purple-600" />
+                <div className="bg-purple-100 p-2 rounded-lg flex-shrink-0 ml-2">
+                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
