@@ -1,28 +1,32 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { QuoteGenerator } from './quote-generator';
-import { TransportAgreementGenerator } from './transport-agreement-generator';
+import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { 
   Building2, FileText, Users, Plus, Search, Phone, Mail, MapPin,
-  Calendar, DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle,
-  ArrowRight, Briefcase, FileSignature, PhoneCall, Printer
+  DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, ArrowRight, 
+  Briefcase, FileSignature, Printer, Download, Route, Truck, Container,
+  Thermometer, Weight, Ruler, CalendarDays, X
 } from 'lucide-react';
+import { format, addDays } from 'date-fns';
+
+// ─── Types ──────────────────────────────────────────────────────────
 
 interface Customer {
   id: string;
@@ -36,1104 +40,1006 @@ interface Customer {
   tax_id: string;
   credit_limit: number;
   status: string;
-  notes: string;
-  total_quotations?: number;
-  active_contracts?: number;
 }
 
-interface Quotation {
+interface RouteQuotation {
   id: string;
   quotation_number: string;
   customer_id: string;
   company_name?: string;
-  quotation_date: string;
-  expiry_date: string;
-  status: string;
+  service_type: string;
   origin: string;
   destination: string;
+  distance_km: number;
+  cargo_type: string;
+  cargo_weight_mt: number;
+  container_size?: string;
+  rate_per_km: number;
+  base_amount: number;
+  fuel_surcharge_pct: number;
+  fuel_surcharge_amount: number;
+  border_fees: number;
+  escort_fees: number;
   subtotal: number;
+  vat_rate: number;
   vat_amount: number;
   total_amount: number;
   currency: string;
+  validity_days: number;
+  expiry_date: string;
+  status: string;
+  notes: string;
+  created_at: string;
 }
 
-interface Contract {
+interface TransportContract {
   id: string;
   contract_number: string;
   customer_id: string;
   company_name?: string;
   contract_type: string;
+  service_types: string[];
+  routes: Array<{origin: string; destination: string; rate: number}>;
   start_date: string;
-  end_date: string;
+  end_date?: string;
+  min_monthly_trips: number;
   contract_value: number;
   currency: string;
+  payment_terms: string;
   status: string;
+  signed_by_client: boolean;
+  signed_by_calvary: boolean;
+  created_at: string;
+}
+
+interface RateSheetEntry {
+  id: string;
+  route_name: string;
   origin: string;
   destination: string;
-  trips_per_month: number;
-  total_trips_completed: number;
+  service_type: string;
+  distance_km: number;
+  container_20ft: number;
+  container_40ft: number;
+  loose_rate_mt: number;
+  lowbed_rate: number;
+  reefer_surcharge: number;
+  border_clearance_fee: number;
+  transit_days: number;
 }
 
-interface FollowUp {
-  id: string;
-  customer_id: string;
-  company_name?: string;
-  follow_up_type: string;
-  scheduled_date: string;
-  status: string;
-  subject: string;
-  notes: string;
-}
-
-interface Opportunity {
+interface SalesOpportunity {
   id: string;
   customer_id: string;
   company_name?: string;
   opportunity_name: string;
-  stage: string;
+  service_type: string;
+  estimated_monthly_revenue: number;
   probability: number;
-  estimated_value: number;
+  stage: string;
   expected_close_date: string;
+  competitor?: string;
+  notes: string;
 }
+
+// ─── Constants ─────────────────────────────────────────────────────
+
+const SERVICE_TYPES = [
+  { value: 'local_transport', label: 'Local Transport (TZ)', icon: Truck },
+  { value: 'cross_border', label: 'Cross-Border Transit', icon: Route },
+  { value: 'lowbed', label: 'Lowbed / Heavy Haulage', icon: Weight },
+  { value: 'reefer', label: 'Reefer / Cold Chain', icon: Thermometer },
+  { value: 'loose_cargo', label: 'Loose Cargo / Bulk', icon: Container },
+];
+
+const CROSS_BORDER_ROUTES = [
+  { origin: 'Dar es Salaam', destination: 'Lusaka (Zambia)', distance: 1850, border: 'Tunduma/Nakonde' },
+  { origin: 'Dar es Salaam', destination: 'Lubumbashi (DRC)', distance: 1650, border: 'Kasumulu' },
+  { origin: 'Dar es Salaam', destination: 'Bujumbura (Burundi)', distance: 1100, border: 'Mutukula/Kobero' },
+  { origin: 'Dar es Salaam', destination: 'Kigali (Rwanda)', distance: 1150, border: 'Rusumo' },
+  { origin: 'Dar es Salaam', destination: 'Kampala (Uganda)', distance: 1450, border: 'Mutukula' },
+  { origin: 'Dar es Salaam', destination: 'Nairobi (Kenya)', distance: 850, border: 'Namanga' },
+  { origin: 'Dar es Salaam', destination: 'Juba (South Sudan)', distance: 2100, border: 'Nimule' },
+];
+
+const LOCAL_ROUTES = [
+  { origin: 'Dar es Salaam', destination: 'Mwanza', distance: 1150 },
+  { origin: 'Dar es Salaam', destination: 'Arusha', distance: 630 },
+  { origin: 'Dar es Salaam', destination: 'Dodoma', distance: 450 },
+  { origin: 'Dar es Salaam', destination: 'Mbeya', distance: 830 },
+  { origin: 'Dar es Salaam', destination: 'Tanga', distance: 350 },
+  { origin: 'Dar es Salaam', destination: 'Morogoro', distance: 190 },
+  { origin: 'Dar es Salaam', destination: 'Kigoma', distance: 1050 },
+];
+
+// ─── Main Component ────────────────────────────────────────────────
 
 export default function SalesModule() {
   const { role } = useRole();
   const { user } = useSupabase();
-  const [activeTab, setActiveTab] = useState('customers');
-
-  // Permission checks - CEO, ADMIN, and SALESMAN can create quotations
-  const canCreateQuotation = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
-  const canCreateContract = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
-  const canCreateCustomer = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
-
-  // Data states
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  
+  const [activeTab, setActiveTab] = useState(tabParam || 'customers');
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-
-  // Loading states
+  const [quotations, setQuotations] = useState<RouteQuotation[]>([]);
+  const [contracts, setContracts] = useState<TransportContract[]>([]);
+  const [rateSheets, setRateSheets] = useState<RateSheetEntry[]>([]);
+  const [opportunities, setOpportunities] = useState<SalesOpportunity[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   // Dialog states
-  const [showAddCustomer, setShowAddCustomer] = useState(false);
-  const [showAddQuotation, setShowAddQuotation] = useState(false);
-  const [showQuoteGenerator, setShowQuoteGenerator] = useState(false);
-  const [showTransportAgreement, setShowTransportAgreement] = useState(false);
-  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
-  const [showAddFollowUp, setShowAddFollowUp] = useState(false);
+  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
+  const [showQuotationDialog, setShowQuotationDialog] = useState(false);
+  const [showContractDialog, setShowContractDialog] = useState(false);
+  const [showOpportunityDialog, setShowOpportunityDialog] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   // Form states
   const [customerForm, setCustomerForm] = useState({
-    company_name: '',
-    contact_person: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    tax_id: '',
-    credit_limit: '',
-    payment_terms: '30 days',
-    notes: ''
+    company_name: '', contact_person: '', email: '', phone: '', 
+    address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '',
+    payment_terms: '30 days', status: 'prospect', notes: ''
   });
-
+  
   const [quotationForm, setQuotationForm] = useState({
-    customer_id: '',
-    origin: '',
-    destination: '',
-    cargo_type: '',
-    cargo_weight_kg: '',
-    subtotal: '',
-    vat_rate: '18',
-    validity_days: '30',
-    notes: ''
+    customer_id: '', service_type: 'local_transport', origin: '', destination: '',
+    distance_km: 0, cargo_type: '', cargo_weight_mt: '', container_size: '20ft',
+    rate_per_km: 0, fuel_surcharge_pct: 15, border_fees: 0, escort_fees: 0,
+    vat_rate: 18, validity_days: 30, notes: ''
   });
 
   const [contractForm, setContractForm] = useState({
-    customer_id: '',
-    quotation_id: '',
-    contract_type: 'one_time',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: '',
-    origin: '',
-    destination: '',
-    contract_value: '',
-    trips_per_month: '',
-    rate_per_km: '',
-    payment_schedule: 'monthly',
+    customer_id: '', quotation_id: '', contract_type: 'long_term', 
+    start_date: format(new Date(), 'yyyy-MM-dd'), end_date: '',
+    min_monthly_trips: 10, contract_value: '', payment_terms: '30 days',
     notes: ''
   });
 
-  // Load all data
+  const [opportunityForm, setOpportunityForm] = useState({
+    customer_id: '', opportunity_name: '', service_type: 'local_transport',
+    estimated_monthly_revenue: '', probability: 50, stage: 'lead',
+    expected_close_date: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+    competitor: '', notes: ''
+  });
+
+  // Permissions
+  const canCreate = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
+
+  // Fetch data
   useEffect(() => {
-    loadData();
+    fetchCustomers();
+    fetchQuotations();
+    fetchContracts();
+    fetchRateSheets();
+    fetchOpportunities();
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [customersRes, quotationsRes, contractsRes, followUpsRes, opportunitiesRes] = await Promise.all([
-        supabase.from('customers').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-        supabase.from('quotations').select('*, customers(company_name)').is('deleted_at', null).order('created_at', { ascending: false }),
-        supabase.from('contracts').select('*, customers(company_name)').is('deleted_at', null).order('created_at', { ascending: false }),
-        supabase.from('follow_ups').select('*, customers(company_name)').order('scheduled_date', { ascending: true }),
-        supabase.from('sales_opportunities').select('*, customers(company_name)').is('deleted_at', null).order('created_at', { ascending: false })
-      ]);
-
-      setCustomers(customersRes.data || []);
-      setQuotations(quotationsRes.data?.map(q => ({ ...q, company_name: q.customers?.company_name })) || []);
-      setContracts(contractsRes.data?.map(c => ({ ...c, company_name: c.customers?.company_name })) || []);
-      setFollowUps(followUpsRes.data?.map(f => ({ ...f, company_name: f.customers?.company_name })) || []);
-      setOpportunities(opportunitiesRes.data?.map(o => ({ ...o, company_name: o.customers?.company_name })) || []);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (tabParam) {
+      setActiveTab(tabParam);
     }
-  };
+  }, [tabParam]);
 
-  // Create customer
-  const handleCreateCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { data, error } = await supabase.from('customers').insert({
-        ...customerForm,
-        credit_limit: parseFloat(customerForm.credit_limit) || 0,
-        created_by: user?.id
-      }).select().single();
+  async function fetchCustomers() {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error) setCustomers(data || []);
+    setLoading(false);
+  }
 
-      if (error) throw error;
+  async function fetchQuotations() {
+    const { data, error } = await supabase
+      .from('route_quotations')
+      .select('*, customers!customer_id(company_name)')
+      .order('created_at', { ascending: false });
+    if (!error) setQuotations(data?.map(q => ({...q, company_name: q.customers?.company_name})) || []);
+  }
 
-      toast({ title: 'Success', description: `Customer ${data.customer_code} created` });
-      setShowAddCustomer(false);
+  async function fetchContracts() {
+    const { data, error } = await supabase
+      .from('transport_contracts')
+      .select('*, customers!customer_id(company_name)')
+      .order('created_at', { ascending: false });
+    if (!error) setContracts(data?.map(c => ({...c, company_name: c.customers?.company_name})) || []);
+  }
+
+  async function fetchRateSheets() {
+    const { data, error } = await supabase
+      .from('rate_sheets')
+      .select('*')
+      .eq('is_active', true)
+      .order('route_name');
+    if (!error) setRateSheets(data || []);
+  }
+
+  async function fetchOpportunities() {
+    const { data, error } = await supabase
+      .from('sales_opportunities')
+      .select('*, customers!customer_id(company_name)')
+      .order('created_at', { ascending: false });
+    if (!error) setOpportunities(data?.map(o => ({...o, company_name: o.customers?.company_name})) || []);
+  }
+
+  // Save functions
+  async function saveCustomer() {
+    if (!customerForm.company_name || !customerForm.contact_person || !customerForm.phone) {
+      toast({ title: 'Error', description: 'Please fill required fields', variant: 'destructive' });
+      return;
+    }
+    const { error } = await supabase.from('customers').insert([{
+      ...customerForm,
+      credit_limit: parseFloat(customerForm.credit_limit) || 0,
+      created_by: user?.id
+    }]);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Customer created successfully' });
+      setShowCustomerDialog(false);
       setCustomerForm({
-        company_name: '',
-        contact_person: '',
-        email: '',
-        phone: '',
-        address: '',
-        city: '',
-        tax_id: '',
-        credit_limit: '',
-        payment_terms: '30 days',
-        notes: ''
+        company_name: '', contact_person: '', email: '', phone: '',
+        address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '',
+        payment_terms: '30 days', status: 'prospect', notes: ''
       });
-      loadData();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      fetchCustomers();
     }
-  };
+  }
 
-  // Create quotation
-  const handleCreateQuotation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const subtotal = parseFloat(quotationForm.subtotal) || 0;
-      const vatRate = parseFloat(quotationForm.vat_rate) || 18;
-      const vatAmount = subtotal * (vatRate / 100);
-      const totalAmount = subtotal + vatAmount;
-
-      const { data, error } = await supabase.from('quotations').insert({
-        customer_id: quotationForm.customer_id,
-        origin: quotationForm.origin,
-        destination: quotationForm.destination,
-        cargo_type: quotationForm.cargo_type,
-        cargo_weight_kg: parseFloat(quotationForm.cargo_weight_kg) || 0,
-        subtotal,
-        vat_rate: vatRate,
-        vat_amount: vatAmount,
-        total_amount: totalAmount,
-        validity_days: parseInt(quotationForm.validity_days) || 30,
-        notes: quotationForm.notes,
-        created_by: user?.id
-      }).select().single();
-
-      if (error) throw error;
-
-      toast({ title: 'Success', description: `Quotation ${data.quotation_number} created` });
-      setShowAddQuotation(false);
-      setQuotationForm({
-        customer_id: '',
-        origin: '',
-        destination: '',
-        cargo_type: '',
-        cargo_weight_kg: '',
-        subtotal: '',
-        vat_rate: '18',
-        validity_days: '30',
-        notes: ''
-      });
-      loadData();
-    } catch (error: any) {
+  async function saveQuotation() {
+    const base = quotationForm.distance_km * quotationForm.rate_per_km;
+    const fuel = base * (quotationForm.fuel_surcharge_pct / 100);
+    const subtotal = base + fuel + quotationForm.border_fees + quotationForm.escort_fees;
+    const vat = subtotal * (quotationForm.vat_rate / 100);
+    const total = subtotal + vat;
+    
+    const { error } = await supabase.from('route_quotations').insert([{
+      customer_id: quotationForm.customer_id,
+      service_type: quotationForm.service_type,
+      origin: quotationForm.origin,
+      destination: quotationForm.destination,
+      distance_km: quotationForm.distance_km,
+      cargo_type: quotationForm.cargo_type,
+      cargo_weight_mt: parseFloat(quotationForm.cargo_weight_mt as string) || 0,
+      container_size: quotationForm.container_size,
+      rate_per_km: quotationForm.rate_per_km,
+      base_amount: base,
+      fuel_surcharge_pct: quotationForm.fuel_surcharge_pct,
+      fuel_surcharge_amount: fuel,
+      border_fees: quotationForm.border_fees,
+      escort_fees: quotationForm.escort_fees,
+      subtotal,
+      vat_rate: quotationForm.vat_rate,
+      vat_amount: vat,
+      total_amount: total,
+      validity_days: quotationForm.validity_days,
+      expiry_date: format(addDays(new Date(), quotationForm.validity_days), 'yyyy-MM-dd'),
+      notes: quotationForm.notes,
+      created_by: user?.id
+    }]);
+    
+    if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Quotation created successfully' });
+      setShowQuotationDialog(false);
+      fetchQuotations();
     }
-  };
+  }
 
-  // Create contract
-  const handleCreateContract = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { data, error } = await supabase.from('contracts').insert({
-        customer_id: contractForm.customer_id,
-        quotation_id: contractForm.quotation_id || null,
-        contract_type: contractForm.contract_type,
-        start_date: contractForm.start_date,
-        end_date: contractForm.end_date || null,
-        origin: contractForm.origin,
-        destination: contractForm.destination,
-        contract_value: parseFloat(contractForm.contract_value) || 0,
-        trips_per_month: parseInt(contractForm.trips_per_month) || 0,
-        rate_per_km: parseFloat(contractForm.rate_per_km) || 0,
-        payment_schedule: contractForm.payment_schedule,
-        notes: contractForm.notes,
-        created_by: user?.id
-      }).select().single();
-
-      if (error) throw error;
-
-      toast({ title: 'Success', description: `Contract ${data.contract_number} created` });
-      setShowAddContract(false);
-      setContractForm({
-        customer_id: '',
-        quotation_id: '',
-        contract_type: 'one_time',
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: '',
-        origin: '',
-        destination: '',
-        contract_value: '',
-        trips_per_month: '',
-        rate_per_km: '',
-        payment_schedule: 'monthly',
-        notes: ''
-      });
-      loadData();
-    } catch (error: any) {
+  async function saveContract() {
+    const { error } = await supabase.from('transport_contracts').insert([{
+      customer_id: contractForm.customer_id,
+      contract_type: contractForm.contract_type,
+      start_date: contractForm.start_date,
+      end_date: contractForm.end_date || null,
+      min_monthly_trips: contractForm.min_monthly_trips,
+      contract_value: parseFloat(contractForm.contract_value as string) || 0,
+      payment_terms: contractForm.payment_terms,
+      notes: contractForm.notes,
+      created_by: user?.id
+    }]);
+    if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Contract created successfully' });
+      setShowContractDialog(false);
+      fetchContracts();
     }
-  };
+  }
 
-  // Convert quotation to contract
-  const convertQuotationToContract = async (quotation: Quotation) => {
-    try {
-      // Create contract from quotation
-      const { data: contract, error } = await supabase.from('contracts').insert({
-        customer_id: quotation.customer_id,
-        quotation_id: quotation.id,
-        contract_type: 'one_time',
-        start_date: new Date().toISOString().split('T')[0],
-        origin: quotation.origin,
-        destination: quotation.destination,
-        contract_value: quotation.total_amount,
-        currency: quotation.currency,
-        status: 'draft',
-        created_by: user?.id
-      }).select().single();
-
-      if (error) throw error;
-
-      // Update quotation status
-      await supabase.from('quotations').update({
-        status: 'converted',
-        converted_to_contract_id: contract.id,
-        converted_at: new Date().toISOString()
-      }).eq('id', quotation.id);
-
-      toast({ title: 'Success', description: `Quotation converted to contract ${contract.contract_number}` });
-      loadData();
-    } catch (error: any) {
+  async function saveOpportunity() {
+    const { error } = await supabase.from('sales_opportunities').insert([{
+      customer_id: opportunityForm.customer_id,
+      opportunity_name: opportunityForm.opportunity_name,
+      service_type: opportunityForm.service_type,
+      estimated_monthly_revenue: parseFloat(opportunityForm.estimated_monthly_revenue as string) || 0,
+      probability: opportunityForm.probability,
+      stage: opportunityForm.stage,
+      expected_close_date: opportunityForm.expected_close_date,
+      competitor: opportunityForm.competitor,
+      notes: opportunityForm.notes,
+      created_by: user?.id
+    }]);
+    if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Opportunity created successfully' });
+      setShowOpportunityDialog(false);
+      fetchOpportunities();
     }
-  };
+  }
 
-  // Status badges
-  const getCustomerStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      active: 'bg-green-100 text-green-700',
-      inactive: 'bg-gray-100 text-gray-700',
-      blacklisted: 'bg-red-100 text-red-700'
-    };
-    return <Badge className={styles[status] || 'bg-gray-100'}>{status}</Badge>;
-  };
+  // Helper functions
+  function getStatusColor(status: string) {
+    switch(status) {
+      case 'active': case 'sent': case 'won': return 'bg-green-500';
+      case 'pending': case 'draft': return 'bg-yellow-500';
+      case 'expired': case 'lost': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  }
 
-  const getQuotationStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      draft: 'bg-gray-100 text-gray-700',
-      sent: 'bg-blue-100 text-blue-700',
-      accepted: 'bg-green-100 text-green-700',
-      rejected: 'bg-red-100 text-red-700',
-      converted: 'bg-purple-100 text-purple-700',
-      expired: 'bg-yellow-100 text-yellow-700'
-    };
-    return <Badge className={styles[status] || 'bg-gray-100'}>{status}</Badge>;
-  };
+  function getStageColor(stage: string) {
+    switch(stage) {
+      case 'contract_won': return 'bg-green-500';
+      case 'contract_lost': return 'bg-red-500';
+      case 'negotiation': return 'bg-orange-500';
+      case 'quotation_sent': return 'bg-blue-500';
+      default: return 'bg-yellow-500';
+    }
+  }
 
-  const getContractStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      draft: 'bg-gray-100 text-gray-700',
-      pending: 'bg-yellow-100 text-yellow-700',
-      active: 'bg-green-100 text-green-700',
-      suspended: 'bg-orange-100 text-orange-700',
-      expired: 'bg-red-100 text-red-700',
-      terminated: 'bg-red-100 text-red-700'
-    };
-    return <Badge className={styles[status] || 'bg-gray-100'}>{status}</Badge>;
-  };
-
-  // Stats
+  // Calculate totals
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter(c => c.status === 'active').length;
-  const pendingQuotations = quotations.filter(q => q.status === 'sent').length;
-  const activeContracts = contracts.filter(c => c.status === 'active').length;
-  const totalPipelineValue = opportunities.reduce((sum, o) => sum + (o.estimated_value || 0), 0);
+  const totalQuotations = quotations.length;
+  const totalContracts = contracts.length;
+  const totalOpportunities = opportunities.length;
+  const pipelineValue = opportunities.reduce((sum, o) => sum + (o.estimated_monthly_revenue || 0), 0);
 
-  if (!role) return null;
+  if (loading) return (
+    <div className="flex min-h-screen bg-gray-100">
+      <Sidebar />
+      <div className="flex-1 p-8">
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold">Sales Module</h1>
-            <p className="text-muted-foreground">Customer management, quotations, contracts, and pipeline</p>
-          </div>
+    <div className="flex min-h-screen bg-gray-100">
+      <Sidebar />
+      <div className="flex-1 p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">Sales & Commercial</h1>
+          <p className="text-gray-600">Manage customers, quotations, contracts, and sales pipeline</p>
+        </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Customers</p>
-                    <p className="text-2xl font-bold">{totalCustomers}</p>
-                  </div>
-                  <Users className="h-8 w-8 text-blue-500" />
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Total Customers</p>
+                  <p className="text-2xl font-bold">{totalCustomers}</p>
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pending Quotations</p>
-                    <p className="text-2xl font-bold">{pendingQuotations}</p>
-                  </div>
-                  <FileText className="h-8 w-8 text-yellow-500" />
+                <Users className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Active Quotations</p>
+                  <p className="text-2xl font-bold">{totalQuotations}</p>
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Active Contracts</p>
-                    <p className="text-2xl font-bold">{activeContracts}</p>
-                  </div>
-                  <FileSignature className="h-8 w-8 text-green-500" />
+                <FileText className="h-8 w-8 text-yellow-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Contracts</p>
+                  <p className="text-2xl font-bold">{totalContracts}</p>
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pipeline Value</p>
-                    <p className="text-2xl font-bold">Tsh {totalPipelineValue.toLocaleString()}</p>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-purple-500" />
+                <FileSignature className="h-8 w-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">Pipeline Value</p>
+                  <p className="text-2xl font-bold">TZS {pipelineValue.toLocaleString()}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <TrendingUp className="h-8 w-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Main Content */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="customers">Customers</TabsTrigger>
-              <TabsTrigger value="quotations">Quotations</TabsTrigger>
-              <TabsTrigger value="contracts">Contracts</TabsTrigger>
-              <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-              <TabsTrigger value="followups">Follow-ups</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="customers">Customers</TabsTrigger>
+            <TabsTrigger value="quotations">Quotations</TabsTrigger>
+            <TabsTrigger value="contracts">Contracts</TabsTrigger>
+            <TabsTrigger value="rate-sheets">Rate Sheets</TabsTrigger>
+            <TabsTrigger value="opportunities">Pipeline</TabsTrigger>
+          </TabsList>
 
-            {/* Customers Tab */}
-            <TabsContent value="customers">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Customer Database</CardTitle>
-                  {canCreateCustomer && (
-                    <Dialog open={showAddCustomer} onOpenChange={setShowAddCustomer}>
-                      <DialogTrigger asChild>
-                        <Button><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle>Add New Customer</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleCreateCustomer} className="space-y-4 pt-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Company Name *</Label>
-                              <Input
-                                value={customerForm.company_name}
-                                onChange={(e) => setCustomerForm({ ...customerForm, company_name: e.target.value })}
-                                required
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Contact Person</Label>
-                              <Input
-                                value={customerForm.contact_person}
-                                onChange={(e) => setCustomerForm({ ...customerForm, contact_person: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Email</Label>
-                              <Input
-                                type="email"
-                                value={customerForm.email}
-                                onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Phone</Label>
-                              <Input
-                                value={customerForm.phone}
-                                onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Address</Label>
-                            <Textarea
-                              value={customerForm.address}
-                              onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>City</Label>
-                              <Input
-                                value={customerForm.city}
-                                onChange={(e) => setCustomerForm({ ...customerForm, city: e.target.value })}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Tax ID (TIN)</Label>
-                              <Input
-                                value={customerForm.tax_id}
-                                onChange={(e) => setCustomerForm({ ...customerForm, tax_id: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Credit Limit (Tsh)</Label>
-                              <Input
-                                type="number"
-                                value={customerForm.credit_limit}
-                                onChange={(e) => setCustomerForm({ ...customerForm, credit_limit: e.target.value })}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Payment Terms</Label>
-                              <Select
-                                value={customerForm.payment_terms}
-                                onValueChange={(v) => setCustomerForm({ ...customerForm, payment_terms: v })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="15 days">15 days</SelectItem>
-                                  <SelectItem value="30 days">30 days</SelectItem>
-                                  <SelectItem value="45 days">45 days</SelectItem>
-                                  <SelectItem value="60 days">60 days</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Notes</Label>
-                            <Textarea
-                              value={customerForm.notes}
-                              onChange={(e) => setCustomerForm({ ...customerForm, notes: e.target.value })}
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddCustomer(false)}>Cancel</Button>
-                            <Button type="submit" className="flex-1">Create Customer</Button>
-                          </div>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Company</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Credit Limit</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {customers.map((customer) => (
-                        <TableRow key={customer.id}>
-                          <TableCell className="font-medium">{customer.customer_code}</TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{customer.company_name}</p>
-                              <p className="text-sm text-muted-foreground">{customer.city}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p>{customer.contact_person}</p>
-                              <p className="text-sm text-muted-foreground">{customer.phone}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getCustomerStatusBadge(customer.status)}</TableCell>
-                          <TableCell>Tsh {customer.credit_limit?.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm">View</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Quotations Tab */}
-            <TabsContent value="quotations">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Quotations & RFQ</CardTitle>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowQuoteGenerator(true)}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Generate Quote
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowTransportAgreement(true)}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Transport Agreement
-                    </Button>
-                    {canCreateQuotation && (
-                      <Dialog open={showAddQuotation} onOpenChange={setShowAddQuotation}>
-                        <DialogTrigger asChild>
-                          <Button><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-lg">
-                          <DialogHeader>
-                            <DialogTitle>Create Quotation</DialogTitle>
-                          </DialogHeader>
-                          <form onSubmit={handleCreateQuotation} className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                              <Label>Customer *</Label>
-                              <Select
-                                value={quotationForm.customer_id}
-                                onValueChange={(v) => setQuotationForm({ ...quotationForm, customer_id: v })}
-                                required
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select customer..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {customers.filter(c => c.status === 'active').map((customer) => (
-                                    <SelectItem key={customer.id} value={customer.id}>
-                                      {customer.company_name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Origin</Label>
-                                <Input
-                                  value={quotationForm.origin}
-                                  onChange={(e) => setQuotationForm({ ...quotationForm, origin: e.target.value })}
-                                  placeholder="e.g. Dar es Salaam"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Destination</Label>
-                                <Input
-                                  value={quotationForm.destination}
-                                  onChange={(e) => setQuotationForm({ ...quotationForm, destination: e.target.value })}
-                                  placeholder="e.g. Mwanza"
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Cargo Type</Label>
-                                <Input
-                                  value={quotationForm.cargo_type}
-                                  onChange={(e) => setQuotationForm({ ...quotationForm, cargo_type: e.target.value })}
-                                  placeholder="e.g. Container"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Cargo Weight (kg)</Label>
-                                <Input
-                                  type="number"
-                                  value={quotationForm.cargo_weight_kg}
-                                  onChange={(e) => setQuotationForm({ ...quotationForm, cargo_weight_kg: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Amount (excl. VAT) *</Label>
-                                <Input
-                                  type="number"
-                                  value={quotationForm.subtotal}
-                                  onChange={(e) => setQuotationForm({ ...quotationForm, subtotal: e.target.value })}
-                                  required
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Valid for (days)</Label>
-                                <Input
-                                  type="number"
-                                  value={quotationForm.validity_days}
-                                  onChange={(e) => setQuotationForm({ ...quotationForm, validity_days: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Notes</Label>
-                              <Textarea
-                                value={quotationForm.notes}
-                                onChange={(e) => setQuotationForm({ ...quotationForm, notes: e.target.value })}
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddQuotation(false)}>Cancel</Button>
-                              <Button type="submit" className="flex-1">Create Quotation</Button>
-                            </div>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Quotation #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Route</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Valid Until</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {quotations.map((q) => (
-                        <TableRow key={q.id}>
-                          <TableCell className="font-medium">{q.quotation_number}</TableCell>
-                          <TableCell>{q.company_name}</TableCell>
-                          <TableCell>
-                            {q.origin && q.destination ? (
-                              <span className="text-sm">{q.origin} → {q.destination}</span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            {q.currency === 'USD' ? '$' : 'Tsh'} {q.total_amount?.toLocaleString()}
-                          </TableCell>
-                          <TableCell>{getQuotationStatusBadge(q.status)}</TableCell>
-                          <TableCell>{q.expiry_date ? new Date(q.expiry_date).toLocaleDateString() : '-'}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedQuotation(q);
-                                  setShowQuoteGenerator(true);
-                                }}
-                              >
-                                <FileText className="size-4 mr-1" />
-                                View Quote
-                              </Button>
-                              {q.status === 'accepted' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-green-600"
-                                  onClick={() => convertQuotationToContract(q)}
-                                >
-                                  Convert to Contract
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Contracts Tab */}
-            <TabsContent value="contracts">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Contracts</CardTitle>
-                  {canCreateContract && (
-                    <div className="flex gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline"><Printer className="h-4 w-4 mr-2" /> Generate Agreement</Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Generate Transportation Agreement</DialogTitle>
-                          </DialogHeader>
-                          <ContractGenerator onClose={() => { }} />
-                        </DialogContent>
-                      </Dialog>
-                      <Dialog open={showAddContract} onOpenChange={setShowAddContract}>
-                        <DialogTrigger asChild>
-                          <Button><Plus className="h-4 w-4 mr-2" /> New Contract</Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-lg">
-                          <DialogHeader>
-                            <DialogTitle>Create Contract</DialogTitle>
-                          </DialogHeader>
-                          <form onSubmit={handleCreateContract} className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                              <Label>Customer *</Label>
-                              <Select
-                                value={contractForm.customer_id}
-                                onValueChange={(v) => setContractForm({ ...contractForm, customer_id: v })}
-                                required
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select customer..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {customers.filter(c => c.status === 'active').map((customer) => (
-                                    <SelectItem key={customer.id} value={customer.id}>
-                                      {customer.company_name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Contract Type</Label>
-                              <Select
-                                value={contractForm.contract_type}
-                                onValueChange={(v) => setContractForm({ ...contractForm, contract_type: v })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="one_time">One Time</SelectItem>
-                                  <SelectItem value="recurring">Recurring</SelectItem>
-                                  <SelectItem value="retainer">Retainer</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Start Date *</Label>
-                                <Input
-                                  type="date"
-                                  value={contractForm.start_date}
-                                  onChange={(e) => setContractForm({ ...contractForm, start_date: e.target.value })}
-                                  required
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>End Date</Label>
-                                <Input
-                                  type="date"
-                                  value={contractForm.end_date}
-                                  onChange={(e) => setContractForm({ ...contractForm, end_date: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Origin</Label>
-                                <Input
-                                  value={contractForm.origin}
-                                  onChange={(e) => setContractForm({ ...contractForm, origin: e.target.value })}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Destination</Label>
-                                <Input
-                                  value={contractForm.destination}
-                                  onChange={(e) => setContractForm({ ...contractForm, destination: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Contract Value *</Label>
-                                <Input
-                                  type="number"
-                                  value={contractForm.contract_value}
-                                  onChange={(e) => setContractForm({ ...contractForm, contract_value: e.target.value })}
-                                  required
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Trips per Month</Label>
-                                <Input
-                                  type="number"
-                                  value={contractForm.trips_per_month}
-                                  onChange={(e) => setContractForm({ ...contractForm, trips_per_month: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Payment Schedule</Label>
-                              <Select
-                                value={contractForm.payment_schedule}
-                                onValueChange={(v) => setContractForm({ ...contractForm, payment_schedule: v })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="upfront">Upfront</SelectItem>
-                                  <SelectItem value="per_delivery">Per Delivery</SelectItem>
-                                  <SelectItem value="monthly">Monthly</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Notes</Label>
-                              <Textarea
-                                value={contractForm.notes}
-                                onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddContract(false)}>Cancel</Button>
-                              <Button type="submit" className="flex-1">Create Contract</Button>
-                            </div>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Contract #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Period</TableHead>
-                        <TableHead>Trips</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {contracts.map((contract) => (
-                        <TableRow key={contract.id}>
-                          <TableCell className="font-medium">{contract.contract_number}</TableCell>
-                          <TableCell>{contract.company_name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{contract.contract_type}</Badge>
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            Tsh {contract.contract_value?.toLocaleString()}
-                          </TableCell>
-                          <TableCell>{getContractStatusBadge(contract.status)}</TableCell>
-                          <TableCell>
-                            <span className="text-sm">
-                              {new Date(contract.start_date).toLocaleDateString()} -
-                              {contract.end_date ? new Date(contract.end_date).toLocaleDateString() : 'Ongoing'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {contract.total_trips_completed || 0} / {contract.trips_per_month || '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm">View</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Pipeline Tab */}
-            <TabsContent value="pipeline">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sales Pipeline</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-5 gap-4">
-                    {['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won'].map((stage) => (
-                      <div key={stage} className="bg-muted rounded-lg p-4">
-                        <h3 className="font-semibold mb-3 capitalize">{stage.replace('_', ' ')}</h3>
+          {/* Customers Tab */}
+          <TabsContent value="customers">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Customers
+                </CardTitle>
+                {canCreate && (
+                  <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
+                    <DialogTrigger asChild>
+                      <Button><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Add New Customer</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          {opportunities
-                            .filter(o => o.stage === stage)
-                            .map((opp) => (
-                              <Card key={opp.id} className="p-3">
-                                <p className="font-medium text-sm">{opp.opportunity_name}</p>
-                                <p className="text-xs text-muted-foreground">{opp.company_name}</p>
-                                <div className="flex justify-between items-center mt-2">
-                                  <span className="text-xs font-semibold">
-                                    Tsh {opp.estimated_value?.toLocaleString()}
-                                  </span>
-                                  <span className="text-xs">{opp.probability}%</span>
-                                </div>
-                              </Card>
-                            ))}
+                          <Label>Company Name *</Label>
+                          <Input value={customerForm.company_name} onChange={e => setCustomerForm({...customerForm, company_name: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Contact Person *</Label>
+                          <Input value={customerForm.contact_person} onChange={e => setCustomerForm({...customerForm, contact_person: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Phone *</Label>
+                          <Input value={customerForm.phone} onChange={e => setCustomerForm({...customerForm, phone: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email</Label>
+                          <Input type="email" value={customerForm.email} onChange={e => setCustomerForm({...customerForm, email: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>City</Label>
+                          <Select value={customerForm.city} onValueChange={v => setCustomerForm({...customerForm, city: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Dar es Salaam">Dar es Salaam</SelectItem>
+                              <SelectItem value="Arusha">Arusha</SelectItem>
+                              <SelectItem value="Mwanza">Mwanza</SelectItem>
+                              <SelectItem value="Dodoma">Dodoma</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Credit Limit (TZS)</Label>
+                          <Input type="number" value={customerForm.credit_limit} onChange={e => setCustomerForm({...customerForm, credit_limit: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <Select value={customerForm.status} onValueChange={v => setCustomerForm({...customerForm, status: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="prospect">Prospect</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
+                              <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                          <Label>Address</Label>
+                          <Textarea value={customerForm.address} onChange={e => setCustomerForm({...customerForm, address: e.target.value})} />
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                          <Label>Notes</Label>
+                          <Textarea value={customerForm.notes} onChange={e => setCustomerForm({...customerForm, notes: e.target.value})} />
                         </div>
                       </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowCustomerDialog(false)}>Cancel</Button>
+                        <Button onClick={saveCustomer}>Save Customer</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>City</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Credit Limit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customers.map(customer => (
+                      <TableRow key={customer.id}>
+                        <TableCell className="font-medium">{customer.customer_code}</TableCell>
+                        <TableCell>{customer.company_name}</TableCell>
+                        <TableCell>{customer.contact_person}</TableCell>
+                        <TableCell>{customer.phone}</TableCell>
+                        <TableCell>{customer.city}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(customer.status)}>
+                            {customer.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>TZS {(customer.credit_limit || 0).toLocaleString()}</TableCell>
+                      </TableRow>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Follow-ups Tab */}
-            <TabsContent value="followups">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Follow-ups & CRM</CardTitle>
-                  <Button><Plus className="h-4 w-4 mr-2" /> Schedule Follow-up</Button>
-                </CardHeader>
-                <CardContent>
+          {/* Quotations Tab */}
+          <TabsContent value="quotations">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Route Quotations
+                </CardTitle>
+                {canCreate && (
+                  <Dialog open={showQuotationDialog} onOpenChange={setShowQuotationDialog}>
+                    <DialogTrigger asChild>
+                      <Button><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Create Route Quotation</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Customer</Label>
+                          <Select value={quotationForm.customer_id} onValueChange={v => setQuotationForm({...quotationForm, customer_id: v})}>
+                            <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                            <SelectContent>
+                              {customers.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Service Type</Label>
+                          <Select value={quotationForm.service_type} onValueChange={v => {
+                            setQuotationForm({...quotationForm, service_type: v});
+                          }}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {SERVICE_TYPES.map(t => (
+                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Origin</Label>
+                          <Input value={quotationForm.origin} onChange={e => setQuotationForm({...quotationForm, origin: e.target.value})} placeholder="e.g., Dar es Salaam" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Destination</Label>
+                          <Input value={quotationForm.destination} onChange={e => setQuotationForm({...quotationForm, destination: e.target.value})} placeholder="e.g., Lusaka" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Distance (km)</Label>
+                          <Input type="number" value={quotationForm.distance_km} onChange={e => setQuotationForm({...quotationForm, distance_km: parseInt(e.target.value) || 0})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Cargo Type</Label>
+                          <Input value={quotationForm.cargo_type} onChange={e => setQuotationForm({...quotationForm, cargo_type: e.target.value})} placeholder="e.g., Electronics, Maize" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Weight (MT)</Label>
+                          <Input type="number" value={quotationForm.cargo_weight_mt} onChange={e => setQuotationForm({...quotationForm, cargo_weight_mt: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Container Size</Label>
+                          <Select value={quotationForm.container_size} onValueChange={v => setQuotationForm({...quotationForm, container_size: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="20ft">20ft Container</SelectItem>
+                              <SelectItem value="40ft">40ft Container</SelectItem>
+                              <SelectItem value="45ft">45ft Container</SelectItem>
+                              <SelectItem value="loose">Loose Cargo</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Rate per km (TZS)</Label>
+                          <Input type="number" value={quotationForm.rate_per_km} onChange={e => setQuotationForm({...quotationForm, rate_per_km: parseFloat(e.target.value) || 0})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Fuel Surcharge %</Label>
+                          <Input type="number" value={quotationForm.fuel_surcharge_pct} onChange={e => setQuotationForm({...quotationForm, fuel_surcharge_pct: parseFloat(e.target.value) || 0})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Border Fees (TZS)</Label>
+                          <Input type="number" value={quotationForm.border_fees} onChange={e => setQuotationForm({...quotationForm, border_fees: parseFloat(e.target.value) || 0})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Escort Fees (TZS)</Label>
+                          <Input type="number" value={quotationForm.escort_fees} onChange={e => setQuotationForm({...quotationForm, escort_fees: parseFloat(e.target.value) || 0})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>VAT Rate %</Label>
+                          <Input type="number" value={quotationForm.vat_rate} onChange={e => setQuotationForm({...quotationForm, vat_rate: parseFloat(e.target.value) || 0})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Validity (days)</Label>
+                          <Input type="number" value={quotationForm.validity_days} onChange={e => setQuotationForm({...quotationForm, validity_days: parseInt(e.target.value) || 30})} />
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                          <Label>Notes</Label>
+                          <Textarea value={quotationForm.notes} onChange={e => setQuotationForm({...quotationForm, notes: e.target.value})} />
+                        </div>
+                      </div>
+                      <Separator className="my-4" />
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2">Cost Breakdown</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>Base Amount:</div>
+                          <div className="text-right">TZS {(quotationForm.distance_km * quotationForm.rate_per_km).toLocaleString()}</div>
+                          <div>Fuel Surcharge ({quotationForm.fuel_surcharge_pct}%):</div>
+                          <div className="text-right">TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (quotationForm.fuel_surcharge_pct/100)).toLocaleString()}</div>
+                          <div>Border Fees:</div>
+                          <div className="text-right">TZS {quotationForm.border_fees.toLocaleString()}</div>
+                          <div>Subtotal:</div>
+                          <div className="text-right font-medium">
+                            TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct/100) + quotationForm.border_fees + quotationForm.escort_fees).toLocaleString()}
+                          </div>
+                          <div>VAT ({quotationForm.vat_rate}%):</div>
+                          <div className="text-right">
+                            TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct/100) + quotationForm.border_fees + quotationForm.escort_fees) * (quotationForm.vat_rate/100)).toLocaleString()}
+                          </div>
+                          <div className="font-bold">Total Amount:</div>
+                          <div className="text-right font-bold text-lg text-green-600">
+                            TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct/100) + quotationForm.border_fees + quotationForm.escort_fees) * (1 + quotationForm.vat_rate/100)).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowQuotationDialog(false)}>Cancel</Button>
+                        <Button onClick={saveQuotation}>Create Quotation</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Quote #</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Route</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Expires</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {quotations.map(q => (
+                      <TableRow key={q.id}>
+                        <TableCell className="font-medium">{q.quotation_number}</TableCell>
+                        <TableCell>{q.company_name}</TableCell>
+                        <TableCell>{q.origin} → {q.destination}</TableCell>
+                        <TableCell>{q.service_type.replace('_', ' ')}</TableCell>
+                        <TableCell>TZS {(q.total_amount || 0).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(q.status)}>{q.status}</Badge>
+                        </TableCell>
+                        <TableCell>{format(new Date(q.expiry_date), 'MMM dd, yyyy')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Contracts Tab */}
+          <TabsContent value="contracts">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Briefcase className="h-5 w-5" />
+                  Transport Contracts
+                </CardTitle>
+                {canCreate && (
+                  <Dialog open={showContractDialog} onOpenChange={setShowContractDialog}>
+                    <DialogTrigger asChild>
+                      <Button><Plus className="h-4 w-4 mr-2" /> New Contract</Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Create Transport Contract</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Customer</Label>
+                          <Select value={contractForm.customer_id} onValueChange={v => setContractForm({...contractForm, customer_id: v})}>
+                            <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                            <SelectContent>
+                              {customers.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Contract Type</Label>
+                          <Select value={contractForm.contract_type} onValueChange={v => setContractForm({...contractForm, contract_type: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="spot">Spot Contract</SelectItem>
+                              <SelectItem value="long_term">Long Term</SelectItem>
+                              <SelectItem value="project_based">Project Based</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Start Date</Label>
+                          <Input type="date" value={contractForm.start_date} onChange={e => setContractForm({...contractForm, start_date: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>End Date (optional)</Label>
+                          <Input type="date" value={contractForm.end_date} onChange={e => setContractForm({...contractForm, end_date: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Min Monthly Trips</Label>
+                          <Input type="number" value={contractForm.min_monthly_trips} onChange={e => setContractForm({...contractForm, min_monthly_trips: parseInt(e.target.value) || 0})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Contract Value (TZS)</Label>
+                          <Input type="number" value={contractForm.contract_value} onChange={e => setContractForm({...contractForm, contract_value: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Payment Terms</Label>
+                          <Select value={contractForm.payment_terms} onValueChange={v => setContractForm({...contractForm, payment_terms: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="7 days">7 Days</SelectItem>
+                              <SelectItem value="15 days">15 Days</SelectItem>
+                              <SelectItem value="30 days">30 Days</SelectItem>
+                              <SelectItem value="45 days">45 Days</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                          <Label>Notes</Label>
+                          <Textarea value={contractForm.notes} onChange={e => setContractForm({...contractForm, notes: e.target.value})} />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowContractDialog(false)}>Cancel</Button>
+                        <Button onClick={saveContract}>Create Contract</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Contract #</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Value</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contracts.map(c => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.contract_number}</TableCell>
+                        <TableCell>{c.company_name}</TableCell>
+                        <TableCell className="capitalize">{c.contract_type.replace('_', ' ')}</TableCell>
+                        <TableCell>{format(new Date(c.start_date), 'MMM yyyy')} {c.end_date && `- ${format(new Date(c.end_date), 'MMM yyyy')}`}</TableCell>
+                        <TableCell>TZS {(c.contract_value || 0).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(c.status)}>{c.status}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Rate Sheets Tab */}
+          <TabsContent value="rate-sheets">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Standard Rate Sheet
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Subject</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>Route</TableHead>
+                        <TableHead>Service Type</TableHead>
+                        <TableHead>Distance</TableHead>
+                        <TableHead>20ft (TZS)</TableHead>
+                        <TableHead>40ft (TZS)</TableHead>
+                        <TableHead>Loose/MT</TableHead>
+                        <TableHead>Transit Days</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {followUps.map((followUp) => (
-                        <TableRow key={followUp.id}>
-                          <TableCell>
-                            {new Date(followUp.scheduled_date).toLocaleString()}
-                          </TableCell>
-                          <TableCell>{followUp.company_name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{followUp.follow_up_type}</Badge>
-                          </TableCell>
-                          <TableCell>{followUp.subject}</TableCell>
-                          <TableCell>
-                            <Badge className={
-                              followUp.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                followUp.status === 'pending' ? 'bg-blue-100 text-blue-700' :
-                                  followUp.status === 'overdue' ? 'bg-red-100 text-red-700' :
-                                    'bg-gray-100 text-gray-700'
-                            }>
-                              {followUp.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm">Complete</Button>
-                          </TableCell>
+                      {rateSheets.map(r => (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-medium">{r.route_name}</TableCell>
+                          <TableCell className="capitalize">{r.service_type.replace('_', ' ')}</TableCell>
+                          <TableCell>{r.distance_km} km</TableCell>
+                          <TableCell>{r.container_20ft ? r.container_20ft.toLocaleString() : '-'}</TableCell>
+                          <TableCell>{r.container_40ft ? r.container_40ft.toLocaleString() : '-'}</TableCell>
+                          <TableCell>{r.loose_rate_mt ? r.loose_rate_mt.toLocaleString() : '-'}</TableCell>
+                          <TableCell>{r.transit_days}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {/* Quote Generator Dialog */}
-          <Dialog open={showQuoteGenerator} onOpenChange={setShowQuoteGenerator}>
-            <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedQuotation ? `Quote ${selectedQuotation.quotation_number}` : 'Transport Price Quote'}
-                </DialogTitle>
-              </DialogHeader>
-              <QuoteGenerator
-                initialData={selectedQuotation ? {
-                  quoteNumber: selectedQuotation.quotation_number,
-                  issueDate: selectedQuotation.quotation_date,
-                  validThrough: selectedQuotation.expiry_date,
-                  receiverName: selectedQuotation.company_name,
-                  receiverAddress1: selectedQuotation.origin,
-                  receiverAddress2: selectedQuotation.destination,
-                  lineItems: [
-                    {
-                      id: '1',
-                      description: `Transport Services: ${selectedQuotation.origin} to ${selectedQuotation.destination}`,
-                      quantity: 1,
-                      unitPrice: selectedQuotation.subtotal,
-                      discount: 0
-                    }
-                  ],
-                  taxRate: 10
-                } : undefined}
-                onClose={() => {
-                  setShowQuoteGenerator(false);
-                  setSelectedQuotation(null);
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-
-          {/* Transport Agreement Dialog */}
-          <Dialog open={showTransportAgreement} onOpenChange={setShowTransportAgreement}>
-            <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Transportation Agreement</DialogTitle>
-              </DialogHeader>
-              <TransportAgreementGenerator
-                initialData={{
-                  clientCompany: selectedCustomer?.company_name || '',
-                  clientAddress: selectedCustomer?.address || '',
-                  clientEmail: selectedCustomer?.email || '',
-                  clientTel: selectedCustomer?.phone || ''
-                }}
-                onClose={() => setShowTransportAgreement(false)}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </main>
+          {/* Opportunities Tab */}
+          <TabsContent value="opportunities">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Sales Pipeline
+                </CardTitle>
+                {canCreate && (
+                  <Dialog open={showOpportunityDialog} onOpenChange={setShowOpportunityDialog}>
+                    <DialogTrigger asChild>
+                      <Button><Plus className="h-4 w-4 mr-2" /> Add Opportunity</Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Add Sales Opportunity</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Customer</Label>
+                          <Select value={opportunityForm.customer_id} onValueChange={v => setOpportunityForm({...opportunityForm, customer_id: v})}>
+                            <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                            <SelectContent>
+                              {customers.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Opportunity Name</Label>
+                          <Input value={opportunityForm.opportunity_name} onChange={e => setOpportunityForm({...opportunityForm, opportunity_name: e.target.value})} placeholder="e.g., Q1 Logistics Contract" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Service Type</Label>
+                          <Select value={opportunityForm.service_type} onValueChange={v => setOpportunityForm({...opportunityForm, service_type: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {SERVICE_TYPES.map(t => (
+                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Monthly Revenue (TZS)</Label>
+                          <Input type="number" value={opportunityForm.estimated_monthly_revenue} onChange={e => setOpportunityForm({...opportunityForm, estimated_monthly_revenue: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Probability (%)</Label>
+                          <Input type="number" min="0" max="100" value={opportunityForm.probability} onChange={e => setOpportunityForm({...opportunityForm, probability: parseInt(e.target.value) || 0})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Stage</Label>
+                          <Select value={opportunityForm.stage} onValueChange={v => setOpportunityForm({...opportunityForm, stage: v})}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="lead">Lead</SelectItem>
+                              <SelectItem value="qualification">Qualification</SelectItem>
+                              <SelectItem value="quotation_sent">Quotation Sent</SelectItem>
+                              <SelectItem value="negotiation">Negotiation</SelectItem>
+                              <SelectItem value="contract_won">Contract Won</SelectItem>
+                              <SelectItem value="contract_lost">Contract Lost</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Expected Close Date</Label>
+                          <Input type="date" value={opportunityForm.expected_close_date} onChange={e => setOpportunityForm({...opportunityForm, expected_close_date: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Competitor</Label>
+                          <Input value={opportunityForm.competitor} onChange={e => setOpportunityForm({...opportunityForm, competitor: e.target.value})} placeholder="Who are we competing with?" />
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                          <Label>Notes</Label>
+                          <Textarea value={opportunityForm.notes} onChange={e => setOpportunityForm({...opportunityForm, notes: e.target.value})} />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowOpportunityDialog(false)}>Cancel</Button>
+                        <Button onClick={saveOpportunity}>Save Opportunity</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Opportunity</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Monthly Revenue</TableHead>
+                      <TableHead>Probability</TableHead>
+                      <TableHead>Stage</TableHead>
+                      <TableHead>Expected Close</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {opportunities.map(o => (
+                      <TableRow key={o.id}>
+                        <TableCell className="font-medium">{o.opportunity_name}</TableCell>
+                        <TableCell>{o.company_name}</TableCell>
+                        <TableCell>{o.service_type.replace('_', ' ')}</TableCell>
+                        <TableCell>TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${o.probability}%` }}></div>
+                            </div>
+                            <span className="text-sm">{o.probability}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStageColor(o.stage)}>{o.stage.replace('_', ' ')}</Badge>
+                        </TableCell>
+                        <TableCell>{format(new Date(o.expected_close_date), 'MMM dd, yyyy')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
