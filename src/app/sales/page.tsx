@@ -421,7 +421,7 @@ function SalesModuleContent() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <Card className="bg-white shadow-sm border border-gray-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
