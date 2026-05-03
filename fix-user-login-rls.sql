@@ -11,6 +11,14 @@ DROP POLICY IF EXISTS "Users can view own profile by email" ON user_profiles;
 DROP POLICY IF EXISTS "Admins can manage all profiles" ON user_profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 
+-- Create function to check user role (SECURITY DEFINER bypasses RLS)
+CREATE OR REPLACE FUNCTION get_user_role(p_user_id UUID)
+RETURNS TEXT AS $$
+BEGIN
+  RETURN (SELECT role FROM user_profiles WHERE id = p_user_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Create new policy: Users can view their own profile by ID OR EMAIL
 CREATE POLICY "Users can view own profile" ON user_profiles
   FOR SELECT USING (
@@ -20,13 +28,9 @@ CREATE POLICY "Users can view own profile" ON user_profiles
 
 -- Policy: Admins/CEO/HR can manage all profiles
 CREATE POLICY "Admins can manage all profiles" ON user_profiles
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles 
-      WHERE user_profiles.id = auth.uid() 
-      AND user_profiles.role IN ('ADMIN', 'CEO', 'HR')
-    )
-  );
+  FOR ALL 
+  TO authenticated
+  USING (get_user_role(auth.uid()) IN ('ADMIN', 'CEO', 'HR'));
 
 -- Policy: Users can update their own profile
 CREATE POLICY "Users can update own profile" ON user_profiles

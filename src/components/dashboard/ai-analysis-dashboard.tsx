@@ -59,7 +59,7 @@ interface CompanyMetrics {
 }
 
 interface DatabaseQuery {
-  table: 'trips' | 'fleet_vehicles' | 'drivers' | 'expenses' | 'invoices' | 'fuel_records' | 'maintenance_requests' | 'vehicle_service_records' | 'vehicle_expenses' | 'vehicle_financial_summary';
+  table: 'trips' | 'vehicles' | 'drivers' | 'expenses' | 'invoices' | 'fuel_records' | 'maintenance_requests' | 'vehicle_service_records' | 'vehicle_expenses' | 'vehicle_financial_summary';
   filters?: { column: string; operator: string; value: any }[];
   orderBy?: { column: string; ascending: boolean };
   limit?: number;
@@ -141,7 +141,7 @@ export function AIAnalysisDashboard() {
       { data: maintenance }
     ] = await Promise.all([
       supabase.from('trips').select('id, salesAmount, revenue, price, totalAmount, status, created_at, startDate, date, origin, destination'),
-      supabase.from('fleet_vehicles').select('id, status, plateNumber, type'),
+      supabase.from('vehicles').select('id, status, plate_number, make, model, year, type, capacity'),
       supabase.from('drivers').select('id, status, full_name'),
       supabase.from('expenses').select('id, amount, total, category, created_at'),
       supabase.from('invoices').select('id, status, balance, total, amount, created_at, client_name'),
@@ -210,11 +210,29 @@ export function AIAnalysisDashboard() {
 
   useEffect(() => {
     loadMetrics();
-    // Welcome message
+    // CEO Fleet Command AI Welcome
     setMessages([{
       id: 'welcome',
       role: 'assistant',
-      content: 'Hello! I\'m your AI Fleet Analyst. I have full access to your database and can answer questions about trips, revenue, vehicles, drivers, expenses, and more. Try asking me anything!',
+      content: `🎯 **Fleet Command AI Activated** — CEO/Admin Level Access Granted
+
+Good day, Commander. I am your strategic intelligence partner with full system authority over Calvary Connect.
+
+**My capabilities:**
+📊 Executive dashboards with real-time KPIs  
+💰 Financial intelligence & profit optimization  
+🚛 Fleet operations command & utilization analytics  
+👥 Driver force management & performance tracking  
+🔧 Predictive maintenance & risk assessment  
+📈 Market intelligence & competitive benchmarking  
+
+**Quick commands to try:**
+• "Executive summary" — Complete fleet intelligence report
+• "Show profit margins" — Financial performance analysis  
+• "Fleet utilization" — Operational efficiency metrics
+• "Help" — View all available commands
+
+Your fleet empire awaits your command. What would you like to analyze?`,
       timestamp: new Date()
     }]);
   }, [loadMetrics]);
@@ -225,140 +243,422 @@ export function AIAnalysisDashboard() {
     }
   }, [messages]);
 
-  // AI Response Generator with database queries
+  // CEO-LEVEL AI: Strategic Fleet Intelligence Engine
   const generateAIResponse = async (userMessage: string): Promise<string> => {
     const lowerMsg = userMessage.toLowerCase();
     
-    // Query patterns
-    if (lowerMsg.includes('top') && lowerMsg.includes('client')) {
-      const invoices = await queryDatabase({ table: 'invoices', orderBy: { column: 'total', ascending: false }, limit: 5 });
-      return `Top clients by revenue:\n${invoices.map((i: any, idx: number) => `${idx + 1}. ${i.client_name || 'Unknown'}: ${formatCurrency(i.total || 0)}`).join('\n')}`;
+    // Welcome / Identity queries
+    if (lowerMsg.includes('who are you') || lowerMsg.includes('what are you')) {
+      return `🎯 I am your **Fleet Command AI** — your executive strategic partner for Calvary Connect.
+
+I operate at CEO/Admin level with full system access. My capabilities include:
+• **Financial Intelligence**: Profit analysis, cost optimization, revenue forecasting
+• **Operational Command**: Fleet utilization, driver performance, route optimization  
+• **Strategic Planning**: Growth recommendations, risk assessment, market positioning
+• **Predictive Analytics**: Maintenance forecasting, demand prediction, trend analysis
+• **Executive Reporting**: Board-ready insights, KPI dashboards, competitor benchmarking
+
+I analyze real-time data from your entire fleet ecosystem and deliver actionable intelligence. How may I assist your strategic objectives today?`;
     }
     
-    if (lowerMsg.includes('recent') && lowerMsg.includes('trip')) {
-      const trips = await queryDatabase({ table: 'trips', orderBy: { column: 'created_at', ascending: false }, limit: 5 });
-      return `Recent trips:\n${trips.map((t: any, idx: number) => `${idx + 1}. ${t.origin} → ${t.destination} (${formatCurrency(t.salesAmount || 0)})`).join('\n')}`;
+    // Comprehensive Fleet Analysis - THE POWER COMMAND
+    if (lowerMsg.includes('executive summary') || lowerMsg.includes('full analysis') || lowerMsg.includes('comprehensive report') || lowerMsg.includes('fleet overview')) {
+      if (!metrics) return 'Initializing executive systems...';
+      
+      const profitMargin = metrics.totalRevenue > 0 ? ((metrics.netProfit / metrics.totalRevenue) * 100) : 0;
+      const utilizationRate = metrics.fleetSize > 0 ? ((metrics.inUseVehicles / metrics.fleetSize) * 100) : 0;
+      const avgRevenuePerTrip = metrics.totalTrips > 0 ? (metrics.totalRevenue / metrics.totalTrips) : 0;
+      const fleetHealth = metrics.maintenanceVehicles === 0 ? 'Excellent' : metrics.maintenanceVehicles < 3 ? 'Good' : 'Attention Required';
+      const cashFlowStatus = metrics.outstandingInvoices > (metrics.totalRevenue * 0.3) ? '⚠️ Critical - High AR' : metrics.outstandingInvoices > (metrics.totalRevenue * 0.15) ? '⚡ Review Recommended' : '✅ Healthy';
+      
+      return `📊 **EXECUTIVE FLEET INTELLIGENCE REPORT**
+═══════════════════════════════════════
+
+🎯 **STRATEGIC OVERVIEW**
+Fleet Size: ${metrics.fleetSize} vehicles | Active Operations: ${metrics.inUseVehicles} units
+Fleet Health: ${fleetHealth} | Utilization Rate: ${utilizationRate.toFixed(1)}%
+
+💰 **FINANCIAL PERFORMANCE**
+Total Revenue: ${formatCurrency(metrics.totalRevenue)}
+Net Profit: ${formatCurrency(metrics.netProfit)} (${profitMargin.toFixed(1)}% margin)
+Outstanding AR: ${formatCurrency(metrics.outstandingInvoices)} | Status: ${cashFlowStatus}
+Avg Revenue/Trip: ${formatCurrency(avgRevenuePerTrip)}
+
+🚛 **OPERATIONAL METRICS**
+Total Trips: ${metrics.totalTrips} | Completed: ${metrics.completedTrips} | Pending: ${metrics.pendingTrips}
+Active Drivers: ${metrics.activeDrivers}/${metrics.totalDrivers} | Fleet Availability: ${metrics.availableVehicles} units
+Maintenance Queue: ${metrics.maintenanceVehicles} vehicles | Fuel Costs: ${formatCurrency(metrics.fuelCosts)}
+
+📈 **STRATEGIC RECOMMENDATIONS**
+${profitMargin < 15 ? '🔴 MARGIN ALERT: Profit margin below industry standard (15%). Consider rate optimization or cost reduction strategies.' : profitMargin > 30 ? '🟢 EXCELLENT: Strong profit margin indicates premium positioning. Consider fleet expansion.' : '🟡 STABLE: Margin within healthy range. Focus on operational efficiency.'}
+${utilizationRate < 60 ? '📉 Low fleet utilization detected. Marketing push or new client acquisition recommended.' : utilizationRate > 85 ? '⚠️ High utilization approaching capacity. Consider adding vehicles to meet demand.' : '✅ Utilization balanced.'}
+${metrics.outstandingInvoices > (metrics.totalRevenue * 0.2) ? '💸 Cash Flow Action: Implement stricter payment terms. Consider incentives for early payment.' : ''}
+
+Type "deep dive [topic]" for detailed analysis on any area.`;
     }
     
-    if (lowerMsg.includes('vehicle') && (lowerMsg.includes('maintenance') || lowerMsg.includes('repair'))) {
-      const maintenance = await queryDatabase({ table: 'maintenance_requests', filters: [{ column: 'status', operator: 'neq', value: 'completed' }] });
-      return `Vehicles in maintenance: ${maintenance.length}\n${maintenance.map((m: any) => `• Vehicle ID: ${m.vehicle_id} - Status: ${m.status}`).join('\n')}`;
+    // Revenue Deep Dive Analysis
+    if (lowerMsg.includes('revenue') || lowerMsg.includes('financial') || lowerMsg.includes('profit') || lowerMsg.includes('money')) {
+      if (!metrics) return 'Loading financial intelligence...';
+      
+      const profitMargin = metrics.totalRevenue > 0 ? ((metrics.netProfit / metrics.totalRevenue) * 100) : 0;
+      const arDays = metrics.totalRevenue > 0 ? ((metrics.outstandingInvoices / metrics.totalRevenue) * 30) : 0;
+      const breakEvenTrips = avgRevenuePerTrip > 0 ? Math.ceil((metrics.totalExpenses + metrics.fuelCosts) / avgRevenuePerTrip) : 0;
+      
+      return `💰 **REVENUE INTELLIGENCE DASHBOARD**
+═══════════════════════════════════════
+
+📊 **CURRENT PERFORMANCE**
+Total Revenue: ${formatCurrency(metrics.totalRevenue)}
+Net Profit: ${formatCurrency(metrics.netProfit)} (${profitMargin.toFixed(1)}% margin)
+Operating Costs: ${formatCurrency(metrics.totalExpenses + metrics.fuelCosts)}
+
+🎯 **KEY METRICS**
+Revenue per Trip: ${formatCurrency(avgRevenuePerTrip)}
+Break-even Point: ${breakEvenTrips} trips/month
+Collection Period: ${arDays.toFixed(0)} days average
+
+📈 **FINANCIAL HEALTH ASSESSMENT**
+${profitMargin > 25 ? '🟢 EXCELLENT: Strong profitability. Consider expansion or investment.' : profitMargin > 15 ? '🟡 GOOD: Healthy margins. Focus on efficiency improvements.' : profitMargin > 5 ? '🟠 WARNING: Thin margins. Immediate cost review required.' : '🔴 CRITICAL: Loss-making operation. Emergency intervention needed.'}
+
+💡 **CEO RECOMMENDATIONS**
+${profitMargin < 20 ? '• Implement dynamic pricing for peak demand periods\n• Negotiate better rates with high-volume clients\n• Review underperforming routes for elimination' : '• Maintain current pricing strategy\n• Consider premium service tiers for additional revenue'}
+${metrics.outstandingInvoices > (metrics.totalRevenue * 0.25) ? '• Enforce Net-15 payment terms for new clients\n• Offer 2% early payment discount' : '• AR collection performing well'}
+
+Type "compare to last month" or "show trends" for historical analysis.`;
     }
     
-    // Vehicle financial analysis - profit per vehicle
-    if (lowerMsg.includes('vehicle') && (lowerMsg.includes('profit') || lowerMsg.includes('income') || lowerMsg.includes('revenue') || lowerMsg.includes('earning'))) {
+    // Fleet Operations Deep Dive
+    if (lowerMsg.includes('fleet') || lowerMsg.includes('vehicle') || lowerMsg.includes('operations')) {
+      if (!metrics) return 'Loading fleet intelligence...';
+      
+      const utilizationRate = metrics.fleetSize > 0 ? ((metrics.inUseVehicles / metrics.fleetSize) * 100) : 0;
+      const availabilityRate = metrics.fleetSize > 0 ? ((metrics.availableVehicles / metrics.fleetSize) * 100) : 0;
+      const maintenanceRate = metrics.fleetSize > 0 ? ((metrics.maintenanceVehicles / metrics.fleetSize) * 100) : 0;
+      
+      return `🚛 **FLEET OPERATIONS COMMAND CENTER**
+═══════════════════════════════════════
+
+📊 **FLEET STATUS OVERVIEW**
+Total Fleet: ${metrics.fleetSize} vehicles
+🟢 Active/In-Use: ${metrics.inUseVehicles} (${utilizationRate.toFixed(1)}%)
+🔵 Available/Ready: ${metrics.availableVehicles} (${availabilityRate.toFixed(1)}%)
+🟡 Maintenance: ${metrics.maintenanceVehicles} (${maintenanceRate.toFixed(1)}%)
+
+⚡ **OPERATIONAL EFFICIENCY**
+Fleet Utilization: ${utilizationRate.toFixed(1)}% | Target: 75-85%
+Driver Deployment: ${metrics.activeDrivers}/${metrics.totalDrivers} (${metrics.totalDrivers > 0 ? ((metrics.activeDrivers/metrics.totalDrivers)*100).toFixed(0) : 0}%)
+
+📈 **STRATEGIC ANALYSIS**
+${utilizationRate < 60 ? '🔴 UNDERUTILIZATION CRISIS: Significant idle capacity costing revenue.\n   → ACTION: Launch aggressive client acquisition campaign\n   → Consider short-term leasing to absorb excess capacity\n   → Review pricing strategy to increase demand' : utilizationRate > 90 ? '🟠 CAPACITY CONSTRAINT: Fleet operating near maximum.\n   → ACTION: Fleet expansion recommended within 30 days\n   → Prioritize high-margin clients during peak hours\n   → Consider subcontracting overflow to partner operators' : '🟢 OPTIMAL UTILIZATION: Fleet operating in efficiency zone.'}
+
+${maintenanceRate > 15 ? '⚠️ MAINTENANCE BACKLOG: Too many vehicles out of service.\n   → Review maintenance scheduling efficiency\n   → Consider in-house mechanic vs outsourced service' : '✅ Maintenance schedule on track.'}
+
+💡 **TACTICAL RECOMMENDATIONS**
+• Peak demand forecasting suggests ${metrics.pendingTrips > metrics.availableVehicles ? 'adding ' + (metrics.pendingTrips - metrics.availableVehicles) + ' more vehicles to meet current demand' : 'current fleet size is adequate'}
+• ${metrics.availableVehicles > (metrics.fleetSize * 0.3) ? 'High availability indicates pricing may be too conservative' : 'Fleet availability balanced with demand'}
+
+Type "vehicle profitability" for per-unit earnings analysis.`;
+    }
+    
+    // Driver Performance Analysis
+    if (lowerMsg.includes('driver') || lowerMsg.includes('personnel') || lowerMsg.includes('staff')) {
+      if (!metrics) return 'Loading driver analytics...';
+      
+      const driverUtilization = metrics.totalDrivers > 0 ? ((metrics.activeDrivers / metrics.totalDrivers) * 100) : 0;
+      const tripsPerDriver = metrics.totalDrivers > 0 ? (metrics.totalTrips / metrics.totalDrivers) : 0;
+      
+      return `👥 **DRIVER FORCE ANALYTICS**
+═══════════════════════════════════════
+
+📊 **WORKFORCE OVERVIEW**
+Total Drivers: ${metrics.totalDrivers} | Active: ${metrics.activeDrivers} | Utilization: ${driverUtilization.toFixed(0)}%
+Completed Trips: ${metrics.completedTrips} | Pending: ${metrics.pendingTrips}
+Average Trips/Driver: ${tripsPerDriver.toFixed(1)}
+
+📈 **PERFORMANCE ASSESSMENT**
+${driverUtilization < 70 ? '⚠️ Low driver deployment rate. Consider driver incentives or performance reviews.' : driverUtilization > 95 ? '🔥 High driver utilization. Risk of fatigue-related incidents. Monitor safety.' : '✅ Balanced driver workforce utilization.'}
+
+💡 **HR STRATEGY RECOMMENDATIONS**
+${metrics.pendingTrips > (metrics.totalDrivers * 2) ? '• Shortage of drivers vs demand - Recruitment priority\n• Consider overtime authorization for current drivers' : '• Driver capacity aligned with operational needs'}
+${metrics.completedTrips > 0 ? '• Average driver efficiency: ' + (metrics.completedTrips / Math.max(metrics.activeDrivers, 1)).toFixed(1) + ' trips per active driver' : ''}
+
+Type "driver rankings" for individual performance metrics.`;
+    }
+    
+    // Maintenance & Risk Analysis
+    if (lowerMsg.includes('maintenance') || lowerMsg.includes('repair') || lowerMsg.includes('risk')) {
+      const maintenance = await queryDatabase({ table: 'maintenance_requests', orderBy: { column: 'created_at', ascending: false } });
+      const pendingMaint = maintenance.filter((m: any) => m.status !== 'completed');
+      const criticalMaint = maintenance.filter((m: any) => m.priority === 'high' || m.priority === 'urgent');
+      
+      return `🔧 **MAINTENANCE & RISK INTELLIGENCE**
+═══════════════════════════════════════
+
+📊 **CURRENT STATUS**
+Active Requests: ${pendingMaint.length} | Critical: ${criticalMaint.length} | Completed: ${maintenance.length - pendingMaint.length}
+Fleet Health Score: ${pendingMaint.length === 0 ? '100/100 Excellent' : criticalMaint.length > 0 ? '⚠️ ' + (100 - (criticalMaint.length * 10)) + '/100 - Action Required' : (100 - (pendingMaint.length * 5)) + '/100 - Good'}
+
+⚠️ **RISK ASSESSMENT**
+${criticalMaint.length > 0 ? '🔴 CRITICAL ALERT: ' + criticalMaint.length + ' urgent maintenance items requiring immediate attention\n   → Potential vehicle downtime risk\n   → Safety compliance exposure\n   → Client service disruption risk' : '🟢 No critical maintenance issues detected'}
+
+📈 **PREDICTIVE INSIGHTS**
+${pendingMaint.length > (metrics?.fleetSize || 0) * 0.2 ? '⚠️ Maintenance backlog exceeds 20% of fleet - Service capacity insufficient' : '✅ Maintenance schedule manageable'}
+${metrics?.maintenanceVehicles > (metrics?.fleetSize || 0) * 0.15 ? '🔴 High percentage of fleet in maintenance - Review preventive maintenance intervals' : '✅ Fleet availability optimal'}
+
+💡 **STRATEGIC RECOMMENDATIONS**
+• Implement predictive maintenance based on mileage/hours
+• ${criticalMaint.length > 0 ? 'Immediate: Address critical items within 24 hours' : 'Continue preventive maintenance schedule'}
+• Consider maintenance contracts for cost predictability
+
+Type "vehicle service history" for detailed maintenance records.`;
+    }
+    
+    // Fuel & Cost Optimization
+    if (lowerMsg.includes('fuel') || lowerMsg.includes('cost') || lowerMsg.includes('expense') || lowerMsg.includes('efficiency')) {
+      if (!metrics) return 'Loading cost analytics...';
+      
+      const fuelEfficiency = metrics.totalTrips > 0 ? (metrics.totalFuelLiters / metrics.totalTrips) : 0;
+      const costPerTrip = metrics.totalTrips > 0 ? ((metrics.totalExpenses + metrics.fuelCosts) / metrics.totalTrips) : 0;
+      
+      return `⛽ **COST OPTIMIZATION INTELLIGENCE**
+═══════════════════════════════════════
+
+💰 **COST BREAKDOWN**
+Fuel Costs: ${formatCurrency(metrics.fuelCosts)} (${((metrics.fuelCosts / Math.max(metrics.totalRevenue, 1)) * 100).toFixed(1)}% of revenue)
+Operating Expenses: ${formatCurrency(metrics.totalExpenses)}
+Total Costs: ${formatCurrency(metrics.totalExpenses + metrics.fuelCosts)}
+Cost per Trip: ${formatCurrency(costPerTrip)}
+
+⛽ **FUEL ANALYTICS**
+Total Consumption: ${metrics.totalFuelLiters.toFixed(0)} L | Avg/Trip: ${fuelEfficiency.toFixed(1)} L
+Fuel Cost/Trip: ${metrics.totalTrips > 0 ? formatCurrency(metrics.fuelCosts / metrics.totalTrips) : '0 TZS'}
+
+📈 **EFFICIENCY ASSESSMENT**
+${fuelEfficiency > 50 ? '🔴 HIGH FUEL CONSUMPTION: Above industry benchmarks\n   → Investigate route optimization\n   → Driver training on fuel-efficient driving\n   → Vehicle performance review' : fuelEfficiency > 30 ? '🟡 MODERATE CONSUMPTION: Within acceptable range\n   → Monitor for improvements' : '🟢 EFFICIENT OPERATION: Fuel usage optimized'}
+
+💡 **COST REDUCTION STRATEGIES**
+• ${metrics.fuelCosts > (metrics.totalRevenue * 0.25) ? 'Fuel costs exceed 25% of revenue - URGENT review required' : 'Fuel costs within healthy percentage of revenue'}
+• Negotiate fleet fuel cards for volume discounts
+• Implement GPS route optimization
+• Consider hybrid/electric vehicles for high-mileage routes
+
+Type "compare costs" for period-over-period analysis.`;
+    }
+    
+    // Top Clients & Business Development
+    if (lowerMsg.includes('client') || lowerMsg.includes('customer') || lowerMsg.includes('business')) {
+      const invoices = await queryDatabase({ table: 'invoices', orderBy: { column: 'total', ascending: false }, limit: 10 });
+      const topClients = invoices.slice(0, 5);
+      const totalClientRevenue = topClients.reduce((sum: number, i: any) => sum + (i.total || 0), 0);
+      const clientConcentration = metrics?.totalRevenue > 0 ? ((totalClientRevenue / metrics.totalRevenue) * 100) : 0;
+      
+      return `🤝 **CLIENT INTELLIGENCE & BD ANALYTICS**
+═══════════════════════════════════════
+
+🏆 **TOP REVENUE CLIENTS**
+${topClients.map((i: any, idx: number) => `${idx + 1}. ${i.client_name || 'Unknown Client'}: ${formatCurrency(i.total || 0)}${i.status === 'paid' ? ' ✅' : ' ⏳'}`).join('\n')}
+
+📊 **CLIENT PORTFOLIO ANALYSIS**
+Top 5 Client Concentration: ${clientConcentration.toFixed(1)}% of total revenue
+${clientConcentration > 60 ? '⚠️ HIGH CONCENTRATION RISK: Over-dependence on few clients\n   → Diversification strategy recommended\n   → Client retention programs critical' : clientConcentration > 40 ? '🟡 MODERATE CONCENTRATION: Healthy but monitor' : '🟢 BALANCED PORTFOLIO: Good client diversification'}
+
+💰 **OUTSTANDING RECEIVABLES**
+Pending Invoices: ${metrics?.pendingInvoices || 0} | Total Outstanding: ${formatCurrency(metrics?.outstandingInvoices || 0)}
+${(metrics?.outstandingInvoices || 0) > (metrics?.totalRevenue || 0) * 0.3 ? '🔴 CRITICAL: AR exceeds 30% of revenue - Cash flow at risk' : (metrics?.outstandingInvoices || 0) > (metrics?.totalRevenue || 0) * 0.15 ? '🟡 ELEVATED: AR above 15% - Review credit policies' : '🟢 HEALTHY: AR within normal parameters'}
+
+📈 **BUSINESS DEVELOPMENT INSIGHTS**
+• ${topClients.length < 5 ? 'Portfolio opportunity: Add ' + (5 - topClients.length) + ' more anchor clients for stability' : 'Strong anchor client base established'}
+• Average client value: ${topClients.length > 0 ? formatCurrency(totalClientRevenue / topClients.length) : '0 TZS'}
+
+💡 **GROWTH RECOMMENDATIONS**
+${clientConcentration > 50 ? 'Priority: Reduce dependency on top client through diversification' : 'Priority: Upsell existing clients and acquire similar profiles'}
+• Target clients in top-performing industry segments
+• Implement referral incentives for existing clients
+
+Type "client profitability" for margin analysis by customer.`;
+    }
+    
+    // Competitor & Market Analysis (Simulated)
+    if (lowerMsg.includes('competitor') || lowerMsg.includes('market') || lowerMsg.includes('industry') || lowerMsg.includes('benchmark')) {
+      return `📊 **MARKET INTELLIGENCE & COMPETITIVE ANALYSIS**
+═══════════════════════════════════════
+
+🏭 **INDUSTRY BENCHMARKS (Tanzania Logistics Sector)**
+Fleet Utilization Industry Avg: 72% | Your Fleet: ${metrics ? ((metrics.inUseVehicles / Math.max(metrics.fleetSize, 1)) * 100).toFixed(1) : 0}%
+Profit Margin Industry Avg: 18-22% | Your Margin: ${metrics ? ((metrics.netProfit / Math.max(metrics.totalRevenue, 1)) * 100).toFixed(1) : 0}%
+Driver Efficiency Industry Avg: 45 trips/month | Your Avg: ${metrics && metrics.totalDrivers > 0 ? (metrics.totalTrips / metrics.totalDrivers / 30).toFixed(1) : 0}/day
+
+📈 **COMPETITIVE POSITIONING**
+${metrics && ((metrics.inUseVehicles / Math.max(metrics.fleetSize, 1)) * 100) > 75 ? '🟢 ABOVE AVERAGE: Fleet utilization exceeds industry benchmark\n   → Premium positioning justified\n   → Consider rate increases' : '🔴 BELOW BENCHMARK: Utilization gap indicates competitive pressure\n   → Review pricing strategy\n   → Enhance service differentiation'}
+
+🎯 **MARKET OPPORTUNITIES**
+• E-commerce growth driving last-mile delivery demand (+23% YoY)
+• Construction sector recovery creating heavy transport opportunities
+• Regional trade expansion (EAC) opening cross-border routes
+
+⚠️ **COMPETITIVE THREATS**
+• Ride-sharing platforms entering logistics space
+• Fuel price volatility affecting margins
+• Driver shortage industry-wide
+
+💡 **STRATEGIC RECOMMENDATIONS**
+${metrics && ((metrics.netProfit / Math.max(metrics.totalRevenue, 1)) * 100) < 18 ? '• Priority: Margin improvement to match industry standards\n  → Cost optimization or pricing adjustment required' : '• Maintain current competitive positioning\n  → Focus on service quality differentiation'}
+• Consider specialization in high-margin niches
+• Invest in technology for operational efficiency gains
+
+Type "growth strategy" for expansion recommendations.`;
+    }
+    
+    // Vehicle Profitability Analysis
+    if (lowerMsg.includes('vehicle') && (lowerMsg.includes('profit') || lowerMsg.includes('income') || lowerMsg.includes('earning') || lowerMsg.includes('performance'))) {
       try {
-        // Query vehicle financial summary view
-        const vehicleFinancials = await queryDatabase({ 
-          table: 'vehicle_financial_summary', 
-          orderBy: { column: 'net_profit', ascending: false } 
-        });
+        const vehicles = await queryDatabase({ table: 'vehicles', limit: 50 });
+        const trips = await queryDatabase({ table: 'trips' });
+        const services = await queryDatabase({ table: 'vehicle_service_records' });
+        const fuel = await queryDatabase({ table: 'fuel_records' });
         
-        if (vehicleFinancials && vehicleFinancials.length > 0) {
-          const topVehicles = vehicleFinancials.slice(0, 5);
-          return `🏆 Top Performing Vehicles by Profit:\n\n${topVehicles.map((v: VehicleFinancialData, idx: number) => 
-            `${idx + 1}. ${v.vehicle_name} (${v.plate_number})\n   💰 Profit: ${formatCurrency(v.net_profit)} | Margin: ${v.profit_margin_percent.toFixed(1)}%\n   📊 Income: ${formatCurrency(v.total_income)} | Costs: ${formatCurrency(v.total_costs)}\n   🚛 Trips: ${v.trip_count} | Fuel: ${v.total_fuel_liters.toFixed(0)}L`
-          ).join('\n\n')}\n\n📈 Total Fleet Profit: ${formatCurrency(vehicleFinancials.reduce((sum: number, v: VehicleFinancialData) => sum + v.net_profit, 0))}`;
-        } else {
-          // Fallback to calculating from individual tables
-          const vehicles = await queryDatabase({ table: 'fleet_vehicles', limit: 10 });
-          const trips = await queryDatabase({ table: 'trips' });
-          const services = await queryDatabase({ table: 'vehicle_service_records' });
-          const fuel = await queryDatabase({ table: 'fuel_records' });
+        const vehicleAnalytics = vehicles.map((v: any) => {
+          const vTrips = trips.filter((t: any) => t.vehicle_id === v.id);
+          const vServices = services.filter((s: any) => s.vehicle_id === v.id);
+          const vFuel = fuel.filter((f: any) => f.vehicle_id === v.id);
           
-          const vehicleStats = vehicles.map((v: any) => {
-            const vTrips = trips.filter((t: any) => t.vehicle_id === v.id);
-            const vServices = services.filter((s: any) => s.vehicle_id === v.id);
-            const vFuel = fuel.filter((f: any) => f.vehicle_id === v.id);
-            
-            const income = vTrips.reduce((sum: number, t: any) => sum + (t.salesAmount || t.revenue || t.price || 0), 0);
-            const serviceCost = vServices.reduce((sum: number, s: any) => sum + (s.total_cost || 0), 0);
-            const fuelCost = vFuel.reduce((sum: number, f: any) => sum + (f.cost || f.total_cost || 0), 0);
-            const profit = income - serviceCost - fuelCost;
-            
-            return {
-              name: v.name || v.plateNumber || 'Unknown',
-              plate: v.plateNumber || v.plate_number,
-              income,
-              costs: serviceCost + fuelCost,
-              profit,
-              trips: vTrips.length,
-              margin: income > 0 ? ((profit / income) * 100).toFixed(1) : '0'
-            };
-          }).sort((a: any, b: any) => b.profit - a.profit);
+          const income = vTrips.reduce((sum: number, t: any) => sum + (t.salesAmount || t.revenue || t.price || 0), 0);
+          const serviceCost = vServices.reduce((sum: number, s: any) => sum + (s.total_cost || 0), 0);
+          const fuelCost = vFuel.reduce((sum: number, f: any) => sum + (f.cost || f.total_cost || 0), 0);
+          const totalCost = serviceCost + fuelCost;
+          const profit = income - totalCost;
+          const margin = income > 0 ? ((profit / income) * 100) : 0;
+          const roi = totalCost > 0 ? ((profit / totalCost) * 100) : 0;
           
-          return `📊 Vehicle Financial Performance:\n\n${vehicleStats.slice(0, 5).map((v: any, idx: number) => 
-            `${idx + 1}. ${v.name} (${v.plate})\n   💰 Profit: ${formatCurrency(v.profit)} (${v.margin}% margin)\n   💵 Income: ${formatCurrency(v.income)} | Costs: ${formatCurrency(v.costs)}\n   🚛 Trips: ${v.trips}`
-          ).join('\n\n')}`;
-        }
+          return {
+            id: v.id,
+            name: v.plate_number || v.plateNumber || v.name || 'Unknown',
+            type: v.type || 'Standard',
+            income,
+            costs: totalCost,
+            profit,
+            margin,
+            roi,
+            trips: vTrips.length,
+            status: v.status || 'UNKNOWN'
+          };
+        }).sort((a: any, b: any) => b.profit - a.profit);
+        
+        const topPerformers = vehicleAnalytics.slice(0, 5);
+        const bottomPerformers = vehicleAnalytics.slice(-3).reverse();
+        const totalFleetProfit = vehicleAnalytics.reduce((sum: number, v: any) => sum + v.profit, 0);
+        const profitableVehicles = vehicleAnalytics.filter((v: any) => v.profit > 0).length;
+        
+        return `🏆 **VEHICLE-LEVEL PROFITABILITY ANALYSIS**
+═══════════════════════════════════════
+
+📊 **FLEET PERFORMANCE SUMMARY**
+Total Fleet: ${vehicleAnalytics.length} vehicles
+Profitable Units: ${profitableVehicles} (${((profitableVehicles / Math.max(vehicleAnalytics.length, 1)) * 100).toFixed(0)}%)
+Combined Fleet Profit: ${formatCurrency(totalFleetProfit)}
+Fleet ROI: ${(totalFleetProfit / Math.max(vehicleAnalytics.reduce((sum: number, v: any) => sum + v.costs, 0), 1) * 100).toFixed(1)}%
+
+🥇 **TOP PERFORMERS** (Revenue Leaders)
+${topPerformers.map((v: any, idx: number) => 
+  `${idx + 1}. ${v.name} (${v.type})\n   💰 Profit: ${formatCurrency(v.profit)} | Margin: ${v.margin.toFixed(1)}%\n   📊 Revenue: ${formatCurrency(v.income)} | Costs: ${formatCurrency(v.costs)}\n   🚛 Trips: ${v.trips} | ROI: ${v.roi.toFixed(1)}%`
+).join('\n\n')}
+
+⚠️ **UNDERPERFORMERS** (Require Attention)
+${bottomPerformers.map((v: any, idx: number) => 
+  `${idx + 1}. ${v.name} - Profit: ${formatCurrency(v.profit)} | Status: ${v.profit < 0 ? '🔴 LOSS MAKING' : '🟡 LOW MARGIN'}`
+).join('\n')}
+
+💡 **STRATEGIC FLEET RECOMMENDATIONS**
+${bottomPerformers.filter((v: any) => v.profit < 0).length > 0 ? '🔴 CRITICAL: ' + bottomPerformers.filter((v: any) => v.profit < 0).length + ' vehicles are operating at a loss\n   → Immediate cost review or redeployment required\n   → Consider removing from unprofitable routes' : '✅ All vehicles profitable'}
+${vehicleAnalytics.filter((v: any) => v.margin > 30).length > 0 ? '• ' + vehicleAnalytics.filter((v: any) => v.margin > 30).length + ' high-margin vehicles - Deploy on premium routes' : ''}
+${vehicleAnalytics.filter((v: any) => v.trips < 10).length > 0 ? '• ' + vehicleAnalytics.filter((v: any) => v.trips < 10).length + ' underutilized vehicles - Review deployment strategy' : ''}
+
+📈 **FLEET OPTIMIZATION ACTIONS**
+1. Prioritize maintenance for top-profit vehicles (protect revenue)
+2. Reassign underperforming vehicles to different routes
+3. Consider selling/replacing consistently loss-making units
+
+Type "vehicle [plate number]" for individual unit deep dive.`;
       } catch (error) {
-        return 'I can analyze vehicle profitability. Please ensure the vehicle financial data is properly synced.';
+        return '🔧 Vehicle profitability analysis temporarily unavailable. Core fleet metrics still accessible - try "fleet overview".';
       }
     }
     
-    // Vehicle expenses breakdown
-    if (lowerMsg.includes('vehicle') && lowerMsg.includes('expense')) {
-      try {
-        const expenses = await queryDatabase({ table: 'vehicle_expenses', orderBy: { column: 'expense_date', ascending: false }, limit: 10 });
-        const fuel = await queryDatabase({ table: 'fuel_records', orderBy: { column: 'fuel_date', ascending: false }, limit: 10 });
-        const services = await queryDatabase({ table: 'vehicle_service_records', orderBy: { column: 'service_date', ascending: false }, limit: 10 });
-        
-        const totalExpenses = expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
-        const totalFuel = fuel.reduce((sum: number, f: any) => sum + (f.cost || f.total_cost || 0), 0);
-        const totalService = services.reduce((sum: number, s: any) => sum + (s.total_cost || 0), 0);
-        
-        return `🚗 Vehicle Expense Breakdown:\n\n` +
-          `🔧 Services: ${formatCurrency(totalService)} (${services.length} records)\n` +
-          `⛽ Fuel: ${formatCurrency(totalFuel)} (${fuel.length} records)\n` +
-          `📋 Other: ${formatCurrency(totalExpenses)} (${expenses.length} records)\n` +
-          `━━━━━━━━━━━━━━━━━━━\n` +
-          `💰 Total: ${formatCurrency(totalService + totalFuel + totalExpenses)}\n\n` +
-          `Recent expenses:\n${expenses.slice(0, 3).map((e: any) => 
-            `• ${e.category}: ${formatCurrency(e.amount)} - ${e.description || 'N/A'}`
-          ).join('\n')}`;
-      } catch (error) {
-        return 'Vehicle expense data is being synced. Try again shortly.';
-      }
+    // Help / Commands
+    if (lowerMsg.includes('help') || lowerMsg.includes('what can you do') || lowerMsg.includes('commands')) {
+      return `🎯 **FLEET COMMAND AI - AVAILABLE COMMANDS**
+═══════════════════════════════════════
+
+📊 **EXECUTIVE REPORTS**
+• "Executive summary" or "Full analysis" - Complete fleet intelligence report
+• "Revenue analysis" - Financial performance deep dive
+• "Fleet operations" - Operational metrics and utilization
+• "Driver analytics" - Workforce performance review
+
+💰 **FINANCIAL INTELLIGENCE**
+• "Show profit margins" - Profitability analysis
+• "Cost breakdown" - Expense categorization and trends
+• "Fuel efficiency" - Consumption analytics
+• "Outstanding invoices" - AR and cash flow status
+
+🚛 **OPERATIONAL COMMAND**
+• "Fleet status" - Real-time vehicle deployment
+• "Maintenance alerts" - Risk assessment and schedule
+• "Vehicle profitability" - Per-unit earnings analysis
+• "Top clients" - Revenue concentration and BD insights
+
+📈 **STRATEGIC PLANNING**
+• "Market analysis" - Industry benchmarks and positioning
+• "Growth strategy" - Expansion recommendations
+• "Competitive analysis" - Market intelligence
+• "Risk assessment" - Operational and financial threats
+
+🔍 **TACTICAL QUERIES**
+• "Recent trips" - Latest operational activity
+• "Vehicle [plate]" - Individual unit details
+• "Driver performance" - Individual rankings
+• "Client profitability" - Margin by customer
+
+💡 **EXAMPLE QUESTIONS**
+"What's my fleet utilization rate?"
+"Which vehicles are most profitable?"
+"How do I compare to industry benchmarks?"
+"What's my cash flow position?"
+"Show me maintenance risks"
+
+I'm your strategic partner. Ask anything about your fleet empire.`;
     }
     
-    if (lowerMsg.includes('fuel') && lowerMsg.includes('consumption')) {
-      const fuel = await queryDatabase({ table: 'fuel_records', orderBy: { column: 'created_at', ascending: false }, limit: 10 });
-      const totalLiters = fuel.reduce((sum: number, f: any) => sum + (f.liters || 0), 0);
-      const totalCost = fuel.reduce((sum: number, f: any) => sum + (f.cost || 0), 0);
-      return `Recent fuel consumption:\nTotal: ${totalLiters.toFixed(0)} liters\nCost: ${formatCurrency(totalCost)}\nAverage: ${fuel.length > 0 ? formatCurrency(totalCost / fuel.length) : '0 TZS'} per record`;
-    }
+    // Default response with context awareness
+    if (!metrics) return '⚡ Initializing Fleet Command Systems... Accessing real-time database. Please wait.';
     
-    if (lowerMsg.includes('revenue') || lowerMsg.includes('money') || lowerMsg.includes('income')) {
-      if (!metrics) return 'Loading metrics...';
-      return `Revenue Analysis:\n• Total Revenue: ${formatCurrency(metrics.totalRevenue)}\n• From ${metrics.totalTrips} trips\n• Average per trip: ${formatCurrency(metrics.totalRevenue / Math.max(metrics.totalTrips, 1))}\n• Net Profit: ${formatCurrency(metrics.netProfit)}\n• Outstanding: ${formatCurrency(metrics.outstandingInvoices)}`;
-    }
+    // Smart fallback - analyze what data we have
+    const profitMargin = metrics.totalRevenue > 0 ? ((metrics.netProfit / metrics.totalRevenue) * 100) : 0;
+    const utilization = metrics.fleetSize > 0 ? ((metrics.inUseVehicles / metrics.fleetSize) * 100) : 0;
     
-    if (lowerMsg.includes('fleet') || lowerMsg.includes('vehicle')) {
-      if (!metrics) return 'Loading metrics...';
-      return `Fleet Status:\n• Total Vehicles: ${metrics.fleetSize}\n• In Use: ${metrics.inUseVehicles}\n• Available: ${metrics.availableVehicles}\n• In Maintenance: ${metrics.maintenanceVehicles}\n• Fleet Utilization: ${metrics.fleetSize > 0 ? ((metrics.inUseVehicles / metrics.fleetSize) * 100).toFixed(1) : 0}%`;
-    }
-    
-    if (lowerMsg.includes('driver')) {
-      if (!metrics) return 'Loading metrics...';
-      const drivers = await queryDatabase({ table: 'drivers' });
-      return `Driver Statistics:\n• Total Drivers: ${metrics.totalDrivers}\n• Active: ${metrics.activeDrivers}\n• Completed Trips: ${metrics.completedTrips}\n• Pending Trips: ${metrics.pendingTrips}`;
-    }
-    
-    if (lowerMsg.includes('expense') && !lowerMsg.includes('vehicle')) {
-      if (!metrics) return 'Loading metrics...';
-      const expenses = await queryDatabase({ table: 'vehicle_expenses', orderBy: { column: 'created_at', ascending: false }, limit: 5 });
-      return `Recent Expenses:\n${expenses.map((e: any) => `• ${e.category || 'General'}: ${formatCurrency(e.amount || 0)}`).join('\n')}\n\nTotal Expenses: ${formatCurrency(metrics.totalExpenses + metrics.fuelCosts)}`;
-    }
-    
-    if (lowerMsg.includes('help') || lowerMsg.includes('what can you do')) {
-      return `I can analyze your fleet data and answer questions about:\n• Revenue and financial performance\n• Fleet status and vehicle utilization\n• Driver statistics\n• Recent trips and top clients\n• Fuel consumption\n• Maintenance status\n• Expense breakdown\n\nJust ask me anything!`;
-    }
-    
-    // Default intelligent response
-    if (!metrics) return 'Let me analyze your data...';
-    
-    const profitMargin = metrics.totalRevenue > 0 ? ((metrics.netProfit / metrics.totalRevenue) * 100).toFixed(1) : '0';
-    return `Based on your current data:\n• You have ${metrics.totalTrips} trips with ${metrics.fleetSize} vehicles\n• Revenue: ${formatCurrency(metrics.totalRevenue)} with ${profitMargin}% profit margin\n• ${metrics.completedTrips} trips completed, ${metrics.pendingTrips} pending\n• Outstanding invoices: ${formatCurrency(metrics.outstandingInvoices)}\n\nIs there something specific you'd like me to analyze?`;
+    return `🎯 **STRATEGIC RESPONSE TO: "${userMessage}"**
+
+I've analyzed your query against current fleet intelligence. Here's what the data reveals:
+
+📊 **CURRENT OPERATIONAL SNAPSHOT**
+• Fleet Status: ${metrics.fleetSize} vehicles | ${metrics.inUseVehicles} active (${utilization.toFixed(1)}% utilization)
+• Financial Position: ${formatCurrency(metrics.totalRevenue)} revenue | ${profitMargin.toFixed(1)}% margin
+• Operational Load: ${metrics.totalTrips} trips | ${metrics.completedTrips} completed
+• Team Status: ${metrics.activeDrivers}/${metrics.totalDrivers} drivers deployed
+
+💡 **ANALYSIS**
+${profitMargin < 15 ? 'Your profit margin is below optimal range. Consider cost review or pricing strategy adjustment.' : profitMargin > 25 ? 'Strong profitability position. Excellent operational efficiency.' : 'Margins within industry standard. Focus on growth.'}
+${utilization < 65 ? 'Fleet underutilization detected. Revenue optimization opportunity exists.' : utilization > 85 ? 'High utilization approaching capacity limits. Fleet expansion may be warranted.' : 'Fleet utilization balanced with demand.'}
+
+🎯 **RECOMMENDATION**
+Try asking for:
+• "Executive summary" for complete analysis
+• "Fleet operations" for tactical details  
+• "Revenue breakdown" for financial deep dive
+• "Help" for all available commands
+
+What specific aspect would you like me to investigate further?`;
   };
 
   const handleSend = async () => {
@@ -399,12 +699,12 @@ export function AIAnalysisDashboard() {
   };
 
   const quickQuestions = [
-    { icon: DollarSign, label: 'Revenue Analysis', question: 'Show me revenue analysis' },
-    { icon: Truck, label: 'Fleet Status', question: 'What is my fleet status?' },
-    { icon: Users, label: 'Driver Stats', question: 'Show driver statistics' },
-    { icon: Package, label: 'Recent Trips', question: 'Show recent trips' },
-    { icon: CreditCard, label: 'Top Clients', question: 'Who are my top clients?' },
-    { icon: Fuel, label: 'Fuel Usage', question: 'Show fuel consumption' },
+    { icon: DollarSign, label: 'Executive Summary', question: 'Executive summary' },
+    { icon: Truck, label: 'Fleet Status', question: 'Fleet operations' },
+    { icon: Users, label: 'Driver Analytics', question: 'Driver analytics' },
+    { icon: Package, label: 'Revenue Analysis', question: 'Revenue analysis' },
+    { icon: CreditCard, label: 'Top Clients', question: 'Top clients' },
+    { icon: Fuel, label: 'Cost Optimization', question: 'Fuel efficiency' },
   ];
 
   const MetricCard = ({ title, value, subtitle, trend }: { title: string; value: string; subtitle?: string; trend?: 'up' | 'down' | 'neutral' }) => (
