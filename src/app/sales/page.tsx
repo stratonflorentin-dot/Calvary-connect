@@ -414,7 +414,7 @@ function SalesModuleContent() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
-      <div className="flex-1 p-6 overflow-x-hidden">
+      <div className="flex-1 p-4 md:p-6 overflow-x-hidden">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Sales & Commercial</h1>
           <p className="text-gray-600 mt-1">Manage customers, quotations, contracts, and sales pipeline</p>
