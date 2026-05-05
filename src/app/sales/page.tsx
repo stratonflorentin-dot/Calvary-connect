@@ -414,7 +414,7 @@ function SalesModuleContent() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
-      <div className="flex-1 p-4 md:p-6 overflow-x-hidden">
+      <div className="flex-1 p-4 md:p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Sales & Commercial</h1>
           <p className="text-gray-600 mt-1">Manage customers, quotations, contracts, and sales pipeline</p>
@@ -564,19 +564,20 @@ function SalesModuleContent() {
                 )}
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Company</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>City</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Credit Limit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>City</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Credit Limit</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {customers.map(customer => (
                       <TableRow key={customer.id}>
                         <TableCell className="font-medium">{customer.customer_code}</TableCell>
@@ -594,6 +595,7 @@ function SalesModuleContent() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -734,19 +736,20 @@ function SalesModuleContent() {
                 )}
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Quote #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Route</TableHead>
-                      <TableHead>Service</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Expires</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Quote #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Route</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Expires</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {quotations.map(q => (
                       <TableRow key={q.id}>
                         <TableCell className="font-medium">{q.quotation_number}</TableCell>
@@ -762,6 +765,7 @@ function SalesModuleContent() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -848,18 +852,19 @@ function SalesModuleContent() {
                 )}
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Contract #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Contract #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Period</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {contracts.map(c => (
                       <TableRow key={c.id}>
                         <TableCell className="font-medium">{c.contract_number}</TableCell>
@@ -874,6 +879,7 @@ function SalesModuleContent() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1008,19 +1014,20 @@ function SalesModuleContent() {
                 )}
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Opportunity</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Service</TableHead>
-                      <TableHead>Monthly Revenue</TableHead>
-                      <TableHead>Probability</TableHead>
-                      <TableHead>Stage</TableHead>
-                      <TableHead>Expected Close</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Opportunity</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Monthly Revenue</TableHead>
+                        <TableHead>Probability</TableHead>
+                        <TableHead>Stage</TableHead>
+                        <TableHead>Expected Close</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {opportunities.map(o => (
                       <TableRow key={o.id}>
                         <TableCell className="font-medium">{o.opportunity_name}</TableCell>
@@ -1043,6 +1050,7 @@ function SalesModuleContent() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
