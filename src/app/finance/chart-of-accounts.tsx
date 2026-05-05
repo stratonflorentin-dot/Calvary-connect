@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, BookOpen, Calculator, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, BookOpen, Calculator, ArrowLeft, Edit2, Trash2, Wallet, CreditCard, Building2, TrendingUp, TrendingDown, Coins, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 interface Account {
@@ -41,15 +41,58 @@ interface LedgerTransaction {
   created_at: string;
 }
 
-const categoryColors: Record<string, { bg: string; text: string; border: string }> = {
-  ASSETS: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-  LIABILITIES: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
-  EQUITY: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-  REVENUE: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
-  COST_OF_SALES: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
-  OPERATING_EXPENSES: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
-  OTHER_EXPENSES: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
+const categoryColors: Record<string, { bg: string; text: string; border: string; icon: any }> = {
+  ASSETS: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: Wallet },
+  LIABILITIES: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', icon: CreditCard },
+  EQUITY: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', icon: Building2 },
+  REVENUE: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', icon: TrendingUp },
+  COST_OF_SALES: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', icon: Coins },
+  OPERATING_EXPENSES: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: TrendingDown },
+  OTHER_EXPENSES: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', icon: FileText },
 };
+
+// Pre-configured logistics accounts for Calvary
+const DEFAULT_ACCOUNTS = [
+  // ASSETS - Bank Accounts
+  { code: '1001', name: 'Cash - NMB Bank Operating', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Bank Accounts' },
+  { code: '1002', name: 'Cash - CRDB Bank Fuel', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Bank Accounts' },
+  { code: '1003', name: 'Cash - NMB Transit Fees', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Bank Accounts' },
+  { code: '1004', name: 'Petty Cash', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Cash' },
+  // ASSETS - Receivables
+  { code: '1101', name: 'Accounts Receivable - Local Clients', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Receivables' },
+  { code: '1102', name: 'Accounts Receivable - Transit Clients', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Receivables' },
+  { code: '1103', name: 'Fuel Advance Receivable', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Receivables' },
+  // ASSETS - Vehicles
+  { code: '1501', name: 'Truck Fleet - Cost', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fleet' },
+  { code: '1502', name: 'Accumulated Depreciation - Fleet', category: 'ASSETS', type: 'credit', currency: 'TZS', sub_category: 'Fleet' },
+  // LIABILITIES
+  { code: '2001', name: 'Accounts Payable - Suppliers', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Payables' },
+  { code: '2002', name: 'Accounts Payable - Fuel Stations', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Payables' },
+  { code: '2101', name: 'VAT Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Taxes' },
+  { code: '2201', name: 'Driver Allowances Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Payroll' },
+  // EQUITY
+  { code: '3001', name: 'Owner Capital', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Capital' },
+  { code: '3002', name: 'Retained Earnings', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Earnings' },
+  { code: '3101', name: 'Profit/Loss Current Year', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Earnings' },
+  // REVENUE
+  { code: '4001', name: 'Local Delivery Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Transport' },
+  { code: '4002', name: 'Transit Revenue - Kenya', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Transit' },
+  { code: '4003', name: 'Transit Revenue - Zambia', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Transit' },
+  { code: '4004', name: 'Reefer Services Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Cold Chain' },
+  { code: '4005', name: 'Lowbed Heavy Cargo Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Heavy Haul' },
+  // COST OF SALES
+  { code: '5001', name: 'Fuel Expenses', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5002', name: 'Driver Allowances', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5003', name: 'Border & Toll Charges', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  // OPERATING EXPENSES
+  { code: '6001', name: 'Vehicle Maintenance & Repairs', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Fleet' },
+  { code: '6002', name: 'Vehicle Insurance', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Fleet' },
+  { code: '6003', name: 'Depreciation - Vehicles', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Fleet' },
+  { code: '6004', name: 'Road Toll & Transit Permits', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Compliance' },
+  { code: '6005', name: 'Salaries & Wages', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Payroll' },
+  { code: '6006', name: 'Office Rent & Utilities', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Admin' },
+  { code: '6007', name: 'Communication & IT', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Admin' },
+];
 
 export function ChartOfAccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -106,8 +149,30 @@ export function ChartOfAccountsPage() {
 
   const loadAccounts = async () => {
     setIsLoading(true);
-    const { data } = await supabase.from('accounts').select('*').order('code');
-    setAccounts(data || []);
+    try {
+      const { data } = await supabase.from('accounts').select('*').order('code');
+      if (data && data.length > 0) {
+        setAccounts(data);
+      } else {
+        // Initialize with default logistics accounts
+        const defaultAccts = DEFAULT_ACCOUNTS.map((a, i) => ({
+          ...a,
+          id: `default-${i}`,
+          current_balance: 0,
+          is_active: true,
+        })) as Account[];
+        setAccounts(defaultAccts);
+      }
+    } catch (error) {
+      // Use defaults on error
+      const defaultAccts = DEFAULT_ACCOUNTS.map((a, i) => ({
+        ...a,
+        id: `default-${i}`,
+        current_balance: 0,
+        is_active: true,
+      })) as Account[];
+      setAccounts(defaultAccts);
+    }
     setIsLoading(false);
   };
 
@@ -518,18 +583,27 @@ export function ChartOfAccountsPage() {
         </div>
 
         {/* Category Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-          {['ASSETS', 'LIABILITIES', 'EQUITY', 'REVENUE', 'OPERATING_EXPENSES'].map((category) => {
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+          {['ASSETS', 'LIABILITIES', 'EQUITY', 'REVENUE', 'COST_OF_SALES', 'OPERATING_EXPENSES', 'OTHER_EXPENSES'].map((category) => {
             const colors = categoryColors[category];
+            const Icon = colors.icon;
             const total = getCategoryTotal(category);
+            const count = accounts.filter(a => a.category === category).length;
             return (
-              <Card key={category} className={`${colors.bg} ${colors.border} border`}>
-                <CardContent className="p-4">
-                  <p className="text-sm font-medium text-muted-foreground uppercase">{category.replace('_', ' ')}</p>
-                  <p className={`text-2xl font-bold ${colors.text}`}>
+              <Card 
+                key={category} 
+                className={`${colors.bg} ${colors.border} border cursor-pointer hover:shadow-md transition-shadow ${activeFilter === category ? 'ring-2 ring-offset-2 ring-blue-400' : ''}`}
+                onClick={() => setActiveFilter(category)}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Icon className={`w-4 h-4 ${colors.text}`} />
+                    <span className="text-xs font-medium text-muted-foreground uppercase">{category.replace('_', ' ')}</span>
+                  </div>
+                  <p className={`text-lg font-bold ${colors.text}`}>
                     {formatCurrency(total)}
                   </p>
-                  <p className="text-xs text-muted-foreground">filter</p>
+                  <p className="text-xs text-muted-foreground">{count} accounts</p>
                 </CardContent>
               </Card>
             );
@@ -538,28 +612,25 @@ export function ChartOfAccountsPage() {
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {categories.map((cat) => (
-            <Button
-              key={cat}
-              variant={activeFilter === cat ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveFilter(cat)}
-              className={activeFilter === cat ? 'bg-red-600 hover:bg-red-700' : ''}
-            >
-              {cat === 'All' && <Calculator className="h-4 w-4 mr-2" />}
-              {cat === 'ASSETS' && <span className="mr-2">💰</span>}
-              {cat === 'LIABILITIES' && <span className="mr-2">📋</span>}
-                  {cat === 'EQUITY' && <span className="mr-2">🏛️</span>}
-                  {cat === 'REVENUE' && <span className="mr-2">📈</span>}
-                  {cat === 'COST_OF_SALES' && <span className="mr-2">📉</span>}
-                  {cat === 'OPERATING_EXPENSES' && <span className="mr-2">💸</span>}
-                  {cat === 'OTHER_EXPENSES' && <span className="mr-2">📊</span>}
-                  {cat.replace(/_/g, ' ')}
-                </Button>
-              ))}
-            </div>
+          {categories.map((cat) => {
+            const colors = categoryColors[cat] || { icon: Calculator, text: 'text-slate-600' };
+            const Icon = colors.icon || Calculator;
+            return (
+              <Button
+                key={cat}
+                variant={activeFilter === cat ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveFilter(cat)}
+                className={activeFilter === cat ? 'bg-slate-900 hover:bg-slate-800' : ''}
+              >
+                <Icon className="h-4 w-4 mr-2" />
+                {cat.replace(/_/g, ' ')}
+              </Button>
+            );
+          })}
+        </div>
 
-            {/* Search */}
+        {/* Search */}
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
