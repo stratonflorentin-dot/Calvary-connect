@@ -507,56 +507,56 @@ export default function UsersPage() {
         </div>
 
         {/* Team Stats Cards - Calvary Style */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 font-medium">Total Users</span>
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
                 <Users className="size-4 text-blue-600" />
               </div>
             </div>
             <p className="text-2xl font-bold text-slate-900">{teamStats.totalUsers}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 font-medium">Active</span>
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
                 <Activity className="size-4 text-green-600" />
               </div>
             </div>
             <p className="text-2xl font-bold text-green-600">{teamStats.activeUsers}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 font-medium">Pending Invites</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
                 <Clock className="size-4 text-amber-600" />
               </div>
             </div>
             <p className="text-2xl font-bold text-amber-600">{teamStats.pendingInvites}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 font-medium">Dormant</span>
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
                 <User className="size-4 text-slate-600" />
               </div>
             </div>
             <p className="text-2xl font-bold text-slate-600">{teamStats.dormantUsers}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 font-medium">Drivers</span>
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
                 <Shield className="size-4 text-purple-600" />
               </div>
             </div>
             <p className="text-2xl font-bold text-purple-600">{teamStats.driversCount}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 font-medium">Operators</span>
-              <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="size-4 text-cyan-600" />
               </div>
             </div>
