@@ -421,54 +421,54 @@ function SalesModuleContent() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-gray-500 truncate">Total Customers</p>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 mb-1">Total Customers</p>
                   <p className="text-2xl font-bold text-gray-900">{totalCustomers}</p>
                 </div>
-                <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0 ml-2">
+                <div className="bg-blue-100 p-3 rounded-lg flex-shrink-0">
                   <Users className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-gray-500 truncate">Active Quotations</p>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 mb-1">Active Quotations</p>
                   <p className="text-2xl font-bold text-gray-900">{totalQuotations}</p>
                 </div>
-                <div className="bg-amber-100 p-2 rounded-lg flex-shrink-0 ml-2">
+                <div className="bg-amber-100 p-3 rounded-lg flex-shrink-0">
                   <FileText className="h-6 w-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-gray-500 truncate">Contracts</p>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 mb-1">Contracts</p>
                   <p className="text-2xl font-bold text-gray-900">{totalContracts}</p>
                 </div>
-                <div className="bg-emerald-100 p-2 rounded-lg flex-shrink-0 ml-2">
+                <div className="bg-emerald-100 p-3 rounded-lg flex-shrink-0">
                   <FileSignature className="h-6 w-6 text-emerald-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-gray-500 truncate">Pipeline Value</p>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 mb-1">Pipeline Value</p>
                   <p className="text-2xl font-bold text-gray-900">TZS {pipelineValue.toLocaleString()}</p>
                 </div>
-                <div className="bg-purple-100 p-2 rounded-lg flex-shrink-0 ml-2">
+                <div className="bg-purple-100 p-3 rounded-lg flex-shrink-0">
                   <TrendingUp className="h-6 w-6 text-purple-600" />
                 </div>
               </div>

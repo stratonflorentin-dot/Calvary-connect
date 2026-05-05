@@ -10,12 +10,14 @@ import { CeoView } from '@/components/dashboard/ceo-view';
 import { DriverView } from '@/components/dashboard/driver-view';
 import { MechanicView } from '@/components/dashboard/mechanic-view';
 import { AccountantView } from '@/components/dashboard/accountant-view';
-import { HrView } from '@/components/dashboard/hr-view';
+import { HRView } from '@/components/dashboard/hr-view';
 import { OperatorView } from '@/components/dashboard/operator-view';
 import { NotificationsBell } from '@/components/shared/notifications-bell';
 import { CurrencyDisplay } from '@/components/shared/currency-display';
 import { AIAnalysisDashboard } from '@/components/dashboard/ai-analysis-dashboard';
+import { WelcomeScreen } from '@/components/welcome-screen';
 import { useLanguage } from '@/hooks/use-language';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Languages } from 'lucide-react';
 
@@ -23,6 +25,7 @@ export default function Home() {
   const { role, isAdmin } = useRole();
   const { user, isLoading } = useSupabase();
   const { toggleLanguage, lang } = useLanguage();
+  const [showWelcome, setShowWelcome] = useState(true);
 
   if (isLoading) {
     return (
@@ -57,14 +60,19 @@ export default function Home() {
 
   if (!role) return null;
 
+  // Show welcome screen on first load
+  if (showWelcome) {
+    return <WelcomeScreen onComplete={() => setShowWelcome(false)} minimumDuration={2500} />;
+  }
+
   // Render role-specific content
   const renderContent = () => {
     switch (role) {
       case 'CEO':
-      case 'ADMIN':
+      case 'HR':
         return (
           <div className="space-y-8">
-            <CeoView />
+            <HRView />
             <AIAnalysisDashboard />
           </div>
         );
@@ -76,8 +84,6 @@ export default function Home() {
         return <MechanicView />;
       case 'ACCOUNTANT':
         return <AccountantView />;
-      case 'HR':
-        return <HrView />;
       default:
         return <CeoView />;
     }
