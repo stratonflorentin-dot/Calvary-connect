@@ -421,11 +421,11 @@ function SalesModuleContent() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-500 mb-1">Total Customers</p>
                   <p className="text-2xl font-bold text-gray-900">{totalCustomers}</p>
                 </div>
@@ -436,9 +436,9 @@ function SalesModuleContent() {
             </CardContent>
           </Card>
           <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-500 mb-1">Active Quotations</p>
                   <p className="text-2xl font-bold text-gray-900">{totalQuotations}</p>
                 </div>
@@ -449,9 +449,9 @@ function SalesModuleContent() {
             </CardContent>
           </Card>
           <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-500 mb-1">Contracts</p>
                   <p className="text-2xl font-bold text-gray-900">{totalContracts}</p>
                 </div>
@@ -462,9 +462,9 @@ function SalesModuleContent() {
             </CardContent>
           </Card>
           <Card className="bg-white shadow-sm border border-gray-200">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-500 mb-1">Pipeline Value</p>
                   <p className="text-2xl font-bold text-gray-900">TZS {pipelineValue.toLocaleString()}</p>
                 </div>
