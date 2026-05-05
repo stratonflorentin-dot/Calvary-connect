@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, X, UserPlus, Search, Trash2, Pencil, RefreshCw } from 'lucide-react';
+import { Camera, Upload, X, UserPlus, Search, Trash2, Pencil, RefreshCw, Users, Activity, Clock, User, Shield, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface UserProfile {
@@ -48,6 +48,32 @@ export default function UsersPage() {
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Team stats
+  const teamStats = {
+    totalUsers: users.length,
+    activeUsers: users.filter(u => u.status === 'active').length,
+    pendingInvites: users.filter(u => u.status === 'invited').length,
+    dormantUsers: users.filter(u => u.status === 'dormant').length,
+    driversCount: users.filter(u => u.role === 'DRIVER').length,
+    operatorsCount: users.filter(u => u.role === 'OPERATOR').length,
+  };
+
+  // Role configuration for enhanced badges
+  const ROLE_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+    CEO: { label: 'CEO', color: 'text-purple-700', bgColor: 'bg-purple-100' },
+    ADMIN: { label: 'Admin', color: 'text-red-700', bgColor: 'bg-red-100' },
+    HR: { label: 'HR', color: 'text-pink-700', bgColor: 'bg-pink-100' },
+    OPERATOR: { label: 'Operations', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+    DRIVER: { label: 'Driver', color: 'text-green-700', bgColor: 'bg-green-100' },
+    MECHANIC: { label: 'Mechanic', color: 'text-orange-700', bgColor: 'bg-orange-100' },
+    ACCOUNTANT: { label: 'Accountant', color: 'text-cyan-700', bgColor: 'bg-cyan-100' },
+  };
+
+  const getRoleBadgeClass = (roleName: string) => {
+    const config = ROLE_CONFIG[roleName] || ROLE_CONFIG.OPERATOR;
+    return `${config.color} ${config.bgColor}`;
+  };
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -147,6 +173,17 @@ export default function UsersPage() {
 
   const getInitials = (name: string) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { bg: string; text: string; label: string; dot: string }> = {
+      active: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Active', dot: 'bg-emerald-500' },
+      invited: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Invited', dot: 'bg-amber-500' },
+      dormant: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Dormant', dot: 'bg-slate-500' },
+      suspended: { bg: 'bg-red-100', text: 'text-red-700', label: 'Suspended', dot: 'bg-red-500' },
+      inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive', dot: 'bg-gray-500' },
+    };
+    return statusConfig[status] || statusConfig.active;
   };
 
   const filteredUsers = users?.filter(u =>
@@ -346,7 +383,7 @@ export default function UsersPage() {
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role!} />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-headline tracking-tighter">User Management</h1>
             <p className="text-muted-foreground text-sm">Add and manage employee access.</p>
@@ -358,7 +395,6 @@ export default function UsersPage() {
               className="rounded-full gap-2"
               onClick={() => {
                 console.log('[UsersPage] Manual refresh triggered');
-                // Force reload users
                 const loadUsers = async () => {
                   if (!user) return;
                   try {
@@ -468,134 +504,192 @@ export default function UsersPage() {
             </DialogContent>
           </Dialog>
           </div>
-
-          {/* Edit User Dialog */}
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit User</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleEditUser} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Full Name</Label>
-                  <Input id="edit-name" name="name" defaultValue={editingUser?.name} placeholder="Full name" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email Address</Label>
-                  <Input id="edit-email" name="email" type="email" defaultValue={editingUser?.email} placeholder="john@calvaryconnect.com" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-role">System Role</Label>
-                  <Select name="role" defaultValue={editingUser?.role} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(role === "CEO" || role === "ADMIN") && <SelectItem value="CEO">CEO</SelectItem>}
-                      <SelectItem value="ADMIN">Admin</SelectItem>
-                      <SelectItem value="HR">HR</SelectItem>
-                      <SelectItem value="OPERATOR">Operations</SelectItem>
-                      <SelectItem value="DRIVER">Driver</SelectItem>
-                      <SelectItem value="MECHANIC">Mechanic</SelectItem>
-                      <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status">Status</Label>
-                  <Select name="status" defaultValue={editingUser?.status || 'active'} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                          <span>Active - Currently using system</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="invited">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-amber-400"></div>
-                          <span>Invited - Pre-added, pending signup</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="dormant">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-slate-400"></div>
-                          <span>Dormant - No activity for 30+ days</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="suspended">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                          <span>Suspended - Access revoked</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="inactive">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                          <span>Inactive - Manually deactivated</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status-reason">Status Reason (Optional)</Label>
-                  <Input 
-                    id="edit-status-reason" 
-                    name="status_reason" 
-                    defaultValue={editingUser?.status_reason} 
-                    placeholder="e.g., No login for 45 days, left company, etc."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-photo">Profile Photo</Label>
-                  <div className="flex items-center gap-4">
-                    {photoPreview ? (
-                      <div className="relative">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage src={photoPreview} />
-                          <AvatarFallback>{getInitials(editingUser?.name || 'U')}</AvatarFallback>
-                        </Avatar>
-                        <button
-                          type="button"
-                          onClick={clearPhoto}
-                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="edit-photo"
-                          name="photo"
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          onChange={handlePhotoChange}
-                          className="hidden"
-                        />
-                        <Label
-                          htmlFor="edit-photo"
-                          className="cursor-pointer flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
-                        >
-                          <Camera className="h-4 w-4" />
-                          <span>Change Photo</span>
-                        </Label>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
-                </div>
-                <Button type="submit" className="w-full" disabled={uploading}>
-                  {uploading ? 'Uploading...' : 'Update User'}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
+
+        {/* Team Stats Cards - Calvary Style */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-500 font-medium">Total Users</span>
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Users className="size-4 text-blue-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-slate-900">{teamStats.totalUsers}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-500 font-medium">Active</span>
+              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                <Activity className="size-4 text-green-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-green-600">{teamStats.activeUsers}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-500 font-medium">Pending Invites</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Clock className="size-4 text-amber-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-amber-600">{teamStats.pendingInvites}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-500 font-medium">Dormant</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <User className="size-4 text-slate-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-slate-600">{teamStats.dormantUsers}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-500 font-medium">Drivers</span>
+              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                <Shield className="size-4 text-purple-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-purple-600">{teamStats.driversCount}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-500 font-medium">Operators</span>
+              <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
+                <AlertTriangle className="size-4 text-cyan-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-cyan-600">{teamStats.operatorsCount}</p>
+          </div>
+        </div>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEditUser} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input id="edit-name" name="name" defaultValue={editingUser?.name} placeholder="Full name" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input id="edit-email" name="email" type="email" defaultValue={editingUser?.email} placeholder="john@calvaryconnect.com" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">System Role</Label>
+                <Select name="role" defaultValue={editingUser?.role} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(role === "CEO" || role === "ADMIN") && <SelectItem value="CEO">CEO</SelectItem>}
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="HR">HR</SelectItem>
+                    <SelectItem value="OPERATOR">Operations</SelectItem>
+                    <SelectItem value="DRIVER">Driver</SelectItem>
+                    <SelectItem value="MECHANIC">Mechanic</SelectItem>
+                    <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select name="status" defaultValue={editingUser?.status || 'active'} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        <span>Active - Currently using system</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="invited">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-400"></div>
+                        <span>Invited - Pre-added, pending signup</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="dormant">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                        <span>Dormant - No activity for 30+ days</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="suspended">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                        <span>Suspended - Access revoked</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                        <span>Inactive - Manually deactivated</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status-reason">Status Reason (Optional)</Label>
+                <Input 
+                  id="edit-status-reason" 
+                  name="status_reason" 
+                  defaultValue={editingUser?.status_reason} 
+                  placeholder="e.g., No login for 45 days, left company, etc."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-photo">Profile Photo</Label>
+                <div className="flex items-center gap-4">
+                  {photoPreview ? (
+                    <div className="relative">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage src={photoPreview} />
+                        <AvatarFallback>{getInitials(editingUser?.name || 'U')}</AvatarFallback>
+                      </Avatar>
+                      <button
+                        type="button"
+                        onClick={clearPhoto}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="edit-photo"
+                        name="photo"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handlePhotoChange}
+                        className="hidden"
+                      />
+                      <Label
+                        htmlFor="edit-photo"
+                        className="cursor-pointer flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
+                      >
+                        <Camera className="h-4 w-4" />
+                        <span>Change Photo</span>
+                      </Label>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
+              </div>
+              <Button type="submit" className="w-full" disabled={uploading}>
+                {uploading ? 'Uploading...' : 'Update User'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-hidden">
           <div className="p-4 border-b">
@@ -649,25 +743,21 @@ export default function UsersPage() {
                     </TableCell>
                   )}
                   <TableCell>
-                    <Badge variant="outline" className="font-headline tracking-tighter text-[10px]">
-                      {u.role}
+                    <Badge className={`font-headline tracking-tighter text-[10px] ${getRoleBadgeClass(u.role)}`}>
+                      {ROLE_CONFIG[u.role]?.label || u.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {(() => {
-                      const statusConfig = {
-                        active: { bg: 'bg-emerald-500', text: 'text-white', label: 'Active' },
-                        invited: { bg: 'bg-amber-400', text: 'text-slate-900', label: 'Invited' },
-                        dormant: { bg: 'bg-slate-400', text: 'text-white', label: 'Dormant' },
-                        suspended: { bg: 'bg-red-500', text: 'text-white', label: 'Suspended' },
-                        inactive: { bg: 'bg-gray-300', text: 'text-slate-700', label: 'Inactive' }
-                      };
-                      const config = statusConfig[u.status as keyof typeof statusConfig] || statusConfig.active;
+                      const config = getStatusBadge(u.status);
                       return (
                         <div className="flex flex-col gap-1">
-                          <Badge className={`${config.bg} ${config.text} text-xs font-medium`}>
-                            {config.label}
-                          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${config.dot} ${u.status === 'active' ? 'animate-pulse' : ''}`} />
+                            <Badge className={`${config.bg} ${config.text} text-xs font-medium`}>
+                              {config.label}
+                            </Badge>
+                          </div>
                           {u.status_reason && (
                             <span className="text-[10px] text-muted-foreground max-w-[150px] truncate" title={u.status_reason}>
                               {u.status_reason}
