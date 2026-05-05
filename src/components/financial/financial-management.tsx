@@ -11,27 +11,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  Receipt, 
-  FileText, 
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Receipt,
+  FileText,
   Target,
   Plus,
   Search,
-  Filter,
   Download,
   Calendar,
-  CreditCard
+  CreditCard,
+  Globe,
+  Anchor,
+  Thermometer,
+  Truck,
+  MapPin,
+  Fuel,
+  Clock,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
+import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
 
-interface Expense {
+interface CalvaryExpense {
   id: string;
-  category_id: string;
+  category: string;
   vehicle_id: string;
   driver_id: string;
   amount: number;
@@ -41,14 +50,18 @@ interface Expense {
   expense_date: string;
   status: string;
   created_at: string;
-  financial_categories?: { name: string; type: string };
+  trip_id?: string;
+  is_cross_border?: boolean;
+  is_reefer?: boolean;
+  is_lowbed?: boolean;
+  border_point?: string;
   vehicles?: { plate_number: string; make: string; model: string };
   user_profiles?: { name: string };
 }
 
-interface Revenue {
+interface CalvaryRevenue {
   id: string;
-  category_id: string;
+  trip_id: string;
   vehicle_id: string;
   amount: number;
   description: string;
@@ -56,21 +69,10 @@ interface Revenue {
   payment_status: string;
   revenue_date: string;
   created_at: string;
-  financial_categories?: { name: string; type: string };
+  is_cross_border: boolean;
+  cargo_type: string;
+  client: string;
   vehicles?: { plate_number: string; make: string; model: string };
-}
-
-interface Budget {
-  id: string;
-  category_id: string;
-  budget_name: string;
-  amount: number;
-  spent_amount: number;
-  period_type: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  financial_categories?: { name: string; type: string };
 }
 
 interface Invoice {
@@ -81,6 +83,8 @@ interface Invoice {
   due_date: string;
   status: 'pending' | 'paid' | 'overdue';
   created_at: string;
+  is_cross_border?: boolean;
+  cargo_type?: string;
 }
 
 interface TaxRecord {
@@ -89,55 +93,64 @@ interface TaxRecord {
   amount: number;
   due_date: string;
   status: 'pending' | 'paid';
-  type: 'VAT' | 'PAYE' | 'Income' | 'Road';
+  type: 'VAT' | 'PAYE' | 'Income' | 'Road' | 'Import' | 'Excise';
 }
 
-export function FinancialManagement() {
+export function CalvaryFinancialManagement() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [revenue, setRevenue] = useState<Revenue[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [expenses, setExpenses] = useState<CalvaryExpense[]>([]);
+  const [revenue, setRevenue] = useState<CalvaryRevenue[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [taxes, setTaxes] = useState<TaxRecord[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [trips, setTrips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const { format } = useCurrency();
 
   // Form states
   const [expenseForm, setExpenseForm] = useState({
-    category_id: '',
+    category: '',
     vehicle_id: '',
     amount: '',
     description: '',
     vendor: '',
     payment_method: 'cash',
     expense_date: format(new Date(), 'yyyy-MM-dd'),
-    notes: ''
+    notes: '',
+    trip_id: '',
+    is_cross_border: false,
+    border_point: ''
   });
 
   const [revenueForm, setRevenueForm] = useState({
-    category_id: '',
+    trip_id: '',
     vehicle_id: '',
     amount: '',
     description: '',
     invoice_number: '',
+    payment_status: 'pending',
     payment_method: 'bank_transfer',
     revenue_date: format(new Date(), 'yyyy-MM-dd'),
-    notes: ''
+    client: '',
+    is_cross_border: false,
+    cargo_type: 'GENERAL'
   });
 
   const [invoiceForm, setInvoiceForm] = useState({
     customer_name: '',
     amount: '',
     due_date: format(new Date(), 'yyyy-MM-dd'),
-    invoice_number: `INV-${Date.now()}`
+    invoice_number: `CAL-${Date.now()}`,
+    is_cross_border: false,
+    cargo_type: 'GENERAL'
   });
 
   const [taxForm, setTaxForm] = useState({
     tax_name: '',
     amount: '',
     due_date: format(new Date(), 'yyyy-MM-dd'),
-    type: 'VAT'
+    type: 'VAT' as TaxRecord['type']
   });
 
   useEffect(() => {
@@ -147,69 +160,45 @@ export function FinancialManagement() {
   const loadFinancialData = async () => {
     try {
       setLoading(true);
-      
-      // Load expenses
-      const { data: expensesData } = await supabase
-        .from('expenses')
-        .select(`
-          *,
-          financial_categories(name, type),
-          vehicles(plate_number, make, model),
-          user_profiles(name)
-        `)
-        .order('created_at', { ascending: false });
-      
-      // Load revenue
-      const { data: revenueData } = await supabase
-        .from('revenue')
-        .select(`
-          *,
-          financial_categories(name, type),
-          vehicles(plate_number, make, model)
-        `)
-        .order('created_at', { ascending: false });
-      
-      // Load budgets
-      const { data: budgetsData } = await supabase
-        .from('budgets')
-        .select(`
-          *,
-          financial_categories(name, type)
-        `)
-        .order('created_at', { ascending: false });
-      
-      // Load categories
-      const { data: categoriesData } = await supabase
-        .from('financial_categories')
-        .select('*')
-        .order('name');
-      
-      // Load vehicles
-      const { data: vehiclesData } = await supabase
-        .from('vehicles')
-        .select('id, plate_number, make, model')
-        .eq('status', 'active')
-        .order('plate_number');
-      
-      // Load invoices
-      const { data: invoicesData } = await supabase
-        .from('invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
 
-      // Load taxes
-      const { data: taxesData } = await supabase
-        .from('taxes')
-        .select('*')
-        .order('due_date', { ascending: true });
-      
+      const [
+        { data: expensesData },
+        { data: revenueData },
+        { data: invoicesData },
+        { data: taxesData },
+        { data: vehiclesData },
+        { data: tripsData }
+      ] = await Promise.all([
+        supabase.from('expenses').select('*, vehicles(plate_number, make, model), user_profiles(name)').order('created_at', { ascending: false }),
+        supabase.from('trips').select('*').order('created_at', { ascending: false }),
+        supabase.from('invoices').select('*').order('created_at', { ascending: false }),
+        supabase.from('taxes').select('*').order('due_date', { ascending: true }),
+        supabase.from('vehicles').select('id, plate_number, make, model').eq('status', 'active').order('plate_number'),
+        supabase.from('trips').select('*').order('created_at', { ascending: false })
+      ]);
+
+      // Process trips as revenue
+      const processedRevenue: CalvaryRevenue[] = (tripsData || []).map(trip => ({
+        id: trip.id,
+        trip_id: trip.id,
+        vehicle_id: trip.vehicle_id,
+        amount: Number(trip.revenue) || Number(trip.price) || 0,
+        description: `${trip.origin} → ${trip.destination}`,
+        invoice_number: `TRIP-${trip.id?.slice(0, 8) || 'N/A'}`,
+        payment_status: trip.status === 'completed' ? 'paid' : 'pending',
+        revenue_date: trip.created_at,
+        created_at: trip.created_at,
+        is_cross_border: trip.is_cross_border || false,
+        cargo_type: trip.cargo_type || 'GENERAL',
+        client: trip.client || 'Direct Client'
+      })).filter(r => r.amount > 0);
+
       setExpenses(expensesData || []);
-      setRevenue(revenueData || []);
-      setBudgets(budgetsData || []);
+      setRevenue(processedRevenue);
       setInvoices(invoicesData || []);
       setTaxes(taxesData || []);
-      setCategories(categoriesData || []);
       setVehicles(vehiclesData || []);
+      setTrips(tripsData || []);
     } catch (error) {
       console.error('Error loading financial data:', error);
       toast({
@@ -224,81 +213,68 @@ export function FinancialManagement() {
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const { error } = await supabase.from('expenses').insert({
-        ...expenseForm,
+        category: expenseForm.category,
+        vehicle_id: expenseForm.vehicle_id || null,
         amount: parseFloat(expenseForm.amount),
-        created_by: (await supabase.auth.getUser()).data?.user?.id
+        description: expenseForm.description,
+        vendor: expenseForm.vendor,
+        payment_method: expenseForm.payment_method,
+        expense_date: expenseForm.expense_date,
+        notes: expenseForm.notes,
+        trip_id: expenseForm.trip_id || null,
+        is_cross_border: expenseForm.is_cross_border,
+        border_point: expenseForm.border_point,
+        status: 'pending',
+        created_at: new Date().toISOString()
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Expense added successfully"
-      });
+      toast({ title: "Success", description: "Expense recorded successfully" });
 
-      // Reset form
       setExpenseForm({
-        category_id: '',
-        vehicle_id: '',
-        amount: '',
-        description: '',
-        vendor: '',
-        payment_method: 'cash',
+        category: '', vehicle_id: '', amount: '', description: '',
+        vendor: '', payment_method: 'cash',
         expense_date: format(new Date(), 'yyyy-MM-dd'),
-        notes: ''
+        notes: '', trip_id: '', is_cross_border: false, border_point: ''
       });
 
       loadFinancialData();
     } catch (error) {
       console.error('Error adding expense:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add expense",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Failed to add expense", variant: "destructive" });
     }
   };
 
   const handleAddRevenue = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
-      const { error } = await supabase.from('revenue').insert({
-        ...revenueForm,
-        amount: parseFloat(revenueForm.amount),
-        created_by: (await supabase.auth.getUser()).data?.user?.id
-      });
+      const { error } = await supabase.from('trips').update({
+        revenue: parseFloat(revenueForm.amount),
+        price: parseFloat(revenueForm.amount),
+        status: 'completed'
+      }).eq('id', revenueForm.trip_id);
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Revenue added successfully"
-      });
+      toast({ title: "Success", description: "Trip revenue recorded" });
 
-      // Reset form
       setRevenueForm({
-        category_id: '',
-        vehicle_id: '',
-        amount: '',
-        description: '',
-        invoice_number: '',
+        trip_id: '', vehicle_id: '', amount: '', description: '',
+        invoice_number: '', payment_status: 'pending',
         payment_method: 'bank_transfer',
         revenue_date: format(new Date(), 'yyyy-MM-dd'),
-        notes: ''
+        client: '', is_cross_border: false, cargo_type: 'GENERAL'
       });
 
       loadFinancialData();
     } catch (error) {
       console.error('Error adding revenue:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add revenue",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Failed to record revenue", variant: "destructive" });
     }
   };
 
@@ -309,11 +285,14 @@ export function FinancialManagement() {
         ...invoiceForm,
         amount: parseFloat(invoiceForm.amount),
         status: 'pending',
-        created_by: (await supabase.auth.getUser()).data?.user?.id
+        created_at: new Date().toISOString()
       });
       if (error) throw error;
       toast({ title: "Invoice Created", description: `Invoice ${invoiceForm.invoice_number} saved.` });
-      setInvoiceForm({ customer_name: '', amount: '', due_date: format(new Date(), 'yyyy-MM-dd'), invoice_number: `INV-${Date.now()}` });
+      setInvoiceForm({
+        customer_name: '', amount: '', due_date: format(new Date(), 'yyyy-MM-dd'),
+        invoice_number: `CAL-${Date.now()}`, is_cross_border: false, cargo_type: 'GENERAL'
+      });
       loadFinancialData();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -327,10 +306,10 @@ export function FinancialManagement() {
         ...taxForm,
         amount: parseFloat(taxForm.amount),
         status: 'pending',
-        created_by: (await supabase.auth.getUser()).data?.user?.id
+        created_at: new Date().toISOString()
       });
       if (error) throw error;
-      toast({ title: "Tax Record Added", description: "Tax obligation recorded." });
+      toast({ title: "Tax Recorded", description: "Tax obligation added." });
       setTaxForm({ tax_name: '', amount: '', due_date: format(new Date(), 'yyyy-MM-dd'), type: 'VAT' });
       loadFinancialData();
     } catch (error: any) {
@@ -338,74 +317,125 @@ export function FinancialManagement() {
     }
   };
 
+  const getCargoTypeBadge = (type: string) => {
+    switch (type) {
+      case 'REEFER':
+      case 'cold_chain':
+        return <Badge className="bg-cyan-500/20 text-cyan-700"><Thermometer className="size-3 mr-1" /> Cold Chain</Badge>;
+      case 'LOWBED':
+      case 'heavy_equipment':
+        return <Badge className="bg-amber-500/20 text-amber-700"><Anchor className="size-3 mr-1" /> Heavy Cargo</Badge>;
+      case 'CROSS_BORDER':
+        return <Badge className="bg-purple-500/20 text-purple-700"><Globe className="size-3 mr-1" /> Cross-Border</Badge>;
+      default:
+        return <Badge variant="outline">General</Badge>;
+    }
+  };
+
+  // Calculate totals
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const totalRevenue = revenue.reduce((sum, rev) => sum + rev.amount, 0);
   const netProfit = totalRevenue - totalExpenses;
 
+  // Logistics-specific breakdowns
+  const crossBorderExpenses = expenses.filter(e => e.is_cross_border).reduce((sum, e) => sum + e.amount, 0);
+  const crossBorderRevenue = revenue.filter(r => r.is_cross_border).reduce((sum, r) => sum + r.amount, 0);
+  const coldChainExpenses = expenses.filter(e => e.is_reefer).reduce((sum, e) => sum + e.amount, 0);
+  const coldChainRevenue = revenue.filter(r => r.cargo_type === 'REEFER' || r.cargo_type === 'cold_chain').reduce((sum, r) => sum + r.amount, 0);
+
+  const filteredExpenses = expenses.filter(e =>
+    (e.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (e.vendor || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (e.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredRevenue = revenue.filter(r =>
+    (r.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.client || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="p-8">
-        <div className="text-center text-muted-foreground">Loading financial data...</div>
+        <div className="text-center text-muted-foreground flex items-center justify-center gap-2">
+          <Truck className="size-5 animate-pulse" /> Loading Calvary Financial Data...
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Overview Cards */}
+      {/* Calvary Brand Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <DollarSign className="size-8 text-amber-500" />
+            Calvary Financial Operations
+          </h1>
+          <p className="text-muted-foreground">East Africa Logistics - Revenue & Expense Management</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2">
+            <Download className="size-4" /> Export Report
+          </Button>
+        </div>
+      </div>
+
+      {/* Overview Cards - Logistics Specific */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-none">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
-                  ${totalRevenue.toLocaleString()}
-                </p>
+                <p className="text-sm text-white/70">Total Revenue</p>
+                <p className="text-2xl font-bold">{format(totalRevenue)}</p>
+                <p className="text-xs text-white/60 mt-1">{revenue.length} trips recorded</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-600" />
+              <TrendingUp className="h-10 w-10 text-white/30" />
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
+
+        <Card className="bg-gradient-to-br from-red-500 to-rose-600 text-white border-none">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Expenses</p>
-                <p className="text-2xl font-bold text-red-600">
-                  ${totalExpenses.toLocaleString()}
-                </p>
+                <p className="text-sm text-white/70">Total Expenses</p>
+                <p className="text-2xl font-bold">{format(totalExpenses)}</p>
+                <p className="text-xs text-white/60 mt-1">{expenses.length} entries</p>
               </div>
-              <TrendingDown className="h-8 w-8 text-red-600" />
+              <TrendingDown className="h-10 w-10 text-white/30" />
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
+
+        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-none">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Net Profit</p>
-                <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ${netProfit.toLocaleString()}
+                <p className="text-sm text-white/70">Net Profit</p>
+                <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-white' : 'text-red-200'}`}>
+                  {format(netProfit)}
+                </p>
+                <p className="text-xs text-white/60 mt-1">
+                  {totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}% margin
                 </p>
               </div>
-              <DollarSign className="h-8 w-8 text-blue-600" />
+              <DollarSign className="h-10 w-10 text-white/30" />
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
+
+        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white border-none">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Budgets</p>
-                <p className="text-2xl font-bold">
-                  {budgets.filter(b => b.status === 'active').length}
-                </p>
+                <p className="text-sm text-white/70">Cross-Border</p>
+                <p className="text-2xl font-bold">{format(crossBorderRevenue)}</p>
+                <p className="text-xs text-white/60 mt-1">Revenue from DRC/Zambia/Kenya routes</p>
               </div>
-              <Target className="h-8 w-8 text-purple-600" />
+              <Globe className="h-10 w-10 text-white/30" />
             </div>
           </CardContent>
         </Card>
@@ -414,142 +444,207 @@ export function FinancialManagement() {
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="taxes">Taxes</TabsTrigger>
-          <TabsTrigger value="budgets">Budgets</TabsTrigger>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="logistics">Logistics</TabsTrigger>
         </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue by Service Type */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="size-5 text-green-600" />
+                  Revenue by Service Type
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Globe className="size-5 text-purple-600" />
+                      <span className="font-medium">Cross-Border Transit</span>
+                    </div>
+                    <span className="font-bold text-purple-600">{format(crossBorderRevenue)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="size-5 text-blue-600" />
+                      <span className="font-medium">Local Tanzania</span>
+                    </div>
+                    <span className="font-bold text-blue-600">{format(totalRevenue - crossBorderRevenue)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-cyan-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Thermometer className="size-5 text-cyan-600" />
+                      <span className="font-medium">Cold Chain</span>
+                    </div>
+                    <span className="font-bold text-cyan-600">{format(coldChainRevenue)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Expense Breakdown */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingDown className="size-5 text-red-600" />
+                  Expense Categories
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {['fuel', 'border', 'maintenance', 'allowance'].map(cat => {
+                    const catExpenses = expenses.filter(e => (e.category || '').toLowerCase().includes(cat));
+                    const catTotal = catExpenses.reduce((sum, e) => sum + e.amount, 0);
+                    const percentage = totalExpenses > 0 ? (catTotal / totalExpenses) * 100 : 0;
+
+                    return (
+                      <div key={cat} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="capitalize">{cat === 'border' ? 'Border Fees' : cat}</span>
+                          <span className="font-medium">{format(catTotal)} ({percentage.toFixed(1)}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="h-2 rounded-full bg-primary"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         {/* Expenses Tab */}
         <TabsContent value="expenses" className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <h2 className="text-2xl font-bold">Expense Management</h2>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus className="size-4" />
-                  Add Expense
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Expense</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleAddExpense} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Select value={expenseForm.category_id} onValueChange={(value) => setExpenseForm({...expenseForm, category_id: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.filter(c => c.type === 'expense').map(category => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search expenses..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 w-64"
+                />
+              </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="gap-2"><Plus className="size-4" /> Add Expense</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Receipt className="size-5" /> Record New Expense
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleAddExpense} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Category</Label>
+                        <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({...expenseForm, category: v})}>
+                          <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fuel">Fuel</SelectItem>
+                            <SelectItem value="border">Border Fees</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            <SelectItem value="customs">Customs/Duties</SelectItem>
+                            <SelectItem value="toll">Toll Charges</SelectItem>
+                            <SelectItem value="parking">Parking</SelectItem>
+                            <SelectItem value="food">Meals/Accommodation</SelectItem>
+                            <SelectItem value="allowance">Driver Allowance</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Vehicle (Optional)</Label>
+                        <Select value={expenseForm.vehicle_id} onValueChange={(v) => setExpenseForm({...expenseForm, vehicle_id: v})}>
+                          <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                          <SelectContent>
+                            {vehicles.map(v => (
+                              <SelectItem key={v.id} value={v.id}>{v.plate_number} - {v.make}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="vehicle">Vehicle</Label>
-                      <Select value={expenseForm.vehicle_id} onValueChange={(value) => setExpenseForm({...expenseForm, vehicle_id: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select vehicle" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vehicles.map(vehicle => (
-                            <SelectItem key={vehicle.id} value={vehicle.id}>
-                              {vehicle.plate_number} - {vehicle.make} {vehicle.model}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Amount (TZS)</Label>
+                        <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Vendor/Source</Label>
+                        <Input value={expenseForm.vendor} onChange={(e) => setExpenseForm({...expenseForm, vendor: e.target.value})} placeholder="e.g., Oryx Fuel Station" />
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Amount</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        step="0.01"
-                        value={expenseForm.amount}
-                        onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
-                        placeholder="0.00"
-                        required
-                      />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Payment Method</Label>
+                        <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({...expenseForm, payment_method: v})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="mobile_money">Mobile Money (M-Pesa)</SelectItem>
+                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                            <SelectItem value="fuel_card">Fuel Card</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Date</Label>
+                        <Input type="date" value={expenseForm.expense_date} onChange={(e) => setExpenseForm({...expenseForm, expense_date: e.target.value})} required />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="vendor">Vendor</Label>
-                      <Input
-                        id="vendor"
-                        value={expenseForm.vendor}
-                        onChange={(e) => setExpenseForm({...expenseForm, vendor: e.target.value})}
-                        placeholder="Vendor name"
-                        required
-                      />
+
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={expenseForm.is_cross_border} onChange={(e) => setExpenseForm({...expenseForm, is_cross_border: e.target.checked})} className="rounded" />
+                        Cross-Border Expense
+                      </label>
                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
+
+                    {expenseForm.is_cross_border && (
+                      <div className="space-y-2">
+                        <Label>Border Point</Label>
+                        <Select value={expenseForm.border_point} onValueChange={(v) => setExpenseForm({...expenseForm, border_point: v})}>
+                          <SelectTrigger><SelectValue placeholder="Select border" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Kasumbalesa">Kasumbalesa (DRC)</SelectItem>
+                            <SelectItem value="Tunduma">Tunduma (Zambia)</SelectItem>
+                            <SelectItem value="Sirari">Sirari (Kenya)</SelectItem>
+                            <SelectItem value="Rusumo">Rusumo (Rwanda)</SelectItem>
+                            <SelectItem value="Mutukula">Mutukula (Uganda)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
-                      <Label htmlFor="payment_method">Payment Method</Label>
-                      <Select value={expenseForm.payment_method} onValueChange={(value) => setExpenseForm({...expenseForm, payment_method: value})}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="card">Card</SelectItem>
-                          <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                          <SelectItem value="check">Check</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label>Description</Label>
+                      <Textarea value={expenseForm.description} onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} placeholder="Expense details..." rows={2} />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="expense_date">Date</Label>
-                      <Input
-                        id="expense_date"
-                        type="date"
-                        value={expenseForm.expense_date}
-                        onChange={(e) => setExpenseForm({...expenseForm, expense_date: e.target.value})}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Input
-                      id="description"
-                      value={expenseForm.description}
-                      onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})}
-                      placeholder="Expense description"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={expenseForm.notes}
-                      onChange={(e) => setExpenseForm({...expenseForm, notes: e.target.value})}
-                      placeholder="Additional notes..."
-                      rows={3}
-                    />
-                  </div>
-                  
-                  <Button type="submit" className="w-full">Add Expense</Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+
+                    <Button type="submit" className="w-full">Record Expense</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           <Card>
@@ -558,30 +653,47 @@ export function FinancialManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead>Vehicle</TableHead>
+                    <TableHead>Cross-Border</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {expenses.map((expense) => (
+                  {filteredExpenses.map((expense) => (
                     <TableRow key={expense.id}>
-                      <TableCell>{format(new Date(expense.expense_date), 'MMM d, yyyy')}</TableCell>
-                      <TableCell>{expense.description}</TableCell>
+                      <TableCell className="whitespace-nowrap">{format(new Date(expense.expense_date), 'MMM d, yyyy')}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{expense.financial_categories?.name}</Badge>
+                        <Badge variant="outline" className="capitalize">{expense.category || 'Other'}</Badge>
                       </TableCell>
+                      <TableCell className="max-w-[200px] truncate">{expense.description}</TableCell>
                       <TableCell>{expense.vehicles?.plate_number || 'N/A'}</TableCell>
-                      <TableCell className="font-medium">${expense.amount.toLocaleString()}</TableCell>
+                      <TableCell>
+                        {expense.is_cross_border ? (
+                          <Badge className="bg-purple-500/20 text-purple-700 gap-1">
+                            <Globe className="size-3" /> {expense.border_point || 'Yes'}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">Local</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium text-red-600">-{format(expense.amount)}</TableCell>
                       <TableCell>
                         <Badge variant={expense.status === 'approved' ? 'default' : 'secondary'}>
-                          {expense.status}
+                          {expense.status || 'pending'}
                         </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {filteredExpenses.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No expenses found
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -590,117 +702,45 @@ export function FinancialManagement() {
 
         {/* Revenue Tab */}
         <TabsContent value="revenue" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Revenue Management</h2>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <h2 className="text-2xl font-bold">Trip Revenue Management</h2>
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus className="size-4" />
-                  Add Revenue
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+                <Button className="gap-2 bg-green-600 hover:bg-green-700"><Plus className="size-4" /> Record Trip Revenue</Button>
+ </DialogTrigger>
+              <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Add New Revenue</DialogTitle>
+                  <DialogTitle>Record Trip Revenue</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleAddRevenue} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="revenue_category">Category</Label>
-                      <Select value={revenueForm.category_id} onValueChange={(value) => setRevenueForm({...revenueForm, category_id: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.filter(c => c.type === 'revenue').map(category => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="revenue_vehicle">Vehicle</Label>
-                      <Select value={revenueForm.vehicle_id} onValueChange={(value) => setRevenueForm({...revenueForm, vehicle_id: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select vehicle" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vehicles.map(vehicle => (
-                            <SelectItem key={vehicle.id} value={vehicle.id}>
-                              {vehicle.plate_number} - {vehicle.make} {vehicle.model}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="revenue_amount">Amount</Label>
-                      <Input
-                        id="revenue_amount"
-                        type="number"
-                        step="0.01"
-                        value={revenueForm.amount}
-                        onChange={(e) => setRevenueForm({...revenueForm, amount: e.target.value})}
-                        placeholder="0.00"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="invoice_number">Invoice Number</Label>
-                      <Input
-                        id="invoice_number"
-                        value={revenueForm.invoice_number}
-                        onChange={(e) => setRevenueForm({...revenueForm, invoice_number: e.target.value})}
-                        placeholder="INV-001"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="revenue_payment_method">Payment Method</Label>
-                      <Select value={revenueForm.payment_method} onValueChange={(value) => setRevenueForm({...revenueForm, payment_method: value})}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="card">Card</SelectItem>
-                          <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                          <SelectItem value="check">Check</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="revenue_date">Date</Label>
-                      <Input
-                        id="revenue_date"
-                        type="date"
-                        value={revenueForm.revenue_date}
-                        onChange={(e) => setRevenueForm({...revenueForm, revenue_date: e.target.value})}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
                   <div className="space-y-2">
-                    <Label htmlFor="revenue_description">Description</Label>
-                    <Input
-                      id="revenue_description"
-                      value={revenueForm.description}
-                      onChange={(e) => setRevenueForm({...revenueForm, description: e.target.value})}
-                      placeholder="Revenue description"
-                      required
-                    />
+                    <Label>Select Completed Trip</Label>
+                    <Select value={revenueForm.trip_id} onValueChange={(v) => setRevenueForm({...revenueForm, trip_id: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select trip" /></SelectTrigger>
+                      <SelectContent>
+                        {trips.filter(t => t.status !== 'completed').map(trip => (
+                          <SelectItem key={trip.id} value={trip.id}>
+                            {trip.origin} → {trip.destination}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  
-                  <Button type="submit" className="w-full">Add Revenue</Button>
+                  <div className="space-y-2">
+                    <Label>Revenue Amount (TZS)</Label>
+                    <Input type="number" value={revenueForm.amount} onChange={(e) => setRevenueForm({...revenueForm, amount: e.target.value})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Client</Label>
+                    <Input value={revenueForm.client} onChange={(e) => setRevenueForm({...revenueForm, client: e.target.value})} placeholder="Client name" />
+                  </div>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={revenueForm.is_cross_border} onChange={(e) => setRevenueForm({...revenueForm, is_cross_border: e.target.checked})} className="rounded" />
+                      Cross-Border Trip
+                    </label>
+                  </div>
+                  <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">Record Revenue</Button>
                 </form>
               </DialogContent>
             </Dialog>
@@ -712,23 +752,21 @@ export function FinancialManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Route</TableHead>
+                    <TableHead>Service Type</TableHead>
+                    <TableHead>Client</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {revenue.map((rev) => (
+                  {filteredRevenue.map((rev) => (
                     <TableRow key={rev.id}>
-                      <TableCell>{format(new Date(rev.revenue_date), 'MMM d, yyyy')}</TableCell>
-                      <TableCell>{rev.description}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{rev.financial_categories?.name}</Badge>
-                      </TableCell>
-                      <TableCell>{rev.vehicles?.plate_number || 'N/A'}</TableCell>
-                      <TableCell className="font-medium text-green-600">${rev.amount.toLocaleString()}</TableCell>
+                      <TableCell className="whitespace-nowrap">{format(new Date(rev.revenue_date), 'MMM d, yyyy')}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{rev.description}</TableCell>
+                      <TableCell>{getCargoTypeBadge(rev.cargo_type)}</TableCell>
+                      <TableCell>{rev.client}</TableCell>
+                      <TableCell className="font-medium text-green-600">{format(rev.amount)}</TableCell>
                       <TableCell>
                         <Badge variant={rev.payment_status === 'paid' ? 'default' : 'secondary'}>
                           {rev.payment_status}
@@ -736,6 +774,13 @@ export function FinancialManagement() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {filteredRevenue.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No revenue records found
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -745,37 +790,51 @@ export function FinancialManagement() {
         {/* Invoices Tab */}
         <TabsContent value="invoices" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Invoices</h2>
+            <h2 className="text-2xl font-bold">Client Invoices</h2>
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="gap-2"><Plus className="size-4" /> Create Invoice</Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>New Invoice</DialogTitle></DialogHeader>
+                <DialogHeader>
+                  <DialogTitle>New Client Invoice</DialogTitle>
+                </DialogHeader>
                 <form onSubmit={handleAddInvoice} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Customer Name</Label>
+                    <Label>Invoice Number</Label>
+                    <Input value={invoiceForm.invoice_number} disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Customer/Client Name</Label>
                     <Input value={invoiceForm.customer_name} onChange={e => setInvoiceForm({...invoiceForm, customer_name: e.target.value})} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Amount</Label>
+                    <Label>Amount (TZS)</Label>
                     <Input type="number" value={invoiceForm.amount} onChange={e => setInvoiceForm({...invoiceForm, amount: e.target.value})} required />
                   </div>
                   <div className="space-y-2">
                     <Label>Due Date</Label>
                     <Input type="date" value={invoiceForm.due_date} onChange={e => setInvoiceForm({...invoiceForm, due_date: e.target.value})} required />
                   </div>
-                  <Button type="submit" className="w-full">Save Invoice</Button>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={invoiceForm.is_cross_border} onChange={(e) => setInvoiceForm({...invoiceForm, is_cross_border: e.target.checked})} className="rounded" />
+                      Cross-Border Service
+                    </label>
+                  </div>
+                  <Button type="submit" className="w-full">Create Invoice</Button>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
+
           <Card>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Number</TableHead>
+                  <TableHead>Invoice #</TableHead>
                   <TableHead>Customer</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead>Status</TableHead>
@@ -786,11 +845,27 @@ export function FinancialManagement() {
                   <TableRow key={inv.id}>
                     <TableCell className="font-medium">{inv.invoice_number}</TableCell>
                     <TableCell>{inv.customer_name}</TableCell>
-                    <TableCell>${inv.amount.toLocaleString()}</TableCell>
+                    <TableCell>{inv.is_cross_border ? <Badge className="bg-purple-500/20 text-purple-700"><Globe className="size-3 mr-1" /> Cross-Border</Badge> : <Badge variant="outline">Local</Badge>}</TableCell>
+                    <TableCell className="font-medium text-green-600">{format(inv.amount)}</TableCell>
                     <TableCell>{format(new Date(inv.due_date), 'PP')}</TableCell>
-                    <TableCell><Badge variant={inv.status === 'paid' ? 'default' : 'secondary'}>{inv.status}</Badge></TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={inv.status === 'paid' ? 'default' : inv.status === 'overdue' ? 'destructive' : 'secondary'}
+                        className="gap-1"
+                      >
+                        {inv.status === 'paid' && <CheckCircle2 className="size-3" />}
+                        {inv.status}
+                      </Badge>
+                    </TableCell>
                   </TableRow>
                 ))}
+                {invoices.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      No invoices yet
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Card>
@@ -799,32 +874,36 @@ export function FinancialManagement() {
         {/* Taxes Tab */}
         <TabsContent value="taxes" className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Tax Records</h2>
+            <h2 className="text-2xl font-bold">Tax Obligations</h2>
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="gap-2"><Plus className="size-4" /> Record Tax</Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>New Tax Entry</DialogTitle></DialogHeader>
+                <DialogHeader>
+                  <DialogTitle>New Tax Entry</DialogTitle>
+                </DialogHeader>
                 <form onSubmit={handleAddTax} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Tax Name/Description</Label>
-                    <Input value={taxForm.tax_name} onChange={e => setTaxForm({...taxForm, tax_name: e.target.value})} required />
+                    <Label>Tax Name</Label>
+                    <Input value={taxForm.tax_name} onChange={e => setTaxForm({...taxForm, tax_name: e.target.value})} placeholder="e.g., Q2 VAT Payment" required />
                   </div>
                   <div className="space-y-2">
                     <Label>Type</Label>
-                    <Select value={taxForm.type} onValueChange={v => setTaxForm({...taxForm, type: v as any})}>
+                    <Select value={taxForm.type} onValueChange={v => setTaxForm({...taxForm, type: v as TaxRecord['type']})}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="VAT">VAT</SelectItem>
                         <SelectItem value="PAYE">PAYE</SelectItem>
                         <SelectItem value="Income">Income Tax</SelectItem>
                         <SelectItem value="Road">Road Tax</SelectItem>
+                        <SelectItem value="Import">Import Duty</SelectItem>
+                        <SelectItem value="Excise">Excise Duty</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Amount</Label>
+                    <Label>Amount (TZS)</Label>
                     <Input type="number" value={taxForm.amount} onChange={e => setTaxForm({...taxForm, amount: e.target.value})} required />
                   </div>
                   <div className="space-y-2">
@@ -836,6 +915,7 @@ export function FinancialManagement() {
               </DialogContent>
             </Dialog>
           </div>
+
           <Card>
             <Table>
               <TableHeader>
@@ -852,143 +932,143 @@ export function FinancialManagement() {
                   <TableRow key={tax.id}>
                     <TableCell className="font-medium">{tax.tax_name}</TableCell>
                     <TableCell><Badge variant="outline">{tax.type}</Badge></TableCell>
-                    <TableCell>${tax.amount.toLocaleString()}</TableCell>
-                    <TableCell>{format(new Date(tax.due_date), 'PP')}</TableCell>
-                    <TableCell><Badge variant={tax.status === 'paid' ? 'default' : 'secondary'}>{tax.status}</Badge></TableCell>
+                    <TableCell className="font-medium">{format(tax.amount)}</TableCell>
+                    <TableCell className={new Date(tax.due_date) < new Date() && tax.status === 'pending' ? 'text-red-600' : ''}>
+                      {format(new Date(tax.due_date), 'PP')}
+                      {new Date(tax.due_date) < new Date() && tax.status === 'pending' && (
+                        <Badge variant="destructive" className="ml-2 text-xs">Overdue</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={tax.status === 'paid' ? 'default' : 'secondary'}>
+                        {tax.status}
+                      </Badge>
+                    </TableCell>
                   </TableRow>
                 ))}
+                {taxes.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No tax records yet
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Card>
         </TabsContent>
 
-        {/* Budgets Tab */}
-        <TabsContent value="budgets" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Budget Management</h2>
-            <Button className="flex items-center gap-2">
-              <Plus className="size-4" />
-              Create Budget
-            </Button>
-          </div>
+        {/* Logistics Costs Tab */}
+        <TabsContent value="logistics" className="space-y-6">
+          <h2 className="text-2xl font-bold">Logistics-Specific Costs</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {budgets.map((budget) => {
-              const percentage = budget.amount > 0 ? (budget.spent_amount / budget.amount) * 100 : 0;
-              const isOverBudget = percentage > 100;
-              
-              return (
-                <Card key={budget.id}>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{budget.budget_name}</h3>
-                          <p className="text-sm text-muted-foreground">{budget.financial_categories?.name}</p>
-                        </div>
-                        <Badge variant={budget.status === 'active' ? 'default' : 'secondary'}>
-                          {budget.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Budget</span>
-                          <span className="font-medium">${budget.amount.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Spent</span>
-                          <span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>
-                            ${budget.spent_amount.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Remaining</span>
-                          <span className="font-medium">
-                            ${(budget.amount - budget.spent_amount).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Usage</span>
-                          <span>{percentage.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              isOverBudget ? 'bg-red-500' : percentage > 80 ? 'bg-yellow-500' : 'bg-green-500'
-                            }`}
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(budget.start_date), 'MMM d')} - {format(new Date(budget.end_date), 'MMM d, yyyy')}
-                      </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="size-5 text-purple-600" />
+                  Cross-Border Operations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Total Expenses</span>
+                    <span className="font-bold text-purple-600">{format(crossBorderExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Revenue</span>
+                    <span className="font-bold text-green-600">{format(crossBorderRevenue)}</span>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Net from Cross-Border</span>
+                      <span className={`font-bold ${crossBorderRevenue - crossBorderExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {format(crossBorderRevenue - crossBorderExpenses)}
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </TabsContent>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card className="border-l-4 border-l-cyan-500">
               <CardHeader>
-                <CardTitle>Expense Breakdown</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Thermometer className="size-5 text-cyan-600" />
+                  Cold Chain Operations
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {categories.filter(c => c.type === 'expense').map(category => {
-                    const categoryExpenses = expenses.filter(e => e.category_id === category.id);
-                    const total = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
-                    const percentage = totalExpenses > 0 ? (total / totalExpenses) * 100 : 0;
-                    
-                    return (
-                      <div key={category.id} className="flex items-center justify-between">
-                        <span className="text-sm">{category.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">${total.toLocaleString()}</span>
-                          <span className="text-xs text-muted-foreground">({percentage.toFixed(1)}%)</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Expenses</span>
+                    <span className="font-bold text-cyan-600">{format(coldChainExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Revenue</span>
+                    <span className="font-bold text-green-600">{format(coldChainRevenue)}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            
-            <Card>
+
+            <Card className="border-l-4 border-l-amber-500">
               <CardHeader>
-                <CardTitle>Revenue Breakdown</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Fuel className="size-5 text-amber-600" />
+                  Fuel Costs
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {categories.filter(c => c.type === 'revenue').map(category => {
-                    const categoryRevenue = revenue.filter(r => r.category_id === category.id);
-                    const total = categoryRevenue.reduce((sum, r) => sum + r.amount, 0);
-                    const percentage = totalRevenue > 0 ? (total / totalRevenue) * 100 : 0;
-                    
+                  {['fuel', 'diesel'].map(cat => {
+                    const catTotal = expenses.filter(e => (e.category || '').toLowerCase().includes(cat)).reduce((sum, e) => sum + e.amount, 0);
                     return (
-                      <div key={category.id} className="flex items-center justify-between">
-                        <span className="text-sm">{category.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-green-600">${total.toLocaleString()}</span>
-                          <span className="text-xs text-muted-foreground">({percentage.toFixed(1)}%)</span>
-                        </div>
+                      <div key={cat} className="flex justify-between items-center">
+                        <span className="text-muted-foreground capitalize">{cat}</span>
+                        <span className="font-bold text-amber-600">{format(catTotal)}</span>
                       </div>
                     );
                   })}
+                  <div className="pt-2 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Total Fuel</span>
+                      <span className="font-bold">
+                        {format(expenses.filter(e => (e.category || '').toLowerCase().includes('fuel')).reduce((sum, e) => sum + e.amount, 0))}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Border Route Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="size-5" />
+                Border Route Cost Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {['Kasumbalesa', 'Tunduma', 'Sirari', 'Rusumo', 'Mutukula', 'Kabanga'].map(route => {
+                  const routeExpenses = expenses.filter(e => (e.description || '').toLowerCase().includes(route.toLowerCase()));
+                  const routeTotal = routeExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+                  return (
+                    <div key={route} className="p-4 border rounded-xl text-center">
+                      <p className="font-medium text-sm mb-2">{route}</p>
+                      <p className="text-lg font-bold text-purple-600">{format(routeTotal)}</p>
+                      <p className="text-xs text-muted-foreground">{routeExpenses.length} entries</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

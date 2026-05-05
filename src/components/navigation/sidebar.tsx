@@ -6,7 +6,8 @@ import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Truck, Route, DollarSign, BarChart2, 
   Users, Package, MapPin, Sparkles, Bell, Wrench, Calculator, LogOut, History, Home, Shield, Camera, User as UserIcon,
-  Briefcase, Building2, CalendarDays
+  Briefcase, Building2, CalendarDays,
+  Globe, Thermometer, Anchor
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
@@ -137,6 +138,8 @@ export function Sidebar({ role }: { role: UserRole }) {
       </div>
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-border scrollbar-track-transparent">
+        {/* Main Navigation */}
+        <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold px-3 mb-2">Main Menu</p>
         {navItems.map((item: NavItem) => (
           <Link
             key={item.href}  // ✅ Use href as key, not label (labels can duplicate)
@@ -155,6 +158,87 @@ export function Sidebar({ role }: { role: UserRole }) {
             <span>{item.label}</span>
           </Link>
         ))}
+
+        {/* Service Types - Calvary Feature */}
+        <div className="mt-6">
+          <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold px-3 mb-2">Services</p>
+          <div className="space-y-1">
+            <Link href="/trips?type=cross-border" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-sidebar-accent transition-colors group">
+              <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Globe className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-sidebar-foreground/70 group-hover:text-white">Cross-Border</span>
+            </Link>
+            <Link href="/trips?type=cold-chain" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-sidebar-accent transition-colors group">
+              <div className="w-6 h-6 rounded bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center">
+                <Thermometer className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-sidebar-foreground/70 group-hover:text-white">Cold Chain</span>
+            </Link>
+            <Link href="/trips?type=heavy-cargo" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-sidebar-accent transition-colors group">
+              <div className="w-6 h-6 rounded bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <Package className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="text-sidebar-foreground/70 group-hover:text-white">Heavy Cargo</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Border Routes - Calvary Feature */}
+        <div className="mt-4">
+          <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold px-3 mb-2">Border Routes</p>
+          <div className="grid grid-cols-2 gap-1 px-2">
+            <Link href="/trips?border=DRC" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-sidebar-accent transition-colors">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-xs text-sidebar-foreground/60">Kasumbalesa</span>
+            </Link>
+            <Link href="/trips?border=ZMB" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-sidebar-accent transition-colors">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-xs text-sidebar-foreground/60">Tunduma</span>
+            </Link>
+            <Link href="/trips?border=KEN" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-sidebar-accent transition-colors">
+              <div className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="text-xs text-sidebar-foreground/60">Sirari</span>
+            </Link>
+            <Link href="/trips?border=RWA" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-sidebar-accent transition-colors">
+              <div className="w-2 h-2 rounded-full bg-violet-500" />
+              <span className="text-xs text-sidebar-foreground/60">Rusumo</span>
+            </Link>
+            <Link href="/trips?border=UGA" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-sidebar-accent transition-colors">
+              <div className="w-2 h-2 rounded-full bg-cyan-500" />
+              <span className="text-xs text-sidebar-foreground/60">Mutukula</span>
+            </Link>
+            <Link href="/trips?border=BDI" className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-sidebar-accent transition-colors">
+              <div className="w-2 h-2 rounded-full bg-pink-500" />
+              <span className="text-xs text-sidebar-foreground/60">Kabanga</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Quick Stats - Calvary Feature */}
+        <div className="mt-4 px-3">
+          <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold mb-2">Fleet Status</p>
+          <div className="bg-sidebar-accent/30 rounded-lg p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-lg font-bold text-white">--</p>
+                <p className="text-[10px] text-sidebar-foreground/50">Active Trips</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-primary">--</p>
+                <p className="text-[10px] text-sidebar-foreground/50">Vehicles</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-emerald-500">--</p>
+                <p className="text-[10px] text-sidebar-foreground/50">Cross-Border</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-cyan-500">--</p>
+                <p className="text-[10px] text-sidebar-foreground/50">Cold Chain</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </nav>
 
       <div className="p-4 border-t border-sidebar-border space-y-4">
