@@ -24,5 +24,10 @@ CREATE POLICY "Admins can manage all profiles" ON user_profiles
 CREATE POLICY "Users can update own profile" ON user_profiles
   FOR UPDATE USING (auth.uid() = id OR email = auth.email());
 
+-- Policy: Allow authenticated users to insert new profiles (for invites)
+CREATE POLICY "Authenticated users can insert profiles" ON user_profiles
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
 -- Verify
 SELECT 'Policies updated' as status;
