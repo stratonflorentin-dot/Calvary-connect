@@ -8,6 +8,7 @@ import { useSupabase } from '@/components/supabase-provider';
 import { FleetDashboard } from '@/components/fleet/fleet-dashboard';
 import { SupabaseSetupAssistant } from '@/components/supabase-setup-assistant';
 import { RoleSelector } from '@/components/dashboard/role-selector';
+import { AIDashboard } from '@/components/ai/ai-dashboard';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,9 @@ export default function FleetPage() {
             <p className="text-muted-foreground text-sm">Monitor and manage your logistics fleet including trucks, trailers, escort cars, and hoses.</p>
           </div>
           <FleetDashboard />
+          <div className="mt-8">
+            <AIDashboard />
+          </div>
         </div>
       </main>
       <BottomTabs role={role!} />
