@@ -1,8 +1,8 @@
 "use client";
 
-import { useCurrency } from '@/hooks/use-currency';
-import { RefreshCw, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useCurrency } from "@/hooks/use-currency";
+import { RefreshCw, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function CurrencyDisplay() {
   const { currency, toggleCurrency, format, exchangeRate } = useCurrency();
@@ -12,21 +12,21 @@ export function CurrencyDisplay() {
       <div className="flex items-center gap-2">
         <TrendingUp className="size-4 text-green-600" />
         <span className="text-sm font-medium text-gray-600">
-          1 USD = {exchangeRate.toLocaleString()} TZS
+          1 USD = {exchangeRate.toLocaleString()} TSH
         </span>
       </div>
-      
+
       <div className="h-4 w-px bg-gray-300" />
-      
+
       <Button
         variant="ghost"
         size="sm"
         onClick={toggleCurrency}
         className="font-mono font-bold text-sm"
       >
-        {currency === 'USD' ? '$ USD' : 'TSh TZS'}
+        {currency === "USD" ? "$ USD" : "TSh TSH"}
       </Button>
-      
+
       <Button
         variant="ghost"
         size="sm"

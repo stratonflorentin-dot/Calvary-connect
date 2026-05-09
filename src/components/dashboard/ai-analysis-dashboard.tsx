@@ -174,13 +174,8 @@ export function AIAnalysisDashboard() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const formatCurrency = (value: number) => {
-    if (value === 0) return "0 TZS";
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+    if (value === 0) return "Tsh 0";
+    return `Tsh ${value.toLocaleString("en-TZ", { maximumFractionDigits: 0 })}`;
   };
 
   // Load all metrics
@@ -633,7 +628,7 @@ Cost per Trip: ${formatCurrency(costPerTrip)}
 
 ⛽ **FUEL ANALYTICS**
 Total Consumption: ${metrics.totalFuelLiters.toFixed(0)} L | Avg/Trip: ${fuelEfficiency.toFixed(1)} L
-Fuel Cost/Trip: ${metrics.totalTrips > 0 ? formatCurrency(metrics.fuelCosts / metrics.totalTrips) : "0 TZS"}
+Fuel Cost/Trip: ${metrics.totalTrips > 0 ? formatCurrency(metrics.fuelCosts / metrics.totalTrips) : "Tsh 0"}
 
 📈 **EFFICIENCY ASSESSMENT**
 ${fuelEfficiency > 50 ? "🔴 HIGH FUEL CONSUMPTION: Above industry benchmarks\n   → Investigate route optimization\n   → Driver training on fuel-efficient driving\n   → Vehicle performance review" : fuelEfficiency > 30 ? "🟡 MODERATE CONSUMPTION: Within acceptable range\n   → Monitor for improvements" : "🟢 EFFICIENT OPERATION: Fuel usage optimized"}
@@ -684,7 +679,7 @@ ${(metrics?.outstandingInvoices || 0) > (metrics?.totalRevenue || 0) * 0.3 ? "�
 
 📈 **BUSINESS DEVELOPMENT INSIGHTS**
 • ${topClients.length < 5 ? "Portfolio opportunity: Add " + (5 - topClients.length) + " more anchor clients for stability" : "Strong anchor client base established"}
-• Average client value: ${topClients.length > 0 ? formatCurrency(totalClientRevenue / topClients.length) : "0 TZS"}
+• Average client value: ${topClients.length > 0 ? formatCurrency(totalClientRevenue / topClients.length) : "Tsh 0"}
 
 💡 **GROWTH RECOMMENDATIONS**
 ${clientConcentration > 50 ? "Priority: Reduce dependency on top client through diversification" : "Priority: Upsell existing clients and acquire similar profiles"}
