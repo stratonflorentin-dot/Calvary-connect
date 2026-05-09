@@ -30,6 +30,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { filterProductionRecords } from "@/lib/production-data";
 import {
   LineChart,
   Line,
@@ -214,12 +215,19 @@ export function AIAnalysisDashboard() {
         .select("id, status, vehicle_id, created_at"),
     ]);
 
-    const tripsData = trips || [];
-    const expensesData = expenses || [];
-    const vehiclesData = vehicles || [];
-    const driversData = drivers || [];
-    const invoicesData = invoices || [];
-    const fuelData = fuelRecords || [];
+    const tripsData = filterProductionRecords(trips, ["origin", "destination"]);
+    const vehiclesData = filterProductionRecords(vehicles, [
+      "plate_number",
+      "make",
+      "model",
+    ]);
+    const driversData = filterProductionRecords(drivers, ["full_name"]);
+    const expensesData = filterProductionRecords(expenses, [
+      "category",
+      "description",
+    ]);
+    const invoicesData = filterProductionRecords(invoices, ["client_name"]);
+    const fuelData = filterProductionRecords(fuelRecords, ["vehicle_id"]);
 
     const totalRevenue = tripsData.reduce(
       (sum: number, t: any) =>

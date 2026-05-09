@@ -44,6 +44,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
 import { useLanguage } from "@/hooks/use-language";
+import { filterProductionRecords } from "@/lib/production-data";
 
 export function CeoView() {
   const { user } = useSupabase();
@@ -111,9 +112,30 @@ export function CeoView() {
           .select("*")
           .eq("role", "DRIVER");
 
-        setVehicles(vehiclesData || []);
-        setTrips(tripsData || []);
-        setDrivers(driversData || []);
+        setVehicles(
+          filterProductionRecords(vehiclesData, [
+            "plate_number",
+            "make",
+            "model",
+            "type",
+          ]),
+        );
+        setTrips(
+          filterProductionRecords(tripsData, [
+            "origin",
+            "destination",
+            "cargo",
+            "client",
+          ]),
+        );
+        setDrivers(
+          filterProductionRecords(driversData, [
+            "name",
+            "full_name",
+            "email",
+            "phone",
+          ]),
+        );
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {

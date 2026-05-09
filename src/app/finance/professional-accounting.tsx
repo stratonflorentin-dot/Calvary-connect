@@ -39,6 +39,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Sidebar } from "@/components/navigation/sidebar";
+import { filterProductionRecords } from "@/lib/production-data";
 import {
   FileText,
   Receipt,
@@ -352,12 +353,41 @@ export function FinancialOperations() {
           supabase.from("accounts").select("*").order("code"),
         ]);
 
-      setInvoices(invoicesRes.data || []);
-      setExpenses(expensesRes.data || []);
-      setJournalEntries(jeRes.data || []);
-      setFilteredJournalEntries(jeRes.data || []);
-      setBankAccounts(bankRes.data || []);
-      setAccounts(accountsRes.data || []);
+      setInvoices(
+        filterProductionRecords(invoicesRes.data, [
+          "invoice_number",
+          "client_name",
+          "description",
+        ]),
+      );
+      setExpenses(
+        filterProductionRecords(expensesRes.data, [
+          "expense_number",
+          "category",
+          "description",
+        ]),
+      );
+      setJournalEntries(
+        filterProductionRecords(jeRes.data, [
+          "entry_number",
+          "description",
+          "reference",
+        ]),
+      );
+      setBankAccounts(
+        filterProductionRecords(bankRes.data, [
+          "account_name",
+          "bank_name",
+          "account_number",
+        ]),
+      );
+      setAccounts(
+        filterProductionRecords(accountsRes.data, [
+          "code",
+          "name",
+          "description",
+        ]),
+      );
       setSupplierPayments([]); // Initialize empty - TODO: load from supplier_payments table
 
       // Load journal entry lines
