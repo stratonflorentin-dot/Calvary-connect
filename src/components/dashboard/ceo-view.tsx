@@ -1,974 +1,766 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSupabase } from "@/components/supabase-provider";
-import { supabase } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Truck,
-  MapPin,
-  Navigation,
-  Plus,
-  FileText,
-  Trash2,
+  DashboardLayout,
+  StatCard,
+  DataTable,
+  ActivityFeed,
+  AlertPanel,
+} from "@/components/dashboard/shared/dashboard-layout";
+import { useFleetVehicles } from "@/hooks/data/use-fleet-vehicles";
+import { useTrips } from "@/hooks/data/use-trips";
+import { useExpenses } from "@/hooks/data/use-expenses";
+import { useInvoices } from "@/hooks/data/use-invoices";
+import { useMonthlyReports } from "@/hooks/data/use-monthly-reports";
+import { useMaintenanceRequests } from "@/hooks/data/use-maintenance-requests";
+import { useUsers } from "@/hooks/data/use-users";
+import { useRole } from "@/hooks/use-role";
+import { useLanguage } from "@/hooks/use-language";
+import { useCurrency } from "@/hooks/use-currency";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
   AlertTriangle,
-  Thermometer,
-  Anchor,
-  Globe,
-  Clock,
-  TrendingUp,
+  Truck,
+  Navigation,
   DollarSign,
   Users,
   Package,
+  MapPin,
+  Plus,
+  Trash2,
+  Edit,
+  Eye,
+  BarChart2,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  History,
+  Settings,
+  Bell,
+  Sparkles,
+  FileText,
+  Upload,
+  Download,
+  RefreshCw,
+  Shield,
+  Briefcase,
+  Building2,
+  CalendarDays,
+  Globe,
+  Thermometer,
+  Anchor,
+  Route,
+  LayoutDashboard,
+  Wrench,
+  Calculator,
+  LogOut,
+  Camera,
+  User as UserIcon,
+  ChevronRight,
+  MoreVertical,
+  ArrowRight,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
-import { useCurrency } from "@/hooks/use-currency";
-import { useLanguage } from "@/hooks/use-language";
-import { filterProductionRecords } from "@/lib/production-data";
+import { useState } from "react";
+import Link from "next/link";
 
-export function CeoView() {
-  const { user } = useSupabase();
+export default function CeoDashboard() {
   const { t } = useLanguage();
   const { format } = useCurrency();
+  const { role } = useRole();
 
-  const [loading, setLoading] = useState(true);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [trips, setTrips] = useState<any[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [showVehicleDialog, setShowVehicleDialog] = useState(false);
-  const [showTripDialog, setShowTripDialog] = useState(false);
-  const [showReportsDialog, setShowReportsDialog] = useState(false);
-
-  // Vehicle form state
-  const [vehicleForm, setVehicleForm] = useState({
-    plate_number: "",
-    make: "",
-    model: "",
-    year: "",
-    type: "TRUCK",
-    capacity: "",
-    mileage: "0",
-    has_reefer: false,
-    is_lowbed: false,
+  // Data hooks
+  const { vehicles, loading: vehiclesLoading } = useFleetVehicles();
+  const { trips, loading: tripsLoading } = useTrips();
+  const { expenses, loading: expensesLoading } = useExpenses();
+  const { invoices, loading: invoicesLoading } = useInvoices();
+  const { reports, loading: reportsLoading } = useMonthlyReports();
+  const { requests: maintenanceRequests, loading: maintenanceLoading } =
+    useMaintenanceRequests();
+  const { users: drivers, loading: driversLoading } = useUsers({
+    role: "DRIVER",
   });
 
-  // Trip form state
-  const [tripForm, setTripForm] = useState({
-    origin: "",
-    destination: "",
-    driver_id: "",
-    vehicle_id: "",
-    cargo: "",
-    cargo_type: "GENERAL",
-    client: "",
-    distance: "",
-    estimated_time: "",
-    has_reefer: false,
-    is_cross_border: false,
-    border_point: "",
+  const loading =
+    vehiclesLoading ||
+    tripsLoading ||
+    expensesLoading ||
+    invoicesLoading ||
+    reportsLoading ||
+    maintenanceLoading ||
+    driversLoading;
+
+  // Calculate metrics
+  const activeTrips = trips.filter((t) =>
+    ["in_transit", "loading", "pending"].includes(t.status),
+  );
+  const completedTrips = trips.filter((t) => t.status === "completed");
+  const totalRevenue = completedTrips.reduce(
+    (sum, t) => sum + (Number(t.revenue || t.price) || 0),
+    0,
+  );
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const netProfit = totalRevenue - totalExpenses;
+  const unpaidInvoices = invoices.filter((i) => {
+    const s = (i.status || "").toLowerCase();
+    return s && !["paid", "settled", "closed"].includes(s);
   });
 
-  const clearMockVehicles = async () => {
-    const mockPlates = ["KAB 123A", "KCD 456B", "KEF 789C"];
-    for (const plate of mockPlates) {
-      await supabase.from("vehicles").delete().eq("plate_number", plate);
-    }
-  };
+  // Fleet status counts
+  const availableVehicles = vehicles.filter(
+    (v) => v.status === "available",
+  ).length;
+  const inUseVehicles = vehicles.filter((v) => v.status === "in_use").length;
+  const maintenanceVehicles = vehicles.filter(
+    (v) => v.status === "maintenance",
+  ).length;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await clearMockVehicles();
+  // Cross-border trips
+  const crossBorderTrips = activeTrips.filter((trip) => {
+    const dest = (trip.destination || "").toLowerCase();
+    return (
+      dest.includes("border") ||
+      dest.includes("dr congo") ||
+      dest.includes("kenya") ||
+      dest.includes("zambia") ||
+      dest.includes("burundi") ||
+      dest.includes("rwanda") ||
+      dest.includes("uganda")
+    );
+  }).length;
 
-        const { data: vehiclesData } = await supabase
-          .from("vehicles")
-          .select("*");
-        const { data: tripsData } = await supabase
-          .from("trips")
-          .select("*")
-          .order("created_at", { ascending: false });
-        const { data: driversData } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("role", "DRIVER");
+  // Cold chain trips
+  const coldChainTrips = activeTrips.filter(
+    (t) =>
+      t.has_reefer ||
+      t.cargo_type === "REEFER" ||
+      t.cargo_type === "cold_chain",
+  ).length;
 
-        setVehicles(
-          filterProductionRecords(vehiclesData, [
-            "plate_number",
-            "make",
-            "model",
-            "type",
-          ]),
-        );
-        setTrips(
-          filterProductionRecords(tripsData, [
-            "origin",
-            "destination",
-            "cargo",
-            "client",
-          ]),
-        );
-        setDrivers(
-          filterProductionRecords(driversData, [
-            "name",
-            "full_name",
-            "email",
-            "phone",
-          ]),
-        );
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [user]);
+  // Heavy cargo trips
+  const heavyCargoTrips = activeTrips.filter((t) =>
+    ["LOWBED", "heavy_equipment", "machinery"].includes(
+      t.cargo_type?.toUpperCase() || "",
+    ),
+  ).length;
 
-  const handleAddVehicle = async () => {
-    try {
-      const { error } = await supabase.from("vehicles").insert([vehicleForm]);
-      if (error) throw error;
+  // Alerts
+  const alerts = [
+    {
+      id: "1",
+      title: "Vehicle Maintenance Due",
+      description:
+        "3 vehicles are due for scheduled maintenance within the next 7 days.",
+      severity: "warning" as const,
+      time: "2 hours ago",
+    },
+    {
+      id: "2",
+      title: "High Fuel Consumption",
+      description:
+        "Vehicle TRK-007 has exceeded fuel consumption threshold by 15%.",
+      severity: "critical" as const,
+      time: "1 hour ago",
+    },
+    {
+      id: "3",
+      title: "New Trip Completed",
+      description:
+        "Trip from Nairobi to Mombasa has been completed successfully.",
+      severity: "info" as const,
+      time: "30 minutes ago",
+    },
+  ];
 
-      toast({ title: "Success", description: "Vehicle added to fleet!" });
-      setShowVehicleDialog(false);
-      setVehicleForm({
-        plate_number: "",
-        make: "",
-        model: "",
-        year: "",
-        type: "TRUCK",
-        capacity: "",
-        mileage: "0",
-        has_reefer: false,
-        is_lowbed: false,
-      });
+  // Recent activities
+  const activities = [
+    {
+      id: "1",
+      title: "Trip #T001 Completed",
+      description: "Nairobi → Mombasa | Driver: John Doe",
+      time: "2 hours ago",
+      icon: CheckCircle2,
+      color: "bg-green-500",
+    },
+    {
+      id: "2",
+      title: "New Vehicle Added",
+      description: "Toyota Hilux - Plate: KDJ-123X",
+      time: "3 hours ago",
+      icon: Plus,
+      color: "bg-blue-500",
+    },
+    {
+      id: "3",
+      title: "Expense Report Submitted",
+      description: "Fuel expense of KES 15,000 by Driver Jane",
+      time: "4 hours ago",
+      icon: FileText,
+      color: "bg-amber-500",
+    },
+    {
+      id: "4",
+      title: "Maintenance Request Created",
+      description: "Engine check for Truck TRK-005",
+      time: "5 hours ago",
+      icon: Wrench,
+      color: "bg-red-500",
+    },
+  ];
 
-      const { data } = await supabase.from("vehicles").select("*");
-      setVehicles(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
+  // Monthly data for chart
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentReport = reports.find((r) =>
+    (r.month || "").toString().startsWith(currentMonth),
+  );
+  const recentReports = reports.slice(0, 6);
 
-  const handleAddTrip = async () => {
-    try {
-      if (!tripForm.driver_id || !tripForm.vehicle_id) {
-        toast({
-          title: "Error",
-          description: "Please select driver and vehicle",
-          variant: "destructive",
-        });
-        return;
-      }
+  // Vehicle utilization
+  const utilizationRate =
+    vehicles.length > 0 ? (inUseVehicles / vehicles.length) * 100 : 0;
 
-      const tripData = {
-        origin: tripForm.origin,
-        destination: tripForm.destination,
-        driver_id: tripForm.driver_id,
-        vehicle_id: tripForm.vehicle_id,
-        cargo: tripForm.cargo,
-        cargo_type: tripForm.cargo_type,
-        client: tripForm.client,
-        distance: tripForm.distance ? parseInt(tripForm.distance, 10) : null,
-        estimated_time: tripForm.estimated_time,
-        has_reefer: tripForm.has_reefer,
-        is_cross_border: tripForm.is_cross_border,
-        border_point: tripForm.border_point,
-        status: "PENDING",
-        created_at: new Date().toISOString(),
-      };
-
-      const { error } = await supabase.from("trips").insert([tripData]);
-      if (error) throw error;
-
-      toast({ title: "Success", description: "Trip dispatched!" });
-      setShowTripDialog(false);
-      setTripForm({
-        origin: "",
-        destination: "",
-        driver_id: "",
-        vehicle_id: "",
-        cargo: "",
-        cargo_type: "GENERAL",
-        client: "",
-        distance: "",
-        estimated_time: "",
-        has_reefer: false,
-        is_cross_border: false,
-        border_point: "",
-      });
-
-      const { data } = await supabase
-        .from("trips")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setTrips(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to dispatch trip",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteVehicle = async (vehicleId: string) => {
-    try {
-      await supabase.from("vehicles").delete().eq("id", vehicleId);
-      toast({ title: "Success", description: "Vehicle removed from fleet" });
-      setVehicles(vehicles.filter((v) => v.id !== vehicleId));
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getCargoTypeBadge = (cargoType: string) => {
-    switch (cargoType) {
-      case "REEFER":
-      case "cold_chain":
-        return (
-          <Badge className="bg-cyan-500/20 text-cyan-700 border-cyan-200">
-            <Thermometer className="size-3 mr-1" /> Cold Chain
-          </Badge>
-        );
-      case "LOWBED":
-      case "heavy_equipment":
-        return (
-          <Badge className="bg-amber-500/20 text-amber-700 border-amber-200">
-            <Package className="size-3 mr-1" /> Heavy Cargo
-          </Badge>
-        );
-      case "CROSS_BORDER":
-        return (
-          <Badge className="bg-purple-500/20 text-purple-700 border-purple-200">
-            <Globe className="size-3 mr-1" /> Cross-Border
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">General</Badge>;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "in_transit":
-        return (
-          <Badge className="bg-green-500/20 text-green-700">In Transit</Badge>
-        );
-      case "loading":
-        return (
-          <Badge className="bg-amber-500/20 text-amber-700">Loading</Badge>
-        );
-      case "completed":
-        return <Badge variant="secondary">Completed</Badge>;
-      case "pending":
-        return <Badge variant="outline">Pending</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  // Cost per trip
+  const costPerTrip =
+    completedTrips.length > 0 ? totalExpenses / completedTrips.length : 0;
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Truck className="size-12 mx-auto mb-4 text-primary animate-bounce" />
-          <p className="text-muted-foreground">Loading Fleet Operations...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Calvary Fleet Command
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            East Africa Logistics Operations Center
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Badge variant="outline" className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            {vehicles.length} Vehicles Online
-          </Badge>
-        </div>
+    <DashboardLayout
+      title="CEO Dashboard"
+      description="Fleet overview and strategic insights"
+      role={role || "CEO"}
+    >
+      {/* Alert Panel */}
+      <AlertPanel alerts={alerts} />
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+        <StatCard
+          title="Total Fleet"
+          value={vehicles.length}
+          icon={Truck}
+          color="text-blue-600"
+          bgColor="bg-blue-50"
+          link="/fleet"
+        />
+        <StatCard
+          title="Active Trips"
+          value={activeTrips.length}
+          icon={Navigation}
+          color="text-green-600"
+          bgColor="bg-green-50"
+          link="/trips"
+        />
+        <StatCard
+          title="Monthly Revenue"
+          value={format(totalRevenue)}
+          icon={DollarSign}
+          color="text-emerald-600"
+          bgColor="bg-emerald-50"
+          link="/finance"
+        />
+        <StatCard
+          title="Cross-Border"
+          value={crossBorderTrips}
+          icon={Globe}
+          color="text-purple-600"
+          bgColor="bg-purple-50"
+        />
+        <StatCard
+          title="Cold Chain"
+          value={coldChainTrips}
+          icon={Thermometer}
+          color="text-cyan-600"
+          bgColor="bg-cyan-50"
+        />
+        <StatCard
+          title="Heavy Cargo"
+          value={heavyCargoTrips}
+          icon={Package}
+          color="text-amber-600"
+          bgColor="bg-amber-50"
+        />
+        <StatCard
+          title="Total Drivers"
+          value={drivers.length}
+          icon={Users}
+          color="text-indigo-600"
+          bgColor="bg-indigo-50"
+        />
+        <StatCard
+          title="Unpaid Invoices"
+          value={unpaidInvoices.length}
+          icon={FileText}
+          color="text-orange-600"
+          bgColor="bg-orange-50"
+          link="/finance"
+        />
       </div>
 
-      {/* Operations Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-500 bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Active Trips
-                </p>
-                <p className="text-3xl font-bold">
-                  {
-                    trips.filter((t) =>
-                      ["in_transit", "loading", "pending"].includes(t.status),
-                    ).length
-                  }
-                </p>
-              </div>
-              <Navigation className="size-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-amber-500 bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Cross-Border
-                </p>
-                <p className="text-3xl font-bold">
-                  {trips.filter((t) => t.is_cross_border).length}
-                </p>
-              </div>
-              <Globe className="size-8 text-amber-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-cyan-500 bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Cold Chain
-                </p>
-                <p className="text-3xl font-bold">
-                  {
-                    trips.filter(
-                      (t) => t.has_reefer || t.cargo_type === "REEFER",
-                    ).length
-                  }
-                </p>
-              </div>
-              <Thermometer className="size-8 text-cyan-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-purple-500 bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Heavy Cargo
-                </p>
-                <p className="text-3xl font-bold">
-                  {
-                    vehicles.filter((v) => v.is_lowbed || v.type === "LOWBED")
-                      .length
-                  }
-                </p>
-              </div>
-              <Anchor className="size-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions & Recent Trips */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 bg-white">
+      {/* Revenue & Profit Chart Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Revenue Overview */}
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MapPin className="size-5 text-primary" />
-              Active Routes
+              <BarChart2 className="size-5" />
+              Revenue & Profit Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {trips.filter((t) =>
-              ["in_transit", "loading", "pending"].includes(t.status),
-            ).length === 0 ? (
-              <div className="text-center py-8">
-                <Truck className="size-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No active trips</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Dispatch a new trip to see routes here
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-green-50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground">Total Revenue</p>
+                <p className="text-lg font-bold text-green-600">
+                  {format(totalRevenue)}
                 </p>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {trips
-                  .filter((t) =>
-                    ["in_transit", "loading", "pending"].includes(t.status),
-                  )
-                  .slice(0, 5)
-                  .map((trip) => (
-                    <div
-                      key={trip.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium">
-                            {trip.origin} → {trip.destination}
-                          </p>
-                          {getCargoTypeBadge(trip.cargo_type)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {trip.cargo && `${trip.cargo} • `}
-                          {trip.client && `${trip.client} • `}
-                          {trip.distance && `${trip.distance}km`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(trip.status)}
-                      </div>
-                    </div>
-                  ))}
+              <div className="bg-red-50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground">Total Expenses</p>
+                <p className="text-lg font-bold text-red-600">
+                  {format(totalExpenses)}
+                </p>
               </div>
-            )}
+              <div className="bg-blue-50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground">Net Profit</p>
+                <p
+                  className={`text-lg font-bold ${netProfit >= 0 ? "text-blue-600" : "text-red-600"}`}
+                >
+                  {format(netProfit)}
+                </p>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground">Completed Trips</p>
+                <p className="text-lg font-bold text-purple-600">
+                  {completedTrips.length}
+                </p>
+              </div>
+            </div>
+            {/* Simple bar chart using divs */}
+            <div className="mt-6 space-y-2">
+              <h4 className="text-sm font-medium">Monthly Revenue Trend</h4>
+              <div className="flex items-end gap-2 h-32">
+                {recentReports.map((report, i) => {
+                  const height = Math.max(
+                    20,
+                    (Number(report.total_revenue || 0) /
+                      Math.max(
+                        ...recentReports.map((r) =>
+                          Number(r.total_revenue || 0),
+                        ),
+                        1,
+                      )) *
+                      100,
+                  );
+                  return (
+                    <div
+                      key={i}
+                      className="flex-1 bg-primary rounded-t-sm flex flex-col items-center justify-end h-full"
+                      style={{ height: `${height}%` }}
+                    >
+                      <span className="text-[8px] text-muted-foreground mb-1">
+                        {new Date(report.month).toLocaleDateString("en-US", {
+                          month: "short",
+                        })}
+                      </span>
+                      <span className="text-[8px] font-bold text-primary-foreground">
+                        {format(Number(report.total_revenue || 0))}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white">
+        {/* Quick Stats */}
+        <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="size-5" />
+              Key Metrics
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Dialog
-                open={showVehicleDialog}
-                onOpenChange={setShowVehicleDialog}
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Fleet Utilization
+              </span>
+              <Badge
+                variant={
+                  utilizationRate > 70
+                    ? "default"
+                    : utilizationRate > 40
+                      ? "secondary"
+                      : "destructive"
+                }
               >
-                <DialogTrigger asChild>
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Vehicle
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Register New Vehicle</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Plate Number</Label>
-                      <Input
-                        value={vehicleForm.plate_number}
-                        onChange={(e) =>
-                          setVehicleForm({
-                            ...vehicleForm,
-                            plate_number: e.target.value,
-                          })
-                        }
-                        placeholder="KAB 123A"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Make</Label>
-                        <Select
-                          value={vehicleForm.make}
-                          onValueChange={(value) =>
-                            setVehicleForm({ ...vehicleForm, make: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select make" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Isuzu">Isuzu</SelectItem>
-                            <SelectItem value="Hino">Hino</SelectItem>
-                            <SelectItem value="Mercedes-Benz">
-                              Mercedes-Benz
-                            </SelectItem>
-                            <SelectItem value="MAN">MAN</SelectItem>
-                            <SelectItem value="Scania">Scania</SelectItem>
-                            <SelectItem value="Volvo">Volvo</SelectItem>
-                            <SelectItem value="FAW">FAW</SelectItem>
-                            <SelectItem value="Sinotruk">Sinotruk</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Model</Label>
-                        <Input
-                          value={vehicleForm.model}
-                          onChange={(e) =>
-                            setVehicleForm({
-                              ...vehicleForm,
-                              model: e.target.value,
-                            })
-                          }
-                          placeholder="NPR 75"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Type</Label>
-                        <Select
-                          value={vehicleForm.type}
-                          onValueChange={(value) =>
-                            setVehicleForm({ ...vehicleForm, type: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="TRUCK">
-                              Standard Truck
-                            </SelectItem>
-                            <SelectItem value="LOWBED">
-                              Lowbed Trailer
-                            </SelectItem>
-                            <SelectItem value="DUMP_TRUCK">
-                              Dump Truck
-                            </SelectItem>
-                            <SelectItem value="TRUCK_HEAD">
-                              Truck Head
-                            </SelectItem>
-                            <SelectItem value="REEFER">
-                              Reefer Container
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Year</Label>
-                        <Select
-                          value={vehicleForm.year}
-                          onValueChange={(value) =>
-                            setVehicleForm({ ...vehicleForm, year: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Year" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[2024, 2023, 2022, 2021, 2020, 2019, 2018].map(
-                              (y) => (
-                                <SelectItem key={y} value={y.toString()}>
-                                  {y}
-                                </SelectItem>
-                              ),
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={vehicleForm.has_reefer}
-                          onChange={(e) =>
-                            setVehicleForm({
-                              ...vehicleForm,
-                              has_reefer: e.target.checked,
-                            })
-                          }
-                          className="rounded"
-                        />
-                        Reefer Container
-                      </label>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={vehicleForm.is_lowbed}
-                          onChange={(e) =>
-                            setVehicleForm({
-                              ...vehicleForm,
-                              is_lowbed: e.target.checked,
-                            })
-                          }
-                          className="rounded"
-                        />
-                        Lowbed Capable
-                      </label>
-                    </div>
-                    <div>
-                      <Label>Capacity (tons)</Label>
-                      <Input
-                        value={vehicleForm.capacity}
-                        onChange={(e) =>
-                          setVehicleForm({
-                            ...vehicleForm,
-                            capacity: e.target.value,
-                          })
-                        }
-                        placeholder="30"
-                      />
-                    </div>
-                    <Button onClick={handleAddVehicle} className="w-full">
-                      Add Vehicle
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              <Dialog open={showTripDialog} onOpenChange={setShowTripDialog}>
-                <DialogTrigger asChild>
-                  <Button className="w-full bg-amber-600 hover:bg-amber-700">
-                    <Navigation className="w-4 h-4 mr-2" />
-                    Dispatch Trip
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>New Trip Dispatch</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Origin</Label>
-                        <Input
-                          value={tripForm.origin}
-                          onChange={(e) =>
-                            setTripForm({ ...tripForm, origin: e.target.value })
-                          }
-                          placeholder="Dar es Salaam"
-                        />
-                      </div>
-                      <div>
-                        <Label>Destination</Label>
-                        <Input
-                          value={tripForm.destination}
-                          onChange={(e) =>
-                            setTripForm({
-                              ...tripForm,
-                              destination: e.target.value,
-                            })
-                          }
-                          placeholder="Kasumbalesa, DRC"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Cargo Type</Label>
-                        <Select
-                          value={tripForm.cargo_type}
-                          onValueChange={(value) =>
-                            setTripForm({ ...tripForm, cargo_type: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="GENERAL">
-                              General Freight
-                            </SelectItem>
-                            <SelectItem value="REEFER">
-                              Cold Chain / Reefer
-                            </SelectItem>
-                            <SelectItem value="LOWBED">
-                              Heavy Equipment
-                            </SelectItem>
-                            <SelectItem value="CROSS_BORDER">
-                              Cross-Border Transit
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Cargo Description</Label>
-                        <Input
-                          value={tripForm.cargo}
-                          onChange={(e) =>
-                            setTripForm({ ...tripForm, cargo: e.target.value })
-                          }
-                          placeholder="Mining equipment"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Driver</Label>
-                        <Select
-                          value={tripForm.driver_id}
-                          onValueChange={(value) =>
-                            setTripForm({ ...tripForm, driver_id: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select driver" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {drivers.map((d) => (
-                              <SelectItem key={d.id} value={d.id}>
-                                {d.name || "Driver"}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Vehicle</Label>
-                        <Select
-                          value={tripForm.vehicle_id}
-                          onValueChange={(value) =>
-                            setTripForm({ ...tripForm, vehicle_id: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select vehicle" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {vehicles.map((v) => (
-                              <SelectItem key={v.id} value={v.id}>
-                                {v.plate_number} - {v.make}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Client</Label>
-                        <Input
-                          value={tripForm.client}
-                          onChange={(e) =>
-                            setTripForm({ ...tripForm, client: e.target.value })
-                          }
-                          placeholder="Mining Co."
-                        />
-                      </div>
-                      <div>
-                        <Label>Distance (km)</Label>
-                        <Input
-                          value={tripForm.distance}
-                          onChange={(e) =>
-                            setTripForm({
-                              ...tripForm,
-                              distance: e.target.value,
-                            })
-                          }
-                          placeholder="1200"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-4 flex-wrap">
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={tripForm.has_reefer}
-                          onChange={(e) =>
-                            setTripForm({
-                              ...tripForm,
-                              has_reefer: e.target.checked,
-                            })
-                          }
-                          className="rounded"
-                        />
-                        Cold Chain Required
-                      </label>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={tripForm.is_cross_border}
-                          onChange={(e) =>
-                            setTripForm({
-                              ...tripForm,
-                              is_cross_border: e.target.checked,
-                            })
-                          }
-                          className="rounded"
-                        />
-                        Cross-Border Transit
-                      </label>
-                    </div>
-                    {tripForm.is_cross_border && (
-                      <div>
-                        <Label>Border Crossing Point</Label>
-                        <Select
-                          value={tripForm.border_point}
-                          onValueChange={(value) =>
-                            setTripForm({ ...tripForm, border_point: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select border point" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Kasumbalesa">
-                              Kasumbalesa (DRC Border)
-                            </SelectItem>
-                            <SelectItem value="Tunduma">
-                              Tunduma (Zambia Border)
-                            </SelectItem>
-                            <SelectItem value="Rusumo">
-                              Rusumo (Rwanda Border)
-                            </SelectItem>
-                            <SelectItem value="Sirari">
-                              Sirari (Kenya Border)
-                            </SelectItem>
-                            <SelectItem value="Mutukula">
-                              Mutukula (Uganda Border)
-                            </SelectItem>
-                            <SelectItem value="Kabanga">
-                              Kabanga (Burundi Border)
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    <Button
-                      onClick={handleAddTrip}
-                      className="w-full bg-primary hover:bg-primary/90"
-                    >
-                      Dispatch Trip
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              <Dialog
-                open={showReportsDialog}
-                onOpenChange={setShowReportsDialog}
+                {utilizationRate.toFixed(1)}%
+              </Badge>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Cost Per Trip
+              </span>
+              <span className="text-sm font-bold">{format(costPerTrip)}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Profit Margin
+              </span>
+              <span
+                className={`text-sm font-bold ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}
               >
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Fleet Reports
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Fleet Operations Report</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="border rounded-lg p-4">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2">
-                        <Users className="size-4" /> Drivers ({drivers.length})
-                      </h3>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {drivers.map((d) => (
-                          <div
-                            key={d.id}
-                            className="p-2 border rounded text-sm"
-                          >
-                            <p className="font-medium">{d.name || "Unknown"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {d.phone || "No phone"}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="border rounded-lg p-4">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2">
-                        <Truck className="size-4" /> Vehicles ({vehicles.length}
-                        )
-                      </h3>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {vehicles.map((v) => (
-                          <div
-                            key={v.id}
-                            className="p-2 border rounded text-sm flex justify-between"
-                          >
-                            <div>
-                              <p className="font-medium">{v.plate_number}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {v.make} {v.model}
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeleteVehicle(v.id)}
-                            >
-                              <Trash2 className="size-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="border rounded-lg p-4">
-                      <h3 className="font-semibold mb-4 flex items-center gap-2">
-                        <Navigation className="size-4" /> Trips ({trips.length})
-                      </h3>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {trips.slice(0, 10).map((t) => (
-                          <div
-                            key={t.id}
-                            className="p-2 border rounded text-sm"
-                          >
-                            <p className="font-medium">
-                              {t.origin} → {t.destination}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {getStatusBadge(t.status)} • {t.cargo}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                {totalRevenue > 0
+                  ? ((netProfit / totalRevenue) * 100).toFixed(1)
+                  : 0}
+                %
+              </span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Avg Revenue/Trip
+              </span>
+              <span className="text-sm font-bold">
+                {completedTrips.length > 0
+                  ? format(totalRevenue / completedTrips.length)
+                  : format(0)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Active Drivers
+              </span>
+              <span className="text-sm font-bold">
+                {drivers.filter((d) => d.status === "active").length}
+              </span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Vehicles Available
+              </span>
+              <span className="text-sm font-bold">{availableVehicles}</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Regional Coverage Map Placeholder */}
-      <Card className="bg-gradient-to-br from-primary/5 to-amber-500/5 border-none">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">
-                East Africa Coverage
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Operating across Tanzania, DRC, Zambia, Kenya, Rwanda, Uganda,
-                Burundi
-              </p>
+      {/* Fleet Status & Recent Activities */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Vehicle Fleet */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="size-5" />
+              Fleet Status
+            </CardTitle>
+            <Badge variant="secondary">{vehicles.length} vehicles</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-600">
+                  {availableVehicles}
+                </p>
+                <p className="text-[10px] text-muted-foreground">Available</p>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-blue-600">
+                  {inUseVehicles}
+                </p>
+                <p className="text-[10px] text-muted-foreground">In Use</p>
+              </div>
+              <div className="bg-amber-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-amber-600">
+                  {maintenanceVehicles}
+                </p>
+                <p className="text-[10px] text-muted-foreground">Maintenance</p>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Badge className="bg-green-500/20 text-green-700">
-                DRC Transit
-              </Badge>
-              <Badge className="bg-blue-500/20 text-blue-700">
-                Zambia Route
-              </Badge>
-              <Badge className="bg-amber-500/20 text-amber-700">
-                Regional Hub
-              </Badge>
-            </div>
-          </div>
+            <DataTable
+              columns={[
+                { key: "plate_number", label: "Plate" },
+                { key: "make", label: "Make" },
+                { key: "model", label: "Model" },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (row) => (
+                    <Badge
+                      variant={
+                        row.status === "available"
+                          ? "secondary"
+                          : row.status === "in_use"
+                            ? "default"
+                            : "destructive"
+                      }
+                    >
+                      {row.status}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={vehicles}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Recent Activities & Active Trips */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="size-5" />
+                Recent Activities
+              </CardTitle>
+              <Badge variant="secondary">{activities.length} new</Badge>
+            </CardHeader>
+            <CardContent>
+              <ActivityFeed activities={activities} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Navigation className="size-5" />
+                Active Trips
+              </CardTitle>
+              <Badge variant="secondary">{activeTrips.length} active</Badge>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={[
+                  { key: "tripNumber", label: "Trip #" },
+                  { key: "origin", label: "Origin" },
+                  { key: "destination", label: "Destination" },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (row) => (
+                      <Badge
+                        variant={
+                          row.status === "in_transit"
+                            ? "default"
+                            : row.status === "loading"
+                              ? "secondary"
+                              : "destructive"
+                        }
+                      >
+                        {row.status?.replace("_", " ")}
+                      </Badge>
+                    ),
+                  },
+                ]}
+                data={activeTrips.slice(0, 5)}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Financial Summary */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="size-5" />
+            Financial Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="expenses">Expenses</TabsTrigger>
+              <TabsTrigger value="invoices">Invoices</TabsTrigger>
+              <TabsTrigger value="reports">Monthly Reports</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">Total Revenue</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {format(totalRevenue)}
+                  </p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">
+                    Total Expenses
+                  </p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {format(totalExpenses)}
+                  </p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">Net Profit</p>
+                  <p
+                    className={`text-2xl font-bold ${netProfit >= 0 ? "text-blue-600" : "text-red-600"}`}
+                  >
+                    {format(netProfit)}
+                  </p>
+                </div>
+              </div>
+              {currentReport && (
+                <div className="mt-4 p-4 bg-muted rounded-lg">
+                  <h4 className="text-sm font-bold mb-2">
+                    Current Month Report ({currentMonth})
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Revenue
+                      </p>
+                      <p className="text-sm font-semibold text-green-600">
+                        {format(Number(currentReport.total_revenue || 0))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Expenses
+                      </p>
+                      <p className="text-sm font-semibold text-red-600">
+                        {format(Number(currentReport.total_expenses || 0))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Allowances
+                      </p>
+                      <p className="text-sm font-semibold text-blue-600">
+                        {format(Number(currentReport.total_allowances || 0))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Net Profit
+                      </p>
+                      <p
+                        className={`text-sm font-semibold ${Number(currentReport.net_profit || 0) >= 0 ? "text-green-600" : "text-red-600"}`}
+                      >
+                        {format(Number(currentReport.net_profit || 0))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="expenses">
+              <DataTable
+                columns={[
+                  { key: "category", label: "Category" },
+                  {
+                    key: "amount",
+                    label: "Amount",
+                    render: (row) => (
+                      <span className="text-rose-600 font-medium">
+                        -{format(row.amount)}
+                      </span>
+                    ),
+                  },
+                  { key: "description", label: "Description" },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (row) => (
+                      <Badge
+                        variant={
+                          row.status === "approved" ? "default" : "secondary"
+                        }
+                      >
+                        {row.status}
+                      </Badge>
+                    ),
+                  },
+                ]}
+                data={expenses.slice(0, 10)}
+              />
+            </TabsContent>
+            <TabsContent value="invoices">
+              <DataTable
+                columns={[
+                  { key: "invoice_number", label: "Invoice #" },
+                  { key: "client", label: "Client" },
+                  { key: "amount", label: "Amount" },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (row) => (
+                      <Badge
+                        variant={
+                          row.status === "paid" ? "default" : "destructive"
+                        }
+                      >
+                        {row.status}
+                      </Badge>
+                    ),
+                  },
+                ]}
+                data={invoices.slice(0, 10)}
+              />
+            </TabsContent>
+            <TabsContent value="reports">
+              <DataTable
+                columns={[
+                  {
+                    key: "month",
+                    label: "Month",
+                    render: (row) =>
+                      new Date(row.month).toLocaleDateString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      }),
+                  },
+                  {
+                    key: "total_revenue",
+                    label: "Revenue",
+                    render: (row) => (
+                      <span className="text-green-600">
+                        {format(Number(row.total_revenue || 0))}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "total_expenses",
+                    label: "Expenses",
+                    render: (row) => (
+                      <span className="text-red-600">
+                        {format(Number(row.total_expenses || 0))}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "net_profit",
+                    label: "Net Profit",
+                    render: (row) => (
+                      <span
+                        className={`font-semibold ${Number(row.net_profit || 0) >= 0 ? "text-green-600" : "text-red-600"}`}
+                      >
+                        {format(Number(row.net_profit || 0))}
+                      </span>
+                    ),
+                  },
+                ]}
+                data={recentReports}
+              />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
-    </div>
+    </DashboardLayout>
   );
 }

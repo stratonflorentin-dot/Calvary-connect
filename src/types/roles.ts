@@ -1,11 +1,20 @@
-export type UserRole = 'CEO' | 'ADMIN' | 'OPERATOR' | 'DRIVER' | 'MECHANIC' | 'ACCOUNTANT' | 'HR' | 'SALESMAN';
+export type UserRole =
+  | "CEO"
+  | "ADMIN"
+  | "OPERATOR"
+  | "DRIVER"
+  | "MECHANIC"
+  | "ACCOUNTANT"
+  | "HR"
+  | "SALESMAN"
+  | "WAREHOUSE_STAFF";
 
 export interface UserProfile {
   uid: string;
   email: string;
   name: string;
   role: UserRole;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   avatar?: string;
   phone?: string;
   employeeId?: string;
@@ -15,17 +24,17 @@ export interface UserProfile {
 }
 
 // Fleet Management Types
-export type FleetType = 'DUMP_TRUCK' | 'TRUCK_HEAD' | 'TRAILER' | 'ESCORT_CAR';
+export type FleetType = "DUMP_TRUCK" | "TRUCK_HEAD" | "TRAILER" | "ESCORT_CAR";
 
 export interface FleetVehicle {
   id: string;
   type: FleetType;
-  trailerSubType?: 'LOWBED' | 'FLATBED'; // Only for TRAILER type
+  trailerSubType?: "LOWBED" | "FLATBED"; // Only for TRAILER type
   plateNumber: string;
   make: string;
   model: string;
   year: number;
-  status: 'available' | 'in_use' | 'maintenance' | 'out_of_service';
+  status: "available" | "in_use" | "maintenance" | "out_of_service";
   currentDriverId?: string;
   currentLocation?: {
     latitude: number;
@@ -43,7 +52,12 @@ export interface FleetVehicle {
   updated_at: any;
 }
 
-export type TripStatus = 'created' | 'loaded' | 'in_transit' | 'delivered' | 'cancelled';
+export type TripStatus =
+  | "created"
+  | "loaded"
+  | "in_transit"
+  | "delivered"
+  | "cancelled";
 
 export interface Trip {
   id: string;
@@ -66,8 +80,8 @@ export interface Trip {
   otherExpenses?: number;
   revenue?: number;
   // Trip Type & VAT
-  tripType?: 'transit' | 'local';
-  tripCategory?: 'town' | 'regional';
+  tripType?: "transit" | "local";
+  tripCategory?: "town" | "regional";
   salesAmount?: number;
   vatRate?: number;
   vatAmount?: number;
@@ -83,7 +97,13 @@ export interface Trip {
 // Expense Management
 export interface Expense {
   id: string;
-  type: 'fuel' | 'maintenance' | 'repair' | 'insurance' | 'registration' | 'other';
+  type:
+    | "fuel"
+    | "maintenance"
+    | "repair"
+    | "insurance"
+    | "registration"
+    | "other";
   amount: number;
   description: string;
   vehicleId: string;
@@ -93,7 +113,7 @@ export interface Expense {
   category: string;
   receiptUrl?: string;
   approvedBy?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   created_at: any;
   updated_at: any;
 }
@@ -103,10 +123,10 @@ export interface MaintenanceRequest {
   id: string;
   vehicleId: string;
   driverId: string;
-  type: 'routine' | 'emergency' | 'repair';
+  type: "routine" | "emergency" | "repair";
   description: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'reported' | 'diagnosed' | 'in_progress' | 'completed' | 'cancelled';
+  priority: "low" | "medium" | "high" | "critical";
+  status: "reported" | "diagnosed" | "in_progress" | "completed" | "cancelled";
   estimatedCost?: number;
   actualCost?: number;
   assignedMechanicId?: string;
@@ -139,7 +159,7 @@ export interface PartsRequest {
   purpose: string;
   vehicleId?: string;
   maintenanceRequestId?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'issued';
+  status: "pending" | "approved" | "rejected" | "issued";
   approvedBy?: string;
   issuedBy?: string;
   created_at: any;
@@ -150,11 +170,11 @@ export interface PartsRequest {
 export interface Allowance {
   id: string;
   employeeId: string;
-  type: 'fuel' | 'meal' | 'accommodation' | 'travel' | 'bonus' | 'other';
+  type: "fuel" | "meal" | "accommodation" | "travel" | "bonus" | "other";
   amount: number;
   description: string;
   period: string;
-  status: 'pending' | 'approved' | 'paid';
+  status: "pending" | "approved" | "paid";
   approvedBy?: string;
   paidAt?: any;
   created_at: any;
@@ -167,7 +187,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
+  type: "info" | "warning" | "error" | "success";
   read: boolean;
   actionUrl?: string;
   createdAt: any;

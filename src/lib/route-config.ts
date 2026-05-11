@@ -6,7 +6,13 @@ import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
 import { ADMIN_EMAIL } from "@/lib/supabase";
-import { Briefcase, BarChart2, Building2, Users, CalendarDays } from "lucide-react";
+import {
+  Briefcase,
+  BarChart2,
+  Building2,
+  Users,
+  CalendarDays,
+} from "lucide-react";
 
 export interface RouteConfig {
   path: string;
@@ -19,25 +25,120 @@ export interface RouteConfig {
 // Central route configuration
 export const ROUTE_CONFIG: RouteConfig[] = [
   // { path: "/drivers", label: "Drivers", allowedRoles: ["CEO", "ADMIN", "OPERATOR"] },
-  { path: "/", label: "Dashboard", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"] },
-  { path: "/fleet", label: "Fleet", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"] },
-  { path: "/trips", label: "Trips", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
-  { path: "/bookings", label: "Bookings", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"], icon: CalendarDays },
-  { path: "/customers", label: "Customers", allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"], icon: Building2 },
-  { path: "/sales", label: "Sales", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"], icon: Briefcase },
-  { path: "/monthly-report", label: "Financial Reporting", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"], icon: BarChart2 },
+  {
+    path: "/",
+    label: "Dashboard",
+    allowedRoles: [
+      "CEO",
+      "ADMIN",
+      "OPERATOR",
+      "DRIVER",
+      "MECHANIC",
+      "ACCOUNTANT",
+      "HR",
+    ],
+  },
+  {
+    path: "/fleet",
+    label: "Fleet",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"],
+  },
+  {
+    path: "/trips",
+    label: "Trips",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"],
+  },
+  {
+    path: "/bookings",
+    label: "Bookings",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
+    icon: CalendarDays,
+  },
+  {
+    path: "/customers",
+    label: "Customers",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    icon: Building2,
+  },
+  {
+    path: "/sales",
+    label: "Sales",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
+    icon: Briefcase,
+  },
+  {
+    path: "/monthly-report",
+    label: "Financial Reporting",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    icon: BarChart2,
+  },
   { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
-  { path: "/inventory", label: "Inventory", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"] },
-  { path: "/parts-requests", label: "Parts Requests", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"] },
-  { path: "/service-requests", label: "Service Requests", allowedRoles: ["CEO", "ADMIN", "MECHANIC", "DRIVER"] },
-  { path: "/truck-history", label: "Truck History", allowedRoles: ["CEO", "ADMIN", "MECHANIC", "DRIVER", "OPERATOR"] },
-  { path: "/map", label: "Fleet Map", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"] },
-  { path: "/proof", label: "Proof of Delivery", allowedRoles: ["CEO", "ADMIN", "DRIVER"] },
-  { path: "/report", label: "Report Maintenance", allowedRoles: ["CEO", "ADMIN", "DRIVER", "MECHANIC"] },
-  { path: "/finance", label: "Financial Operations", allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"] },
-  { path: "/ai-insights", label: "AI Insights", allowedRoles: ["CEO", "ADMIN"] },
+  {
+    path: "/inventory",
+    label: "Inventory",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+  },
+  {
+    path: "/parts-requests",
+    label: "Parts Requests",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+  },
+  {
+    path: "/service-requests",
+    label: "Service Requests",
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "DRIVER"],
+  },
+  {
+    path: "/truck-history",
+    label: "Truck History",
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "DRIVER", "OPERATOR"],
+  },
+  {
+    path: "/map",
+    label: "Fleet Map",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"],
+  },
+  {
+    path: "/proof",
+    label: "Proof of Delivery",
+    allowedRoles: ["CEO", "ADMIN", "DRIVER"],
+  },
+  {
+    path: "/report",
+    label: "Report Maintenance",
+    allowedRoles: ["CEO", "ADMIN", "DRIVER", "MECHANIC"],
+  },
+  {
+    path: "/finance",
+    label: "Financial Operations",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+  },
+  {
+    path: "/ai-insights",
+    label: "AI Insights",
+    allowedRoles: ["CEO", "ADMIN"],
+  },
   { path: "/audit", label: "Audit Log", allowedRoles: ["CEO", "ADMIN"] },
-  { path: "/notifications", label: "Notifications", allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR", "SALESMAN"] },
+  {
+    path: "/notifications",
+    label: "Notifications",
+    allowedRoles: [
+      "CEO",
+      "ADMIN",
+      "OPERATOR",
+      "DRIVER",
+      "MECHANIC",
+      "ACCOUNTANT",
+      "HR",
+      "SALESMAN",
+      "WAREHOUSE_STAFF",
+    ],
+  },
+  {
+    path: "/warehouse",
+    label: "Warehouse",
+    allowedRoles: ["CEO", "ADMIN", "WAREHOUSE_STAFF"],
+  },
 ];
 
 // Role-specific default landing pages
@@ -50,6 +151,7 @@ export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
   SALESMAN: "/sales",
   ACCOUNTANT: "/finance",
   HR: "/finance",
+  WAREHOUSE_STAFF: "/warehouse",
 };
 
 // Route guard hook
@@ -95,7 +197,7 @@ export function useRouteGuard() {
         return false;
       }
     },
-    [role, user?.email]
+    [role, user?.email],
   );
 
   const redirectToDefault = useCallback(
@@ -104,14 +206,15 @@ export function useRouteGuard() {
       console.log(`[RouteGuard] Redirecting ${userRole} to ${defaultRoute}`);
       router.push(defaultRoute);
     },
-    [router]
+    [router],
   );
 
   useEffect(() => {
     if (isUserLoading || !isInitialized) return;
 
     // Check if admin user (owner) - should always have access, no redirects
-    const isAdminUser = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    const isAdminUser =
+      user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
     // Admin user should never be redirected, even when switching roles
     if (isAdminUser) {
@@ -135,7 +238,15 @@ export function useRouteGuard() {
     if (!hasAccess) {
       redirectToDefault(role);
     }
-  }, [user, role, pathname, isUserLoading, isInitialized, checkAccess, redirectToDefault]);
+  }, [
+    user,
+    role,
+    pathname,
+    isUserLoading,
+    isInitialized,
+    checkAccess,
+    redirectToDefault,
+  ]);
 
   return { hasAccess: checkAccess, redirectToDefault };
 }
@@ -146,9 +257,9 @@ export function getMenuByRole(
   isAdmin: boolean,
   t: Record<string, string>,
   userEmail?: string | null,
-  respectRoleSwitch: boolean = false  // ✅ New flag 
+  respectRoleSwitch: boolean = false, // ✅ New flag
 ): RouteConfig[] {
-  if (!role) return []
+  if (!role) return [];
 
   // Owner (admin email) gets full access UNLESS they are previewing another role
   if (
@@ -170,7 +281,17 @@ export function getMenuByRole(
 
 // Validate role
 export function isValidRole(role: string): role is UserRole {
-  return ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR", "SALESMAN"].includes(role);
+  return [
+    "CEO",
+    "ADMIN",
+    "OPERATOR",
+    "DRIVER",
+    "MECHANIC",
+    "ACCOUNTANT",
+    "HR",
+    "SALESMAN",
+    "WAREHOUSE_STAFF",
+  ].includes(role);
 }
 
 // Normalize role to uppercase

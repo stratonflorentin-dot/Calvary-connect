@@ -1,402 +1,483 @@
-
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useSupabase } from '@/components/supabase-provider';
-import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, FileText, TrendingUp, TrendingDown, Image as ImageIcon, Coins, Calendar, DollarSign, Receipt, CreditCard } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { useCurrency } from '@/hooks/use-currency';
-import { useLanguage } from '@/hooks/use-language';
-import { toast } from '@/hooks/use-toast';
+import {
+  DashboardLayout,
+  StatCard,
+  DataTable,
+  ActivityFeed,
+  AlertPanel,
+} from "@/components/dashboard/shared/dashboard-layout";
+import { useExpenses } from "@/hooks/data/use-expenses";
+import { useInvoices } from "@/hooks/data/use-invoices";
+import { useTrips } from "@/hooks/data/use-trips";
+import { useMonthlyReports } from "@/hooks/data/use-monthly-reports";
+import { useUsers } from "@/hooks/data/use-users";
+import { useRole } from "@/hooks/use-role";
+import { useLanguage } from "@/hooks/use-language";
+import { useCurrency } from "@/hooks/use-currency";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DollarSign,
+  Users,
+  FileText,
+  BarChart2,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  TrendingUp,
+  Shield,
+  Calendar,
+  Download,
+  Upload,
+  RefreshCw,
+  Plus,
+  Trash2,
+  Edit,
+  Eye,
+  Briefcase,
+  Calculator,
+  ArrowRight,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState, useMemo } from "react";
 
-export function AccountantView() {
-  const { user } = useSupabase();
-  const { format, toggleCurrency, currency } = useCurrency();
+export default function AccountantDashboard() {
   const { t } = useLanguage();
+  const { format } = useCurrency();
+  const { role } = useRole();
 
-  const [expenses, setExpenses] = useState([]);
-  const [invoices, setInvoices] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [monthlyReports, setMonthlyReports] = useState([]);
-  const [currentMonthReport, setCurrentMonthReport] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Data hooks
+  const { expenses, loading: expensesLoading } = useExpenses();
+  const { invoices, loading: invoicesLoading } = useInvoices();
+  const { trips, loading: tripsLoading } = useTrips();
+  const { reports, loading: reportsLoading } = useMonthlyReports();
+  const { users: drivers, loading: driversLoading } = useUsers({
+    role: "DRIVER",
+  });
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!user) return;
-      
-      try {
-        setLoading(true);
-        
-        // Load real expenses
-        const { data: expensesData } = await supabase
-          .from('expenses')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        // Load real invoices
-        const { data: invoicesData } = await supabase
-          .from('invoices')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        // Load real trips as sales data
-        const { data: tripsData } = await supabase
-          .from('trips')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        // Load monthly reports
-        const { data: reportsData } = await supabase
-          .from('monthly_reports')
-          .select('*')
-          .order('month', { ascending: false });
-        
-        setExpenses(expensesData || []);
-        setInvoices(invoicesData || []);
-        setSales(tripsData || []);
-        setMonthlyReports(reportsData || []);
-        
-        // Set current month report
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const currentReport = reportsData?.find(report => 
-          report.month.toISOString().slice(0, 7) === currentMonth
-        );
-        setCurrentMonthReport(currentReport);
-        
-      } catch (error) {
-        console.error('Error loading accountant data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loading =
+    expensesLoading ||
+    invoicesLoading ||
+    tripsLoading ||
+    reportsLoading ||
+    driversLoading;
 
-    loadData();
-  }, [user]);
+  // Calculate totals
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalRevenue = trips.reduce(
+    (sum, t) => sum + (Number(t.revenue || t.price) || 0),
+    0,
+  );
+  const unpaidInvoices = invoices.filter((i) => {
+    const s = (i.status || "").toLowerCase();
+    return s && !["paid", "settled", "closed"].includes(s);
+  });
+  const totalUnpaidAmount = unpaidInvoices.reduce(
+    (sum, inv) => sum + (Number(inv.amount) || 0),
+    0,
+  );
 
-  // Calculate totals from real data
-  const totalExpenses = expenses?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-  const unpaidInvoicesCount =
-    invoices?.filter((i) => {
-      const s = (i.status || '').toLowerCase();
-      return s && !['paid', 'settled', 'closed'].includes(s);
-    }).length ?? 0;
-  const totalRecordedSales = sales?.reduce((sum, item) => sum + (Number(item.amount) || 0), 0) ?? 0;
+  // Current month report
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentReport = reports.find((r) =>
+    (r.month || "").toString().startsWith(currentMonth),
+  );
+  const recentReports = reports.slice(0, 6);
 
-  // Generate monthly report
-  const generateMonthlyReport = async () => {
-    if (!user) return;
-    
-    try {
-      const currentMonth = new Date();
-      const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      
-      // Get all trips for this month
-      const { data: monthTrips } = await supabase
-        .from('trips')
-        .select('*')
-        .gte('created_at', monthStart.toISOString())
-        .lte('created_at', monthEnd.toISOString());
-      
-      // Get all expenses for this month
-      const { data: monthExpenses } = await supabase
-        .from('expenses')
-        .select('*')
-        .gte('created_at', monthStart.toISOString())
-        .lte('created_at', monthEnd.toISOString());
-      
-      // Get all allowances for this month
-      const { data: monthAllowances } = await supabase
-        .from('driver_allowances')
-        .select('*')
-        .gte('created_at', monthStart.toISOString())
-        .lte('created_at', monthEnd.toISOString());
-      
-      // Calculate totals from real data
-      const totalRevenue = monthTrips?.reduce((sum, trip) => {
-        // Use real pricing from trip data or default to 0 if not set
-        const tripRevenue = trip.revenue || trip.price || 0; // Use actual revenue if available
-        return sum + Number(tripRevenue);
-      }, 0) || 0;
-      
-      const totalExpenses = monthExpenses?.reduce((sum, expense) => 
-        sum + (expense.amount || 0), 0
-      ) || 0;
-      
-      const totalAllowances = monthAllowances?.reduce((sum, allowance) => 
-        sum + (allowance.amount || 0), 0
-      ) || 0;
-      
-      const netProfit = totalRevenue - totalExpenses - totalAllowances;
-      
-      // Create report object
-      const reportData = {
-        id: crypto.randomUUID(),
-        month: monthStart.toISOString(),
-        total_revenue: totalRevenue,
-        total_expenses: totalExpenses,
-        total_allowances: totalAllowances,
-        net_profit: netProfit,
-        trip_count: monthTrips?.length || 0,
-        expense_count: monthExpenses?.length || 0,
-        generated_at: new Date().toISOString()
-      };
-      
-      // Try to save to database, but don't fail if permissions blocked
-      const { error: reportError } = await supabase.from('monthly_reports').insert({
-        month: monthStart,
-        total_revenue: totalRevenue,
-        total_expenses: totalExpenses,
-        total_allowances: totalAllowances,
-        net_profit: netProfit,
-        trip_count: monthTrips?.length || 0,
-        expense_count: monthExpenses?.length || 0
-      });
-      
-      if (reportError) {
-        // Silently log errors - report will still display
-        console.log('Note: Could not save report to database:', reportError.message);
-      }
-      
-      // Always update UI with the calculated report (works even if DB save failed)
-      setCurrentMonthReport(reportData);
-      setMonthlyReports(prev => [reportData, ...prev.filter(r => r.month !== monthStart.toISOString())]);
-      
-      toast({ 
-        title: "Report Generated", 
-        description: `Revenue: ${format(totalRevenue)} | Expenses: ${format(totalExpenses)} | Net: ${format(netProfit)}` 
-      });
-    } catch (error: any) {
-      console.error('Error generating monthly report:', error);
-      toast({ 
-        title: "Report Generation Failed", 
-        description: "Failed to generate monthly report.",
-        variant: "destructive"
-      });
-    }
-  };
+  // Expense categories
+  const expenseCategories = useMemo(() => {
+    const categories: Record<string, number> = {};
+    expenses.forEach((e) => {
+      const cat = e.category || "Other";
+      categories[cat] = (categories[cat] || 0) + (e.amount || 0);
+    });
+    return categories;
+  }, [expenses]);
 
-  // Approve expense
-  const approveExpense = async (expenseId: string) => {
-    try {
-      const { error } = await supabase
-        .from('expenses')
-        .update({ status: 'approved' })
-        .eq('id', expenseId);
-      
-      if (error) throw error;
-      
-      toast({ title: "Expense Approved", description: "Expense has been approved." });
-      
-      // Refresh expenses
-      const { data: refreshedExpenses } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('created_at', { ascending: false });
-      setExpenses(refreshedExpenses || []);
-      
-    } catch (error: any) {
-      toast({ 
-        title: "Approval Failed", 
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
+  // Alerts
+  const alerts = [
+    {
+      id: "1",
+      title: "Unpaid Invoices Overdue",
+      description: `${unpaidInvoices.length} invoices are pending payment with total amount of ${format(totalUnpaidAmount)}.`,
+      severity: "warning" as const,
+      time: "1 day ago",
+    },
+    {
+      id: "2",
+      title: "Monthly Report Available",
+      description: currentReport
+        ? `Report for ${new Date(currentReport.month).toLocaleDateString("en-US", { month: "long" })} is ready.`
+        : "No report for current month yet.",
+      severity: "info" as const,
+      time: "2 hours ago",
+    },
+  ];
+
+  // Recent activities
+  const activities = [
+    {
+      id: "1",
+      title: "Expense Approved",
+      description: "Fuel expense KES 5,000 approved by Manager",
+      time: "2 hours ago",
+      icon: CheckCircle2,
+      color: "bg-green-500",
+    },
+    {
+      id: "2",
+      title: "Invoice Generated",
+      description: "Invoice INV-001 for Client ABC Corp",
+      time: "3 hours ago",
+      icon: FileText,
+      color: "bg-blue-500",
+    },
+    {
+      id: "3",
+      title: "Monthly Report Generated",
+      description: "June 2024 financial summary",
+      time: "5 hours ago",
+      icon: BarChart2,
+      color: "bg-purple-500",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading financial data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-headline tracking-tighter">{t.financial_dashboard}</h1>
-          <p className="text-muted-foreground text-sm">{t.audit_revenue}</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={toggleCurrency} className="gap-2 rounded-full border-primary text-primary">
-          <Coins className="size-4" />
-          {currency === 'USD' ? 'USD' : 'TZS'}
-        </Button>
-      </header>
+    <DashboardLayout
+      title="Accountant Dashboard"
+      description="Financial management and reporting"
+      role={role || "ACCOUNTANT"}
+    >
+      {/* Alert Panel */}
+      <AlertPanel alerts={alerts} />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="rounded-2xl border-none shadow-sm bg-white">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">{t.recent_expenses}</CardTitle>
-            <TrendingDown className="size-5 text-rose-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl xl:text-3xl font-headline">{format(totalExpenses)}</div>
-          </CardContent>
-        </Card>
-        <Card className="rounded-2xl border-none shadow-sm bg-primary text-white">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-widest text-primary-foreground/70">{t.unpaid_invoices}</CardTitle>
-            <FileText className="size-5 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl xl:text-3xl font-headline">{unpaidInvoicesCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="rounded-2xl border-none shadow-sm bg-white">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">Recorded sales</CardTitle>
-            <TrendingUp className="size-5 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl xl:text-3xl font-headline">{format(totalRecordedSales)}</div>
-          </CardContent>
-        </Card>
-        <Card className="rounded-2xl border-none shadow-sm bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm uppercase tracking-widest text-white/80">Monthly Report</CardTitle>
-            <Calendar className="size-5 text-white" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="text-lg font-headline">
-                {currentMonthReport ? format(currentMonthReport.net_profit) : 'No Report'}
-              </div>
-              <Button 
-                onClick={generateMonthlyReport}
-                size="sm" 
-                className="w-full bg-white text-blue-600 hover:bg-white/90"
-              >
-                {currentMonthReport ? 'Regenerate' : 'Generate'} Report
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+        <StatCard
+          title="Total Revenue"
+          value={format(totalRevenue)}
+          icon={DollarSign}
+          color="text-green-600"
+          bgColor="bg-green-50"
+        />
+        <StatCard
+          title="Total Expenses"
+          value={format(totalExpenses)}
+          icon={Calculator}
+          color="text-red-600"
+          bgColor="bg-red-50"
+        />
+        <StatCard
+          title="Net Profit"
+          value={format(totalRevenue - totalExpenses)}
+          icon={TrendingUp}
+          color={
+            totalRevenue - totalExpenses >= 0
+              ? "text-green-600"
+              : "text-red-600"
+          }
+          bgColor={
+            totalRevenue - totalExpenses >= 0 ? "bg-green-50" : "bg-red-50"
+          }
+        />
+        <StatCard
+          title="Unpaid Invoices"
+          value={unpaidInvoices.length}
+          icon={FileText}
+          color="text-orange-600"
+          bgColor="bg-orange-50"
+        />
+        <StatCard
+          title="Total Drivers"
+          value={drivers.length}
+          icon={Users}
+          color="text-indigo-600"
+          bgColor="bg-indigo-50"
+        />
+        <StatCard
+          title="Expense Categories"
+          value={Object.keys(expenseCategories).length}
+          icon={Briefcase}
+          color="text-purple-600"
+          bgColor="bg-purple-50"
+        />
+        <StatCard
+          title="Completed Trips"
+          value={trips.filter((t) => t.status === "completed").length}
+          icon={Navigation}
+          color="text-cyan-600"
+          bgColor="bg-cyan-50"
+        />
+        <StatCard
+          title="Monthly Reports"
+          value={reports.length}
+          icon={Calendar}
+          color="text-amber-600"
+          bgColor="bg-amber-50"
+        />
       </div>
 
-      <Card className="rounded-2xl shadow-sm border-none bg-white overflow-hidden">
-        <CardHeader>
-          <CardTitle className="text-lg font-headline flex items-center gap-2">
-            <FileText className="size-5" />
-            Monthly Reports History
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {monthlyReports.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="size-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">No monthly reports generated yet</p>
-              <p className="text-xs text-muted-foreground mt-2">Generate your first monthly report to see financial summaries</p>
+      {/* Financial Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Revenue vs Expenses Chart */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart2 className="size-5" />
+              Financial Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-green-50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground">Total Revenue</p>
+                <p className="text-lg font-bold text-green-600">
+                  {format(totalRevenue)}
+                </p>
+              </div>
+              <div className="bg-red-50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground">Total Expenses</p>
+                <p className="text-lg font-bold text-red-600">
+                  {format(totalExpenses)}
+                </p>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground">Unpaid Invoices</p>
+                <p className="text-lg font-bold text-blue-600">
+                  {format(totalUnpaidAmount)}
+                </p>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground">Profit Margin</p>
+                <p
+                  className={`text-lg font-bold ${totalRevenue - totalExpenses >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
+                  {totalRevenue > 0
+                    ? (
+                        ((totalRevenue - totalExpenses) / totalRevenue) *
+                        100
+                      ).toFixed(1)
+                    : 0}
+                  %
+                </p>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {monthlyReports.map((report) => (
-                <div key={report.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold">
-                        {new Date(report.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Generated: {new Date(report.generated_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Badge variant={report.net_profit >= 0 ? 'default' : 'destructive'}>
-                      {report.net_profit >= 0 ? 'Profit' : 'Loss'}
-                    </Badge>
+            {/* Expense Breakdown */}
+            <h4 className="text-sm font-medium mb-3">
+              Expense Breakdown by Category
+            </h4>
+            <div className="space-y-2">
+              {Object.entries(expenseCategories).map(([cat, amount]) => (
+                <div key={cat} className="flex items-center gap-3">
+                  <div className="w-24 text-xs text-muted-foreground truncate">
+                    {cat}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Revenue</p>
-                      <p className="font-semibold text-green-600">{format(report.total_revenue)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Expenses</p>
-                      <p className="font-semibold text-red-600">{format(report.total_expenses)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Allowances</p>
-                      <p className="font-semibold text-blue-600">{format(report.total_allowances)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Net Profit</p>
-                      <p className={`font-semibold ${report.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {format(report.net_profit)}
-                      </p>
-                    </div>
+                  <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      style={{
+                        width: `${totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0}%`,
+                      }}
+                    />
                   </div>
-                  <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                    <span className="mr-4">{report.trip_count} trips</span>
-                    <span className="mr-4">{report.expense_count} expenses</span>
+                  <div className="w-20 text-right text-sm font-medium">
+                    {format(amount)}
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card className="rounded-2xl shadow-sm border-none bg-white overflow-hidden">
-        <CardHeader>
-          <CardTitle className="text-lg font-headline">{t.approval_queue}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Category</TableHead>
-                <TableHead>Proof</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {expenses?.map(expense => (
-                <TableRow key={expense.id}>
-                  <TableCell className="font-medium">{expense.category}</TableCell>
-                  <TableCell>
-                    {expense.photoUrl && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10">
-                            <ImageIcon className="size-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-xl">
-                          <DialogHeader>
-                            <DialogTitle>Expense Proof - {expense.category}</DialogTitle>
-                          </DialogHeader>
-                          <div className="mt-4 space-y-4">
-                            <div className="aspect-video rounded-xl overflow-hidden bg-muted border">
-                              <img src={expense.photoUrl} alt="Receipt" className="w-full h-full object-contain" />
-                            </div>
-                            <div className="p-4 bg-muted/30 rounded-lg text-sm italic">
-                              {expense.notes || "No additional notes provided."}
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-bold text-rose-600">-{format(expense.amount)}</TableCell>
-                  <TableCell>
-                    <Badge variant={expense.isApproved ? "default" : "secondary"}>
-                      {expense.isApproved ? "Approved" : "Pending"}
+        {/* Quick Actions */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="size-5" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  /* Add expense logic */
+                }}
+              >
+                <Plus className="size-4 mr-2" /> Record Expense
+              </Button>
+              <Button variant="outline" className="w-full">
+                <Upload className="size-4 mr-2" /> Upload Receipt
+              </Button>
+              <Button variant="outline" className="w-full">
+                <Download className="size-4 mr-2" /> Export Report
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="size-5" />
+                Recent Activities
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActivityFeed activities={activities} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Expense & Invoice Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="size-5" />
+              Recent Expenses
+            </CardTitle>
+            <Badge variant="secondary">{expenses.length} total</Badge>
+          </CardHeader>
+          <CardContent>
+            <DataTable
+              columns={[
+                { key: "category", label: "Category" },
+                {
+                  key: "amount",
+                  label: "Amount",
+                  render: (row) => (
+                    <span className="text-rose-600 font-medium">
+                      -{format(row.amount)}
+                    </span>
+                  ),
+                },
+                { key: "description", label: "Description" },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (row) => (
+                    <Badge
+                      variant={
+                        row.status === "approved"
+                          ? "default"
+                          : row.status === "pending"
+                            ? "secondary"
+                            : "destructive"
+                      }
+                    >
+                      {row.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {!expense.isApproved && (
-                      <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold">Review</Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  ),
+                },
+              ]}
+              data={expenses.slice(0, 10)}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="size-5" />
+              Invoices
+            </CardTitle>
+            <Badge variant="destructive">{unpaidInvoices.length} unpaid</Badge>
+          </CardHeader>
+          <CardContent>
+            <DataTable
+              columns={[
+                { key: "invoice_number", label: "Invoice #" },
+                { key: "client", label: "Client" },
+                { key: "amount", label: "Amount" },
+                {
+                  key: "status",
+                  label: "Status",
+                  render: (row) => (
+                    <Badge
+                      variant={
+                        row.status === "paid" ? "default" : "destructive"
+                      }
+                    >
+                      {row.status}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={invoices.slice(0, 10)}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Monthly Reports */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="size-5" />
+            Monthly Reports
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={[
+              {
+                key: "month",
+                label: "Month",
+                render: (row) =>
+                  new Date(row.month).toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  }),
+              },
+              {
+                key: "total_revenue",
+                label: "Revenue",
+                render: (row) => (
+                  <span className="text-green-600">
+                    {format(Number(row.total_revenue || 0))}
+                  </span>
+                ),
+              },
+              {
+                key: "total_expenses",
+                label: "Expenses",
+                render: (row) => (
+                  <span className="text-red-600">
+                    {format(Number(row.total_expenses || 0))}
+                  </span>
+                ),
+              },
+              {
+                key: "net_profit",
+                label: "Net Profit",
+                render: (row) => (
+                  <span
+                    className={`font-semibold ${Number(row.net_profit || 0) >= 0 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {format(Number(row.net_profit || 0))}
+                  </span>
+                ),
+              },
+            ]}
+            data={recentReports}
+          />
         </CardContent>
       </Card>
-    </div>
+    </DashboardLayout>
   );
-};
-
-export default AccountantView;
+}

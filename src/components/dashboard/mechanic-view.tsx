@@ -1,159 +1,494 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useSupabase } from '@/components/supabase-provider';
-import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wrench, Package, History, AlertCircle, CheckCircle2, ArrowRight, PlusCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useLanguage } from '@/hooks/use-language';
-import { cn } from '@/lib/utils';
-import Link from 'next/link';
+import {
+  DashboardLayout,
+  StatCard,
+  DataTable,
+  ActivityFeed,
+  AlertPanel,
+} from "@/components/dashboard/shared/dashboard-layout";
+import { useMaintenanceRequests } from "@/hooks/data/use-maintenance-requests";
+import { useFleetVehicles } from "@/hooks/data/use-fleet-vehicles";
+import { useTrips } from "@/hooks/data/use-trips";
+import { useRole } from "@/hooks/use-role";
+import { useLanguage } from "@/hooks/use-language";
+import { useCurrency } from "@/hooks/use-currency";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Wrench,
+  Package,
+  History,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  PlusCircle,
+  Clock,
+  TrendingUp,
+  BarChart2,
+  Truck,
+  Users,
+  Settings,
+  Bell,
+  Sparkles,
+  Eye,
+  FileText,
+  RefreshCw,
+  AlertTriangle,
+  Calendar,
+  DollarSign,
+  Navigation,
+  MapPin,
+  Plus,
+  Trash2,
+  Edit,
+  Shield,
+  Briefcase,
+  Loader2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
+import Link from "next/link";
 
-export function MechanicView() {
-  const { user } = useSupabase();
+export default function MechanicDashboard() {
   const { t } = useLanguage();
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { format } = useCurrency();
+  const { role } = useRole();
 
-  useEffect(() => {
-    const loadRequests = async () => {
-      if (!user) return;
-      
-      try {
-        setLoading(true);
-        
-        // Load real maintenance requests from database
-        const { data: maintenanceRequests } = await supabase
-          .from('maintenance_requests')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        setRequests(maintenanceRequests || []);
-        
-      } catch (error) {
-        console.error('Error loading maintenance requests:', error);
-        setRequests([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Data hooks
+  const { requests: maintenanceRequests, loading: maintenanceLoading } =
+    useMaintenanceRequests();
+  const { vehicles, loading: vehiclesLoading } = useFleetVehicles({
+    status: "maintenance",
+  });
+  const { trips, loading: tripsLoading } = useTrips();
 
-    loadRequests();
-  }, [user]);
+  const loading = maintenanceLoading || vehiclesLoading || tripsLoading;
 
-  const pendingCount = requests?.filter(r => r.status === 'pending').length || 0;
-  const inProgressCount = requests?.filter(r => r.status === 'in_progress').length || 0;
+  // Calculate metrics
+  const pendingCount = maintenanceRequests.filter(
+    (r) => r.status === "pending" || r.status === "reported",
+  ).length;
+  const inProgressCount = maintenanceRequests.filter(
+    (r) => r.status === "in_progress" || r.status === "diagnosed",
+  ).length;
+  const completedCount = maintenanceRequests.filter(
+    (r) => r.status === "completed",
+  ).length;
+  const cancelledCount = maintenanceRequests.filter(
+    (r) => r.status === "cancelled",
+  ).length;
+
+  // Maintenance cost estimate
+  const totalEstimatedCost = maintenanceRequests.reduce(
+    (sum, r) => sum + (Number(r.estimatedCost) || 0),
+    0,
+  );
+  const totalActualCost = maintenanceRequests.reduce(
+    (sum, r) => sum + (Number(r.actualCost) || 0),
+    0,
+  );
+
+  // Recent completed maintenance
+  const recentCompleted = maintenanceRequests
+    .filter((r) => r.status === "completed")
+    .sort(
+      (a, b) =>
+        new Date(b.completedAt || b.updated_at || 0).getTime() -
+        new Date(a.completedAt || a.updated_at || 0).getTime(),
+    )
+    .slice(0, 5);
+
+  // Alerts
+  const alerts = [
+    {
+      id: "1",
+      title: "Critical Maintenance Required",
+      description: `${maintenanceRequests.filter((r) => r.priority === "critical").length} critical maintenance requests need immediate attention.`,
+      severity: "critical" as const,
+      time: "30 minutes ago",
+    },
+    {
+      id: "2",
+      title: "Parts Running Low",
+      description: "3 spare parts are below minimum stock level.",
+      severity: "warning" as const,
+      time: "2 hours ago",
+    },
+  ];
+
+  // Recent activities
+  const activities = [
+    {
+      id: "1",
+      title: "Maintenance Completed",
+      description: "Engine repair for TRK-005 - $2,500",
+      time: "2 hours ago",
+      icon: CheckCircle2,
+      color: "bg-green-500",
+    },
+    {
+      id: "2",
+      title: "New Maintenance Request",
+      description: "Brake inspection for TRK-012",
+      time: "4 hours ago",
+      icon: PlusCircle,
+      color: "bg-blue-500",
+    },
+    {
+      id: "3",
+      title: "Parts Order Placed",
+      description: "Ordered 4 brake pads and 2 oil filters",
+      time: "6 hours ago",
+      icon: Package,
+      color: "bg-amber-500",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading maintenance data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-headline tracking-tighter">{t.maintenance_hub}</h1>
-          <p className="text-muted-foreground text-sm">{t.real_time_health}</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/spare-parts">
-            <Button variant="default" size="sm" className="rounded-full gap-2 shadow-lg">
-              <PlusCircle className="size-4" /> {t.request_parts}
-            </Button>
-          </Link>
-          <Link href="/service-requests">
-            <Button variant="outline" size="sm" className="rounded-full gap-2 border-primary text-primary">
-              {t.overview} <ArrowRight className="size-4" />
-            </Button>
-          </Link>
-        </div>
-      </header>
+    <DashboardLayout
+      title="Mechanic Dashboard"
+      description="Fleet maintenance and repair management"
+      role={role || "MECHANIC"}
+    >
+      {/* Alert Panel */}
+      <AlertPanel alerts={alerts} />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="rounded-2xl border-none shadow-sm bg-primary text-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-primary-foreground/70">{t.tasks_pending}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-headline">{pendingCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="rounded-2xl border-none shadow-sm bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">{t.in_progress}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-2">
-            <div className="text-3xl font-headline text-blue-500">{inProgressCount}</div>
-          </CardContent>
-        </Card>
-        <Card className="rounded-2xl border-none shadow-sm bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">{t.quick_action}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Link href="/truck-history">
-              <Button variant="ghost" className="w-full justify-start gap-2 h-auto py-2 text-xs font-bold text-primary hover:bg-primary/5">
-                <History className="size-4" /> {t.check_history}
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+        <StatCard
+          title="Pending Requests"
+          value={pendingCount}
+          icon={Clock}
+          color="text-amber-600"
+          bgColor="bg-amber-50"
+        />
+        <StatCard
+          title="In Progress"
+          value={inProgressCount}
+          icon={Loader2}
+          color="text-blue-600"
+          bgColor="bg-blue-50"
+        />
+        <StatCard
+          title="Completed"
+          value={completedCount}
+          icon={CheckCircle2}
+          color="text-green-600"
+          bgColor="bg-green-50"
+        />
+        <StatCard
+          title="Cancelled"
+          value={cancelledCount}
+          icon={AlertCircle}
+          color="text-red-600"
+          bgColor="bg-red-50"
+        />
+        <StatCard
+          title="Vehicles in Maintenance"
+          value={vehicles.length}
+          icon={Truck}
+          color="text-purple-600"
+          bgColor="bg-purple-50"
+        />
+        <StatCard
+          title="Estimated Cost"
+          value={format(totalEstimatedCost)}
+          icon={DollarSign}
+          color="text-emerald-600"
+          bgColor="bg-emerald-50"
+        />
+        <StatCard
+          title="Actual Cost"
+          value={format(totalActualCost)}
+          icon={Calculator}
+          color="text-cyan-600"
+          bgColor="bg-cyan-50"
+        />
+        <StatCard
+          title="Active Trips"
+          value={
+            trips.filter((t) =>
+              ["in_transit", "loading", "pending"].includes(t.status),
+            ).length
+          }
+          icon={Navigation}
+          color="text-indigo-600"
+          bgColor="bg-indigo-50"
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <section className="space-y-4">
-          <h2 className="text-xl font-headline tracking-tighter flex items-center gap-2">
-            <Wrench className="size-5 text-primary" /> {t.active_queue}
-          </h2>
-          <div className="space-y-3">
-            {requests?.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">No active requests found.</p>
-            ) : requests?.map(request => (
-              <Card key={request.id} className="rounded-xl shadow-sm border overflow-hidden">
-                <CardContent className="p-4 flex justify-between items-center">
-                  <div>
-                    <p className="font-headline text-sm truncate max-w-[200px]">{request.issueDescription}</p>
-                    <p className="text-[10px] text-muted-foreground">Truck ID: {request.fleetVehicleId}</p>
-                  </div>
-                  <Badge className={cn(
-                    "text-[10px]",
-                    request.status === 'in_progress' ? 'bg-blue-500' : 
-                    request.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'
-                  )}>
-                    {request.status.toUpperCase()}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+      {/* Maintenance & Fleet Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Active Maintenance Queue */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Wrench className="size-5" />
+              Active Maintenance Queue
+            </CardTitle>
+            <Badge variant="destructive">{pendingCount} pending</Badge>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="pending">
+              <TabsList>
+                <TabsTrigger value="pending">
+                  Pending ({pendingCount})
+                </TabsTrigger>
+                <TabsTrigger value="in_progress">
+                  In Progress ({inProgressCount})
+                </TabsTrigger>
+                <TabsTrigger value="completed">
+                  Completed ({completedCount})
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="pending">
+                <DataTable
+                  columns={[
+                    { key: "issueDescription", label: "Issue" },
+                    { key: "fleetVehicleId", label: "Vehicle" },
+                    {
+                      key: "priority",
+                      label: "Priority",
+                      render: (row) => (
+                        <Badge
+                          variant={
+                            row.priority === "critical"
+                              ? "destructive"
+                              : row.priority === "high"
+                                ? "default"
+                                : "secondary"
+                          }
+                        >
+                          {row.priority}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      key: "status",
+                      label: "Status",
+                      render: (row) => (
+                        <Badge
+                          variant={
+                            row.status === "pending"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                        >
+                          {row.status?.replace("_", " ")}
+                        </Badge>
+                      ),
+                    },
+                  ]}
+                  data={maintenanceRequests.filter(
+                    (r) => r.status === "pending" || r.status === "reported",
+                  )}
+                />
+              </TabsContent>
+              <TabsContent value="in_progress">
+                <DataTable
+                  columns={[
+                    { key: "issueDescription", label: "Issue" },
+                    { key: "fleetVehicleId", label: "Vehicle" },
+                    {
+                      key: "status",
+                      label: "Status",
+                      render: (row) => (
+                        <Badge variant="secondary">
+                          {row.status?.replace("_", " ")}
+                        </Badge>
+                      ),
+                    },
+                  ]}
+                  data={maintenanceRequests.filter(
+                    (r) =>
+                      r.status === "in_progress" || r.status === "diagnosed",
+                  )}
+                />
+              </TabsContent>
+              <TabsContent value="completed">
+                <DataTable
+                  columns={[
+                    { key: "issueDescription", label: "Issue" },
+                    { key: "fleetVehicleId", label: "Vehicle" },
+                    {
+                      key: "completedAt",
+                      label: "Completed",
+                      render: (row) =>
+                        new Date(
+                          row.completedAt || row.updated_at,
+                        ).toLocaleDateString(),
+                    },
+                    {
+                      key: "truckConditionAfterService",
+                      label: "Condition",
+                      render: (row) => (
+                        <Badge
+                          variant={
+                            row.truckConditionAfterService === "good"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {row.truckConditionAfterService}
+                        </Badge>
+                      ),
+                    },
+                  ]}
+                  data={recentCompleted}
+                />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
 
-        <section className="space-y-4">
-          <h2 className="text-xl font-headline tracking-tighter flex items-center gap-2">
-            <History className="size-5 text-primary" /> {t.recent_activity}
-          </h2>
-          <div className="bg-white rounded-2xl shadow-sm border p-6">
-            <div className="space-y-4">
-              {requests?.filter(r => r.status === 'completed').slice(0, 3).map((log, i) => (
-                <div key={i} className="flex gap-3 border-b pb-3 last:border-0">
-                  <div className="size-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                    <CheckCircle2 className="size-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold">{log.issueDescription}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">Log: {log.serviceLog}</p>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-[9px] text-muted-foreground uppercase font-bold">{new Date(log.completedAt).toLocaleDateString()}</span>
-                      <Badge variant="outline" className="text-[8px] h-4">{log.truckConditionAfterService}</Badge>
-                    </div>
-                  </div>
+        {/* Fleet Status & Cost Analysis */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="size-5" />
+                Fleet Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-green-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {vehicles.filter((v) => v.status === "available").length}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">Available</p>
                 </div>
-              ))}
-              {requests?.filter(r => r.status === 'completed').length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4 italic">No recent completion logs found.</p>
-              )}
-            </div>
-          </div>
-        </section>
+                <div className="bg-blue-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {vehicles.filter((v) => v.status === "in_use").length}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">In Use</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-amber-600">
+                    {vehicles.filter((v) => v.status === "maintenance").length}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Maintenance
+                  </p>
+                </div>
+              </div>
+              <DataTable
+                columns={[
+                  { key: "plate_number", label: "Plate" },
+                  { key: "make", label: "Make" },
+                  { key: "model", label: "Model" },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (row) => (
+                      <Badge
+                        variant={
+                          row.status === "available"
+                            ? "secondary"
+                            : row.status === "in_use"
+                              ? "default"
+                              : "destructive"
+                        }
+                      >
+                        {row.status}
+                      </Badge>
+                    ),
+                  },
+                ]}
+                data={vehicles.slice(0, 8)}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart2 className="size-5" />
+                Cost Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="bg-orange-50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">
+                    Estimated Cost
+                  </p>
+                  <p className="text-lg font-bold text-orange-600">
+                    {format(totalEstimatedCost)}
+                  </p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">Actual Cost</p>
+                  <p className="text-lg font-bold text-green-600">
+                    {format(totalActualCost)}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-muted rounded-lg p-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Cost Variance
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-4 bg-white rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      style={{
+                        width: `${totalEstimatedCost > 0 ? (totalActualCost / totalEstimatedCost) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm font-bold w-16 text-right">
+                    {totalEstimatedCost > 0
+                      ? ((totalActualCost / totalEstimatedCost) * 100).toFixed(
+                          0,
+                        )
+                      : 0}
+                    %
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="size-5" />
+                Recent Activities
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActivityFeed activities={activities} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+
+      {/* Request Parts Button */}
+      <div className="flex justify-end mb-6">
+        <Button
+          onClick={() => {
+            /* Request parts logic */
+          }}
+        >
+          <PlusCircle className="size-4 mr-2" /> Request Parts
+        </Button>
+      </div>
+    </DashboardLayout>
   );
 }
