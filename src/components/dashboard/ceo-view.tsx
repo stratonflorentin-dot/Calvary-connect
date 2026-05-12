@@ -247,69 +247,8 @@ export default function CeoDashboard() {
       {/* Alert Panel */}
       <AlertPanel alerts={alerts} />
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
-        <StatCard
-          title="Total Fleet"
-          value={vehicles.length}
-          icon={Truck}
-          color="text-blue-600"
-          bgColor="bg-blue-50"
-          link="/fleet"
-        />
-        <StatCard
-          title="Active Trips"
-          value={activeTrips.length}
-          icon={Navigation}
-          color="text-green-600"
-          bgColor="bg-green-50"
-          link="/trips"
-        />
-        <StatCard
-          title="Monthly Revenue"
-          value={format(totalRevenue)}
-          icon={DollarSign}
-          color="text-emerald-600"
-          bgColor="bg-emerald-50"
-          link="/finance"
-        />
-        <StatCard
-          title="Cross-Border"
-          value={crossBorderTrips}
-          icon={Globe}
-          color="text-purple-600"
-          bgColor="bg-purple-50"
-        />
-        <StatCard
-          title="Cold Chain"
-          value={coldChainTrips}
-          icon={Thermometer}
-          color="text-cyan-600"
-          bgColor="bg-cyan-50"
-        />
-        <StatCard
-          title="Heavy Cargo"
-          value={heavyCargoTrips}
-          icon={Package}
-          color="text-amber-600"
-          bgColor="bg-amber-50"
-        />
-        <StatCard
-          title="Total Drivers"
-          value={drivers.length}
-          icon={Users}
-          color="text-indigo-600"
-          bgColor="bg-indigo-50"
-        />
-        <StatCard
-          title="Unpaid Invoices"
-          value={unpaidInvoices.length}
-          icon={FileText}
-          color="text-orange-600"
-          bgColor="bg-orange-50"
-          link="/finance"
-        />
-      </div>
+      {/* Enhanced Stat Cards - Unified Component */}
+      <StatCards />
 
       {/* Revenue & Profit Chart Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -573,6 +512,74 @@ export default function CeoDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Warehouse Operations Overview */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Container className="size-5" />
+            Warehouse Operations
+          </CardTitle>
+          <Badge variant="secondary">Warehouse</Badge>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-pink-50 rounded-lg p-4 text-center">
+              <p className="text-2xl font-bold text-pink-600">
+                {stats.warehouseUtilization || 0}
+              </p>
+              <p className="text-[10px] text-muted-foreground">Items Stored</p>
+            </div>
+            <div className="bg-cyan-50 rounded-lg p-4 text-center">
+              <p className="text-2xl font-bold text-cyan-600">--</p>
+              <p className="text-[10px] text-muted-foreground">Capacity</p>
+            </div>
+            <div className="bg-amber-50 rounded-lg p-4 text-center">
+              <p className="text-2xl font-bold text-amber-600">--</p>
+              <p className="text-[10px] text-muted-foreground">
+                Pending Clearance
+              </p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-4 text-center">
+              <p className="text-2xl font-bold text-green-600">--</p>
+              <p className="text-[10px] text-muted-foreground">
+                Ready for Dispatch
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-sm font-medium">Recent Warehouse Activity</h4>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/warehouse">View Full Dashboard</Link>
+            </Button>
+          </div>
+          <DataTable
+            columns={[
+              { key: "shipment_ref", label: "Shipment Ref" },
+              { key: "origin", label: "Origin" },
+              { key: "location_bin", label: "Location" },
+              {
+                key: "status",
+                label: "Status",
+                render: (row) => (
+                  <Badge
+                    variant={
+                      row.status === "STORED"
+                        ? "secondary"
+                        : row.status === "CLEARED"
+                          ? "default"
+                          : "destructive"
+                    }
+                  >
+                    {row.status}
+                  </Badge>
+                ),
+              },
+            ]}
+            data={[]}
+          />
+        </CardContent>
+      </Card>
 
       {/* Financial Summary */}
       <Card className="mb-6">

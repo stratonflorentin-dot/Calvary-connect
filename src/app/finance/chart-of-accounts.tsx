@@ -472,20 +472,20 @@ export function ChartOfAccountsPage() {
   if (isLoading) return <div className="p-8 text-center">Loading Chart of Accounts...</div>;
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-6">
+        {/* Header - Responsive Layout */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
-            <div className="flex items-center gap-4 mb-2">
+            <div className="flex items-center gap-2 sm:gap-4 mb-2">
               <Link href="/finance">
                 <Button variant="outline" size="sm" className="gap-2">
                   <ArrowLeft className="h-4 w-4" /> Back to Finance
                 </Button>
               </Link>
             </div>
-            <h1 className="text-3xl font-bold">Chart of Accounts</h1>
-            <p className="text-muted-foreground">Double-entry ledger accounts</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Chart of Accounts</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Double-entry ledger accounts</p>
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
@@ -582,8 +582,8 @@ export function ChartOfAccountsPage() {
           </Dialog>
         </div>
 
-        {/* Category Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+        {/* Category Summary Cards - Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-6">
           {['ASSETS', 'LIABILITIES', 'EQUITY', 'REVENUE', 'COST_OF_SALES', 'OPERATING_EXPENSES', 'OTHER_EXPENSES'].map((category) => {
             const colors = categoryColors[category];
             const Icon = colors.icon;
@@ -641,21 +641,22 @@ export function ChartOfAccountsPage() {
               />
             </div>
 
-            {/* Accounts Table */}
+            {/* Accounts Table - Responsive */}
             <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-20">Code</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Parent</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
-                    <TableHead>Currency</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <div className="overflow-x-auto">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[80px]">Code</TableHead>
+                      <TableHead className="min-w-[150px]">Name</TableHead>
+                      <TableHead className="min-w-[80px]">Type</TableHead>
+                      <TableHead className="min-w-[100px]">Parent</TableHead>
+                      <TableHead className="min-w-[120px] text-right">Balance</TableHead>
+                      <TableHead className="min-w-[80px]">Currency</TableHead>
+                      <TableHead className="min-w-[80px]">Status</TableHead>
+                      <TableHead className="min-w-[120px] text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {filteredAccounts.map((account) => (
                     <TableRow key={account.id}>

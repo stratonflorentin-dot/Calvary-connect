@@ -416,12 +416,12 @@ function SalesModuleContent() {
       <Sidebar />
       <div className="flex-1 p-4 md:p-6 md:ml-64">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Sales & Commercial</h1>
-          <p className="text-gray-600 mt-1">Manage customers, quotations, contracts, and sales pipeline</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Sales & Commercial</h1>
+          <p className="text-sm md:text-base text-gray-600 mt-1">Manage customers, quotations, contracts, and sales pipeline</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Stats - Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
           <Card className="bg-white shadow-sm border border-gray-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
@@ -568,13 +568,13 @@ function SalesModuleContent() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Company</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>City</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Credit Limit</TableHead>
+                        <TableHead className="min-w-[80px]">Code</TableHead>
+                        <TableHead className="min-w-[120px]">Company</TableHead>
+                        <TableHead className="min-w-[100px]">Contact</TableHead>
+                        <TableHead className="min-w-[100px]">Phone</TableHead>
+                        <TableHead className="min-w-[80px]">City</TableHead>
+                        <TableHead className="min-w-[80px]">Status</TableHead>
+                        <TableHead className="min-w-[100px]">Credit Limit</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

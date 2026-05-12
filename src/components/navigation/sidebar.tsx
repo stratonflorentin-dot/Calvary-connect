@@ -29,6 +29,8 @@ import {
   Thermometer,
   Anchor,
   Container,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
@@ -80,6 +82,12 @@ export function Sidebar({ role }: { role: UserRole }) {
   // ✅ Track stored role reactively
   const [storedRole, setStoredRole] = useState<UserRole | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -157,7 +165,31 @@ export function Sidebar({ role }: { role: UserRole }) {
   }));
 
   return (
-    <aside className="hidden md:flex flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50">
+    <>
+      {/* Mobile Hamburger Button */}
+      <button
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        className="md:hidden fixed top-4 left-4 z-[60] p-2 rounded-lg bg-sidebar text-white shadow-lg"
+        aria-label="Toggle menu"
+      >
+        {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+      </button>
+
+      {/* Mobile Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Desktop always visible, Mobile conditional */}
+      <aside className={`
+        flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50
+        transition-transform duration-300 ease-in-out
+        md:translate-x-0
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
       <div className="p-6 flex items-center justify-between">
         <div>
           <h1 className="font-headline text-2xl tracking-tighter text-white">
@@ -377,5 +409,6 @@ export function Sidebar({ role }: { role: UserRole }) {
         </button>
       </div>
     </aside>
+    </>
   );
 }

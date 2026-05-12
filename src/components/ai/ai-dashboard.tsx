@@ -240,7 +240,7 @@ export function AIDashboard() {
         </Badge>
       </div>
 
-      {/* Forecast Section */}
+      {/* Forecast Section - Responsive Layout */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -249,7 +249,7 @@ export function AIDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Select value={forecastType} onValueChange={setForecastType}>
               <SelectTrigger className="w-48">
                 <SelectValue />
@@ -289,7 +289,7 @@ export function AIDashboard() {
         </CardContent>
       </Card>
 
-      {/* Analysis Section */}
+      {/* Analysis Section - Responsive Layout */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -298,9 +298,9 @@ export function AIDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Select value={analysisType} onValueChange={setAnalysisType}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -311,7 +311,7 @@ export function AIDashboard() {
                 <SelectItem value="profitability">Profitability</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={handleAnalyze} disabled={loading}>
+            <Button onClick={handleAnalyze} disabled={loading} className="w-full sm:w-auto">
               {loading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (

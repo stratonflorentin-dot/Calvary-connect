@@ -353,8 +353,8 @@ export function FleetDashboard() {
         <AddVehicleDialog onVehicleAdded={loadFleetData} />
       </div>
 
-      {/* Fleet Statistics - Calvary Style */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      {/* Fleet Statistics - Responsive Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
@@ -412,8 +412,8 @@ export function FleetDashboard() {
         </Card>
       </div>
 
-      {/* Fleet Type Distribution - Calvary Style with Special Types */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      {/* Fleet Type Distribution - Responsive Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -481,9 +481,9 @@ export function FleetDashboard() {
         </Card>
       </div>
 
-      {/* Filter and Actions - Calvary Style with Service Type Filters */}
+      {/* Filter and Actions - Responsive Layout */}
       <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-wrap">
             {['all', 'active', 'idle', 'maintenance'].map((tab) => (
               <button
@@ -550,8 +550,8 @@ export function FleetDashboard() {
         </div>
       </div>
 
-      {/* Fleet List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Fleet List - Responsive Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {vehicles.map((vehicle) => (
           <Card key={vehicle.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
@@ -576,7 +576,7 @@ export function FleetDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-muted-foreground">Year:</span>
                   <p className="font-medium">{vehicle.year}</p>

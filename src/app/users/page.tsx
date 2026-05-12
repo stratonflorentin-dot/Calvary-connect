@@ -385,8 +385,8 @@ export default function UsersPage() {
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-headline tracking-tighter">User Management</h1>
-            <p className="text-muted-foreground text-sm">Add and manage employee access.</p>
+            <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">User Management</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Add and manage employee access.</p>
           </div>
 
           <div className="flex gap-2">
@@ -506,8 +506,8 @@ export default function UsersPage() {
           </div>
         </div>
 
-        {/* Team Stats Cards - Calvary Style */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+        {/* Team Stats Cards - Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 font-medium">Total Users</span>
@@ -704,15 +704,15 @@ export default function UsersPage() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-full">
               <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  {(role === 'CEO' || role === 'ADMIN') && <TableHead>Password</TableHead>}
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="min-w-[100px]">User</TableHead>
+                  {(role === 'CEO' || role === 'ADMIN') && <TableHead className="min-w-[100px]">Password</TableHead>}
+                  <TableHead className="min-w-[80px]">Role</TableHead>
+                  <TableHead className="min-w-[80px]">Status</TableHead>
+                  <TableHead className="min-w-[80px]">Joined</TableHead>
+                  <TableHead className="min-w-[100px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
