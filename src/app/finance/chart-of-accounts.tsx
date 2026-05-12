@@ -725,6 +725,7 @@ export function ChartOfAccountsPage() {
                   )}
                 </TableBody>
               </Table>
+            </div>
             </Card>
 
             {/* View Account Dialog */}
@@ -778,7 +779,7 @@ export function ChartOfAccountsPage() {
                       </div>
                       <div>
                         <Label className="text-muted-foreground">Status</Label>
-                        <p><Badge className={selectedAccount.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                        <p><Badge variant="outline" className={selectedAccount.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
                           {selectedAccount.is_active ? 'Active' : 'Inactive'}
                         </Badge></p>
                       </div>
