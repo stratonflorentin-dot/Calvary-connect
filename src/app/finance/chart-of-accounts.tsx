@@ -734,59 +734,59 @@ export function ChartOfAccountsPage() {
                   <DialogTitle>Account Details</DialogTitle>
                 </DialogHeader>
                 {selectedAccount && (
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground">Account Code</Label>
-                      <p className="font-semibold font-mono">{selectedAccount.code}</p>
+                  <div className="space-y-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground">Account Code</Label>
+                        <p className="font-semibold font-mono">{selectedAccount.code}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Type</Label>
+                        <p className="font-semibold capitalize">{selectedAccount.type}</p>
+                      </div>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Type</Label>
-                      <p className="font-semibold capitalize">{selectedAccount.type}</p>
+                      <Label className="text-muted-foreground">Account Name</Label>
+                      <p className="font-semibold text-lg">{selectedAccount.name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Category</Label>
+                      <p className="font-semibold">{selectedAccount.category.replace(/_/g, ' ')}</p>
+                    </div>
+                    {selectedAccount.sub_category && (
+                      <div>
+                        <Label className="text-muted-foreground">Sub Category</Label>
+                        <p className="font-semibold">{selectedAccount.sub_category}</p>
+                      </div>
+                    )}
+                    {selectedAccount.description && (
+                      <div>
+                        <Label className="text-muted-foreground">Description</Label>
+                        <p className="font-semibold">{selectedAccount.description}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground">Current Balance</Label>
+                        <p className="font-semibold text-lg">{formatCurrency(selectedAccount.current_balance, selectedAccount.currency)}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Currency</Label>
+                        <p><Badge variant="outline" className={selectedAccount.currency === 'USD' ? 'text-blue-600' : 'text-gray-600'}>
+                          {selectedAccount.currency || 'TZS'}
+                        </Badge></p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Status</Label>
+                        <p><Badge className={selectedAccount.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                          {selectedAccount.is_active ? 'Active' : 'Inactive'}
+                        </Badge></p>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Account Name</Label>
-                    <p className="font-semibold text-lg">{selectedAccount.name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Category</Label>
-                    <p className="font-semibold">{selectedAccount.category.replace(/_/g, ' ')}</p>
-                  </div>
-                  {selectedAccount.sub_category && (
-                    <div>
-                      <Label className="text-muted-foreground">Sub Category</Label>
-                      <p className="font-semibold">{selectedAccount.sub_category}</p>
-                    </div>
-                  )}
-                  {selectedAccount.description && (
-                    <div>
-                      <Label className="text-muted-foreground">Description</Label>
-                      <p className="font-semibold">{selectedAccount.description}</p>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground">Current Balance</Label>
-                      <p className="font-semibold text-lg">{formatCurrency(selectedAccount.current_balance, selectedAccount.currency)}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Currency</Label>
-                      <p><Badge variant="outline" className={selectedAccount.currency === 'USD' ? 'text-blue-600' : 'text-gray-600'}>
-                        {selectedAccount.currency || 'TZS'}
-                      </Badge></p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Status</Label>
-                      <p><Badge className={selectedAccount.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
-                        {selectedAccount.is_active ? 'Active' : 'Inactive'}
-                      </Badge></p>
-                    </div>
-                  </div>
-                </div>
-              )}
-      </DialogContent>
-    </Dialog>
+                )}
+              </DialogContent>
+            </Dialog>
 
     {/* Edit Account Dialog */}
     <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
