@@ -733,7 +733,7 @@ export function ChartOfAccountsPage() {
                 <DialogHeader>
                   <DialogTitle>Account Details</DialogTitle>
                 </DialogHeader>
-        {selectedAccount && (
+                {selectedAccount && (
                 <div className="space-y-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
