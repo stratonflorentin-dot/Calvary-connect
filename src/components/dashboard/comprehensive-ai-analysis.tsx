@@ -198,7 +198,7 @@ export default function ComprehensiveAIAnalysis() {
     {
       id: "1",
       title: "AI Analysis Complete",
-      description: `${insights.length} actionable insights generated from fleet data.`,
+      description: `${aiInsights.length} actionable insights generated from fleet data.`,
       severity: "info" as const,
       time: "Just now",
     },

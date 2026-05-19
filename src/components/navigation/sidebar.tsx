@@ -185,7 +185,7 @@ export function Sidebar({ role }: { role: UserRole }) {
 
       {/* Sidebar - Desktop always visible, Mobile conditional */}
       <aside className={`
-        flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50
+        flex flex-col w-60 fixed inset-y-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50
         transition-transform duration-300 ease-in-out
         md:translate-x-0
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
