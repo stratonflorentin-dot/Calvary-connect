@@ -481,3 +481,5 @@ export default function AccountantDashboard() {
     </DashboardLayout>
   );
 }
+
+export { AccountantDashboard as AccountantView };

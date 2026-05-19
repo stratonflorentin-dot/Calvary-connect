@@ -492,3 +492,5 @@ export default function MechanicDashboard() {
     </DashboardLayout>
   );
 }
+
+export { MechanicDashboard as MechanicView };

@@ -404,3 +404,5 @@ export default function HRDashboard() {
     </DashboardLayout>
   );
 }
+
+export { HRDashboard as HRView };

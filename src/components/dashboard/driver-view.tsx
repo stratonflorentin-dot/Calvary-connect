@@ -390,3 +390,5 @@ export default function DriverDashboard() {
     </DashboardLayout>
   );
 }
+
+export { DriverDashboard as DriverView };

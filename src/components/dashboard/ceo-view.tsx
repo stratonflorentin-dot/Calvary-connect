@@ -67,8 +67,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import Link from "next/link";
+import { StatCards } from "./stat-cards";
 
 export default function CeoDashboard() {
+  const stats = { warehouseUtilization: 0 };
   const { t } = useLanguage();
   const { format } = useCurrency();
   const { role } = useRole();
@@ -771,3 +773,5 @@ export default function CeoDashboard() {
     </DashboardLayout>
   );
 }
+
+export { CeoDashboard as CeoView };

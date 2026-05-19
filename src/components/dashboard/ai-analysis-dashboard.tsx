@@ -649,3 +649,5 @@ export default function AIAnalysisDashboard() {
     </DashboardLayout>
   );
 }
+
+export { AIAnalysisDashboard };
