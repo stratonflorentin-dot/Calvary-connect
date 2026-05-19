@@ -14,6 +14,7 @@ let globalFetchPromise: Promise<number | null> | null = null;
 
 async function fetchExchangeRateWithCache(): Promise<number> {
   // Check cache first
+  if (typeof window === 'undefined') return FALLBACK_RATE;
   const cachedRate = localStorage.getItem(CACHE_KEY);
   const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
 
@@ -87,8 +88,10 @@ async function fetchExchangeRateFromAPI(): Promise<number | null> {
 
       if (rate && rate > 0) {
         // Cache the successful rate
-        localStorage.setItem(CACHE_KEY, rate.toString());
-        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(CACHE_KEY, rate.toString());
+          localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        }
         console.log(
           `Exchange rate updated: 1 USD = ${rate} TZS (via ${api.url})`,
         );

@@ -21,7 +21,7 @@ export function useRole() {
 
   // For admin user, always use localStorage role as current role
   const currentRole = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-    ? (localStorage.getItem('fleet_command_role') as UserRole || 'ADMIN')
+    ? (typeof window !== 'undefined' ? (localStorage.getItem('fleet_command_role') as UserRole || 'ADMIN') : 'ADMIN')
     : contextRole;
 
   console.log(`[useRole] User: ${user?.email}, isAdmin: ${isAdmin}, currentRole: ${currentRole}, contextRole: ${contextRole}`);
