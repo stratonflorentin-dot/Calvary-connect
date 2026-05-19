@@ -110,35 +110,7 @@ export default function DriverDashboard() {
     });
   }
 
-  // Recent activities
-  const activities = [
-    {
-      id: "1",
-      title: "Trip Started",
-      description: recentTrip
-        ? `${recentTrip.origin} → ${recentTrip.destination}`
-        : "No active trip",
-      time: "2 hours ago",
-      icon: CheckCircle2,
-      color: "bg-green-500",
-    },
-    {
-      id: "2",
-      title: "Delivery Completed",
-      description: "Trip #T001 - Dar es Salaam",
-      time: "4 hours ago",
-      icon: Truck,
-      color: "bg-blue-500",
-    },
-    {
-      id: "3",
-      title: "Expense Recorded",
-      description: "Fuel expense KES 2,500",
-      time: "6 hours ago",
-      icon: DollarSign,
-      color: "bg-amber-500",
-    },
-  ];
+
 
   if (loading) {
     return (

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, DEMO_MODE } from '@/lib/supabase';
 
 export interface AuditLogEntry {
   userId: string;
@@ -76,8 +76,8 @@ export class AuditService {
     const { data, error } = await query;
     
     let result = data || [];
-    if (error || result.length === 0) {
-      if (error) {
+    if (DEMO_MODE || (error && !data)) {
+      if (error && !DEMO_MODE) {
         console.error('Failed to get audit logs from DB, using fallback mock data:', error);
       }
       // High-fidelity fallback mock data
