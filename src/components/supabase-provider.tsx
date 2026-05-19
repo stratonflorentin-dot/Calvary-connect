@@ -452,8 +452,22 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         }).ilike('email', normalizedEmail);
 
         if (profileError) {
-          console.error('[SupabaseProvider] Error updating profile after signUp:', profileError);
-          throw profileError;
+          console.warn('[SupabaseProvider] Client-side profile link error:', profileError.message);
+          
+          // Verify if a database trigger (handle_new_user_signup) already linked it automatically
+          const { data: verifiedProfile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('id', authUser.id)
+            .single();
+            
+          if (!verifiedProfile) {
+            console.error('[SupabaseProvider] Profile is still unlinked after signup');
+            throw profileError;
+          }
+          console.log('[SupabaseProvider] Profile verified: Linked successfully via database trigger.');
+        } else {
+          console.log('[SupabaseProvider] Profile linked successfully via client-side update');
         }
         console.log('[SupabaseProvider] Sign up process complete');
       }
