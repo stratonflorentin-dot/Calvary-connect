@@ -47,6 +47,7 @@ import {
   Shield,
   Briefcase,
   Loader2,
+  Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";

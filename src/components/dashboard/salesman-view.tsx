@@ -14,7 +14,8 @@ import {
   Briefcase, DollarSign, Users, Calendar, TrendingUp, BarChart2,
   CheckCircle2, Clock, AlertTriangle, Eye, FileText, MapPin,
   Navigation, Package, ArrowRight, RefreshCw, Settings, Bell,
-  Sparkles, Shield, Plus, Trash2, Edit, Locate, Truck
+  Sparkles, Shield, Plus, Trash2, Edit, Locate, Truck,
+  Calculator
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
