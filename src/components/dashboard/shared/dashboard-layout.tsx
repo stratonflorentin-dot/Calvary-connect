@@ -89,6 +89,7 @@ interface DashboardLayoutProps {
   role: string;
   showQuickActions?: boolean;
   onAddItem?: () => void;
+  hideSidebar?: boolean;
 }
 
 export function DashboardLayout({
@@ -98,6 +99,7 @@ export function DashboardLayout({
   role,
   showQuickActions = true,
   onAddItem,
+  hideSidebar = true,
 }: DashboardLayoutProps) {
   const { user } = useSupabase();
   const { t } = useLanguage();
@@ -108,9 +110,9 @@ export function DashboardLayout({
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar role={role as any} />
-      <main className="flex-1 md:ml-60 flex flex-col overflow-hidden">
+    <div className={cn("flex bg-background overflow-hidden w-full", !hideSidebar && "h-screen")}>
+      {!hideSidebar && <Sidebar role={role as any} />}
+      <main className={cn("flex-1 flex flex-col overflow-hidden", !hideSidebar && "md:ml-60")}>
         {/* Top Header */}
         <header className="bg-white border-b border-border px-4 py-3 md:px-6 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-4">
