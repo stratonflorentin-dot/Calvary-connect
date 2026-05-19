@@ -158,6 +158,7 @@ export default function HRDashboard() {
       title="HR Dashboard"
       description="Employee management and workforce analytics"
       role={role || "HR"}
+      hideSidebar={true}
     >
       {/* Alert Panel */}
       <AlertPanel alerts={alerts} />

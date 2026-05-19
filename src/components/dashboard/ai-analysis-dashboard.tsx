@@ -280,6 +280,7 @@ export default function AIAnalysisDashboard() {
       title="AI Fleet Analysis"
       description="Intelligent insights powered by fleet data analysis"
       role={role || "CEO"}
+      hideSidebar={true}
     >
       {/* Alert Panel */}
       <AlertPanel alerts={alerts} />

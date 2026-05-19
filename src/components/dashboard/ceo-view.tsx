@@ -246,6 +246,7 @@ export default function CeoDashboard() {
       title="CEO Dashboard"
       description="Fleet overview and strategic insights"
       role={role || "CEO"}
+      hideSidebar={true}
     >
       {/* Alert Panel */}
       <AlertPanel alerts={alerts} />

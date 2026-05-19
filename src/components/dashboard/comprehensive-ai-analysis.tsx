@@ -259,6 +259,7 @@ export default function ComprehensiveAIAnalysis() {
       title="Comprehensive AI Analysis"
       description="Detailed fleet intelligence and predictive analytics"
       role={role || "CEO"}
+      hideSidebar={true}
     >
       {/* Alert Panel */}
       <AlertPanel alerts={alerts} />
