@@ -7,6 +7,7 @@ import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
 import { isPrimaryOwnerEmail } from "@/lib/supabase";
 import { isValidRole, normalizeRole } from "@/lib/user-role-utils";
+import { DRIVER_ROUTE_CONFIG } from "@/lib/driver-routes";
 import {
   Briefcase,
   BarChart2,
@@ -47,12 +48,32 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/fleet",
     label: "Fleet",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
   },
   {
     path: "/trips",
     label: "Trips",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "SALESMAN"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN"],
+  },
+  {
+    path: "/driver/trips",
+    label: "My Trips",
+    allowedRoles: ["DRIVER"],
+  },
+  {
+    path: "/driver/fuel",
+    label: "Fuel",
+    allowedRoles: ["DRIVER"],
+  },
+  {
+    path: "/driver/expenses",
+    label: "My Expenses",
+    allowedRoles: ["DRIVER"],
+  },
+  {
+    path: "/driver/profile",
+    label: "Driver Profile",
+    allowedRoles: ["DRIVER"],
   },
   {
     path: "/bookings",
@@ -97,7 +118,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
       "ADMIN",
       "ACCOUNTANT",
       "OPERATOR",
-      "DRIVER",
       "MECHANIC",
       "HR",
     ],
@@ -110,12 +130,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/allowances",
     label: "Allowances",
-    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT", "DRIVER", "MECHANIC", "OPERATOR"],
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT", "MECHANIC", "OPERATOR"],
   },
   {
     path: "/fuel-approvals",
     label: "Fuel Approvals",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
   },
   {
     path: "/spare-parts",
@@ -126,7 +146,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
       "MECHANIC",
       "OPERATOR",
       "WAREHOUSE_STAFF",
-      "DRIVER",
     ],
   },
   { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
@@ -143,17 +162,17 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/service-requests",
     label: "Service Requests",
-    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "DRIVER"],
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC"],
   },
   {
     path: "/truck-history",
     label: "Truck History",
-    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "DRIVER", "OPERATOR"],
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR"],
   },
   {
     path: "/map",
     label: "Fleet Map",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR"],
   },
   {
     path: "/proof",
@@ -203,7 +222,7 @@ export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
   CEO: "/",
   ADMIN: "/",
   OPERATOR: "/trips",
-  DRIVER: "/trips",
+  DRIVER: "/",
   MECHANIC: "/service-requests",
   SALESMAN: "/sales",
   ACCOUNTANT: "/finance",
@@ -345,6 +364,10 @@ export function getMenuByRole(
     return ROUTE_CONFIG;
   }
 
+  if (normalizedRole === "DRIVER") {
+    return DRIVER_ROUTE_CONFIG;
+  }
+
   // Others see only their allowed routes
   return ROUTE_CONFIG.filter((route) =>
     route.allowedRoles.includes(normalizedRole),
@@ -355,6 +378,7 @@ export function getMenuByRole(
 export function roleHasTripsAccess(role: UserRole | null): boolean {
   const normalized = role != null ? normalizeRole(String(role)) : null;
   if (!normalized) return false;
+  if (normalized === "DRIVER") return false;
   const tripRoute = ROUTE_CONFIG.find((r) => r.path === "/trips");
   return !!tripRoute?.allowedRoles.includes(normalized);
 }

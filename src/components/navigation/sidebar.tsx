@@ -18,6 +18,7 @@ import {
   Calculator,
   LogOut,
   History,
+  Receipt,
   Home,
   Shield,
   Camera,
@@ -69,6 +70,10 @@ const routeIconMap: Record<string, any> = {
   "/audit": Shield,
   "/notifications": Bell,
   "/profile": UserIcon,
+  "/driver/trips": Route,
+  "/driver/fuel": DollarSign,
+  "/driver/expenses": Receipt,
+  "/driver/profile": UserIcon,
 };
 
 const getIconForRoute = (path: string) => routeIconMap[path] || LayoutDashboard;

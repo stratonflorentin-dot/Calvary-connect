@@ -41,8 +41,15 @@ export default function ExpensesPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (role === 'DRIVER') {
+            window.location.replace('/driver/expenses');
+        }
+    }, [role]);
+
+    useEffect(() => {
         const loadExpenses = async () => {
             if (!user) return;
+            if (role === 'DRIVER') return;
             
             try {
                 setLoading(true);
@@ -61,7 +68,7 @@ export default function ExpensesPage() {
         };
 
         loadExpenses();
-    }, [user]);
+    }, [user, role]);
 
     const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();

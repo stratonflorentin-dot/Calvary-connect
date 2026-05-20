@@ -1,369 +1,227 @@
 "use client";
 
-import {
-  DashboardLayout,
-  StatCard,
-  DataTable,
-  ActivityFeed,
-  AlertPanel,
-} from "@/components/dashboard/shared/dashboard-layout";
-import { useTrips } from "@/hooks/data/use-trips";
-import { useExpenses } from "@/hooks/data/use-expenses";
-import { useUsers } from "@/hooks/data/use-users";
-import { useRole } from "@/hooks/use-role";
-import { useLanguage } from "@/hooks/use-language";
-import { useCurrency } from "@/hooks/use-currency";
-import { useGeolocation } from "@/hooks/use-geolocation";
+import type { ComponentType } from "react";
+import Link from "next/link";
+import { useDriverData } from "@/hooks/use-driver-data";
+import { useSupabase } from "@/components/supabase-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Truck,
-  Navigation,
-  MapPin,
-  AlertTriangle,
+  Package,
   CheckCircle2,
   Clock,
-  Plus,
-  Trash2,
-  Eye,
-  FileText,
-  Calendar,
-  DollarSign,
-  Users,
-  BarChart2,
-  TrendingUp,
-  AlertCircle,
-  ArrowRight,
-  Package,
-  RefreshCw,
-  Settings,
-  Bell,
-  Sparkles,
-  Shield,
-  Briefcase,
-  Phone,
-  Mail,
-  Locate,
+  Fuel,
+  Wrench,
   Route,
-  Calculator,
+  Receipt,
+  User,
+  Camera,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import Link from "next/link";
+
+const statusColors: Record<string, string> = {
+  Active: "bg-emerald-100 text-emerald-800",
+  "On Trip": "bg-blue-100 text-blue-800",
+  Maintenance: "bg-amber-100 text-amber-800",
+  Offline: "bg-slate-100 text-slate-600",
+};
+
+function StatTile({
+  label,
+  value,
+  icon: Icon,
+  className,
+}: {
+  label: string;
+  value: string | number;
+  icon: ComponentType<{ className?: string }>;
+  className?: string;
+}) {
+  return (
+    <Card className={cn("border shadow-sm", className)}>
+      <CardContent className="p-4 flex items-center gap-3">
+        <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+          <Icon className="size-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-2xl font-bold leading-none">{value}</p>
+          <p className="text-xs text-muted-foreground mt-1 truncate">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuickLink({
+  href,
+  label,
+  icon: Icon,
+}: {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors active:scale-[0.98]"
+    >
+      <span className="flex items-center gap-3 font-medium text-sm">
+        <Icon className="size-5 text-primary" />
+        {label}
+      </span>
+      <ChevronRight className="size-4 text-muted-foreground" />
+    </Link>
+  );
+}
 
 export default function DriverDashboard() {
-  const { t } = useLanguage();
-  const { format } = useCurrency();
-  const { role } = useRole();
-  const { location, error: locationError } = useGeolocation();
+  const { user } = useSupabase();
+  const { stats, assignedVehicle, trips, loading, refresh } = useDriverData();
 
-  // Data hooks
-  const {
-    trips,
-    loading: tripsLoading,
-    refresh: refreshTrips,
-  } = useTrips({ driverId: "current" });
-  const { expenses, loading: expensesLoading } = useExpenses();
+  const plate =
+    (assignedVehicle?.plate_number as string) ||
+    (assignedVehicle?.plateNumber as string) ||
+    "—";
+  const vehicleType =
+    (assignedVehicle?.type as string)?.replace(/_/g, " ") || "Truck";
+  const fuelLevel =
+    assignedVehicle?.current_fuel_level != null
+      ? `${assignedVehicle.current_fuel_level}%`
+      : assignedVehicle?.currentFuelLevel != null
+        ? `${assignedVehicle.currentFuelLevel}%`
+        : "—";
+  const lastService =
+    (assignedVehicle?.last_maintenance_date as string)?.slice(0, 10) ||
+    (assignedVehicle?.lastMaintenanceDate as string)?.slice(0, 10) ||
+    "—";
 
-  const loading = tripsLoading || expensesLoading;
-
-  // Get current driver's trips
-  const activeTrips = trips.filter((t) =>
-    ["in_transit", "loading", "pending"].includes(t.status),
+  const activeTrip = trips.find((t) =>
+    ["in_transit", "loading", "in_progress"].includes(
+      String(t.status || "").toLowerCase(),
+    ),
   );
-  const completedTrips = trips.filter((t) => t.status === "completed");
-  const pendingTrips = trips.filter(
-    (t) => t.status === "pending" || t.status === "created",
-  );
-
-  // Calculate earnings
-  const totalEarnings = completedTrips.reduce(
-    (sum, t) => sum + (Number(t.revenue || t.price) || 0),
-    0,
-  );
-  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const netEarnings = totalEarnings - totalExpenses;
-
-  // Recent trip
-  const recentTrip = activeTrips[0] || completedTrips[0];
-
-  // Activities (mock data or fetched data)
-  const activities: any[] = [];
-
-  // Alerts
-  const alerts = [];
-  if (locationError) {
-    alerts.push({
-      id: "1",
-      title: "Location Access Denied",
-      description: "Please enable location services to track your position.",
-      severity: "warning" as const,
-      time: "Just now",
-    });
-  }
-  if (activeTrips.length > 0 && !location) {
-    alerts.push({
-      id: "2",
-      title: "GPS Signal Lost",
-      description: "Unable to determine your current location.",
-      severity: "critical" as const,
-      time: "Just now",
-    });
-  }
-
-
+  const assignedRoute = activeTrip
+    ? `${activeTrip.origin || "—"} → ${activeTrip.destination || "—"}`
+    : trips[0]
+      ? `${trips[0].origin || "—"} → ${trips[0].destination || "—"}`
+      : "No route assigned";
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading driver dashboard...</p>
-        </div>
+      <div className="flex items-center justify-center py-16">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
-    <DashboardLayout
-      title="Driver Dashboard"
-      description="Track trips and manage deliveries"
-      role={role || "DRIVER"}
-    >
-      {/* Alert Panel */}
-      {alerts.length > 0 && <AlertPanel alerts={alerts} />}
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <h2 className="text-xl font-headline tracking-tight">
+          Hello, {user?.name?.split(" ")[0] || "Driver"}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Your trips, vehicle, fuel, and expenses in one place.
+        </p>
+      </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
-        <StatCard
-          title="Active Trips"
-          value={activeTrips.length}
-          icon={Navigation}
-          color="text-green-600"
-          bgColor="bg-green-50"
-        />
-        <StatCard
-          title="Completed Trips"
-          value={completedTrips.length}
-          icon={CheckCircle2}
-          color="text-blue-600"
-          bgColor="bg-blue-50"
-        />
-        <StatCard
-          title="Total Earnings"
-          value={format(totalEarnings)}
-          icon={DollarSign}
-          color="text-emerald-600"
-          bgColor="bg-emerald-50"
-        />
-        <StatCard
-          title="Net Earnings"
-          value={format(netEarnings)}
-          icon={TrendingUp}
-          color={netEarnings >= 0 ? "text-green-600" : "text-red-600"}
-          bgColor={netEarnings >= 0 ? "bg-green-50" : "bg-red-50"}
-        />
-        <StatCard
-          title="Pending Trips"
-          value={pendingTrips.length}
+      <div className="grid grid-cols-2 gap-3">
+        <StatTile label="Trips Assigned" value={stats.tripsAssigned} icon={Route} />
+        <StatTile
+          label="Pending Deliveries"
+          value={stats.pendingDeliveries}
           icon={Clock}
-          color="text-amber-600"
-          bgColor="bg-amber-50"
         />
-        <StatCard
-          title="Total Expenses"
-          value={format(totalExpenses)}
-          icon={Calculator}
-          color="text-red-600"
-          bgColor="bg-red-50"
+        <StatTile
+          label="Completed"
+          value={stats.completedDeliveries}
+          icon={CheckCircle2}
         />
-        <StatCard
-          title="GPS Status"
-          value={location ? "Active" : "Inactive"}
-          icon={MapPin}
-          color={location ? "text-green-600" : "text-red-600"}
-          bgColor={location ? "bg-green-50" : "bg-red-50"}
+        <StatTile
+          label="Truck Status"
+          value={stats.truckStatus}
+          icon={Truck}
+          className="col-span-2"
         />
-        <StatCard
-          title="Current Location"
-          value={
-            location
-              ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
-              : "N/A"
-          }
-          icon={Locate}
-          color="text-indigo-600"
-          bgColor="bg-indigo-50"
+        <StatTile
+          label="Fuel Pending"
+          value={stats.fuelRequestsPending}
+          icon={Fuel}
+        />
+        <StatTile
+          label="Maintenance"
+          value={stats.maintenanceRequests}
+          icon={Wrench}
         />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Current Trip Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Navigation className="size-5" />
-              Current Trip Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentTrip ? (
-              <div className="space-y-4">
-                <div className="bg-muted rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Route</span>
-                    <Badge variant="default">
-                      {recentTrip.status?.replace("_", " ")}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="size-4 text-primary" />
-                    <span>{recentTrip.origin}</span>
-                    <ArrowRight className="size-4 text-muted-foreground" />
-                    <MapPin className="size-4 text-primary" />
-                    <span>{recentTrip.destination}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-green-50 rounded-lg p-3">
-                    <p className="text-[10px] text-muted-foreground">Cargo</p>
-                    <p className="text-sm font-bold">
-                      {recentTrip.cargo || "N/A"}
-                    </p>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <p className="text-[10px] text-muted-foreground">Client</p>
-                    <p className="text-sm font-bold">
-                      {recentTrip.client || "N/A"}
-                    </p>
-                  </div>
-                  <div className="bg-amber-50 rounded-lg p-3">
-                    <p className="text-[10px] text-muted-foreground">
-                      Distance
-                    </p>
-                    <p className="text-sm font-bold">
-                      {recentTrip.distance || "N/A"} km
-                    </p>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-3">
-                    <p className="text-[10px] text-muted-foreground">Revenue</p>
-                    <p className="text-sm font-bold">
-                      {format(
-                        Number(recentTrip.revenue || recentTrip.price || 0),
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Truck className="size-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No active trips</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  You have no trips assigned at this time.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Trip History & Expenses */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="size-5" />
-                Trip History
-              </CardTitle>
-              <Badge variant="secondary">
-                {completedTrips.length} completed
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                columns={[
-                  { key: "tripNumber", label: "Trip #" },
-                  { key: "origin", label: "Origin" },
-                  { key: "destination", label: "Destination" },
-                  {
-                    key: "revenue",
-                    label: "Revenue",
-                    render: (row) =>
-                      format(Number(row.revenue || row.price || 0)),
-                  },
-                  {
-                    key: "status",
-                    label: "Status",
-                    render: (row) => (
-                      <Badge variant="default">
-                        {row.status?.replace("_", " ")}
-                      </Badge>
-                    ),
-                  },
-                ]}
-                data={completedTrips.slice(0, 5)}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="size-5" />
-                Recent Expenses
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                columns={[
-                  { key: "category", label: "Category" },
-                  {
-                    key: "amount",
-                    label: "Amount",
-                    render: (row) => (
-                      <span className="text-rose-600 font-medium">
-                        -{format(row.amount)}
-                      </span>
-                    ),
-                  },
-                  { key: "description", label: "Description" },
-                  {
-                    key: "status",
-                    label: "Status",
-                    render: (row) => (
-                      <Badge
-                        variant={
-                          row.status === "approved" ? "default" : "secondary"
-                        }
-                      >
-                        {row.status}
-                      </Badge>
-                    ),
-                  },
-                ]}
-                data={expenses.slice(0, 5)}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Activity Feed */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="size-5" />
-            Recent Activities
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Truck className="size-5 text-primary" />
+            My Assigned Vehicle
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ActivityFeed activities={activities} />
+        <CardContent className="space-y-4">
+          {assignedVehicle ? (
+            <>
+              <div className="aspect-video rounded-xl bg-gradient-to-br from-slate-800 to-slate-600 flex items-center justify-center">
+                <Truck className="size-16 text-white/80" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Registration</p>
+                  <p className="font-semibold">{plate}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Type</p>
+                  <p className="font-semibold capitalize">{vehicleType}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-muted-foreground text-xs">Assigned route</p>
+                  <p className="font-medium">{assignedRoute}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Fuel level</p>
+                  <p className="font-semibold">{fuelLevel}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Last service</p>
+                  <p className="font-semibold">{lastService}</p>
+                </div>
+              </div>
+              <Badge className={statusColors[stats.truckStatus] || statusColors.Active}>
+                {stats.truckStatus}
+              </Badge>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No vehicle assigned yet. Check back when a trip is assigned to you.
+            </p>
+          )}
         </CardContent>
       </Card>
-    </DashboardLayout>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+          Quick actions
+        </p>
+        <QuickLink href="/driver/trips" label="My Trips" icon={Route} />
+        <QuickLink href="/proof" label="Proof of Delivery" icon={Camera} />
+        <QuickLink href="/driver/fuel" label="Fuel requests" icon={Fuel} />
+        <QuickLink href="/driver/expenses" label="Submit expense" icon={Receipt} />
+        <QuickLink href="/report" label="Report maintenance" icon={Wrench} />
+        <QuickLink href="/driver/profile" label="Driver profile" icon={User} />
+      </div>
+
+      <Button variant="outline" size="sm" onClick={() => refresh()} className="w-full">
+        Refresh dashboard
+      </Button>
+    </div>
   );
 }
 

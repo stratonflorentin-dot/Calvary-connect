@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Trip } from "@/types/roles";
+import { useSupabase } from "@/components/supabase-provider";
 
 interface UseTripsOptions {
   enabled?: boolean;
@@ -12,6 +13,9 @@ interface UseTripsOptions {
 
 export function useTrips(options: UseTripsOptions = {}) {
   const { enabled = true, status, driverId } = options;
+  const { user } = useSupabase();
+  const resolvedDriverId =
+    driverId === "current" ? user?.id : driverId;
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +27,7 @@ export function useTrips(options: UseTripsOptions = {}) {
     try {
       let query = supabase.from("trips").select("*");
       if (status) query = query.eq("status", status);
-      if (driverId) query = query.eq("driver_id", driverId);
+      if (resolvedDriverId) query = query.eq("driver_id", resolvedDriverId);
       const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       setTrips(data || []);
@@ -34,7 +38,7 @@ export function useTrips(options: UseTripsOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [enabled, status, driverId]);
+  }, [enabled, status, resolvedDriverId]);
 
   useEffect(() => {
     fetchTrips();
