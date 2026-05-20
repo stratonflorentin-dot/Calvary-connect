@@ -30,7 +30,8 @@ import {
   Loader2,
   Terminal,
   Activity,
-  Bot
+  Bot,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useRef, useEffect } from "react";
