@@ -74,15 +74,7 @@ export default function Home() {
     }
   };
 
-  // Driver view is full-screen mobile only
-  if (role === 'DRIVER' && !isAdmin) {
-    return (
-      <main className="min-h-screen bg-background safe-area-padding">
-        {renderContent()}
-        <BottomTabs role={role} />
-      </main>
-    );
-  }
+  // Standard layout for all roles including Driver
 
   return (
     <div className="min-h-screen bg-background flex">
