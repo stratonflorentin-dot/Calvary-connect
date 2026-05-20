@@ -94,7 +94,7 @@ export async function linkUserProfileAction(email: string, authId: string, name:
 
   const { data, error } = await supabaseAdmin
     .from("user_profiles")
-    .update({ id: authId, name: name, updated_at: new Date().toISOString() })
+    .update({ id: authId, name: name, status: 'active', updated_at: new Date().toISOString() })
     .ilike("email", email)
     .select()
     .single();

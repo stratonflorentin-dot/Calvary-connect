@@ -163,6 +163,14 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (profile && !profileError) {
         console.log('[SupabaseProvider] Profile found by ID:', profile.role);
+        
+        // Self-healing: If user is logged in but still marked as invited, fix it
+        if (profile.status === 'invited' || profile.status === 'Invited' || profile.status === 'pending') {
+          console.log('[SupabaseProvider] Auto-fixing user status to active');
+          await supabase.from('user_profiles').update({ status: 'active' }).eq('id', userId);
+          profile.status = 'active';
+        }
+        
         return profile;
       }
 
