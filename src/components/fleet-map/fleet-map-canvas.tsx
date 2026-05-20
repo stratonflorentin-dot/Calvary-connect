@@ -1,5 +1,7 @@
 "use client";
 
+import "leaflet/dist/leaflet.css";
+
 import {
   forwardRef,
   useEffect,
@@ -16,6 +18,7 @@ import {
   DRIVER_MARKER_SIZE,
   DRIVER_MARKER_ANCHOR,
 } from "@/components/fleet-map/map-markers";
+import { FLEET_MAP_TILE_LAYERS } from "@/components/fleet-map/fleet-map-tiles";
 
 const BORDER_POINTS = [
   { name: "Namanga", coords: [-2.5276, 36.7873] as [number, number] },
@@ -44,6 +47,17 @@ type Props = {
   onSelectDriver: (driver: FleetMapDriver) => void;
 };
 
+function scheduleInvalidate(map: import("leaflet").Map) {
+  const run = () => {
+    map.invalidateSize({ animate: false });
+  };
+  run();
+  requestAnimationFrame(run);
+  setTimeout(run, 100);
+  setTimeout(run, 400);
+  setTimeout(run, 800);
+}
+
 export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
   function FleetMapCanvas(
     { locations, defaultCenter, selectedId, onSelectDriver },
@@ -52,8 +66,10 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<import("leaflet").Map | null>(null);
     const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map());
+    const tileLayerRef = useRef<import("leaflet").TileLayer | null>(null);
     const initRef = useRef(false);
     const [mapReady, setMapReady] = useState(false);
+    const [tilesLoaded, setTilesLoaded] = useState(false);
     const lastFitCountRef = useRef(0);
 
     const fitAllDrivers = () => {
@@ -63,7 +79,8 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         const bounds = L.latLngBounds(
           locations.map((l) => [l.latitude, l.longitude] as [number, number]),
         );
-        map.fitBounds(bounds, { padding: [100, 100], maxZoom: 14 });
+        map.fitBounds(bounds, { padding: [120, 120], maxZoom: 14 });
+        scheduleInvalidate(map);
       });
     };
 
@@ -77,35 +94,56 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     }));
 
     useEffect(() => {
-      if (!mapRef.current || initRef.current) return;
+      const el = mapRef.current;
+      if (!el || initRef.current) return;
+
+      let map: import("leaflet").Map | null = null;
+      let resizeObserver: ResizeObserver | null = null;
+      let onWindowResize: (() => void) | null = null;
 
       const init = async () => {
         const L = await import("leaflet");
-        await import("leaflet/dist/leaflet.css");
 
-        if (mapInstanceRef.current) return;
+        if (initRef.current || mapInstanceRef.current) return;
 
-        const el = mapRef.current;
-        if (el && (el as HTMLElement & { _leaflet_id?: number })._leaflet_id) {
-          (el as HTMLElement & { _leaflet_id?: number })._leaflet_id = undefined;
+        const container = mapRef.current;
+        if (!container) return;
+
+        if ((container as HTMLElement & { _leaflet_id?: number })._leaflet_id) {
+          delete (container as HTMLElement & { _leaflet_id?: number })._leaflet_id;
         }
 
-        const map = L.map(el!, {
+        map = L.map(container, {
           center: defaultCenter,
-          zoom: 7,
+          zoom: locations.length > 0 ? 10 : 7,
           zoomControl: false,
           attributionControl: true,
+          preferCanvas: false,
         });
 
-        L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-          {
-            attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-            subdomains: "abcd",
-            maxZoom: 19,
-          },
-        ).addTo(map);
+        let fallbackIndex = 0;
+        let switchedProvider = false;
+
+        const addTileLayer = (index: number) => {
+          if (!map || index >= FLEET_MAP_TILE_LAYERS.length) return;
+          const cfg = FLEET_MAP_TILE_LAYERS[index];
+          if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
+
+          const layer = L.tileLayer(cfg.url, cfg.options);
+          layer.on("load", () => setTilesLoaded(true));
+          layer.on("tileerror", () => {
+            if (switchedProvider) return;
+            fallbackIndex += 1;
+            if (fallbackIndex < FLEET_MAP_TILE_LAYERS.length) {
+              switchedProvider = true;
+              addTileLayer(fallbackIndex);
+            }
+          });
+          layer.addTo(map);
+          tileLayerRef.current = layer;
+        };
+
+        addTileLayer(0);
 
         const staticLayers = L.layerGroup().addTo(map);
 
@@ -118,7 +156,9 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               iconAnchor: [14, 14],
             }),
           })
-            .bindPopup(`<p style="font-family:system-ui;margin:0;font-size:13px;font-weight:600;">${p.name} Border</p>`)
+            .bindPopup(
+              `<p style="font-family:system-ui;margin:0;font-size:13px;font-weight:600;">${p.name} Border</p>`,
+            )
             .addTo(staticLayers);
         });
 
@@ -131,23 +171,52 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               iconAnchor: [12, 12],
             }),
           })
-            .bindPopup(`<p style="font-family:system-ui;margin:0;font-size:13px;font-weight:600;">${c.name}</p>`)
+            .bindPopup(
+              `<p style="font-family:system-ui;margin:0;font-size:13px;font-weight:600;">${c.name}</p>`,
+            )
             .addTo(staticLayers);
         });
 
         mapInstanceRef.current = map;
         initRef.current = true;
-        setMapReady(true);
+
+        map.whenReady(() => {
+          scheduleInvalidate(map!);
+          setMapReady(true);
+        });
+
+        resizeObserver = new ResizeObserver(() => {
+          if (mapInstanceRef.current) scheduleInvalidate(mapInstanceRef.current);
+        });
+        resizeObserver.observe(container);
+
+        onWindowResize = () => {
+          if (mapInstanceRef.current) scheduleInvalidate(mapInstanceRef.current);
+        };
+        window.addEventListener("resize", onWindowResize);
       };
 
-      init();
+      const startWhenSized = () => {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 50 && rect.height > 50) {
+          init();
+        } else {
+          requestAnimationFrame(startWhenSized);
+        }
+      };
+
+      startWhenSized();
 
       return () => {
+        if (onWindowResize) window.removeEventListener("resize", onWindowResize);
+        resizeObserver?.disconnect();
         mapInstanceRef.current?.remove();
         mapInstanceRef.current = null;
+        tileLayerRef.current = null;
         markersRef.current.clear();
         initRef.current = false;
         setMapReady(false);
+        setTilesLoaded(false);
       };
     }, [defaultCenter]);
 
@@ -181,7 +250,9 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           if (existing) {
             existing.setLatLng([loc.latitude, loc.longitude]);
             existing.setIcon(icon);
-            existing.setZIndexOffset(isSelected ? 2000 : loc.isOnline ? 1000 : 100);
+            existing.setZIndexOffset(
+              isSelected ? 2000 : loc.isOnline ? 1000 : 100,
+            );
             return;
           }
 
@@ -205,10 +276,15 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           markersRef.current.set(loc.id, marker);
         });
 
-        if (locations.length > 0 && locations.length !== lastFitCountRef.current) {
+        if (
+          locations.length > 0 &&
+          locations.length !== lastFitCountRef.current
+        ) {
           lastFitCountRef.current = locations.length;
           fitAllDrivers();
         }
+
+        scheduleInvalidate(map);
       };
 
       sync();
@@ -225,11 +301,13 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     }, [selectedId, locations, mapReady]);
 
     return (
-      <>
-        <div
-          ref={mapRef}
-          className="absolute inset-0 z-0 h-full w-full bg-[#e8eef4]"
-        />
+      <div className="absolute inset-0 z-[1] h-full w-full min-h-[400px]">
+        {!tilesLoaded && (
+          <div className="absolute inset-0 z-[2] flex items-center justify-center bg-slate-200/80 pointer-events-none">
+            <p className="text-sm font-medium text-slate-600">Loading map tiles…</p>
+          </div>
+        )}
+        <div ref={mapRef} className="h-full w-full min-h-[400px]" />
         <style jsx global>{`
           @keyframes fleet-pulse {
             0% {
@@ -250,16 +328,29 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
             background: transparent !important;
             border: none !important;
           }
+          .fleet-map-root .leaflet-container {
+            font-family: inherit;
+            background: #cbd5e1 !important;
+            height: 100% !important;
+            width: 100% !important;
+            z-index: 1;
+          }
+          .fleet-map-root .leaflet-tile-pane {
+            z-index: 2;
+          }
+          .fleet-map-root .leaflet-overlay-pane,
+          .fleet-map-root .leaflet-marker-pane {
+            z-index: 4;
+          }
+          .fleet-map-root .leaflet-popup-pane {
+            z-index: 5;
+          }
           .fleet-popup .leaflet-popup-content-wrapper {
             border-radius: 14px;
             box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
           }
-          .leaflet-container {
-            font-family: inherit;
-            background: #e8eef4;
-          }
         `}</style>
-      </>
+      </div>
     );
   },
 );

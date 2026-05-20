@@ -250,7 +250,7 @@ export default function FleetMapView({
   }, []);
 
   return (
-    <div className="relative h-full w-full min-h-[calc(100vh-0px)] overflow-hidden bg-[#0f172a]">
+    <div className="fleet-map-root relative h-full w-full min-h-[calc(100dvh-0px)] overflow-hidden bg-slate-300">
       <FleetMapCanvas
         ref={canvasRef}
         locations={locations}

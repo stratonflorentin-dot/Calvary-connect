@@ -102,9 +102,9 @@ export default function LiveMapPage() {
   const defaultCenter: [number, number] = [-3.3869, 36.683];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0f172a]">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-900">
       <Sidebar role={role!} />
-      <main className="flex-1 md:ml-60 relative h-full min-h-0">
+      <main className="flex-1 relative h-[100dvh] min-h-0 w-full md:ml-60">
         <FleetMapView
           locations={locations}
           defaultCenter={defaultCenter}
