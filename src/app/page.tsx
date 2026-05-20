@@ -12,6 +12,7 @@ import { MechanicView } from '@/components/dashboard/mechanic-view';
 import { AccountantView } from '@/components/dashboard/accountant-view';
 import { HRView } from '@/components/dashboard/hr-view';
 import { OperatorView } from '@/components/dashboard/operator-view';
+import SalesmanDashboard from '@/components/dashboard/salesman-view';
 import { NotificationsBell } from '@/components/shared/notifications-bell';
 import { CurrencyDisplay } from '@/components/shared/currency-display';
 import { AIAnalysisDashboard } from '@/components/dashboard/ai-analysis-dashboard';
@@ -69,6 +70,10 @@ export default function Home() {
         return <MechanicView />;
       case 'ACCOUNTANT':
         return <AccountantView />;
+      case 'SALESMAN':
+        return <SalesmanDashboard />;
+      case 'WAREHOUSE_STAFF':
+        return <OperatorView />;
       default:
         return <CeoView />;
     }

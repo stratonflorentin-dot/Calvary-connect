@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { UserRole } from '@/types/roles';
 import { useSupabase } from '@/components/supabase-provider';
 import { ADMIN_EMAIL } from '@/lib/supabase';
+import { resolveUserRole } from '@/lib/user-role-utils';
 
 export function useRole() {
   const { user, role: contextRole, changeRole: supabaseChangeRole, isLoading } = useSupabase();
@@ -21,18 +22,28 @@ export function useRole() {
 
   // For admin user, always use localStorage role as current role
   const currentRole = isAdmin
-    ? (typeof window !== 'undefined' ? (localStorage.getItem('fleet_command_role') as UserRole || actualRole || 'ADMIN') : (actualRole || 'ADMIN'))
-    : contextRole;
+    ? typeof window !== 'undefined'
+      ? resolveUserRole(
+          localStorage.getItem('fleet_command_role') || String(actualRole || 'ADMIN'),
+          'ADMIN',
+        )
+      : resolveUserRole(String(actualRole || 'ADMIN'), 'ADMIN')
+    : contextRole != null
+      ? resolveUserRole(contextRole)
+      : null;
 
   console.log(`[useRole] User: ${user?.email}, isAdmin: ${isAdmin}, currentRole: ${currentRole}, contextRole: ${contextRole}`);
 
   // Sync role from localStorage (for admin role switching)
   useEffect(() => {
     if (isAdmin) {
-      const savedRole = localStorage.getItem('fleet_command_role') as UserRole;
-      if (savedRole && savedRole !== contextRole) {
-        setLocalRole(savedRole);
-        supabaseChangeRole(savedRole);
+      const savedRole = localStorage.getItem('fleet_command_role');
+      if (savedRole) {
+        const resolved = resolveUserRole(savedRole, 'ADMIN');
+        if (resolved !== contextRole) {
+          setLocalRole(resolved);
+          supabaseChangeRole(resolved);
+        }
       }
     }
   }, [user, contextRole, supabaseChangeRole, isAdmin]);

@@ -6,6 +6,7 @@ import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
 import { ADMIN_EMAIL } from "@/lib/supabase";
+import { isValidRole, normalizeRole } from "@/lib/user-role-utils";
 import {
   Briefcase,
   BarChart2,
@@ -13,6 +14,19 @@ import {
   Users,
   CalendarDays,
 } from "lucide-react";
+
+/** Every authenticated role can open the home dashboard and profile. */
+const ALL_APP_ROLES: UserRole[] = [
+  "CEO",
+  "ADMIN",
+  "OPERATOR",
+  "DRIVER",
+  "MECHANIC",
+  "ACCOUNTANT",
+  "HR",
+  "SALESMAN",
+  "WAREHOUSE_STAFF",
+];
 
 export interface RouteConfig {
   path: string;
@@ -28,15 +42,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/",
     label: "Dashboard",
-    allowedRoles: [
-      "CEO",
-      "ADMIN",
-      "OPERATOR",
-      "DRIVER",
-      "MECHANIC",
-      "ACCOUNTANT",
-      "HR",
-    ],
+    allowedRoles: [...ALL_APP_ROLES],
   },
   {
     path: "/fleet",
@@ -46,13 +52,18 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/trips",
     label: "Trips",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "SALESMAN"],
   },
   {
     path: "/bookings",
     label: "Bookings",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
     icon: CalendarDays,
+  },
+  {
+    path: "/drivers",
+    label: "Drivers",
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR"],
   },
   {
     path: "/customers",
@@ -72,16 +83,62 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
     icon: BarChart2,
   },
+  {
+    path: "/reports",
+    label: "Reports & Analytics",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR", "OPERATOR", "SALESMAN"],
+    icon: BarChart2,
+  },
+  {
+    path: "/expenses",
+    label: "Expenses",
+    allowedRoles: [
+      "CEO",
+      "ADMIN",
+      "ACCOUNTANT",
+      "OPERATOR",
+      "DRIVER",
+      "MECHANIC",
+      "HR",
+    ],
+  },
+  {
+    path: "/income",
+    label: "Income",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR", "SALESMAN"],
+  },
+  {
+    path: "/allowances",
+    label: "Allowances",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT", "DRIVER", "MECHANIC", "OPERATOR"],
+  },
+  {
+    path: "/fuel-approvals",
+    label: "Fuel Approvals",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC"],
+  },
+  {
+    path: "/spare-parts",
+    label: "Spare Parts",
+    allowedRoles: [
+      "CEO",
+      "ADMIN",
+      "MECHANIC",
+      "OPERATOR",
+      "WAREHOUSE_STAFF",
+      "DRIVER",
+    ],
+  },
   { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
   {
     path: "/inventory",
     label: "Inventory",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
   },
   {
     path: "/parts-requests",
     label: "Parts Requests",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
   },
   {
     path: "/service-requests",
@@ -116,7 +173,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/ai-insights",
     label: "AI Insights",
-    allowedRoles: ["CEO", "ADMIN", "HR"],
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
   },
   { path: "/audit", label: "Audit Log", allowedRoles: ["CEO", "ADMIN"] },
   {
@@ -135,9 +192,9 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     ],
   },
   {
-    path: "/warehouse",
-    label: "Warehouse",
-    allowedRoles: ["CEO", "ADMIN", "WAREHOUSE_STAFF"],
+    path: "/profile",
+    label: "Profile",
+    allowedRoles: [...ALL_APP_ROLES],
   },
 ];
 
@@ -151,7 +208,7 @@ export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
   SALESMAN: "/sales",
   ACCOUNTANT: "/finance",
   HR: "/finance",
-  WAREHOUSE_STAFF: "/warehouse",
+  WAREHOUSE_STAFF: "/inventory",
 };
 
 // Route guard hook
@@ -192,7 +249,9 @@ export function useRouteGuard() {
           return false;
         }
 
-        const hasAccess = route.allowedRoles.includes(role);
+        const normalizedRole = normalizeRole(String(role));
+        if (!normalizedRole) return false;
+        const hasAccess = route.allowedRoles.includes(normalizedRole);
         if (!hasAccess) {
           console.warn("Access denied:", role, path);
         }
@@ -268,7 +327,9 @@ export function getMenuByRole(
   userEmail?: string | null,
   respectRoleSwitch: boolean = false, // ✅ New flag
 ): RouteConfig[] {
-  if (!role) return [];
+  const normalizedRole =
+    role != null ? normalizeRole(String(role)) : null;
+  if (!normalizedRole) return [];
 
   // Owner (admin email) gets full access UNLESS they are previewing another role
   const isOwnerOrAdminEmail = 
@@ -284,34 +345,22 @@ export function getMenuByRole(
   }
 
   // CEO and ADMIN see all routes
-  if (role === "CEO" || role === "ADMIN") {
+  if (normalizedRole === "CEO" || normalizedRole === "ADMIN") {
     return ROUTE_CONFIG;
   }
 
   // Others see only their allowed routes
-  return ROUTE_CONFIG.filter((route) => route.allowedRoles.includes(role));
+  return ROUTE_CONFIG.filter((route) =>
+    route.allowedRoles.includes(normalizedRole),
+  );
 }
 
-// Validate role
-export function isValidRole(role: string): role is UserRole {
-  return [
-    "CEO",
-    "ADMIN",
-    "OPERATOR",
-    "DRIVER",
-    "MECHANIC",
-    "ACCOUNTANT",
-    "HR",
-    "SALESMAN",
-    "WAREHOUSE_STAFF",
-  ].includes(role);
+/** Used by the sidebar to hide trip shortcuts for roles without /trips access. */
+export function roleHasTripsAccess(role: UserRole | null): boolean {
+  const normalized = role != null ? normalizeRole(String(role)) : null;
+  if (!normalized) return false;
+  const tripRoute = ROUTE_CONFIG.find((r) => r.path === "/trips");
+  return !!tripRoute?.allowedRoles.includes(normalized);
 }
 
-// Normalize role to uppercase
-export function normalizeRole(role: string): UserRole | null {
-  const upperRole = role.toUpperCase();
-  if (isValidRole(upperRole)) {
-    return upperRole as UserRole;
-  }
-  return null;
-}
+export { isValidRole, normalizeRole };

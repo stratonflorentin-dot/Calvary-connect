@@ -554,7 +554,7 @@ export default function CeoDashboard() {
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-sm font-medium">Recent Warehouse Activity</h4>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/warehouse">View Full Dashboard</Link>
+              <Link href="/inventory">View Full Dashboard</Link>
             </Button>
           </div>
           <DataTable

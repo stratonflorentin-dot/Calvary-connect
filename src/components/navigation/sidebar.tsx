@@ -28,7 +28,6 @@ import {
   Globe,
   Thermometer,
   Anchor,
-  Container,
   Menu,
   X,
 } from "lucide-react";
@@ -38,7 +37,8 @@ import { useLanguage } from "@/hooks/use-language";
 import { useSupabase } from "@/components/supabase-provider";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { ADMIN_EMAIL } from "@/lib/supabase";
-import { getMenuByRole } from "@/lib/route-config";
+import { getMenuByRole, roleHasTripsAccess } from "@/lib/route-config";
+import { resolveUserRole } from "@/lib/user-role-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
 
@@ -68,7 +68,7 @@ const routeIconMap: Record<string, any> = {
   "/ai-insights": Sparkles,
   "/audit": Shield,
   "/notifications": Bell,
-  "/warehouse": Container,
+  "/profile": UserIcon,
 };
 
 const getIconForRoute = (path: string) => routeIconMap[path] || LayoutDashboard;
@@ -144,9 +144,11 @@ export function Sidebar({ role }: { role: UserRole }) {
     };
   }, []);
 
-  const effectiveRole = isAdminEmail ? storedRole || role || "ADMIN" : role;
+  const effectiveRole = isAdminEmail
+    ? resolveUserRole(String(storedRole || role || "ADMIN"), "ADMIN")
+    : resolveUserRole(String(role || ""), "OPERATOR");
 
-  // ✅ Admin always gets full menu access even when switching roles
+  const showTripShortcuts = roleHasTripsAccess(effectiveRole);
   // This allows them to view all features without restriction
   const menuItems = getMenuByRole(
     effectiveRole,
@@ -234,6 +236,8 @@ export function Sidebar({ role }: { role: UserRole }) {
           </Link>
         ))}
 
+        {showTripShortcuts && (
+        <>
         {/* Service Types - Calvary Feature */}
         <div className="mt-6">
           <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold px-3 mb-2">
@@ -369,6 +373,8 @@ export function Sidebar({ role }: { role: UserRole }) {
             </div>
           </div>
         </div>
+        </>
+        )}
       </nav>
 
       <div className="p-4 border-t border-sidebar-border space-y-4">

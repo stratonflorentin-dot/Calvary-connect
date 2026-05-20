@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase, ADMIN_EMAIL, ADMIN_ROLE, DEMO_MODE } from '@/lib/supabase';
 import { UserRole } from '@/types/roles';
+import { resolveUserRole } from '@/lib/user-role-utils';
 import { SyncManager } from '@/lib/offline-sync';
 import { toast } from '@/hooks/use-toast';
 import { checkInviteAction, linkUserProfileAction } from '@/app/users/actions';
@@ -48,17 +49,21 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     
     if (adminSession === 'true' && savedRole) {
       console.log('[SupabaseProvider] Initializing admin role from localStorage:', savedRole);
-      setRole(savedRole);
+      setRole(resolveUserRole(savedRole, 'ADMIN'));
     }
   }, []);
 
   // Sync role from localStorage when user changes (for role switching)
   useEffect(() => {
-    if (user?.email === ADMIN_EMAIL) {
+    const ownerEmail =
+      user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+      user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com';
+    if (ownerEmail) {
       const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
-      if (savedRole && savedRole !== role) {
-        console.log('[SupabaseProvider] Syncing role from localStorage:', savedRole);
-        setRole(savedRole);
+      const resolved = savedRole ? resolveUserRole(savedRole, 'ADMIN') : null;
+      if (resolved && resolved !== role) {
+        console.log('[SupabaseProvider] Syncing role from localStorage:', resolved);
+        setRole(resolved);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,14 +76,14 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
     
     if (adminSession) {
-      const adminUser = {
+        const adminUser = {
         id: 'admin-straton',
         email: ADMIN_EMAIL,
         name: 'Straton Florentin Tesha',
-        role: savedRole || 'ADMIN' as UserRole
+        role: resolveUserRole(savedRole || 'ADMIN', 'ADMIN')
       };
       setUser(adminUser);
-      setRole(savedRole || 'ADMIN');
+      setRole(resolveUserRole(savedRole || 'ADMIN', 'ADMIN'));
       setIsLoading(false);
       return;
     }
@@ -262,13 +267,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             id: profile.id,
             email: profile.email,
             name: profile.name,
-            role: profile.role as UserRole,
+            role: resolveUserRole(profile.role),
             avatar: profile.avatar_url || profile.avatar,
             phone: profile.phone,
             employeeId: profile.employee_id,
             department: profile.department,
           });
-          setRole(profile.role as UserRole);
+          setRole(resolveUserRole(profile.role));
         } else {
           // User profile deleted - sign out immediately
           console.log('[SupabaseProvider] User profile not found, signing out deleted user');
@@ -295,13 +300,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             id: profile.id,
             email: profile.email,
             name: profile.name,
-            role: profile.role as UserRole,
+            role: resolveUserRole(profile.role),
             avatar: profile.avatar_url || profile.avatar,
             phone: profile.phone,
             employeeId: profile.employee_id,
             department: profile.department,
           });
-          setRole(profile.role as UserRole);
+          setRole(resolveUserRole(profile.role));
         } else {
           // User profile deleted - sign out immediately
           console.log('[SupabaseProvider] User profile not found on init, signing out deleted user');
@@ -374,13 +379,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           id: profile.id,
           email: profile.email,
           name: profile.name,
-          role: profile.role as UserRole,
+          role: resolveUserRole(profile.role),
           avatar: profile.avatar_url || profile.avatar,
           phone: profile.phone,
           employeeId: profile.employee_id,
           department: profile.department,
         });
-        setRole(profile.role as UserRole);
+        setRole(resolveUserRole(profile.role));
       }
     }
   };
@@ -398,7 +403,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         
         // Get saved role or default to ADMIN
         const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
-        const adminRole = savedRole || 'ADMIN' as UserRole;
+        const adminRole = resolveUserRole(savedRole || 'ADMIN', 'ADMIN');
         
         const adminUser = {
           id: 'admin-straton',

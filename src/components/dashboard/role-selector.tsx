@@ -13,12 +13,12 @@ import {
   Shield,
   UserCog,
   Truck,
-  HardHat,
   Wrench,
   Calculator,
   Users,
   Crown,
   Briefcase,
+  Package,
 } from "lucide-react";
 import { useSupabase } from "@/components/supabase-provider";
 import { UserRole } from "@/types/roles";
@@ -34,6 +34,7 @@ const ROLE_ICONS = {
   ACCOUNTANT: Calculator,
   HR: Users,
   SALESMAN: Briefcase,
+  WAREHOUSE_STAFF: Package,
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -45,6 +46,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   ACCOUNTANT: "Accountant",
   HR: "HR Manager",
   SALESMAN: "Sales Representative",
+  WAREHOUSE_STAFF: "Warehouse Staff",
 };
 
 export function RoleSelector() {
@@ -107,7 +109,7 @@ export function RoleSelector() {
         <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
           Switch Role (Current: {ROLE_LABELS[currentRole]})
         </div>
-        {(Object.keys(ROLE_ICONS) as UserRole[]).map((r) => {
+        {(Object.keys(ROLE_LABELS) as UserRole[]).map((r) => {
           const Icon = ROLE_ICONS[r];
           return (
             <DropdownMenuItem
