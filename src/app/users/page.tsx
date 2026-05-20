@@ -179,6 +179,7 @@ export default function UsersPage() {
     try {
       const formData = new FormData(e.currentTarget);
       const userData = {
+        id: crypto.randomUUID(),
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         role: formData.get('role') as string,
