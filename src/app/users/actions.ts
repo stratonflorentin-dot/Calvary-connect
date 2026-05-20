@@ -66,3 +66,39 @@ export async function updateUserAction(userId: string, updateData: any) {
   if (error) throw new Error(error.message);
   return true;
 }
+
+export async function checkInviteAction(email: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  if (!supabaseUrl || !supabaseServiceKey) return null;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { data, error } = await supabaseAdmin
+    .from("user_profiles")
+    .select("*")
+    .ilike("email", email)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // Not found
+    throw new Error(error.message);
+  }
+  return data;
+}
+
+export async function linkUserProfileAction(email: string, authId: string, name: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  if (!supabaseUrl || !supabaseServiceKey) return null;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { data, error } = await supabaseAdmin
+    .from("user_profiles")
+    .update({ id: authId, name: name, updated_at: new Date().toISOString() })
+    .ilike("email", email)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}

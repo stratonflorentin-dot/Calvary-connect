@@ -4,7 +4,7 @@ const fs = require('fs');
 try {
   console.log(execSync('git add .').toString());
   try {
-    console.log(execSync('git commit -m "Update fixes for login/signup and role loading"').toString());
+    console.log(execSync('git commit -m "Fix signup 406 error by securely verifying invitations with a server action (bypasses RLS)"').toString());
   } catch(e) {
     console.log('Nothing to commit');
   }

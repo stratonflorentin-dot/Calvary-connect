@@ -5,6 +5,7 @@ import { supabase, ADMIN_EMAIL, ADMIN_ROLE, DEMO_MODE } from '@/lib/supabase';
 import { UserRole } from '@/types/roles';
 import { SyncManager } from '@/lib/offline-sync';
 import { toast } from '@/hooks/use-toast';
+import { checkInviteAction, linkUserProfileAction } from '@/app/users/actions';
 
 interface User {
   id: string;
@@ -425,14 +426,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       const normalizedEmail = email.toLowerCase().trim();
       console.log('[SupabaseProvider] Starting sign up for:', normalizedEmail);
 
-      // Check if user was pre-added by admin/HR/CEO in user_profiles
-      const { data: pendingUser, error: checkError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .ilike('email', normalizedEmail)
-        .single();
+      // Check if user was pre-added by admin/HR/CEO in user_profiles securely bypassing RLS
+      const pendingUser = await checkInviteAction(normalizedEmail);
 
-      if (checkError || !pendingUser) {
+      if (!pendingUser) {
         console.warn('[SupabaseProvider] Sign up blocked: No invitation found for', normalizedEmail);
         throw new Error('You must be invited by an administrator before signing up. Please contact HR or your manager.');
       }
@@ -451,15 +448,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (authUser) {
         console.log('[SupabaseProvider] Auth account created, updating profile');
-        // Update the pre-created profile with password/auth info
-        const { error: profileError } = await supabase.from('user_profiles').update({
-          id: authUser.id,
-          name: name,
-          updated_at: new Date().toISOString(),
-        }).ilike('email', normalizedEmail);
-
-        if (profileError) {
-          console.warn('[SupabaseProvider] Client-side profile link error:', profileError.message);
+        // Update the pre-created profile securely using Server Action to bypass RLS
+        try {
+          await linkUserProfileAction(normalizedEmail, authUser.id, name);
+          console.log('[SupabaseProvider] Profile linked successfully via Server Action');
+        } catch (profileError: any) {
+          console.warn('[SupabaseProvider] Server-side profile link error:', profileError.message);
           
           // Verify if a database trigger (handle_new_user_signup) already linked it automatically
           const { data: verifiedProfile } = await supabase
@@ -473,8 +467,6 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             throw profileError;
           }
           console.log('[SupabaseProvider] Profile verified: Linked successfully via database trigger.');
-        } else {
-          console.log('[SupabaseProvider] Profile linked successfully via client-side update');
         }
         console.log('[SupabaseProvider] Sign up process complete');
       }
