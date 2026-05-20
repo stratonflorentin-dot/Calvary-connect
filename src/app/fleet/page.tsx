@@ -16,7 +16,15 @@ import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 
 export default function FleetPage() {
-  const { role, isAdmin } = useRole();
+  const { role, isAdmin, isLoading } = useRole();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) {
     return (

@@ -6,7 +6,7 @@ import { useSupabase } from '@/components/supabase-provider';
 import { ADMIN_EMAIL } from '@/lib/supabase';
 
 export function useRole() {
-  const { user, role: contextRole, changeRole: supabaseChangeRole } = useSupabase();
+  const { user, role: contextRole, changeRole: supabaseChangeRole, isLoading } = useSupabase();
   const [localRole, setLocalRole] = useState<UserRole | null>(null);
 
   // Enhanced console logging for role changes
@@ -64,7 +64,8 @@ export function useRole() {
     actualRole,
     isAdmin,
     changeRole, 
-    isInitialized: true,
+    isInitialized: !isLoading,
+    isLoading,
     hasPermission,
     canAccess
   };

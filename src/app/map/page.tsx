@@ -48,7 +48,15 @@ interface DriverLocation {
 }
 
 export default function LiveMapPage() {
-  const { role, isAdmin } = useRole();
+  const { role, isAdmin, isLoading } = useRole();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   const { user } = useSupabase();
   const [locations, setLocations] = useState<DriverLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
