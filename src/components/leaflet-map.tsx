@@ -45,6 +45,7 @@ interface LeafletMapProps {
   locations: DriverLocation[];
   defaultCenter: [number, number];
   onDriverSelect?: (driver: DriverLocation) => void;
+  showEmptyOverlay?: boolean;
 }
 
 // Custom truck icon SVG as data URL
@@ -66,6 +67,7 @@ export default function LeafletMap({
   locations,
   defaultCenter,
   onDriverSelect,
+  showEmptyOverlay = true,
 }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -632,18 +634,19 @@ export default function LeafletMap({
       </div>
 
       {/* Loading State */}
-      {locations.length === 0 && (
+      {showEmptyOverlay && locations.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 z-[1001]">
-          <div className="text-center">
+          <div className="text-center px-4">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
               <Truck className="w-8 h-8 text-slate-400" />
             </div>
             <h3 className="text-lg font-medium text-slate-900 mb-2">
-              No Drivers Found
+              No driver GPS yet
             </h3>
-            <p className="text-sm text-slate-500 max-w-xs">
-              No drivers are currently sharing their location. Drivers must
-              grant location permission in the mobile app.
+            <p className="text-sm text-slate-500 max-w-sm">
+              Ask the driver to open Calvary Connect on their phone and allow
+              location when prompted. Positions update every 15–30 seconds while
+              they are signed in.
             </p>
           </div>
         </div>

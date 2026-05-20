@@ -16,8 +16,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { getDriverLocationsForMapAction } from "@/app/tracking/actions";
 
 // Dynamic import for Leaflet map (no SSR)
 const LeafletMap = dynamic(() => import("@/components/leaflet-map"), {
@@ -63,109 +64,76 @@ export default function LiveMapPage() {
   const [debugInfo, setDebugInfo] = useState<string>("Loading...");
   const [showDebug, setShowDebug] = useState(false);
 
-  useEffect(() => {
-    const loadLocations = async () => {
-      if (!user) return;
+  const loadLocations = useCallback(async () => {
+    if (!user) return;
 
-      try {
-        setIsLoading(true);
-        console.log("[LiveMap] Loading driver locations...");
+    try {
+      setIsLoading(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
 
-        // Fetch locations and profiles separately (no foreign key relationship in DB)
-        const [
-          { data: locationsData, error: locError },
-          { data: profilesData },
-        ] = await Promise.all([
-          supabase
-            .from("driver_locations")
-            .select("*")
-            .order("last_updated", { ascending: false }),
-          supabase.from("user_profiles").select("id, name, role").eq("role", "DRIVER"),
-        ]);
-
-        const error = locError;
-
-        if (error) {
-          console.error("[LiveMap] Database error:", error);
-          setDebugInfo(`Error: ${error.message}`);
-          setLocations([]);
-        } else {
-          console.log("[LiveMap] Raw locations data:", locationsData);
-          console.log("[LiveMap] Profiles data:", profilesData);
-          console.log(
-            "[LiveMap] Loaded",
-            locationsData?.length || 0,
-            "locations",
-          );
-          setDebugInfo(`Loaded ${locationsData?.length || 0} drivers from DB`);
-
-          // Create lookup map for profiles
-          const profileMap = new Map(
-            profilesData?.map((p) => [p.id, p.name]) || [],
-          );
-
-          // Only show locations for drivers that exist in user_profiles
-          const transformedLocations =
-            locationsData
-              ?.filter((loc) => profileMap.has(loc.driver_id)) // Filter out deleted drivers
-              ?.map((loc) => {
-                const profileName = profileMap.get(loc.driver_id);
-                console.log(
-                  `[LiveMap] Driver ${loc.driver_id}: profile name =`,
-                  profileName,
-                );
-                return {
-                  id: loc.id || loc.driver_id,
-                  driverName:
-                    profileName || `Driver ${loc.driver_id?.slice(0, 8)}`,
-                  driverRole: "DRIVER",
-                  vehicleId: loc.driver_id,
-                  vehiclePlate: "N/A",
-                  vehicleMake: "Unknown",
-                  vehicleModel: "Unknown",
-                  latitude: Number(loc.latitude),
-                  longitude: Number(loc.longitude),
-                  heading: loc.heading || 0,
-                  speed: loc.speed || 0,
-                  status: loc.is_active ? "active" : "inactive",
-                  isOnline: loc.is_active || false,
-                  alertStatus: "none",
-                  lastUpdate: loc.last_updated,
-                };
-              }) || [];
-
-          setDebugInfo(`Showing ${transformedLocations.length} drivers on map`);
-          console.log("[LiveMap] Transformed locations:", transformedLocations);
-          setLocations(transformedLocations);
-        }
-      } catch (error) {
-        console.error("[LiveMap] Error loading locations:", error);
-        setDebugInfo(`Exception: ${error}`);
+      if (!token) {
+        setDebugInfo("No auth session — sign in again");
         setLocations([]);
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
 
+      const { locations: rows, error } = await getDriverLocationsForMapAction(token);
+
+      if (error) {
+        setDebugInfo(`Error: ${error}`);
+        setLocations([]);
+        return;
+      }
+
+      setDebugInfo(`Showing ${rows.length} driver(s) on map`);
+
+      setLocations(
+        rows.map((loc) => ({
+          id: loc.id,
+          driverName: loc.driverName,
+          driverRole: "DRIVER",
+          vehicleId: loc.driverId,
+          vehiclePlate: loc.vehiclePlate,
+          vehicleMake: "",
+          vehicleModel: "",
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          heading: loc.heading,
+          speed: loc.speed,
+          status: loc.isOnline ? "active" : "inactive",
+          isOnline: loc.isOnline,
+          alertStatus: "none",
+          lastUpdate: loc.lastUpdate,
+        })),
+      );
+    } catch (err) {
+      setDebugInfo(`Exception: ${err}`);
+      setLocations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
     loadLocations();
 
     const subscription = supabase
-      .channel("driver_locations")
+      .channel("driver_locations_map")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "driver_locations" },
-        (payload) => {
-          console.log("[LiveMap] Real-time update:", payload);
-          setDebugInfo(`Real-time update received`);
-          loadLocations();
-        },
+        () => loadLocations(),
       )
       .subscribe();
 
+    const poll = setInterval(loadLocations, 20000);
+
     return () => {
       subscription.unsubscribe();
+      clearInterval(poll);
     };
-  }, [user]);
+  }, [loadLocations]);
 
   if (!isAdmin && !["CEO", "ADMIN", "OPERATOR", "HR"].includes(role || ""))
     return <div className="p-8">Access Denied</div>;
@@ -229,6 +197,7 @@ export default function LiveMapPage() {
           <LeafletMap
             locations={leafletLocations}
             defaultCenter={defaultCenter}
+            showEmptyOverlay={!isLoading && locations.length === 0}
           />
 
           {/* Debug Panel */}
@@ -242,19 +211,11 @@ export default function LiveMapPage() {
               </p>
               {locations.length === 0 && (
                 <p className="text-xs text-amber-600 mt-2">
-                  No drivers. Driver must grant location permission.
+                  No GPS data yet. Have the driver open the app on their phone and allow location when the browser asks (once). Then refresh this page.
                 </p>
               )}
               <button
-                onClick={async () => {
-                  const { data, error } = await supabase
-                    .from("driver_locations")
-                    .select("*");
-                  console.log("DB check:", { data, error });
-                  setDebugInfo(
-                    `DB: ${data?.length || 0} records. ${error?.message || "OK"}`,
-                  );
-                }}
+                onClick={() => loadLocations()}
                 className="mt-2 w-full py-1 px-2 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
               >
                 Check DB

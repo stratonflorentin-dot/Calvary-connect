@@ -20,47 +20,53 @@ export function SilentLocationTracker() {
   const lastUpdateRef = useRef<number>(0);
   const savingRef = useRef(false);
 
-  const saveLocation = useCallback(async (pos: GeoPosition) => {
-    if (!user?.id || savingRef.current) return;
+  const saveLocation = useCallback(
+    async (pos: GeoPosition, force = false) => {
+      if (!user?.id || savingRef.current) return;
 
-    const now = Date.now();
-    if (now - lastUpdateRef.current < 15000) return;
-    lastUpdateRef.current = now;
-    savingRef.current = true;
+      const now = Date.now();
+      if (!force && now - lastUpdateRef.current < 15000) return;
+      lastUpdateRef.current = now;
+      savingRef.current = true;
 
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (token) {
-        await upsertDriverLocationAction(token, {
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-          accuracy: pos.accuracy,
-          speed: pos.speed,
-          heading: pos.heading,
-          is_active: true,
-        });
-        return;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        const authId = sessionData.session?.user?.id;
+
+        if (token) {
+          await upsertDriverLocationAction(token, {
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            accuracy: pos.accuracy,
+            speed: pos.speed,
+            heading: pos.heading,
+            is_active: true,
+          });
+          return;
+        }
+
+        if (authId) {
+          await supabase.from("driver_locations").upsert(
+            {
+              driver_id: authId,
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+              accuracy: pos.accuracy,
+              speed: pos.speed,
+              heading: pos.heading,
+              is_active: true,
+              last_updated: new Date().toISOString(),
+            },
+            { onConflict: "driver_id" },
+          );
+        }
+      } finally {
+        savingRef.current = false;
       }
-    } catch {
-      // Fallback: direct upsert when session action unavailable
-      await supabase.from("driver_locations").upsert(
-        {
-          driver_id: user.id,
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-          accuracy: pos.accuracy,
-          speed: pos.speed,
-          heading: pos.heading,
-          is_active: true,
-          last_updated: new Date().toISOString(),
-        },
-        { onConflict: "driver_id" },
-      );
-    } finally {
-      savingRef.current = false;
-    }
-  }, [user]);
+    },
+    [user],
+  );
 
   useEffect(() => {
     if (!user?.id || typeof window === "undefined") return;
@@ -70,13 +76,16 @@ export function SilentLocationTracker() {
 
     geo.getCurrentPosition(
       (pos) =>
-        saveLocation({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-          speed: pos.coords.speed,
-          heading: pos.coords.heading,
-        }),
+        saveLocation(
+          {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            speed: pos.coords.speed,
+            heading: pos.coords.heading,
+          },
+          true,
+        ),
       () => {},
       { enableHighAccuracy: true, timeout: 30000, maximumAge: 120000 },
     );

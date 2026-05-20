@@ -4,8 +4,8 @@
 CREATE TABLE IF NOT EXISTS driver_locations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   driver_id UUID NOT NULL UNIQUE,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
+  latitude DECIMAL(10, 8) NOT NULL DEFAULT 0,
+  longitude DECIMAL(11, 8) NOT NULL DEFAULT 0,
   accuracy DECIMAL(10, 2),
   speed DECIMAL(10, 2),
   heading DECIMAL(10, 2),

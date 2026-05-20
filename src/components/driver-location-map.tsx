@@ -1,95 +1,69 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
-import { supabase } from '@/lib/supabase';
-import { useRole } from '@/hooks/use-role';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { MapPin, Users, Navigation, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from "react";
+import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
+import { supabase } from "@/lib/supabase";
+import { useRole } from "@/hooks/use-role";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { MapPin, Users, Navigation, Loader2 } from "lucide-react";
+import { getDriverLocationsForMapAction } from "@/app/tracking/actions";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
-interface DriverLocation {
-  id: string;
-  driver_id: string;
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  speed: number | null;
-  heading: number | null;
-  is_active: boolean;
-  last_updated: string;
-  driver?: {
-    name: string;
-    email: string;
-    avatar_url?: string;
-  };
-}
-
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 export function DriverLocationMap() {
-  const { role } = useRole();
-  const [locations, setLocations] = useState<DriverLocation[]>([]);
+  const { role, isAdmin } = useRole();
+  const [locations, setLocations] = useState<
+    Awaited<ReturnType<typeof getDriverLocationsForMapAction>>["locations"]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeDrivers, setActiveDrivers] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Only CEO, Admin, HR, and Operators can view
-    if (!['CEO', 'ADMIN', 'HR', 'OPERATOR'].includes(role || '')) return;
+  const canView =
+    isAdmin || ["CEO", "ADMIN", "HR", "OPERATOR"].includes(role || "");
 
-    fetchDriverLocations();
-
-    // Subscribe to real-time location updates
-    const subscription = supabase
-      .channel('driver_locations')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'driver_locations',
-        },
-        () => {
-          fetchDriverLocations();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [role]);
-
-  const fetchDriverLocations = async () => {
+  const fetchDriverLocations = useCallback(async () => {
     try {
-      const { data: locationsData, error: locError } = await supabase
-        .from('driver_locations')
-        .select('*')
-        .order('last_updated', { ascending: false });
-
-      if (locError) throw locError;
-
-      const { data: drivers } = await supabase
-        .from('user_profiles')
-        .select('id, name, email, avatar_url')
-        .eq('role', 'DRIVER');
-
-      const driverMap = new Map((drivers || []).map((d) => [d.id, d]));
-      const data = (locationsData || [])
-        .filter((loc) => driverMap.has(loc.driver_id))
-        .map((loc) => ({
-          ...loc,
-          driver: driverMap.get(loc.driver_id),
-        }));
-
-      setLocations(data || []);
-      setActiveDrivers(data?.length || 0);
-    } catch (error) {
-      console.error('Error fetching driver locations:', error);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        setLoadError("Sign in required");
+        setLocations([]);
+        return;
+      }
+      const { locations: rows, error } = await getDriverLocationsForMapAction(token);
+      if (error) setLoadError(error);
+      else setLoadError(null);
+      setLocations(rows);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Failed to load");
+      setLocations([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!canView) return;
+    fetchDriverLocations();
+    const sub = supabase
+      .channel("driver_locations_dashboard")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "driver_locations" },
+        () => fetchDriverLocations(),
+      )
+      .subscribe();
+    const poll = setInterval(fetchDriverLocations, 20000);
+    return () => {
+      sub.unsubscribe();
+      clearInterval(poll);
+    };
+  }, [canView, fetchDriverLocations]);
+
+  if (!canView) return null;
 
   if (isLoading) {
     return (
@@ -101,6 +75,12 @@ export function DriverLocationMap() {
     );
   }
 
+  const activeDrivers = locations.filter((l) => l.isOnline).length;
+  const center =
+    locations.length > 0
+      ? { lat: locations[0].latitude, lng: locations[0].longitude }
+      : { lat: -3.3869, lng: 36.683 };
+
   return (
     <Card className="col-span-full">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -109,93 +89,74 @@ export function DriverLocationMap() {
             <Navigation className="h-5 w-5" />
             Live Driver Locations
           </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-            Live positions while drivers are signed in to the app
+          <p className="text-sm text-muted-foreground mt-1">
+            Updates while drivers are signed in to the app
           </p>
         </div>
-        <Badge variant="outline" className="gap-1">
-          <Users className="h-3 w-3" />
-          {activeDrivers} Active
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1">
+            <Users className="h-3 w-3" />
+            {activeDrivers} online / {locations.length} tracked
+          </Badge>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/map">Full map</Link>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
+        {loadError && (
+          <p className="text-sm text-amber-700 mb-3">{loadError}</p>
+        )}
         {locations.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground h-[400px] flex flex-col items-center justify-center">
+          <div className="text-center py-8 text-muted-foreground h-[280px] flex flex-col items-center justify-center">
             <MapPin className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No active drivers currently</p>
-            <p className="text-sm">No drivers online right now. Open Fleet Map for the full view.</p>
+            <p>No driver GPS data yet</p>
+            <p className="text-sm mt-1 max-w-md">
+              Driver must open the app on their phone and allow location when the
+              browser prompts (one time).
+            </p>
+          </div>
+        ) : GOOGLE_MAPS_API_KEY ? (
+          <div className="h-[400px] rounded-lg overflow-hidden">
+            <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+              <Map
+                defaultCenter={center}
+                defaultZoom={10}
+                gestureHandling="greedy"
+                disableDefaultUI
+                style={{ width: "100%", height: "100%" }}
+              >
+                {locations.map((loc) => (
+                  <AdvancedMarker
+                    key={loc.id}
+                    position={{ lat: loc.latitude, lng: loc.longitude }}
+                    title={loc.driverName}
+                  >
+                    <Pin
+                      background={loc.isOnline ? "#10b981" : "#6b7280"}
+                      borderColor="#fff"
+                      glyphColor="#fff"
+                    />
+                  </AdvancedMarker>
+                ))}
+              </Map>
+            </APIProvider>
           </div>
         ) : (
-          <>
-            {/* Google Map */}
-            <div className="h-[400px] w-full rounded-lg overflow-hidden border">
-              <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                <Map
-                  defaultCenter={{
-                    lat: locations[0]?.latitude || -6.7924,
-                    lng: locations[0]?.longitude || 39.2083,
-                  }}
-                  defaultZoom={12}
-                  gestureHandling={'greedy'}
-                  disableDefaultUI={false}
-                >
-                  {locations.map((location) => (
-                    <AdvancedMarker
-                      key={location.id}
-                      position={{
-                        lat: location.latitude,
-                        lng: location.longitude,
-                      }}
-                      title={location.driver?.name || 'Unknown Driver'}
-                    >
-                      <Pin
-                        background={'#10B981'}
-                        borderColor={'#059669'}
-                        glyphColor={'#FFFFFF'}
-                        glyph={location.driver?.name?.charAt(0).toUpperCase() || 'D'}
-                      />
-                    </AdvancedMarker>
-                  ))}
-                </Map>
-              </APIProvider>
-            </div>
-
-            {/* Driver list below map */}
-            <div className="mt-6 space-y-4">
-              <h3 className="font-medium">Active Drivers</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {locations.map((location) => (
-                  <div
-                    key={location.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <MapPin className="h-4 w-4 text-primary" />
-                        </div>
-                        <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border-2 border-background" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {location.driver?.name || 'Unknown Driver'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right text-xs text-muted-foreground">
-                      <p>{new Date(location.last_updated).toLocaleTimeString()}</p>
-                      {location.speed !== null && (
-                        <p>{(location.speed * 3.6).toFixed(0)} km/h</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
+          <ul className="space-y-2">
+            {locations.map((loc) => (
+              <li
+                key={loc.id}
+                className="flex justify-between text-sm border rounded-lg px-3 py-2"
+              >
+                <span className="font-medium">{loc.driverName}</span>
+                <span className="text-muted-foreground">
+                  {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
+                  {loc.isOnline ? " · online" : " · offline"}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>

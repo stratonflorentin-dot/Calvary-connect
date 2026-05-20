@@ -9,6 +9,9 @@ export function DriverSilentTrackingRoot() {
   const { user } = useSupabase();
   const { role, isLoading } = useRole();
 
-  if (isLoading || !user || role !== "DRIVER") return null;
+  const isDriver =
+    role === "DRIVER" || String(user?.role || "").toUpperCase() === "DRIVER";
+
+  if (isLoading || !user || !isDriver) return null;
   return <SilentLocationTracker />;
 }
