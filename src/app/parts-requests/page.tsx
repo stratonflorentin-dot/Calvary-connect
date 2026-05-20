@@ -122,7 +122,19 @@ export default function PartsRequestsPage() {
     }
   };
 
-  if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) return <div className="p-8">Access Denied</div>;
+  if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar role={role!} />
+        <main className="flex-1 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+          <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
+            <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
+            <p className="text-muted-foreground text-sm">You do not have permission to review parts requests.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">

@@ -56,7 +56,16 @@ export function AuditView() {
   };
 
   if (isLoading) return <div className="p-8">Loading...</div>;
-  if (role !== "CEO" && role !== "ADMIN") return <div className="p-8">Access Denied</div>;
+  if (role !== "CEO" && role !== "ADMIN") {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
+          <p className="text-muted-foreground text-sm">You do not have permission to view the audit log.</p>
+        </div>
+      </div>
+    );
+  }
 
   const getActionIcon = (action: string) => {
     switch (action) {
