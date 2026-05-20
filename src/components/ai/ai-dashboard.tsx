@@ -23,14 +23,7 @@ import {
 
 function tryParseJson(value: unknown): unknown {
   if (typeof value !== "string") return value;
-  let trimmed = value.trim();
-
-  // Strip markdown formatting if the model returned a code block
-  const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  if (match) {
-    trimmed = match[1].trim();
-  }
-
+  const trimmed = value.trim();
   if (!trimmed || (!trimmed.startsWith("{") && !trimmed.startsWith("[")))
     return value;
 
