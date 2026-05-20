@@ -89,6 +89,9 @@ export default function DriverDashboard() {
   // Recent trip
   const recentTrip = activeTrips[0] || completedTrips[0];
 
+  // Activities (mock data or fetched data)
+  const activities: any[] = [];
+
   // Alerts
   const alerts = [];
   if (locationError) {
