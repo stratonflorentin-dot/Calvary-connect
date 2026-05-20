@@ -70,42 +70,54 @@ export default function LeafletMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
+  const isInitializingRef = useRef(false);
   const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(
     null,
   );
   const [showPanel, setShowPanel] = useState(false);
 
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
+    if (!mapRef.current || mapInstanceRef.current || isInitializingRef.current) return;
 
     const initMap = async () => {
-      // Dynamically import Leaflet
-      const L = await import("leaflet");
-      await import("leaflet/dist/leaflet.css");
+      isInitializingRef.current = true;
+      try {
+        // Dynamically import Leaflet
+        const L = await import("leaflet");
+        await import("leaflet/dist/leaflet.css");
 
-      // Initialize map
-      const map = L.map(mapRef.current, {
-        center: defaultCenter,
-        zoom: 7,
-        zoomControl: false,
-        attributionControl: true,
-      });
+        // Check again after async import to prevent race conditions
+        if (mapInstanceRef.current) return;
 
-      // Add tile layer (OpenStreetMap)
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 18,
-      }).addTo(map);
+        // Leaflet retains state on DOM element during strict mode re-mounts
+        // We must forcefully clean up the _leaflet_id if it exists
+        if (mapRef.current && (mapRef.current as any)._leaflet_id) {
+          (mapRef.current as any)._leaflet_id = null;
+        }
 
-      // Add zoom control to bottom right
-      L.control.zoom({ position: "bottomright" }).addTo(map);
+        // Initialize map
+        const map = L.map(mapRef.current!, {
+          center: defaultCenter,
+          zoom: 7,
+          zoomControl: false,
+          attributionControl: true,
+        });
 
-      // Store map instance
-      mapInstanceRef.current = map;
+        // Add tile layer (OpenStreetMap)
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 18,
+        }).addTo(map);
 
-      // Add Tanzania boundary layer (simplified)
-      const tanzaniaBoundary = [
+        // Add zoom control to bottom right
+        L.control.zoom({ position: "bottomright" }).addTo(map);
+
+        // Store map instance
+        mapInstanceRef.current = map;
+
+        // Add Tanzania boundary layer (simplified)
+        const tanzaniaBoundary = [
         [-0.9897, 29.5732],
         [-1.0596, 29.5732],
         [-1.4467, 29.9533],
@@ -202,6 +214,9 @@ export default function LeafletMap({
 
         marker.bindPopup(`<p class="font-medium text-sm">${city.name}</p>`);
       });
+      } finally {
+        isInitializingRef.current = false;
+      }
     };
 
     initMap();
