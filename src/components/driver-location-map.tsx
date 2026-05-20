@@ -33,7 +33,11 @@ export function DriverLocationMap() {
         setLocations([]);
         return;
       }
-      const { locations: rows, error } = await getDriverLocationsForMapAction(token);
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { locations: rows, error } = await getDriverLocationsForMapAction(
+        token,
+        authUser?.email ?? null,
+      );
       if (error) setLoadError(error);
       else setLoadError(null);
       setLocations(rows);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback } from "react";
+import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -210,12 +210,20 @@ export default function FleetMapView({
   defaultCenter,
   isLoading = false,
   showEmptyOverlay = false,
+  loadError = null,
+  driversWithoutGps = [],
   onRefresh,
 }: FleetMapViewProps) {
   const canvasRef = useRef<FleetMapCanvasHandle>(null);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(true);
+
+  useEffect(() => {
+    if (locations.length > 0 && !selectedId) {
+      setSelectedId(locations[0].id);
+    }
+  }, [locations, selectedId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -285,6 +293,23 @@ export default function FleetMapView({
               className="h-10 pl-10 rounded-full border-slate-200/80 bg-white/80 text-sm focus-visible:ring-[#2952A3]/30"
             />
           </div>
+
+          {loadError && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
+              {loadError}
+            </p>
+          )}
+          {driversWithoutGps.length > 0 && locations.length === 0 && (
+            <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mb-2">
+              Waiting for GPS from: {driversWithoutGps.join(", ")}. Drivers must open the app on
+              their phone and allow location.
+            </p>
+          )}
+          {driversWithoutGps.length > 0 && locations.length > 0 && (
+            <p className="text-[10px] text-slate-500 mb-2">
+              No GPS yet: {driversWithoutGps.join(", ")}
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="rounded-full bg-emerald-500/10 text-emerald-700 border-emerald-200/60 hover:bg-emerald-500/10 gap-1.5 px-3 py-1">

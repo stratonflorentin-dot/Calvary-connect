@@ -25,7 +25,7 @@ export function SilentLocationTracker() {
       if (!user?.id || savingRef.current) return;
 
       const now = Date.now();
-      if (!force && now - lastUpdateRef.current < 15000) return;
+      if (!force && now - lastUpdateRef.current < 10000) return;
       lastUpdateRef.current = now;
       savingRef.current = true;
 

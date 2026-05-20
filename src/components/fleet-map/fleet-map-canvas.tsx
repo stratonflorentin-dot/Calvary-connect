@@ -5,6 +5,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
 } from "react";
 import type { FleetMapDriver } from "@/components/fleet-map/types";
 import {
@@ -12,6 +13,8 @@ import {
   cityMarkerHtml,
   driverMarkerHtml,
   popupHtml,
+  DRIVER_MARKER_SIZE,
+  DRIVER_MARKER_ANCHOR,
 } from "@/components/fleet-map/map-markers";
 
 const BORDER_POINTS = [
@@ -49,23 +52,26 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<import("leaflet").Map | null>(null);
     const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map());
-    const staticLayersRef = useRef<import("leaflet").LayerGroup | null>(null);
     const initRef = useRef(false);
+    const [mapReady, setMapReady] = useState(false);
+    const lastFitCountRef = useRef(0);
+
+    const fitAllDrivers = () => {
+      const map = mapInstanceRef.current;
+      if (!map || !locations.length) return;
+      import("leaflet").then((L) => {
+        const bounds = L.latLngBounds(
+          locations.map((l) => [l.latitude, l.longitude] as [number, number]),
+        );
+        map.fitBounds(bounds, { padding: [100, 100], maxZoom: 14 });
+      });
+    };
 
     useImperativeHandle(ref, () => ({
       zoomIn: () => mapInstanceRef.current?.zoomIn(),
       zoomOut: () => mapInstanceRef.current?.zoomOut(),
-      fitDrivers: () => {
-        const map = mapInstanceRef.current;
-        if (!map || !locations.length) return;
-        import("leaflet").then((L) => {
-          const bounds = L.latLngBounds(
-            locations.map((l) => [l.latitude, l.longitude]),
-          );
-          map.fitBounds(bounds, { padding: [80, 80], maxZoom: 12 });
-        });
-      },
-      flyToDriver: (lat, lng, zoom = 14) => {
+      fitDrivers: fitAllDrivers,
+      flyToDriver: (lat, lng, zoom = 15) => {
         mapInstanceRef.current?.flyTo([lat, lng], zoom, { duration: 0.8 });
       },
     }));
@@ -78,11 +84,13 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         await import("leaflet/dist/leaflet.css");
 
         if (mapInstanceRef.current) return;
-        if (mapRef.current && (mapRef.current as HTMLElement & { _leaflet_id?: number })._leaflet_id) {
-          (mapRef.current as HTMLElement & { _leaflet_id?: number })._leaflet_id = undefined;
+
+        const el = mapRef.current;
+        if (el && (el as HTMLElement & { _leaflet_id?: number })._leaflet_id) {
+          (el as HTMLElement & { _leaflet_id?: number })._leaflet_id = undefined;
         }
 
-        const map = L.map(mapRef.current!, {
+        const map = L.map(el!, {
           center: defaultCenter,
           zoom: 7,
           zoomControl: false,
@@ -90,7 +98,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         });
 
         L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
           {
             attribution:
               '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
@@ -110,7 +118,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               iconAnchor: [14, 14],
             }),
           })
-            .bindPopup(`<p class="text-sm font-medium">${p.name} Border</p>`)
+            .bindPopup(`<p style="font-family:system-ui;margin:0;font-size:13px;font-weight:600;">${p.name} Border</p>`)
             .addTo(staticLayers);
         });
 
@@ -123,13 +131,13 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               iconAnchor: [12, 12],
             }),
           })
-            .bindPopup(`<p class="text-sm font-medium">${c.name}</p>`)
+            .bindPopup(`<p style="font-family:system-ui;margin:0;font-size:13px;font-weight:600;">${c.name}</p>`)
             .addTo(staticLayers);
         });
 
-        staticLayersRef.current = staticLayers;
         mapInstanceRef.current = map;
         initRef.current = true;
+        setMapReady(true);
       };
 
       init();
@@ -138,12 +146,14 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         mapInstanceRef.current?.remove();
         mapInstanceRef.current = null;
         markersRef.current.clear();
-        staticLayersRef.current = null;
         initRef.current = false;
+        setMapReady(false);
       };
     }, [defaultCenter]);
 
     useEffect(() => {
+      if (!mapReady) return;
+
       const sync = async () => {
         const map = mapInstanceRef.current;
         if (!map) return;
@@ -159,30 +169,25 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
         locations.forEach((loc) => {
           const isSelected = selectedId === loc.id;
+          const icon = L.divIcon({
+            className: "fleet-driver-marker",
+            html: driverMarkerHtml(loc.driverName, loc.isOnline, isSelected),
+            iconSize: DRIVER_MARKER_SIZE,
+            iconAnchor: DRIVER_MARKER_ANCHOR,
+          });
+
           const existing = markersRef.current.get(loc.id);
 
           if (existing) {
             existing.setLatLng([loc.latitude, loc.longitude]);
-            existing.setIcon(
-              L.divIcon({
-                className: "fleet-driver-marker",
-                html: driverMarkerHtml(loc.isOnline, isSelected, loc.heading || 0),
-                iconSize: [44, 44],
-                iconAnchor: [22, 22],
-              }),
-            );
-            existing.setZIndexOffset(isSelected ? 1000 : loc.isOnline ? 500 : 0);
+            existing.setIcon(icon);
+            existing.setZIndexOffset(isSelected ? 2000 : loc.isOnline ? 1000 : 100);
             return;
           }
 
           const marker = L.marker([loc.latitude, loc.longitude], {
-            icon: L.divIcon({
-              className: "fleet-driver-marker",
-              html: driverMarkerHtml(loc.isOnline, isSelected, loc.heading || 0),
-              iconSize: [44, 44],
-              iconAnchor: [22, 22],
-            }),
-            zIndexOffset: isSelected ? 1000 : loc.isOnline ? 500 : 0,
+            icon,
+            zIndexOffset: isSelected ? 2000 : loc.isOnline ? 1000 : 100,
           }).addTo(map);
 
           marker.bindPopup(
@@ -193,33 +198,68 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               speed: loc.speed,
               lastUpdate: loc.lastUpdate,
             }),
-            { className: "fleet-popup", maxWidth: 260 },
+            { className: "fleet-popup", maxWidth: 280 },
           );
 
           marker.on("click", () => onSelectDriver(loc));
           markersRef.current.set(loc.id, marker);
         });
+
+        if (locations.length > 0 && locations.length !== lastFitCountRef.current) {
+          lastFitCountRef.current = locations.length;
+          fitAllDrivers();
+        }
       };
 
       sync();
-    }, [locations, selectedId, onSelectDriver]);
+    }, [locations, selectedId, onSelectDriver, mapReady]);
 
     useEffect(() => {
-      if (selectedId && mapInstanceRef.current) {
-        const loc = locations.find((l) => l.id === selectedId);
-        if (loc) {
-          mapInstanceRef.current.flyTo([loc.latitude, loc.longitude], 13, {
-            duration: 0.6,
-          });
-        }
+      if (!mapReady || !selectedId) return;
+      const loc = locations.find((l) => l.id === selectedId);
+      if (loc && mapInstanceRef.current) {
+        mapInstanceRef.current.flyTo([loc.latitude, loc.longitude], 15, {
+          duration: 0.6,
+        });
       }
-    }, [selectedId, locations]);
+    }, [selectedId, locations, mapReady]);
 
     return (
-      <div
-        ref={mapRef}
-        className="absolute inset-0 z-0 h-full w-full bg-[#e8eef4]"
-      />
+      <>
+        <div
+          ref={mapRef}
+          className="absolute inset-0 z-0 h-full w-full bg-[#e8eef4]"
+        />
+        <style jsx global>{`
+          @keyframes fleet-pulse {
+            0% {
+              transform: scale(1);
+              opacity: 1;
+            }
+            70% {
+              transform: scale(1.8);
+              opacity: 0;
+            }
+            100% {
+              transform: scale(1.8);
+              opacity: 0;
+            }
+          }
+          .fleet-driver-marker,
+          .fleet-static-marker {
+            background: transparent !important;
+            border: none !important;
+          }
+          .fleet-popup .leaflet-popup-content-wrapper {
+            border-radius: 14px;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+          }
+          .leaflet-container {
+            font-family: inherit;
+            background: #e8eef4;
+          }
+        `}</style>
+      </>
     );
   },
 );

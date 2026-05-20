@@ -30,15 +30,31 @@ async function resolveAuthUser(accessToken: string) {
   return { admin, user };
 }
 
-async function ensureManagerAccess(admin: ReturnType<typeof getAdminClient>, userId: string, email?: string | null) {
-  const { data: profile } = await admin
-    .from("user_profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (profile && isManagerRole(profile.role)) return true;
+async function verifyManager(
+  admin: ReturnType<typeof getAdminClient>,
+  userId?: string,
+  email?: string | null,
+) {
   if (email && isPrimaryOwnerEmail(email)) return true;
+
+  if (userId) {
+    const { data: profile } = await admin
+      .from("user_profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profile && isManagerRole(profile.role)) return true;
+  }
+
+  if (email) {
+    const { data: profile } = await admin
+      .from("user_profiles")
+      .select("role")
+      .ilike("email", email.toLowerCase().trim())
+      .maybeSingle();
+    if (profile && isManagerRole(profile.role)) return true;
+  }
+
   throw new Error("Not authorized to view driver locations");
 }
 
@@ -103,6 +119,7 @@ export type MapDriverLocation = {
   isOnline: boolean;
   lastUpdate: string;
   vehiclePlate: string;
+  hasGps: boolean;
 };
 
 /** Persist driver GPS using service role (avoids RLS / profile-id mismatches). */
@@ -138,76 +155,131 @@ export async function upsertDriverLocationAction(
   return true;
 }
 
-/** Fleet map: load all driver locations (bypasses RLS for managers). */
+function buildLocationRows(
+  admin: ReturnType<typeof getAdminClient>,
+  locationsData: Record<string, unknown>[],
+  driverProfiles: { id: string; name?: string; email?: string; role?: string }[],
+  authByEmail: Map<string, string>,
+) {
+  const nameByDriverId = new Map<string, string>();
+  const profileIds = new Set<string>();
+
+  for (const d of driverProfiles) {
+    profileIds.add(d.id);
+    nameByDriverId.set(d.id, d.name || d.email || "Driver");
+    const authId = d.email
+      ? authByEmail.get(String(d.email).toLowerCase().trim())
+      : undefined;
+    if (authId) {
+      profileIds.add(authId);
+      nameByDriverId.set(authId, d.name || d.email || "Driver");
+    }
+  }
+
+  const locations: MapDriverLocation[] = [];
+  const seenDriverIds = new Set<string>();
+
+  for (const loc of locationsData) {
+    const lat = Number(loc.latitude);
+    const lng = Number(loc.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat === 0 && lng === 0) continue;
+
+    const driverId = String(loc.driver_id);
+    const driverName =
+      nameByDriverId.get(driverId) || `Driver ${driverId.slice(0, 8)}`;
+
+    const staleMs = Date.now() - new Date(String(loc.last_updated || 0)).getTime();
+    const isOnline = !!loc.is_active && staleMs < 20 * 60 * 1000;
+
+    if (seenDriverIds.has(driverId)) continue;
+    seenDriverIds.add(driverId);
+
+    locations.push({
+      id: String(loc.id || driverId),
+      driverId,
+      driverName,
+      latitude: lat,
+      longitude: lng,
+      heading: Number(loc.heading) || 0,
+      speed: Number(loc.speed) || 0,
+      isOnline,
+      lastUpdate: String(loc.last_updated || ""),
+      vehiclePlate: "—",
+      hasGps: true,
+    });
+  }
+
+  return { locations };
+}
+
+async function fetchMapLocationsInternal(
+  admin: ReturnType<typeof getAdminClient>,
+): Promise<{ locations: MapDriverLocation[]; driversWithoutGps: string[]; error?: string }> {
+  const { data: locationsData, error: locError } = await admin
+    .from("driver_locations")
+    .select("*")
+    .order("last_updated", { ascending: false });
+
+  if (locError) return { locations: [], driversWithoutGps: [], error: locError.message };
+
+  const { data: drivers } = await admin
+    .from("user_profiles")
+    .select("id, name, email, role");
+
+  const driverProfiles = (drivers || []).filter((d) => isDriverRole(d.role));
+
+  const authByEmail = new Map<string, string>();
+  const { data: authList } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  for (const au of authList?.users || []) {
+    if (au.email) authByEmail.set(au.email.toLowerCase().trim(), au.id);
+  }
+
+  const { locations } = buildLocationRows(
+    admin,
+    locationsData || [],
+    driverProfiles,
+    authByEmail,
+  );
+
+  const driversWithoutGps: string[] = [];
+  for (const d of driverProfiles) {
+    const authId = d.email
+      ? authByEmail.get(String(d.email).toLowerCase().trim())
+      : undefined;
+    const hasGps = locations.some(
+      (l) => l.driverId === d.id || (authId && l.driverId === authId),
+    );
+    if (!hasGps) {
+      driversWithoutGps.push(d.name || d.email || "Driver");
+    }
+  }
+
+  return { locations, driversWithoutGps };
+}
+
+/** Fleet map: load driver locations (service role). Token or manager email required. */
 export async function getDriverLocationsForMapAction(
-  accessToken: string,
-): Promise<{ locations: MapDriverLocation[]; error?: string }> {
+  accessToken?: string | null,
+  managerEmail?: string | null,
+): Promise<{
+  locations: MapDriverLocation[];
+  driversWithoutGps?: string[];
+  error?: string;
+}> {
   try {
-    if (!accessToken) return { locations: [], error: "Not signed in" };
+    const admin = getAdminClient();
 
-    const { admin, user } = await resolveAuthUser(accessToken);
-    await ensureManagerAccess(admin, user.id, user.email);
-
-    const { data: locationsData, error: locError } = await admin
-      .from("driver_locations")
-      .select("*")
-      .not("latitude", "is", null)
-      .not("longitude", "is", null)
-      .order("last_updated", { ascending: false });
-
-    if (locError) return { locations: [], error: locError.message };
-
-    const { data: drivers } = await admin
-      .from("user_profiles")
-      .select("id, name, email, role");
-
-    const driverProfiles = (drivers || []).filter((d) => isDriverRole(d.role));
-
-    const authByEmail = new Map<string, string>();
-    const { data: authList } = await admin.auth.admin.listUsers({ perPage: 1000 });
-    for (const au of authList?.users || []) {
-      if (au.email) authByEmail.set(au.email.toLowerCase().trim(), au.id);
+    if (accessToken) {
+      const { user } = await resolveAuthUser(accessToken);
+      await verifyManager(admin, user.id, user.email);
+    } else if (managerEmail) {
+      await verifyManager(admin, undefined, managerEmail);
+    } else {
+      return { locations: [], error: "Not signed in" };
     }
 
-    const nameByDriverId = new Map<string, string>();
-    for (const d of driverProfiles) {
-      nameByDriverId.set(d.id, d.name || d.email || "Driver");
-      const authId = d.email
-        ? authByEmail.get(String(d.email).toLowerCase().trim())
-        : undefined;
-      if (authId) nameByDriverId.set(authId, d.name || d.email || "Driver");
-    }
-
-    const locations: MapDriverLocation[] = [];
-
-    for (const loc of locationsData || []) {
-      const lat = Number(loc.latitude);
-      const lng = Number(loc.longitude);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-
-      const driverId = String(loc.driver_id);
-      const driverName =
-        nameByDriverId.get(driverId) ||
-        `Driver ${driverId.slice(0, 8)}`;
-
-      const staleMs = Date.now() - new Date(loc.last_updated || 0).getTime();
-      const isOnline = !!loc.is_active && staleMs < 15 * 60 * 1000;
-
-      locations.push({
-        id: String(loc.id || driverId),
-        driverId,
-        driverName,
-        latitude: lat,
-        longitude: lng,
-        heading: Number(loc.heading) || 0,
-        speed: Number(loc.speed) || 0,
-        isOnline,
-        lastUpdate: loc.last_updated || "",
-        vehiclePlate: "—",
-      });
-    }
-
-    return { locations };
+    return fetchMapLocationsInternal(admin);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Failed to load locations";
     return { locations: [], error: msg };

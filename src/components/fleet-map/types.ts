@@ -16,5 +16,7 @@ export interface FleetMapViewProps {
   defaultCenter: [number, number];
   isLoading?: boolean;
   showEmptyOverlay?: boolean;
+  loadError?: string | null;
+  driversWithoutGps?: string[];
   onRefresh?: () => void;
 }

@@ -18,6 +18,8 @@ export default function LiveMapPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
   const { user } = useSupabase();
   const [locations, setLocations] = useState<FleetMapDriver[]>([]);
+  const [driversWithoutGps, setDriversWithoutGps] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadLocations = useCallback(async () => {
@@ -26,19 +28,20 @@ export default function LiveMapPage() {
     try {
       setIsLoading(true);
       const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
+      const token = sessionData.session?.access_token ?? null;
 
-      if (!token) {
-        setLocations([]);
-        return;
-      }
-
-      const { locations: rows, error } = await getDriverLocationsForMapAction(token);
+      const { locations: rows, error, driversWithoutGps: noGps } =
+        await getDriverLocationsForMapAction(token, user.email ?? null);
 
       if (error) {
+        setLoadError(error);
         setLocations([]);
+        setDriversWithoutGps(noGps || []);
         return;
       }
+
+      setLoadError(null);
+      setDriversWithoutGps(noGps || []);
 
       setLocations(
         rows.map((loc) => ({
@@ -54,7 +57,8 @@ export default function LiveMapPage() {
           heading: loc.heading,
         })),
       );
-    } catch {
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load");
       setLocations([]);
     } finally {
       setIsLoading(false);
@@ -73,7 +77,7 @@ export default function LiveMapPage() {
       )
       .subscribe();
 
-    const poll = setInterval(loadLocations, 20000);
+    const poll = setInterval(loadLocations, 10000);
 
     return () => {
       subscription.unsubscribe();
@@ -89,7 +93,10 @@ export default function LiveMapPage() {
     );
   }
 
-  if (!isAdmin && !["CEO", "ADMIN", "OPERATOR", "HR"].includes(role || ""))
+  if (
+    !isAdmin &&
+    !["CEO", "ADMIN", "OPERATOR", "HR"].includes(role || "")
+  )
     return <div className="p-8">Access Denied</div>;
 
   const defaultCenter: [number, number] = [-3.3869, 36.683];
@@ -102,6 +109,8 @@ export default function LiveMapPage() {
           locations={locations}
           defaultCenter={defaultCenter}
           isLoading={isLoading}
+          loadError={loadError}
+          driversWithoutGps={driversWithoutGps}
           showEmptyOverlay={!isLoading && locations.length === 0}
           onRefresh={loadLocations}
         />
