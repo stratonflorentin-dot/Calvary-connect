@@ -16,26 +16,26 @@ export function useRole() {
 
   // The actual user role from database (never changes with impersonation)
   const actualRole = user?.role || null;
-  // Whether user is an actual ADMIN (check both role and email)
-  const isAdmin = actualRole === 'ADMIN' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  // Whether user is an actual ADMIN (check roles and emails)
+  const isAdmin = actualRole === 'ADMIN' || actualRole === 'CEO' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com';
 
   // For admin user, always use localStorage role as current role
-  const currentRole = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-    ? (typeof window !== 'undefined' ? (localStorage.getItem('fleet_command_role') as UserRole || 'ADMIN') : 'ADMIN')
+  const currentRole = isAdmin
+    ? (typeof window !== 'undefined' ? (localStorage.getItem('fleet_command_role') as UserRole || actualRole || 'ADMIN') : (actualRole || 'ADMIN'))
     : contextRole;
 
   console.log(`[useRole] User: ${user?.email}, isAdmin: ${isAdmin}, currentRole: ${currentRole}, contextRole: ${contextRole}`);
 
   // Sync role from localStorage (for admin role switching)
   useEffect(() => {
-    if (user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    if (isAdmin) {
       const savedRole = localStorage.getItem('fleet_command_role') as UserRole;
       if (savedRole && savedRole !== contextRole) {
         setLocalRole(savedRole);
         supabaseChangeRole(savedRole);
       }
     }
-  }, [user, contextRole, supabaseChangeRole]);
+  }, [user, contextRole, supabaseChangeRole, isAdmin]);
 
   const changeRole = (newRole: UserRole) => {
     // Role switching is now handled directly in role-selector with localStorage

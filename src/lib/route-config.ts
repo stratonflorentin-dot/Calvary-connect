@@ -116,7 +116,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/ai-insights",
     label: "AI Insights",
-    allowedRoles: ["CEO", "ADMIN"],
+    allowedRoles: ["CEO", "ADMIN", "HR"],
   },
   { path: "/audit", label: "Audit Log", allowedRoles: ["CEO", "ADMIN"] },
   {
@@ -169,9 +169,15 @@ export function useRouteGuard() {
   const checkAccess = useCallback(
     (path: string): boolean => {
       try {
-        // Owner (admin email) has full access to everything, even during role switching
-        if (user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-          console.log(`[RouteGuard] Owner access granted for ${path}`);
+        // Owner (admin email) or CEO/ADMIN role has full access to everything, even during role switching
+        const isOwnerOrAdmin = 
+          user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+          user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com' ||
+          user?.role === 'ADMIN' ||
+          user?.role === 'CEO';
+
+        if (isOwnerOrAdmin) {
+          console.log(`[RouteGuard] Owner/Admin access granted for ${path}`);
           return true;
         }
 
@@ -214,7 +220,10 @@ export function useRouteGuard() {
 
     // Check if admin user (owner) - should always have access, no redirects
     const isAdminUser =
-      user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+      user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com' ||
+      user?.role === 'ADMIN' ||
+      user?.role === 'CEO';
 
     // Admin user should never be redirected, even when switching roles
     if (isAdminUser) {
@@ -262,8 +271,12 @@ export function getMenuByRole(
   if (!role) return [];
 
   // Owner (admin email) gets full access UNLESS they are previewing another role
+  const isOwnerOrAdminEmail = 
+    userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
+    userEmail?.toLowerCase() === 'calvaryadmin466@gmail.com';
+
   if (
-    userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase() &&
+    isOwnerOrAdminEmail &&
     !respectRoleSwitch
   ) {
     console.log("[RouteConfig] Owner gets full menu access");

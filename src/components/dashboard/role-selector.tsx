@@ -55,8 +55,18 @@ export function RoleSelector() {
   // Debug logging
   console.log("[RoleSelector] user:", user?.email, "role:", role, "ADMIN_EMAIL:", ADMIN_EMAIL);
 
-  // Only show for the specific admin email
-  if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+  // Only show for admins/owners
+  if (!user) {
+    return null;
+  }
+
+  const isAdmin = 
+    user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || 
+    user.email?.toLowerCase() === 'calvaryadmin466@gmail.com' ||
+    user.role === 'ADMIN' ||
+    user.role === 'CEO';
+
+  if (!isAdmin) {
     console.log("[RoleSelector] hiding: not admin");
     return null;
   }

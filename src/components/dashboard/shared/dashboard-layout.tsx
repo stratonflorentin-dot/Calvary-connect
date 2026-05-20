@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
@@ -204,7 +205,21 @@ export function StatCard({
   link,
 }: StatCardProps) {
   const content = (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+    <motion.div
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ 
+        y: -4, 
+        scale: 1.015,
+        boxShadow: "0 12px 20px -8px rgba(0,0,0,0.08)"
+      }}
+      transition={{ 
+        type: "spring",
+        stiffness: 260,
+        damping: 18
+      }}
+      className="rounded-2xl border bg-white p-4 shadow-sm cursor-pointer transition-shadow"
+    >
       <div className="flex items-center justify-between mb-2">
         <div className={cn("p-2 rounded-lg", bgColor)}>
           <Icon className={cn("size-5", color)} />
@@ -226,7 +241,7 @@ export function StatCard({
       <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1">
         {title}
       </p>
-    </div>
+    </motion.div>
   );
 
   if (link) {
@@ -327,6 +342,21 @@ export function DataTable({
   );
 }
 
+const listContainerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const listItemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
+
 interface ActivityItem {
   id: string;
   title: string;
@@ -338,11 +368,18 @@ interface ActivityItem {
 
 export function ActivityFeed({ activities }: { activities: ActivityItem[] }) {
   return (
-    <div className="space-y-4">
+    <motion.div 
+      variants={listContainerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-4"
+    >
       {activities.map((activity) => (
-        <div
+        <motion.div
           key={activity.id}
-          className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors"
+          variants={listItemVariants}
+          whileHover={{ x: 4, backgroundColor: "rgba(0, 0, 0, 0.015)" }}
+          className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted/50 transition-all duration-200"
         >
           <div
             className={cn(
@@ -361,9 +398,9 @@ export function ActivityFeed({ activities }: { activities: ActivityItem[] }) {
           <p className="text-[10px] text-muted-foreground whitespace-nowrap">
             {activity.time}
           </p>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -377,10 +414,17 @@ interface AlertItem {
 
 export function AlertPanel({ alerts }: { alerts: AlertItem[] }) {
   return (
-    <div className="space-y-3">
+    <motion.div 
+      variants={listContainerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-3"
+    >
       {alerts.map((alert) => (
-        <div
+        <motion.div
           key={alert.id}
+          variants={listItemVariants}
+          whileHover={{ scale: 1.01 }}
           className={cn(
             "p-3 rounded-xl border-l-4",
             alert.severity === "critical"
@@ -411,8 +455,8 @@ export function AlertPanel({ alerts }: { alerts: AlertItem[] }) {
               {alert.time}
             </span>
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }

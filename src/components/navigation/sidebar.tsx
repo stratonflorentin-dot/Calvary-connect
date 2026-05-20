@@ -77,7 +77,11 @@ export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { signOut, user, uploadAvatar } = useSupabase();
-  const isAdminEmail = user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdminEmail = 
+    user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || 
+    user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com' ||
+    user?.role === 'ADMIN' ||
+    user?.role === 'CEO';
 
   // ✅ Track stored role reactively
   const [storedRole, setStoredRole] = useState<UserRole | null>(null);

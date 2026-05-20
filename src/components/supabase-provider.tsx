@@ -313,7 +313,14 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   // Periodic validation to catch deleted users during active sessions
   useEffect(() => {
     const validateUserExists = async () => {
-      if (!user?.id || user.email === ADMIN_EMAIL) return;
+      if (!user?.id) return;
+      
+      const isBypassAdmin = 
+        user.email === ADMIN_EMAIL || 
+        user.email === 'calvaryadmin466@gmail.com' ||
+        user.role === 'ADMIN' ||
+        user.role === 'CEO';
+      if (isBypassAdmin) return;
       
       const { data: profile } = await supabase
         .from('user_profiles')
