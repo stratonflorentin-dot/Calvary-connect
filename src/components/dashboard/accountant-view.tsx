@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function AccountantDashboard() {
   const { t } = useLanguage();
@@ -66,6 +68,9 @@ export default function AccountantDashboard() {
 
   // Calculate totals
   const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const pendingExpenseCount = expenses.filter(
+    (e) => String(e.status || "pending").toLowerCase() === "pending",
+  ).length;
   const totalRevenue = trips.reduce(
     (sum, t) => sum + (Number(t.revenue || t.price) || 0),
     0,
@@ -163,6 +168,15 @@ export default function AccountantDashboard() {
     >
       {/* Alert Panel */}
       <AlertPanel alerts={alerts} />
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Button asChild>
+          <Link href="/accountant/expenses">
+            Review expenses
+            {pendingExpenseCount > 0 && ` (${pendingExpenseCount} pending)`}
+          </Link>
+        </Button>
+      </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">

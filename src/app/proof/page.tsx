@@ -12,9 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, FileImage, CheckCircle2, Shield, FileText, Eye, ExternalLink, Camera, X, RotateCcw } from 'lucide-react';
+import { Upload, FileImage, CheckCircle2, Shield, FileText, Eye, ExternalLink, Camera, X, RotateCcw, PenLine } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { uploadToBucket, uploadDataUrl } from '@/lib/storage-upload';
+import { createNotification } from '@/services/notification-service';
 
 export default function DeliveryProofPage() {
   const { user } = useSupabase();
@@ -32,6 +34,11 @@ export default function DeliveryProofPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [signing, setSigning] = useState(false);
+  const signCanvasRef = useRef<HTMLCanvasElement>(null);
+  const signDrawing = useRef(false);
 
   // Load driver's assigned vehicle and insurance documents
   useEffect(() => {
@@ -177,19 +184,113 @@ export default function DeliveryProofPage() {
 
   if (!user || !role) return null;
 
+  const startSign = () => {
+    setSigning(true);
+    setSignatureDataUrl(null);
+  };
+
+  const clearSignature = () => {
+    const canvas = signCanvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    setSignatureDataUrl(null);
+  };
+
+  const saveSignature = () => {
+    const canvas = signCanvasRef.current;
+    if (!canvas) return;
+    setSignatureDataUrl(canvas.toDataURL('image/png'));
+    setSigning(false);
+  };
+
+  const drawSign = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = signCanvasRef.current;
+    if (!canvas || !signDrawing.current) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    const point = 'touches' in e
+      ? { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }
+      : { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#111';
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     setIsSubmitting(true);
-    
-    // Simulate upload delay
-    setTimeout(() => {
-      setIsSubmitting(false);
+
+    try {
+      const form = new FormData(e.currentTarget);
+      const tripRef = String(form.get('tripId') || '');
+      const notes = String(form.get('notes') || '');
+
+      let deliveryPhotoUrl: string | null = null;
+      if (capturedImage) {
+        deliveryPhotoUrl = await uploadDataUrl('vehicle-documents', 'delivery-proofs', capturedImage, `photo-${Date.now()}.png`);
+      }
+      const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+      const uploadFile = documentFile || fileInput?.files?.[0];
+      if (uploadFile && !deliveryPhotoUrl) {
+        deliveryPhotoUrl = await uploadToBucket('vehicle-documents', 'delivery-proofs', uploadFile);
+      }
+
+      let documentUrl: string | null = null;
+      if (documentFile) {
+        documentUrl = await uploadToBucket('vehicle-documents', 'delivery-documents', documentFile);
+      }
+
+      let customerSignature: string | null = signatureDataUrl;
+      if (signatureDataUrl) {
+        const sigUrl = await uploadDataUrl('vehicle-documents', 'signatures', signatureDataUrl, `sig-${Date.now()}.png`);
+        customerSignature = sigUrl || signatureDataUrl;
+      }
+
+      const deliveredAt = new Date().toISOString();
+      const { error } = await supabase.from('delivery_proofs').insert([{
+        trip_id: tripRef,
+        driver_id: user.id,
+        delivery_photo_url: deliveryPhotoUrl,
+        document_url: documentUrl,
+        delivery_notes: notes,
+        customer_signature: customerSignature,
+        delivered_at: deliveredAt,
+      }]);
+
+      if (error) throw error;
+
+      const { data: admins } = await supabase.from('user_profiles').select('id').in('role', ['CEO', 'ADMIN', 'OPERATOR']);
+      await Promise.all((admins || []).map((a) => createNotification({
+        userId: a.id,
+        category: 'delivery_update',
+        title: 'Proof of delivery submitted',
+        message: `Trip ${tripRef} — delivery recorded at ${new Date(deliveredAt).toLocaleString()}.`,
+        severity: 'success',
+      })));
+
       toast({
-        title: "Proof Uploaded",
-        description: "Your delivery proof has been secured and attached to the trip.",
+        title: 'Proof uploaded',
+        description: 'Delivery proof saved with timestamp.',
       });
       (e.target as HTMLFormElement).reset();
-    }, 1500);
+      setCapturedImage(null);
+      setDocumentFile(null);
+      setSignatureDataUrl(null);
+      clearSignature();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -211,7 +312,7 @@ export default function DeliveryProofPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="tripId">Trip Reference / ID</Label>
-                  <Input id="tripId" placeholder="e.g. TRP-2024-001" required />
+                  <Input id="tripId" name="tripId" placeholder="e.g. TRP-2024-001" required />
                 </div>
                 
                 <div className="space-y-2">
@@ -298,7 +399,8 @@ export default function DeliveryProofPage() {
                           type="file" 
                           className="hidden" 
                           id="file-upload" 
-                          accept="image/*,.pdf" 
+                          accept="image/*,.pdf"
+                          onChange={(ev) => setDocumentFile(ev.target.files?.[0] || null)}
                         />
                       </div>
                       <div 
@@ -317,8 +419,54 @@ export default function DeliveryProofPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                  <Textarea id="notes" placeholder="Any remarks regarding the delivery condition..." className="resize-none" rows={3} />
+                  <Label>Signed document (optional)</Label>
+                  <Input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(ev) => setDocumentFile(ev.target.files?.[0] || null)}
+                  />
+                  {documentFile && (
+                    <p className="text-xs text-muted-foreground">{documentFile.name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <PenLine className="size-4" /> Customer signature
+                  </Label>
+                  {signatureDataUrl && !signing ? (
+                    <div className="border rounded-lg p-2">
+                      <img src={signatureDataUrl} alt="Signature" className="h-24 w-full object-contain" />
+                      <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={startSign}>
+                        Redraw
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <canvas
+                        ref={signCanvasRef}
+                        width={400}
+                        height={120}
+                        className="w-full border rounded-lg bg-white touch-none"
+                        onMouseDown={() => { signDrawing.current = true; const c = signCanvasRef.current; const ctx = c?.getContext('2d'); if (ctx) { ctx.beginPath(); } }}
+                        onMouseUp={() => { signDrawing.current = false; }}
+                        onMouseLeave={() => { signDrawing.current = false; }}
+                        onMouseMove={drawSign}
+                        onTouchStart={() => { signDrawing.current = true; }}
+                        onTouchEnd={() => { signDrawing.current = false; }}
+                        onTouchMove={drawSign}
+                      />
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={clearSignature}>Clear</Button>
+                        <Button type="button" size="sm" onClick={saveSignature}>Save signature</Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Delivery notes (optional)</Label>
+                  <Textarea id="notes" name="notes" placeholder="Condition, recipient name, etc." className="resize-none" rows={3} />
                 </div>
 
                 <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>

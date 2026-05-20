@@ -28,6 +28,10 @@ import {
 import { Plus, Receipt } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
+import {
+  fetchAccountantUserIds,
+  notifyAccountantsExpenseSubmitted,
+} from "@/services/notification-service";
 
 const CATEGORIES = [
   { value: "fuel", label: "Fuel" },
@@ -75,6 +79,13 @@ export default function DriverExpensesPage() {
       ]);
 
       if (error) throw error;
+      const accountantIds = await fetchAccountantUserIds();
+      const driverName = user.email?.split("@")[0] || "Driver";
+      await notifyAccountantsExpenseSubmitted(
+        driverName,
+        parseFloat(String(form.get("amount") || "0")),
+        accountantIds,
+      );
       toast({ title: "Expense submitted", description: "Pending approval." });
       setOpen(false);
       (e.target as HTMLFormElement).reset();

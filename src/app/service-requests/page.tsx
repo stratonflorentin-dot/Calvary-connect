@@ -15,6 +15,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Wrench, Clock, CheckCircle2, AlertTriangle, Truck } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
+import { createNotification } from '@/services/notification-service';
+
+type Req = Record<string, unknown>;
+
+function reqIssue(r: Req) {
+  return String(r.issue_description || r.description || r.part_name || 'Maintenance request');
+}
+function reqStatus(r: Req) {
+  return String(r.status || 'pending').toLowerCase();
+}
+function reqUrgency(r: Req) {
+  return String(r.priority || r.urgency || r.severity || 'medium');
+}
+function reqDate(r: Req) {
+  const d = r.reported_at || r.created_at || r.requested_date;
+  return d ? new Date(String(d)).toLocaleString() : '—';
+}
+function statusLabel(s: string) {
+  const map: Record<string, string> = {
+    pending: 'Pending',
+    in_review: 'In Review',
+    in_progress: 'In Review',
+    approved: 'Approved',
+    completed: 'Completed',
+  };
+  return map[s] || s;
+}
 
 export default function ServiceRequestsPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
@@ -27,7 +55,7 @@ export default function ServiceRequestsPage() {
     );
   }
   const { user } = useSupabase();
-  const [requests, setRequests] = useState([]);
+  const [requests, setRequests] = useState<Req[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,46 +84,58 @@ export default function ServiceRequestsPage() {
     loadRequests();
   }, [user]);
 
-  const handleStartWork = async (requestId: string) => {
+  const notifyDriver = async (request: Req, message: string) => {
+    const driverId = String(request.driver_id || request.user_id || '');
+    if (!driverId) return;
+    await createNotification({
+      userId: driverId,
+      category: 'maintenance_update',
+      title: 'Maintenance update',
+      message,
+      severity: 'info',
+    });
+  };
+
+  const updateRequest = async (
+    requestId: string,
+    status: string,
+    extra: Record<string, unknown> = {},
+    request?: Req,
+  ) => {
     try {
       const { error } = await supabase
         .from('maintenance_requests')
-        .update({ status: 'in_progress' })
+        .update({ status, updated_at: new Date().toISOString(), ...extra })
         .eq('id', requestId);
-      
       if (error) throw error;
-      
-      setRequests(prev => 
-        prev.map(r => r.id === requestId ? { ...r, status: 'in_progress' } : r)
+      setRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, status, ...extra } : r)),
       );
+      if (request) {
+        await notifyDriver(request, `Request status: ${statusLabel(status)}`);
+      }
+      toast({ title: 'Updated', description: `Status set to ${statusLabel(status)}` });
     } catch (error) {
-      console.error('Error starting work:', error);
+      console.error('Error updating request:', error);
+      toast({ title: 'Error', description: 'Could not update request', variant: 'destructive' });
     }
   };
 
-  const handleCompleteRepair = async (e: React.FormEvent<HTMLFormElement>, requestId: string, vehicleId: string) => {
+  const handleMechanicNotes = async (
+    e: React.FormEvent<HTMLFormElement>,
+    requestId: string,
+    request: Req,
+    nextStatus: string,
+  ) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const notes = formData.get('notes') as string;
-    
-    try {
-      const { error } = await supabase
-        .from('maintenance_requests')
-        .update({ 
-          status: 'completed',
-          description: notes
-        })
-        .eq('id', requestId);
-      
-      if (error) throw error;
-      
-      setRequests(prev => 
-        prev.map(r => r.id === requestId ? { ...r, status: 'completed' } : r)
-      );
-      e.currentTarget.reset();
-    } catch (error) {
-      console.error('Error completing repair:', error);
-    }
+    const notes = String(new FormData(e.currentTarget).get('notes') || '');
+    await updateRequest(
+      requestId,
+      nextStatus,
+      { mechanic_notes: notes, notes },
+      request,
+    );
+    e.currentTarget.reset();
   };
 
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) return <div className="p-8">Access Denied</div>;
@@ -118,103 +158,102 @@ export default function ServiceRequestsPage() {
               <p className="text-muted-foreground">No pending maintenance requests.</p>
             </div>
           ) : (
-            requests?.map((r) => (
-              <Card key={r.id} className="rounded-2xl shadow-sm border-none overflow-hidden bg-white">
+            requests?.map((r) => {
+              const status = reqStatus(r);
+              const id = String(r.id);
+              return (
+              <Card key={id} className="rounded-2xl shadow-sm border-none overflow-hidden bg-white">
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row justify-between gap-4">
                     <div className="space-y-3 flex-1">
                       <div className="flex items-center gap-2">
                         <Badge className={cn(
                           "text-[10px] font-bold",
-                          r.severity === 'Critical' ? 'bg-rose-500' : 'bg-amber-500'
+                          reqUrgency(r).includes('crit') || reqUrgency(r).includes('urgent') ? 'bg-rose-500' : 'bg-amber-500'
                         )}>
-                          {r.severity.toUpperCase()}
+                          {reqUrgency(r).toUpperCase()}
                         </Badge>
                         <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                          Request #{r.id.slice(0, 8)}
+                          Request #{id.slice(0, 8)}
                         </Badge>
                       </div>
 
                       <div className="space-y-1">
-                        <h3 className="font-headline text-lg">{r.issueDescription}</h3>
+                        <h3 className="font-headline text-lg">{reqIssue(r)}</h3>
                         <p className="text-xs text-muted-foreground flex items-center gap-2">
-                          <Truck className="size-3" /> Vehicle ID: {r.fleetVehicleId}
+                          <Truck className="size-3" /> Vehicle: {String(r.vehicle_id || '—')}
                         </p>
+                        {r.mechanic_notes && (
+                          <p className="text-xs text-muted-foreground">Notes: {String(r.mechanic_notes)}</p>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-bold uppercase">
-                        <span className="flex items-center gap-1"><Clock className="size-3" /> Reported: {new Date(r.reportedAt).toLocaleString()}</span>
-                        {r.status === 'completed' && <span className="flex items-center gap-1 text-emerald-600"><CheckCircle2 className="size-3" /> Fixed: {new Date(r.completedAt).toLocaleString()}</span>}
+                        <span className="flex items-center gap-1"><Clock className="size-3" /> Reported: {reqDate(r)}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-col justify-center gap-2 md:w-48">
-                      {r.status === 'pending' && (
-                        <Button onClick={() => handleStartWork(r.id)} className="w-full rounded-xl gap-2">
-                          <Wrench className="size-4" /> Start Work
+                    <div className="flex flex-col justify-center gap-2 md:w-52">
+                      {status === 'pending' && (
+                        <Button onClick={() => updateRequest(id, 'in_review', {}, r)} className="w-full rounded-xl gap-2">
+                          <Wrench className="size-4" /> Mark In Review
                         </Button>
                       )}
-
-                      {r.status === 'in_progress' && (
+                      {(status === 'in_review' || status === 'in_progress') && (
+                        <>
+                          <Button onClick={() => updateRequest(id, 'approved', {}, r)} className="w-full rounded-xl">
+                            Approve repair
+                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button className="w-full rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700">
+                                <CheckCircle2 className="size-4" /> Complete
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Mechanic notes</DialogTitle>
+                              </DialogHeader>
+                              <form onSubmit={(e) => handleMechanicNotes(e, id, r, 'completed')} className="space-y-4 pt-4">
+                                <Textarea name="notes" placeholder="Work performed, parts replaced…" required className="min-h-[120px]" />
+                                <Button type="submit" className="w-full">Mark completed</Button>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+                        </>
+                      )}
+                      {status === 'approved' && (
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button className="w-full rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700">
-                              <CheckCircle2 className="size-4" /> Complete & Report
+                              <CheckCircle2 className="size-4" /> Complete
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-md">
                             <DialogHeader>
-                              <DialogTitle>Finalize Service Report</DialogTitle>
+                              <DialogTitle>Mechanic notes</DialogTitle>
                             </DialogHeader>
-                            <form onSubmit={(e) => handleCompleteRepair(e, r.id, r.fleetVehicleId)} className="space-y-4 pt-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="log">Work Performed (Service Log)</Label>
-                                <Textarea
-                                  id="log"
-                                  name="log"
-                                  placeholder="Describe what was fixed, parts replaced, etc."
-                                  required
-                                  className="min-h-[120px]"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Truck Condition After Service</Label>
-                                <Select name="condition" defaultValue="Good" required>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select condition" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Excellent">Excellent</SelectItem>
-                                    <SelectItem value="Good">Good</SelectItem>
-                                    <SelectItem value="Fair">Fair (Needs more work soon)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <Button type="submit" className="w-full h-12">Submit Report & Release Truck</Button>
+                            <form onSubmit={(e) => handleMechanicNotes(e, id, r, 'completed')} className="space-y-4 pt-4">
+                              <Textarea name="notes" placeholder="Final service log…" required className="min-h-[120px]" />
+                              <Button type="submit" className="w-full">Mark completed</Button>
                             </form>
                           </DialogContent>
                         </Dialog>
                       )}
 
-                      {r.status === 'completed' && (
-                        <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl">
-                          <p className="text-[10px] font-bold text-emerald-700 uppercase mb-1">Service Log</p>
-                          <p className="text-xs italic text-emerald-900 line-clamp-3">"{r.serviceLog}"</p>
-                        </div>
-                      )}
-
                       <Badge className={cn(
                         "w-full justify-center py-1 mt-auto",
-                        r.status === 'completed' ? 'bg-emerald-500' :
-                          r.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : 'bg-slate-400'
+                        status === 'completed' ? 'bg-emerald-500' :
+                          status === 'approved' ? 'bg-blue-500' :
+                          status === 'in_review' || status === 'in_progress' ? 'bg-amber-500' : 'bg-slate-400'
                       )}>
-                        {r.status.toUpperCase()}
+                        {statusLabel(status)}
                       </Badge>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))
+            );})
           )}
         </div>
       </main>

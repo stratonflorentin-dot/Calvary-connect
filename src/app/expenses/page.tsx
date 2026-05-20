@@ -44,6 +44,9 @@ export default function ExpensesPage() {
         if (role === 'DRIVER') {
             window.location.replace('/driver/expenses');
         }
+        if (role === 'ACCOUNTANT' || role === 'HR') {
+            window.location.replace('/accountant/expenses');
+        }
     }, [role]);
 
     useEffect(() => {
@@ -385,7 +388,7 @@ export default function ExpensesPage() {
                                                             </form>
                                                         </DialogContent>
                                                     </Dialog>
-                                                    {(role === 'CEO' || role === 'ADMIN') && expense.status === 'pending' && (
+                                                    {(['CEO', 'ADMIN', 'ACCOUNTANT', 'HR'].includes(role || '')) && expense.status === 'pending' && (
                                                         <>
                                                             <Button
                                                                 variant="outline"

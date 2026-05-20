@@ -76,6 +76,16 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["DRIVER"],
   },
   {
+    path: "/driver/maintenance",
+    label: "Maintenance",
+    allowedRoles: ["DRIVER"],
+  },
+  {
+    path: "/accountant/expenses",
+    label: "Expense Review",
+    allowedRoles: ["ACCOUNTANT", "CEO", "ADMIN", "HR"],
+  },
+  {
     path: "/bookings",
     label: "Bookings",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],

@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
+import { isAllowedNotification } from '@/lib/notification-categories';
 
 export default function NotificationsPage() {
   const { role, isAdmin } = useRole();
@@ -27,13 +28,15 @@ export default function NotificationsPage() {
         const { data: realNotifications, error } = await supabase
           .from('notifications')
           .select('*')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
         if (error) {
           console.log('Notifications error - skipping:', error);
           setNotifications([]);
         } else {
-          setNotifications(realNotifications || []);
+          const filtered = (realNotifications || []).filter(isAllowedNotification);
+          setNotifications(filtered);
         }
       } catch (error) {
         console.log('Notifications loading error - skipping:', error);
@@ -60,15 +63,14 @@ export default function NotificationsPage() {
       // Update notification as read in database
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: true })
+        .update({ is_read: true, read: true })
         .eq('id', id);
         
       if (error) {
         console.error('Error marking notification as read:', error);
       } else {
-        // Update local state
         setNotifications(prev => 
-          prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+          prev.map(n => n.id === id ? { ...n, is_read: true, read: true } : n)
         );
       }
     } catch (error) {
@@ -84,7 +86,9 @@ export default function NotificationsPage() {
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-headline tracking-tighter">Notifications Center</h1>
-          <p className="text-muted-foreground text-sm font-sans">Alerts and updates for your account.</p>
+          <p className="text-muted-foreground text-sm font-sans">
+            Trips, fuel, expenses, maintenance, and delivery updates only.
+          </p>
         </header>
         <div className="max-w-2xl space-y-4">
           {!notifications || notifications.length === 0 ? (
@@ -97,7 +101,7 @@ export default function NotificationsPage() {
             notifications.map((n) => (
               <Card
                 key={n.id}
-                className={cn(!n.is_read && 'border-primary/30 bg-primary/5')}
+                className={cn(!(n.is_read || n.read) && 'border-primary/30 bg-primary/5')}
               >
                 <CardHeader className="py-4 flex flex-row items-start gap-3">
                   {getIcon(n.severity || 'info')}

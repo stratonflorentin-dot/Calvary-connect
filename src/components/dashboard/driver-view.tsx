@@ -214,7 +214,7 @@ export default function DriverDashboard() {
         <QuickLink href="/proof" label="Proof of Delivery" icon={Camera} />
         <QuickLink href="/driver/fuel" label="Fuel requests" icon={Fuel} />
         <QuickLink href="/driver/expenses" label="Submit expense" icon={Receipt} />
-        <QuickLink href="/report" label="Report maintenance" icon={Wrench} />
+        <QuickLink href="/driver/maintenance" label="Report maintenance" icon={Wrench} />
         <QuickLink href="/driver/profile" label="Driver profile" icon={User} />
       </div>
 

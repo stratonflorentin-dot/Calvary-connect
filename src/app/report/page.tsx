@@ -11,15 +11,24 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, Wrench } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 export default function MaintenanceReportPage() {
   const { user } = useSupabase();
   const { role, isAdmin } = useRole();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (role === 'DRIVER') {
+      router.replace('/driver/maintenance');
+    }
+  }, [role, router]);
+
   if (!user || !role) return null;
+  if (role === 'DRIVER') return null;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
