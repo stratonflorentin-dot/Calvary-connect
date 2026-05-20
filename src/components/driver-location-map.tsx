@@ -62,16 +62,25 @@ export function DriverLocationMap() {
 
   const fetchDriverLocations = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: locationsData, error: locError } = await supabase
         .from('driver_locations')
-        .select(`
-          *,
-          driver:user_profiles(name, email, avatar_url)
-        `)
-        .eq('is_active', true)
+        .select('*')
         .order('last_updated', { ascending: false });
 
-      if (error) throw error;
+      if (locError) throw locError;
+
+      const { data: drivers } = await supabase
+        .from('user_profiles')
+        .select('id, name, email, avatar_url')
+        .eq('role', 'DRIVER');
+
+      const driverMap = new Map((drivers || []).map((d) => [d.id, d]));
+      const data = (locationsData || [])
+        .filter((loc) => driverMap.has(loc.driver_id))
+        .map((loc) => ({
+          ...loc,
+          driver: driverMap.get(loc.driver_id),
+        }));
 
       setLocations(data || []);
       setActiveDrivers(data?.length || 0);
@@ -100,8 +109,8 @@ export function DriverLocationMap() {
             <Navigation className="h-5 w-5" />
             Live Driver Locations
           </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            Real-time tracking of active drivers
+            <p className="text-sm text-muted-foreground mt-1">
+            Live positions while drivers are signed in to the app
           </p>
         </div>
         <Badge variant="outline" className="gap-1">
@@ -114,7 +123,7 @@ export function DriverLocationMap() {
           <div className="text-center py-8 text-muted-foreground h-[400px] flex flex-col items-center justify-center">
             <MapPin className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p>No active drivers currently</p>
-            <p className="text-sm">Drivers will appear here when they enable location tracking</p>
+            <p className="text-sm">No drivers online right now. Open Fleet Map for the full view.</p>
           </div>
         ) : (
           <>

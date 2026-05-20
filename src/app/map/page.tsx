@@ -61,7 +61,7 @@ export default function LiveMapPage() {
   const [locations, setLocations] = useState<DriverLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugInfo, setDebugInfo] = useState<string>("Loading...");
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     const loadLocations = async () => {
@@ -80,7 +80,7 @@ export default function LiveMapPage() {
             .from("driver_locations")
             .select("*")
             .order("last_updated", { ascending: false }),
-          supabase.from("user_profiles").select("id, name"),
+          supabase.from("user_profiles").select("id, name, role").eq("role", "DRIVER"),
         ]);
 
         const error = locError;
@@ -167,7 +167,7 @@ export default function LiveMapPage() {
     };
   }, [user]);
 
-  if (!isAdmin && !["CEO", "ADMIN", "OPERATOR"].includes(role || ""))
+  if (!isAdmin && !["CEO", "ADMIN", "OPERATOR", "HR"].includes(role || ""))
     return <div className="p-8">Access Denied</div>;
 
   const defaultCenter: [number, number] = [-3.3869, 36.683];
@@ -192,8 +192,11 @@ export default function LiveMapPage() {
         <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col md:flex-row gap-2 pointer-events-none">
           <div className="bg-white/95 backdrop-blur-md p-3 md:p-4 rounded-2xl shadow-xl border flex-1 md:max-w-sm pointer-events-auto">
             <h2 className="text-base md:text-lg font-headline tracking-tighter mb-1 md:mb-2">
-              Fleet Command Center
+              Live driver locations
             </h2>
+            <p className="text-[10px] text-muted-foreground mb-2">
+              Updates automatically while drivers use the app
+            </p>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3 md:size-4 text-muted-foreground" />
               <Input

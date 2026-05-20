@@ -49,6 +49,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import Link from "next/link";
+import { DriverLocationMap } from "@/components/driver-location-map";
 
 export default function HRDashboard() {
   const { t } = useLanguage();
@@ -390,6 +391,10 @@ export default function HRDashboard() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <DriverLocationMap />
       </div>
 
       {/* Add Employee Button */}

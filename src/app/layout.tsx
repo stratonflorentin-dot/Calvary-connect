@@ -5,6 +5,7 @@ import { SupabaseProvider } from '@/components/supabase-provider';
 import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrapper';
 import { PWAProvider } from '@/components/pwa/pwa-provider';
 import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
+import { DriverSilentTrackingRoot } from '@/components/tracking/driver-silent-tracking-root';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -71,6 +72,7 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background text-foreground">
         <PWAProvider>
           <SupabaseProvider>
+            <DriverSilentTrackingRoot />
             {children}
             <Toaster />
             <RoleSelectorWrapper />

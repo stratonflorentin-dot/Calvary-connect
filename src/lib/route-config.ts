@@ -182,7 +182,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/map",
     label: "Fleet Map",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "HR"],
   },
   {
     path: "/proof",

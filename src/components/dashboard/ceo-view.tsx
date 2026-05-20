@@ -66,8 +66,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { DriverLocationMap } from "@/components/driver-location-map";
 import Link from "next/link";
+import { useState } from "react";
 import { StatCards } from "./stat-cards";
 
 export default function CeoDashboard() {
@@ -669,6 +670,15 @@ export default function CeoDashboard() {
                   </div>
                 </div>
               )}
+              <div className="mt-6 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold">Driver locations</h4>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/map">Open Fleet Map</Link>
+                  </Button>
+                </div>
+                <DriverLocationMap />
+              </div>
             </TabsContent>
             <TabsContent value="expenses">
               <DataTable
