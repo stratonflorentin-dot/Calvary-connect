@@ -67,8 +67,9 @@ self.addEventListener('fetch', (event) => {
     }).catch(() => {
       // Return offline fallback for navigation requests
       if (event.request.mode === 'navigate') {
-        return caches.match('/');
+        return caches.match('/').then(res => res || new Response('Offline', { status: 503 }));
       }
+      return new Response('', { status: 404 });
     })
   );
 });

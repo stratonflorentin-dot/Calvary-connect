@@ -109,7 +109,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         if (!container) return;
 
         if ((container as HTMLElement & { _leaflet_id?: number })._leaflet_id) {
-          delete (container as HTMLElement & { _leaflet_id?: number })._leaflet_id;
+          try { delete (container as HTMLElement & { _leaflet_id?: number })._leaflet_id; } catch(e) {}
         }
 
         map = L.map(container, {
@@ -208,7 +208,10 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       return () => {
         if (onWindowResize) window.removeEventListener("resize", onWindowResize);
         resizeObserver?.disconnect();
-        mapInstanceRef.current?.remove();
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.stop();
+          mapInstanceRef.current.remove();
+        }
         mapInstanceRef.current = null;
         tileLayerRef.current = null;
         markersRef.current.clear();

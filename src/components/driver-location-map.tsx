@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
+import dynamic from "next/dynamic";
+import type { FleetMapDriver } from "@/components/fleet-map/types";
 import { supabase } from "@/lib/supabase";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
@@ -12,8 +13,17 @@ import { getDriverLocationsForMapAction } from "@/app/tracking/actions";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-
+const FleetMapCanvas = dynamic(
+  () => import("@/components/fleet-map/fleet-map-canvas").then((m) => m.FleetMapCanvas),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center bg-slate-100">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    ),
+  }
+);
 export function DriverLocationMap() {
   const { user } = useSupabase();
   const { role, isAdmin, actualRole } = useRole();
@@ -123,47 +133,15 @@ export function DriverLocationMap() {
               browser prompts (one time).
             </p>
           </div>
-        ) : GOOGLE_MAPS_API_KEY ? (
-          <div className="h-[400px] rounded-lg overflow-hidden">
-            <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-              <Map
-                defaultCenter={center}
-                defaultZoom={10}
-                gestureHandling="greedy"
-                disableDefaultUI
-                style={{ width: "100%", height: "100%" }}
-              >
-                {locations.map((loc) => (
-                  <AdvancedMarker
-                    key={loc.id}
-                    position={{ lat: loc.latitude, lng: loc.longitude }}
-                    title={loc.driverName}
-                  >
-                    <Pin
-                      background={loc.isOnline ? "#10b981" : "#6b7280"}
-                      borderColor="#fff"
-                      glyphColor="#fff"
-                    />
-                  </AdvancedMarker>
-                ))}
-              </Map>
-            </APIProvider>
-          </div>
         ) : (
-          <ul className="space-y-2">
-            {locations.map((loc) => (
-              <li
-                key={loc.id}
-                className="flex justify-between text-sm border rounded-lg px-3 py-2"
-              >
-                <span className="font-medium">{loc.driverName}</span>
-                <span className="text-muted-foreground">
-                  {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
-                  {loc.isOnline ? " · online" : " · offline"}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="relative h-[400px] rounded-lg overflow-hidden border">
+            <FleetMapCanvas
+              locations={locations as unknown as FleetMapDriver[]}
+              defaultCenter={[center.lat, center.lng]}
+              selectedId={null}
+              onSelectDriver={() => {}}
+            />
+          </div>
         )}
       </CardContent>
     </Card>

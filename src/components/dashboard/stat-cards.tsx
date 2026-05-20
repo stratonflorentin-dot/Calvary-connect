@@ -64,11 +64,11 @@ export function StatCards() {
 
         // FLEET METRICS
         const { data: vehicles } = await supabase
-          .from("vehicles")
+          .from("fleet_vehicles")
           .select("id, status");
         const activeVehicles =
           vehicles?.filter(
-            (v) => v.status === "AVAILABLE" || v.status === "IN_USE",
+            (v) => v.status === "Available" || v.status === "In Use" || v.status === "available" || v.status === "in_use",
           ).length || 0;
         const totalVehicles = vehicles?.length || 0;
 
@@ -84,61 +84,55 @@ export function StatCards() {
         const { data: maintenanceRequests } = await supabase
           .from("maintenance_requests")
           .select("id")
-          .eq("status", "PENDING");
+          .eq("status", "pending");
 
         // FINANCIAL METRICS
-        const { data: shipments } = await supabase
-          .from("shipments")
-          .select("revenue, value, status, delivery_date")
-          .gte("created_at", `${currentMonth}-01`)
-          .eq("status", "DELIVERED");
+        const { data: income } = await supabase
+          .from("income")
+          .select("amount")
+          .gte("createdAt", `${currentMonth}-01T00:00:00Z`);
         const monthlyRevenue =
-          shipments?.reduce((sum, s) => sum + (s.revenue || s.value || 0), 0) ||
-          0;
+          income?.reduce((sum, i) => sum + (i.amount || 0), 0) || 0;
 
         const { data: expenses } = await supabase
           .from("expenses")
           .select("amount")
-          .gte("created_at", `${currentMonth}-01`);
+          .gte("createdAt", `${currentMonth}-01T00:00:00Z`);
         const monthlyExpenses =
           expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
         const netProfit = monthlyRevenue - monthlyExpenses;
 
-        const { data: invoices } = await supabase
-          .from("invoices")
-          .select("amount")
-          .eq("status", "OVERDUE");
-        const outstandingPayments =
-          invoices?.reduce((sum, i) => sum + (i.amount || 0), 0) || 0;
+        const outstandingPayments = 0; // No invoices table yet
 
         // OPERATIONS METRICS
-        const { data: transitShipments } = await supabase
-          .from("shipments")
+        const { data: transitTrips } = await supabase
+          .from("trips")
           .select("id, status")
-          .in("status", ["picked_up", "in_transit"]);
-        const shipmentsInTransit = transitShipments?.length || 0;
+          .in("status", ["loaded", "in_transit"]);
+        const shipmentsInTransit = transitTrips?.length || 0;
 
-        const { data: deliveredShipments } = await supabase
-          .from("shipments")
-          .select("delivery_date")
-          .eq("status", "DELIVERED")
-          .gte("created_at", `${currentMonth}-01`);
+        const { data: deliveredTrips } = await supabase
+          .from("trips")
+          .select("estimatedCompletionTime, deliveredAt")
+          .eq("status", "delivered")
+          .gte("createdAt", `${currentMonth}-01T00:00:00Z`);
         const onTimeCount =
-          deliveredShipments?.filter((s) => {
-            const expectedDate = new Date(s.delivery_date);
-            const actualDate = new Date(s.delivery_date);
+          deliveredTrips?.filter((t) => {
+            if (!t.estimatedCompletionTime || !t.deliveredAt) return false;
+            const expectedDate = new Date(t.estimatedCompletionTime);
+            const actualDate = new Date(t.deliveredAt);
             return actualDate <= expectedDate;
           }).length || 0;
-        const onTimeDeliveryRate = deliveredShipments?.length
-          ? ((onTimeCount / deliveredShipments.length) * 100).toFixed(1)
+        const onTimeDeliveryRate = deliveredTrips?.length
+          ? ((onTimeCount / deliveredTrips.length) * 100).toFixed(1)
           : 0;
 
         // WAREHOUSE METRICS
         const { data: warehouseItems } = await supabase
-          .from("warehouse_items")
+          .from("inventory_items")
           .select("id, status");
         const warehouseUtilization =
-          warehouseItems?.filter((w) => w.status === "STORED").length || 0;
+          warehouseItems?.filter((w) => w.status === "In Stock" || w.status === "in_stock").length || 0;
 
         // CASH FLOW METRICS
         const bankBalance = 0;
