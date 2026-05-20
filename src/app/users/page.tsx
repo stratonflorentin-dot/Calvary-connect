@@ -35,6 +35,8 @@ interface UserProfile {
   invited_by?: string;
 }
 
+import { inviteUserAction } from './actions';
+
 export default function UsersPage() {
   const { role, isAdmin } = useRole();
   const { user } = useSupabase();
@@ -214,17 +216,15 @@ export default function UsersPage() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .insert([userData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding user:', error);
+      // Use the server action to bypass RLS error
+      let data;
+      try {
+        data = await inviteUserAction(userData);
+      } catch (insertError: any) {
+        console.error('Error adding user via action:', insertError);
         toast({ 
           title: 'Error', 
-          description: error.message || 'Failed to invite user. Please try again.',
+          description: insertError.message || 'Failed to invite user. Please try again.',
           variant: 'destructive'
         });
         return;
