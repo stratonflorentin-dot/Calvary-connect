@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useSupabase } from "@/components/supabase-provider";
 import { UserRole } from "@/types/roles";
-import { ADMIN_EMAIL } from "@/lib/supabase";
+import { isPrimaryOwnerEmail } from "@/lib/supabase";
 import { ROLE_DEFAULT_ROUTES } from "@/lib/route-config";
 
 const ROLE_ICONS = {
@@ -55,7 +55,7 @@ export function RoleSelector() {
   const { user, role, changeRole } = useSupabase();
 
   // Debug logging
-  console.log("[RoleSelector] user:", user?.email, "role:", role, "ADMIN_EMAIL:", ADMIN_EMAIL);
+  console.log("[RoleSelector] user:", user?.email, "role:", role);
 
   // Only show for admins/owners
   if (!user) {
@@ -63,8 +63,7 @@ export function RoleSelector() {
   }
 
   const isAdmin = 
-    user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || 
-    user.email?.toLowerCase() === 'calvaryadmin466@gmail.com' ||
+    isPrimaryOwnerEmail(user.email) ||
     user.role === 'ADMIN' ||
     user.role === 'CEO';
 

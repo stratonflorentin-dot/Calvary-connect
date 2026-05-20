@@ -10,5 +10,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export const ADMIN_EMAIL = 'stratonflorentin@gmail.com';
 export const ADMIN_ROLE = 'CEO';
 
+/** Primary install owner (offline admin / legacy bypass). Not every staff @ domain. */
+export function isPrimaryOwnerEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase();
+}
+
 // Demo mode flag - only active if no real Supabase URL is provided
 export const DEMO_MODE = !supabaseUrl || supabaseUrl === ''; // Auto-detect based on URL presence

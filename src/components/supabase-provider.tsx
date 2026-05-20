@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase, ADMIN_EMAIL, ADMIN_ROLE, DEMO_MODE } from '@/lib/supabase';
+import { supabase, ADMIN_EMAIL, ADMIN_ROLE, DEMO_MODE, isPrimaryOwnerEmail } from '@/lib/supabase';
 import { UserRole } from '@/types/roles';
 import { resolveUserRole } from '@/lib/user-role-utils';
 import { SyncManager } from '@/lib/offline-sync';
@@ -56,8 +56,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   // Sync role from localStorage when user changes (for role switching)
   useEffect(() => {
     const ownerEmail =
-      user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
-      user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com';
+      isPrimaryOwnerEmail(user?.email);
     if (ownerEmail) {
       const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
       const resolved = savedRole ? resolveUserRole(savedRole, 'ADMIN') : null;
@@ -155,6 +154,30 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   // Fetch user profile from Supabase
   const fetchUserProfile = async (userId: string, email: string) => {
+    const invitedLike = (s: unknown) => {
+      const raw = String(s ?? "").toLowerCase().trim();
+      return ["invited", "pending", "invite_pending", "invitation_sent", "invite"].includes(raw);
+    };
+
+    const recordLoginAndActivate = async (uid: string, status: unknown) => {
+      const raw = String(status ?? "").toLowerCase().trim();
+      const updates: Record<string, string> = {
+        updated_at: new Date().toISOString(),
+        last_login_at: new Date().toISOString(),
+      };
+      if (invitedLike(status)) {
+        updates.status = "active";
+      }
+      const { error } = await supabase
+        .from("user_profiles")
+        .update(updates)
+        .eq("id", uid);
+      if (error) {
+        console.warn("[SupabaseProvider] recordLoginAndActivate:", error.message);
+      }
+      return invitedLike(status);
+    };
+
     try {
       const normalizedEmail = email.toLowerCase().trim();
       console.log('[SupabaseProvider] Fetching profile for:', normalizedEmail, 'ID:', userId);
@@ -168,13 +191,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (profile && !profileError) {
         console.log('[SupabaseProvider] Profile found by ID:', profile.role);
-        
-        // Self-healing: If user is logged in but still marked as invited, fix it
-        if (profile.status === 'invited' || profile.status === 'Invited' || profile.status === 'pending') {
-          console.log('[SupabaseProvider] Auto-fixing user status to active');
-          await supabase.from('user_profiles').update({ status: 'active' }).eq('id', userId);
-          profile.status = 'active';
-        }
+
+        const wasInvite = await recordLoginAndActivate(profile.id, profile.status);
+        if (wasInvite) profile.status = 'active';
         
         return profile;
       }
@@ -205,11 +224,21 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
           if (!updateError && updatedProfile) {
             console.log('[SupabaseProvider] Profile linked successfully');
+            const wasInvite = await recordLoginAndActivate(
+              updatedProfile.id,
+              updatedProfile.status,
+            );
+            if (wasInvite) updatedProfile.status = "active";
             return updatedProfile;
           }
           
           console.error('[SupabaseProvider] Error linking profile:', updateError);
           // Return the existing profile even if update failed (RLS might block update)
+          const wasInvite = await recordLoginAndActivate(
+            userId,
+            existingByEmail.status,
+          );
+          if (wasInvite) existingByEmail.status = "active";
           return existingByEmail;
         }
       }
@@ -330,8 +359,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (!user?.id) return;
       
       const isBypassAdmin = 
-        user.email === ADMIN_EMAIL || 
-        user.email === 'calvaryadmin466@gmail.com' ||
+        isPrimaryOwnerEmail(user.email) ||
         user.role === 'ADMIN' ||
         user.role === 'CEO';
       if (isBypassAdmin) return;
@@ -504,7 +532,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     
     // Admin can switch roles locally without database update
-    if (user.email === ADMIN_EMAIL) {
+    if (user.email && isPrimaryOwnerEmail(user.email)) {
       setUser(prev => prev ? { ...prev, role: newRole } : null);
       setRole(newRole);
       return;

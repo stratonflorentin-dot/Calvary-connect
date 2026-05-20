@@ -36,7 +36,7 @@ import { UserRole } from "@/types/roles";
 import { useLanguage } from "@/hooks/use-language";
 import { useSupabase } from "@/components/supabase-provider";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { ADMIN_EMAIL } from "@/lib/supabase";
+import { isPrimaryOwnerEmail } from "@/lib/supabase";
 import { getMenuByRole, roleHasTripsAccess } from "@/lib/route-config";
 import { resolveUserRole } from "@/lib/user-role-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -77,11 +77,15 @@ export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { signOut, user, uploadAvatar } = useSupabase();
-  const isAdminEmail = 
-    user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || 
-    user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com' ||
-    user?.role === 'ADMIN' ||
-    user?.role === 'CEO';
+  const canUseRolePreview =
+    user?.role === "ADMIN" ||
+    user?.role === "CEO" ||
+    isPrimaryOwnerEmail(user?.email);
+
+  // Only primary owner keeps "preview any role" menu via email bypass in getMenuByRole
+  const menuOwnerEmail = isPrimaryOwnerEmail(user?.email)
+    ? user?.email
+    : undefined;
 
   // ✅ Track stored role reactively
   const [storedRole, setStoredRole] = useState<UserRole | null>(null);
@@ -144,7 +148,7 @@ export function Sidebar({ role }: { role: UserRole }) {
     };
   }, []);
 
-  const effectiveRole = isAdminEmail
+  const effectiveRole = canUseRolePreview
     ? resolveUserRole(String(storedRole || role || "ADMIN"), "ADMIN")
     : resolveUserRole(String(role || ""), "OPERATOR");
 
@@ -154,8 +158,8 @@ export function Sidebar({ role }: { role: UserRole }) {
     effectiveRole,
     false,
     t,
-    user?.email,
-    false, // ✅ Never restrict the menu for the admin/owner
+    menuOwnerEmail,
+    false,
   );
 
   interface NavItem {

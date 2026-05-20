@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
-import { ADMIN_EMAIL } from "@/lib/supabase";
+import { isPrimaryOwnerEmail } from "@/lib/supabase";
 import { isValidRole, normalizeRole } from "@/lib/user-role-utils";
 import {
   Briefcase,
@@ -227,9 +227,8 @@ export function useRouteGuard() {
     (path: string): boolean => {
       try {
         // Owner (admin email) or CEO/ADMIN role has full access to everything, even during role switching
-        const isOwnerOrAdmin = 
-          user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
-          user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com' ||
+        const isOwnerOrAdmin =
+          isPrimaryOwnerEmail(user?.email) ||
           user?.role === 'ADMIN' ||
           user?.role === 'CEO';
 
@@ -262,7 +261,7 @@ export function useRouteGuard() {
         return false;
       }
     },
-    [role, user?.email],
+    [role, user?.email, user?.role],
   );
 
   const redirectToDefault = useCallback(
@@ -279,8 +278,7 @@ export function useRouteGuard() {
 
     // Check if admin user (owner) - should always have access, no redirects
     const isAdminUser =
-      user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
-      user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com' ||
+      isPrimaryOwnerEmail(user?.email) ||
       user?.role === 'ADMIN' ||
       user?.role === 'CEO';
 
@@ -332,9 +330,7 @@ export function getMenuByRole(
   if (!normalizedRole) return [];
 
   // Owner (admin email) gets full access UNLESS they are previewing another role
-  const isOwnerOrAdminEmail = 
-    userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ||
-    userEmail?.toLowerCase() === 'calvaryadmin466@gmail.com';
+  const isOwnerOrAdminEmail = isPrimaryOwnerEmail(userEmail);
 
   if (
     isOwnerOrAdminEmail &&

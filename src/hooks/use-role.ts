@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { UserRole } from '@/types/roles';
 import { useSupabase } from '@/components/supabase-provider';
-import { ADMIN_EMAIL } from '@/lib/supabase';
+import { isPrimaryOwnerEmail } from '@/lib/supabase';
 import { resolveUserRole } from '@/lib/user-role-utils';
 
 export function useRole() {
@@ -18,10 +18,14 @@ export function useRole() {
   // The actual user role from database (never changes with impersonation)
   const actualRole = user?.role || null;
   // Whether user is an actual ADMIN (check roles and emails)
-  const isAdmin = actualRole === 'ADMIN' || actualRole === 'CEO' || user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || user?.email?.toLowerCase() === 'calvaryadmin466@gmail.com';
+  const isAdmin =
+    actualRole === 'ADMIN' ||
+    actualRole === 'CEO' ||
+    isPrimaryOwnerEmail(user?.email);
 
-  // For admin user, always use localStorage role as current role
-  const currentRole = isAdmin
+  // CEO/ADMIN or primary owner may preview another role from localStorage
+  const canUseRolePreview = isAdmin;
+  const currentRole = canUseRolePreview
     ? typeof window !== 'undefined'
       ? resolveUserRole(
           localStorage.getItem('fleet_command_role') || String(actualRole || 'ADMIN'),
@@ -36,7 +40,7 @@ export function useRole() {
 
   // Sync role from localStorage (for admin role switching)
   useEffect(() => {
-    if (isAdmin) {
+    if (canUseRolePreview) {
       const savedRole = localStorage.getItem('fleet_command_role');
       if (savedRole) {
         const resolved = resolveUserRole(savedRole, 'ADMIN');
@@ -46,7 +50,7 @@ export function useRole() {
         }
       }
     }
-  }, [user, contextRole, supabaseChangeRole, isAdmin]);
+  }, [user, contextRole, supabaseChangeRole, canUseRolePreview]);
 
   const changeRole = (newRole: UserRole) => {
     // Role switching is now handled directly in role-selector with localStorage
