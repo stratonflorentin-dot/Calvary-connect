@@ -6,7 +6,7 @@ import { UserRole } from '@/types/roles';
 import { resolveUserRole } from '@/lib/user-role-utils';
 import { SyncManager } from '@/lib/offline-sync';
 import { toast } from '@/hooks/use-toast';
-import { checkInviteAction, linkUserProfileAction } from '@/app/users/actions';
+import { checkInviteAction, linkUserProfileAction, activateUserOnLoginAction } from '@/app/users/actions';
 
 interface User {
   id: string;
@@ -159,23 +159,15 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       return ["invited", "pending", "invite_pending", "invitation_sent", "invite"].includes(raw);
     };
 
-    const recordLoginAndActivate = async (uid: string, status: unknown) => {
-      const raw = String(status ?? "").toLowerCase().trim();
-      const updates: Record<string, string> = {
-        updated_at: new Date().toISOString(),
-        last_login_at: new Date().toISOString(),
-      };
-      if (invitedLike(status)) {
-        updates.status = "active";
+    const recordLoginAndActivate = async (uid: string, status: unknown, userEmail: string) => {
+      const wasInvited = invitedLike(status);
+      try {
+        const updated = await activateUserOnLoginAction(uid, userEmail);
+        if (updated?.status === "active") return true;
+      } catch (err) {
+        console.warn("[SupabaseProvider] activateUserOnLoginAction:", err);
       }
-      const { error } = await supabase
-        .from("user_profiles")
-        .update(updates)
-        .eq("id", uid);
-      if (error) {
-        console.warn("[SupabaseProvider] recordLoginAndActivate:", error.message);
-      }
-      return invitedLike(status);
+      return wasInvited;
     };
 
     try {
@@ -192,7 +184,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       if (profile && !profileError) {
         console.log('[SupabaseProvider] Profile found by ID:', profile.role);
 
-        const wasInvite = await recordLoginAndActivate(profile.id, profile.status);
+        const wasInvite = await recordLoginAndActivate(profile.id, profile.status, normalizedEmail);
         if (wasInvite) profile.status = 'active';
         
         return profile;
@@ -227,16 +219,17 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             const wasInvite = await recordLoginAndActivate(
               updatedProfile.id,
               updatedProfile.status,
+              normalizedEmail,
             );
             if (wasInvite) updatedProfile.status = "active";
             return updatedProfile;
           }
           
           console.error('[SupabaseProvider] Error linking profile:', updateError);
-          // Return the existing profile even if update failed (RLS might block update)
           const wasInvite = await recordLoginAndActivate(
             userId,
             existingByEmail.status,
+            normalizedEmail,
           );
           if (wasInvite) existingByEmail.status = "active";
           return existingByEmail;
@@ -447,10 +440,17 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       
       // Use Supabase auth for all other users
       console.log('Attempting Supabase login for:', email);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         console.error('Supabase login error:', error);
         throw error;
+      }
+      if (signInData?.user?.email) {
+        try {
+          await activateUserOnLoginAction(signInData.user.id, signInData.user.email);
+        } catch (activateErr) {
+          console.warn('[SupabaseProvider] Post-login activation:', activateErr);
+        }
       }
     } catch (err) {
       console.error('Sign in error:', err);

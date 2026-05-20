@@ -36,6 +36,7 @@ interface UserProfile {
 }
 
 import { inviteUserAction, getUsersAction, deleteUserAction, updateUserAction } from './actions';
+import { effectiveUserStatus } from '@/lib/user-status-utils';
 
 export default function UsersPage() {
   const { role, isAdmin } = useRole();
@@ -54,8 +55,8 @@ export default function UsersPage() {
   // Team stats
   const teamStats = {
     totalUsers: users.length,
-    activeUsers: users.filter(u => u.status === 'active').length,
-    pendingInvites: users.filter(u => u.status === 'invited').length,
+    activeUsers: users.filter(u => effectiveUserStatus(u) === 'active').length,
+    pendingInvites: users.filter(u => effectiveUserStatus(u) === 'invited').length,
     dormantUsers: users.filter(u => u.status === 'dormant').length,
     driversCount: users.filter(u => u.role === 'DRIVER').length,
     operatorsCount: users.filter(u => u.role === 'OPERATOR').length,
@@ -694,18 +695,27 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell>
                     {(() => {
-                      const config = getStatusBadge(u.status);
+                      const displayStatus = effectiveUserStatus(u);
+                      const config = getStatusBadge(displayStatus);
+                      const showReason =
+                        u.status_reason &&
+                        displayStatus !== 'active';
                       return (
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full ${config.dot} ${u.status === 'active' ? 'animate-pulse' : ''}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${config.dot} ${displayStatus === 'active' ? 'animate-pulse' : ''}`} />
                             <Badge className={`${config.bg} ${config.text} text-xs font-medium`}>
                               {config.label}
                             </Badge>
                           </div>
-                          {u.status_reason && (
+                          {showReason && (
                             <span className="text-[10px] text-muted-foreground max-w-[150px] truncate" title={u.status_reason}>
                               {u.status_reason}
+                            </span>
+                          )}
+                          {displayStatus === 'active' && u.last_login_at && (
+                            <span className="text-[10px] text-emerald-600">
+                              Last login {new Date(u.last_login_at).toLocaleDateString()}
                             </span>
                           )}
                         </div>
