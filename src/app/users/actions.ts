@@ -24,3 +24,45 @@ export async function inviteUserAction(userData: any) {
 
   return data;
 }
+
+export async function getUsersAction() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { data, error } = await supabaseAdmin
+    .from("user_profiles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteUserAction(userId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { error } = await supabaseAdmin
+    .from("user_profiles")
+    .delete()
+    .eq("id", userId);
+
+  if (error) throw new Error(error.message);
+  return true;
+}
+
+export async function updateUserAction(userId: string, updateData: any) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { error } = await supabaseAdmin
+    .from("user_profiles")
+    .update(updateData)
+    .eq("id", userId);
+
+  if (error) throw new Error(error.message);
+  return true;
+}

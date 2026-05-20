@@ -35,7 +35,7 @@ interface UserProfile {
   invited_by?: string;
 }
 
-import { inviteUserAction } from './actions';
+import { inviteUserAction, getUsersAction, deleteUserAction, updateUserAction } from './actions';
 
 export default function UsersPage() {
   const { role, isAdmin } = useRole();
@@ -90,34 +90,14 @@ export default function UsersPage() {
         setIsLoading(true);
         console.log('[UsersPage] Fetching from user_profiles...');
         
-        // Fetch all users
-        const { data: usersData, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // Fetch all users using Server Action to bypass RLS
+        const usersData = await getUsersAction();
         
-        if (error) {
-          console.error('[UsersPage] Error loading users:', error);
-          console.error('[UsersPage] Error details:', error.message, error.details);
-          // Try fetching without ordering as fallback
-          console.log('[UsersPage] Trying fallback query...');
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from('user_profiles')
-            .select('id, email, name, role, status, created_at, avatar_url, last_login_at, login_count, status_reason');
-          
-          if (fallbackError) {
-            console.error('[UsersPage] Fallback also failed:', fallbackError);
-          } else {
-            console.log('[UsersPage] Fallback succeeded, loaded:', fallbackData?.length || 0);
-            setUsers(fallbackData || []);
-          }
-        } else {
-          console.log('[UsersPage] Loaded users:', usersData?.length || 0);
-          if (usersData && usersData.length > 0) {
-            console.log('[UsersPage] First user:', usersData[0].email, usersData[0].name);
-          }
-          setUsers(usersData || []);
+        console.log('[UsersPage] Loaded users:', usersData?.length || 0);
+        if (usersData && usersData.length > 0) {
+          console.log('[UsersPage] First user:', usersData[0].email, usersData[0].name);
         }
+        setUsers(usersData || []);
       } catch (error: any) {
         console.error('[UsersPage] Exception loading users:', error);
       } finally {
@@ -235,10 +215,7 @@ export default function UsersPage() {
       if (data?.id && selectedPhoto) {
         avatarUrl = await uploadPhoto(data.id);
         if (avatarUrl) {
-          await supabase
-            .from('user_profiles')
-            .update({ avatar_url: avatarUrl })
-            .eq('id', data.id);
+          await updateUserAction(data.id, { avatar_url: avatarUrl });
         }
       }
 
@@ -248,10 +225,7 @@ export default function UsersPage() {
         description: `Invitation sent to ${userData.email}`
       });
       // Refresh users list
-      const { data: updatedUsers } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const updatedUsers = await getUsersAction();
       
       setUsers(updatedUsers || []);
       setIsAddDialogOpen(false);
@@ -288,20 +262,11 @@ export default function UsersPage() {
     if (!confirm('Are you sure you want to delete this user?')) return;
     
     try {
-      // Hard delete - remove user completely
-      const { error } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', userId);
-        
-      if (error) throw error;
+      // Hard delete - remove user completely using Server Action
+      await deleteUserAction(userId);
       
       // Refresh users list
-      const { data: updatedUsers } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+      const updatedUsers = await getUsersAction();
       setUsers(updatedUsers || []);
       console.log('User deleted successfully');
     } catch (error: any) {
@@ -344,30 +309,18 @@ export default function UsersPage() {
         return;
       }
 
-      const { error } = await supabase
-        .from('user_profiles')
-        .update(updateData)
-        .eq('id', editingUser.id);
-
-      if (error) throw error;
+      await updateUserAction(editingUser.id, updateData);
 
       // Upload new photo if selected
       if (selectedPhoto) {
         const avatarUrl = await uploadPhoto(editingUser.id);
         if (avatarUrl) {
-          await supabase
-            .from('user_profiles')
-            .update({ avatar_url: avatarUrl })
-            .eq('id', editingUser.id);
+          await updateUserAction(editingUser.id, { avatar_url: avatarUrl });
         }
       }
 
       // Refresh users list
-      const { data: updatedUsers } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const updatedUsers = await getUsersAction();
       setUsers(updatedUsers || []);
       setIsEditDialogOpen(false);
       setEditingUser(null);
@@ -399,18 +352,8 @@ export default function UsersPage() {
                   if (!user) return;
                   try {
                     setIsLoading(true);
-                    const { data: usersData, error } = await supabase
-                      .from('user_profiles')
-                      .select('*')
-                      .order('created_at', { ascending: false });
-                    
-                    if (error) {
-                      console.error('[UsersPage] Refresh error:', error);
-                      alert('Error loading users: ' + error.message);
-                    } else {
-                      console.log('[UsersPage] Refreshed, loaded:', usersData?.length || 0);
-                      setUsers(usersData || []);
-                    }
+                    const usersData = await getUsersAction();
+                    setUsers(usersData || []);
                   } catch (error: any) {
                     console.error('[UsersPage] Refresh exception:', error);
                     alert('Error: ' + error.message);
