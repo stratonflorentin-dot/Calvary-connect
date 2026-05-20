@@ -69,7 +69,6 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     const tileLayerRef = useRef<import("leaflet").TileLayer | null>(null);
     const initRef = useRef(false);
     const [mapReady, setMapReady] = useState(false);
-    const [tilesLoaded, setTilesLoaded] = useState(false);
     const lastFitCountRef = useRef(0);
 
     const fitAllDrivers = () => {
@@ -130,7 +129,6 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
 
           const layer = L.tileLayer(cfg.url, cfg.options);
-          layer.on("load", () => setTilesLoaded(true));
           layer.on("tileerror", () => {
             if (switchedProvider) return;
             fallbackIndex += 1;
@@ -216,7 +214,6 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         markersRef.current.clear();
         initRef.current = false;
         setMapReady(false);
-        setTilesLoaded(false);
       };
     }, [defaultCenter]);
 
@@ -302,9 +299,9 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
     return (
       <div className="absolute inset-0 z-[1] h-full w-full min-h-[400px]">
-        {!tilesLoaded && (
-          <div className="absolute inset-0 z-[2] flex items-center justify-center bg-slate-200/80 pointer-events-none">
-            <p className="text-sm font-medium text-slate-600">Loading map tiles…</p>
+        {!mapReady && (
+          <div className="absolute inset-0 z-[2] flex items-center justify-center bg-slate-200/60 pointer-events-none">
+            <p className="text-sm font-medium text-slate-600">Starting map…</p>
           </div>
         )}
         <div ref={mapRef} className="h-full w-full min-h-[400px]" />

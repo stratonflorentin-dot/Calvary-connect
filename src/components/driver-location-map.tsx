@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
 import { supabase } from "@/lib/supabase";
 import { useRole } from "@/hooks/use-role";
+import { useSupabase } from "@/components/supabase-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Users, Navigation, Loader2 } from "lucide-react";
@@ -14,7 +15,8 @@ import { Button } from "@/components/ui/button";
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 export function DriverLocationMap() {
-  const { role, isAdmin } = useRole();
+  const { user } = useSupabase();
+  const { role, isAdmin, actualRole } = useRole();
   const [locations, setLocations] = useState<
     Awaited<ReturnType<typeof getDriverLocationsForMapAction>>["locations"]
   >([]);
@@ -25,18 +27,19 @@ export function DriverLocationMap() {
     isAdmin || ["CEO", "ADMIN", "HR", "OPERATOR"].includes(role || "");
 
   const fetchDriverLocations = useCallback(async () => {
+    if (!user?.email) return;
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
+      let token = sessionData.session?.access_token ?? null;
       if (!token) {
-        setLoadError("Sign in required");
-        setLocations([]);
-        return;
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        token = refreshed.session?.access_token ?? null;
       }
-      const { data: { user: authUser } } = await supabase.auth.getUser();
       const { locations: rows, error } = await getDriverLocationsForMapAction(
         token,
-        authUser?.email ?? null,
+        user.email,
+        actualRole || role || undefined,
+        isAdmin,
       );
       if (error) setLoadError(error);
       else setLoadError(null);
@@ -47,7 +50,7 @@ export function DriverLocationMap() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user, actualRole, role, isAdmin]);
 
   useEffect(() => {
     if (!canView) return;
@@ -65,7 +68,7 @@ export function DriverLocationMap() {
       sub.unsubscribe();
       clearInterval(poll);
     };
-  }, [canView, fetchDriverLocations]);
+  }, [canView, fetchDriverLocations, user?.email]);
 
   if (!canView) return null;
 

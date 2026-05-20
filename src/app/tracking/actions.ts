@@ -34,23 +34,40 @@ async function verifyManager(
   admin: ReturnType<typeof getAdminClient>,
   userId?: string,
   email?: string | null,
+  clientRole?: string | null,
+  isAdminBypass?: boolean,
 ) {
   if (email && isPrimaryOwnerEmail(email)) return true;
+  if (isAdminBypass) return true;
+  if (
+    clientRole &&
+    isManagerRole(clientRole) &&
+    email &&
+    (userId || email)
+  ) {
+    const { data: profile } = await admin
+      .from("user_profiles")
+      .select("role")
+      .ilike("email", email.toLowerCase().trim())
+      .maybeSingle();
+    if (profile && isManagerRole(profile.role)) return true;
+  }
 
   if (userId) {
     const { data: profile } = await admin
       .from("user_profiles")
-      .select("role")
+      .select("role, email")
       .eq("id", userId)
       .maybeSingle();
     if (profile && isManagerRole(profile.role)) return true;
   }
 
   if (email) {
+    const normalized = email.toLowerCase().trim();
     const { data: profile } = await admin
       .from("user_profiles")
-      .select("role")
-      .ilike("email", email.toLowerCase().trim())
+      .select("role, email")
+      .ilike("email", normalized)
       .maybeSingle();
     if (profile && isManagerRole(profile.role)) return true;
   }
@@ -258,10 +275,12 @@ async function fetchMapLocationsInternal(
   return { locations, driversWithoutGps };
 }
 
-/** Fleet map: load driver locations (service role). Token or manager email required. */
+/** Fleet map: same driver GPS data for CEO, Admin, HR, Operator (service role). */
 export async function getDriverLocationsForMapAction(
   accessToken?: string | null,
   managerEmail?: string | null,
+  managerRole?: string | null,
+  isAdminBypass?: boolean,
 ): Promise<{
   locations: MapDriverLocation[];
   driversWithoutGps?: string[];
@@ -269,13 +288,45 @@ export async function getDriverLocationsForMapAction(
 }> {
   try {
     const admin = getAdminClient();
+    let verified = false;
 
     if (accessToken) {
-      const { user } = await resolveAuthUser(accessToken);
-      await verifyManager(admin, user.id, user.email);
-    } else if (managerEmail) {
-      await verifyManager(admin, undefined, managerEmail);
-    } else {
+      try {
+        const { user } = await resolveAuthUser(accessToken);
+        await verifyManager(
+          admin,
+          user.id,
+          user.email || managerEmail,
+          managerRole,
+          isAdminBypass,
+        );
+        verified = true;
+      } catch {
+        if (managerEmail) {
+          await verifyManager(
+            admin,
+            undefined,
+            managerEmail,
+            managerRole,
+            isAdminBypass,
+          );
+          verified = true;
+        }
+      }
+    }
+
+    if (!verified && managerEmail) {
+      await verifyManager(
+        admin,
+        undefined,
+        managerEmail,
+        managerRole,
+        isAdminBypass,
+      );
+      verified = true;
+    }
+
+    if (!verified) {
       return { locations: [], error: "Not signed in" };
     }
 
