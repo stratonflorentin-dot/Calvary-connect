@@ -217,13 +217,9 @@ export default function FleetMapView({
   const canvasRef = useRef<FleetMapCanvasHandle>(null);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(true);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
-  useEffect(() => {
-    if (locations.length > 0 && !selectedId) {
-      setSelectedId(locations[0].id);
-    }
-  }, [locations, selectedId]);
+  // Removed auto-selection to allow users to see the full map on load
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -260,7 +256,12 @@ export default function FleetMapView({
       />
 
       {/* Top bar — search & live stats */}
-      <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col sm:flex-row gap-3 pointer-events-none max-w-[calc(100vw-2rem)]">
+      <div
+        className={cn(
+          "absolute top-4 left-4 right-4 z-[1000] gap-3 pointer-events-none max-w-[calc(100vw-2rem)]",
+          selected ? "hidden md:flex flex-col sm:flex-row" : "flex flex-col sm:flex-row"
+        )}
+      >
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -402,7 +403,12 @@ export default function FleetMapView({
       </div>
 
       {/* Bottom — driver list + mobile legend */}
-      <div className="absolute bottom-4 left-4 right-4 z-[1000] flex flex-col gap-3 pointer-events-none md:pr-[340px]">
+      <div
+        className={cn(
+          "absolute bottom-4 left-4 right-4 z-[1000] gap-3 pointer-events-none md:pr-[340px]",
+          selected ? "hidden md:flex flex-col" : "flex flex-col"
+        )}
+      >
         <div className="lg:hidden pointer-events-auto">
           <div className={cn(glass, "rounded-xl px-3 py-2 inline-flex flex-wrap gap-3")}>
             <LegendItem color="bg-emerald-500" label="Online" />

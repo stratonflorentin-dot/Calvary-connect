@@ -245,14 +245,35 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
             iconAnchor: DRIVER_MARKER_ANCHOR,
           });
 
+          const stateKey = `${loc.isOnline}-${isSelected}`;
+
           const existing = markersRef.current.get(loc.id);
 
           if (existing) {
             existing.setLatLng([loc.latitude, loc.longitude]);
-            existing.setIcon(icon);
             existing.setZIndexOffset(
               isSelected ? 2000 : loc.isOnline ? 1000 : 100,
             );
+
+            if ((existing as any)._customStateKey !== stateKey) {
+              existing.setIcon(icon);
+              (existing as any)._customStateKey = stateKey;
+            }
+
+            const popup = existing.getPopup();
+            if (popup) {
+              const newHtml = popupHtml({
+                driverName: loc.driverName,
+                isOnline: loc.isOnline,
+                vehiclePlate: loc.vehiclePlate,
+                speed: loc.speed,
+                lastUpdate: loc.lastUpdate,
+              });
+              if ((existing as any)._lastPopupHtml !== newHtml) {
+                popup.setContent(newHtml);
+                (existing as any)._lastPopupHtml = newHtml;
+              }
+            }
             return;
           }
 
@@ -261,15 +282,21 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
             zIndexOffset: isSelected ? 2000 : loc.isOnline ? 1000 : 100,
           }).addTo(map);
 
+          (marker as any)._customStateKey = stateKey;
+
+          const initialPopupHtml = popupHtml({
+            driverName: loc.driverName,
+            isOnline: loc.isOnline,
+            vehiclePlate: loc.vehiclePlate,
+            speed: loc.speed,
+            lastUpdate: loc.lastUpdate,
+          });
+          
+          (marker as any)._lastPopupHtml = initialPopupHtml;
+
           marker.bindPopup(
-            popupHtml({
-              driverName: loc.driverName,
-              isOnline: loc.isOnline,
-              vehiclePlate: loc.vehiclePlate,
-              speed: loc.speed,
-              lastUpdate: loc.lastUpdate,
-            }),
-            { className: "fleet-popup", maxWidth: 280 },
+            initialPopupHtml,
+            { className: "fleet-popup", maxWidth: 280, autoPan: false },
           );
 
           marker.on("click", () => onSelectDriver(loc));
@@ -278,7 +305,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
         if (
           locations.length > 0 &&
-          locations.length !== lastFitCountRef.current
+          lastFitCountRef.current === 0
         ) {
           lastFitCountRef.current = locations.length;
           fitAllDrivers();
@@ -290,15 +317,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       sync();
     }, [locations, selectedId, onSelectDriver, mapReady]);
 
-    useEffect(() => {
-      if (!mapReady || !selectedId) return;
-      const loc = locations.find((l) => l.id === selectedId);
-      if (loc && mapInstanceRef.current) {
-        mapInstanceRef.current.flyTo([loc.latitude, loc.longitude], 15, {
-          duration: 0.6,
-        });
-      }
-    }, [selectedId, locations, mapReady]);
+    // Removed automatic flyTo on locations change to prevent map jumping during realtime updates
 
     return (
       <div className="absolute inset-0 z-[1] h-full w-full min-h-[400px]">
