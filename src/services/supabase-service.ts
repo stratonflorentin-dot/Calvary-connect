@@ -54,14 +54,14 @@ export class SupabaseService {
     if (error) throw error;
     return data || [];
   }
-    
+    static async getVehicles(filters?: { type?: string; status?: string }) {
+    let query = supabase.from('vehicles').select('*');
     if (filters?.type) {
       query = query.eq('type', filters.type);
     }
     if (filters?.status) {
       query = query.eq('status', filters.status);
     }
-    
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
