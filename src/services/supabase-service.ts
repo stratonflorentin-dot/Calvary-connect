@@ -45,8 +45,15 @@ export class SupabaseService {
   }
 
   // Fleet Vehicle Management
-  static async getVehicles(filters?: { type?: FleetType; status?: string }) {
-    let query = supabase.from('vehicles').select('*');
+  static async getDrivers() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'driver')
+      .order('first_name', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
     
     if (filters?.type) {
       query = query.eq('type', filters.type);

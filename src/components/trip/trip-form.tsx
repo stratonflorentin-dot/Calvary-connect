@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FleetService } from '@/services/fleet-service';
+import { useDrivers } from '@/hooks/use-drivers';
+
 import { FleetVehicle } from '@/types/roles';
 import { Truck, Package, Car, Wrench } from 'lucide-react';
 
