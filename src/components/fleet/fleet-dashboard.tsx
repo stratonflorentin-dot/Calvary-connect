@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { useRole } from '@/hooks/use-role';
+import { getUsersAction } from '@/app/users/actions';
 import { AddVehicleDialog } from '@/components/fleet/add-vehicle-dialog';
 import { VehicleDetailsDialog } from '@/components/fleet/vehicle-details-dialog';
 import { 
@@ -120,29 +121,10 @@ export function FleetDashboard() {
   // Open assign dialog and load available drivers
   const openAssignDialog = async () => {
     try {
-      // Load available drivers (users with DRIVER role who are not assigned to a vehicle)
-      const { data: driversData, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('role', 'DRIVER');
-      
-      if (error) {
-        console.error('Error loading drivers:', error);
-        // Try alternative query if table structure is different
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('*');
-        
-        if (profiles) {
-          const driverProfiles = profiles.filter((p: any) => 
-            p.role === 'DRIVER' || p.user_role === 'DRIVER'
-          );
-          setDrivers(driverProfiles);
-        }
-      } else {
-        setDrivers(driversData || []);
-      }
-      
+      // Load available drivers using server action to bypass RLS
+      const allUsers = await getUsersAction();
+      const driversData = allUsers?.filter((u: any) => u.role === 'DRIVER') || [];
+      setDrivers(driversData);
       setAssignOpen(true);
     } catch (error) {
       console.error('Error opening assign dialog:', error);

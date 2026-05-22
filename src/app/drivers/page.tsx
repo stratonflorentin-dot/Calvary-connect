@@ -7,6 +7,7 @@ import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getUsersAction } from "@/app/users/actions";
 
 export default function DriversPage() {
     const { role } = useRole();
@@ -17,12 +18,16 @@ export default function DriversPage() {
     useEffect(() => {
         const loadDrivers = async () => {
             setLoading(true);
-            const { data, error } = await supabase
-                .from("user_profiles")
-                .select("*")
-                .eq("role", "DRIVER");
-            setDrivers(data || []);
-            setLoading(false);
+            try {
+                const allUsers = await getUsersAction();
+                const driversData = allUsers?.filter((u: any) => u.role === 'DRIVER') || [];
+                setDrivers(driversData);
+            } catch (error) {
+                console.error("Error loading drivers:", error);
+                setDrivers([]);
+            } finally {
+                setLoading(false);
+            }
         };
         loadDrivers();
     }, []);

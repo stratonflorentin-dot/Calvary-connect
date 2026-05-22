@@ -19,6 +19,7 @@ import { Route, Plus, Trash2, Pencil, UserX, MapPin, Search, CalendarDays } from
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { africanCities, City, getCityByName, calculateDistance, getEstimatedTime } from '@/lib/african-cities';
+import { getUsersAction } from '@/app/users/actions';
 
 export default function TripsPage() {
   const { role, isAdmin, isInitialized } = useRole();
@@ -105,17 +106,24 @@ export default function TripsPage() {
       setIsLoading(true);
 
       try {
-        const [{ data: tripsData }, { data: vehiclesData }, { data: trailersData }, { data: driversData }] = await Promise.all([
+        const [
+          { data: tripsData }, 
+          { data: vehiclesData }, 
+          { data: trailersData }, 
+          allUsers
+        ] = await Promise.all([
           supabase.from('trips').select('*').order('created_at', { ascending: false }),
           supabase.from('vehicles').select('*').in('type', ['DUMP_TRUCK', 'TRUCK_HEAD', 'ESCORT_CAR']),
           supabase.from('vehicles').select('*').eq('type', 'TRAILER'),
-          supabase.from('user_profiles').select('*').eq('role', 'DRIVER')
+          getUsersAction()
         ]);
+
+        const driversData = allUsers?.filter((u: any) => u.role === 'DRIVER') || [];
 
         setTrips(tripsData || []);
         setVehicles(vehiclesData || []);
         setTrailers(trailersData || []);
-        setDrivers(driversData || []);
+        setDrivers(driversData);
       } catch (error) {
         console.error('[TripsPage] Error loading data:', error);
       } finally {

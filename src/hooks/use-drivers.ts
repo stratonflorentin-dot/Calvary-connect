@@ -12,10 +12,10 @@ export function useDrivers() {
     setError(null);
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('*')
-        .ilike('role', 'driver')
-        .order('first_name', { ascending: true });
+        .eq('role', 'DRIVER')
+        .order('name', { ascending: true });
       if (error) throw error;
       setDrivers(data as UserProfile[]);
     } catch (e: any) {
