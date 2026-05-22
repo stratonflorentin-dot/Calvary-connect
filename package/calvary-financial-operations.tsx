@@ -301,8 +301,6 @@ export function FinancialOperations() {
       calculateStats(invoicesData || [], expensesData || [], bankData || []);
     } catch (error) {
       console.error('Load error:', error);
-      // Use mock data for demo
-      loadMockData();
     } finally {
       setIsLoading(false);
     }
@@ -337,66 +335,6 @@ export function FinancialOperations() {
       fuelCosts,
       driverCosts,
       maintenanceCosts,
-    });
-  };
-
-  const loadMockData = () => {
-    // Mock invoices
-    setInvoices([
-      { id: '1', invoice_number: 'INV-2024-001', client_name: 'Tata Tanzania Ltd', total_amount: 2500000, due_date: '2024-02-15', status: 'paid', amount_paid: 2500000, created_at: '2024-01-15' },
-      { id: '2', invoice_number: 'INV-2024-002', client_name: 'Bamboo Foods Ltd', total_amount: 1800000, due_date: '2024-02-20', status: 'awaiting-payment', created_at: '2024-01-20' },
-      { id: '3', invoice_number: 'INV-2024-003', client_name: 'Dar Logistics Co', total_amount: 3200000, due_date: '2024-01-10', status: 'overdue', created_at: '2024-01-05' },
-      { id: '4', invoice_number: 'INV-2024-004', client_name: 'Safari Cement', total_amount: 4500000, due_date: '2024-03-01', status: 'sent', created_at: '2024-02-01' },
-      { id: '5', invoice_number: 'INV-2024-005', client_name: 'East Africa Mining', total_amount: 6000000, due_date: '2024-03-15', status: 'draft', created_at: '2024-02-10' },
-    ]);
-
-    // Mock expenses
-    setExpenses([
-      { id: '1', expense_number: 'EXP-001', category: 'FUEL', description: 'Fuel - TZG 123', amount: 850000, date: '2024-02-01', status: 'approved', vehicle_plate: 'TZG 123' },
-      { id: '2', expense_number: 'EXP-002', category: 'DRIVER_ALLOWANCE', description: 'Driver allowance - Arusha trip', amount: 350000, date: '2024-02-02', status: 'approved' },
-      { id: '3', expense_number: 'EXP-003', category: 'MAINTENANCE', description: 'Oil change - TZG 456', amount: 250000, date: '2024-02-03', status: 'approved', vehicle_plate: 'TZG 456' },
-      { id: '4', expense_number: 'EXP-004', category: 'TOLL', description: 'Toll - Namanga border', amount: 150000, date: '2024-02-04', status: 'approved' },
-      { id: '5', expense_number: 'EXP-005', category: 'FUEL', description: 'Fuel - TZG 789', amount: 920000, date: '2024-02-05', status: 'pending', vehicle_plate: 'TZG 789' },
-      { id: '6', expense_number: 'EXP-006', category: 'INSURANCE', description: 'Vehicle insurance renewal', amount: 1500000, date: '2024-02-06', status: 'approved' },
-    ]);
-
-    // Mock journal entries
-    setJournalEntries([
-      { id: '1', entry_number: 'JE-2024-001', entry_date: '2024-02-01', description: 'Fuel expense - TZG 123', total_debit: 850000, total_credit: 850000, is_posted: true, source: 'expense', created_at: '2024-02-01' },
-      { id: '2', entry_number: 'JE-2024-002', entry_date: '2024-02-02', description: 'Client payment received', total_debit: 2500000, total_credit: 2500000, is_posted: true, source: 'invoice', created_at: '2024-02-02' },
-      { id: '3', entry_number: 'JE-2024-003', entry_date: '2024-02-03', description: 'Driver allowance - Mwanza trip', total_debit: 350000, total_credit: 350000, is_posted: true, source: 'expense', created_at: '2024-02-03' },
-    ]);
-
-    // Mock bank accounts
-    setBankAccounts([
-      { id: '1', account_name: 'Operating Account', bank_name: 'NMB Bank', account_number: '****4521', account_type: 'Checking', currency: 'TZS', current_balance: 15450000, is_active: true },
-      { id: '2', account_name: 'Fuel Account', bank_name: 'CRDB Bank', account_number: '****7832', account_type: 'Savings', currency: 'TZS', current_balance: 3500000, is_active: true },
-    ]);
-
-    // Mock accounts (chart of accounts)
-    setAccounts([
-      { id: '1', code: '1001', name: 'Cash - NMB Operating', category: 'ASSETS', type: 'debit', current_balance: 15450000, is_active: true, currency: 'TZS' },
-      { id: '2', code: '1002', name: 'Cash - CRDB Fuel', category: 'ASSETS', type: 'debit', current_balance: 3500000, is_active: true, currency: 'TZS' },
-      { id: '3', code: '2001', name: 'Accounts Payable', category: 'LIABILITIES', type: 'credit', current_balance: 2500000, is_active: true, currency: 'TZS' },
-      { id: '4', code: '4001', name: 'Local Delivery Revenue', category: 'REVENUE', type: 'credit', current_balance: 12500000, is_active: true, currency: 'TZS' },
-      { id: '5', code: '4002', name: 'Transit Revenue', category: 'REVENUE', type: 'credit', current_balance: 8500000, is_active: true, currency: 'TZS' },
-      { id: '6', code: '5001', name: 'Fuel Expenses', category: 'OPERATING_EXPENSES', type: 'debit', current_balance: 3200000, is_active: true, currency: 'TZS' },
-      { id: '7', code: '5002', name: 'Driver Allowances', category: 'OPERATING_EXPENSES', type: 'debit', current_balance: 1800000, is_active: true, currency: 'TZS' },
-      { id: '8', code: '5003', name: 'Vehicle Maintenance', category: 'OPERATING_EXPENSES', type: 'debit', current_balance: 950000, is_active: true, currency: 'TZS' },
-    ]);
-
-    // Mock stats
-    setStats({
-      totalRevenue: 21000000,
-      totalExpenses: 5950000,
-      netProfit: 15050000,
-      profitMargin: 71.7,
-      pendingInvoices: 4,
-      pendingAmount: 15500000,
-      cashBalance: 18950000,
-      fuelCosts: 3200000,
-      driverCosts: 1800000,
-      maintenanceCosts: 950000,
     });
   };
 

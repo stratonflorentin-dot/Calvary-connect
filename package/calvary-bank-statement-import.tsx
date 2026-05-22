@@ -103,20 +103,10 @@ export function BankStatementImport() {
   const loadBankAccounts = async () => {
     try {
       const { data } = await supabase.from('bank_accounts').select('*').eq('is_active', true);
-      if (data && data.length > 0) {
-        setBankAccounts(data);
-      } else {
-        // Default accounts
-        setBankAccounts([
-          { id: '1', account_name: 'Operating Account', bank_name: 'NMB Bank', account_number: '4521', account_type: 'Checking', currency: 'TZS', current_balance: 15450000, is_active: true },
-          { id: '2', account_name: 'Fuel Account', bank_name: 'CRDB Bank', account_number: '7832', account_type: 'Savings', currency: 'TZS', current_balance: 3500000, is_active: true },
-        ]);
-      }
+      setBankAccounts(data || []);
     } catch (error) {
-      setBankAccounts([
-        { id: '1', account_name: 'Operating Account', bank_name: 'NMB Bank', account_number: '4521', account_type: 'Checking', currency: 'TZS', current_balance: 15450000, is_active: true },
-        { id: '2', account_name: 'Fuel Account', bank_name: 'CRDB Bank', account_number: '7832', account_type: 'Savings', currency: 'TZS', current_balance: 3500000, is_active: true },
-      ]);
+      console.error('Error loading bank accounts:', error);
+      setBankAccounts([]);
     }
   };
 
@@ -129,13 +119,8 @@ export function BankStatementImport() {
         .limit(100);
       setImportedTransactions(data || []);
     } catch (error) {
-      // Mock data
-      setImportedTransactions([
-        { id: '1', bank_account_id: '1', transaction_date: '2024-02-01', description: 'Client Payment - Tata Tanzania', reference_number: 'INV-2024-001', credit_amount: 2500000, balance: 17500000, transaction_type: 'deposit', reconciled: true, created_at: '2024-02-01' },
-        { id: '2', bank_account_id: '1', transaction_date: '2024-02-02', description: 'Fuel Purchase - Shell Dar', debit_amount: 850000, balance: 16650000, transaction_type: 'withdrawal', reconciled: true, created_at: '2024-02-02' },
-        { id: '3', bank_account_id: '1', transaction_date: '2024-02-03', description: 'Driver Allowance Transfer', debit_amount: 350000, balance: 16300000, transaction_type: 'withdrawal', reconciled: false, created_at: '2024-02-03' },
-        { id: '4', bank_account_id: '1', transaction_date: '2024-02-05', description: 'Client Payment - Bamboo Foods', credit_amount: 1800000, balance: 18100000, transaction_type: 'deposit', reconciled: false, created_at: '2024-02-05' },
-      ]);
+      console.error('Error loading transactions:', error);
+      setImportedTransactions([]);
     }
   };
 

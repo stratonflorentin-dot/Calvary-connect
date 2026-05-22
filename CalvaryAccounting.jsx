@@ -20,193 +20,11 @@ const fmtCur = (n, cur = "TZS") => {
   return fmtTZS(n);
 };
 const todayStr = () => new Date().toISOString().split("T")[0];
-const NOW = new Date("2026-05-20");
+const NOW = new Date();
 const RATES = { TZS: 1, USD: 2600, KES: 20, ZMW: 140, UGX: 0.71 };
 
-const SEED_ACCOUNTS = [
-  {
-    id: "acc-usd", name: "NMB Bank – USD Account", currency: "USD",
-    account_number: "011-USD-456-7890", bank: "NMB Bank Tanzania",
-    swift: "NMIBTZTZ", branch: "DSM City Branch", balance: 45200,
-    transactions: [
-      { id: "ut1", date: "2026-05-15", description: "Congo Mining Corp – Freight",      type: "credit", amount: 6923.08, ref: "TRF-001", category: "Freight Revenue" },
-      { id: "ut2", date: "2026-05-12", description: "Zambia Breweries – CAL-2026-001",  type: "credit", amount: 4807.69, ref: "TRF-002", category: "Freight Revenue" },
-      { id: "ut3", date: "2026-05-10", description: "Fuel purchase – Lusaka",           type: "debit",  amount:  692.31, ref: "TRF-003", category: "Fuel" },
-      { id: "ut4", date: "2026-05-08", description: "Kenya Fresh Ltd – Cold chain",     type: "credit", amount: 2384.62, ref: "TRF-004", category: "Freight Revenue" },
-      { id: "ut5", date: "2026-05-01", description: "Bank service charges – May",       type: "debit",  amount:   25.00, ref: "CHG-001", category: "Bank Charges" },
-      { id: "ut6", date: "2026-04-28", description: "International transfer from HQ",  type: "credit", amount: 10000.00, ref: "TRF-005", category: "Capital" },
-      { id: "ut7", date: "2026-04-20", description: "Fleet insurance premium – Q2",    type: "debit",  amount:  850.00, ref: "INS-001", category: "Insurance" },
-    ],
-  },
-  {
-    id: "acc-tzs", name: "NMB Bank – TZS Account", currency: "TZS",
-    account_number: "011-TZS-654-3210", bank: "NMB Bank Tanzania",
-    swift: "NMIBTZTZ", branch: "DSM City Branch", balance: 187500000,
-    transactions: [
-      { id: "tt1", date: "2026-05-15", description: "Govt of Tanzania – Invoice",       type: "credit", amount: 3100000, ref: "GOV-001", category: "Freight Revenue" },
-      { id: "tt2", date: "2026-05-14", description: "Lake Victoria Trading – Freight",  type: "credit", amount: 4800000, ref: "TRF-006", category: "Freight Revenue" },
-      { id: "tt3", date: "2026-05-13", description: "Driver allowances – May batch",    type: "debit",  amount: 1800000, ref: "PAY-001", category: "Allowances" },
-      { id: "tt4", date: "2026-05-12", description: "Tire replacement – T 567 DEF",    type: "debit",  amount: 1200000, ref: "MNT-001", category: "Maintenance" },
-      { id: "tt5", date: "2026-05-10", description: "TRA Border fees – Tunduma",        type: "debit",  amount:  850000, ref: "BDR-001", category: "Border Fees" },
-      { id: "tt6", date: "2026-05-09", description: "TANROADS toll – Morogoro",         type: "debit",  amount:  220000, ref: "TOL-001", category: "Toll" },
-      { id: "tt7", date: "2026-05-08", description: "Uganda Grains – Advance payment", type: "credit", amount: 4200000, ref: "TRF-007", category: "Freight Revenue" },
-      { id: "tt8", date: "2026-05-05", description: "Oryx Fuel Station – Diesel",      type: "debit",  amount: 2500000, ref: "FUL-001", category: "Fuel" },
-      { id: "tt9", date: "2026-05-01", description: "TRA – Q1 2026 VAT Payment",       type: "debit",  amount: 2800000, ref: "TAX-001", category: "Tax" },
-    ],
-  },
-];
-
-const SEED_EXPENSES = [
-  { id: "e1", category: "fuel",        vehicle: "T 234 ABC / Scania",   description: "Diesel – DSM to Tunduma route",       vendor: "Oryx Fuel Station", amount: 2500000, date: "2026-05-15", status: "approved", is_cross_border: false, border_point: "" },
-  { id: "e2", category: "border",      vehicle: "T 789 XYZ / Mercedes", description: "Border clearance fees – Tunduma",     vendor: "TRA Border Office", amount:  850000, date: "2026-05-14", status: "pending",  is_cross_border: true,  border_point: "Tunduma" },
-  { id: "e3", category: "maintenance", vehicle: "T 567 DEF / Volvo",    description: "Front-axle tire replacement",         vendor: "Calvary Workshop",  amount: 1200000, date: "2026-05-12", status: "approved", is_cross_border: false, border_point: "" },
-  { id: "e4", category: "allowance",   vehicle: "T 234 ABC / Scania",   description: "Driver daily allowance – 5 days",     vendor: "Internal Payroll",  amount:  180000, date: "2026-05-13", status: "approved", is_cross_border: false, border_point: "" },
-  { id: "e5", category: "customs",     vehicle: "T 999 GHI / MAN",      description: "Customs clearance – Kasumbalesa DRC", vendor: "DRC Customs Auth",  amount: 3200000, date: "2026-05-10", status: "approved", is_cross_border: true,  border_point: "Kasumbalesa" },
-];
-
-const SEED_REVENUE = [
-  { id: "r1", description: "Dar es Salaam → Lusaka",     client: "Zambia Breweries Ltd",  amount: 12500000, date: "2026-05-15", status: "paid",    cargo_type: "GENERAL", is_cross_border: true },
-  { id: "r2", description: "Dar es Salaam → Mwanza",     client: "Lake Victoria Trading", amount:  4800000, date: "2026-05-14", status: "paid",    cargo_type: "GENERAL", is_cross_border: false },
-  { id: "r3", description: "Dar es Salaam → Lubumbashi", client: "Congo Mining Corp",     amount: 18000000, date: "2026-05-12", status: "pending", cargo_type: "LOWBED",  is_cross_border: true },
-  { id: "r4", description: "Arusha → Nairobi",           client: "Kenya Fresh Ltd",       amount:  6200000, date: "2026-05-10", status: "paid",    cargo_type: "REEFER",  is_cross_border: true },
-];
-
-const SEED_INVOICES = [
-  { id: "i1", invoice_number: "CAL-2026-001", customer_name: "Zambia Breweries Ltd",  amount: 12500000, due_date: "2026-05-30", status: "pending", is_cross_border: true,  type: "receivable", linked_revenue: "r1" },
-  { id: "i2", invoice_number: "CAL-2026-002", customer_name: "Congo Mining Corp",     amount: 18000000, due_date: "2026-05-01", status: "pending", is_cross_border: true,  type: "receivable", linked_revenue: "r3" },
-  { id: "i3", invoice_number: "CAL-2026-003", customer_name: "Kenya Fresh Ltd",       amount:  6200000, due_date: "2026-04-01", status: "pending", is_cross_border: true,  type: "receivable", linked_revenue: "r4" },
-  { id: "i4", invoice_number: "CAL-2026-004", customer_name: "Uganda Grains Corp",    amount:  8400000, due_date: "2026-03-15", status: "pending", is_cross_border: true,  type: "receivable" },
-  { id: "i5", invoice_number: "BILL-2026-001", customer_name: "Oryx Fuel Station",   amount:  2500000, due_date: "2026-05-25", status: "pending", is_cross_border: false, type: "payable", linked_expense: "e1" },
-  { id: "i6", invoice_number: "BILL-2026-002", customer_name: "DRC Customs Auth",    amount:  3200000, due_date: "2026-04-15", status: "pending", is_cross_border: true,  type: "payable", linked_expense: "e5" },
-  { id: "i7", invoice_number: "BILL-2026-003", customer_name: "Calvary Workshop",    amount:  1200000, due_date: "2026-03-01", status: "paid",    is_cross_border: false, type: "payable", linked_expense: "e3" },
-];
-
-const SEED_TAXES = [
-  { id: "t1", tax_name: "Q1 2026 VAT Payment",   type: "VAT",  amount: 2800000, due_date: "2026-04-30", status: "paid"    },
-  { id: "t2", tax_name: "Q2 2026 PAYE – May",    type: "PAYE", amount:  950000, due_date: "2026-05-31", status: "pending" },
-  { id: "t3", tax_name: "Road Tax – Fleet 2026", type: "Road", amount: 1500000, due_date: "2026-06-15", status: "pending" },
-];
-
-const SEED_COA = [
-  // 1100 Current Assets
-  { code:"1101", name:"Cash on Hand",              type:"Asset", normal:"debit",  balance:0,          group:"Current Assets" },
-  { code:"1102", name:"Bank Account",              type:"Asset", normal:"debit",  balance:187500000,  group:"Current Assets" },
-  { code:"1103", name:"Mobile Money Account",      type:"Asset", normal:"debit",  balance:8500000,    group:"Current Assets" },
-  { code:"1104", name:"Accounts Receivable",       type:"Asset", normal:"debit",  balance:53000000,   group:"Current Assets" },
-  { code:"1105", name:"Prepaid Expenses",          type:"Asset", normal:"debit",  balance:1800000,    group:"Current Assets" },
-  { code:"1106", name:"Fuel Inventory",            type:"Asset", normal:"debit",  balance:3500000,    group:"Current Assets" },
-  { code:"1107", name:"Spare Parts Inventory",     type:"Asset", normal:"debit",  balance:2200000,    group:"Current Assets" },
-  { code:"1108", name:"VAT Receivable",            type:"Asset", normal:"debit",  balance:1100000,    group:"Current Assets" },
-  // 1200 Fixed Assets
-  { code:"1201", name:"Trucks and Trailers",       type:"Asset", normal:"debit",  balance:720000000,  group:"Fixed Assets" },
-  { code:"1202", name:"Motor Vehicles",            type:"Asset", normal:"debit",  balance:85000000,   group:"Fixed Assets" },
-  { code:"1203", name:"Office Equipment",          type:"Asset", normal:"debit",  balance:4500000,    group:"Fixed Assets" },
-  { code:"1204", name:"Computers and IT Equipment",type:"Asset", normal:"debit",  balance:3200000,    group:"Fixed Assets" },
-  { code:"1205", name:"Warehouse Equipment",       type:"Asset", normal:"debit",  balance:12000000,   group:"Fixed Assets" },
-  { code:"1206", name:"Furniture and Fixtures",    type:"Asset", normal:"debit",  balance:2800000,    group:"Fixed Assets" },
-  { code:"1207", name:"GPS Tracking Devices",      type:"Asset", normal:"debit",  balance:1500000,    group:"Fixed Assets" },
-  // 1300 Accumulated Depreciation
-  { code:"1301", name:"Accum. Depreciation – Trucks",    type:"Asset", normal:"credit", balance:-120000000, group:"Accumulated Depreciation" },
-  { code:"1302", name:"Accum. Depreciation – Vehicles",  type:"Asset", normal:"credit", balance:-18000000,  group:"Accumulated Depreciation" },
-  { code:"1303", name:"Accum. Depreciation – Equipment", type:"Asset", normal:"credit", balance:-4200000,   group:"Accumulated Depreciation" },
-  // 2100 Current Liabilities
-  { code:"2101", name:"Accounts Payable",          type:"Liability", normal:"credit", balance:8900000,  group:"Current Liabilities" },
-  { code:"2102", name:"Fuel Creditors",            type:"Liability", normal:"credit", balance:3200000,  group:"Current Liabilities" },
-  { code:"2103", name:"Driver Allowances Payable", type:"Liability", normal:"credit", balance:1800000,  group:"Current Liabilities" },
-  { code:"2104", name:"Salaries Payable",          type:"Liability", normal:"credit", balance:4500000,  group:"Current Liabilities" },
-  { code:"2105", name:"Tax Payable",               type:"Liability", normal:"credit", balance:2100000,  group:"Current Liabilities" },
-  { code:"2106", name:"VAT Payable",               type:"Liability", normal:"credit", balance:2800000,  group:"Current Liabilities" },
-  { code:"2107", name:"NHIF Payable",              type:"Liability", normal:"credit", balance:480000,   group:"Current Liabilities" },
-  { code:"2108", name:"NSSF Payable",              type:"Liability", normal:"credit", balance:720000,   group:"Current Liabilities" },
-  // 2200 Long Term Liabilities
-  { code:"2201", name:"Truck Loan",                type:"Liability", normal:"credit", balance:85000000, group:"Long Term Liabilities" },
-  { code:"2202", name:"Vehicle Financing",         type:"Liability", normal:"credit", balance:22000000, group:"Long Term Liabilities" },
-  { code:"2203", name:"Bank Loan",                 type:"Liability", normal:"credit", balance:40000000, group:"Long Term Liabilities" },
-  { code:"2204", name:"Lease Obligations",         type:"Liability", normal:"credit", balance:15000000, group:"Long Term Liabilities" },
-  // 3000 Equity
-  { code:"3101", name:"Owner Capital",             type:"Equity", normal:"credit", balance:750000000,  group:"Equity" },
-  { code:"3102", name:"Retained Earnings",         type:"Equity", normal:"credit", balance:42000000,   group:"Equity" },
-  { code:"3103", name:"Current Year Profit",       type:"Equity", normal:"credit", balance:0,          group:"Equity" },
-  { code:"3104", name:"Drawings",                  type:"Equity", normal:"debit",  balance:0,          group:"Equity" },
-  // 4100 Transport Revenue
-  { code:"4101", name:"Local Transport Revenue",        type:"Revenue", normal:"credit", balance:7900000,  group:"Transport Revenue" },
-  { code:"4102", name:"Cross Border Transport Revenue", type:"Revenue", normal:"credit", balance:45100000, group:"Transport Revenue" },
-  { code:"4103", name:"Container Transport Revenue",    type:"Revenue", normal:"credit", balance:12000000, group:"Transport Revenue" },
-  { code:"4104", name:"Loose Cargo Revenue",           type:"Revenue", normal:"credit", balance:3200000,  group:"Transport Revenue" },
-  { code:"4105", name:"Express Delivery Revenue",      type:"Revenue", normal:"credit", balance:1500000,  group:"Transport Revenue" },
-  { code:"4106", name:"Warehousing Revenue",           type:"Revenue", normal:"credit", balance:4800000,  group:"Transport Revenue" },
-  { code:"4107", name:"Loading and Offloading Revenue",type:"Revenue", normal:"credit", balance:1200000,  group:"Transport Revenue" },
-  { code:"4108", name:"Customs Clearing Revenue",      type:"Revenue", normal:"credit", balance:2600000,  group:"Transport Revenue" },
-  // 4200 Other Income
-  { code:"4201", name:"Fuel Surcharge Income",     type:"Revenue", normal:"credit", balance:1250000, group:"Other Income" },
-  { code:"4202", name:"Commission Income",         type:"Revenue", normal:"credit", balance:800000,  group:"Other Income" },
-  { code:"4203", name:"Rental Income",             type:"Revenue", normal:"credit", balance:600000,  group:"Other Income" },
-  { code:"4204", name:"Other Operating Income",    type:"Revenue", normal:"credit", balance:350000,  group:"Other Income" },
-  // 5000 Direct Logistics Costs
-  { code:"5101", name:"Fuel Expense",                  type:"Expense", normal:"debit", balance:18500000, group:"Direct Logistics Costs" },
-  { code:"5102", name:"Driver Salaries",               type:"Expense", normal:"debit", balance:12500000, group:"Direct Logistics Costs" },
-  { code:"5103", name:"Driver Allowances",             type:"Expense", normal:"debit", balance:3800000,  group:"Direct Logistics Costs" },
-  { code:"5104", name:"Truck Repairs",                 type:"Expense", normal:"debit", balance:4200000,  group:"Direct Logistics Costs" },
-  { code:"5105", name:"Tire Expense",                  type:"Expense", normal:"debit", balance:2800000,  group:"Direct Logistics Costs" },
-  { code:"5106", name:"Lubricants and Oil",            type:"Expense", normal:"debit", balance:980000,   group:"Direct Logistics Costs" },
-  { code:"5107", name:"Border and Port Charges",       type:"Expense", normal:"debit", balance:4050000,  group:"Direct Logistics Costs" },
-  { code:"5108", name:"Cargo Handling Expense",        type:"Expense", normal:"debit", balance:1200000,  group:"Direct Logistics Costs" },
-  { code:"5109", name:"Toll Fees",                     type:"Expense", normal:"debit", balance:220000,   group:"Direct Logistics Costs" },
-  { code:"5110", name:"Vehicle Insurance",             type:"Expense", normal:"debit", balance:3600000,  group:"Direct Logistics Costs" },
-  { code:"5111", name:"GPS Tracking Costs",            type:"Expense", normal:"debit", balance:480000,   group:"Direct Logistics Costs" },
-  { code:"5112", name:"Trip Loading Expenses",         type:"Expense", normal:"debit", balance:650000,   group:"Direct Logistics Costs" },
-  { code:"5113", name:"Freight Subcontractor Expense", type:"Expense", normal:"debit", balance:7200000,  group:"Direct Logistics Costs" },
-  // 6100 Office and Admin
-  { code:"6101", name:"Office Rent",               type:"Expense", normal:"debit", balance:3600000, group:"Office and Admin" },
-  { code:"6102", name:"Electricity and Water",     type:"Expense", normal:"debit", balance:840000,  group:"Office and Admin" },
-  { code:"6103", name:"Internet Expense",          type:"Expense", normal:"debit", balance:360000,  group:"Office and Admin" },
-  { code:"6104", name:"Telephone Expense",         type:"Expense", normal:"debit", balance:480000,  group:"Office and Admin" },
-  { code:"6105", name:"Office Supplies",           type:"Expense", normal:"debit", balance:220000,  group:"Office and Admin" },
-  { code:"6106", name:"Cleaning Expense",          type:"Expense", normal:"debit", balance:180000,  group:"Office and Admin" },
-  { code:"6107", name:"Security Expense",          type:"Expense", normal:"debit", balance:600000,  group:"Office and Admin" },
-  // 6200 Staff Costs
-  { code:"6201", name:"Office Salaries",           type:"Expense", normal:"debit", balance:8400000, group:"Staff Costs" },
-  { code:"6202", name:"Staff Welfare",             type:"Expense", normal:"debit", balance:420000,  group:"Staff Costs" },
-  { code:"6203", name:"Staff Training",            type:"Expense", normal:"debit", balance:280000,  group:"Staff Costs" },
-  { code:"6204", name:"Recruitment Expense",       type:"Expense", normal:"debit", balance:150000,  group:"Staff Costs" },
-  // 6300 Marketing
-  { code:"6301", name:"Advertising Expense",       type:"Expense", normal:"debit", balance:680000,  group:"Marketing" },
-  { code:"6302", name:"Branding Expense",          type:"Expense", normal:"debit", balance:320000,  group:"Marketing" },
-  { code:"6303", name:"Website Expense",           type:"Expense", normal:"debit", balance:180000,  group:"Marketing" },
-  { code:"6304", name:"Social Media Marketing",    type:"Expense", normal:"debit", balance:240000,  group:"Marketing" },
-  // 6400 Professional Fees
-  { code:"6401", name:"Legal Fees",                type:"Expense", normal:"debit", balance:850000,  group:"Professional Fees" },
-  { code:"6402", name:"Audit Fees",                type:"Expense", normal:"debit", balance:1200000, group:"Professional Fees" },
-  { code:"6403", name:"Consultancy Fees",          type:"Expense", normal:"debit", balance:500000,  group:"Professional Fees" },
-  // 6500 Finance Costs
-  { code:"6501", name:"Bank Charges",              type:"Expense", normal:"debit", balance:180000,  group:"Finance Costs" },
-  { code:"6502", name:"Loan Interest",             type:"Expense", normal:"debit", balance:2100000, group:"Finance Costs" },
-  { code:"6503", name:"Foreign Exchange Loss",     type:"Expense", normal:"debit", balance:420000,  group:"Finance Costs" },
-  // 7000 Taxes and Compliance
-  { code:"7101", name:"Corporate Tax Expense",     type:"Expense", normal:"debit", balance:0,       group:"Taxes and Compliance" },
-  { code:"7102", name:"Withholding Tax",           type:"Expense", normal:"debit", balance:380000,  group:"Taxes and Compliance" },
-  { code:"7103", name:"Business License Fees",     type:"Expense", normal:"debit", balance:250000,  group:"Taxes and Compliance" },
-  { code:"7104", name:"Road License Fees",         type:"Expense", normal:"debit", balance:480000,  group:"Taxes and Compliance" },
-  { code:"7105", name:"Regulatory Compliance Fees",type:"Expense", normal:"debit", balance:320000,  group:"Taxes and Compliance" },
-];
-
-const SEED_JOURNAL = [
-  { id:"je1", date:"2026-05-15", reference:"JE-001", description:"Cross-border freight revenue – Zambia Breweries Ltd",
-    lines:[{ account_code:"1104", account_name:"Accounts Receivable", debit:12500000, credit:0 },{ account_code:"4102", account_name:"Cross Border Transport Revenue", debit:0, credit:12500000 }] },
-  { id:"je2", date:"2026-05-14", reference:"JE-002", description:"Fuel expense – Oryx Fuel Station",
-    lines:[{ account_code:"5101", account_name:"Fuel Expense", debit:2500000, credit:0 },{ account_code:"1102", account_name:"Bank Account", debit:0, credit:2500000 }] },
-  { id:"je3", date:"2026-05-12", reference:"JE-003", description:"Border & port charges – Kasumbalesa DRC",
-    lines:[{ account_code:"5107", account_name:"Border and Port Charges", debit:3200000, credit:0 },{ account_code:"2101", account_name:"Accounts Payable", debit:0, credit:3200000 }] },
-  { id:"je4", date:"2026-05-10", reference:"JE-004", description:"Driver allowances – May batch",
-    lines:[{ account_code:"5103", account_name:"Driver Allowances", debit:1800000, credit:0 },{ account_code:"2103", account_name:"Driver Allowances Payable", debit:0, credit:1800000 }] },
-  { id:"je5", date:"2026-05-09", reference:"JE-005", description:"Tire replacement – T 567 DEF",
-    lines:[{ account_code:"5105", account_name:"Tire Expense", debit:1200000, credit:0 },{ account_code:"1102", account_name:"Bank Account", debit:0, credit:1200000 }] },
-  { id:"je6", date:"2026-05-01", reference:"JE-006", description:"VAT payable remittance – Q1 2026",
-    lines:[{ account_code:"2106", account_name:"VAT Payable", debit:2800000, credit:0 },{ account_code:"1102", account_name:"Bank Account", debit:0, credit:2800000 }] },
-];
-
-const VEHICLES  = ["T 234 ABC / Scania","T 789 XYZ / Mercedes","T 567 DEF / Volvo","T 999 GHI / MAN"];
-const BORDERS   = ["Kasumbalesa (DRC)","Tunduma (Zambia)","Sirari (Kenya)","Rusumo (Rwanda)","Mutukula (Uganda)"];
+const VEHICLES  = [];
+const BORDERS   = [];
 const COA_TYPES = ["Asset","Liability","Equity","Revenue","Expense"];
 const CURRENCIES= ["TZS","USD","KES","ZMW","UGX"];
 const TABS = [
@@ -319,12 +137,12 @@ export default function CalvaryAccounting() {
         supabase.from("journal_entries").select("*, journal_entry_lines(*)")
       ]);
 
-      setAccounts(accs.data || SEED_ACCOUNTS);
-      setExpenses(exps || SEED_EXPENSES);
-      setRevenue(revs.map(r => ({ ...r, amount: r.total_amount || r.amount })) || SEED_REVENUE);
-      setInvoices(invs || SEED_INVOICES);
-      setTaxes(txs || SEED_TAXES);
-      setCoa(coas.data || SEED_COA);
+      setAccounts(accs.data || []);
+      setExpenses(exps || []);
+      setRevenue(revs?.map(r => ({ ...r, amount: r.total_amount || r.amount })) || []);
+      setInvoices(invs || []);
+      setTaxes(txs || []);
+      setCoa(coas.data || []);
       setJournal(jrnls.data?.map(j => ({
         ...j,
         lines: j.journal_entry_lines?.map(l => ({
@@ -333,7 +151,7 @@ export default function CalvaryAccounting() {
           debit: l.debit_amount,
           credit: l.credit_amount
         }))
-      })) || SEED_JOURNAL);
+      })) || []);
     } catch (error) {
       console.error("Error fetching accounting data:", error);
     } finally {
@@ -705,8 +523,10 @@ export default function CalvaryAccounting() {
     return ms&&mf;
   });
 
+  const totalFuel = expenses.filter(e => e.category === "fuel").reduce((s, e) => s + e.amount, 0);
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F8FAFC]">
       {confirm && <Confirm {...confirm} onCancel={()=>setConfirm(null)}/>}
 
       {loading && (
@@ -718,7 +538,8 @@ export default function CalvaryAccounting() {
         </div>
       )}
 
-      {/* EXPENSE MODAL */}
+      {/* MODALS ... */}
+
       {modal==="expense" && (
         <Modal title="Record Expense" subtitle="Auto-creates a vendor invoice" onClose={()=>setModal(null)}>
           <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-700 font-medium flex items-center gap-2"><FileText className="w-3.5 h-3.5 flex-shrink-0"/>A payable invoice will be created automatically.</div>
@@ -912,138 +733,182 @@ export default function CalvaryAccounting() {
       })()}
 
       {/* PAGE SHELL */}
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-[1600px] mx-auto px-6 py-8 space-y-8">
 
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center"><Truck className="w-5 h-5 text-white"/></div>
-              Calvary Accounting
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5 ml-11">East Africa Logistics · Full Ledger Suite</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-[#10B981] rounded-xl flex items-center justify-center shadow-lg shadow-emerald-100">
+              <Landmark className="w-6 h-6 text-white"/>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-[#1E293B] tracking-tight">Financial Operations</h1>
+              <p className="text-sm font-medium text-[#64748B]">Calvary Investment Company Ltd</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-400 bg-white border border-slate-200 rounded-xl px-3 py-2">
-            <RefreshCw className="w-3.5 h-3.5"/> {NOW.toDateString()}
+          <div className="flex items-center gap-3">
+            <button onClick={fetchData} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#475569] hover:bg-slate-50 transition-all shadow-sm">
+              <RefreshCw className={`w-4 h-4 ${loading?"animate-spin":""}`}/> Refresh
+            </button>
+            <div className="relative group">
+              <button className="flex items-center gap-2 px-5 py-2.5 bg-[#0F172A] text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all shadow-md">
+                <Plus className="w-4 h-4"/> New Transaction <ChevronDown className="w-4 h-4 opacity-50"/>
+              </button>
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-[#E2E8F0] rounded-xl shadow-xl py-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-20">
+                <button onClick={()=>setModal("expense")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Record Expense</button>
+                <button onClick={()=>setModal("revenue")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Record Revenue</button>
+                <button onClick={()=>setModal("invoice")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">New Invoice</button>
+                <button onClick={()=>setModal("journal")} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Journal Entry</button>
+              </div>
+            </div>
+            <button className="flex items-center gap-2 px-5 py-2.5 bg-[#10B981] text-white rounded-xl text-sm font-semibold hover:bg-[#059669] transition-all shadow-md">
+              <Landmark className="w-4 h-4"/> Reconcile Bank
+            </button>
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
-          {TABS.map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${tab===t.id?"bg-indigo-600 text-white shadow-sm":"text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}>
-              <t.icon className="w-4 h-4"/>{t.label}
+        {/* KPI Cards Row */}
+        <div className="grid grid-cols-6 gap-5">
+          {[
+            { label: "TOTAL REVENUE", value: fmtTZS(totalRev), sub: "Paid invoices", icon: TrendingUp, color: "emerald", bg: "bg-emerald-50", iconBg: "bg-emerald-100" },
+            { label: "TOTAL EXPENSES", value: fmtTZS(totalExp), sub: "Operating costs", icon: TrendingDown, color: "rose", bg: "bg-rose-50", iconBg: "bg-rose-100" },
+            { label: "NET PROFIT", value: fmtTZS(netProfit), sub: `${totalRev>0?((netProfit/totalRev)*100).toFixed(1):0}% margin`, icon: BarChart3, color: "blue", bg: "bg-blue-50", iconBg: "bg-blue-100" },
+            { label: "RECEIVABLES", value: fmtTZS(pendingAR), sub: "Unpaid amount", icon: Clock, color: "amber", bg: "bg-amber-50", iconBg: "bg-amber-100" },
+            { label: "CASH BALANCE", value: fmtTZS(totalCashTZS), sub: "All bank accounts", icon: Wallet, color: "purple", bg: "bg-purple-50", iconBg: "bg-purple-100" },
+            { label: "FUEL COSTS", value: fmtTZS(totalFuel), sub: "This period", icon: Truck, color: "orange", bg: "bg-orange-50", iconBg: "bg-orange-100" },
+          ].map((kpi, idx) => (
+            <div key={idx} className="bg-white border border-[#F1F5F9] rounded-[24px] p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-10 h-10 ${kpi.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                  <kpi.icon className={`w-5 h-5 text-${kpi.color}-600`}/>
+                </div>
+                <span className="text-[10px] font-bold text-[#94A3B8] tracking-widest uppercase">TSH</span>
+              </div>
+              <p className="text-[11px] font-bold text-[#94A3B8] tracking-wider mb-1">{kpi.label}</p>
+              <h3 className="text-xl font-extrabold text-[#1E293B] mb-1">Tsh {Number(kpi.value.replace("TZS ","").replace(/,/g,"")).toLocaleString()}</h3>
+              <p className="text-[11px] font-semibold text-[#64748B] opacity-70">{kpi.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="bg-[#F1F5F9] p-1 rounded-2xl inline-flex gap-1">
+          {["Overview", "Invoices", "Expenses", "Journal"].map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t.toLowerCase())}
+              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${tab === t.toLowerCase() ? "bg-white text-[#1E293B] shadow-sm" : "text-[#64748B] hover:text-[#1E293B]"}`}
+            >
+              {t}
             </button>
           ))}
         </div>
 
         {/* ── OVERVIEW ── */}
-        {tab==="overview"&&(
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[{label:"Total Revenue",value:fmtTZS(totalRev),sub:`${revenue.length} trips`,grad:"from-emerald-500 to-teal-600",icon:TrendingUp},{label:"Total Expenses",value:fmtTZS(totalExp),sub:`${expenses.length} entries`,grad:"from-rose-500 to-red-600",icon:TrendingDown},{label:"Net Profit",value:fmtTZS(netProfit),sub:`${totalRev>0?((netProfit/totalRev)*100).toFixed(1):0}% margin`,grad:netProfit>=0?"from-indigo-500 to-blue-600":"from-red-600 to-rose-700",icon:DollarSign},{label:"Total Cash",value:fmtTZS(totalCashTZS),sub:`${accounts.length} accounts combined`,grad:"from-amber-500 to-orange-600",icon:Wallet}].map(s=>(
-                <div key={s.label} className={`bg-gradient-to-br ${s.grad} rounded-2xl p-5 text-white`}>
-                  <div className="flex items-center justify-between mb-3"><p className="text-white/70 text-xs font-semibold uppercase tracking-wide">{s.label}</p><s.icon className="w-5 h-5 text-white/30"/></div>
-                  <p className="text-2xl font-bold">{s.value}</p>
-                  <p className="text-white/60 text-xs mt-1">{s.sub}</p>
+        {tab === "overview" && (
+          <div className="space-y-8">
+            <div className="grid grid-cols-12 gap-6">
+              {/* Left: Expense Distribution */}
+              <div className="col-span-8 bg-white border border-[#F1F5F9] rounded-[24px] p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                  <Clock className="w-5 h-5 text-indigo-500"/>
+                  <h3 className="text-lg font-bold text-[#1E293B]">Expense Distribution</h3>
                 </div>
-              ))}
-            </div>
-
-            {/* Both accounts side by side */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-800 text-base">Bank Accounts</h3>
-                <Btn label="Add Account" onClick={()=>setModal("addAccount")} icon={Plus} sm/>
+                <div className="space-y-8">
+                  {[
+                    { label: "Fuel", color: "bg-amber-500", key: "fuel" },
+                    { label: "Driver Allowance", color: "bg-blue-500", key: "allowance" },
+                    { label: "Maintenance", color: "bg-orange-500", key: "maintenance" },
+                    { label: "Other", color: "bg-slate-400", key: "other" }
+                  ].map((item) => {
+                    const val = item.key === "other" 
+                      ? expenses.filter(e => !["fuel", "allowance", "maintenance"].includes(e.category)).reduce((s,e)=>s+e.amount,0)
+                      : expenses.filter(e => e.category === item.key).reduce((s,e)=>s+e.amount,0);
+                    const pct = totalExp > 0 ? (val / totalExp) * 100 : 0;
+                    return (
+                      <div key={item.label} className="space-y-3">
+                        <div className="flex justify-between items-end">
+                          <span className="text-sm font-bold text-[#475569]">{item.label}</span>
+                          <span className="text-sm font-bold text-[#1E293B]">Tsh {val.toLocaleString()} ({pct.toFixed(1)}%)</span>
+                        </div>
+                        <div className="h-2.5 w-full bg-[#F1F5F9] rounded-full overflow-hidden">
+                          <div className={`h-full ${item.color} rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }}/>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {accounts.map(acc=>{
-                  const cr=acc.transactions.filter(t=>t.type==="credit").reduce((s,t)=>s+t.amount,0);
-                  const db=acc.transactions.filter(t=>t.type==="debit").reduce((s,t)=>s+t.amount,0);
-                  return (
-                    <div key={acc.id} className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                      <div className={`bg-gradient-to-br ${accGrad(acc.currency)} p-5 text-white`}>
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="min-w-0">
-                            <p className="text-white/60 text-xs truncate">{acc.bank||"Bank"}</p>
-                            <p className="font-bold truncate">{acc.name}</p>
-                            <p className="font-mono text-xs text-white/50 mt-0.5 truncate">{acc.account_number}</p>
-                          </div>
-                          <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full ml-2 flex-shrink-0">{acc.currency}</span>
-                        </div>
-                        <p className="text-3xl font-bold">{fmtCur(acc.balance,acc.currency)}</p>
-                        {acc.currency!=="TZS"&&<p className="text-white/40 text-xs mt-0.5">≈ {fmtTZS(acc.balance*(RATES[acc.currency]||1))}</p>}
-                      </div>
-                      <div className="p-4 space-y-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-emerald-50 rounded-xl p-2.5 text-center"><p className="text-xs text-emerald-600 mb-0.5">Credits In</p><p className="font-bold text-emerald-700 text-xs">{fmtCur(cr,acc.currency)}</p></div>
-                          <div className="bg-rose-50 rounded-xl p-2.5 text-center"><p className="text-xs text-rose-600 mb-0.5">Debits Out</p><p className="font-bold text-rose-700 text-xs">{fmtCur(db,acc.currency)}</p></div>
-                        </div>
-                        <div className="space-y-1">
-                          {acc.transactions.slice(0,2).map(t=>(
-                            <div key={t.id} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
-                              <div className="flex items-center gap-1.5 min-w-0">{t.type==="credit"?<ArrowUpRight className="w-3 h-3 text-emerald-500 flex-shrink-0"/>:<ArrowDownLeft className="w-3 h-3 text-rose-500 flex-shrink-0"/>}<span className="text-xs text-slate-600 truncate">{t.description}</span></div>
-                              <span className={`text-xs font-semibold flex-shrink-0 ml-1 ${t.type==="credit"?"text-emerald-600":"text-rose-600"}`}>{t.type==="credit"?"+":"−"}{fmtCur(t.amount,acc.currency)}</span>
-                            </div>
-                          ))}
-                          {acc.transactions.length===0&&<p className="text-xs text-slate-400 text-center py-1">No transactions yet</p>}
-                        </div>
-                        <div className="flex gap-1.5 pt-1">
-                          <button onClick={()=>{setSelAcc(acc.id);setTab("bank");}} className="flex-1 text-xs font-semibold py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl transition-colors flex items-center justify-center gap-1"><FileText className="w-3 h-3"/>Statement</button>
-                          <button onClick={()=>openEditAcc(acc)} className="flex-1 text-xs font-semibold py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl transition-colors flex items-center justify-center gap-1"><Pencil className="w-3 h-3"/>Edit</button>
-                          <button onClick={()=>setConfirm({msg:`Delete "${acc.name}"?`,detail:"All transactions will be removed.",onConfirm:()=>delAccount(acc.id)})} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-3.5 h-3.5"/></button>
-                        </div>
-                      </div>
+
+              {/* Right: Bank Accounts */}
+              <div className="col-span-4 bg-white border border-[#F1F5F9] rounded-[24px] p-8 shadow-sm">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <Landmark className="w-5 h-5 text-[#10B981]"/>
+                    <h3 className="text-lg font-bold text-[#1E293B]">Bank Accounts</h3>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {accounts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                      <Wallet className="w-12 h-12 opacity-20 mb-3"/>
+                      <p className="text-sm font-semibold">No accounts linked</p>
                     </div>
-                  );
-                })}
-                <button onClick={()=>setModal("addAccount")} className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all group min-h-[220px]">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors"><Plus className="w-6 h-6"/></div>
-                  <div className="text-center"><p className="font-semibold text-sm">Add Bank Account</p><p className="text-xs mt-0.5 opacity-70">USD · TZS · KES · ZMW · UGX</p></div>
-                </button>
-              </div>
-            </div>
-
-            {/* AR / AP */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[{label:"Accounts Receivable",value:pendingAR,type:"receivable",icon:ArrowUpRight,color:"emerald"},{label:"Accounts Payable",value:pendingAP,type:"payable",icon:ArrowDownLeft,color:"rose"}].map(s=>(
-                <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-5 space-y-3">
-                  <p className="font-bold text-slate-800 flex items-center gap-2"><s.icon className={`w-4 h-4 text-${s.color}-600`}/>{s.label}</p>
-                  <p className={`text-3xl font-bold text-${s.color}-700`}>{fmtTZS(s.value)}</p>
-                  <p className="text-xs text-slate-500">{invoices.filter(i=>i.type===s.type&&i.status!=="paid").length} pending</p>
-                  {invoices.filter(i=>i.type===s.type&&i.status!=="paid").slice(0,3).map(inv=>(
-                    <div key={inv.id} className="flex justify-between text-sm cursor-pointer hover:opacity-80" onClick={()=>setSelectedInvoice(inv)}>
-                      <span className="text-slate-600 truncate">{inv.customer_name}</span>
-                      <span className={`font-semibold text-${s.color}-700 ml-2`}>{fmtTZS(inv.amount)}</span>
+                  ) : accounts.map(acc => (
+                    <div key={acc.id} className="p-4 rounded-2xl border border-[#F1F5F9] hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group cursor-pointer" onClick={() => {setSelAcc(acc.id); setTab("bank");}}>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">{acc.currency}</p>
+                          <h4 className="font-bold text-[#1E293B] group-hover:text-indigo-600 transition-colors">{acc.name}</h4>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 transition-colors"/>
+                      </div>
+                      <p className="text-xl font-black text-[#1E293B]">{fmtCur(acc.balance, acc.currency)}</p>
                     </div>
                   ))}
-                  <button onClick={()=>{setInvFilter(s.type);setTab("invoices");}} className="text-xs text-indigo-600 font-semibold hover:text-indigo-700 flex items-center gap-1">View all <ChevronRight className="w-3 h-3"/></button>
                 </div>
-              ))}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-white border border-slate-100 rounded-2xl p-5">
-                <p className="font-bold text-slate-800 mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-600"/>Revenue by Type</p>
-                {[{label:"Cross-Border",value:xbRev,icon:Globe,c:"text-purple-600 bg-purple-50"},{label:"Local Tanzania",value:totalRev-xbRev,icon:MapPin,c:"text-blue-600 bg-blue-50"},{label:"Cold Chain",value:ccRev,icon:Thermometer,c:"text-cyan-600 bg-cyan-50"}].map(row=>(
-                  <div key={row.label} className={`flex items-center justify-between p-3 rounded-xl mb-2 ${row.c.split(" ")[1]}`}>
-                    <div className="flex items-center gap-2.5"><row.icon className={`w-4 h-4 ${row.c.split(" ")[0]}`}/><span className="text-sm font-semibold text-slate-700">{row.label}</span></div>
-                    <span className={`font-bold text-sm ${row.c.split(" ")[0]}`}>{fmtTZS(row.value)}</span>
-                  </div>
-                ))}
+            {/* Bottom: AR/AP and Revenue Splits */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white border border-[#F1F5F9] rounded-[24px] p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <ArrowUpRight className="w-5 h-5 text-emerald-500"/>
+                  <h3 className="text-lg font-bold text-[#1E293B]">Accounts Receivable</h3>
+                </div>
+                <p className="text-3xl font-black text-emerald-600 mb-6">{fmtTZS(pendingAR)}</p>
+                <div className="space-y-3">
+                  {invoices.filter(i=>i.type==="receivable"&&i.status!=="paid").slice(0,4).map(inv=>(
+                    <div key={inv.id} className="flex justify-between items-center p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer" onClick={()=>setSelectedInvoice(inv)}>
+                      <span className="text-sm font-semibold text-slate-600 truncate">{inv.customer_name}</span>
+                      <span className="text-sm font-bold text-slate-800">{fmtTZS(inv.amount)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="bg-white border border-slate-100 rounded-2xl p-5">
-                <p className="font-bold text-slate-800 mb-4 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-rose-600"/>Expense Categories</p>
-                {catBreakdown.sort((a,b)=>b.total-a.total).map(c=>{
-                  const pct=totalExp>0?(c.total/totalExp)*100:0;
-                  return (<div key={c.cat} className="space-y-1 mb-2"><div className="flex justify-between text-sm"><span className="text-slate-600 capitalize font-medium">{c.cat==="border"?"Border Fees":c.cat}</span><span className="font-semibold text-slate-800">{fmtTZS(c.total)}</span></div><div className="w-full bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-gradient-to-r from-rose-400 to-rose-600" style={{width:`${pct}%`}}/></div></div>);
-                })}
+              <div className="bg-white border border-[#F1F5F9] rounded-[24px] p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <ArrowDownLeft className="w-5 h-5 text-rose-500"/>
+                  <h3 className="text-lg font-bold text-[#1E293B]">Accounts Payable</h3>
+                </div>
+                <p className="text-3xl font-black text-rose-600 mb-6">{fmtTZS(pendingAP)}</p>
+                <div className="space-y-3">
+                  {invoices.filter(i=>i.type==="payable"&&i.status!=="paid").slice(0,4).map(inv=>(
+                    <div key={inv.id} className="flex justify-between items-center p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer" onClick={()=>setSelectedInvoice(inv)}>
+                      <span className="text-sm font-semibold text-slate-600 truncate">{inv.customer_name}</span>
+                      <span className="text-sm font-bold text-slate-800">{fmtTZS(inv.amount)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         )}
 
+
         {/* ── ACCOUNTS TAB ── */}
+
         {tab==="accounts"&&(
           <div className="space-y-5">
             <div className="flex items-center justify-between">

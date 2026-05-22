@@ -85,9 +85,9 @@ export function FleetDashboard() {
       
       // Skip Supabase calls to prevent errors
       if (error) {
-        console.log('Supabase error - skipping:', error);
-        setError('Demo mode - database disabled');
-        setDebugInfo({ error: null, status: 'Demo mode' });
+        console.error('Supabase error:', error);
+        setError('Failed to load fleet data. Please check your connection.');
+        setDebugInfo({ error, status: 'Error' });
       }
       
       if (!data) {

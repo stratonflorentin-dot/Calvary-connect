@@ -16,5 +16,5 @@ export function isPrimaryOwnerEmail(email: string | null | undefined): boolean {
   return email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase();
 }
 
-// Demo mode flag - only active if no real Supabase URL is provided
-export const DEMO_MODE = !supabaseUrl || supabaseUrl === ''; // Auto-detect based on URL presence
+// Demo mode flag - should be false in production
+export const DEMO_MODE = false;

@@ -84,9 +84,9 @@ export function TransportAgreementGenerator({ initialData, onClose }: TransportA
     supplierCompany: initialData?.supplierCompany || 'Calvary Investment Company Limited',
     supplierAddress: initialData?.supplierAddress || 'P.O. Box 12929',
     supplierLocation: initialData?.supplierLocation || 'Dar es Salaam, Tanzania',
-    supplierTel: initialData?.supplierTel || '+255 22 276 1025',
-    supplierEmail: initialData?.supplierEmail || 'info@calvaryinvestment.co.tz',
-    supplierTin: initialData?.supplierTin || '101-083-417',
+    supplierTel: initialData?.supplierTel || '',
+    supplierEmail: initialData?.supplierEmail || '',
+    supplierTin: initialData?.supplierTin || '',
     
     clientCompany: initialData?.clientCompany || '',
     clientAddress: initialData?.clientAddress || '',
@@ -104,10 +104,10 @@ export function TransportAgreementGenerator({ initialData, onClose }: TransportA
     ],
     totalContractValue: initialData?.totalContractValue || 0,
     
-    bankName: initialData?.bankName || 'CRDB Bank',
-    bankBranch: initialData?.bankBranch || 'Water Front Branch, Dar es Salaam',
-    accountNumber: initialData?.accountNumber || '0150000232800',
-    accountName: initialData?.accountName || 'Calvary Investment Co. Ltd',
+    bankName: initialData?.bankName || '',
+    bankBranch: initialData?.bankBranch || '',
+    accountNumber: initialData?.accountNumber || '',
+    accountName: initialData?.accountName || '',
     
     paymentTerms: initialData?.paymentTerms || '100% upfront or 50% advance, 50% on delivery',
     deliveryLocation: initialData?.deliveryLocation || '',
