@@ -27,7 +27,7 @@ const RATES = { TZS: 1, USD: 2600, KES: 20, ZMW: 140, UGX: 0.71 };
 
 const VEHICLES  = [];
 const BORDERS   = [];
-const COA_TYPES = ["Asset","Liability","Equity","Revenue","Expense"];
+const COA_TYPES = ["ASSETS","LIABILITIES","EQUITY","REVENUE","COST_OF_SALES","OPERATING_EXPENSES","OTHER_EXPENSES"];
 const CURRENCIES= ["TZS","USD","KES","ZMW","UGX"];
 const TABS = [
   { id:"overview", label:"Overview",          icon:BarChart3 },
@@ -135,7 +135,7 @@ export default function CalvaryAccounting() {
         SupabaseService.getSales(),
         SupabaseService.getInvoices(),
         SupabaseService.getTaxes(),
-        supabase.from("chart_of_accounts").select("*").order("code"),
+        supabase.from("accounts").select("*").order("code"),
         supabase.from("journal_entries").select("*, journal_entry_lines(*)").order("date", { ascending: false })
       ]);
 
@@ -217,19 +217,19 @@ export default function CalvaryAccounting() {
   const pendingAP = invoices.filter(i=>i.status!=="paid"&&i.type==="payable").reduce((s,i)=>s+i.amount,0);
 
   // COA
-  const coaGroups = COA_TYPES.map(type=>({ type, rows:coa.filter(a=>a.type===type), total:coa.filter(a=>a.type===type).reduce((s,a)=>s+a.balance,0) }));
-  const totalAssets = coaGroups.find(g=>g.type==="Asset")?.total||0;
-  const totalLiab   = coaGroups.find(g=>g.type==="Liability")?.total||0;
-  const totalEquity = coaGroups.find(g=>g.type==="Equity")?.total||0;
-  const netIncome   = (coaGroups.find(g=>g.type==="Revenue")?.total||0)-(coaGroups.find(g=>g.type==="Expense")?.total||0);
+  const coaGroups = COA_TYPES.map(type=>({ type, rows:coa.filter(a=>a.category===type), total:coa.filter(a=>a.category===type).reduce((s,a)=>s+a.current_balance,0) }));
+  const totalAssets = coaGroups.find(g=>g.type==="ASSETS")?.total||0;
+  const totalLiab   = coaGroups.find(g=>g.type==="LIABILITIES")?.total||0;
+  const totalEquity = coaGroups.find(g=>g.type==="EQUITY")?.total||0;
+  const netIncome   = (coaGroups.find(g=>g.type==="REVENUE")?.total||0)-(coaGroups.find(g=>g.type==="OPERATING_EXPENSES")?.total||0)-(coaGroups.find(g=>g.type==="COST_OF_SALES")?.total||0);
   // Group accounts by their group field within each type
   const getSubGroups = (type) => {
-    const rows = coa.filter(a=>a.type===type);
+    const rows = coa.filter(a=>a.category===type);
     const groups = {};
-    rows.forEach(a=>{ const g=a.group||type; if(!groups[g])groups[g]=[]; groups[g].push(a); });
-    return Object.entries(groups).map(([name,accounts])=>({ name, accounts, total:accounts.reduce((s,a)=>s+a.balance,0) }));
+    rows.forEach(a=>{ const g=a.sub_category||type; if(!groups[g])groups[g]=[]; groups[g].push(a); });
+    return Object.entries(groups).map(([name,accounts])=>({ name, accounts, total:accounts.reduce((s,a)=>s+a.current_balance,0) }));
   };
-  const SECTION_LABELS = { Asset:"1000 ASSETS", Liability:"2000 LIABILITIES", Equity:"3000 EQUITY", Revenue:"4000 REVENUE", Expense:"5000–7000 EXPENSES & COMPLIANCE" };
+  const SECTION_LABELS = { ASSETS:"1000 ASSETS", LIABILITIES:"2000 LIABILITIES", EQUITY:"3000 EQUITY", REVENUE:"4000 REVENUE", COST_OF_SALES:"5000 COST OF SALES", OPERATING_EXPENSES:"6000 OPERATING EXPENSES", OTHER_EXPENSES:"7000 OTHER EXPENSES" };
 
   // journal
   const jeDr = jeF.lines.reduce((s,l)=>s+(parseFloat(l.debit)||0),0);

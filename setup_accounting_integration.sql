@@ -22,32 +22,32 @@ DECLARE
 BEGIN
     -- Map expense category to chart of accounts
     v_expense_account := CASE UPPER(p_category)
-        WHEN 'FUEL' THEN '5001'
-        WHEN 'DRIVER' THEN '5002'
-        WHEN 'TURNBOY' THEN '5003'
-        WHEN 'TOLLS' THEN '5004'
-        WHEN 'MAINTENANCE' THEN '6100'
-        WHEN 'INSURANCE' THEN '6101'
-        WHEN 'LICENSE' THEN '6102'
-        WHEN 'TRACKING' THEN '6103'
-        WHEN 'MARKETING' THEN '6200'
-        WHEN 'ENTERTAINMENT' THEN '6201'
-        WHEN 'RENT' THEN '6002'
-        WHEN 'UTILITIES' THEN '6003'
-        WHEN 'INTERNET' THEN '6004'
-        WHEN 'SALARIES' THEN '6001'
-        WHEN 'BANK_CHARGES' THEN '7001'
-        WHEN 'INTEREST' THEN '7002'
-        WHEN 'FINES' THEN '7003'
-        ELSE '6001' -- Default to office salaries
+        WHEN 'FUEL' THEN '5101'
+        WHEN 'DRIVER' THEN '5102'
+        WHEN 'TURNBOY' THEN '5103'
+        WHEN 'TOLLS' THEN '5109'
+        WHEN 'MAINTENANCE' THEN '5104'
+        WHEN 'INSURANCE' THEN '5110'
+        WHEN 'LICENSE' THEN '7104'
+        WHEN 'TRACKING' THEN '5111'
+        WHEN 'MARKETING' THEN '6301'
+        WHEN 'ENTERTAINMENT' THEN '6202'
+        WHEN 'RENT' THEN '6101'
+        WHEN 'UTILITIES' THEN '6102'
+        WHEN 'INTERNET' THEN '6103'
+        WHEN 'SALARIES' THEN '6201'
+        WHEN 'BANK_CHARGES' THEN '6501'
+        WHEN 'INTEREST' THEN '6502'
+        WHEN 'FINES' THEN '7105'
+        ELSE '6201' -- Default to office salaries
     END;
     
     -- Determine cash/bank account based on payment method
     v_cash_account := CASE UPPER(p_payment_method)
-        WHEN 'CASH' THEN '1001'
-        WHEN 'MOBILE' THEN '1003'
-        WHEN 'BANK' THEN '1002'
-        ELSE '1001'
+        WHEN 'CASH' THEN '1101'
+        WHEN 'MOBILE' THEN '1103'
+        WHEN 'BANK' THEN '1102'
+        ELSE '1101'
     END;
     
     -- Generate entry number
@@ -131,14 +131,14 @@ CREATE OR REPLACE FUNCTION create_invoice_journal_entry(
     p_vat_amount DECIMAL,
     p_total_amount DECIMAL,
     p_description TEXT,
-    p_revenue_account TEXT DEFAULT '4002'
+    p_revenue_account TEXT DEFAULT '4101'
 )
 RETURNS UUID AS $$
 DECLARE
     v_entry_id UUID;
     v_entry_number TEXT;
-    v_ar_account TEXT := '1100';
-    v_vat_account TEXT := '2005';
+    v_ar_account TEXT := '1104';
+    v_vat_account TEXT := '2106';
 BEGIN
     -- Generate entry number
     v_entry_number := generate_entry_number();
@@ -303,7 +303,7 @@ BEGIN
     WHERE trip_id = v_invoice.trip_id;
     
     -- Default to Local Delivery Revenue if no trip linked
-    v_revenue_account := COALESCE(v_revenue_account, '4002');
+    v_revenue_account := COALESCE(v_revenue_account, '4101');
     
     -- Create journal entry
     v_journal_id := create_invoice_journal_entry(

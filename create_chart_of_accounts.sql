@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS fuel_tracking (
     odometer_reading INTEGER,
     distance_km INTEGER,
     consumption_per_km DECIMAL(6, 3), -- liters/km
-    account_code VARCHAR(20) DEFAULT '5001',
+    account_code VARCHAR(20) DEFAULT '5101',
     vendor_id UUID REFERENCES vendor_balances(id),
     receipt_url TEXT,
     journal_entry_id UUID REFERENCES journal_entries(id),

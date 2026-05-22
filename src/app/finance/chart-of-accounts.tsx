@@ -53,45 +53,112 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
 
 // Pre-configured logistics accounts for Calvary
 const DEFAULT_ACCOUNTS = [
-  // ASSETS - Bank Accounts
-  { code: '1001', name: 'Cash - NMB Bank Operating', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Bank Accounts' },
-  { code: '1002', name: 'Cash - CRDB Bank Fuel', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Bank Accounts' },
-  { code: '1003', name: 'Cash - NMB Transit Fees', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Bank Accounts' },
-  { code: '1004', name: 'Petty Cash', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Cash' },
-  // ASSETS - Receivables
-  { code: '1101', name: 'Accounts Receivable - Local Clients', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Receivables' },
-  { code: '1102', name: 'Accounts Receivable - Transit Clients', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Receivables' },
-  { code: '1103', name: 'Fuel Advance Receivable', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Receivables' },
-  // ASSETS - Vehicles
-  { code: '1501', name: 'Truck Fleet - Cost', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fleet' },
-  { code: '1502', name: 'Accumulated Depreciation - Fleet', category: 'ASSETS', type: 'credit', currency: 'TZS', sub_category: 'Fleet' },
-  // LIABILITIES
-  { code: '2001', name: 'Accounts Payable - Suppliers', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Payables' },
-  { code: '2002', name: 'Accounts Payable - Fuel Stations', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Payables' },
-  { code: '2101', name: 'VAT Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Taxes' },
-  { code: '2201', name: 'Driver Allowances Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Payroll' },
-  // EQUITY
-  { code: '3001', name: 'Owner Capital', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Capital' },
-  { code: '3002', name: 'Retained Earnings', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Earnings' },
-  { code: '3101', name: 'Profit/Loss Current Year', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Earnings' },
-  // REVENUE
-  { code: '4001', name: 'Local Delivery Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Transport' },
-  { code: '4002', name: 'Transit Revenue - Kenya', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Transit' },
-  { code: '4003', name: 'Transit Revenue - Zambia', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Transit' },
-  { code: '4004', name: 'Reefer Services Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Cold Chain' },
-  { code: '4005', name: 'Lowbed Heavy Cargo Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Heavy Haul' },
-  // COST OF SALES
-  { code: '5001', name: 'Fuel Expenses', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
-  { code: '5002', name: 'Driver Allowances', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
-  { code: '5003', name: 'Border & Toll Charges', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
-  // OPERATING EXPENSES
-  { code: '6001', name: 'Vehicle Maintenance & Repairs', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Fleet' },
-  { code: '6002', name: 'Vehicle Insurance', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Fleet' },
-  { code: '6003', name: 'Depreciation - Vehicles', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Fleet' },
-  { code: '6004', name: 'Road Toll & Transit Permits', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Compliance' },
-  { code: '6005', name: 'Salaries & Wages', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Payroll' },
-  { code: '6006', name: 'Office Rent & Utilities', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Admin' },
-  { code: '6007', name: 'Communication & IT', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Admin' },
+  // ASSETS (1000–1999)
+  { code: '1101', name: 'Cash on Hand', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
+  { code: '1102', name: 'Bank Account', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
+  { code: '1103', name: 'Mobile Money Account', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
+  { code: '1104', name: 'Accounts Receivable', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
+  { code: '1105', name: 'Prepaid Expenses', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
+  { code: '1106', name: 'Fuel Inventory', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
+  { code: '1107', name: 'Spare Parts Inventory', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
+  { code: '1108', name: 'VAT Receivable', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
+  
+  { code: '1201', name: 'Trucks and Trailers', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
+  { code: '1202', name: 'Motor Vehicles', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
+  { code: '1203', name: 'Office Equipment', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
+  { code: '1204', name: 'Computers and IT Equipment', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
+  { code: '1205', name: 'Warehouse Equipment', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
+  { code: '1206', name: 'Furniture and Fixtures', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
+  { code: '1207', name: 'GPS Tracking Devices', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
+  
+  { code: '1301', name: 'Accumulated Depreciation, Trucks', category: 'ASSETS', type: 'credit', currency: 'TZS', sub_category: 'Depreciation' },
+  { code: '1302', name: 'Accumulated Depreciation, Vehicles', category: 'ASSETS', type: 'credit', currency: 'TZS', sub_category: 'Depreciation' },
+  { code: '1303', name: 'Accumulated Depreciation, Equipment', category: 'ASSETS', type: 'credit', currency: 'TZS', sub_category: 'Depreciation' },
+
+  // LIABILITIES (2000–2999)
+  { code: '2101', name: 'Accounts Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Current Liabilities' },
+  { code: '2102', name: 'Fuel Creditors', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Current Liabilities' },
+  { code: '2103', name: 'Driver Allowances Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Current Liabilities' },
+  { code: '2104', name: 'Salaries Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Current Liabilities' },
+  { code: '2105', name: 'Tax Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Current Liabilities' },
+  { code: '2106', name: 'VAT Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Current Liabilities' },
+  { code: '2107', name: 'NHIF Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Current Liabilities' },
+  { code: '2108', name: 'NSSF Payable', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Current Liabilities' },
+  
+  { code: '2201', name: 'Truck Loan', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Long Term Liabilities' },
+  { code: '2202', name: 'Vehicle Financing', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Long Term Liabilities' },
+  { code: '2203', name: 'Bank Loan', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Long Term Liabilities' },
+  { code: '2204', name: 'Lease Obligations', category: 'LIABILITIES', type: 'credit', currency: 'TZS', sub_category: 'Long Term Liabilities' },
+
+  // EQUITY (3000–3999)
+  { code: '3101', name: 'Owner Capital', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Equity' },
+  { code: '3102', name: 'Retained Earnings', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Equity' },
+  { code: '3103', name: 'Current Year Profit', category: 'EQUITY', type: 'credit', currency: 'TZS', sub_category: 'Equity' },
+  { code: '3104', name: 'Drawings', category: 'EQUITY', type: 'debit', currency: 'TZS', sub_category: 'Equity' },
+
+  // REVENUE (4000–4999)
+  { code: '4101', name: 'Local Transport Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Core Revenue' },
+  { code: '4102', name: 'Cross Border Transport Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Core Revenue' },
+  { code: '4103', name: 'Container Transport Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Core Revenue' },
+  { code: '4104', name: 'Loose Cargo Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Core Revenue' },
+  { code: '4105', name: 'Express Delivery Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Core Revenue' },
+  { code: '4106', name: 'Warehousing Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Core Revenue' },
+  { code: '4107', name: 'Loading and Offloading Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Core Revenue' },
+  { code: '4108', name: 'Customs Clearing Revenue', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Core Revenue' },
+  
+  { code: '4201', name: 'Fuel Surcharge Income', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Other Income' },
+  { code: '4202', name: 'Commission Income', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Other Income' },
+  { code: '4203', name: 'Rental Income', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Other Income' },
+  { code: '4204', name: 'Other Operating Income', category: 'REVENUE', type: 'credit', currency: 'TZS', sub_category: 'Other Income' },
+
+  // COST OF SALES (5000–5999)
+  { code: '5101', name: 'Fuel Expense', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5102', name: 'Driver Salaries', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5103', name: 'Driver Allowances', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5104', name: 'Truck Repairs', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5105', name: 'Tire Expense', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5106', name: 'Lubricants and Oil', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5107', name: 'Border and Port Charges', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5108', name: 'Cargo Handling Expense', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5109', name: 'Toll Fees', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5110', name: 'Vehicle Insurance', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5111', name: 'GPS Tracking Costs', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5112', name: 'Trip Loading Expenses', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+  { code: '5113', name: 'Freight Subcontractor Expense', category: 'COST_OF_SALES', type: 'debit', currency: 'TZS', sub_category: 'Direct Costs' },
+
+  // OPERATING EXPENSES (6000–6999)
+  { code: '6101', name: 'Office Rent', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Facilities' },
+  { code: '6102', name: 'Electricity and Water', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Facilities' },
+  { code: '6103', name: 'Internet Expense', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Facilities' },
+  { code: '6104', name: 'Telephone Expense', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Facilities' },
+  { code: '6105', name: 'Office Supplies', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Facilities' },
+  { code: '6106', name: 'Cleaning Expense', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Facilities' },
+  { code: '6107', name: 'Security Expense', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Facilities' },
+  
+  { code: '6201', name: 'Office Salaries', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Personnel' },
+  { code: '6202', name: 'Staff Welfare', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Personnel' },
+  { code: '6203', name: 'Staff Training', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Personnel' },
+  { code: '6204', name: 'Recruitment Expense', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Personnel' },
+  
+  { code: '6301', name: 'Advertising Expense', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Marketing' },
+  { code: '6302', name: 'Branding Expense', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Marketing' },
+  { code: '6303', name: 'Website Expense', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Marketing' },
+  { code: '6304', name: 'Social Media Marketing', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Marketing' },
+  
+  { code: '6401', name: 'Legal Fees', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Professional' },
+  { code: '6402', name: 'Audit Fees', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Professional' },
+  { code: '6403', name: 'Consultancy Fees', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Professional' },
+  
+  { code: '6501', name: 'Bank Charges', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Financial' },
+  { code: '6502', name: 'Loan Interest', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Financial' },
+  { code: '6503', name: 'Foreign Exchange Loss', category: 'OPERATING_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Financial' },
+
+  // TAXES AND COMPLIANCE (7000–7999)
+  { code: '7101', name: 'Corporate Tax Expense', category: 'OTHER_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Taxes & Compliance' },
+  { code: '7102', name: 'Withholding Tax', category: 'OTHER_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Taxes & Compliance' },
+  { code: '7103', name: 'Business License Fees', category: 'OTHER_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Taxes & Compliance' },
+  { code: '7104', name: 'Road License Fees', category: 'OTHER_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Taxes & Compliance' },
+  { code: '7105', name: 'Regulatory Compliance Fees', category: 'OTHER_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Taxes & Compliance' },
 ];
 
 export function ChartOfAccountsPage() {

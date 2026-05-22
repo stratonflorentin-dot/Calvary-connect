@@ -78,7 +78,7 @@ export function BankStatementImport() {
       try {
         const [accountsRes, coaRes, invoicesRes, expensesRes, salesRes] = await Promise.all([
           supabase.from('bank_accounts').select('*').eq('is_active', true),
-          supabase.from('chart_of_accounts').select('code, name, category').order('code'),
+          supabase.from('accounts').select('code, name, category').order('code'),
           supabase.from('invoices').select('*').eq('status', 'pending'),
           supabase.from('expenses').select('*').eq('status', 'pending'),
           supabase.from('sales').select('*').eq('status', 'pending'),
@@ -137,10 +137,25 @@ export function BankStatementImport() {
 
   const suggestAccount = (description: string) => {
     const desc = description.toLowerCase();
+    
+    // Direct Costs (5000s)
     if (desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel')) return '5101';
     if (desc.includes('repair') || desc.includes('service') || desc.includes('maintenance')) return '5104';
-    if (desc.includes('payment') || desc.includes('inv') || desc.includes('revenue')) return '4101';
     if (desc.includes('salary') || desc.includes('pay') || desc.includes('allowance')) return '5102';
+    if (desc.includes('toll') || desc.includes('tanroads')) return '5109';
+    if (desc.includes('tire') || desc.includes('tyre')) return '5105';
+    if (desc.includes('border') || desc.includes('tra') || desc.includes('customs')) return '5107';
+    
+    // Revenue (4000s)
+    if (desc.includes('payment') || desc.includes('inv') || desc.includes('revenue') || desc.includes('freight')) return '4101';
+    
+    // Operating Expenses (6000s)
+    if (desc.includes('rent')) return '6101';
+    if (desc.includes('electric') || desc.includes('water') || desc.includes('luku')) return '6102';
+    if (desc.includes('internet') || desc.includes('data') || desc.includes('software')) return '6103';
+    if (desc.includes('fee') || desc.includes('charge') || desc.includes('commission')) return '6501';
+    if (desc.includes('tax') || desc.includes('wht')) return '7102';
+    
     return undefined;
   };
 

@@ -53,8 +53,8 @@ CREATE OR REPLACE FUNCTION create_trip_revenue_entry(
     p_trip_id UUID,
     p_revenue_amount DECIMAL,
     p_client_name TEXT,
-    p_revenue_account TEXT DEFAULT '4002',
-    p_ar_account TEXT DEFAULT '1100'
+    p_revenue_account TEXT DEFAULT '4101',
+    p_ar_account TEXT DEFAULT '1104'
 )
 RETURNS UUID AS $$
 DECLARE
@@ -131,27 +131,27 @@ BEGIN
     -- Debit various expense accounts
     IF p_fuel_cost > 0 THEN
         INSERT INTO journal_entry_lines (journal_entry_id, account_code, debit_amount, credit_amount, description, line_order)
-        VALUES (v_entry_id, '5001', p_fuel_cost, 0, 'Fuel expense', 1);
+        VALUES (v_entry_id, '5101', p_fuel_cost, 0, 'Fuel expense', 1);
     END IF;
     
     IF p_driver_wages > 0 THEN
         INSERT INTO journal_entry_lines (journal_entry_id, account_code, debit_amount, credit_amount, description, line_order)
-        VALUES (v_entry_id, '5002', p_driver_wages, 0, 'Driver wages', 2);
+        VALUES (v_entry_id, '5103', p_driver_wages, 0, 'Driver allowances', 2);
     END IF;
     
     IF p_tolls > 0 THEN
         INSERT INTO journal_entry_lines (journal_entry_id, account_code, debit_amount, credit_amount, description, line_order)
-        VALUES (v_entry_id, '5004', p_tolls, 0, 'Tolls and road charges', 3);
+        VALUES (v_entry_id, '5109', p_tolls, 0, 'Tolls and road charges', 3);
     END IF;
     
     IF p_maintenance > 0 THEN
         INSERT INTO journal_entry_lines (journal_entry_id, account_code, debit_amount, credit_amount, description, line_order)
-        VALUES (v_entry_id, '5005', p_maintenance, 0, 'Trip-related maintenance', 4);
+        VALUES (v_entry_id, '5104', p_maintenance, 0, 'Trip-related maintenance', 4);
     END IF;
     
-    -- Credit Cash or Payable (assuming paid from petty cash for now)
+    -- Credit Cash or Payable (assuming paid from cash on hand for now)
     INSERT INTO journal_entry_lines (journal_entry_id, account_code, debit_amount, credit_amount, description, line_order)
-    VALUES (v_entry_id, '1001', 0, v_total, 'Payment of trip expenses', 99);
+    VALUES (v_entry_id, '1101', 0, v_total, 'Payment of trip expenses', 99);
     
     -- Post the entry
     PERFORM post_journal_entry(v_entry_id);
@@ -174,9 +174,9 @@ DECLARE
 BEGIN
     -- Determine cash account based on payment method
     v_cash_account := CASE p_payment_method
-        WHEN 'CASH' THEN '1001'
-        WHEN 'MOBILE' THEN '1003'
-        ELSE '1002'
+        WHEN 'CASH' THEN '1101'
+        WHEN 'MOBILE' THEN '1103'
+        ELSE '1102'
     END;
     
     -- Generate entry number
@@ -200,7 +200,7 @@ BEGIN
     
     -- Credit Accounts Receivable
     INSERT INTO journal_entry_lines (journal_entry_id, account_code, debit_amount, credit_amount, description, line_order)
-    VALUES (v_entry_id, '1100', 0, p_amount, 'From ' || p_client_name, 2);
+    VALUES (v_entry_id, '1104', 0, p_amount, 'From ' || p_client_name, 2);
     
     -- Post the entry
     PERFORM post_journal_entry(v_entry_id);
@@ -235,14 +235,14 @@ DECLARE
 BEGIN
     -- Map expense type to account code
     v_account_code := CASE p_expense_type
-        WHEN 'FUEL' THEN '5001'
-        WHEN 'MAINTENANCE' THEN '6100'
-        WHEN 'INSURANCE' THEN '6101'
-        WHEN 'LICENSE' THEN '6102'
-        WHEN 'REPAIR' THEN '6100'
-        WHEN 'TIRES' THEN '6100'
-        WHEN 'TOLLS' THEN '5004'
-        ELSE '6100'
+        WHEN 'FUEL' THEN '5101'
+        WHEN 'MAINTENANCE' THEN '5104'
+        WHEN 'INSURANCE' THEN '5110'
+        WHEN 'LICENSE' THEN '7104'
+        WHEN 'REPAIR' THEN '5104'
+        WHEN 'TIRES' THEN '5105'
+        WHEN 'TOLLS' THEN '5109'
+        ELSE '5104'
     END;
     
     -- Generate entry number
@@ -267,10 +267,10 @@ BEGIN
     -- Credit Accounts Payable or Cash
     IF p_vendor_name IS NOT NULL THEN
         INSERT INTO journal_entry_lines (journal_entry_id, account_code, debit_amount, credit_amount, description, line_order)
-        VALUES (v_entry_id, '2001', 0, p_amount, 'Owed to ' || p_vendor_name, 2);
+        VALUES (v_entry_id, '2101', 0, p_amount, 'Owed to ' || p_vendor_name, 2);
     ELSE
         INSERT INTO journal_entry_lines (journal_entry_id, account_code, debit_amount, credit_amount, description, line_order)
-        VALUES (v_entry_id, '1001', 0, p_amount, 'Paid from petty cash', 2);
+        VALUES (v_entry_id, '1101', 0, p_amount, 'Paid from cash on hand', 2);
     END IF;
     
     -- Post the entry
