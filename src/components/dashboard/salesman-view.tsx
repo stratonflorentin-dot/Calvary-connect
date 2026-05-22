@@ -1,392 +1,757 @@
 "use client";
 
-import { DashboardLayout, StatCard, DataTable, ActivityFeed, AlertPanel } from "@/components/dashboard/shared/dashboard-layout";
-import { useTrips } from "@/hooks/data/use-trips";
-import { useExpenses } from "@/hooks/data/use-expenses";
-import { useInvoices } from "@/hooks/data/use-invoices";
-import { ContractGenerator } from "@/app/sales/contract-generator";
+import { useState, useMemo } from "react"; 
+import { DashboardLayout } from "@/components/dashboard/shared/dashboard-layout";
 import { useRole } from "@/hooks/use-role";
-import { useLanguage } from "@/hooks/use-language";
 import { useCurrency } from "@/hooks/use-currency";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
+import { 
   Briefcase, DollarSign, Users, Calendar, TrendingUp, BarChart2,
   CheckCircle2, Clock, AlertTriangle, Eye, FileText, MapPin,
   Navigation, Package, ArrowRight, RefreshCw, Settings, Bell,
   Sparkles, Shield, Plus, Trash2, Edit, Locate, Truck,
-  Calculator
+  Calculator, Printer, Download, Search
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
 
-export default function SalesmanDashboard() {
-  const { t } = useLanguage();
-  const { format } = useCurrency();
-  const { role } = useRole();
+ // ── Seed Data ────────────────────────────────────────────────────────────── 
+ const SEED_CLIENTS = [ 
+   { id: "c1", company_name: "Simba Logistics Ltd", contact_person: "James Kimani", email: "james@simbalogistics.co.tz", phone: "+255 754 123 456", address: "P.O. Box 1234, Dar es Salaam", status: "active" }, 
+   { id: "c2", company_name: "Tanga Cement Co.", contact_person: "Fatuma Hassan", email: "fatuma@tangacement.co.tz", phone: "+255 712 987 654", address: "P.O. Box 5678, Tanga", status: "active" }, 
+   { id: "c3", company_name: "Kilimanjaro Traders", contact_person: "Peter Moshi", email: "peter@kilitraders.co.tz", phone: "+255 765 111 222", address: "P.O. Box 910, Moshi", status: "active" }, 
+   { id: "c4", company_name: "Zanzibar Exports Ltd", contact_person: "Amina Said", email: "amina@znzexports.co.tz", phone: "+255 777 333 444", address: "P.O. Box 321, Zanzibar", status: "active" }, 
+   { id: "c5", company_name: "Dodoma Agro Ltd", contact_person: "Rashid Mwamba", email: "rashid@dodomaagro.co.tz", phone: "+255 688 555 666", address: "P.O. Box 777, Dodoma", status: "inactive" }, 
+ ]; 
+ 
+ const SEED_TRIPS = [ 
+   { id: "t1", tripNumber: "CAL-001", client: "c1", origin: "Dar es Salaam", destination: "Nairobi", cargo_type: "20ft Container", revenue: 850000, status: "completed", date: "2025-05-01", driver: "Ali Hassan", truck: "T.255 AAA" }, 
+   { id: "t2", tripNumber: "CAL-002", client: "c2", origin: "Tanga", destination: "Mombasa", cargo_type: "40ft Container", revenue: 1200000, status: "completed", date: "2025-05-04", driver: "Moses Njeru", truck: "T.255 BBB" }, 
+   { id: "t3", tripNumber: "CAL-003", client: "c3", origin: "Dar es Salaam", destination: "Lusaka", cargo_type: "Loose Cargo", revenue: 600000, status: "in_transit", date: "2025-05-10", driver: "David Odhiambo", truck: "T.255 CCC" }, 
+   { id: "t4", tripNumber: "CAL-004", client: "c1", origin: "Dar es Salaam", destination: "Kampala", cargo_type: "20ft Container", revenue: 950000, status: "completed", date: "2025-05-12", driver: "Ali Hassan", truck: "T.255 AAA" }, 
+   { id: "t5", tripNumber: "CAL-005", client: "c4", origin: "Zanzibar", destination: "Dar es Salaam", cargo_type: "Loose Cargo", revenue: 300000, status: "pending", date: "2025-05-18", driver: "", truck: "" }, 
+   { id: "t6", tripNumber: "CAL-006", client: "c2", origin: "Dar es Salaam", destination: "Lilongwe", cargo_type: "40ft Container", revenue: 1350000, status: "completed", date: "2025-05-20", driver: "Moses Njeru", truck: "T.255 BBB" }, 
+   { id: "t7", tripNumber: "CAL-007", client: "c3", origin: "Arusha", destination: "Nairobi", cargo_type: "20ft Container", revenue: 780000, status: "pending", date: "2025-05-22", driver: "", truck: "" }, 
+ ]; 
+ 
+ const SEED_INVOICES = [ 
+   { id: "i1", invoice_number: "INV-2025-001", client: "c1", trip: "t1", amount: 850000, status: "paid", date: "2025-05-03", due_date: "2025-05-17" }, 
+   { id: "i2", invoice_number: "INV-2025-002", client: "c2", trip: "t2", amount: 1200000, status: "paid", date: "2025-05-06", due_date: "2025-05-20" }, 
+   { id: "i3", invoice_number: "INV-2025-003", client: "c3", trip: "t3", amount: 600000, status: "pending", date: "2025-05-11", due_date: "2025-05-25" }, 
+   { id: "i4", invoice_number: "INV-2025-004", client: "c1", trip: "t4", amount: 950000, status: "overdue", date: "2025-05-13", due_date: "2025-05-20" }, 
+   { id: "i5", invoice_number: "INV-2025-005", client: "c2", trip: "t6", amount: 1350000, status: "pending", date: "2025-05-21", due_date: "2025-06-04" }, 
+ ]; 
+ 
+ const SEED_EXPENSES = [ 
+   { id: "e1", description: "Fuel – CAL-001", trip: "t1", amount: 120000, category: "Fuel", date: "2025-05-01" }, 
+   { id: "e2", description: "Border crossing fees", trip: "t1", amount: 45000, category: "Fees", date: "2025-05-02" }, 
+   { id: "e3", description: "Fuel – CAL-002", trip: "t2", amount: 95000, category: "Fuel", date: "2025-05-04" }, 
+   { id: "e4", description: "Driver allowance", trip: "t2", amount: 30000, category: "Allowance", date: "2025-05-05" }, 
+   { id: "e5", description: "Vehicle service", trip: "t4", amount: 80000, category: "Maintenance", date: "2025-05-12" }, 
+ ]; 
+ 
+ const RATE_SHEET = [ 
+   { from: "Dar es Salaam", destination: "Nairobi", c20: 850000, c40: 1200000, loose: 450000, days: 2 }, 
+   { from: "Dar es Salaam", destination: "Kampala", c20: 950000, c40: 1350000, loose: 500000, days: 3 }, 
+   { from: "Dar es Salaam", destination: "Lusaka", c20: 1100000, c40: 1600000, loose: 600000, days: 4 }, 
+   { from: "Dar es Salaam", destination: "Lilongwe", c20: 1050000, c40: 1500000, loose: 550000, days: 3 }, 
+   { from: "Tanga", destination: "Mombasa", c20: 700000, c40: 1000000, loose: 380000, days: 1 }, 
+   { from: "Arusha", destination: "Nairobi", c20: 780000, c40: 1100000, loose: 420000, days: 1 }, 
+   { from: "Zanzibar", destination: "Dar es Salaam", c20: 350000, c40: 500000, loose: 200000, days: 1 }, 
+ ]; 
+ 
+ // ── Helpers ─────────────────────────────────────────────────────────────── 
+ const fmtTZS = (n: number) => `TZS ${Number(n || 0).toLocaleString()}`; 
+ const uid = () => Math.random().toString(36).slice(2, 8).toUpperCase(); 
+ const today = () => new Date().toISOString().split("T")[0]; 
+ 
+ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = { 
+   completed: { bg: "#d1fae5", text: "#065f46", label: "Completed" }, 
+   in_transit: { bg: "#dbeafe", text: "#1e40af", label: "In Transit" }, 
+   pending:    { bg: "#fef3c7", text: "#92400e", label: "Pending" }, 
+   created:    { bg: "#f3f4f6", text: "#374151", label: "Created" }, 
+   loading:    { bg: "#ede9fe", text: "#5b21b6", label: "Loading" }, 
+   paid:       { bg: "#d1fae5", text: "#065f46", label: "Paid" }, 
+   overdue:    { bg: "#fee2e2", text: "#991b1b", label: "Overdue" }, 
+   active:     { bg: "#d1fae5", text: "#065f46", label: "Active" }, 
+   inactive:   { bg: "#f3f4f6", text: "#6b7280", label: "Inactive" }, 
+ }; 
+ 
+ const Badge = ({ status }: { status: string }) => { 
+   const s = STATUS_COLORS[status] || STATUS_COLORS.pending; 
+   return ( 
+     <span style={{ background: s.bg, color: s.text, padding: "2px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, letterSpacing: 0.3 }}> 
+       {s.label} 
+     </span> 
+   ); 
+ }; 
+ 
+ // ── Company Stamp SVG ───────────────────────────────────────────────────── 
+ const CompanyStamp = ({ size = 110 }) => ( 
+   <svg width={size} height={size} viewBox="0 0 340 340"> 
+     <style>{`.st{font-family:'Times New Roman',serif;fill:#1a5fa8;letter-spacing:2px}`}</style> 
+     <circle cx="170" cy="170" r="155" fill="none" stroke="#1a5fa8" strokeWidth="4"/> 
+     <circle cx="170" cy="170" r="143" fill="none" stroke="#1a5fa8" strokeWidth="1.5"/> 
+     <path id="ta" d="M 28,165 A 142,142 0 0,1 312,165" fill="none"/> 
+     <text className="st" fontSize="17" fontWeight="700"><textPath href="#ta" startOffset="50%" textAnchor="middle">CALVARY INVESTMENT COMPANY LTD.</textPath></text> 
+     <path id="ba" d="M 45,225 A 142,142 0 0,0 295,225" fill="none"/> 
+     <text className="st" fontSize="15" fontWeight="700"><textPath href="#ba" startOffset="50%" textAnchor="middle">★  TANZANIA  ★</textPath></text> 
+     <text x="170" y="162" className="st" fontSize="14.5" fontWeight="700" textAnchor="middle" letterSpacing="1">P. O. Box 75941</text> 
+     <text x="170" y="184" className="st" fontSize="14.5" fontWeight="700" textAnchor="middle" letterSpacing="1">DAR ES SALAAM</text> 
+     <line x1="90" y1="195" x2="250" y2="195" stroke="#1a5fa8" strokeWidth="1.2"/> 
+     <line x1="95" y1="143" x2="245" y2="143" stroke="#1a5fa8" strokeWidth="1.2"/> 
+   </svg> 
+ ); 
+ 
+ // ── Contract Preview ────────────────────────────────────────────────────── 
+ function ContractPreview({ client, rateRow, details, onClose }: any) { 
+   const html = ` 
+     <html><head><style> 
+       body{font-family:'Times New Roman',serif;max-width:800px;margin:0 auto;padding:40px;line-height:1.7;color:#111} 
+       h1{color:#1e3a5f;font-size:20px;margin:0}h2{color:#1e3a5f;font-size:16px} 
+       table{width:100%;border-collapse:collapse;font-size:12px} 
+       th{background:#1e3a5f;color:#fff;padding:7px 10px;text-align:left} 
+       td{border:1px solid #ccc;padding:6px 10px}tr:nth-child(even){background:#f9f9f9} 
+       .sig-box{border-bottom:1px solid #333;height:50px;margin-bottom:8px} 
+       .note{background:#fff3cd;border-left:4px solid #f59e0b;padding:10px 15px;font-size:12px;margin:16px 0} 
+       .footer{text-align:center;font-size:10px;color:#888;border-top:1px solid #ccc;margin-top:50px;padding-top:12px} 
+       @media print{body{padding:20px}} 
+     </style></head><body> 
+     <div style="display:flex;align-items:center;gap:24px;border-bottom:3px solid #1e3a5f;padding-bottom:20px;margin-bottom:28px"> 
+       <svg width="90" height="90" viewBox="0 0 340 340"> 
+         <style>.st{font-family:'Times New Roman',serif;fill:#1a5fa8;letter-spacing:2px}</style> 
+         <circle cx="170" cy="170" r="155" fill="none" stroke="#1a5fa8" stroke-width="4"/> 
+         <circle cx="170" cy="170" r="143" fill="none" stroke="#1a5fa8" stroke-width="1.5"/> 
+         <path id="ta" d="M 28,165 A 142,142 0 0,1 312,165" fill="none"/> 
+         <text class="st" font-size="17" font-weight="700"><textPath href="#ta" startOffset="50%" text-anchor="middle">CALVARY INVESTMENT COMPANY LTD.</textPath></text> 
+         <path id="ba" d="M 45,225 A 142,142 0 0,0 295,225" fill="none"/> 
+         <text class="st" font-size="15" font-weight="700"><textPath href="#ba" startOffset="50%" text-anchor="middle">★  TANZANIA  ★</textPath></text> 
+         <text x="170" y="162" class="st" font-size="14.5" font-weight="700" text-anchor="middle">P. O. Box 75941</text> 
+         <text x="170" y="184" class="st" font-size="14.5" font-weight="700" text-anchor="middle">DAR ES SALAAM</text> 
+         <line x1="90" y1="195" x2="250" y2="195" stroke="#1a5fa8" stroke-width="1.2"/> 
+         <line x1="95" y1="143" x2="245" y2="143" stroke="#1a5fa8" stroke-width="1.2"/> 
+       </svg> 
+       <div> 
+         <h1>TRANSPORTATION SERVICES AGREEMENT</h1> 
+         <p style="margin:4px 0;color:#555;font-size:13px">Calvary Investment Company Ltd &nbsp;|&nbsp; P.O. Box 75941, Dar es Salaam, Tanzania</p> 
+       </div> 
+     </div> 
+ 
+     <p style="text-align:center;margin-bottom:24px"> 
+       <strong>This Agreement is made on the ${new Date(details.contract_date).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong> 
+     </p> 
+ 
+     <p><strong>Between:</strong></p> 
+     <div style="display:flex;gap:40px;margin:16px 0 24px"> 
+       <div style="flex:1;padding:12px;border:1px solid #ccc;border-radius:4px"> 
+         <strong>${client.company_name}</strong><br/>${client.address}<br/> 
+         Contact: ${client.contact_person}<br/>Phone: ${client.phone}<br/> 
+         <em style="font-size:12px">(hereinafter "The Client")</em> 
+       </div> 
+       <div style="flex:1;padding:12px;border:1px solid #ccc;border-radius:4px"> 
+         <strong>Calvary Investment Company Ltd</strong><br/>P.O. Box 75941, Dar es Salaam<br/> 
+         Contact: Managing Director<br/> 
+         <em style="font-size:12px">(hereinafter "The Transporter")</em> 
+       </div> 
+     </div> 
+ 
+     <h2>1. SCOPE OF SERVICES</h2> 
+     <p>The Transporter agrees to provide road freight transportation services to the Client for the movement of cargo between the agreed routes, subject to the rates and conditions set out in this Agreement.</p> 
+ 
+     <h2>2. CONTRACT PERIOD</h2> 
+     <p>This Agreement shall be effective from <strong>${new Date(details.start_date).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong>${details.end_date ? ` to <strong>${new Date(details.end_date).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong>` : " and shall remain in force until terminated by either party with 30 days written notice"}.</p> 
+ 
+     <h2>3. AGREED RATES – ANNEXURE A</h2> 
+     <table> 
+       <thead><tr><th>From</th><th>Destination</th><th>20ft (TZS)</th><th>40ft (TZS)</th><th>Loose (TZS)</th><th>Transit Days</th></tr></thead> 
+       <tbody> 
+         ${rateRow ? `<tr><td>${rateRow.from}</td><td>${rateRow.destination}</td><td>${rateRow.c20.toLocaleString()}</td><td>${rateRow.c40.toLocaleString()}</td><td>${rateRow.loose.toLocaleString()}</td><td>${rateRow.days}</td></tr>` : RATE_SHEET.map((r,i)=>`<tr style="${i%2?'background:#f9f9f9':''}"><td>${r.from}</td><td>${r.destination}</td><td>${r.c20.toLocaleString()}</td><td>${r.c40.toLocaleString()}</td><td>${r.loose.toLocaleString()}</td><td>${r.days}</td></tr>`).join("")} 
+       </tbody> 
+     </table> 
+ 
+     <div class="note"><strong>Note:</strong> Rates are negotiable based on volume and frequency. Fuel surcharges may apply. All rates are exclusive of port/border charges unless stated.</div> 
+ 
+     <h2>4. PAYMENT TERMS</h2> 
+     <p>Invoices are due within <strong>${details.payment_days || 14} days</strong> of delivery. Overdue accounts attract 2% monthly interest. Payment by bank transfer to Calvary Investment Company Ltd — account details provided on invoice.</p> 
+ 
+     <h2>5. LIABILITY</h2> 
+     <p>The Transporter shall take reasonable care of cargo in transit. Liability for loss or damage shall be limited to the declared value of goods, provided the Client has declared such value prior to shipment. The Transporter shall not be liable for delays caused by force majeure, border closures, or road conditions beyond its control.</p> 
+ 
+     <h2>6. INSURANCE</h2> 
+     <p>Cargo insurance is the responsibility of the Client unless otherwise agreed in writing. The Transporter maintains third-party vehicle insurance as required by law.</p> 
+ 
+     <h2>7. GOVERNING LAW</h2> 
+     <p>This Agreement is governed by the Laws of the United Republic of Tanzania. Any disputes shall be resolved by arbitration in Dar es Salaam.</p> 
+ 
+     ${details.special_notes ? `<h2>8. SPECIAL CONDITIONS</h2><p>${details.special_notes}</p>` : ""} 
+ 
+     <div style="margin-top:50px"> 
+       <p style="text-align:center;font-weight:bold;margin-bottom:30px">IN WITNESS WHEREOF, the parties have executed this Agreement:</p> 
+       <div style="display:flex;gap:60px"> 
+         <div style="flex:1"> 
+           <p><strong>For and on behalf of The Client</strong></p> 
+           <div class="sig-box"></div> 
+           <p>Name: ${details.client_signatory || "___________________________"}</p> 
+           <p>Title: ${details.client_title || "___________________________"}</p> 
+           <p style="font-size:11px;color:#888">(Affix company stamp)</p> 
+         </div> 
+         <div style="flex:1"> 
+           <p><strong>For and on behalf of The Transporter</strong></p> 
+           <div class="sig-box"></div> 
+           <p>Name: ___________________________</p> 
+           <p>Title: Managing Director</p> 
+           <p style="font-size:11px;color:#888">(Affix company stamp)</p> 
+         </div> 
+       </div> 
+     </div> 
+ 
+     <div class="footer">Calvary Investment Company Ltd | P.O. Box 75941, Dar es Salaam, Tanzania | This Agreement is governed by the Laws of the United Republic of Tanzania</div> 
+     </body></html>`; 
+ 
+   const print = () => { 
+     const w = window.open("", "_blank"); 
+     if (w) {
+       w.document.write(html); 
+       w.document.close(); 
+       w.print(); 
+     }
+   }; 
+ 
+   return ( 
+     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}> 
+       <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 760, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden" }}> 
+         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid #e5e7eb" }}> 
+           <span style={{ fontWeight: 700, fontSize: 16, color: "#111" }}>Contract Preview</span> 
+           <div style={{ display: "flex", gap: 10 }}> 
+             <button onClick={print} style={{ background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨 Print / Save PDF</button> 
+             <button onClick={onClose} style={{ background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 13 }}>✕ Close</button> 
+           </div> 
+         </div> 
+         <div style={{ overflow: "auto", padding: 24, flex: 1 }} dangerouslySetInnerHTML={{ __html: html }} /> 
+       </div> 
+     </div> 
+   ); 
+ } 
+ 
+ // ── Modal Wrapper ───────────────────────────────────────────────────────── 
+ function Modal({ title, onClose, children }: any) { 
+   return ( 
+     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}> 
+       <div style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 560, maxHeight: "90vh", overflow: "auto" }}> 
+         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1px solid #e5e7eb" }}> 
+           <span style={{ fontWeight: 700, fontSize: 16 }}>{title}</span> 
+           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>✕</button> 
+         </div> 
+         <div style={{ padding: 24 }}>{children}</div> 
+       </div> 
+     </div> 
+   ); 
+ } 
+ 
+ const Field = ({ label, children }: any) => ( 
+   <div style={{ marginBottom: 16 }}> 
+     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</label> 
+     {children} 
+   </div> 
+ ); 
+ const Input = (props: any) => <input {...props} style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8, padding: "9px 12px", fontSize: 14, outline: "none", boxSizing: "border-box", ...props.style }} />; 
+ const Select = ({ value, onChange, children, ...rest }: any) => ( 
+   <select value={value} onChange={onChange} {...rest} style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8, padding: "9px 12px", fontSize: 14, background: "#fff", outline: "none", boxSizing: "border-box" }}>{children}</select> 
+ ); 
+ const Btn = ({ children, onClick, variant = "primary", style: s = {}, ...rest }: any) => { 
+   const styles: any = { 
+     primary: { background: "#1e3a5f", color: "#fff" }, 
+     secondary: { background: "#f3f4f6", color: "#374151" }, 
+     danger: { background: "#fee2e2", color: "#991b1b" }, 
+     success: { background: "#d1fae5", color: "#065f46" }, 
+   }; 
+   return <button onClick={onClick} {...rest} style={{ border: "none", borderRadius: 8, padding: "9px 18px", cursor: "pointer", fontSize: 13, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, ...styles[variant], ...s }}>{children}</button>; 
+ }; 
+ 
+ // ── Main Dashboard ───────────────────────────────────────────────────────── 
+ export default function SalesmanDashboard() { 
+   const { role } = useRole();
+   const { format } = useCurrency();
+   const [tab, setTab] = useState("overview"); 
+   const [clients, setClients] = useState(SEED_CLIENTS); 
+   const [trips, setTrips] = useState(SEED_TRIPS); 
+   const [invoices, setInvoices] = useState(SEED_INVOICES); 
+   const [expenses, setExpenses] = useState(SEED_EXPENSES); 
+   const [modal, setModal] = useState<any>(null); // { type, data } 
+   const [contractState, setContractState] = useState<any>(null); 
+   const [searchQ, setSearchQ] = useState(""); 
+ 
+   const closeModal = () => setModal(null); 
+ 
+   // ── Derived metrics ── 
+   const completedTrips = trips.filter(t => t.status === "completed"); 
+   const totalRevenue = completedTrips.reduce((s, t) => s + (t.revenue || 0), 0); 
+   const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0); 
+   const unpaid = invoices.filter(i => i.status !== "paid"); 
+   const unpaidAmount = unpaid.reduce((s, i) => s + (i.amount || 0), 0); 
+   const clientMap = useMemo(() => Object.fromEntries(clients.map(c => [c.id, c])), [clients]); 
+ 
+   // ── Handlers ── 
+   const saveTrip = (data: any) => { 
+     if (data.id) setTrips(ts => ts.map(t => t.id === data.id ? { ...t, ...data } : t));
+     else setTrips([...trips, { ...data, id: uid(), tripNumber: "CAL-" + (trips.length + 1).toString().padStart(3, '0'), status: "pending", date: today() }]);
+     closeModal();
+   };
 
-  // Data hooks
-  const { trips, loading: tripsLoading } = useTrips();
-  const { expenses, loading: expensesLoading } = useExpenses();
-  const { invoices, loading: invoicesLoading } = useInvoices();
+   const deleteTrip = (id: string) => {
+     if (confirm("Delete this trip?")) setTrips(trips.filter(t => t.id !== id));
+   };
 
-  const loading = tripsLoading || expensesLoading || invoicesLoading;
+   const saveClient = (data: any) => {
+     if (data.id) setClients(cs => cs.map(c => c.id === data.id ? { ...c, ...data } : c));
+     else setClients([...clients, { ...data, id: uid(), status: "active" }]);
+     closeModal();
+   };
 
-  // Calculate metrics
-  const completedTrips = trips.filter(t => t.status === "completed");
-  const pendingTrips = trips.filter(t => t.status === "pending" || t.status === "created");
-  const activeTrips = trips.filter(t => ["in_transit", "loading"].includes(t.status));
-  const totalRevenue = completedTrips.reduce((sum, t) => sum + (Number(t.revenue || t.price) || 0), 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const unpaidInvoices = invoices.filter(i => {
-    const s = (i.status || "").toLowerCase();
-    return s && !["paid", "settled", "closed"].includes(s);
-  });
+   const deleteClient = (id: string) => {
+     if (confirm("Delete this client?")) setClients(clients.filter(c => c.id !== id));
+   };
 
-  // Client revenue breakdown
-  const clientRevenue = completedTrips.reduce((acc: Record<string, number>, trip) => {
-    const client = trip.client || "Unknown";
-    acc[client] = (acc[client] || 0) + (Number(trip.revenue || trip.price) || 0);
-    return acc;
-  }, {});
+   const saveInvoice = (data: any) => {
+     if (data.id) setInvoices(is => is.map(i => i.id === data.id ? { ...i, ...data } : i));
+     else setInvoices([...invoices, { ...data, id: uid(), invoice_number: "INV-" + today().split("-")[0] + "-" + (invoices.length + 1).toString().padStart(3, '0'), status: "pending", date: today() }]);
+     closeModal();
+   };
 
-  // Trip type breakdown
-  const tripTypes = completedTrips.reduce((acc: Record<string, number>, trip) => {
-    const type = trip.cargo_type || "General";
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {});
+   const deleteInvoice = (id: string) => {
+     if (confirm("Delete this invoice?")) setInvoices(invoices.filter(i => i.id !== id));
+   };
 
-  // Alerts
-  const alerts = [
-    {
-      id: "1",
-      title: "Pending Invoices",
-      description: `${unpaidInvoices.length} invoices are pending collection.`,
-      severity: "warning" as const,
-      time: "1 day ago"
-    },
-    {
-      id: "2",
-      title: "Monthly Target",
-      description: `You've achieved ${completedTrips.length} trips this month.`,
-      severity: "info" as const,
-      time: "3 hours ago"
-    }
-  ];
+   const saveExpense = (data: any) => {
+     if (data.id) setExpenses(es => es.map(e => e.id === data.id ? { ...e, ...data } : e));
+     else setExpenses([...expenses, { ...data, id: uid(), date: today() }]);
+     closeModal();
+   };
 
-  // Recent activities
-  const activities = [
-    {
-      id: "1",
-      title: "Trip Completed",
-      description: "Nairobi → Mombasa | Revenue: KES 45,000",
-      time: "2 hours ago",
-      icon: CheckCircle2,
-      color: "bg-green-500"
-    },
-    {
-      id: "2",
-      title: "New Client Added",
-      description: "ABC Corporation - Nairobi Branch",
-      time: "4 hours ago",
-      icon: Users,
-      color: "bg-blue-500"
-    },
-    {
-      id: "3",
-      title: "Invoice Paid",
-      description: "INV-001 received payment of KES 30,000",
-      time: "6 hours ago",
-      icon: DollarSign,
-      color: "bg-emerald-500"
-    }
-  ];
+   const deleteExpense = (id: string) => {
+     if (confirm("Delete this expense?")) setExpenses(expenses.filter(e => e.id !== id));
+   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading sales data...</p>
-        </div>
-      </div>
-    );
-  }
+   return (
+     <DashboardLayout
+       title="Sales Dashboard"
+       description="Calvary Connect Sales & Commercial Management"
+       role={role || "SALESMAN"}
+     >
+       <div className="space-y-6">
+         {/* Navigation Tabs */}
+         <div className="flex bg-white p-1 rounded-xl border shadow-sm sticky top-0 z-10 overflow-x-auto no-scrollbar">
+           {[
+             { id: "overview", label: "📊 Overview" },
+             { id: "clients", label: "👥 Clients" },
+             { id: "trips", label: "🚚 Trips" },
+             { id: "invoices", label: "🧾 Invoices" },
+             { id: "expenses", label: "💸 Expenses" },
+             { id: "contracts", label: "📄 Contracts" }
+           ].map(t => (
+             <button
+               key={t.id}
+               onClick={() => setTab(t.id)}
+               className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${tab === t.id ? "bg-[#1e3a5f] text-white shadow-md" : "text-gray-500 hover:bg-gray-100"}`}
+             >
+               {t.label}
+             </button>
+           ))}
+         </div>
 
-  return (
-    <DashboardLayout
-      title="Sales Dashboard"
-      description="Sales tracking and client management"
-      role={role || "SALESMAN"}
-    >
-      {/* Alert Panel */}
-      <AlertPanel alerts={alerts} />
+         {/* Overview Tab */}
+         {tab === "overview" && (
+           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+               <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                 <div className="flex items-center gap-4">
+                   <div className="p-3 bg-green-50 rounded-xl text-green-600"><DollarSign /></div>
+                   <div>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Revenue</p>
+                     <p className="text-2xl font-black text-gray-800">{fmtTZS(totalRevenue)}</p>
+                   </div>
+                 </div>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                 <div className="flex items-center gap-4">
+                   <div className="p-3 bg-red-50 rounded-xl text-red-600"><Calculator /></div>
+                   <div>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Expenses</p>
+                     <p className="text-2xl font-black text-gray-800">{fmtTZS(totalExpenses)}</p>
+                   </div>
+                 </div>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                 <div className="flex items-center gap-4">
+                   <div className="p-3 bg-blue-50 rounded-xl text-blue-600"><Truck /></div>
+                   <div>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Completed Trips</p>
+                     <p className="text-2xl font-black text-gray-800">{completedTrips.length}</p>
+                   </div>
+                 </div>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                 <div className="flex items-center gap-4">
+                   <div className="p-3 bg-orange-50 rounded-xl text-orange-600"><FileText /></div>
+                   <div>
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Unpaid Amount</p>
+                     <p className="text-2xl font-black text-gray-800">{fmtTZS(unpaidAmount)}</p>
+                   </div>
+                 </div>
+               </div>
+             </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-white border rounded-lg h-auto p-1 overflow-x-auto flex w-full justify-start md:justify-center sticky top-[60px] z-10 shadow-sm">
-          <TabsTrigger value="overview" className="px-6 py-2.5 rounded-md text-sm font-semibold data-[state=active]:bg-primary data-[state=active]:text-white transition-all whitespace-nowrap">
-            📊 Overview
-          </TabsTrigger>
-          <TabsTrigger value="contracts" className="px-6 py-2.5 rounded-md text-sm font-semibold data-[state=active]:bg-primary data-[state=active]:text-white transition-all whitespace-nowrap">
-            📄 Contracts
-          </TabsTrigger>
-        </TabsList>
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+               <div className="lg:col-span-2 bg-white p-6 rounded-2xl border shadow-sm">
+                 <div className="flex items-center justify-between mb-6">
+                   <h3 className="font-bold text-gray-800 flex items-center gap-2"><TrendingUp className="size-5 text-blue-600" /> Revenue Distribution</h3>
+                 </div>
+                 <div className="space-y-4">
+                    {clients.slice(0, 5).map(c => {
+                      const rev = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
+                      const pct = totalRevenue > 0 ? (rev / totalRevenue) * 100 : 0;
+                      return (
+                        <div key={c.id}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium text-gray-700">{c.company_name}</span>
+                            <span className="font-bold text-gray-900">{fmtTZS(rev)}</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-2">
+                            <div className="bg-[#1e3a5f] h-2 rounded-full transition-all duration-1000" style={{ width: `${pct}%` }}></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                 </div>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border shadow-sm flex flex-col items-center justify-center text-center">
+                 <CompanyStamp size={140} />
+                 <h4 className="mt-4 font-black text-[#1a5fa8] text-lg">CALVARY CONNECT</h4>
+                 <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Official Logistics Portal</p>
+               </div>
+             </div>
+           </div>
+         )}
 
-        <TabsContent value="overview" className="space-y-6 mt-4">
-          {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
-        <StatCard
-          title="Total Revenue"
-          value={format(totalRevenue)}
-          icon={DollarSign}
-          color="text-green-600"
-          bgColor="bg-green-50"
-        />
-        <StatCard
-          title="Completed Trips"
-          value={completedTrips.length}
-          icon={CheckCircle2}
-          color="text-blue-600"
-          bgColor="bg-blue-50"
-        />
-        <StatCard
-          title="Active Trips"
-          value={activeTrips.length}
-          icon={Navigation}
-          color="text-cyan-600"
-          bgColor="bg-cyan-50"
-        />
-        <StatCard
-          title="Pending Trips"
-          value={pendingTrips.length}
-          icon={Clock}
-          color="text-amber-600"
-          bgColor="bg-amber-50"
-        />
-        <StatCard
-          title="Total Expenses"
-          value={format(totalExpenses)}
-          icon={Calculator}
-          color="text-red-600"
-          bgColor="bg-red-50"
-        />
-        <StatCard
-          title="Unpaid Invoices"
-          value={unpaidInvoices.length}
-          icon={FileText}
-          color="text-orange-600"
-          bgColor="bg-orange-50"
-        />
-        <StatCard
-          title="Net Earnings"
-          value={format(totalRevenue - totalExpenses)}
-          icon={TrendingUp}
-          color={totalRevenue - totalExpenses >= 0 ? "text-green-600" : "text-red-600"}
-          bgColor={totalRevenue - totalExpenses >= 0 ? "bg-green-50" : "bg-red-50"}
-        />
-        <StatCard
-          title="Clients"
-          value={Object.keys(clientRevenue).length}
-          icon={Users}
-          color="text-indigo-600"
-          bgColor="bg-indigo-50"
-        />
-      </div>
+         {/* Clients Tab */}
+         {tab === "clients" && (
+           <div className="bg-white rounded-2xl border shadow-sm overflow-hidden animate-in fade-in">
+             <div className="p-6 border-b flex items-center justify-between bg-gray-50/50">
+               <h3 className="font-bold text-gray-800">Client Directory</h3>
+               <Btn onClick={() => setModal({ type: "client" })}><Plus size={16} /> Add Client</Btn>
+             </div>
+             <div className="overflow-x-auto">
+               <table className="w-full text-sm text-left">
+                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                   <tr>
+                     <th className="px-6 py-4">Company Name</th>
+                     <th className="px-6 py-4">Contact Person</th>
+                     <th className="px-6 py-4">Email / Phone</th>
+                     <th className="px-6 py-4">Status</th>
+                     <th className="px-6 py-4 text-right">Actions</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y">
+                   {clients.map(c => (
+                     <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                       <td className="px-6 py-4 font-bold text-gray-900">{c.company_name}</td>
+                       <td className="px-6 py-4 text-gray-600">{c.contact_person}</td>
+                       <td className="px-6 py-4">
+                         <div className="text-xs font-medium text-gray-800">{c.email}</div>
+                         <div className="text-[10px] text-gray-400">{c.phone}</div>
+                       </td>
+                       <td className="px-6 py-4"><Badge status={c.status} /></td>
+                       <td className="px-6 py-4 text-right">
+                         <button onClick={() => setModal({ type: "client", data: c })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                         <button onClick={() => deleteClient(c.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+         )}
 
-      {/* Revenue & Sales Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Revenue Chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart2 className="size-5" />
-              Revenue & Trip Analytics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-green-50 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Total Revenue</p>
-                <p className="text-lg font-bold text-green-600">{format(totalRevenue)}</p>
-              </div>
-              <div className="bg-red-50 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Total Expenses</p>
-                <p className="text-lg font-bold text-red-600">{format(totalExpenses)}</p>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Completed Trips</p>
-                <p className="text-lg font-bold text-blue-600">{completedTrips.length}</p>
-              </div>
-              <div className="bg-purple-50 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Avg Revenue/Trip</p>
-                <p className="text-lg font-bold text-purple-600">
-                  {completedTrips.length > 0
-                    ? format(totalRevenue / completedTrips.length)
-                    : format(0)}
-                </p>
-              </div>
-            </div>
-            {/* Trip Type Distribution */}
-            <h4 className="text-sm font-medium mb-3">Trip Type Distribution</h4>
-            <div className="space-y-2">
-              {Object.entries(tripTypes).map(([type, count]) => (
-                <div key={type} className="flex items-center gap-3">
-                  <div className="w-24 text-xs text-muted-foreground truncate">{type}</div>
-                  <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-500"
-                      style={{
-                        width: `${completedTrips.length > 0 ? (count / completedTrips.length) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <div className="w-16 text-right text-sm font-medium">{count} trips</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+         {/* Trips Tab */}
+         {tab === "trips" && (
+           <div className="bg-white rounded-2xl border shadow-sm overflow-hidden animate-in fade-in">
+             <div className="p-6 border-b flex items-center justify-between bg-gray-50/50">
+               <h3 className="font-bold text-gray-800">Trip Logs</h3>
+               <Btn onClick={() => setModal({ type: "trip" })}><Plus size={16} /> New Trip</Btn>
+             </div>
+             <div className="overflow-x-auto">
+               <table className="w-full text-sm text-left">
+                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                   <tr>
+                     <th className="px-6 py-4">Trip #</th>
+                     <th className="px-6 py-4">Route</th>
+                     <th className="px-6 py-4">Client</th>
+                     <th className="px-6 py-4">Revenue</th>
+                     <th className="px-6 py-4">Status</th>
+                     <th className="px-6 py-4 text-right">Actions</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y">
+                   {trips.map(t => (
+                     <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                       <td className="px-6 py-4 font-black text-gray-900">{t.tripNumber}</td>
+                       <td className="px-6 py-4">
+                         <div className="flex items-center gap-2 text-gray-800 font-medium">
+                           {t.origin} <ArrowRight size={12} className="text-gray-400" /> {t.destination}
+                         </div>
+                       </td>
+                       <td className="px-6 py-4 text-gray-600">{clientMap[t.client]?.company_name || "Unknown"}</td>
+                       <td className="px-6 py-4 font-bold text-green-600">{fmtTZS(t.revenue)}</td>
+                       <td className="px-6 py-4"><Badge status={t.status} /></td>
+                       <td className="px-6 py-4 text-right">
+                         <button onClick={() => setModal({ type: "trip", data: t })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                         <button onClick={() => deleteTrip(t.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+         )}
 
-        {/* Quick Actions & Top Clients */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Briefcase className="size-5" />
-                Top Clients
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {Object.entries(clientRevenue)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5)
-                .map(([client, revenue], i) => (
-                  <div key={i} className="flex items-center justify-between p-2 border-b last:border-0">
-                    <div className="flex items-center gap-2">
-                      <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                        {i + 1}
-                      </div>
-                      <span className="text-sm font-medium">{client}</span>
-                    </div>
-                    <span className="text-sm font-bold text-green-600">{format(revenue)}</span>
-                  </div>
-                ))}
-              {Object.keys(clientRevenue).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">No client data available</p>
-              )}
-            </CardContent>
-          </Card>
+         {/* Invoices Tab */}
+         {tab === "invoices" && (
+           <div className="bg-white rounded-2xl border shadow-sm overflow-hidden animate-in fade-in">
+             <div className="p-6 border-b flex items-center justify-between bg-gray-50/50">
+               <h3 className="font-bold text-gray-800">Financial Invoices</h3>
+               <Btn onClick={() => setModal({ type: "invoice" })}><Plus size={16} /> Create Invoice</Btn>
+             </div>
+             <div className="overflow-x-auto">
+               <table className="w-full text-sm text-left">
+                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                   <tr>
+                     <th className="px-6 py-4">Invoice #</th>
+                     <th className="px-6 py-4">Client</th>
+                     <th className="px-6 py-4">Amount</th>
+                     <th className="px-6 py-4">Due Date</th>
+                     <th className="px-6 py-4">Status</th>
+                     <th className="px-6 py-4 text-right">Actions</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y">
+                   {invoices.map(i => (
+                     <tr key={i.id} className="hover:bg-gray-50 transition-colors">
+                       <td className="px-6 py-4 font-black text-gray-900">{i.invoice_number}</td>
+                       <td className="px-6 py-4 text-gray-600">{clientMap[i.client]?.company_name || "Unknown"}</td>
+                       <td className="px-6 py-4 font-bold text-blue-600">{fmtTZS(i.amount)}</td>
+                       <td className="px-6 py-4 text-gray-500">{new Date(i.due_date).toLocaleDateString()}</td>
+                       <td className="px-6 py-4"><Badge status={i.status} /></td>
+                       <td className="px-6 py-4 text-right">
+                         <button onClick={() => setModal({ type: "invoice", data: i })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                         <button onClick={() => deleteInvoice(i.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+         )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="size-5" />
-                Recent Activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ActivityFeed activities={activities} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+         {/* Expenses Tab */}
+         {tab === "expenses" && (
+           <div className="bg-white rounded-2xl border shadow-sm overflow-hidden animate-in fade-in">
+             <div className="p-6 border-b flex items-center justify-between bg-gray-50/50">
+               <h3 className="font-bold text-gray-800">Operational Expenses</h3>
+               <Btn onClick={() => setModal({ type: "expense" })}><Plus size={16} /> Record Expense</Btn>
+             </div>
+             <div className="overflow-x-auto">
+               <table className="w-full text-sm text-left">
+                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                   <tr>
+                     <th className="px-6 py-4">Description</th>
+                     <th className="px-6 py-4">Category</th>
+                     <th className="px-6 py-4">Amount</th>
+                     <th className="px-6 py-4">Date</th>
+                     <th className="px-6 py-4 text-right">Actions</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y">
+                   {expenses.map(e => (
+                     <tr key={e.id} className="hover:bg-gray-50 transition-colors">
+                       <td className="px-6 py-4 font-bold text-gray-900">{e.description}</td>
+                       <td className="px-6 py-4">
+                         <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-black uppercase text-gray-500">{e.category}</span>
+                       </td>
+                       <td className="px-6 py-4 font-bold text-red-600">{fmtTZS(e.amount)}</td>
+                       <td className="px-6 py-4 text-gray-500">{new Date(e.date).toLocaleDateString()}</td>
+                       <td className="px-6 py-4 text-right">
+                         <button onClick={() => setModal({ type: "expense", data: e })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                         <button onClick={() => deleteExpense(e.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+         )}
 
-      {/* Trip & Invoice Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Navigation className="size-5" />
-              Trip History
-            </CardTitle>
-            <Badge variant="secondary">{completedTrips.length} completed</Badge>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="completed">
-              <TabsList>
-                <TabsTrigger value="completed">Completed</TabsTrigger>
-                <TabsTrigger value="active">Active ({activeTrips.length})</TabsTrigger>
-                <TabsTrigger value="pending">Pending ({pendingTrips.length})</TabsTrigger>
-              </TabsList>
-              <TabsContent value="completed">
-                <DataTable
-                  columns={[
-                    { key: "tripNumber", label: "Trip #" },
-                    { key: "origin", label: "Origin" },
-                    { key: "destination", label: "Destination" },
-                    { key: "client", label: "Client" },
-                    { key: "revenue", label: "Revenue", render: (row) => format(Number(row.revenue || row.price || 0)) },
-                  ]}
-                  data={completedTrips.slice(0, 10)}
-                />
-              </TabsContent>
-              <TabsContent value="active">
-                <DataTable
-                  columns={[
-                    { key: "tripNumber", label: "Trip #" },
-                    { key: "origin", label: "Origin" },
-                    { key: "destination", label: "Destination" },
-                    { key: "status", label: "Status", render: (row) => (
-                      <Badge variant="default">
-                        {row.status?.replace("_", " ")}
-                      </Badge>
-                    )},
-                  ]}
-                  data={activeTrips.slice(0, 10)}
-                />
-              </TabsContent>
-              <TabsContent value="pending">
-                <DataTable
-                  columns={[
-                    { key: "tripNumber", label: "Trip #" },
-                    { key: "origin", label: "Origin" },
-                    { key: "destination", label: "Destination" },
-                    { key: "status", label: "Status", render: (row) => (
-                      <Badge variant="outline">
-                        {row.status?.replace("_", " ")}
-                      </Badge>
-                    )},
-                  ]}
-                  data={pendingTrips.slice(0, 10)}
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+         {/* Contracts Tab */}
+         {tab === "contracts" && (
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
+             <div className="bg-white p-6 rounded-2xl border shadow-sm">
+               <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2"><FileText className="text-blue-600" /> Contract Generator</h3>
+               <div className="space-y-4">
+                 <Field label="Select Client">
+                   <Select value={contractState?.client || ""} onChange={(e: any) => setContractState({ ...contractState, client: e.target.value })}>
+                     <option value="">Choose a client...</option>
+                     {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                   </Select>
+                 </Field>
+                 <Field label="Route & Rates">
+                   <Select value={contractState?.routeIdx || ""} onChange={(e: any) => setContractState({ ...contractState, routeIdx: e.target.value })}>
+                     <option value="">Standard Rate Sheet (All Routes)</option>
+                     {RATE_SHEET.map((r, i) => <option key={i} value={i}>{r.from} → {r.destination}</option>)}
+                   </Select>
+                 </Field>
+                 <div className="grid grid-cols-2 gap-4">
+                   <Field label="Contract Date">
+                     <Input type="date" value={contractState?.contract_date || today()} onChange={(e: any) => setContractState({ ...contractState, contract_date: e.target.value })} />
+                   </Field>
+                   <Field label="Start Date">
+                     <Input type="date" value={contractState?.start_date || today()} onChange={(e: any) => setContractState({ ...contractState, start_date: e.target.value })} />
+                   </Field>
+                 </div>
+                 <Btn onClick={() => setContractState({ ...contractState, showPreview: true })} style={{ width: "100%", height: 45 }} disabled={!contractState?.client}>
+                   Generate Agreement
+                 </Btn>
+               </div>
+             </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="size-5" />
-              Invoices
-            </CardTitle>
-            <Badge variant="destructive">{unpaidInvoices.length} unpaid</Badge>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              columns={[
-                { key: "invoice_number", label: "Invoice #" },
-                { key: "client", label: "Client" },
-                { key: "amount", label: "Amount" },
-                { key: "status", label: "Status", render: (row) => (
-                  <Badge variant={row.status === "paid" ? "default" : "destructive"}>
-                    {row.status}
-                  </Badge>
-                )},
-              ]}
-              data={invoices.slice(0, 10)}
-            />
-          </CardContent>
-        </Card>
-      </div>
-        </TabsContent>
+             <div className="bg-white p-6 rounded-2xl border shadow-sm">
+               <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2"><DollarSign className="text-green-600" /> Current Rate Sheet</h3>
+               <div className="overflow-auto max-h-[300px] rounded-lg border">
+                 <table className="w-full text-xs text-left">
+                   <thead className="bg-gray-50 text-gray-500 uppercase text-[9px] font-black">
+                     <tr>
+                       <th className="px-3 py-3">Route</th>
+                       <th className="px-3 py-3">20ft</th>
+                       <th className="px-3 py-3">40ft</th>
+                       <th className="px-3 py-3">Days</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y">
+                     {RATE_SHEET.map((r, i) => (
+                       <tr key={i} className="hover:bg-gray-50">
+                         <td className="px-3 py-3 font-medium">{r.from} → {r.destination}</td>
+                         <td className="px-3 py-3 font-bold">{r.c20.toLocaleString()}</td>
+                         <td className="px-3 py-3 font-bold">{r.c40.toLocaleString()}</td>
+                         <td className="px-3 py-3 text-center">{r.days}</td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             </div>
+           </div>
+         )}
+       </div>
 
-        <TabsContent value="contracts" className="mt-4">
-          <ContractGenerator />
-        </TabsContent>
-      </Tabs>
-    </DashboardLayout>
-  );
-}
+       {/* Contract Preview Modal */}
+       {contractState?.showPreview && (
+         <ContractPreview 
+           client={clients.find(c => c.id === contractState.client)}
+           rateRow={contractState.routeIdx !== "" ? RATE_SHEET[contractState.routeIdx] : null}
+           details={contractState}
+           onClose={() => setContractState({ ...contractState, showPreview: false })}
+         />
+       )}
+
+       {/* Modals for CRUD operations */}
+       {modal?.type === "client" && (
+         <Modal title={modal.data ? "Edit Client" : "Add New Client"} onClose={closeModal}>
+           <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveClient(Object.fromEntries(d)); }}>
+             <input type="hidden" name="id" defaultValue={modal.data?.id} />
+             <Field label="Company Name"><Input name="company_name" defaultValue={modal.data?.company_name} required /></Field>
+             <Field label="Contact Person"><Input name="contact_person" defaultValue={modal.data?.contact_person} required /></Field>
+             <Field label="Email Address"><Input name="email" type="email" defaultValue={modal.data?.email} required /></Field>
+             <Field label="Phone Number"><Input name="phone" defaultValue={modal.data?.phone} required /></Field>
+             <Field label="Physical Address"><Input name="address" defaultValue={modal.data?.address} /></Field>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit">Save Client</Btn>
+             </div>
+           </form>
+         </Modal>
+       )}
+
+       {modal?.type === "trip" && (
+         <Modal title={modal.data ? "Edit Trip" : "New Trip Log"} onClose={closeModal}>
+           <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveTrip(Object.fromEntries(d)); }}>
+             <input type="hidden" name="id" defaultValue={modal.data?.id} />
+             <Field label="Select Client">
+               <Select name="client" defaultValue={modal.data?.client} required>
+                 {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+               </Select>
+             </Field>
+             <div className="grid grid-cols-2 gap-4">
+               <Field label="Origin"><Input name="origin" defaultValue={modal.data?.origin} required /></Field>
+               <Field label="Destination"><Input name="destination" defaultValue={modal.data?.destination} required /></Field>
+             </div>
+             <div className="grid grid-cols-2 gap-4">
+               <Field label="Cargo Type"><Input name="cargo_type" defaultValue={modal.data?.cargo_type} /></Field>
+               <Field label="Revenue (TZS)"><Input name="revenue" type="number" defaultValue={modal.data?.revenue} required /></Field>
+             </div>
+             <div className="grid grid-cols-2 gap-4">
+               <Field label="Driver Name"><Input name="driver" defaultValue={modal.data?.driver} /></Field>
+               <Field label="Truck Number"><Input name="truck" defaultValue={modal.data?.truck} /></Field>
+             </div>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit">Save Trip</Btn>
+             </div>
+           </form>
+         </Modal>
+       )}
+
+       {modal?.type === "invoice" && (
+         <Modal title={modal.data ? "Edit Invoice" : "Create New Invoice"} onClose={closeModal}>
+           <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveInvoice(Object.fromEntries(d)); }}>
+             <input type="hidden" name="id" defaultValue={modal.data?.id} />
+             <Field label="Select Client">
+               <Select name="client" defaultValue={modal.data?.client} required>
+                 {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+               </Select>
+             </Field>
+             <Field label="Amount (TZS)"><Input name="amount" type="number" defaultValue={modal.data?.amount} required /></Field>
+             <Field label="Due Date"><Input name="due_date" type="date" defaultValue={modal.data?.due_date || today()} required /></Field>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit">Create Invoice</Btn>
+             </div>
+           </form>
+         </Modal>
+       )}
+
+       {modal?.type === "expense" && (
+         <Modal title={modal.data ? "Edit Expense" : "Record Operational Expense"} onClose={closeModal}>
+           <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveExpense(Object.fromEntries(d)); }}>
+             <input type="hidden" name="id" defaultValue={modal.data?.id} />
+             <Field label="Description"><Input name="description" defaultValue={modal.data?.description} required /></Field>
+             <div className="grid grid-cols-2 gap-4">
+               <Field label="Category">
+                 <Select name="category" defaultValue={modal.data?.category}>
+                   <option value="Fuel">Fuel</option>
+                   <option value="Maintenance">Maintenance</option>
+                   <option value="Fees">Fees</option>
+                   <option value="Allowance">Allowance</option>
+                   <option value="Other">Other</option>
+                 </Select>
+               </Field>
+               <Field label="Amount (TZS)"><Input name="amount" type="number" defaultValue={modal.data?.amount} required /></Field>
+             </div>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit">Save Expense</Btn>
+             </div>
+           </form>
+         </Modal>
+       )}
+     </DashboardLayout>
+   ); 
+ }
