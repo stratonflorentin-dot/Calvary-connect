@@ -44,6 +44,8 @@ function statusLabel(s: string) {
   return map[s] || s;
 }
 
+import { WorkflowService } from '@/services/workflow-service';
+
 export default function ServiceRequestsPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
 
@@ -128,13 +130,20 @@ export default function ServiceRequestsPage() {
     nextStatus: string,
   ) => {
     e.preventDefault();
-    const notes = String(new FormData(e.currentTarget).get('notes') || '');
-    await updateRequest(
-      requestId,
-      nextStatus,
-      { mechanic_notes: notes, notes },
-      request,
-    );
+    const formData = new FormData(e.currentTarget);
+    const notes = String(formData.get('notes') || '');
+    const cost = parseFloat(String(formData.get('cost') || '0'));
+
+    if (nextStatus === 'completed') {
+      await WorkflowService.completeMaintenance(requestId, cost);
+    } else {
+      await updateRequest(
+        requestId,
+        nextStatus,
+        { mechanic_notes: notes, notes },
+        request,
+      );
+    }
     e.currentTarget.reset();
   };
 
@@ -227,7 +236,14 @@ export default function ServiceRequestsPage() {
                                 <DialogTitle>Mechanic notes</DialogTitle>
                               </DialogHeader>
                               <form onSubmit={(e) => handleMechanicNotes(e, id, r, 'completed')} className="space-y-4 pt-4">
-                                <Textarea name="notes" placeholder="Work performed, parts replaced…" required className="min-h-[120px]" />
+                                <div className="space-y-2">
+                                  <Label>Actual Cost (TZS)</Label>
+                                  <Input name="cost" type="number" placeholder="0" required />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Service Log / Notes</Label>
+                                  <Textarea name="notes" placeholder="Work performed, parts replaced…" required className="min-h-[120px]" />
+                                </div>
                                 <Button type="submit" className="w-full">Mark completed</Button>
                               </form>
                             </DialogContent>
@@ -246,9 +262,16 @@ export default function ServiceRequestsPage() {
                               <DialogTitle>Mechanic notes</DialogTitle>
                             </DialogHeader>
                             <form onSubmit={(e) => handleMechanicNotes(e, id, r, 'completed')} className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                              <Label>Actual Cost (TZS)</Label>
+                              <Input name="cost" type="number" placeholder="0" required />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Service Log / Notes</Label>
                               <Textarea name="notes" placeholder="Final service log…" required className="min-h-[120px]" />
-                              <Button type="submit" className="w-full">Mark completed</Button>
-                            </form>
+                            </div>
+                            <Button type="submit" className="w-full">Mark completed</Button>
+                          </form>
                           </DialogContent>
                         </Dialog>
                       )}

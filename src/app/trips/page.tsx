@@ -21,6 +21,8 @@ import { toast } from '@/hooks/use-toast';
 import { africanCities, City, getCityByName, calculateDistance, getEstimatedTime } from '@/lib/african-cities';
 import { getUsersAction } from '@/app/users/actions';
 
+import { WorkflowService } from '@/services/workflow-service';
+
 export default function TripsPage() {
   const { role, isAdmin, isInitialized } = useRole();
   const { user, isLoading: isUserLoading } = useSupabase();
@@ -266,12 +268,15 @@ export default function TripsPage() {
         updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
-        .from('trips')
-        .update(updateData)
-        .eq('id', editingTrip.id);
-
-      if (error) throw error;
+      if (editingTrip.status === 'COMPLETED') {
+        await WorkflowService.completeTrip(editingTrip.id, updateData);
+      } else {
+        const { error } = await supabase
+          .from('trips')
+          .update(updateData)
+          .eq('id', editingTrip.id);
+        if (error) throw error;
+      }
 
       toast({ title: 'Success', description: 'Trip updated successfully!' });
       setShowEditDialog(false);

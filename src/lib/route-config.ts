@@ -35,26 +35,146 @@ export interface RouteConfig {
   allowedRoles: UserRole[];
   defaultRedirect?: string;
   icon?: any;
+  category?: "dashboard" | "logistics" | "fleet" | "finance" | "people" | "system";
 }
 
 // Central route configuration
 export const ROUTE_CONFIG: RouteConfig[] = [
-  // { path: "/drivers", label: "Drivers", allowedRoles: ["CEO", "ADMIN", "OPERATOR"] },
   {
     path: "/",
     label: "Dashboard",
     allowedRoles: [...ALL_APP_ROLES],
+    category: "dashboard",
   },
-  {
-    path: "/fleet",
-    label: "Fleet",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
-  },
+  // --- Logistics ---
   {
     path: "/trips",
-    label: "Trips",
+    label: "Trips & Dispatch",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN"],
+    category: "logistics",
   },
+  {
+    path: "/bookings",
+    label: "Bookings",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
+    icon: CalendarDays,
+    category: "logistics",
+  },
+  {
+    path: "/map",
+    label: "Live Fleet Map",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "HR"],
+    category: "logistics",
+  },
+  {
+    path: "/customers",
+    label: "Customers",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    icon: Building2,
+    category: "logistics",
+  },
+  {
+    path: "/sales",
+    label: "Sales Pipelines",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
+    icon: Briefcase,
+    category: "logistics",
+  },
+
+  // --- Fleet & Assets ---
+  {
+    path: "/fleet",
+    label: "Fleet Assets",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+    category: "fleet",
+  },
+  {
+    path: "/service-requests",
+    label: "Maintenance",
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR"],
+    category: "fleet",
+  },
+  {
+    path: "/inventory",
+    label: "Inventory",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
+    category: "fleet",
+  },
+  {
+    path: "/parts-requests",
+    label: "Parts Requests",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
+    category: "fleet",
+  },
+  {
+    path: "/fuel-approvals",
+    label: "Fuel Management",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+    category: "fleet",
+  },
+
+  // --- Financial Operations ---
+  {
+    path: "/finance",
+    label: "Financial Ledger",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+  },
+  {
+    path: "/expenses",
+    label: "Expense Tracking",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "OPERATOR", "HR"],
+    category: "finance",
+  },
+  {
+    path: "/income",
+    label: "Revenue Tracking",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "SALESMAN"],
+    category: "finance",
+  },
+  {
+    path: "/reports",
+    label: "Financial Reports",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    icon: BarChart2,
+    category: "finance",
+  },
+
+  // --- People & HR ---
+  {
+    path: "/users",
+    label: "Staff Directory",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+    category: "people",
+  },
+  {
+    path: "/drivers",
+    label: "Driver Management",
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR"],
+    category: "people",
+  },
+  {
+    path: "/allowances",
+    label: "Payroll & Allowances",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+  },
+
+  // --- System ---
+  {
+    path: "/audit",
+    label: "Audit Logs",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "system",
+  },
+  {
+    path: "/ai-insights",
+    label: "AI Strategy",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "system",
+  },
+
+  // --- Driver Specific (Hidden from Sidebar Main Menu) ---
   {
     path: "/driver/trips",
     label: "My Trips",
@@ -62,7 +182,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: "/driver/fuel",
-    label: "Fuel",
+    label: "Fuel Log",
     allowedRoles: ["DRIVER"],
   },
   {
@@ -77,147 +197,19 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: "/driver/maintenance",
-    label: "Maintenance",
+    label: "Report Issue",
     allowedRoles: ["DRIVER"],
   },
-  {
-    path: "/accountant/expenses",
-    label: "Expense Review",
-    allowedRoles: ["ACCOUNTANT", "CEO", "ADMIN", "HR"],
-  },
-  {
-    path: "/bookings",
-    label: "Bookings",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
-    icon: CalendarDays,
-  },
-  {
-    path: "/drivers",
-    label: "Drivers",
-    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR"],
-  },
-  {
-    path: "/customers",
-    label: "Customers",
-    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
-    icon: Building2,
-  },
-  {
-    path: "/sales",
-    label: "Sales",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
-    icon: Briefcase,
-  },
-
-  {
-    path: "/reports",
-    label: "Reports & Analytics",
-    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR", "OPERATOR", "SALESMAN"],
-    icon: BarChart2,
-  },
-  {
-    path: "/expenses",
-    label: "Expenses",
-    allowedRoles: [
-      "CEO",
-      "ADMIN",
-      "ACCOUNTANT",
-      "OPERATOR",
-      "MECHANIC",
-      "HR",
-    ],
-  },
-  {
-    path: "/income",
-    label: "Income",
-    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR", "SALESMAN"],
-  },
-  {
-    path: "/allowances",
-    label: "Allowances",
-    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT", "MECHANIC", "OPERATOR"],
-  },
-  {
-    path: "/fuel-approvals",
-    label: "Fuel Approvals",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
-  },
-  {
-    path: "/spare-parts",
-    label: "Spare Parts",
-    allowedRoles: [
-      "CEO",
-      "ADMIN",
-      "MECHANIC",
-      "OPERATOR",
-      "WAREHOUSE_STAFF",
-    ],
-  },
-  { path: "/users", label: "Users", allowedRoles: ["CEO", "ADMIN", "HR"] },
-  {
-    path: "/inventory",
-    label: "Inventory",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
-  },
-  {
-    path: "/parts-requests",
-    label: "Parts Requests",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
-  },
-  {
-    path: "/service-requests",
-    label: "Service Requests",
-    allowedRoles: ["CEO", "ADMIN", "MECHANIC"],
-  },
-  {
-    path: "/truck-history",
-    label: "Truck History",
-    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR"],
-  },
-  {
-    path: "/map",
-    label: "Fleet Map",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "HR"],
-  },
-  {
-    path: "/proof",
-    label: "Proof of Delivery",
-    allowedRoles: ["CEO", "ADMIN", "DRIVER"],
-  },
-  {
-    path: "/report",
-    label: "Report Maintenance",
-    allowedRoles: ["CEO", "ADMIN", "DRIVER", "MECHANIC"],
-  },
-  {
-    path: "/finance",
-    label: "Financial Operations",
-    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
-  },
-  {
-    path: "/ai-insights",
-    label: "AI Insights",
-    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
-  },
-  { path: "/audit", label: "Audit Log", allowedRoles: ["CEO", "ADMIN"] },
+  
+  // --- Profile & Shared ---
   {
     path: "/notifications",
     label: "Notifications",
-    allowedRoles: [
-      "CEO",
-      "ADMIN",
-      "OPERATOR",
-      "DRIVER",
-      "MECHANIC",
-      "ACCOUNTANT",
-      "HR",
-      "SALESMAN",
-      "WAREHOUSE_STAFF",
-    ],
+    allowedRoles: [...ALL_APP_ROLES],
   },
   {
     path: "/profile",
-    label: "Profile",
+    label: "My Profile",
     allowedRoles: [...ALL_APP_ROLES],
   },
 ];
