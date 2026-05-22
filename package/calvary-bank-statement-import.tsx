@@ -68,18 +68,18 @@ interface ImportedTransaction {
 
 // Pre-configured mapping rules
 const ACCOUNT_MAPPINGS = [
-  { keyword: 'fuel', accountCode: '5101', accountName: 'Fuel Expense' },
-  { keyword: 'diesel', accountCode: '5101', accountName: 'Fuel Expense' },
-  { keyword: 'maintenance', accountCode: '5104', accountName: 'Truck Repairs' },
-  { keyword: 'repair', accountCode: '5104', accountName: 'Truck Repairs' },
-  { keyword: 'driver', accountCode: '5102', accountName: 'Driver Salaries' },
-  { keyword: 'allowance', accountCode: '5103', accountName: 'Driver Allowances' },
-  { keyword: 'toll', accountCode: '5109', accountName: 'Toll Fees' },
-  { keyword: 'border', accountCode: '5107', accountName: 'Border and Port Charges' },
-  { keyword: 'insurance', accountCode: '5110', accountName: 'Vehicle Insurance' },
-  { keyword: 'client', accountCode: '1104', accountName: 'Accounts Receivable' },
-  { keyword: 'payment', accountCode: '1104', accountName: 'Accounts Receivable' },
-  { keyword: 'transfer', accountCode: '1102', accountName: 'Bank Account' },
+  { keyword: 'fuel', accountCode: '5001', accountName: 'Fuel Expenses' },
+  { keyword: 'diesel', accountCode: '5001', accountName: 'Fuel Expenses' },
+  { keyword: 'maintenance', accountCode: '6001', accountName: 'Vehicle Maintenance' },
+  { keyword: 'repair', accountCode: '6001', accountName: 'Vehicle Maintenance' },
+  { keyword: 'driver', accountCode: '5002', accountName: 'Driver Allowances' },
+  { keyword: 'allowance', accountCode: '5002', accountName: 'Driver Allowances' },
+  { keyword: 'toll', accountCode: '5003', accountName: 'Border & Toll Charges' },
+  { keyword: 'border', accountCode: '5003', accountName: 'Border & Toll Charges' },
+  { keyword: 'insurance', accountCode: '6002', accountName: 'Vehicle Insurance' },
+  { keyword: 'client', accountCode: '1101', accountName: 'Accounts Receivable' },
+  { keyword: 'payment', accountCode: '1101', accountName: 'Accounts Receivable' },
+  { keyword: 'transfer', accountCode: '1001', accountName: 'Cash - NMB Bank' },
 ];
 
 export function BankStatementImport() {

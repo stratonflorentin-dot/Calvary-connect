@@ -259,7 +259,7 @@ export class SupabaseService {
       query = query.eq('vehicle_id', filters.vehicleId);
     }
     
-    const { data, error } = await query.order('reported_at', { ascending: false });
+    const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   }
@@ -268,12 +268,12 @@ export class SupabaseService {
     const user = await getCurrentUser();
     const data = await this.performAction('maintenance_requests', 'INSERT', {
       ...request,
-      reported_at: new Date().toISOString()
+      created_at: new Date().toISOString()
     });
     
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'maintenance_requests', data.id, null, data,
-        `Created maintenance request for ${request.vehicle_id} - ${request.issue_type}`);
+        `Created maintenance request for ${request.vehicle_id}`);
     }
     
     return data;

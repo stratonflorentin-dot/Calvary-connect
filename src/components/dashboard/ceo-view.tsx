@@ -119,7 +119,7 @@ export default function CeoDashboard() {
           ...(maintAlerts?.map(m => ({
             id: m.id,
             title: "Maintenance Due",
-            description: `Vehicle ${m.vehicle_id} needs attention: ${m.issue_type}`,
+            description: `Vehicle ${m.vehicle_id} needs attention: ${m.description || m.issue_type}`,
             severity: "warning" as const,
             time: "Recent"
           })) || []),

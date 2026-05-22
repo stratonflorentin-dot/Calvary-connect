@@ -66,7 +66,7 @@ export default function AdminDashboard() {
         );
         
         const criticalMaint = await supabase.from('maintenance_requests')
-          .select('id, vehicle_id, issue_type')
+          .select('id, vehicle_id, description')
           .eq('priority', 'critical')
           .neq('status', 'completed')
           .limit(3);
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
           ...(criticalMaint.data?.map(m => ({
             id: m.id,
             title: "Critical Maintenance",
-            description: `Vehicle ${m.vehicle_id} has critical issue: ${m.issue_type}`,
+            description: `Vehicle ${m.vehicle_id} has critical issue: ${m.description}`,
             severity: "warning" as const,
             time: "Fleet"
           })) || [])

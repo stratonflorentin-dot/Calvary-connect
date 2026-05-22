@@ -96,7 +96,7 @@ export default function MechanicDashboard() {
         const criticalMaint = maintenanceRequests.filter(r => r.priority === 'critical' && r.status !== 'completed').map(m => ({
           id: m.id,
           title: "CRITICAL REPAIR",
-          description: `Vehicle ${m.vehicle_id} has critical issue: ${m.issue_type}`,
+          description: `Vehicle ${m.vehicle_id} has critical issue: ${m.description || m.issue_description || m.issue_type}`,
           severity: "critical" as const,
           time: "Immediate"
         }));
@@ -258,8 +258,8 @@ export default function MechanicDashboard() {
               <TabsContent value="pending">
                 <DataTable
                   columns={[
-                    { key: "issueDescription", label: "Issue" },
-                    { key: "fleetVehicleId", label: "Vehicle" },
+                    { key: "description", label: "Issue" },
+                    { key: "vehicle_id", label: "Vehicle" },
                     {
                       key: "priority",
                       label: "Priority",
@@ -301,8 +301,8 @@ export default function MechanicDashboard() {
               <TabsContent value="in_progress">
                 <DataTable
                   columns={[
-                    { key: "issueDescription", label: "Issue" },
-                    { key: "fleetVehicleId", label: "Vehicle" },
+                    { key: "description", label: "Issue" },
+                    { key: "vehicle_id", label: "Vehicle" },
                     {
                       key: "status",
                       label: "Status",
@@ -322,28 +322,28 @@ export default function MechanicDashboard() {
               <TabsContent value="completed">
                 <DataTable
                   columns={[
-                    { key: "issueDescription", label: "Issue" },
-                    { key: "fleetVehicleId", label: "Vehicle" },
+                    { key: "description", label: "Issue" },
+                    { key: "vehicle_id", label: "Vehicle" },
                     {
-                      key: "completedAt",
+                      key: "completed_at",
                       label: "Completed",
                       render: (row) =>
                         new Date(
-                          row.completedAt || row.updated_at,
+                          row.completed_at || row.updated_at,
                         ).toLocaleDateString(),
                     },
                     {
-                      key: "truckConditionAfterService",
+                      key: "truck_condition_after_service",
                       label: "Condition",
                       render: (row) => (
                         <Badge
                           variant={
-                            row.truckConditionAfterService === "good"
+                            row.truck_condition_after_service === "good"
                               ? "default"
                               : "secondary"
                           }
                         >
-                          {row.truckConditionAfterService}
+                          {row.truck_condition_after_service}
                         </Badge>
                       ),
                     },

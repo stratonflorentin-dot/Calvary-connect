@@ -117,14 +117,14 @@ export function StatCards() {
 
         const { data: deliveredTrips } = await supabase
           .from("trips")
-          .select("estimatedCompletionTime, deliveredAt")
+          .select("start_time, end_time")
           .eq("status", "delivered")
           .gte("created_at", `${currentMonth}-01T00:00:00Z`);
         const onTimeCount =
           deliveredTrips?.filter((t) => {
-            if (!t.estimatedCompletionTime || !t.deliveredAt) return false;
-            const expectedDate = new Date(t.estimatedCompletionTime);
-            const actualDate = new Date(t.deliveredAt);
+            if (!t.start_time || !t.end_time) return false;
+            const expectedDate = new Date(t.start_time);
+            const actualDate = new Date(t.end_time);
             return actualDate <= expectedDate;
           }).length || 0;
         const onTimeDeliveryRate = deliveredTrips?.length
@@ -133,14 +133,14 @@ export function StatCards() {
 
         // WAREHOUSE METRICS
         const { data: warehouseItems } = await supabase
-          .from("inventory_items")
-          .select("id, status");
+          .from("spare_parts")
+          .select("id, quantity");
         const warehouseUtilization =
-          warehouseItems?.filter((w) => w.status === "In Stock" || w.status === "in_stock").length || 0;
+          warehouseItems?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
 
         // CASH FLOW METRICS
-        const { data: bankData } = await supabase.from("bank_accounts").select("balance");
-        const bankBalance = bankData?.reduce((sum, b) => sum + (b.balance || 0), 0) || 0;
+        const { data: bankData } = await supabase.from("bank_accounts").select("current_balance");
+        const bankBalance = bankData?.reduce((sum, b) => sum + (b.current_balance || 0), 0) || 0;
         
         const receivables = outstandingPayments;
         const payables = monthlyExpenses;

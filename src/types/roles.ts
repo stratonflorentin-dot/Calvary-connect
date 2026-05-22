@@ -121,17 +121,20 @@ export interface Expense {
 // Maintenance Management
 export interface MaintenanceRequest {
   id: string;
-  vehicleId: string;
-  driverId: string;
-  type: "routine" | "emergency" | "repair";
+  vehicle_id: string;
+  driver_id?: string;
+  type?: "routine" | "emergency" | "repair";
   description: string;
+  issue_description?: string;
+  issue_type?: string;
   priority: "low" | "medium" | "high" | "critical";
-  status: "reported" | "diagnosed" | "in_progress" | "completed" | "cancelled";
-  estimatedCost?: number;
-  actualCost?: number;
-  assignedMechanicId?: string;
-  reportedAt: any;
-  completedAt?: any;
+  status: "pending" | "reported" | "diagnosed" | "in_progress" | "completed" | "cancelled";
+  estimated_cost?: number;
+  actual_cost?: number;
+  assigned_mechanic_id?: string;
+  created_at: any;
+  updated_at: any;
+  completed_at?: any;
   notes?: string;
 }
 
@@ -139,14 +142,12 @@ export interface MaintenanceRequest {
 export interface SparePart {
   id: string;
   name: string;
-  partNumber: string;
+  part_number?: string;
   category: string;
   quantity: number;
-  minStockLevel: number;
-  unitPrice: number;
+  min_quantity?: number;
+  unit_price?: number;
   supplier?: string;
-  location?: string;
-  compatibleVehicles: string[];
   created_at: any;
   updated_at: any;
 }

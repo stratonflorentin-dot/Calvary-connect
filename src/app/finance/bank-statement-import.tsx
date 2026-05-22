@@ -78,7 +78,7 @@ export function BankStatementImport() {
       try {
         const [accountsRes, coaRes, invoicesRes, expensesRes, salesRes] = await Promise.all([
           supabase.from('bank_accounts').select('*').eq('is_active', true),
-          supabase.from('accounts').select('code, name, category').order('code'),
+          supabase.from('chart_of_accounts').select('code, name, category').order('code'),
           supabase.from('invoices').select('*').eq('status', 'pending'),
           supabase.from('expenses').select('*').eq('status', 'pending'),
           supabase.from('sales').select('*').eq('status', 'pending'),
