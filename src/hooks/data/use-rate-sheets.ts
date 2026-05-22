@@ -15,7 +15,6 @@ export function useRateSheets() {
       const { data, error } = await supabase
         .from("rate_sheets")
         .select("*")
-        .eq("is_active", true)
         .order("route_name");
       if (error) throw error;
       setRateSheets(data || []);

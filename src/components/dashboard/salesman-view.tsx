@@ -9,13 +9,17 @@ import { useTrips } from "@/hooks/data/use-trips";
 import { useInvoices } from "@/hooks/data/use-invoices";
 import { useExpenses } from "@/hooks/data/use-expenses";
 import { useRateSheets } from "@/hooks/data/use-rate-sheets";
+import { useQuotations } from "@/hooks/data/use-quotations";
+import { useBookings } from "@/hooks/data/use-bookings";
 import { useUsers } from "@/hooks/data/use-users";
 import { useFleetVehicles } from "@/hooks/data/use-fleet-vehicles";
 import { 
   saveCustomerAction, deleteCustomerAction,
   saveTripAction, deleteTripAction,
   saveInvoiceAction, deleteInvoiceAction,
-  saveExpenseAction, deleteExpenseAction
+  saveExpenseAction, deleteExpenseAction,
+  saveRateSheetAction, deleteRateSheetAction,
+  saveQuotationAction
 } from "@/app/sales/actions";
 import { 
   Briefcase, DollarSign, Users, Calendar, TrendingUp, BarChart2,
@@ -246,7 +250,9 @@ import {
    const { trips, refresh: refreshTrips } = useTrips();
    const { invoices, refresh: refreshInvoices } = useInvoices();
    const { expenses, refresh: refreshExpenses } = useExpenses();
-   const { rateSheets } = useRateSheets();
+   const { rateSheets, refresh: refreshRateSheets } = useRateSheets();
+   const { quotations, refresh: refreshQuotations } = useQuotations();
+   const { bookings, refresh: refreshBookings } = useBookings();
    const { users: drivers } = useUsers();
    const { vehicles, loading: vLoading } = useFleetVehicles();
 
@@ -286,15 +292,69 @@ import {
      (i.invoice_number || "").toLowerCase().includes(searchQ.toLowerCase())
    ), [invoices, searchQ]);
 
+   const filteredQuotations = useMemo(() => quotations.filter(q => 
+     (q.quotation_number || "").toLowerCase().includes(searchQ.toLowerCase()) ||
+     (q.origin || "").toLowerCase().includes(searchQ.toLowerCase()) ||
+     (q.destination || "").toLowerCase().includes(searchQ.toLowerCase())
+   ), [quotations, searchQ]);
+
+   const filteredBookings = useMemo(() => bookings.filter(b => 
+     (b.booking_number || "").toLowerCase().includes(searchQ.toLowerCase()) ||
+     (b.origin || "").toLowerCase().includes(searchQ.toLowerCase()) ||
+     (b.destination || "").toLowerCase().includes(searchQ.toLowerCase())
+   ), [bookings, searchQ]);
+
    // ── Handlers ── 
    const saveTrip = async (data: any) => { 
      setIsSaving(true);
      try {
+       // Ensure trip is linked to booking if applicable
        await saveTripAction(data);
        refreshTrips();
+       if (data.booking_id) refreshBookings();
        closeModal();
      } catch (err) {
        alert("Error saving trip: " + err);
+     } finally {
+       setIsSaving(false);
+     }
+   };
+
+   const saveRateSheet = async (data: any) => {
+     setIsSaving(true);
+     try {
+       await saveRateSheetAction(data);
+       refreshRateSheets();
+       closeModal();
+     } catch (err) {
+       alert("Error saving rate sheet: " + err);
+     } finally {
+       setIsSaving(false);
+     }
+   };
+
+   const deleteRateSheet = async (id: string) => {
+     if (confirm("Delete this rate sheet entry?")) {
+       setIsSaving(true);
+       try {
+         await deleteRateSheetAction(id);
+         refreshRateSheets();
+       } catch (err) {
+         alert("Error deleting rate sheet: " + err);
+       } finally {
+         setIsSaving(false);
+       }
+     }
+   };
+
+   const saveQuotation = async (data: any) => {
+     setIsSaving(true);
+     try {
+       await saveQuotationAction(data);
+       refreshQuotations();
+       closeModal();
+     } catch (err) {
+       alert("Error saving quotation: " + err);
      } finally {
        setIsSaving(false);
      }
@@ -426,10 +486,12 @@ import {
                     {[
                         { id: "overview", label: "📊 Overview" },
                         { id: "clients", label: "👥 Clients" },
+                        { id: "quotations", label: "📝 Quotations" },
+                        { id: "bookings", label: "📅 Bookings" },
                         { id: "trips", label: "🚚 Trips" },
                         { id: "invoices", label: "🧾 Invoices" },
                         { id: "expenses", label: "💸 Expenses" },
-                        { id: "contracts", label: "📄 Contracts" }
+                        { id: "rates", label: "📈 Rate Sheet" }
                     ].map(t => (
                         <button
                         key={t.id}
@@ -879,72 +941,130 @@ import {
            </div>
          )}
 
-         {/* Contracts Tab */}
-         {tab === "contracts" && (
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
-             <div className="bg-white p-6 rounded-2xl border shadow-sm">
-               <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2"><FileText className="text-blue-600" /> Contract Generator</h3>
-               <div className="space-y-4">
-                 <Field label="Select Client">
-                   <Select value={contractState?.client || ""} onChange={(e: any) => setContractState({ ...contractState, client: e.target.value })}>
-                     <option value="">Choose a client...</option>
-                     {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
-                   </Select>
-                 </Field>
-                 <Field label="Route & Rates">
-                   <Select value={contractState?.routeIdx || ""} onChange={(e: any) => setContractState({ ...contractState, routeIdx: e.target.value })}>
-                     <option value="">Standard Rate Sheet (All Routes)</option>
-                     {rateSheets.map((r, i) => <option key={i} value={i}>{r.origin_name} → {r.destination_name}</option>)}
-                   </Select>
-                 </Field>
-                 <div className="grid grid-cols-2 gap-4">
-                   <Field label="Contract Date">
-                     <Input type="date" value={contractState?.contract_date || today()} onChange={(e: any) => setContractState({ ...contractState, contract_date: e.target.value })} />
-                   </Field>
-                   <Field label="Start Date">
-                     <Input type="date" value={contractState?.start_date || today()} onChange={(e: any) => setContractState({ ...contractState, start_date: e.target.value })} />
-                   </Field>
-                 </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <Field label="Client Signatory">
-                        <Input placeholder="e.g. John Doe" value={contractState?.client_signatory || ""} onChange={(e: any) => setContractState({ ...contractState, client_signatory: e.target.value })} />
-                    </Field>
-                    <Field label="Signatory Title">
-                        <Input placeholder="e.g. Director" value={contractState?.client_title || ""} onChange={(e: any) => setContractState({ ...contractState, client_title: e.target.value })} />
-                    </Field>
-                 </div>
-                 <Btn onClick={() => setContractState({ ...contractState, showPreview: true })} style={{ width: "100%", height: 45 }} disabled={!contractState?.client}>
-                   Generate Agreement
-                 </Btn>
-               </div>
-             </div>
+         {/* Quotations Tab */}
+         {tab === "quotations" && (
+            <div className="space-y-6 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-gray-800">Sales Quotations</h3>
+                    <Btn onClick={() => setModal({ type: "quotation" })}><Plus size={16} /> Create Quotation</Btn>
+                </div>
+                <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                            <tr>
+                                <th className="px-6 py-4">QT #</th>
+                                <th className="px-6 py-4">Client</th>
+                                <th className="px-6 py-4">Route</th>
+                                <th className="px-6 py-4">Amount</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {filteredQuotations.map(q => (
+                                <tr key={q.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 font-bold">{q.quotation_number}</td>
+                                    <td className="px-6 py-4">{clientMap[q.customer_id]?.company_name || "Unknown"}</td>
+                                    <td className="px-6 py-4">{q.origin} → {q.destination}</td>
+                                    <td className="px-6 py-4 font-black text-blue-600">{fmtTZS(q.total_amount)}</td>
+                                    <td className="px-6 py-4"><Badge status={q.status} /></td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Eye size={14} /></button>
+                                        <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg ml-1"><CheckCircle size={14} /></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+         )}
 
-             <div className="bg-white p-6 rounded-2xl border shadow-sm">
-               <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2"><DollarSign className="text-green-600" /> Current Rate Sheet</h3>
-               <div className="overflow-auto max-h-[350px] rounded-lg border">
-                 <table className="w-full text-xs text-left">
-                   <thead className="bg-gray-50 text-gray-500 uppercase text-[9px] font-black">
-                     <tr>
-                       <th className="px-3 py-3">Route</th>
-                       <th className="px-3 py-3">20ft</th>
-                       <th className="px-3 py-3">40ft</th>
-                       <th className="px-3 py-3">Days</th>
-                     </tr>
-                   </thead>
-                   <tbody className="divide-y">
-                     {rateSheets.map((r, i) => (
-                       <tr key={i} className="hover:bg-gray-50">
-                         <td className="px-3 py-3 font-medium">{r.origin_name} → {r.destination_name}</td>
-                         <td className="px-3 py-3 font-bold">{r.container_20ft_rate?.toLocaleString()}</td>
-                         <td className="px-3 py-3 font-bold">{r.container_40ft_rate?.toLocaleString()}</td>
-                         <td className="px-3 py-3 text-center">{r.transit_days}</td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
-               </div>
-             </div>
-           </div>
+         {/* Bookings Tab */}
+         {tab === "bookings" && (
+            <div className="space-y-6 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-gray-800">Confirmed Bookings</h3>
+                    <Btn onClick={() => setTab("quotations")} variant="secondary">From Quotation</Btn>
+                </div>
+                <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                            <tr>
+                                <th className="px-6 py-4">BK #</th>
+                                <th className="px-6 py-4">Client</th>
+                                <th className="px-6 py-4">Route / Date</th>
+                                <th className="px-6 py-4">Cargo</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {filteredBookings.map(b => (
+                                <tr key={b.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 font-bold">{b.booking_number}</td>
+                                    <td className="px-6 py-4">{clientMap[b.customer_id]?.company_name}</td>
+                                    <td className="px-6 py-4">
+                                        <div>{b.origin} → {b.destination}</div>
+                                        <div className="text-[10px] text-gray-400">{new Date(b.pickup_date).toLocaleDateString()}</div>
+                                    </td>
+                                    <td className="px-6 py-4">{b.cargo_type}</td>
+                                    <td className="px-6 py-4"><Badge status={b.status} /></td>
+                                    <td className="px-6 py-4 text-right">
+                                        {b.status === 'confirmed' && (
+                                            <button 
+                                                onClick={() => setModal({ type: "trip", data: { ...b, client_id: b.customer_id, booking_id: b.id, revenue: b.amount } })}
+                                                className="px-3 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                                            >
+                                                Generate Trip
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+         )}
+
+         {/* Rate Sheets Tab */}
+         {tab === "rates" && (
+            <div className="space-y-6 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-gray-800">Route & Rate Management</h3>
+                    <Btn onClick={() => setModal({ type: "rate" })}><Plus size={16} /> Add Route</Btn>
+                </div>
+                <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                            <tr>
+                                <th className="px-6 py-4">Route Name</th>
+                                <th className="px-6 py-4">20ft Rate</th>
+                                <th className="px-6 py-4">40ft Rate</th>
+                                <th className="px-6 py-4">Loose Rate/MT</th>
+                                <th className="px-6 py-4">Transit Days</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {rateSheets.map(r => (
+                                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 font-bold">{r.route_name}</td>
+                                    <td className="px-6 py-4 font-black text-gray-700">{fmtTZS(r.container_20ft)}</td>
+                                    <td className="px-6 py-4 font-black text-gray-700">{fmtTZS(r.container_40ft)}</td>
+                                    <td className="px-6 py-4 font-black text-gray-700">{fmtTZS(r.loose_rate_mt)}</td>
+                                    <td className="px-6 py-4 text-center font-bold text-blue-600">{r.transit_days}</td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button onClick={() => setModal({ type: "rate", data: r })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                                        <button onClick={() => deleteRateSheet(r.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
          )}
        </div>
 
@@ -986,6 +1106,7 @@ import {
                saveTrip(Object.fromEntries(d)); 
             }}>
              <input type="hidden" name="id" defaultValue={modal.data?.id} />
+             <input type="hidden" name="booking_id" defaultValue={modal.data?.booking_id} />
              <Field label="Select Client">
                <Select name="client_id" defaultValue={modal.data?.client_id || modal.data?.client} required>
                  <option value="">Choose a client...</option>
@@ -1014,7 +1135,7 @@ import {
              </div>
              <div className="grid grid-cols-2 gap-4">
                <Field label="Cargo Type"><Input name="cargo_type" defaultValue={modal.data?.cargo_type} /></Field>
-               <Field label="Revenue (TZS)"><Input name="revenue" type="number" defaultValue={modal.data?.revenue} required /></Field>
+               <Field label="Revenue (TZS)"><Input name="revenue" type="number" defaultValue={modal.data?.revenue || modal.data?.amount} required /></Field>
              </div>
              <div className="grid grid-cols-2 gap-4">
                <Field label="Driver">
@@ -1097,7 +1218,56 @@ import {
              <Field label="Amount (TZS)"><Input name="amount" type="number" defaultValue={modal.data?.amount} required /></Field>
              <div className="flex justify-end gap-2 mt-6">
                <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
-               <Btn type="submit">Save Expense</Btn>
+               <Btn type="submit" disabled={isSaving}>Save Expense</Btn>
+             </div>
+           </form>
+         </Modal>
+       )}
+
+       {modal?.type === "rate" && (
+         <Modal title={modal.data ? "Edit Route Rate" : "Add New Route"} onClose={closeModal}>
+           <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveRateSheet(Object.fromEntries(d)); }}>
+             <input type="hidden" name="id" defaultValue={modal.data?.id} />
+             <Field label="Route Name (e.g. Dar-Nairobi)"><Input name="route_name" defaultValue={modal.data?.route_name} required /></Field>
+             <div className="grid grid-cols-2 gap-4">
+                <Field label="Origin"><Input name="origin" defaultValue={modal.data?.origin} required /></Field>
+                <Field label="Destination"><Input name="destination" defaultValue={modal.data?.destination} required /></Field>
+             </div>
+             <div className="grid grid-cols-3 gap-4">
+                <Field label="20ft Rate"><Input name="container_20ft" type="number" defaultValue={modal.data?.container_20ft} required /></Field>
+                <Field label="40ft Rate"><Input name="container_40ft" type="number" defaultValue={modal.data?.container_40ft} required /></Field>
+                <Field label="Loose MT Rate"><Input name="loose_rate_mt" type="number" defaultValue={modal.data?.loose_rate_mt} required /></Field>
+             </div>
+             <Field label="Transit Days"><Input name="transit_days" type="number" defaultValue={modal.data?.transit_days} required /></Field>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit" disabled={isSaving}>Save Route</Btn>
+             </div>
+           </form>
+         </Modal>
+       )}
+
+       {modal?.type === "quotation" && (
+         <Modal title="Create Sales Quotation" onClose={closeModal}>
+           <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveQuotation(Object.fromEntries(d)); }}>
+             <Field label="Select Client">
+               <Select name="customer_id" required>
+                 <option value="">Choose a client...</option>
+                 {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+               </Select>
+             </Field>
+             <div className="grid grid-cols-2 gap-4">
+                <Field label="Origin"><Input name="origin" required /></Field>
+                <Field label="Destination"><Input name="destination" required /></Field>
+             </div>
+             <div className="grid grid-cols-2 gap-4">
+                <Field label="Total Amount (TZS)"><Input name="total_amount" type="number" required /></Field>
+                <Field label="Validity (Days)"><Input name="validity_days" type="number" defaultValue="30" /></Field>
+             </div>
+             <Field label="Notes / Special Terms"><Input name="notes" /></Field>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit" disabled={isSaving}>Generate Quote</Btn>
              </div>
            </form>
          </Modal>

@@ -18,7 +18,7 @@ export async function saveCustomerAction(data: any) {
   const supabaseAdmin = getAdminClient();
   const { id, ...rest } = data;
   
-  if (id && id.length > 10) { // UUID check
+  if (id && id.length > 10) {
     const { data: result, error } = await supabaseAdmin
       .from("customers")
       .update({ ...rest, updated_at: new Date().toISOString() })
@@ -48,13 +48,12 @@ export async function deleteCustomerAction(id: string) {
   return true;
 }
 
-// ─── Trip Actions ───────────────────────────────────────────────────────
+// ─── Trip & Booking Actions ──────────────────────────────────────────────
 
 export async function saveTripAction(data: any) {
   const supabaseAdmin = getAdminClient();
   const { id, ...rest } = data;
   
-  // Map salesman-dashboard fields to database fields if needed
   const mappedData = {
     origin: rest.origin,
     destination: rest.destination,
@@ -62,7 +61,10 @@ export async function saveTripAction(data: any) {
     truck_id: rest.truck_id,
     cargo_type: rest.cargo_type,
     status: rest.status || 'PENDING',
-    // add other fields if they exist in schema
+    client_id: rest.client_id,
+    booking_id: rest.booking_id,
+    revenue: rest.revenue ? parseFloat(rest.revenue) : 0,
+    date: rest.date || new Date().toISOString().split('T')[0],
   };
 
   if (id && id.length > 10) {
@@ -104,10 +106,16 @@ export async function saveInvoiceAction(data: any) {
   const mappedData = {
     invoice_number: rest.invoice_number,
     client_name: rest.client_name,
+    client_id: rest.client_id,
     amount: parseFloat(rest.amount),
     due_date: rest.due_date,
-    status: rest.status || 'pending',
+    status: rest.status || 'draft',
     trip_id: rest.trip_id,
+    items: rest.items || [],
+    subtotal: rest.subtotal || parseFloat(rest.amount),
+    total_amount: rest.total_amount || parseFloat(rest.amount),
+    currency: rest.currency || 'TZS',
+    issue_date: rest.issue_date || new Date().toISOString().split('T')[0],
   };
 
   if (id && id.length > 10) {
@@ -140,24 +148,76 @@ export async function deleteInvoiceAction(id: string) {
   return true;
 }
 
-// ─── Expense Actions ────────────────────────────────────────────────────
+// ─── Rate Sheet Actions ──────────────────────────────────────────────────
 
-export async function saveExpenseAction(data: any) {
+export async function saveRateSheetAction(data: any) {
   const supabaseAdmin = getAdminClient();
   const { id, ...rest } = data;
 
   const mappedData = {
-    description: rest.description,
-    amount: parseFloat(rest.amount),
-    category: rest.category,
-    expense_date: rest.date || new Date().toISOString().split('T')[0],
-    trip_id: rest.trip_id,
-    status: rest.status || 'pending',
+    route_name: rest.route_name,
+    origin: rest.origin,
+    destination: rest.destination,
+    service_type: rest.service_type || 'local_transport',
+    container_20ft: parseFloat(rest.container_20ft || 0),
+    container_40ft: parseFloat(rest.container_40ft || 0),
+    loose_rate_mt: parseFloat(rest.loose_rate_mt || 0),
+    transit_days: parseInt(rest.transit_days || 0),
+    is_active: rest.is_active !== undefined ? rest.is_active : true,
   };
 
   if (id && id.length > 10) {
     const { data: result, error } = await supabaseAdmin
-      .from("expenses")
+      .from("rate_sheets")
+      .update(mappedData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return result;
+  } else {
+    const { data: result, error } = await supabaseAdmin
+      .from("rate_sheets")
+      .insert([mappedData])
+      .select()
+      .single();
+    if (error) throw error;
+    return result;
+  }
+}
+
+export async function deleteRateSheetAction(id: string) {
+  const supabaseAdmin = getAdminClient();
+  const { error } = await supabaseAdmin
+    .from("rate_sheets")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+  return true;
+}
+
+// ─── Quotation Actions ───────────────────────────────────────────────────
+
+export async function saveQuotationAction(data: any) {
+  const supabaseAdmin = getAdminClient();
+  const { id, ...rest } = data;
+
+  const mappedData = {
+    quotation_number: rest.quotation_number || `QT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    customer_id: rest.customer_id,
+    origin: rest.origin,
+    destination: rest.destination,
+    service_type: rest.service_type || 'local_transport',
+    total_amount: parseFloat(rest.total_amount || 0),
+    status: rest.status || 'draft',
+    notes: rest.notes,
+    validity_days: parseInt(rest.validity_days || 30),
+    expiry_date: rest.expiry_date,
+  };
+
+  if (id && id.length > 10) {
+    const { data: result, error } = await supabaseAdmin
+      .from("route_quotations")
       .update({ ...mappedData, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
@@ -166,21 +226,11 @@ export async function saveExpenseAction(data: any) {
     return result;
   } else {
     const { data: result, error } = await supabaseAdmin
-      .from("expenses")
+      .from("route_quotations")
       .insert([{ ...mappedData, created_at: new Date().toISOString() }])
       .select()
       .single();
     if (error) throw error;
     return result;
   }
-}
-
-export async function deleteExpenseAction(id: string) {
-  const supabaseAdmin = getAdminClient();
-  const { error } = await supabaseAdmin
-    .from("expenses")
-    .delete()
-    .eq("id", id);
-  if (error) throw error;
-  return true;
 }
