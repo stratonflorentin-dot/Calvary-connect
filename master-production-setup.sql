@@ -162,16 +162,120 @@ CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_logs(created_at DESC);
 -- 4. SEED DATA
 
 INSERT INTO accounts (code, name, category, type) VALUES
+-- 1000 ASSETS
 ('1000', 'ASSETS', 'ASSETS', 'debit'),
 ('1100', 'Current Assets', 'ASSETS', 'debit'),
 ('1101', 'Cash on Hand', 'ASSETS', 'debit'),
 ('1102', 'Bank Account', 'ASSETS', 'debit'),
+('1103', 'Mobile Money Account', 'ASSETS', 'debit'),
+('1104', 'Accounts Receivable', 'ASSETS', 'debit'),
+('1105', 'Prepaid Expenses', 'ASSETS', 'debit'),
+('1106', 'Fuel Inventory', 'ASSETS', 'debit'),
+('1107', 'Spare Parts Inventory', 'ASSETS', 'debit'),
+('1108', 'VAT Receivable', 'ASSETS', 'debit'),
+('1200', 'Fixed Assets', 'ASSETS', 'debit'),
+('1201', 'Trucks and Trailers', 'ASSETS', 'debit'),
+('1202', 'Motor Vehicles', 'ASSETS', 'debit'),
+('1203', 'Office Equipment', 'ASSETS', 'debit'),
+('1204', 'Computers and IT Equipment', 'ASSETS', 'debit'),
+('1205', 'Warehouse Equipment', 'ASSETS', 'debit'),
+('1206', 'Furniture and Fixtures', 'ASSETS', 'debit'),
+('1207', 'GPS Tracking Devices', 'ASSETS', 'debit'),
+('1300', 'Accumulated Depreciation', 'ASSETS', 'credit'),
+('1301', 'Accumulated Depreciation, Trucks', 'ASSETS', 'credit'),
+('1302', 'Accumulated Depreciation, Vehicles', 'ASSETS', 'credit'),
+('1303', 'Accumulated Depreciation, Equipment', 'ASSETS', 'credit'),
+
+-- 2000 LIABILITIES
+('2000', 'LIABILITIES', 'LIABILITIES', 'credit'),
+('2100', 'Current Liabilities', 'LIABILITIES', 'credit'),
+('2101', 'Accounts Payable', 'LIABILITIES', 'credit'),
+('2102', 'Fuel Creditors', 'LIABILITIES', 'credit'),
+('2103', 'Driver Allowances Payable', 'LIABILITIES', 'credit'),
+('2104', 'Salaries Payable', 'LIABILITIES', 'credit'),
+('2105', 'Tax Payable', 'LIABILITIES', 'credit'),
+('2106', 'VAT Payable', 'LIABILITIES', 'credit'),
+('2107', 'NHIF Payable', 'LIABILITIES', 'credit'),
+('2108', 'NSSF Payable', 'LIABILITIES', 'credit'),
+('2200', 'Long Term Liabilities', 'LIABILITIES', 'credit'),
+('2201', 'Truck Loan', 'LIABILITIES', 'credit'),
+('2202', 'Vehicle Financing', 'LIABILITIES', 'credit'),
+('2203', 'Bank Loan', 'LIABILITIES', 'credit'),
+('2204', 'Lease Obligations', 'LIABILITIES', 'credit'),
+
+-- 3000 EQUITY
+('3000', 'EQUITY', 'EQUITY', 'credit'),
+('3101', 'Owner Capital', 'EQUITY', 'credit'),
+('3102', 'Retained Earnings', 'EQUITY', 'credit'),
+('3103', 'Current Year Profit', 'EQUITY', 'credit'),
+('3104', 'Drawings', 'EQUITY', 'debit'),
+
+-- 4000 REVENUE
 ('4000', 'REVENUE', 'REVENUE', 'credit'),
 ('4101', 'Local Transport Revenue', 'REVENUE', 'credit'),
-('5000', 'COST OF SALES', 'COST_OF_SALES', 'debit'),
+('4102', 'Cross Border Transport Revenue', 'REVENUE', 'credit'),
+('4103', 'Container Transport Revenue', 'REVENUE', 'credit'),
+('4104', 'Loose Cargo Revenue', 'REVENUE', 'credit'),
+('4105', 'Express Delivery Revenue', 'REVENUE', 'credit'),
+('4106', 'Warehousing Revenue', 'REVENUE', 'credit'),
+('4107', 'Loading and Offloading Revenue', 'REVENUE', 'credit'),
+('4108', 'Customs Clearing Revenue', 'REVENUE', 'credit'),
+('4200', 'Other Income', 'REVENUE', 'credit'),
+('4201', 'Fuel Surcharge Income', 'REVENUE', 'credit'),
+('4202', 'Commission Income', 'REVENUE', 'credit'),
+('4203', 'Rental Income', 'REVENUE', 'credit'),
+('4204', 'Other Operating Income', 'REVENUE', 'credit'),
+
+-- 5000 COST OF SALES
+('5000', 'COST OF SALES / DIRECT LOGISTICS COSTS', 'COST_OF_SALES', 'debit'),
 ('5101', 'Fuel Expense', 'COST_OF_SALES', 'debit'),
-('6000', 'OPERATING EXPENSES', 'OPERATING_EXPENSES', 'debit')
-ON CONFLICT (code) DO NOTHING;
+('5102', 'Driver Salaries', 'COST_OF_SALES', 'debit'),
+('5103', 'Driver Allowances', 'COST_OF_SALES', 'debit'),
+('5104', 'Truck Repairs', 'COST_OF_SALES', 'debit'),
+('5105', 'Tire Expense', 'COST_OF_SALES', 'debit'),
+('5106', 'Lubricants and Oil', 'COST_OF_SALES', 'debit'),
+('5107', 'Border and Port Charges', 'COST_OF_SALES', 'debit'),
+('5108', 'Cargo Handling Expense', 'COST_OF_SALES', 'debit'),
+('5109', 'Toll Fees', 'COST_OF_SALES', 'debit'),
+('5110', 'Vehicle Insurance', 'COST_OF_SALES', 'debit'),
+('5111', 'GPS Tracking Costs', 'COST_OF_SALES', 'debit'),
+('5112', 'Trip Loading Expenses', 'COST_OF_SALES', 'debit'),
+('5113', 'Freight Subcontractor Expense', 'COST_OF_SALES', 'debit'),
+
+-- 6000 OPERATING EXPENSES
+('6000', 'OPERATING EXPENSES', 'OPERATING_EXPENSES', 'debit'),
+('6101', 'Office Rent', 'OPERATING_EXPENSES', 'debit'),
+('6102', 'Electricity and Water', 'OPERATING_EXPENSES', 'debit'),
+('6103', 'Internet Expense', 'OPERATING_EXPENSES', 'debit'),
+('6104', 'Telephone Expense', 'OPERATING_EXPENSES', 'debit'),
+('6105', 'Office Supplies', 'OPERATING_EXPENSES', 'debit'),
+('6106', 'Cleaning Expense', 'OPERATING_EXPENSES', 'debit'),
+('6107', 'Security Expense', 'OPERATING_EXPENSES', 'debit'),
+('6201', 'Office Salaries', 'OPERATING_EXPENSES', 'debit'),
+('6202', 'Staff Welfare', 'OPERATING_EXPENSES', 'debit'),
+('6203', 'Staff Training', 'OPERATING_EXPENSES', 'debit'),
+('6204', 'Recruitment Expense', 'OPERATING_EXPENSES', 'debit'),
+('6301', 'Advertising Expense', 'OPERATING_EXPENSES', 'debit'),
+('6302', 'Branding Expense', 'OPERATING_EXPENSES', 'debit'),
+('6303', 'Website Expense', 'OPERATING_EXPENSES', 'debit'),
+('6401', 'Legal Fees', 'OPERATING_EXPENSES', 'debit'),
+('6402', 'Audit Fees', 'OPERATING_EXPENSES', 'debit'),
+('6403', 'Consultancy Fees', 'OPERATING_EXPENSES', 'debit'),
+('6501', 'Bank Charges', 'OPERATING_EXPENSES', 'debit'),
+('6502', 'Loan Interest', 'OPERATING_EXPENSES', 'debit'),
+('6503', 'Foreign Exchange Loss', 'OPERATING_EXPENSES', 'debit'),
+
+-- 7000 TAXES AND COMPLIANCE
+('7000', 'TAXES AND COMPLIANCE', 'TAXES_AND_COMPLIANCE', 'debit'),
+('7101', 'Corporate Tax Expense', 'TAXES_AND_COMPLIANCE', 'debit'),
+('7102', 'Withholding Tax', 'TAXES_AND_COMPLIANCE', 'debit'),
+('7103', 'Business License Fees', 'TAXES_AND_COMPLIANCE', 'debit'),
+('7104', 'Road License Fees', 'TAXES_AND_COMPLIANCE', 'debit'),
+('7105', 'Regulatory Compliance Fees', 'TAXES_AND_COMPLIANCE', 'debit')
+ON CONFLICT (code) DO UPDATE SET 
+    name = EXCLUDED.name,
+    category = EXCLUDED.category,
+    type = EXCLUDED.type;
 
 -- 5. RLS POLICIES (Reset)
 
