@@ -118,15 +118,24 @@ export function ContractGenerator({ customerId, onClose }: { customerId?: string
       <div style="font-family: 'Times New Roman', serif; max-width: 800px; margin: 0 auto; padding: 40px; line-height: 1.6;">
         <!-- Header with Logo -->
         <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1e3a5f; padding-bottom: 20px;">
-          <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
-            <div style="width: 80px; height: 80px; background: #1e3a5f; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">
-              CALVARY<br>INVESTMENT
-            </div>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 24px;">
+            <svg width="110" height="110" viewBox="0 0 340 340">
+              <style>.st{font-family:'Times New Roman',serif;fill:#1a5fa8;letter-spacing:2px}</style>
+              <circle cx="170" cy="170" r="155" fill="none" stroke="#1a5fa8" stroke-width="4"/>
+              <circle cx="170" cy="170" r="143" fill="none" stroke="#1a5fa8" stroke-width="1.5"/>
+              <path id="ta" d="M 28,165 A 142,142 0 0,1 312,165" fill="none"/>
+              <text class="st" font-size="17" font-weight="700"><textPath href="#ta" startOffset="50%" text-anchor="middle">CALVARY INVESTMENT COMPANY LTD.</textPath></text>
+              <path id="ba" d="M 45,225 A 142,142 0 0,0 295,225" fill="none"/>
+              <text class="st" font-size="15" font-weight="700"><textPath href="#ba" startOffset="50%" text-anchor="middle">★  TANZANIA  ★</textPath></text>
+              <text x="170" y="162" class="st" font-size="14.5" font-weight="700" text-anchor="middle" letter-spacing="1">P. O. Box 75941</text>
+              <text x="170" y="184" class="st" font-size="14.5" font-weight="700" text-anchor="middle" letter-spacing="1">DAR ES SALAAM</text>
+              <line x1="90" y1="195" x2="250" y2="195" stroke="#1a5fa8" stroke-width="1.2"/>
+              <line x1="95" y1="143" x2="245" y2="143" stroke="#1a5fa8" stroke-width="1.2"/>
+            </svg>
             <div>
-              <h1 style="margin: 0; color: #1e3a5f; font-size: 24px;">${template.contract_title}</h1>
-              <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">
-                ${template.company_name}<br>
-                ${template.company_address}
+              <h1 style="margin: 0; color: #1e3a5f; font-size: 20px;">${template.contract_title}</h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #555;">
+                ${template.company_name} &nbsp;|&nbsp; ${template.company_address}
               </p>
             </div>
           </div>

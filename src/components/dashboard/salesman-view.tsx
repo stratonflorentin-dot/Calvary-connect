@@ -4,6 +4,7 @@ import { DashboardLayout, StatCard, DataTable, ActivityFeed, AlertPanel } from "
 import { useTrips } from "@/hooks/data/use-trips";
 import { useExpenses } from "@/hooks/data/use-expenses";
 import { useInvoices } from "@/hooks/data/use-invoices";
+import { ContractGenerator } from "@/app/sales/contract-generator";
 import { useRole } from "@/hooks/use-role";
 import { useLanguage } from "@/hooks/use-language";
 import { useCurrency } from "@/hooks/use-currency";
@@ -123,7 +124,18 @@ export default function SalesmanDashboard() {
       {/* Alert Panel */}
       <AlertPanel alerts={alerts} />
 
-      {/* Stat Cards */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="bg-white border rounded-lg h-auto p-1 overflow-x-auto flex w-full justify-start md:justify-center sticky top-[60px] z-10 shadow-sm">
+          <TabsTrigger value="overview" className="px-6 py-2.5 rounded-md text-sm font-semibold data-[state=active]:bg-primary data-[state=active]:text-white transition-all whitespace-nowrap">
+            📊 Overview
+          </TabsTrigger>
+          <TabsTrigger value="contracts" className="px-6 py-2.5 rounded-md text-sm font-semibold data-[state=active]:bg-primary data-[state=active]:text-white transition-all whitespace-nowrap">
+            📄 Contracts
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6 mt-4">
+          {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
         <StatCard
           title="Total Revenue"
@@ -369,6 +381,12 @@ export default function SalesmanDashboard() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        <TabsContent value="contracts" className="mt-4">
+          <ContractGenerator />
+        </TabsContent>
+      </Tabs>
     </DashboardLayout>
   );
 }
