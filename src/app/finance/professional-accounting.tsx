@@ -10,6 +10,8 @@ import {
 import { supabase } from "@/lib/supabase";
 import { SupabaseService } from "@/services/supabase-service";
 
+import { BankStatementImport } from "./bank-statement-import";
+
 const fmtTZS = (n) => "TZS " + Math.round(n || 0).toLocaleString();
 const fmtUSD = (n) => "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtCur = (n, cur = "TZS") => {
@@ -168,6 +170,7 @@ export default function CalvaryAccounting() {
   const [invFilter, setInvFilter] = useState("all");
   const [coaFilter, setCoaFilter] = useState("All");
   const [selAcc, setSelAcc]     = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     if (accounts.length > 0 && !selAcc) {
@@ -748,6 +751,23 @@ export default function CalvaryAccounting() {
       {/* PAGE SHELL */}
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-5">
 
+        {showImport && (
+          <div className="fixed inset-0 z-[110] bg-white overflow-y-auto">
+            <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+              <h2 className="font-bold">Bank Statement Import & Reconciliation</h2>
+              <button 
+                onClick={() => { setShowImport(false); fetchData(); }}
+                className="p-2 hover:bg-slate-100 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <BankStatementImport />
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -824,6 +844,7 @@ export default function CalvaryAccounting() {
                         </div>
                         <div className="flex gap-1.5 pt-1">
                           <button onClick={()=>{setSelAcc(acc.id);setTab("bank");}} className="flex-1 text-xs font-semibold py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl transition-colors flex items-center justify-center gap-1"><FileText className="w-3 h-3"/>Statement</button>
+                          <button onClick={() => setShowImport(true)} className="flex-1 text-xs font-semibold py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition-colors flex items-center justify-center gap-1"><Upload className="w-3 h-3"/>Import</button>
                           <button onClick={()=>openEditAcc(acc)} className="flex-1 text-xs font-semibold py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl transition-colors flex items-center justify-center gap-1"><Pencil className="w-3 h-3"/>Edit</button>
                           <button onClick={()=>setConfirm({msg:`Delete "${acc.name}"?`,detail:"All transactions will be removed.",onConfirm:()=>delAccount(acc.id)})} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-3.5 h-3.5"/></button>
                         </div>

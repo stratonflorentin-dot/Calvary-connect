@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '@/components/ui/badge';
 import { 
   Upload, Download, FileText, CheckCircle, AlertCircle, 
-  ArrowLeft, Search, RefreshCw, Landmark, ShieldCheck, XCircle, Loader2
+  ArrowLeft, Search, RefreshCw, Landmark, ShieldCheck, XCircle, Loader2,
+  Check, AlertTriangle, Link as LinkIcon, ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,6 +31,8 @@ interface ParsedTransaction {
   accountCode?: string;
   suggestedAccount?: string;
   confidence?: number;
+  matchId?: string; // ID of matched internal record
+  matchType?: 'invoice' | 'expense' | 'sale';
 }
 
 interface BankAccount {
@@ -46,43 +49,98 @@ interface ChartOfAccount {
   category: string;
 }
 
+interface InternalRecord {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: 'invoice' | 'expense' | 'sale';
+  customer_name?: string;
+  invoice_number?: string;
+}
+
 export function BankStatementImport() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [coa, setCoa] = useState<ChartOfAccount[]>([]);
+  const [internalRecords, setInternalRecords] = useState<InternalRecord[]>([]);
   const [selectedAccount, setSelectedAccount] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [reconciliationMode, setReconciliationMode] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
-      const [accountsRes, coaRes] = await Promise.all([
-        supabase.from('bank_accounts').select('*').eq('is_active', true),
-        supabase.from('chart_of_accounts').select('code, name, category').order('code')
-      ]);
-      setBankAccounts(accountsRes.data || []);
-      setCoa(coaRes.data || [
-        { code: '1002', name: 'Bank Account', category: 'Asset' },
-        { code: '5001', name: 'Fuel Expense', category: 'Expense' },
-        { code: '6100', name: 'Vehicle Repairs', category: 'Expense' },
-        { code: '4002', name: 'Local Delivery Revenue', category: 'Revenue' },
-        { code: '6200', name: 'Marketing', category: 'Expense' },
-      ]);
-      setIsLoading(false);
+      try {
+        const [accountsRes, coaRes, invoicesRes, expensesRes, salesRes] = await Promise.all([
+          supabase.from('bank_accounts').select('*').eq('is_active', true),
+          supabase.from('chart_of_accounts').select('code, name, category').order('code'),
+          supabase.from('invoices').select('*').eq('status', 'pending'),
+          supabase.from('expenses').select('*').eq('status', 'pending'),
+          supabase.from('sales').select('*').eq('status', 'pending'),
+        ]);
+        
+        setBankAccounts(accountsRes.data || []);
+        setCoa(coaRes.data || []);
+
+        // Combine internal records for reconciliation
+        const combined: InternalRecord[] = [
+          ...(invoicesRes.data || []).map(i => ({
+            id: i.id,
+            date: i.due_date,
+            description: `Invoice ${i.invoice_number} - ${i.customer_name}`,
+            amount: i.amount,
+            type: 'invoice' as const,
+            customer_name: i.customer_name,
+            invoice_number: i.invoice_number
+          })),
+          ...(expensesRes.data || []).map(e => ({
+            id: e.id,
+            date: e.date,
+            description: e.description,
+            amount: e.amount,
+            type: 'expense' as const
+          })),
+          ...(salesRes.data || []).map(s => ({
+            id: s.id,
+            date: s.date,
+            description: s.description,
+            amount: s.total_amount || s.amount,
+            type: 'sale' as const
+          }))
+        ];
+        setInternalRecords(combined);
+      } catch (err) {
+        console.error("Initialization error:", err);
+      } finally {
+        setIsLoading(false);
+      }
     };
     init();
   }, []);
 
+  const findBestMatch = (tx: ParsedTransaction) => {
+    const amount = tx.debit || tx.credit || 0;
+    // Exact amount match within 7 days of transaction date
+    const txDate = new Date(tx.date);
+    
+    return internalRecords.find(record => {
+      const recordDate = new Date(record.date);
+      const daysDiff = Math.abs(txDate.getTime() - recordDate.getTime()) / (1000 * 3600 * 24);
+      return Math.abs(record.amount - amount) < 0.01 && daysDiff <= 7;
+    });
+  };
+
   const suggestAccount = (description: string) => {
     const desc = description.toLowerCase();
-    if (desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel')) return '5001';
-    if (desc.includes('repair') || desc.includes('service') || desc.includes('maintenance')) return '6100';
-    if (desc.includes('payment') || desc.includes('inv') || desc.includes('revenue')) return '4002';
-    if (desc.includes('marketing') || desc.includes('ads') || desc.includes('facebook')) return '6200';
+    if (desc.includes('fuel') || desc.includes('petrol') || desc.includes('diesel')) return '5101';
+    if (desc.includes('repair') || desc.includes('service') || desc.includes('maintenance')) return '5104';
+    if (desc.includes('payment') || desc.includes('inv') || desc.includes('revenue')) return '4101';
+    if (desc.includes('salary') || desc.includes('pay') || desc.includes('allowance')) return '5102';
     return undefined;
   };
 
@@ -98,8 +156,7 @@ export function BankStatementImport() {
       
       const description = values[1] || '';
       const suggested = suggestAccount(description);
-      
-      transactions.push({
+      const tx: ParsedTransaction = {
         id: `tx-${Date.now()}-${i}`,
         date: values[0] || '',
         description,
@@ -107,10 +164,18 @@ export function BankStatementImport() {
         debit: parseFloat(values[3]) || undefined,
         credit: parseFloat(values[4]) || undefined,
         balance: parseFloat(values[5]) || undefined,
-        matched: !!suggested,
+        matched: false,
         accountCode: suggested,
-        confidence: suggested ? 0.85 : 0
-      });
+      };
+
+      const match = findBestMatch(tx);
+      if (match) {
+        tx.matched = true;
+        tx.matchId = match.id;
+        tx.matchType = match.type;
+      }
+      
+      transactions.push(tx);
     }
     
     return transactions;
@@ -156,6 +221,22 @@ export function BankStatementImport() {
       );
 
       if (txError) throw txError;
+
+      // Update internal records status if matched
+      const matchPromises = parsedTransactions
+        .filter(tx => tx.matched && tx.matchId)
+        .map(tx => {
+          if (tx.matchType === 'invoice') {
+            return supabase.from('invoices').update({ status: 'paid', updated_at: new Date().toISOString() }).eq('id', tx.matchId);
+          } else if (tx.matchType === 'expense') {
+            return supabase.from('expenses').update({ status: 'paid', updated_at: new Date().toISOString() }).eq('id', tx.matchId);
+          } else if (tx.matchType === 'sale') {
+            return supabase.from('sales').update({ status: 'paid', updated_at: new Date().toISOString() }).eq('id', tx.matchId);
+          }
+          return Promise.resolve();
+        });
+      
+      await Promise.all(matchPromises);
 
       // Update balance logic (simplified)
       const lastTx = parsedTransactions[parsedTransactions.length - 1];
@@ -286,13 +367,22 @@ export function BankStatementImport() {
                                             {tx.debit ? `-${tx.debit.toLocaleString()}` : `+${tx.credit?.toLocaleString()}`}
                                         </TableCell>
                                         <TableCell>
-                                            {tx.accountCode ? (
-                                                <Badge className="bg-blue-100 text-blue-700 border-none font-bold text-[9px] uppercase">
-                                                    {coa.find(c => c.code === tx.accountCode)?.name}
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="outline" className="text-slate-400 font-bold text-[9px] uppercase border-dashed">Manual Review</Badge>
-                                            )}
+                                            <div className="flex flex-col gap-1">
+                                                {tx.matchId ? (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Badge className="bg-emerald-100 text-emerald-700 border-none font-bold text-[9px] uppercase">
+                                                            <Check className="w-2.5 h-2.5 mr-1" /> Linked to {tx.matchType}
+                                                        </Badge>
+                                                        <ExternalLink className="w-3 h-3 text-slate-400" />
+                                                    </div>
+                                                ) : tx.accountCode ? (
+                                                    <Badge className="bg-blue-100 text-blue-700 border-none font-bold text-[9px] uppercase">
+                                                        {coa.find(c => c.code === tx.accountCode)?.name}
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-slate-400 font-bold text-[9px] uppercase border-dashed">Manual Review</Badge>
+                                                )}
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -332,26 +422,52 @@ export function BankStatementImport() {
                                       {tx.debit ? `-${tx.debit.toLocaleString()}` : `+${tx.credit?.toLocaleString()}`}
                                   </TableCell>
                                   <TableCell>
-                                      <Select 
-                                          value={tx.accountCode} 
-                                          onValueChange={(code) => {
-                                              const updated = [...parsedTransactions];
-                                              updated[idx].accountCode = code;
-                                              updated[idx].matched = true;
-                                              setParsedTransactions(updated);
-                                          }}
-                                      >
-                                          <SelectTrigger className="w-full bg-slate-50 border-none h-9 text-xs font-bold">
-                                              <SelectValue placeholder="Select Account" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                              {coa.map(c => (
-                                                  <SelectItem key={c.code} value={c.code} className="text-xs font-medium">
-                                                      {c.code} - {c.name}
-                                                  </SelectItem>
-                                              ))}
-                                          </SelectContent>
-                                      </Select>
+                                      <div className="space-y-1">
+                                          <Select 
+                                              value={tx.accountCode} 
+                                              onValueChange={(code) => {
+                                                  const updated = [...parsedTransactions];
+                                                  updated[idx].accountCode = code;
+                                                  updated[idx].matched = true;
+                                                  setParsedTransactions(updated);
+                                              }}
+                                          >
+                                              <SelectTrigger className="w-full bg-slate-50 border-none h-9 text-xs font-bold">
+                                                  <SelectValue placeholder="Select Account" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                  {coa.map(c => (
+                                                      <SelectItem key={c.code} value={c.code} className="text-xs font-medium">
+                                                          {c.code} - {c.name}
+                                                      </SelectItem>
+                                                  ))}
+                                              </SelectContent>
+                                          </Select>
+                                          
+                                          {tx.matchId ? (
+                                              <div className="flex items-center gap-2 p-1.5 bg-emerald-50 rounded-lg border border-emerald-100">
+                                                  <LinkIcon className="w-3 h-3 text-emerald-600" />
+                                                  <span className="text-[10px] font-bold text-emerald-700">Auto-matched to internal {tx.matchType}</span>
+                                                  <button 
+                                                    className="ml-auto text-[9px] text-slate-400 hover:text-red-500 font-black"
+                                                    onClick={() => {
+                                                        const updated = [...parsedTransactions];
+                                                        delete updated[idx].matchId;
+                                                        delete updated[idx].matchType;
+                                                        updated[idx].matched = false;
+                                                        setParsedTransactions(updated);
+                                                    }}
+                                                  >
+                                                      UNLINK
+                                                  </button>
+                                              </div>
+                                          ) : (
+                                              <div className="flex items-center gap-2 p-1.5 bg-slate-50 rounded-lg border border-slate-100">
+                                                  <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                                  <span className="text-[10px] font-bold text-slate-500">No internal record found</span>
+                                              </div>
+                                          )}
+                                      </div>
                                   </TableCell>
                               </TableRow>
                           ))}

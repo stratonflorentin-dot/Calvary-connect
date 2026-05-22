@@ -151,10 +151,23 @@ export function Sidebar({ role }:{ role:UserRole }){
                 <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-4">{label}</p>
                 <div className="space-y-1">
                   {items.map(item=>(
-                    <Link key={item.path} href={item.path} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all group",pathname===item.path?"bg-[#2952A3] text-white shadow-lg shadow-blue-900/20":"text-white/50 hover:text-white hover:bg-white/5")}>
-                      {(() => { const Icon = routeIconMap[item.path] || LayoutDashboard; return <Icon className={cn("size-5",pathname===item.path?"text-cyan-400":"text-white/30 group-hover:text-cyan-400")}/>; })()}
-                      <span>{item.label}</span>
-                    </Link>
+                    <div key={item.path} className="relative group/nav">
+                      <Link href={item.path} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all group",pathname===item.path?"bg-[#2952A3] text-white shadow-lg shadow-blue-900/20":"text-white/50 hover:text-white hover:bg-white/5")}>
+                        {(() => { const Icon = routeIconMap[item.path] || LayoutDashboard; return <Icon className={cn("size-5",pathname===item.path?"text-cyan-400":"text-white/30 group-hover:text-cyan-400")}/>; })()}
+                        <span>{item.label}</span>
+                      </Link>
+                      
+                      {/* Quick Nav Axis for Financial Ledger */}
+                      {item.path === "/finance" && (
+                        <Link 
+                          href="/" 
+                          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/nav:opacity-100 transition-all p-1.5 hover:bg-white/10 rounded-lg text-cyan-400 hover:text-cyan-300"
+                          title="Quick Return to Dashboard"
+                        >
+                          <LayoutDashboard className="size-4" />
+                        </Link>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
