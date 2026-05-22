@@ -93,6 +93,13 @@ interface Expense {
   created_at: string;
 }
 
+interface JournalEntryLine {
+  account_code: string;
+  account_name: string;
+  debit: number;
+  credit: number;
+}
+
 interface JournalEntry {
   id: string;
   entry_number: string;
@@ -101,7 +108,17 @@ interface JournalEntry {
   total_debit: number;
   total_credit: number;
   is_posted: boolean;
+  lines?: JournalEntryLine[];
   created_at: string;
+}
+
+interface ChartOfAccount {
+  code: string;
+  name: string;
+  type: 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
+  balance: number;
+  group: string;
+  normal: 'debit' | 'credit';
 }
 
 interface BankAccount {
@@ -158,6 +175,7 @@ export function FinancialOperations() {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [coa, setCoa] = useState<ChartOfAccount[]>([]);
 
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [expenseSearch, setExpenseSearch] = useState('');
@@ -167,6 +185,8 @@ export function FinancialOperations() {
   // Dialog States
   const [showAddInvoice, setShowAddInvoice] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showAddJournal, setShowAddJournal] = useState(false);
+  const [showCOA, setShowCOA] = useState(false);
 
   // Form States
   const [newInvoice, setNewInvoice] = useState({
@@ -185,15 +205,25 @@ export function FinancialOperations() {
     trip_id: '',
   });
 
+  const [newJournal, setNewJournal] = useState({
+    description: '',
+    entry_date: new Date().toISOString().split('T')[0],
+    lines: [
+      { account_code: '', debit: 0, credit: 0 },
+      { account_code: '', debit: 0, credit: 0 }
+    ]
+  });
+
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [invoicesRes, expensesRes, jeRes, bankRes, tripsRes] = await Promise.all([
+      const [invoicesRes, expensesRes, jeRes, bankRes, tripsRes, coaRes] = await Promise.all([
         supabase.from("invoices").select("*").order("created_at", { ascending: false }).limit(50),
         supabase.from("expenses").select("*").order("date", { ascending: false }).limit(50),
         supabase.from("journal_entries").select("*").order("entry_date", { ascending: false }).limit(20),
         supabase.from("bank_accounts").select("*").eq('is_active', true),
         supabase.from("trips").select("*").order("created_at", { ascending: false }).limit(20),
+        supabase.from("chart_of_accounts").select("*").order("code"),
       ]);
 
       setInvoices(invoicesRes.data || []);
@@ -201,6 +231,7 @@ export function FinancialOperations() {
       setJournalEntries(jeRes.data || []);
       setBankAccounts(bankRes.data || []);
       setTrips(tripsRes.data || []);
+      setCoa(coaRes.data || []);
     } catch (error) {
       console.error("Error loading financial data:", error);
       toast({ title: "Error", description: "Failed to load financial data", variant: "destructive" });
@@ -345,11 +376,18 @@ export function FinancialOperations() {
                     <span className="text-[10px] text-slate-500">Record costs and payments</span>
                   </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 py-2 cursor-pointer">
+                <DropdownMenuItem onClick={() => setShowAddJournal(true)} className="gap-2 py-2 cursor-pointer">
                   <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600"><Activity className="w-4 h-4" /></div>
                   <div className="flex flex-col">
                     <span className="font-bold text-sm">Journal Entry</span>
                     <span className="text-[10px] text-slate-500">Manual ledger adjustment</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowCOA(true)} className="gap-2 py-2 cursor-pointer">
+                  <div className="p-1.5 bg-slate-50 rounded-lg text-slate-600"><LayoutDashboard className="w-4 h-4" /></div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm">Chart of Accounts</span>
+                    <span className="text-[10px] text-slate-500">Manage ledger structure</span>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -731,6 +769,188 @@ export function FinancialOperations() {
             </div>
             <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700 h-11 font-bold">Record Transaction</Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Journal Entry Dialog */}
+      <Dialog open={showAddJournal} onOpenChange={setShowAddJournal}>
+        <DialogContent className="max-w-3xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black flex items-center gap-2">
+              <Activity className="w-5 h-5 text-purple-600" /> New Journal Entry
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Description</Label>
+                <Input value={newJournal.description} onChange={(e) => setNewJournal({...newJournal, description: e.target.value})} placeholder="e.g. Year-end adjustment" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Entry Date</Label>
+                <Input type="date" value={newJournal.entry_date} onChange={(e) => setNewJournal({...newJournal, entry_date: e.target.value})} />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Entry Lines</Label>
+              <div className="border rounded-xl overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-slate-50">
+                    <TableRow>
+                      <TableHead>Account</TableHead>
+                      <TableHead className="text-right">Debit</TableHead>
+                      <TableHead className="text-right">Credit</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {newJournal.lines.map((line, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <Select 
+                            value={line.account_code} 
+                            onValueChange={(val) => {
+                              const updatedLines = [...newJournal.lines];
+                              updatedLines[idx].account_code = val;
+                              setNewJournal({...newJournal, lines: updatedLines});
+                            }}
+                          >
+                            <SelectTrigger className="border-none shadow-none h-8 bg-transparent text-xs font-bold">
+                              <SelectValue placeholder="Select Account" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {coa.map(account => (
+                                <SelectItem key={account.code} value={account.code} className="text-xs">
+                                  {account.code} - {account.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="p-0">
+                          <Input 
+                            type="number" 
+                            className="border-none shadow-none text-right font-bold text-red-500 h-10 bg-transparent"
+                            value={line.debit}
+                            onChange={(e) => {
+                              const updatedLines = [...newJournal.lines];
+                              updatedLines[idx].debit = parseFloat(e.target.value) || 0;
+                              setNewJournal({...newJournal, lines: updatedLines});
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="p-0">
+                          <Input 
+                            type="number" 
+                            className="border-none shadow-none text-right font-bold text-emerald-600 h-10 bg-transparent"
+                            value={line.credit}
+                            onChange={(e) => {
+                              const updatedLines = [...newJournal.lines];
+                              updatedLines[idx].credit = parseFloat(e.target.value) || 0;
+                              setNewJournal({...newJournal, lines: updatedLines});
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-slate-300 hover:text-red-500"
+                            onClick={() => {
+                              const updatedLines = newJournal.lines.filter((_, i) => i !== idx);
+                              setNewJournal({...newJournal, lines: updatedLines});
+                            }}
+                          >
+                            <Plus className="w-4 h-4 rotate-45" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2 text-xs font-bold gap-2"
+                onClick={() => setNewJournal({...newJournal, lines: [...newJournal.lines, { account_code: '', debit: 0, credit: 0 }]})}
+              >
+                <Plus className="w-3 h-3" /> Add Line
+              </Button>
+            </div>
+
+            <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl mt-4">
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Debit</p>
+                  <p className="text-sm font-black text-red-500">{formatCurrency(newJournal.lines.reduce((s, l) => s + l.debit, 0))}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Credit</p>
+                  <p className="text-sm font-black text-emerald-600">{formatCurrency(newJournal.lines.reduce((s, l) => s + l.credit, 0))}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {newJournal.lines.reduce((s, l) => s + l.debit, 0) !== newJournal.lines.reduce((s, l) => s + l.credit, 0) && (
+                  <Badge variant="destructive" className="text-[9px] uppercase font-bold">Entry Unbalanced</Badge>
+                )}
+                <Button 
+                  disabled={newJournal.lines.reduce((s, l) => s + l.debit, 0) !== newJournal.lines.reduce((s, l) => s + l.credit, 0)}
+                  className="bg-purple-600 hover:bg-purple-700 font-bold"
+                >
+                  Post Entry
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Chart of Accounts Dialog */}
+      <Dialog open={showCOA} onOpenChange={setShowCOA}>
+        <DialogContent className="max-w-4xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black flex items-center gap-2">
+              <LayoutDashboard className="w-5 h-5 text-slate-600" /> Chart of Accounts
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="flex justify-between items-center">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input placeholder="Search accounts..." className="pl-10 h-10 bg-slate-50 border-none" />
+              </div>
+              <Button className="bg-slate-900 font-bold gap-2"><Plus className="w-4 h-4" /> New Account</Button>
+            </div>
+            
+            <div className="border rounded-xl overflow-hidden max-h-[400px] overflow-y-auto">
+              <Table>
+                <TableHeader className="bg-slate-50 sticky top-0">
+                  <TableRow>
+                    <TableHead className="font-bold">Code</TableHead>
+                    <TableHead className="font-bold">Account Name</TableHead>
+                    <TableHead className="font-bold">Type</TableHead>
+                    <TableHead className="font-bold">Normal</TableHead>
+                    <TableHead className="text-right font-bold">Current Balance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {coa.map(account => (
+                    <TableRow key={account.code} className="hover:bg-slate-50">
+                      <TableCell className="font-mono font-bold text-blue-600">{account.code}</TableCell>
+                      <TableCell className="font-bold text-slate-700">{account.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-slate-100 text-[10px] uppercase font-bold text-slate-500">{account.type}</Badge>
+                      </TableCell>
+                      <TableCell className="text-[10px] uppercase font-bold text-slate-400">{account.normal}</TableCell>
+                      <TableCell className="text-right font-black text-slate-900">{formatCurrency(account.balance)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
