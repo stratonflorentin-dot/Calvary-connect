@@ -1,65 +1,32 @@
 "use client";
 
-import { useState, useMemo } from "react"; 
+import { useState, useMemo, useEffect } from "react"; 
 import { DashboardLayout } from "@/components/dashboard/shared/dashboard-layout";
 import { useRole } from "@/hooks/use-role";
 import { useCurrency } from "@/hooks/use-currency";
+import { useCustomers } from "@/hooks/data/use-customers";
+import { useTrips } from "@/hooks/data/use-trips";
+import { useInvoices } from "@/hooks/data/use-invoices";
+import { useExpenses } from "@/hooks/data/use-expenses";
+import { useRateSheets } from "@/hooks/data/use-rate-sheets";
+import { useUsers } from "@/hooks/data/use-users";
+import { useFleetVehicles } from "@/hooks/data/use-fleet-vehicles";
+import { 
+  saveCustomerAction, deleteCustomerAction,
+  saveTripAction, deleteTripAction,
+  saveInvoiceAction, deleteInvoiceAction,
+  saveExpenseAction, deleteExpenseAction
+} from "@/app/sales/actions";
 import { 
   Briefcase, DollarSign, Users, Calendar, TrendingUp, BarChart2,
   CheckCircle2, Clock, AlertTriangle, Eye, FileText, MapPin,
   Navigation, Package, ArrowRight, RefreshCw, Settings, Bell,
   Sparkles, Shield, Plus, Trash2, Edit, Locate, Truck,
-  Calculator, Printer, Download, Search, CheckCircle, XCircle
+  Calculator, Printer, Download, Search, CheckCircle, XCircle, Loader2
 } from "lucide-react";
 
- // ── Seed Data ────────────────────────────────────────────────────────────── 
- const SEED_CLIENTS = [ 
-   { id: "c1", company_name: "Simba Logistics Ltd", contact_person: "James Kimani", email: "james@simbalogistics.co.tz", phone: "+255 754 123 456", address: "P.O. Box 1234, Dar es Salaam", status: "active" }, 
-   { id: "c2", company_name: "Tanga Cement Co.", contact_person: "Fatuma Hassan", email: "fatuma@tangacement.co.tz", phone: "+255 712 987 654", address: "P.O. Box 5678, Tanga", status: "active" }, 
-   { id: "c3", company_name: "Kilimanjaro Traders", contact_person: "Peter Moshi", email: "peter@kilitraders.co.tz", phone: "+255 765 111 222", address: "P.O. Box 910, Moshi", status: "active" }, 
-   { id: "c4", company_name: "Zanzibar Exports Ltd", contact_person: "Amina Said", email: "amina@znzexports.co.tz", phone: "+255 777 333 444", address: "P.O. Box 321, Zanzibar", status: "active" }, 
-   { id: "c5", company_name: "Dodoma Agro Ltd", contact_person: "Rashid Mwamba", email: "rashid@dodomaagro.co.tz", phone: "+255 688 555 666", address: "P.O. Box 777, Dodoma", status: "inactive" }, 
- ]; 
- 
- const SEED_TRIPS = [ 
-   { id: "t1", tripNumber: "CAL-001", client: "c1", origin: "Dar es Salaam", destination: "Nairobi", cargo_type: "20ft Container", revenue: 850000, status: "completed", date: "2025-05-01", driver: "Ali Hassan", truck_plate: "T.255 AAA" }, 
-   { id: "t2", tripNumber: "CAL-002", client: "c2", origin: "Tanga", destination: "Mombasa", cargo_type: "40ft Container", revenue: 1200000, status: "completed", date: "2025-05-04", driver: "Moses Njeru", truck_plate: "T.255 BBB" }, 
-   { id: "t3", tripNumber: "CAL-003", client: "c3", origin: "Dar es Salaam", destination: "Lusaka", cargo_type: "Loose Cargo", revenue: 600000, status: "in_transit", date: "2025-05-10", driver: "David Odhiambo", truck_plate: "T.255 CCC" }, 
-   { id: "t4", tripNumber: "CAL-004", client: "c1", origin: "Dar es Salaam", destination: "Kampala", cargo_type: "20ft Container", revenue: 950000, status: "completed", date: "2025-05-12", driver: "Ali Hassan", truck_plate: "T.255 AAA" }, 
-   { id: "t5", tripNumber: "CAL-005", client: "c4", origin: "Zanzibar", destination: "Dar es Salaam", cargo_type: "Loose Cargo", revenue: 300000, status: "pending", date: "2025-05-18", driver: "", truck_plate: "" }, 
-   { id: "t6", tripNumber: "CAL-006", client: "c2", origin: "Dar es Salaam", destination: "Lilongwe", cargo_type: "40ft Container", revenue: 1350000, status: "completed", date: "2025-05-20", driver: "Moses Njeru", truck_plate: "T.255 BBB" }, 
-   { id: "t7", tripNumber: "CAL-007", client: "c3", origin: "Arusha", destination: "Nairobi", cargo_type: "20ft Container", revenue: 780000, status: "pending", date: "2025-05-22", driver: "", truck_plate: "" }, 
- ]; 
- 
- const SEED_INVOICES = [ 
-   { id: "i1", invoice_number: "INV-2025-001", client: "c1", trip: "t1", amount: 850000, status: "paid", date: "2025-05-03", due_date: "2025-05-17" }, 
-   { id: "i2", invoice_number: "INV-2025-002", client: "c2", trip: "t2", amount: 1200000, status: "paid", date: "2025-05-06", due_date: "2025-05-20" }, 
-   { id: "i3", invoice_number: "INV-2025-003", client: "c3", trip: "t3", amount: 600000, status: "pending", date: "2025-05-11", due_date: "2025-05-25" }, 
-   { id: "i4", invoice_number: "INV-2025-004", client: "c1", trip: "t4", amount: 950000, status: "overdue", date: "2025-05-13", due_date: "2025-05-20" }, 
-   { id: "i5", invoice_number: "INV-2025-005", client: "c2", trip: "t6", amount: 1350000, status: "pending", date: "2025-05-21", due_date: "2025-06-04" }, 
- ]; 
- 
- const SEED_EXPENSES = [ 
-   { id: "e1", description: "Fuel – CAL-001", trip: "t1", amount: 120000, category: "Fuel", date: "2025-05-01" }, 
-   { id: "e2", description: "Border crossing fees", trip: "t1", amount: 45000, category: "Fees", date: "2025-05-02" }, 
-   { id: "e3", description: "Fuel – CAL-002", trip: "t2", amount: 95000, category: "Fuel", date: "2025-05-04" }, 
-   { id: "e4", description: "Driver allowance", trip: "t2", amount: 30000, category: "Allowance", date: "2025-05-05" }, 
-   { id: "e5", description: "Vehicle service", trip: "t4", amount: 80000, category: "Maintenance", date: "2025-05-12" }, 
- ]; 
- 
- const RATE_SHEET = [ 
-   { from: "Dar es Salaam", destination: "Nairobi", c20: 850000, c40: 1200000, loose: 450000, days: 2 }, 
-   { from: "Dar es Salaam", destination: "Kampala", c20: 950000, c40: 1350000, loose: 500000, days: 3 }, 
-   { from: "Dar es Salaam", destination: "Lusaka", c20: 1100000, c40: 1600000, loose: 600000, days: 4 }, 
-   { from: "Dar es Salaam", destination: "Lilongwe", c20: 1050000, c40: 1500000, loose: 550000, days: 3 }, 
-   { from: "Tanga", destination: "Mombasa", c20: 700000, c40: 1000000, loose: 380000, days: 1 }, 
-   { from: "Arusha", destination: "Nairobi", c20: 780000, c40: 1100000, loose: 420000, days: 1 }, 
-   { from: "Zanzibar", destination: "Dar es Salaam", c20: 350000, c40: 500000, loose: 200000, days: 1 }, 
- ]; 
- 
  // ── Helpers ─────────────────────────────────────────────────────────────── 
  const fmtTZS = (n: number) => `TZS ${Number(n || 0).toLocaleString()}`; 
- const uid = () => Math.random().toString(36).slice(2, 8).toUpperCase(); 
  const today = () => new Date().toISOString().split("T")[0]; 
  
  const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = { 
@@ -72,6 +39,9 @@ import {
    overdue:    { bg: "#fee2e2", text: "#991b1b", label: "Overdue" }, 
    active:     { bg: "#d1fae5", text: "#065f46", label: "Active" }, 
    inactive:   { bg: "#f3f4f6", text: "#6b7280", label: "Inactive" }, 
+   COMPLETED:  { bg: "#d1fae5", text: "#065f46", label: "Completed" },
+   PENDING:    { bg: "#fef3c7", text: "#92400e", label: "Pending" },
+   IN_TRANSIT: { bg: "#dbeafe", text: "#1e40af", label: "In Transit" },
  }; 
  
  const Badge = ({ status }: { status: string }) => { 
@@ -162,7 +132,7 @@ import {
      <table> 
        <thead><tr><th>From</th><th>Destination</th><th>20ft (TZS)</th><th>40ft (TZS)</th><th>Loose (TZS)</th><th>Transit Days</th></tr></thead> 
        <tbody> 
-         ${rateRow ? `<tr><td>${rateRow.from}</td><td>${rateRow.destination}</td><td>${rateRow.c20.toLocaleString()}</td><td>${rateRow.c40.toLocaleString()}</td><td>${rateRow.loose.toLocaleString()}</td><td>${rateRow.days}</td></tr>` : RATE_SHEET.map((r,i)=>`<tr style="${i%2?'background:#f9f9f9':''}"><td>${r.from}</td><td>${r.destination}</td><td>${r.c20.toLocaleString()}</td><td>${r.c40.toLocaleString()}</td><td>${r.loose.toLocaleString()}</td><td>${r.days}</td></tr>`).join("")} 
+         ${rateRow ? `<tr><td>${rateRow.origin_name || rateRow.from}</td><td>${rateRow.destination_name || rateRow.destination}</td><td>${(rateRow.container_20ft_rate || rateRow.c20).toLocaleString()}</td><td>${(rateRow.container_40ft_rate || rateRow.c40).toLocaleString()}</td><td>${(rateRow.loose_cargo_rate || rateRow.loose).toLocaleString()}</td><td>${rateRow.transit_days || rateRow.days}</td></tr>` : rateSheets.map((r,i)=>`<tr style="${i%2?'background:#f9f9f9':''}"><td>${r.origin_name}</td><td>${r.destination_name}</td><td>${r.container_20ft_rate?.toLocaleString()}</td><td>${r.container_40ft_rate?.toLocaleString()}</td><td>${r.loose_cargo_rate?.toLocaleString()}</td><td>${r.transit_days}</td></tr>`).join("")} 
        </tbody> 
      </table> 
  
@@ -270,89 +240,177 @@ import {
    const { role } = useRole();
    const { format } = useCurrency();
    const [tab, setTab] = useState("overview"); 
-   const [clients, setClients] = useState(SEED_CLIENTS); 
-   const [trips, setTrips] = useState(SEED_TRIPS); 
-   const [invoices, setInvoices] = useState(SEED_INVOICES); 
-   const [expenses, setExpenses] = useState(SEED_EXPENSES); 
+   
+   // Real data hooks
+   const { customers, refresh: refreshCustomers } = useCustomers();
+   const { trips, refresh: refreshTrips } = useTrips();
+   const { invoices, refresh: refreshInvoices } = useInvoices();
+   const { expenses, refresh: refreshExpenses } = useExpenses();
+   const { rateSheets } = useRateSheets();
+   const { users: drivers } = useUsers();
+   const { vehicles, loading: vLoading } = useFleetVehicles();
+
    const [modal, setModal] = useState<any>(null); // { type, data } 
    const [contractState, setContractState] = useState<any>(null); 
    const [searchQ, setSearchQ] = useState(""); 
-     const [clientView, setClientView] = useState<"table" | "grid">("grid");
+   const [clientView, setClientView] = useState<"table" | "grid">("grid");
+   const [isSaving, setIsSaving] = useState(false);
 
    const closeModal = () => setModal(null); 
  
    // ── Derived metrics ── 
-   const completedTrips = trips.filter(t => t.status === "completed"); 
-   const totalRevenue = completedTrips.reduce((s, t) => s + (t.revenue || 0), 0); 
-   const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0); 
+   const completedTrips = useMemo(() => trips.filter(t => t.status === "completed" || t.status === "COMPLETED"), [trips]); 
+   const totalRevenue = useMemo(() => completedTrips.reduce((s, t) => s + (t.revenue || 0), 0), [completedTrips]); 
+   const totalExpenses = useMemo(() => expenses.reduce((s, e) => s + (e.amount || 0), 0), [expenses]); 
    const netProfit = totalRevenue - totalExpenses;
    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-   const unpaid = invoices.filter(i => i.status !== "paid"); 
-   const unpaidAmount = unpaid.reduce((s, i) => s + (i.amount || 0), 0); 
-   const activeTripsCount = trips.filter(t => ["in_transit", "loading", "pending", "created"].includes(t.status)).length;
-   const activeClientsCount = clients.filter(c => c.status === "active").length;
-   const clientMap = useMemo(() => Object.fromEntries(clients.map(c => [c.id, c])), [clients]); 
+   const unpaid = useMemo(() => invoices.filter(i => i.status !== "paid"), [invoices]); 
+   const unpaidAmount = useMemo(() => unpaid.reduce((s, i) => s + (i.amount || 0), 0), [unpaid]); 
+   const activeTripsCount = useMemo(() => trips.filter(t => ["in_transit", "loading", "pending", "created", "IN_TRANSIT", "PENDING"].includes(t.status)).length, [trips]);
+   const activeClientsCount = useMemo(() => customers.filter(c => c.status === "active").length, [customers]);
+   const clientMap = useMemo(() => Object.fromEntries(customers.map(c => [c.id, c])), [customers]); 
  
    // ── Filtering logic ──
-   const filteredClients = useMemo(() => clients.filter(c => 
-     c.company_name.toLowerCase().includes(searchQ.toLowerCase()) || 
-     c.contact_person.toLowerCase().includes(searchQ.toLowerCase())
-   ), [clients, searchQ]);
+   const filteredClients = useMemo(() => customers.filter(c => 
+     (c.company_name || "").toLowerCase().includes(searchQ.toLowerCase()) || 
+     (c.contact_person || "").toLowerCase().includes(searchQ.toLowerCase())
+   ), [customers, searchQ]);
 
    const filteredTrips = useMemo(() => trips.filter(t => 
-     t.tripNumber.toLowerCase().includes(searchQ.toLowerCase()) || 
-     t.origin.toLowerCase().includes(searchQ.toLowerCase()) ||
-     t.destination.toLowerCase().includes(searchQ.toLowerCase())
+     (t.trip_number || t.tripNumber || "").toLowerCase().includes(searchQ.toLowerCase()) || 
+     (t.origin || "").toLowerCase().includes(searchQ.toLowerCase()) ||
+     (t.destination || "").toLowerCase().includes(searchQ.toLowerCase())
    ), [trips, searchQ]);
 
    const filteredInvoices = useMemo(() => invoices.filter(i => 
-     i.invoice_number.toLowerCase().includes(searchQ.toLowerCase())
+     (i.invoice_number || "").toLowerCase().includes(searchQ.toLowerCase())
    ), [invoices, searchQ]);
 
    // ── Handlers ── 
-   const saveTrip = (data: any) => { 
-     if (data.id) setTrips(ts => ts.map(t => t.id === data.id ? { ...t, ...data } : t));
-     else setTrips([...trips, { ...data, id: uid(), tripNumber: "CAL-" + (trips.length + 1).toString().padStart(3, '0'), status: "pending", date: today() }]);
-     closeModal();
+   const saveTrip = async (data: any) => { 
+     setIsSaving(true);
+     try {
+       await saveTripAction(data);
+       refreshTrips();
+       closeModal();
+     } catch (err) {
+       alert("Error saving trip: " + err);
+     } finally {
+       setIsSaving(false);
+     }
    };
 
-   const deleteTrip = (id: string) => {
-     if (confirm("Delete this trip?")) setTrips(trips.filter(t => t.id !== id));
+   const deleteTrip = async (id: string) => {
+     if (confirm("Delete this trip?")) {
+       setIsSaving(true);
+       try {
+         await deleteTripAction(id);
+         refreshTrips();
+       } catch (err) {
+         alert("Error deleting trip: " + err);
+       } finally {
+         setIsSaving(false);
+       }
+     }
    };
 
-   const saveClient = (data: any) => {
-     if (data.id) setClients(cs => cs.map(c => c.id === data.id ? { ...c, ...data } : c));
-     else setClients([...clients, { ...data, id: uid(), status: "active" }]);
-     closeModal();
+   const saveClient = async (data: any) => {
+     setIsSaving(true);
+     try {
+       await saveCustomerAction(data);
+       refreshCustomers();
+       closeModal();
+     } catch (err) {
+       alert("Error saving client: " + err);
+     } finally {
+       setIsSaving(false);
+     }
    };
 
-   const deleteClient = (id: string) => {
-     if (confirm("Delete this client?")) setClients(clients.filter(c => c.id !== id));
+   const deleteClient = async (id: string) => {
+     if (confirm("Delete this client?")) {
+       setIsSaving(true);
+       try {
+         await deleteCustomerAction(id);
+         refreshCustomers();
+       } catch (err) {
+         alert("Error deleting client: " + err);
+       } finally {
+         setIsSaving(false);
+       }
+     }
    };
 
-   const saveInvoice = (data: any) => {
-     if (data.id) setInvoices(is => is.map(i => i.id === data.id ? { ...i, ...data } : i));
-     else setInvoices([...invoices, { ...data, id: uid(), invoice_number: "INV-" + today().split("-")[0] + "-" + (invoices.length + 1).toString().padStart(3, '0'), status: "pending", date: today() }]);
-     closeModal();
+   const saveInvoice = async (data: any) => {
+     setIsSaving(true);
+     try {
+       await saveInvoiceAction(data);
+       refreshInvoices();
+       closeModal();
+     } catch (err) {
+       alert("Error saving invoice: " + err);
+     } finally {
+       setIsSaving(false);
+     }
    };
 
-   const markInvoicePaid = (id: string) => {
-     setInvoices(is => is.map(i => i.id === id ? { ...i, status: "paid" } : i));
+   const markInvoicePaid = async (id: string) => {
+     setIsSaving(true);
+     try {
+       const invoice = invoices.find(i => i.id === id);
+       if (invoice) {
+         await saveInvoiceAction({ ...invoice, status: "paid" });
+         refreshInvoices();
+       }
+     } catch (err) {
+       alert("Error marking invoice paid: " + err);
+     } finally {
+       setIsSaving(false);
+     }
    };
 
-   const deleteInvoice = (id: string) => {
-     if (confirm("Delete this invoice?")) setInvoices(invoices.filter(i => i.id !== id));
+   const deleteInvoice = async (id: string) => {
+     if (confirm("Delete this invoice?")) {
+       setIsSaving(true);
+       try {
+         await deleteInvoiceAction(id);
+         refreshInvoices();
+       } catch (err) {
+         alert("Error deleting invoice: " + err);
+       } finally {
+         setIsSaving(false);
+       }
+     }
    };
 
-   const saveExpense = (data: any) => {
-     if (data.id) setExpenses(es => es.map(e => e.id === data.id ? { ...e, ...data } : e));
-     else setExpenses([...expenses, { ...data, id: uid(), date: today() }]);
-     closeModal();
+   const saveExpense = async (data: any) => {
+     setIsSaving(true);
+     try {
+       await saveExpenseAction(data);
+       refreshExpenses();
+       closeModal();
+     } catch (err) {
+       alert("Error saving expense: " + err);
+     } finally {
+       setIsSaving(false);
+     }
    };
 
-   const deleteExpense = (id: string) => {
-     if (confirm("Delete this expense?")) setExpenses(expenses.filter(e => e.id !== id));
+   const deleteExpense = async (id: string) => {
+     if (confirm("Delete this expense?")) {
+       setIsSaving(true);
+       try {
+         await deleteExpenseAction(id);
+         refreshExpenses();
+       } catch (err) {
+         alert("Error deleting expense: " + err);
+       } finally {
+         setIsSaving(false);
+       }
+     }
    };
+
+   if (!role) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-600 mb-2" /> Loading Dashboard...</div>;
 
    return (
      <DashboardLayout
@@ -445,13 +503,13 @@ import {
                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">Margin: {profitMargin.toFixed(1)}%</span>
                     </div>
                     <div className="space-y-4">
-                        {clients.slice(0, 5).sort((a,b) => {
-                            const revA = trips.filter(t => t.client === a.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
-                            const revB = trips.filter(t => t.client === b.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
+                        {customers.slice(0, 5).sort((a,b) => {
+                            const revA = trips.filter(t => (t.client_id === a.id || t.client === a.id) && (t.status === "completed" || t.status === "COMPLETED")).reduce((s, t) => s + (t.revenue || 0), 0);
+                            const revB = trips.filter(t => (t.client_id === b.id || t.client === b.id) && (t.status === "completed" || t.status === "COMPLETED")).reduce((s, t) => s + (t.revenue || 0), 0);
                             return revB - revA;
                         }).map(c => {
-                        const rev = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
-                        const tripCount = trips.filter(t => t.client === c.id).length;
+                        const rev = trips.filter(t => (t.client_id === c.id || t.client === c.id) && (t.status === "completed" || t.status === "COMPLETED")).reduce((s, t) => s + (t.revenue || 0), 0);
+                        const tripCount = trips.filter(t => (t.client_id === c.id || t.client === c.id)).length;
                         const pct = totalRevenue > 0 ? (rev / totalRevenue) * 100 : 0;
                         return (
                             <div key={c.id}>
@@ -481,8 +539,8 @@ import {
                                         <Truck size={16} />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-bold text-gray-900">{t.tripNumber} — {t.origin} to {t.destination}</p>
-                                        <p className="text-[10px] text-gray-500">{clientMap[t.client]?.company_name} | {new Date(t.date).toLocaleDateString()}</p>
+                                        <p className="text-xs font-bold text-gray-900">{t.trip_number || t.tripNumber} — {t.origin} to {t.destination}</p>
+                                        <p className="text-[10px] text-gray-500">{clientMap[t.client_id || t.client]?.company_name} | {new Date(t.date || t.created_at).toLocaleDateString()}</p>
                                     </div>
                                 </div>
                                 <Badge status={t.status} />
@@ -572,8 +630,8 @@ import {
              {clientView === "grid" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredClients.map(c => {
-                        const rev = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
-                        const tripCount = trips.filter(t => t.client === c.id).length;
+                        const rev = trips.filter(t => (t.client_id === c.id || t.client === c.id) && (t.status === "completed" || t.status === "COMPLETED")).reduce((s, t) => s + (t.revenue || 0), 0);
+                        const tripCount = trips.filter(t => (t.client_id === c.id || t.client === c.id)).length;
                         return (
                             <div key={c.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
                                 <div className="flex justify-between items-start mb-4">
@@ -631,8 +689,8 @@ import {
                         </thead>
                         <tbody className="divide-y">
                         {filteredClients.map(c => {
-                            const rev = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
-                            const tripCount = trips.filter(t => t.client === c.id).length;
+                            const rev = trips.filter(t => (t.client_id === c.id || t.client === c.id) && (t.status === "completed" || t.status === "COMPLETED")).reduce((s, t) => s + (t.revenue || 0), 0);
+                            const tripCount = trips.filter(t => (t.client_id === c.id || t.client === c.id)).length;
                             return (
                                 <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4">
@@ -687,8 +745,8 @@ import {
                    {filteredTrips.map(t => (
                      <tr key={t.id} className="hover:bg-gray-50 transition-colors">
                        <td className="px-6 py-4">
-                            <div className="font-black text-gray-900">{t.tripNumber}</div>
-                            <div className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString()}</div>
+                            <div className="font-black text-gray-900">{t.trip_number || t.tripNumber}</div>
+                            <div className="text-[10px] text-gray-400">{new Date(t.date || t.created_at).toLocaleDateString()}</div>
                        </td>
                        <td className="px-6 py-4">
                          <div className="flex items-center gap-2 text-gray-800 font-medium">
@@ -697,8 +755,8 @@ import {
                          <div className="text-[10px] text-gray-400 italic">{t.cargo_type}</div>
                        </td>
                        <td className="px-6 py-4">
-                            <div className="text-gray-600 font-medium">{clientMap[t.client]?.company_name || "Unknown"}</div>
-                            <div className="text-[10px] text-gray-400">{t.driver} | {t.truck_plate}</div>
+                            <div className="text-gray-600 font-medium">{clientMap[t.client_id || t.client]?.company_name || "Unknown"}</div>
+                            <div className="text-[10px] text-gray-400">{t.driver_name || t.driver} | {t.truck_plate || t.truck}</div>
                        </td>
                        <td className="px-6 py-4 font-bold text-green-600">{fmtTZS(t.revenue)}</td>
                        <td className="px-6 py-4"><Badge status={t.status} /></td>
@@ -737,7 +795,7 @@ import {
                    {filteredInvoices.map(i => (
                      <tr key={i.id} className="hover:bg-gray-50 transition-colors">
                        <td className="px-6 py-4 font-black text-gray-900">{i.invoice_number}</td>
-                       <td className="px-6 py-4 text-gray-600">{clientMap[i.client]?.company_name || "Unknown"}</td>
+                       <td className="px-6 py-4 text-gray-600">{i.client_name || clientMap[i.client_id || i.client]?.company_name || "Unknown"}</td>
                        <td className="px-6 py-4 font-bold text-blue-600">{fmtTZS(i.amount)}</td>
                        <td className="px-6 py-4">
                             <div className={`text-xs font-medium ${new Date(i.due_date) < new Date() && i.status !== 'paid' ? 'text-red-500' : 'text-gray-500'}`}>
@@ -801,13 +859,13 @@ import {
                         <tr key={e.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                             <div className="font-bold text-gray-900">{e.description}</div>
-                            <div className="text-[10px] text-gray-400">Trip: {trips.find(t => t.id === e.trip)?.tripNumber || "N/A"}</div>
+                            <div className="text-[10px] text-gray-400">Trip: {trips.find(t => t.id === (e.trip_id || e.trip))?.trip_number || "N/A"}</div>
                         </td>
                         <td className="px-6 py-4">
                             <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-black uppercase text-gray-500">{e.category}</span>
                         </td>
                         <td className="px-6 py-4 font-bold text-red-600">{fmtTZS(e.amount)}</td>
-                        <td className="px-6 py-4 text-gray-500">{new Date(e.date).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-gray-500">{new Date(e.expense_date || e.date).toLocaleDateString()}</td>
                         <td className="px-6 py-4 text-right">
                             <button onClick={() => setModal({ type: "expense", data: e })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
                             <button onClick={() => deleteExpense(e.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
@@ -830,13 +888,13 @@ import {
                  <Field label="Select Client">
                    <Select value={contractState?.client || ""} onChange={(e: any) => setContractState({ ...contractState, client: e.target.value })}>
                      <option value="">Choose a client...</option>
-                     {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                     {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                    </Select>
                  </Field>
                  <Field label="Route & Rates">
                    <Select value={contractState?.routeIdx || ""} onChange={(e: any) => setContractState({ ...contractState, routeIdx: e.target.value })}>
                      <option value="">Standard Rate Sheet (All Routes)</option>
-                     {RATE_SHEET.map((r, i) => <option key={i} value={i}>{r.from} → {r.destination}</option>)}
+                     {rateSheets.map((r, i) => <option key={i} value={i}>{r.origin_name} → {r.destination_name}</option>)}
                    </Select>
                  </Field>
                  <div className="grid grid-cols-2 gap-4">
@@ -874,12 +932,12 @@ import {
                      </tr>
                    </thead>
                    <tbody className="divide-y">
-                     {RATE_SHEET.map((r, i) => (
+                     {rateSheets.map((r, i) => (
                        <tr key={i} className="hover:bg-gray-50">
-                         <td className="px-3 py-3 font-medium">{r.from} → {r.destination}</td>
-                         <td className="px-3 py-3 font-bold">{r.c20.toLocaleString()}</td>
-                         <td className="px-3 py-3 font-bold">{r.c40.toLocaleString()}</td>
-                         <td className="px-3 py-3 text-center">{r.days}</td>
+                         <td className="px-3 py-3 font-medium">{r.origin_name} → {r.destination_name}</td>
+                         <td className="px-3 py-3 font-bold">{r.container_20ft_rate?.toLocaleString()}</td>
+                         <td className="px-3 py-3 font-bold">{r.container_40ft_rate?.toLocaleString()}</td>
+                         <td className="px-3 py-3 text-center">{r.transit_days}</td>
                        </tr>
                      ))}
                    </tbody>
@@ -893,8 +951,8 @@ import {
        {/* Contract Preview Modal */}
        {contractState?.showPreview && (
          <ContractPreview 
-           client={clients.find(c => c.id === contractState.client)}
-           rateRow={contractState.routeIdx !== "" ? RATE_SHEET[contractState.routeIdx] : null}
+           client={customers.find(c => c.id === contractState.client)}
+           rateRow={contractState.routeIdx !== "" ? rateSheets[contractState.routeIdx] : null}
            details={contractState}
            onClose={() => setContractState({ ...contractState, showPreview: false })}
          />
@@ -929,23 +987,23 @@ import {
             }}>
              <input type="hidden" name="id" defaultValue={modal.data?.id} />
              <Field label="Select Client">
-               <Select name="client" defaultValue={modal.data?.client} required>
+               <Select name="client_id" defaultValue={modal.data?.client_id || modal.data?.client} required>
                  <option value="">Choose a client...</option>
-                 {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                 {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                </Select>
              </Field>
              <div className="grid grid-cols-2 gap-4">
                 <Field label="Select Route (Auto-Price)">
                     <Select onChange={(e: any) => {
                         if (e.target.value === "") return;
-                        const route = RATE_SHEET[e.target.value];
+                        const route = rateSheets[e.target.value];
                         const form = e.target.closest('form');
-                        form.origin.value = route.from;
-                        form.destination.value = route.destination;
-                        form.revenue.value = route.c20; // Default to 20ft
+                        form.origin.value = route.origin_name;
+                        form.destination.value = route.destination_name;
+                        form.revenue.value = route.container_20ft_rate; 
                     }}>
                         <option value="">Custom Route...</option>
-                        {RATE_SHEET.map((r, i) => <option key={i} value={i}>{r.from} → {r.destination}</option>)}
+                        {rateSheets.map((r, i) => <option key={i} value={i}>{r.origin_name} → {r.destination_name}</option>)}
                     </Select>
                 </Field>
                 <Field label="Trip Date"><Input name="date" type="date" defaultValue={modal.data?.date || today()} /></Field>
@@ -959,8 +1017,18 @@ import {
                <Field label="Revenue (TZS)"><Input name="revenue" type="number" defaultValue={modal.data?.revenue} required /></Field>
              </div>
              <div className="grid grid-cols-2 gap-4">
-               <Field label="Driver Name"><Input name="driver" defaultValue={modal.data?.driver} /></Field>
-               <Field label="Truck Plate"><Input name="truck_plate" defaultValue={modal.data?.truck_plate} /></Field>
+               <Field label="Driver">
+                    <Select name="driver_id" defaultValue={modal.data?.driver_id}>
+                        <option value="">Assign Driver...</option>
+                        {drivers.map(d => <option key={d.id} value={d.id}>{d.full_name}</option>)}
+                    </Select>
+               </Field>
+               <Field label="Truck">
+                    <Select name="truck_id" defaultValue={modal.data?.truck_id}>
+                        <option value="">Assign Truck...</option>
+                        {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number}</option>)}
+                    </Select>
+               </Field>
              </div>
              <div className="flex justify-end gap-2 mt-6">
                <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
@@ -975,21 +1043,21 @@ import {
            <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveInvoice(Object.fromEntries(d)); }}>
              <input type="hidden" name="id" defaultValue={modal.data?.id} />
              <Field label="Select Trip (Auto-Amount)">
-                <Select name="trip" defaultValue={modal.data?.trip} onChange={(e: any) => {
+                <Select name="trip_id" defaultValue={modal.data?.trip_id || modal.data?.trip} onChange={(e: any) => {
                     const trip = trips.find(t => t.id === e.target.value);
                     if (trip) {
                         const form = e.target.closest('form');
-                        form.client.value = trip.client;
+                        form.client_id.value = trip.client_id || trip.client;
                         form.amount.value = trip.revenue;
                     }
                 }}>
                     <option value="">Choose a trip...</option>
-                    {trips.map(t => <option key={t.id} value={t.id}>{t.tripNumber} ({t.origin} → {t.destination})</option>)}
+                    {trips.map(t => <option key={t.id} value={t.id}>{t.trip_number || t.tripNumber} ({t.origin} → {t.destination})</option>)}
                 </Select>
              </Field>
              <Field label="Select Client">
-               <Select name="client" defaultValue={modal.data?.client} required>
-                 {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+               <Select name="client_id" defaultValue={modal.data?.client_id || modal.data?.client} required>
+                 {customers.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                </Select>
              </Field>
              <div className="grid grid-cols-2 gap-4">
@@ -1011,9 +1079,9 @@ import {
              <Field label="Description"><Input name="description" defaultValue={modal.data?.description} required /></Field>
              <div className="grid grid-cols-2 gap-4">
                 <Field label="Link to Trip">
-                    <Select name="trip" defaultValue={modal.data?.trip}>
+                    <Select name="trip_id" defaultValue={modal.data?.trip_id || modal.data?.trip}>
                         <option value="">Optional: Choose trip...</option>
-                        {trips.map(t => <option key={t.id} value={t.id}>{t.tripNumber}</option>)}
+                        {trips.map(t => <option key={t.id} value={t.id}>{t.trip_number || t.tripNumber}</option>)}
                     </Select>
                 </Field>
                 <Field label="Category">
