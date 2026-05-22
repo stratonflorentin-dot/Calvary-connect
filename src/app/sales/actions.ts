@@ -148,6 +148,52 @@ export async function deleteInvoiceAction(id: string) {
   return true;
 }
 
+// ─── Expense Actions ────────────────────────────────────────────────────
+
+export async function saveExpenseAction(data: any) {
+  const supabaseAdmin = getAdminClient();
+  const { id, ...rest } = data;
+
+  const mappedData = {
+    amount: parseFloat(rest.amount || 0),
+    category: rest.category || 'Other',
+    description: rest.description,
+    vehicle_id: rest.vehicle_id,
+    driver_id: rest.driver_id,
+    status: rest.status || 'pending',
+    date: rest.date || new Date().toISOString().split('T')[0],
+  };
+
+  if (id && id.length > 10) {
+    const { data: result, error } = await supabaseAdmin
+      .from("expenses")
+      .update({ ...mappedData, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return result;
+  } else {
+    const { data: result, error } = await supabaseAdmin
+      .from("expenses")
+      .insert([{ ...mappedData, created_at: new Date().toISOString() }])
+      .select()
+      .single();
+    if (error) throw error;
+    return result;
+  }
+}
+
+export async function deleteExpenseAction(id: string) {
+  const supabaseAdmin = getAdminClient();
+  const { error } = await supabaseAdmin
+    .from("expenses")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+  return true;
+}
+
 // ─── Rate Sheet Actions ──────────────────────────────────────────────────
 
 export async function saveRateSheetAction(data: any) {

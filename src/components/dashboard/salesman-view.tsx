@@ -333,7 +333,6 @@ import {
    const unpaidAmount = useMemo(() => unpaid.reduce((s, i) => s + (i.amount || 0), 0), [unpaid]); 
    const activeTripsCount = useMemo(() => trips.filter(t => ["in_transit", "loading", "pending", "created", "IN_TRANSIT", "PENDING"].includes(t.status)).length, [trips]);
    const activeClientsCount = useMemo(() => customers.filter(c => c.status === "active").length, [customers]);
-   const clientMap = useMemo(() => Object.fromEntries(customers.map(c => [c.id, c])), [customers]); 
  
    // ── Filtering logic ──
    const filteredClients = useMemo(() => customers.filter(c => 
