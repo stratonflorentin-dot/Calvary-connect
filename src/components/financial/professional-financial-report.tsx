@@ -77,12 +77,18 @@ export function ProfessionalFinancialReport() {
         { data: trips },
         { data: expenses },
         { data: fuelRecords },
-        { data: maintenanceRequests }
+        { data: maintenanceRequests },
+        { data: sales },
+        { data: purchases },
+        { data: allowances }
       ] = await Promise.all([
         supabase.from('trips').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('expenses').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('fuel_records').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('maintenance_requests').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
+        supabase.from('sales').select('*').gte('date', startDate.toISOString()).lte('date', endDate.toISOString()),
+        supabase.from('purchases').select('*').gte('date', startDate.toISOString()).lte('date', endDate.toISOString()),
+        supabase.from('driver_allowances').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
       ]);
 
       // Calculate monthly data
@@ -95,13 +101,31 @@ export function ProfessionalFinancialReport() {
           return date >= monthStart && date <= monthEnd;
         }) || [];
 
+        const monthSales = sales?.filter(s => {
+          const date = new Date(s.date);
+          return date >= monthStart && date <= monthEnd;
+        }) || [];
+
         const monthExpenses = expenses?.filter(e => {
           const date = new Date(e.created_at || e.date);
           return date >= monthStart && date <= monthEnd;
         }) || [];
 
-        const revenue = monthTrips.reduce((sum, t) => sum + (t.salesAmount || t.revenue || t.price || 0), 0);
-        const expensesTotal = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const monthPurchases = purchases?.filter(p => {
+          const date = new Date(p.date);
+          return date >= monthStart && date <= monthEnd;
+        }) || [];
+
+        const monthAllowances = allowances?.filter(a => {
+          const date = new Date(a.created_at);
+          return date >= monthStart && date <= monthEnd;
+        }) || [];
+
+        const revenue = monthSales.reduce((sum, s) => sum + (s.total_amount || s.amount || 0), 0);
+        const expensesTotal = 
+          monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0) + 
+          monthPurchases.reduce((sum, p) => sum + (p.total_amount || p.amount || 0), 0) +
+          monthAllowances.reduce((sum, a) => sum + (a.amount || 0), 0);
 
         return {
           month: month.substring(0, 3),
@@ -113,18 +137,21 @@ export function ProfessionalFinancialReport() {
       });
 
       // Calculate totals
-      const totalRevenue = trips?.reduce((sum, t) => sum + (t.salesAmount || t.revenue || t.price || 0), 0) || 0;
-      const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      const totalRevenue = sales?.reduce((sum, s) => sum + (s.total_amount || s.amount || 0), 0) || 0;
       const fuelCost = fuelRecords?.reduce((sum, f) => sum + (f.cost || 0), 0) || 0;
       const maintenanceCost = maintenanceRequests?.reduce((sum, m) => sum + (m.cost || 0), 0) || 0;
-      const driverCost = expenses?.filter(e => e.category === 'driver' || e.category === 'allowance').reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-      const otherExpenses = totalExpenses - fuelCost - maintenanceCost - driverCost;
+      const allowanceCost = allowances?.reduce((sum, a) => sum + (a.amount || 0), 0) || 0;
+      const otherExpenses = 
+        (expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0) + 
+        (purchases?.reduce((sum, p) => sum + (p.total_amount || p.amount || 0), 0) || 0);
+      
+      const totalExpenses = fuelCost + maintenanceCost + allowanceCost + otherExpenses;
 
       const expenseBreakdown: ExpenseCategory[] = [
         { name: 'Fuel', value: fuelCost, color: '#3b82f6' },
         { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
-        { name: 'Driver Costs', value: driverCost, color: '#10b981' },
-        { name: 'Other', value: otherExpenses, color: '#8b5cf6' }
+        { name: 'Allowances', value: allowanceCost, color: '#10b981' },
+        { name: 'Other Operations', value: otherExpenses, color: '#8b5cf6' }
       ].filter(cat => cat.value > 0);
 
       setData({
@@ -136,7 +163,7 @@ export function ProfessionalFinancialReport() {
         averageRevenuePerTrip: trips && trips.length > 0 ? totalRevenue / trips.length : 0,
         fuelCost,
         maintenanceCost,
-        driverCost,
+        driverCost: allowanceCost,
         otherExpenses,
         monthlyData: monthlyStats,
         expenseBreakdown

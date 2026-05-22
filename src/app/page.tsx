@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/navigation/sidebar';
 import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { AuthComponent } from '@/components/auth/auth-component';
 import { CeoView } from '@/components/dashboard/ceo-view';
+import AdminDashboard from '@/components/dashboard/admin-view';
 import { DriverView } from '@/components/dashboard/driver-view';
 import { MechanicView } from '@/components/dashboard/mechanic-view';
 import { AccountantView } from '@/components/dashboard/accountant-view';
@@ -54,14 +55,12 @@ export default function Home() {
   // Render role-specific content
   const renderContent = () => {
     switch (role) {
+      case 'ADMIN':
+        return <AdminDashboard />;
       case 'CEO':
+        return <CeoView />;
       case 'HR':
-        return (
-          <div className="space-y-8">
-            <HRView />
-            <AIAnalysisDashboard />
-          </div>
-        );
+        return <HRView />;
       case 'DRIVER':
         return <DriverView />;
       case 'OPERATOR':
@@ -75,7 +74,7 @@ export default function Home() {
       case 'WAREHOUSE_STAFF':
         return <OperatorView />;
       default:
-        return <CeoView />;
+        return <AdminDashboard />;
     }
   };
 

@@ -45,6 +45,10 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+import { StatCards } from "./stat-cards";
+import { AuditService } from "@/services/audit-service";
+import { useEffect } from "react";
+
 export default function AccountantDashboard() {
   const { t } = useLanguage();
   const { format } = useCurrency();
@@ -59,12 +63,65 @@ export default function AccountantDashboard() {
     role: "DRIVER",
   });
 
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [extraLoading, setExtraLoading] = useState(true);
+
+  useEffect(() => {
+    const loadExtra = async () => {
+      try {
+        setExtraLoading(true);
+        // Real financial activities
+        const logs = await AuditService.getLogs({ limit: 5 });
+        const mappedActivities = logs.filter(l => ['expenses', 'sales', 'invoices', 'bank_accounts'].includes(l.table_name)).map(log => ({
+          id: log.id,
+          title: log.change_summary || "Financial Activity",
+          description: `${log.user_name} updated ${log.table_name}`,
+          time: new Date(log.created_at).toLocaleTimeString(),
+          icon: DollarSign,
+          color: "bg-emerald-500",
+        }));
+        setActivities(mappedActivities.length > 0 ? mappedActivities : [
+          { id: '1', title: 'No recent financial activity', description: 'Ledger is balanced', time: 'Now', icon: DollarSign, color: 'bg-slate-400' }
+        ]);
+
+        // Real financial alerts
+        const unpaidInv = invoices.filter(i => String(i.status).toLowerCase() !== 'paid' && new Date(i.due_date) < new Date());
+        const pendingExps = expenses.filter(e => String(e.status).toLowerCase() === 'pending');
+        
+        const combinedAlerts = [
+          ...(unpaidInv.map(i => ({
+            id: i.id,
+            title: "Overdue Invoice",
+            description: `${i.invoice_number} from ${i.customer_name} is past due.`,
+            severity: "critical" as const,
+            time: "Now"
+          }))),
+          ...(pendingExps.map(e => ({
+            id: e.id,
+            title: "Pending Expense",
+            description: `New expense of ${format(e.amount)} needs approval.`,
+            severity: "warning" as const,
+            time: "Recent"
+          })))
+        ];
+        setAlerts(combinedAlerts);
+      } catch (err) {
+        console.error("Error loading Accountant extra data:", err);
+      } finally {
+        setExtraLoading(false);
+      }
+    };
+    loadExtra();
+  }, [invoices, expenses]);
+
   const loading =
     expensesLoading ||
     invoicesLoading ||
     tripsLoading ||
     reportsLoading ||
-    driversLoading;
+    driversLoading ||
+    extraLoading;
 
   // Calculate totals
   const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -100,54 +157,6 @@ export default function AccountantDashboard() {
     });
     return categories;
   }, [expenses]);
-
-  // Alerts
-  const alerts = [
-    {
-      id: "1",
-      title: "Unpaid Invoices Overdue",
-      description: `${unpaidInvoices.length} invoices are pending payment with total amount of ${format(totalUnpaidAmount)}.`,
-      severity: "warning" as const,
-      time: "1 day ago",
-    },
-    {
-      id: "2",
-      title: "Monthly Report Available",
-      description: currentReport
-        ? `Report for ${new Date(currentReport.month).toLocaleDateString("en-US", { month: "long" })} is ready.`
-        : "No report for current month yet.",
-      severity: "info" as const,
-      time: "2 hours ago",
-    },
-  ];
-
-  // Recent activities
-  const activities = [
-    {
-      id: "1",
-      title: "Expense Approved",
-      description: "Fuel expense KES 5,000 approved by Manager",
-      time: "2 hours ago",
-      icon: CheckCircle2,
-      color: "bg-green-500",
-    },
-    {
-      id: "2",
-      title: "Invoice Generated",
-      description: "Invoice INV-001 for Client ABC Corp",
-      time: "3 hours ago",
-      icon: FileText,
-      color: "bg-blue-500",
-    },
-    {
-      id: "3",
-      title: "Monthly Report Generated",
-      description: "June 2024 financial summary",
-      time: "5 hours ago",
-      icon: BarChart2,
-      color: "bg-purple-500",
-    },
-  ];
 
   if (loading) {
     return (

@@ -47,9 +47,12 @@ import {
   Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { DriverLocationMap } from "@/components/driver-location-map";
+import { StatCards } from "./stat-cards";
+import { AuditService } from "@/services/audit-service";
+import { supabase } from "@/lib/supabase";
 
 export default function HRDashboard() {
   const { t } = useLanguage();
@@ -64,74 +67,65 @@ export default function HRDashboard() {
   const { vehicles, loading: vehiclesLoading } = useFleetVehicles();
   const { trips, loading: tripsLoading } = useTrips();
 
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [extraLoading, setExtraLoading] = useState(true);
+
+  useEffect(() => {
+    const loadExtra = async () => {
+      try {
+        setExtraLoading(true);
+        // Real activities from Audit Trail (HR relevant)
+        const logs = await AuditService.getLogs({ limit: 5 });
+        const mappedActivities = logs.filter(l => ['user_profiles', 'allowances'].includes(l.table_name)).map(log => ({
+          id: log.id,
+          title: log.change_summary || "HR Activity",
+          description: `${log.user_name} updated ${log.table_name}`,
+          time: new Date(log.created_at).toLocaleTimeString(),
+          icon: Users,
+          color: "bg-blue-500",
+        }));
+        setActivities(mappedActivities.length > 0 ? mappedActivities : [
+          { id: '1', title: 'No recent HR activity', description: 'System is up to date', time: 'Now', icon: Users, color: 'bg-slate-400' }
+        ]);
+
+        // Real license expiry alerts
+        const licenseAlerts = drivers.filter((d) => {
+          if (!d.license_expiry) return false;
+          const expiry = new Date(d.license_expiry);
+          const days = Math.floor((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          return days <= 30 && days >= 0;
+        }).map(d => ({
+          id: `lic-${d.id}`,
+          title: "License Expiry",
+          description: `Driver ${d.full_name}'s license expires soon.`,
+          severity: "warning" as const,
+          time: "Action required"
+        }));
+        
+        setAlerts(licenseAlerts);
+      } catch (err) {
+        console.error("Error loading HR extra data:", err);
+      } finally {
+        setExtraLoading(false);
+      }
+    };
+    loadExtra();
+  }, [drivers]);
+
   const loading =
-    employeesLoading || driversLoading || vehiclesLoading || tripsLoading;
+    employeesLoading || driversLoading || vehiclesLoading || tripsLoading || extraLoading;
 
-  // Calculate metrics
-  const activeEmployees = employees.filter((e) => e.status === "active").length;
-  const inactiveEmployees = employees.filter(
-    (e) => e.status === "inactive",
-  ).length;
+  // Real data metrics
+  const activeEmployees = employees.filter(e => e.status === 'active').length;
   const totalDrivers = drivers.length;
-  const activeTrips = trips.filter((t) =>
-    ["in_transit", "loading", "pending"].includes(t.status),
-  );
-
-  // License expiry alerts
+  const activeTrips = trips.filter(t => t.status === 'in_transit' || t.status === 'loading');
   const licenseExpiryAlerts = drivers.filter((d) => {
     if (!d.license_expiry) return false;
     const expiry = new Date(d.license_expiry);
-    const daysUntilExpiry = Math.floor(
-      (expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-    );
-    return daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
+    const days = Math.floor((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return days <= 30 && days >= 0;
   });
-
-  // Alerts
-  const alerts = [
-    {
-      id: "1",
-      title: "Driver License Expiry",
-      description: `${licenseExpiryAlerts.length} drivers have licenses expiring within 30 days.`,
-      severity: "warning" as const,
-      time: "1 day ago",
-    },
-    {
-      id: "2",
-      title: "New Employee Onboarding",
-      description: "3 new employees are pending onboarding completion.",
-      severity: "info" as const,
-      time: "3 hours ago",
-    },
-  ];
-
-  // Recent activities
-  const activities = [
-    {
-      id: "1",
-      title: "New Driver Added",
-      description: "John Doe - License: ABC-12345",
-      time: "2 hours ago",
-      icon: CheckCircle2,
-      color: "bg-green-500",
-    },
-    {
-      id: "2",
-      title: "Employee Status Updated",
-      description: "Jane Smith - Status changed to Active",
-      time: "4 hours ago",
-      icon: Users,
-      color: "bg-blue-500",
-    },
-    {
-      id: "3",
-      title: "License Renewal Reminder",
-      description: "Driver Mike - License expires in 15 days",
-      time: "6 hours ago",
-      icon: AlertTriangle,
-      color: "bg-amber-500",
-    },
-  ];
 
   // Employee distribution by role
   const roleDistribution = employees.reduce(

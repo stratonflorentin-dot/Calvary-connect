@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { calculateDriverAllowance, generateAllowanceReason, getAllowanceBreakdown } from '@/lib/driver-allowance';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
+import { WorkflowService } from '@/services/workflow-service';
 
 interface Allowance {
   id: string;
@@ -48,7 +49,7 @@ export default function AllowancesPage() {
     setLoading(true);
     try {
       // For admin/accountant: show all, for driver: show only theirs
-      const isAdminOrAccountant = role === 'ADMIN' || role === 'ACCOUNTANT' || role === 'CEO';
+      const isAdminOrAccountant = role === 'ADMIN' || role === 'ACCOUNTANT' || role === 'CEO' || role === 'HR';
       
       let query = supabase
         .from('driver_allowances')
@@ -77,6 +78,22 @@ export default function AllowancesPage() {
     } catch (error) {
       console.error('Error loading allowances:', error);
       toast({ title: 'Error', description: 'Failed to load allowances', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      await WorkflowService.processAllowance(id, user.id);
+      toast({ title: 'Success', description: 'Allowance approved and synced to Finance' });
+      loadAllowances();
+    } catch (error) {
+      console.error('Error approving allowance:', error);
+      toast({ title: 'Error', description: 'Failed to approve allowance', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -294,6 +311,9 @@ export default function AllowancesPage() {
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
+                      {(role === 'ADMIN' || role === 'ACCOUNTANT' || role === 'CEO' || role === 'HR') && (
+                        <TableHead className="text-right">Actions</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -326,6 +346,19 @@ export default function AllowancesPage() {
                         <TableCell className="text-sm text-muted-foreground">
                           {new Date(allowance.created_at).toLocaleDateString()}
                         </TableCell>
+                        {(role === 'ADMIN' || role === 'ACCOUNTANT' || role === 'CEO' || role === 'HR') && (
+                          <TableCell className="text-right">
+                            {allowance.status === 'pending' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleApprove(allowance.id)}
+                                disabled={loading}
+                              >
+                                Approve
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>

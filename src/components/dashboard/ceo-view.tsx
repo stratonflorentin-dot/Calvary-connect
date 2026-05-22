@@ -70,6 +70,9 @@ import { DriverLocationMap } from "@/components/driver-location-map";
 import Link from "next/link";
 import { useState } from "react";
 import { StatCards } from "./stat-cards";
+import { AuditService } from "@/services/audit-service";
+import { AIAnalysisDashboard } from "./ai-analysis-dashboard";
+import { useEffect, useState } from "react";
 
 export default function CeoDashboard() {
   const stats = { warehouseUtilization: 0 };
@@ -89,6 +92,56 @@ export default function CeoDashboard() {
     role: "DRIVER",
   });
 
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [extraLoading, setExtraLoading] = useState(true);
+
+  useEffect(() => {
+    const loadExtra = async () => {
+      try {
+        setExtraLoading(true);
+        // Load real activities from Audit Trail
+        const logs = await AuditService.getLogs({ limit: 5 });
+        const mappedActivities = logs.map(log => ({
+          id: log.id,
+          title: log.change_summary || "Activity recorded",
+          description: `${log.user_name} updated ${log.table_name}`,
+          time: new Date(log.created_at).toLocaleTimeString(),
+          icon: log.action === 'CREATE' ? Plus : log.action === 'DELETE' ? Trash2 : Edit,
+          color: log.action === 'CREATE' ? "bg-green-500" : log.action === 'DELETE' ? "bg-red-500" : "bg-blue-500",
+        }));
+        setActivities(mappedActivities);
+
+        // Load real alerts from maintenance and invoices
+        const { data: maintAlerts } = await supabase.from('maintenance_requests').select('*').eq('status', 'pending').limit(2);
+        const { data: overdueInvoices } = await supabase.from('invoices').select('*').eq('status', 'pending').lt('due_date', new Date().toISOString()).limit(2);
+        
+        const combinedAlerts = [
+          ...(maintAlerts?.map(m => ({
+            id: m.id,
+            title: "Maintenance Due",
+            description: `Vehicle ${m.vehicle_id} needs attention: ${m.issue_type}`,
+            severity: "warning" as const,
+            time: "Recent"
+          })) || []),
+          ...(overdueInvoices?.map(i => ({
+            id: i.id,
+            title: "Overdue Payment",
+            description: `Invoice ${i.invoice_number} is past due from ${i.customer_name}`,
+            severity: "critical" as const,
+            time: "Now"
+          })) || [])
+        ];
+        setAlerts(combinedAlerts);
+      } catch (err) {
+        console.error("Error loading CEO extra data:", err);
+      } finally {
+        setExtraLoading(false);
+      }
+    };
+    loadExtra();
+  }, []);
+
   const loading =
     vehiclesLoading ||
     tripsLoading ||
@@ -96,7 +149,8 @@ export default function CeoDashboard() {
     invoicesLoading ||
     reportsLoading ||
     maintenanceLoading ||
-    driversLoading;
+    driversLoading ||
+    extraLoading;
 
   // Calculate metrics
   const activeTrips = trips.filter((t) =>
@@ -151,77 +205,6 @@ export default function CeoDashboard() {
       t.cargo_type?.toUpperCase() || "",
     ),
   ).length;
-
-  // Alerts
-  const alerts = [
-    {
-      id: "1",
-      title: "Vehicle Maintenance Due",
-      description:
-        "3 vehicles are due for scheduled maintenance within the next 7 days.",
-      severity: "warning" as const,
-      time: "2 hours ago",
-    },
-    {
-      id: "2",
-      title: "High Fuel Consumption",
-      description:
-        "Vehicle TRK-007 has exceeded fuel consumption threshold by 15%.",
-      severity: "critical" as const,
-      time: "1 hour ago",
-    },
-    {
-      id: "3",
-      title: "New Trip Completed",
-      description:
-        "Trip from Nairobi to Mombasa has been completed successfully.",
-      severity: "info" as const,
-      time: "30 minutes ago",
-    },
-  ];
-
-  // Recent activities
-  const activities = [
-    {
-      id: "1",
-      title: "Trip #T001 Completed",
-      description: "Nairobi → Mombasa | Driver: John Doe",
-      time: "2 hours ago",
-      icon: CheckCircle2,
-      color: "bg-green-500",
-    },
-    {
-      id: "2",
-      title: "New Vehicle Added",
-      description: "Toyota Hilux - Plate: KDJ-123X",
-      time: "3 hours ago",
-      icon: Plus,
-      color: "bg-blue-500",
-    },
-    {
-      id: "3",
-      title: "Expense Report Submitted",
-      description: "Fuel expense of KES 15,000 by Driver Jane",
-      time: "4 hours ago",
-      icon: FileText,
-      color: "bg-amber-500",
-    },
-    {
-      id: "4",
-      title: "Maintenance Request Created",
-      description: "Engine check for Truck TRK-005",
-      time: "5 hours ago",
-      icon: Wrench,
-      color: "bg-red-500",
-    },
-  ];
-
-  // Monthly data for chart
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const currentReport = reports.find((r) =>
-    (r.month || "").toString().startsWith(currentMonth),
-  );
-  const recentReports = reports.slice(0, 6);
 
   // Vehicle utilization
   const utilizationRate =
@@ -782,6 +765,11 @@ export default function CeoDashboard() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* AI Strategy & Insights */}
+      <div className="mt-8">
+        <AIAnalysisDashboard />
+      </div>
     </DashboardLayout>
   );
 }

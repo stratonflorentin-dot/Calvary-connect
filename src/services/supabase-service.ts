@@ -279,6 +279,27 @@ export class SupabaseService {
     return data;
   }
 
+  static async updateMaintenanceRequest(id: string, updates: Partial<MaintenanceRequest>) {
+    const user = await getCurrentUser();
+    const { data: oldData } = await supabase.from('maintenance_requests').select('*').eq('id', id).single();
+    
+    const { data, error } = await supabase
+      .from('maintenance_requests')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (user && SyncManager.isOnline()) {
+      await AuditService.logCRUD(user, 'UPDATE', 'maintenance_requests', id, oldData, data,
+        `Updated maintenance request ${id}`);
+    }
+    
+    return data;
+  }
+
   // Spare Parts
   static async getSpareParts(filters?: { category?: string }) {
     let query = supabase.from('spare_parts').select('*');
@@ -358,6 +379,27 @@ export class SupabaseService {
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'allowances', data.id, null, data,
         `Created allowance for ${allowance.workerName} - ${allowance.amount}`);
+    }
+    
+    return data;
+  }
+
+  static async updateAllowance(id: string, updates: Partial<Allowance>) {
+    const user = await getCurrentUser();
+    const { data: oldData } = await supabase.from('allowances').select('*').eq('id', id).single();
+    
+    const { data, error } = await supabase
+      .from('allowances')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (user && SyncManager.isOnline()) {
+      await AuditService.logCRUD(user, 'UPDATE', 'allowances', id, oldData, data,
+        `Updated allowance for ${oldData?.workerName || id}`);
     }
     
     return data;

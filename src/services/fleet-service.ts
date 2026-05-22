@@ -1,9 +1,12 @@
 import { supabase } from '@/lib/supabase';
 import { FleetVehicle, FleetType, Trip, TripStatus, Expense, MaintenanceRequest, SparePart, PartsRequest, Allowance } from '@/types/roles';
+import { AuditService } from './audit-service';
+import { getCurrentUser } from '@/lib/supabase';
 
 export class FleetService {
   // Fleet Vehicle Management
   static async createVehicle(vehicle: Omit<FleetVehicle, 'id' | 'created_at' | 'updated_at'>) {
+    const user = await getCurrentUser();
     const vehicleData = {
       ...vehicle,
       created_at: new Date().toISOString(),
@@ -16,19 +19,35 @@ export class FleetService {
       .single();
     
     if (error) throw error;
+
+    if (user) {
+      await AuditService.logCRUD(user, 'CREATE', 'vehicles', data.id, null, data, 
+        `Registered new vehicle: ${vehicle.plate_number} (${vehicle.type})`);
+    }
+
     return data.id;
   }
 
   static async updateVehicle(id: string, updates: Partial<FleetVehicle>) {
-    const { error } = await supabase
+    const user = await getCurrentUser();
+    const { data: oldData } = await supabase.from('vehicles').select('*').eq('id', id).single();
+
+    const { data, error } = await supabase
       .from('vehicles')
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select()
+      .single();
     
     if (error) throw error;
+
+    if (user) {
+      await AuditService.logCRUD(user, 'UPDATE', 'vehicles', id, oldData, data, 
+        `Updated vehicle ${oldData?.plate_number || id}`);
+    }
   }
 
   static async getVehicles(type?: FleetType, status?: string) {
@@ -56,6 +75,7 @@ export class FleetService {
 
   // Trip Management
   static async createTrip(trip: Omit<Trip, 'id' | 'created_at' | 'updated_at'>) {
+    const user = await getCurrentUser();
     const tripData = {
       ...trip,
       created_at: new Date().toISOString(),
@@ -68,19 +88,35 @@ export class FleetService {
       .single();
     
     if (error) throw error;
+
+    if (user) {
+      await AuditService.logCRUD(user, 'CREATE', 'trips', data.id, null, data, 
+        `Created trip #${trip.tripNumber || data.id} (${trip.origin} -> ${trip.destination})`);
+    }
+
     return data.id;
   }
 
   static async updateTrip(id: string, updates: Partial<Trip>) {
-    const { error } = await supabase
+    const user = await getCurrentUser();
+    const { data: oldData } = await supabase.from('trips').select('*').eq('id', id).single();
+
+    const { data, error } = await supabase
       .from('trips')
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select()
+      .single();
     
     if (error) throw error;
+
+    if (user) {
+      await AuditService.logCRUD(user, 'UPDATE', 'trips', id, oldData, data, 
+        `Updated trip #${oldData?.tripNumber || id} status to ${updates.status || oldData?.status}`);
+    }
   }
 
   static async getTrips(status?: TripStatus, driverId?: string) {

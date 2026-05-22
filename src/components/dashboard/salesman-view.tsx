@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react"; 
-import { DashboardLayout } from "@/components/dashboard/shared/dashboard-layout";
+import { DashboardLayout, ActivityFeed, AlertPanel } from "@/components/dashboard/shared/dashboard-layout";
 import { useRole } from "@/hooks/use-role";
 import { useCurrency } from "@/hooks/use-currency";
 import { useCustomers } from "@/hooks/data/use-customers";
@@ -13,6 +13,8 @@ import { useQuotations } from "@/hooks/data/use-quotations";
 import { useBookings } from "@/hooks/data/use-bookings";
 import { useUsers } from "@/hooks/data/use-users";
 import { useFleetVehicles } from "@/hooks/data/use-fleet-vehicles";
+import { AuditService } from "@/services/audit-service";
+import { supabase } from "@/lib/supabase";
 import { 
   saveCustomerAction, deleteCustomerAction,
   saveTripAction, deleteTripAction,
@@ -261,6 +263,63 @@ import {
    const [searchQ, setSearchQ] = useState(""); 
    const [clientView, setClientView] = useState<"table" | "grid">("grid");
    const [isSaving, setIsSaving] = useState(false);
+   const [alerts, setAlerts] = useState<any[]>([]);
+   const [activities, setActivities] = useState<any[]>([]);
+   const [extraLoading, setExtraLoading] = useState(true);
+
+   const clientMap = useMemo(() => Object.fromEntries(customers.map(c => [c.id, c])), [customers]); 
+
+   useEffect(() => {
+     const loadExtra = async () => {
+       try {
+         setExtraLoading(true);
+         // Real sales activities
+         const logs = await AuditService.getLogs({ limit: 5 });
+         const mappedActivities = logs.filter(l => ['sales', 'customers', 'quotations', 'bookings'].includes(l.table_name)).map(log => ({
+           id: log.id,
+           title: log.change_summary || "Sales Activity",
+           description: `${log.user_name} updated ${log.table_name}`,
+           time: new Date(log.created_at).toLocaleTimeString(),
+           icon: Briefcase,
+           color: "bg-blue-500",
+         }));
+         setActivities(mappedActivities.length > 0 ? mappedActivities : [
+           { id: '1', title: 'No recent sales activity', description: 'Pipeline is steady', time: 'Now', icon: Briefcase, color: 'bg-slate-400' }
+         ]);
+
+         // Real sales alerts
+         const pendingBookings = bookings.filter(b => b.status === 'pending');
+         const expiringQuotations = quotations.filter(q => {
+           if (!q.expiry_date) return false;
+           const expiry = new Date(q.expiry_date);
+           return expiry > new Date() && expiry < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+         });
+         
+         const combinedAlerts = [
+           ...(pendingBookings.map(b => ({
+             id: b.id,
+             title: "Pending Booking",
+             description: `New booking #${b.booking_number} from ${clientMap[b.customer_id]?.company_name || 'Client'} needs review.`,
+             severity: "warning" as const,
+             time: "Recent"
+           }))),
+           ...(expiringQuotations.map(q => ({
+             id: q.id,
+             title: "Expiring Quotation",
+             description: `Quotation #${q.quotation_number} for ${q.origin} expires soon.`,
+             severity: "info" as const,
+             time: "Action required"
+           })))
+         ];
+         setAlerts(combinedAlerts);
+       } catch (err) {
+         console.error("Error loading Sales extra data:", err);
+       } finally {
+         setExtraLoading(false);
+       }
+     };
+     loadExtra();
+   }, [bookings, quotations, clientMap]);
 
    const closeModal = () => setModal(null); 
  
@@ -479,6 +538,9 @@ import {
        role={role || "SALESMAN"}
      >
        <div className="space-y-6">
+         {/* Alert Panel */}
+         <AlertPanel alerts={alerts} />
+
          {/* Top Sticky Header with Search */}
          <div className="sticky top-0 z-20 bg-gray-50/80 backdrop-blur-md pb-4 pt-2">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -649,6 +711,11 @@ import {
                         <h3 className="font-bold mb-2 flex items-center gap-2 text-sm"><Sparkles className="size-4 text-blue-300" /> Sales Quick Action</h3>
                         <p className="text-[11px] text-blue-100 mb-4 leading-relaxed">Need to secure a new route? Use the contract generator to finalize terms in seconds.</p>
                         <button onClick={() => setTab("contracts")} className="w-full py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg text-xs font-bold transition-colors">Create Agreement</button>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-sm"><Clock className="size-4 text-blue-500" /> Recent Activities</h3>
+                        <ActivityFeed activities={activities} />
                     </div>
                </div>
              </div>

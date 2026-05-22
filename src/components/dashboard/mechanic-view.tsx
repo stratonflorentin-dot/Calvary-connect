@@ -53,6 +53,10 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import Link from "next/link";
 
+import { StatCards } from "./stat-cards";
+import { AuditService } from "@/services/audit-service";
+import { useEffect } from "react";
+
 export default function MechanicDashboard() {
   const { t } = useLanguage();
   const { format } = useCurrency();
@@ -66,7 +70,48 @@ export default function MechanicDashboard() {
   });
   const { trips, loading: tripsLoading } = useTrips();
 
-  const loading = maintenanceLoading || vehiclesLoading || tripsLoading;
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [extraLoading, setExtraLoading] = useState(true);
+
+  useEffect(() => {
+    const loadExtra = async () => {
+      try {
+        setExtraLoading(true);
+        // Real activities from Audit Trail (Mechanic relevant)
+        const logs = await AuditService.getLogs({ limit: 5 });
+        const mappedActivities = logs.filter(l => ['maintenance_requests', 'spare_parts', 'parts_requests'].includes(l.table_name)).map(log => ({
+          id: log.id,
+          title: log.change_summary || "Maintenance Activity",
+          description: `${log.user_name} updated ${log.table_name}`,
+          time: new Date(log.created_at).toLocaleTimeString(),
+          icon: Wrench,
+          color: "bg-orange-500",
+        }));
+        setActivities(mappedActivities.length > 0 ? mappedActivities : [
+          { id: '1', title: 'No recent maintenance activity', description: 'Workshop is idle', time: 'Now', icon: Wrench, color: 'bg-slate-400' }
+        ]);
+
+        // Real maintenance alerts
+        const criticalMaint = maintenanceRequests.filter(r => r.priority === 'critical' && r.status !== 'completed').map(m => ({
+          id: m.id,
+          title: "CRITICAL REPAIR",
+          description: `Vehicle ${m.vehicle_id} has critical issue: ${m.issue_type}`,
+          severity: "critical" as const,
+          time: "Immediate"
+        }));
+        
+        setAlerts(criticalMaint);
+      } catch (err) {
+        console.error("Error loading Mechanic extra data:", err);
+      } finally {
+        setExtraLoading(false);
+      }
+    };
+    loadExtra();
+  }, [maintenanceRequests]);
+
+  const loading = maintenanceLoading || vehiclesLoading || tripsLoading || extraLoading;
 
   // Calculate metrics
   const pendingCount = maintenanceRequests.filter(
@@ -101,52 +146,6 @@ export default function MechanicDashboard() {
         new Date(a.completedAt || a.updated_at || 0).getTime(),
     )
     .slice(0, 5);
-
-  // Alerts
-  const alerts = [
-    {
-      id: "1",
-      title: "Critical Maintenance Required",
-      description: `${maintenanceRequests.filter((r) => r.priority === "critical").length} critical maintenance requests need immediate attention.`,
-      severity: "critical" as const,
-      time: "30 minutes ago",
-    },
-    {
-      id: "2",
-      title: "Parts Running Low",
-      description: "3 spare parts are below minimum stock level.",
-      severity: "warning" as const,
-      time: "2 hours ago",
-    },
-  ];
-
-  // Recent activities
-  const activities = [
-    {
-      id: "1",
-      title: "Maintenance Completed",
-      description: "Engine repair for TRK-005 - $2,500",
-      time: "2 hours ago",
-      icon: CheckCircle2,
-      color: "bg-green-500",
-    },
-    {
-      id: "2",
-      title: "New Maintenance Request",
-      description: "Brake inspection for TRK-012",
-      time: "4 hours ago",
-      icon: PlusCircle,
-      color: "bg-blue-500",
-    },
-    {
-      id: "3",
-      title: "Parts Order Placed",
-      description: "Ordered 4 brake pads and 2 oil filters",
-      time: "6 hours ago",
-      icon: Package,
-      color: "bg-amber-500",
-    },
-  ];
 
   if (loading) {
     return (

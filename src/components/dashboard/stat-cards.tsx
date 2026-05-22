@@ -64,11 +64,11 @@ export function StatCards() {
 
         // FLEET METRICS
         const { data: vehicles } = await supabase
-          .from("fleet_vehicles")
+          .from("vehicles")
           .select("id, status");
         const activeVehicles =
           vehicles?.filter(
-            (v) => v.status === "Available" || v.status === "In Use" || v.status === "available" || v.status === "in_use",
+            (v) => v.status === "available" || v.status === "in_use",
           ).length || 0;
         const totalVehicles = vehicles?.length || 0;
 
@@ -87,22 +87,26 @@ export function StatCards() {
           .eq("status", "pending");
 
         // FINANCIAL METRICS
-        const { data: income } = await supabase
-          .from("income")
-          .select("amount")
-          .gte("createdAt", `${currentMonth}-01T00:00:00Z`);
+        const { data: sales } = await supabase
+          .from("sales")
+          .select("amount, total_amount")
+          .gte("created_at", `${currentMonth}-01T00:00:00Z`);
         const monthlyRevenue =
-          income?.reduce((sum, i) => sum + (i.amount || 0), 0) || 0;
+          sales?.reduce((sum, s) => sum + (s.total_amount || s.amount || 0), 0) || 0;
 
         const { data: expenses } = await supabase
           .from("expenses")
           .select("amount")
-          .gte("createdAt", `${currentMonth}-01T00:00:00Z`);
+          .gte("created_at", `${currentMonth}-01T00:00:00Z`);
         const monthlyExpenses =
           expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
         const netProfit = monthlyRevenue - monthlyExpenses;
 
-        const outstandingPayments = 0; // No invoices table yet
+        const { data: invData } = await supabase
+          .from("invoices")
+          .select("amount")
+          .eq("status", "pending");
+        const outstandingPayments = invData?.reduce((sum, i) => sum + (i.amount || 0), 0) || 0;
 
         // OPERATIONS METRICS
         const { data: transitTrips } = await supabase
@@ -115,7 +119,7 @@ export function StatCards() {
           .from("trips")
           .select("estimatedCompletionTime, deliveredAt")
           .eq("status", "delivered")
-          .gte("createdAt", `${currentMonth}-01T00:00:00Z`);
+          .gte("created_at", `${currentMonth}-01T00:00:00Z`);
         const onTimeCount =
           deliveredTrips?.filter((t) => {
             if (!t.estimatedCompletionTime || !t.deliveredAt) return false;
@@ -135,7 +139,9 @@ export function StatCards() {
           warehouseItems?.filter((w) => w.status === "In Stock" || w.status === "in_stock").length || 0;
 
         // CASH FLOW METRICS
-        const bankBalance = 0;
+        const { data: bankData } = await supabase.from("bank_accounts").select("balance");
+        const bankBalance = bankData?.reduce((sum, b) => sum + (b.balance || 0), 0) || 0;
+        
         const receivables = outstandingPayments;
         const payables = monthlyExpenses;
         const dailyExpense = monthlyExpenses / 30;
