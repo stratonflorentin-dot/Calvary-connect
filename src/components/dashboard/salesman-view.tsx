@@ -3,20 +3,16 @@
 import { useState, useMemo } from "react"; 
 import { DashboardLayout } from "@/components/dashboard/shared/dashboard-layout";
 import { useRole } from "@/hooks/use-role";
+import { useCurrency } from "@/hooks/use-currency";
 import { 
   Briefcase, DollarSign, Users, Calendar, TrendingUp, BarChart2,
   CheckCircle2, Clock, AlertTriangle, Eye, FileText, MapPin,
   Navigation, Package, ArrowRight, RefreshCw, Settings, Bell,
   Sparkles, Shield, Plus, Trash2, Edit, Locate, Truck,
-  Calculator, Printer, Download, Search, ChevronRight, X, Filter
+  Calculator, Printer, Download, Search, CheckCircle, XCircle
 } from "lucide-react";
 
-/**
- * CALVARY CONNECT - SALESMAN DASHBOARD (ENTERPRISE EDITION)
- * A complete, standalone single-page dashboard for logistics sales management.
- */
-
- // ── 1. Seed Data ────────────────────────────────────────────────────────────── 
+ // ── Seed Data ────────────────────────────────────────────────────────────── 
  const SEED_CLIENTS = [ 
    { id: "c1", company_name: "Simba Logistics Ltd", contact_person: "James Kimani", email: "james@simbalogistics.co.tz", phone: "+255 754 123 456", address: "P.O. Box 1234, Dar es Salaam", status: "active" }, 
    { id: "c2", company_name: "Tanga Cement Co.", contact_person: "Fatuma Hassan", email: "fatuma@tangacement.co.tz", phone: "+255 712 987 654", address: "P.O. Box 5678, Tanga", status: "active" }, 
@@ -26,13 +22,13 @@ import {
  ]; 
  
  const SEED_TRIPS = [ 
-   { id: "t1", tripNumber: "CAL-001", client: "c1", origin: "Dar es Salaam", destination: "Nairobi", cargo_type: "20ft Container", revenue: 850000, status: "completed", date: "2025-05-01", driver: "Ali Hassan", truck: "T.255 AAA" }, 
-   { id: "t2", tripNumber: "CAL-002", client: "c2", origin: "Tanga", destination: "Mombasa", cargo_type: "40ft Container", revenue: 1200000, status: "completed", date: "2025-05-04", driver: "Moses Njeru", truck: "T.255 BBB" }, 
-   { id: "t3", tripNumber: "CAL-003", client: "c3", origin: "Dar es Salaam", destination: "Lusaka", cargo_type: "Loose Cargo", revenue: 600000, status: "in_transit", date: "2025-05-10", driver: "David Odhiambo", truck: "T.255 CCC" }, 
-   { id: "t4", tripNumber: "CAL-004", client: "c1", origin: "Dar es Salaam", destination: "Kampala", cargo_type: "20ft Container", revenue: 950000, status: "completed", date: "2025-05-12", driver: "Ali Hassan", truck: "T.255 AAA" }, 
-   { id: "t5", tripNumber: "CAL-005", client: "c4", origin: "Zanzibar", destination: "Dar es Salaam", cargo_type: "Loose Cargo", revenue: 300000, status: "pending", date: "2025-05-18", driver: "", truck: "" }, 
-   { id: "t6", tripNumber: "CAL-006", client: "c2", origin: "Dar es Salaam", destination: "Lilongwe", cargo_type: "40ft Container", revenue: 1350000, status: "completed", date: "2025-05-20", driver: "Moses Njeru", truck: "T.255 BBB" }, 
-   { id: "t7", tripNumber: "CAL-007", client: "c3", origin: "Arusha", destination: "Nairobi", cargo_type: "20ft Container", revenue: 780000, status: "pending", date: "2025-05-22", driver: "", truck: "" }, 
+   { id: "t1", tripNumber: "CAL-001", client: "c1", origin: "Dar es Salaam", destination: "Nairobi", cargo_type: "20ft Container", revenue: 850000, status: "completed", date: "2025-05-01", driver: "Ali Hassan", truck_plate: "T.255 AAA" }, 
+   { id: "t2", tripNumber: "CAL-002", client: "c2", origin: "Tanga", destination: "Mombasa", cargo_type: "40ft Container", revenue: 1200000, status: "completed", date: "2025-05-04", driver: "Moses Njeru", truck_plate: "T.255 BBB" }, 
+   { id: "t3", tripNumber: "CAL-003", client: "c3", origin: "Dar es Salaam", destination: "Lusaka", cargo_type: "Loose Cargo", revenue: 600000, status: "in_transit", date: "2025-05-10", driver: "David Odhiambo", truck_plate: "T.255 CCC" }, 
+   { id: "t4", tripNumber: "CAL-004", client: "c1", origin: "Dar es Salaam", destination: "Kampala", cargo_type: "20ft Container", revenue: 950000, status: "completed", date: "2025-05-12", driver: "Ali Hassan", truck_plate: "T.255 AAA" }, 
+   { id: "t5", tripNumber: "CAL-005", client: "c4", origin: "Zanzibar", destination: "Dar es Salaam", cargo_type: "Loose Cargo", revenue: 300000, status: "pending", date: "2025-05-18", driver: "", truck_plate: "" }, 
+   { id: "t6", tripNumber: "CAL-006", client: "c2", origin: "Dar es Salaam", destination: "Lilongwe", cargo_type: "40ft Container", revenue: 1350000, status: "completed", date: "2025-05-20", driver: "Moses Njeru", truck_plate: "T.255 BBB" }, 
+   { id: "t7", tripNumber: "CAL-007", client: "c3", origin: "Arusha", destination: "Nairobi", cargo_type: "20ft Container", revenue: 780000, status: "pending", date: "2025-05-22", driver: "", truck_plate: "" }, 
  ]; 
  
  const SEED_INVOICES = [ 
@@ -61,12 +57,12 @@ import {
    { from: "Zanzibar", destination: "Dar es Salaam", c20: 350000, c40: 500000, loose: 200000, days: 1 }, 
  ]; 
  
- // ── 2. Helpers & Atoms ─────────────────────────────────────────────────────────────── 
- const fmt = (n: number) => `TZS ${Number(n || 0).toLocaleString()}`; 
+ // ── Helpers ─────────────────────────────────────────────────────────────── 
+ const fmtTZS = (n: number) => `TZS ${Number(n || 0).toLocaleString()}`; 
  const uid = () => Math.random().toString(36).slice(2, 8).toUpperCase(); 
  const today = () => new Date().toISOString().split("T")[0]; 
  
- const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = { 
+ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = { 
    completed: { bg: "#d1fae5", text: "#065f46", label: "Completed" }, 
    in_transit: { bg: "#dbeafe", text: "#1e40af", label: "In Transit" }, 
    pending:    { bg: "#fef3c7", text: "#92400e", label: "Pending" }, 
@@ -79,62 +75,15 @@ import {
  }; 
  
  const Badge = ({ status }: { status: string }) => { 
-   const s = STATUS_CONFIG[status] || STATUS_CONFIG.pending; 
+   const s = STATUS_COLORS[status] || STATUS_COLORS.pending; 
    return ( 
-     <span style={{ background: s.bg, color: s.text, padding: "2px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700, letterSpacing: 0.3, display: "inline-flex", alignItems: "center" }}> 
+     <span style={{ background: s.bg, color: s.text, padding: "2px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, letterSpacing: 0.3 }}> 
        {s.label} 
      </span> 
    ); 
  }; 
-
- const Modal = ({ title, onClose, children }: any) => ( 
-   <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4"> 
-     <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"> 
-       <div className="px-8 py-6 border-b flex items-center justify-between bg-gray-50/50"> 
-         <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight">{title}</h3> 
-         <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400"><X size={20} /></button> 
-       </div> 
-       <div className="p-8 overflow-y-auto max-h-[80vh]">{children}</div> 
-     </div> 
-   </div> 
- ); 
-
- const Field = ({ label, children }: any) => ( 
-   <div className="mb-5"> 
-     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">{label}</label> 
-     {children} 
-   </div> 
- ); 
-
- const Input = (props: any) => (
-   <input {...props} className={`w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent outline-none transition-all placeholder:text-gray-300 font-medium ${props.className || ""}`} />
- );
-
- const Select = ({ value, onChange, children, ...rest }: any) => ( 
-   <select value={value} onChange={onChange} {...rest} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#1e3a5f] outline-none transition-all font-medium appearance-none cursor-pointer">
-     {children}
-   </select> 
- ); 
-
- const Btn = ({ children, onClick, variant = "primary", className = "", ...rest }: any) => { 
-   const styles: any = { 
-     primary: "bg-[#1e3a5f] text-white hover:bg-[#162a45] shadow-lg shadow-[#1e3a5f]/20", 
-     secondary: "bg-gray-100 text-gray-600 hover:bg-gray-200", 
-     danger: "bg-red-50 text-red-600 hover:bg-red-100", 
-     success: "bg-green-50 text-green-600 hover:bg-green-100", 
-   }; 
-   return (
-     <button 
-       onClick={onClick} 
-       {...rest} 
-       className={`inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95 ${styles[variant]} ${className}`}
-     >
-       {children}
-     </button>
-   ); 
- }; 
-
- // ── 3. Branded Components ───────────────────────────────────────────────────── 
+ 
+ // ── Company Stamp SVG ───────────────────────────────────────────────────── 
  const CompanyStamp = ({ size = 110 }) => ( 
    <svg width={size} height={size} viewBox="0 0 340 340"> 
      <style>{`.st{font-family:'Times New Roman',serif;fill:#1a5fa8;letter-spacing:2px}`}</style> 
@@ -151,6 +100,7 @@ import {
    </svg> 
  ); 
  
+ // ── Contract Preview ────────────────────────────────────────────────────── 
  function ContractPreview({ client, rateRow, details, onClose }: any) { 
    const html = ` 
      <html><head><style> 
@@ -185,14 +135,14 @@ import {
      </div> 
  
      <p style="text-align:center;margin-bottom:24px"> 
-       <strong>This Agreement is made on the ${new Date(details.contract_date).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong> 
+       <strong>This Agreement is made on the ${new Date(details.contract_date || today()).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong> 
      </p> 
  
      <p><strong>Between:</strong></p> 
      <div style="display:flex;gap:40px;margin:16px 0 24px"> 
        <div style="flex:1;padding:12px;border:1px solid #ccc;border-radius:4px"> 
          <strong>${client?.company_name || "[Client Name]"}</strong><br/>${client?.address || "[Client Address]"}<br/> 
-         Contact: ${client?.contact_person || "[Contact Person]"}<br/>Phone: ${client?.phone || "[Phone]"}<br/> 
+         Contact: ${client?.contact_person || "[Contact]"}<br/>Phone: ${client?.phone || "[Phone]"}<br/> 
          <em style="font-size:12px">(hereinafter "The Client")</em> 
        </div> 
        <div style="flex:1;padding:12px;border:1px solid #ccc;border-radius:4px"> 
@@ -206,7 +156,7 @@ import {
      <p>The Transporter agrees to provide road freight transportation services to the Client for the movement of cargo between the agreed routes, subject to the rates and conditions set out in this Agreement.</p> 
  
      <h2>2. CONTRACT PERIOD</h2> 
-     <p>This Agreement shall be effective from <strong>${new Date(details.start_date).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong>${details.end_date ? ` to <strong>${new Date(details.end_date).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong>` : " and shall remain in force until terminated by either party with 30 days written notice"}.</p> 
+     <p>This Agreement shall be effective from <strong>${new Date(details.start_date || today()).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong>${details.end_date ? ` to <strong>${new Date(details.end_date).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</strong>` : " and shall remain in force until terminated by either party with 30 days written notice"}.</p> 
  
      <h2>3. AGREED RATES – ANNEXURE A</h2> 
      <table> 
@@ -265,27 +215,60 @@ import {
    }; 
  
    return ( 
-     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[2000] flex items-center justify-center p-4"> 
-       <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"> 
-         <div className="px-8 py-6 border-b flex items-center justify-between bg-gray-50/50"> 
-           <div className="flex items-center gap-3">
-             <div className="p-2 bg-[#1e3a5f]/10 rounded-lg text-[#1e3a5f]"><FileText size={20} /></div>
-             <span className="text-lg font-black text-gray-800 uppercase tracking-tight">Contract Master Preview</span> 
-           </div>
-           <div className="flex gap-3"> 
-             <Btn onClick={print}><Printer size={16} /> Print / Save PDF</Btn> 
-             <Btn variant="secondary" onClick={onClose}><X size={16} /> Close</Btn> 
+     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}> 
+       <div style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 760, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden" }}> 
+         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid #e5e7eb" }}> 
+           <span style={{ fontWeight: 700, fontSize: 16, color: "#111" }}>Contract Preview</span> 
+           <div style={{ display: "flex", gap: 10 }}> 
+             <button onClick={print} style={{ background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨 Print / Save PDF</button> 
+             <button onClick={onClose} style={{ background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 13 }}>✕ Close</button> 
            </div> 
          </div> 
-         <div className="overflow-auto p-12 bg-white flex-1" dangerouslySetInnerHTML={{ __html: html }} /> 
+         <div style={{ overflow: "auto", padding: 24, flex: 1 }} dangerouslySetInnerHTML={{ __html: html }} /> 
        </div> 
      </div> 
    ); 
  } 
  
- // ── 4. Main Dashboard Component ───────────────────────────────────────────────────────── 
+ // ── Modal Wrapper ───────────────────────────────────────────────────────── 
+ function Modal({ title, onClose, children }: any) { 
+   return ( 
+     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}> 
+       <div style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 560, maxHeight: "90vh", overflow: "auto" }}> 
+         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1px solid #e5e7eb" }}> 
+           <span style={{ fontWeight: 700, fontSize: 16 }}>{title}</span> 
+           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>✕</button> 
+         </div> 
+         <div style={{ padding: 24 }}>{children}</div> 
+       </div> 
+     </div> 
+   ); 
+ } 
+ 
+ const Field = ({ label, children }: any) => ( 
+   <div style={{ marginBottom: 16 }}> 
+     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</label> 
+     {children} 
+   </div> 
+ ); 
+ const Input = (props: any) => <input {...props} style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8, padding: "9px 12px", fontSize: 14, outline: "none", boxSizing: "border-box", ...props.style }} />; 
+ const Select = ({ value, onChange, children, ...rest }: any) => ( 
+   <select value={value} onChange={onChange} {...rest} style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: 8, padding: "9px 12px", fontSize: 14, background: "#fff", outline: "none", boxSizing: "border-box" }}>{children}</select> 
+ ); 
+ const Btn = ({ children, onClick, variant = "primary", style: s = {}, ...rest }: any) => { 
+   const styles: any = { 
+     primary: { background: "#1e3a5f", color: "#fff" }, 
+     secondary: { background: "#f3f4f6", color: "#374151" }, 
+     danger: { background: "#fee2e2", color: "#991b1b" }, 
+     success: { background: "#d1fae5", color: "#065f46" }, 
+   }; 
+   return <button onClick={onClick} {...rest} style={{ border: "none", borderRadius: 8, padding: "9px 18px", cursor: "pointer", fontSize: 13, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, ...styles[variant], ...s }}>{children}</button>; 
+ }; 
+ 
+ // ── Main Dashboard ───────────────────────────────────────────────────────── 
  export default function SalesmanDashboard() { 
    const { role } = useRole();
+   const { format } = useCurrency();
    const [tab, setTab] = useState("overview"); 
    const [clients, setClients] = useState(SEED_CLIENTS); 
    const [trips, setTrips] = useState(SEED_TRIPS); 
@@ -294,40 +277,47 @@ import {
    const [modal, setModal] = useState<any>(null); // { type, data } 
    const [contractState, setContractState] = useState<any>(null); 
    const [searchQ, setSearchQ] = useState(""); 
- 
+     const [clientView, setClientView] = useState<"table" | "grid">("grid");
+
    const closeModal = () => setModal(null); 
  
-   // ── 5. Derived Metrics & Filters ── 
+   // ── Derived metrics ── 
    const completedTrips = trips.filter(t => t.status === "completed"); 
    const totalRevenue = completedTrips.reduce((s, t) => s + (t.revenue || 0), 0); 
    const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0); 
+   const netProfit = totalRevenue - totalExpenses;
+   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
    const unpaid = invoices.filter(i => i.status !== "paid"); 
    const unpaidAmount = unpaid.reduce((s, i) => s + (i.amount || 0), 0); 
-   const activeTripsCount = trips.filter(t => ["in_transit", "loading"].includes(t.status)).length;
+   const activeTripsCount = trips.filter(t => ["in_transit", "loading", "pending", "created"].includes(t.status)).length;
    const activeClientsCount = clients.filter(c => c.status === "active").length;
-   
    const clientMap = useMemo(() => Object.fromEntries(clients.map(c => [c.id, c])), [clients]); 
-
-   const filteredTrips = trips.filter(t => 
-     t.tripNumber.toLowerCase().includes(searchQ.toLowerCase()) || 
-     t.origin.toLowerCase().includes(searchQ.toLowerCase()) || 
-     t.destination.toLowerCase().includes(searchQ.toLowerCase())
-   );
-
-   const filteredClients = clients.filter(c => 
+ 
+   // ── Filtering logic ──
+   const filteredClients = useMemo(() => clients.filter(c => 
      c.company_name.toLowerCase().includes(searchQ.toLowerCase()) || 
      c.contact_person.toLowerCase().includes(searchQ.toLowerCase())
-   );
- 
-   // ── 6. CRUD Handlers ── 
+   ), [clients, searchQ]);
+
+   const filteredTrips = useMemo(() => trips.filter(t => 
+     t.tripNumber.toLowerCase().includes(searchQ.toLowerCase()) || 
+     t.origin.toLowerCase().includes(searchQ.toLowerCase()) ||
+     t.destination.toLowerCase().includes(searchQ.toLowerCase())
+   ), [trips, searchQ]);
+
+   const filteredInvoices = useMemo(() => invoices.filter(i => 
+     i.invoice_number.toLowerCase().includes(searchQ.toLowerCase())
+   ), [invoices, searchQ]);
+
+   // ── Handlers ── 
    const saveTrip = (data: any) => { 
-     if (data.id) setTrips(ts => ts.map(t => t.id === data.id ? { ...t, ...data, revenue: Number(data.revenue) } : t));
-     else setTrips([...trips, { ...data, id: uid(), tripNumber: "CAL-" + (trips.length + 1).toString().padStart(3, '0'), status: "pending", date: today(), revenue: Number(data.revenue) }]);
+     if (data.id) setTrips(ts => ts.map(t => t.id === data.id ? { ...t, ...data } : t));
+     else setTrips([...trips, { ...data, id: uid(), tripNumber: "CAL-" + (trips.length + 1).toString().padStart(3, '0'), status: "pending", date: today() }]);
      closeModal();
    };
 
    const deleteTrip = (id: string) => {
-     if (confirm("Permanently delete this trip log?")) setTrips(trips.filter(t => t.id !== id));
+     if (confirm("Delete this trip?")) setTrips(trips.filter(t => t.id !== id));
    };
 
    const saveClient = (data: any) => {
@@ -337,294 +327,384 @@ import {
    };
 
    const deleteClient = (id: string) => {
-     if (confirm("Permanently delete this client profile?")) setClients(clients.filter(c => c.id !== id));
+     if (confirm("Delete this client?")) setClients(clients.filter(c => c.id !== id));
    };
 
    const saveInvoice = (data: any) => {
-     const amount = data.trip_id ? (trips.find(t => t.id === data.trip_id)?.revenue || 0) : Number(data.amount);
-     if (data.id) setInvoices(is => is.map(i => i.id === data.id ? { ...i, ...data, amount } : i));
-     else setInvoices([...invoices, { ...data, id: uid(), invoice_number: "INV-" + today().split("-")[0] + "-" + (invoices.length + 1).toString().padStart(3, '0'), status: "pending", date: today(), amount }]);
+     if (data.id) setInvoices(is => is.map(i => i.id === data.id ? { ...i, ...data } : i));
+     else setInvoices([...invoices, { ...data, id: uid(), invoice_number: "INV-" + today().split("-")[0] + "-" + (invoices.length + 1).toString().padStart(3, '0'), status: "pending", date: today() }]);
      closeModal();
    };
 
+   const markInvoicePaid = (id: string) => {
+     setInvoices(is => is.map(i => i.id === id ? { ...i, status: "paid" } : i));
+   };
+
    const deleteInvoice = (id: string) => {
-     if (confirm("Permanently delete this invoice?")) setInvoices(invoices.filter(i => i.id !== id));
+     if (confirm("Delete this invoice?")) setInvoices(invoices.filter(i => i.id !== id));
    };
 
    const saveExpense = (data: any) => {
-     if (data.id) setExpenses(es => es.map(e => e.id === data.id ? { ...e, ...data, amount: Number(data.amount) } : e));
-     else setExpenses([...expenses, { ...data, id: uid(), date: today(), amount: Number(data.amount) }]);
+     if (data.id) setExpenses(es => es.map(e => e.id === data.id ? { ...e, ...data } : e));
+     else setExpenses([...expenses, { ...data, id: uid(), date: today() }]);
      closeModal();
    };
 
    const deleteExpense = (id: string) => {
-     if (confirm("Permanently delete this expense record?")) setExpenses(expenses.filter(e => e.id !== id));
-   };
-
-   const markPaid = (id: string) => {
-     setInvoices(is => is.map(i => i.id === id ? { ...i, status: "paid" } : i));
+     if (confirm("Delete this expense?")) setExpenses(expenses.filter(e => e.id !== id));
    };
 
    return (
      <DashboardLayout
-       title="Sales Master Console"
-       description="Enterprise Logistics CRM & Commercial Management"
+       title="Sales Dashboard"
+       description="Calvary Connect Sales & Commercial Management"
        role={role || "SALESMAN"}
      >
-       <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
-         
-         {/* ── Header Search & Tab Bar ── */}
-         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-2 rounded-2xl border shadow-sm sticky top-[64px] z-[50]">
-           <div className="flex bg-gray-50 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar">
-             {[
-               { id: "overview", label: "📊 Overview" },
-               { id: "clients", label: "👥 Clients" },
-               { id: "trips", label: "🚚 Trips" },
-               { id: "invoices", label: "🧾 Invoices" },
-               { id: "expenses", label: "💸 Expenses" },
-               { id: "contracts", label: "📄 Contracts" }
-             ].map(t => (
-               <button
-                 key={t.id}
-                 onClick={() => { setTab(t.id); setSearchQ(""); }}
-                 className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${tab === t.id ? "bg-[#1e3a5f] text-white shadow-lg" : "text-gray-400 hover:bg-gray-200"}`}
-               >
-                 {t.label}
-               </button>
-             ))}
-           </div>
-           
-           {tab !== "overview" && tab !== "contracts" && (
-             <div className="relative w-full md:w-80 group">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#1e3a5f] transition-colors" size={16} />
-               <input 
-                 type="text" 
-                 placeholder={`Search ${tab}...`} 
-                 value={searchQ}
-                 onChange={(e) => setSearchQ(e.target.value)}
-                 className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-[#1e3a5f] outline-none transition-all font-bold text-gray-700"
-               />
-             </div>
-           )}
+       <div className="space-y-6">
+         {/* Top Sticky Header with Search */}
+         <div className="sticky top-0 z-20 bg-gray-50/80 backdrop-blur-md pb-4 pt-2">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex bg-white p-1 rounded-xl border shadow-sm overflow-x-auto no-scrollbar w-full md:w-auto">
+                    {[
+                        { id: "overview", label: "📊 Overview" },
+                        { id: "clients", label: "👥 Clients" },
+                        { id: "trips", label: "🚚 Trips" },
+                        { id: "invoices", label: "🧾 Invoices" },
+                        { id: "expenses", label: "💸 Expenses" },
+                        { id: "contracts", label: "📄 Contracts" }
+                    ].map(t => (
+                        <button
+                        key={t.id}
+                        onClick={() => setTab(t.id)}
+                        className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${tab === t.id ? "bg-[#1e3a5f] text-white shadow-md" : "text-gray-500 hover:bg-gray-100"}`}
+                        >
+                        {t.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Search records..." 
+                        value={searchQ}
+                        onChange={(e) => setSearchQ(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-sm bg-white shadow-sm"
+                    />
+                </div>
+            </div>
          </div>
 
-         {/* ── 7. Module Content ── */}
-
-         {/* OVERVIEW MODULE */}
+         {/* Overview Tab */}
          {tab === "overview" && (
-           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-             {/* KPI GRID */}
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-               {[
-                 { label: "Total Revenue", val: fmt(totalRevenue), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
-                 { label: "Net Profit", val: fmt(totalRevenue - totalExpenses), icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50" },
-                 { label: "Total Expenses", val: fmt(totalExpenses), icon: Calculator, color: "text-red-600", bg: "bg-red-50" },
-                 { label: "Unpaid Amount", val: fmt(unpaidAmount), icon: FileText, color: "text-orange-600", bg: "bg-orange-50" },
-                 { label: "Active Trips", val: activeTripsCount, icon: Truck, color: "text-cyan-600", bg: "bg-cyan-50" },
-                 { label: "Active Clients", val: activeClientsCount, icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
-               ].map((kpi, i) => (
-                 <div key={i} className="bg-white p-6 rounded-3xl border shadow-sm hover:shadow-md transition-shadow group">
-                   <div className={`p-3 rounded-2xl w-fit mb-4 transition-transform group-hover:scale-110 ${kpi.bg} ${kpi.color}`}>
-                     <kpi.icon size={20} />
-                   </div>
-                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{kpi.label}</p>
-                   <p className="text-xl font-black text-gray-800 tracking-tight">{kpi.val}</p>
-                 </div>
-               ))}
-             </div>
-
-             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-               {/* ANALYTICS CARD */}
-               <div className="xl:col-span-2 bg-white p-8 rounded-3xl border shadow-sm">
-                 <div className="flex items-center justify-between mb-8">
+           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+               <div className="bg-white p-6 rounded-2xl border border-blue-100 shadow-sm group hover:shadow-md transition-all">
+                 <div className="flex items-center gap-4">
+                   <div className="p-3 bg-blue-50 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all"><DollarSign /></div>
                    <div>
-                     <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight">Revenue Analytics</h3>
-                     <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Client performance breakdown</p>
+                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
+                     <p className="text-2xl font-black text-gray-800">{fmtTZS(totalRevenue)}</p>
                    </div>
-                   <Btn variant="secondary"><BarChart2 size={14} /> Full Report</Btn>
                  </div>
-                 <div className="space-y-6">
-                    {clients.slice(0, 6).map(c => {
-                      const rev = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
-                      const tCount = trips.filter(t => t.client === c.id).length;
-                      const pct = totalRevenue > 0 ? (rev / totalRevenue) * 100 : 0;
-                      return (
-                        <div key={c.id} className="group">
-                          <div className="flex justify-between text-sm mb-2 items-end">
-                            <div>
-                              <span className="font-black text-gray-800 text-sm group-hover:text-[#1e3a5f] transition-colors">{c.company_name}</span>
-                              <span className="text-[10px] font-black text-gray-300 ml-2 uppercase tracking-tighter">{tCount} Trips</span>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm group hover:shadow-md transition-all">
+                 <div className="flex items-center gap-4">
+                   <div className="p-3 bg-red-50 rounded-xl text-red-600 group-hover:bg-red-600 group-hover:text-white transition-all"><Calculator /></div>
+                   <div>
+                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Expenses</p>
+                     <p className="text-2xl font-black text-gray-800">{fmtTZS(totalExpenses)}</p>
+                   </div>
+                 </div>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border border-green-100 shadow-sm group hover:shadow-md transition-all">
+                 <div className="flex items-center gap-4">
+                   <div className="p-3 bg-green-50 rounded-xl text-green-600 group-hover:bg-green-600 group-hover:text-white transition-all"><Briefcase /></div>
+                   <div>
+                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Net Profit</p>
+                     <p className="text-2xl font-black text-gray-800">{fmtTZS(netProfit)}</p>
+                   </div>
+                 </div>
+               </div>
+               <div className="bg-white p-6 rounded-2xl border border-orange-100 shadow-sm group hover:shadow-md transition-all">
+                 <div className="flex items-center gap-4">
+                   <div className="p-3 bg-orange-50 rounded-xl text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-all"><AlertTriangle /></div>
+                   <div>
+                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Unpaid Invoices</p>
+                     <p className="text-2xl font-black text-gray-800">{fmtTZS(unpaidAmount)}</p>
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+               <div className="lg:col-span-2 space-y-6">
+                 <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2"><TrendingUp className="size-5 text-blue-600" /> Top Clients Leaderboard</h3>
+                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">Margin: {profitMargin.toFixed(1)}%</span>
+                    </div>
+                    <div className="space-y-4">
+                        {clients.slice(0, 5).sort((a,b) => {
+                            const revA = trips.filter(t => t.client === a.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
+                            const revB = trips.filter(t => t.client === b.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
+                            return revB - revA;
+                        }).map(c => {
+                        const rev = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
+                        const tripCount = trips.filter(t => t.client === c.id).length;
+                        const pct = totalRevenue > 0 ? (rev / totalRevenue) * 100 : 0;
+                        return (
+                            <div key={c.id}>
+                            <div className="flex justify-between text-sm mb-1">
+                                <span className="font-medium text-gray-700">{c.company_name} <span className="text-[10px] text-gray-400 font-normal">({tripCount} trips)</span></span>
+                                <span className="font-bold text-gray-900">{fmtTZS(rev)}</span>
                             </div>
-                            <span className="font-black text-gray-900">{fmt(rev)}</span>
-                          </div>
-                          <div className="w-full bg-gray-50 rounded-full h-3 overflow-hidden border border-gray-100">
-                            <div className="bg-gradient-to-r from-[#1e3a5f] to-[#3a67a0] h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${pct}%` }}></div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                                <div className="bg-[#1e3a5f] h-2 rounded-full transition-all duration-1000" style={{ width: `${pct}%` }}></div>
+                            </div>
+                            </div>
+                        );
+                        })}
+                    </div>
+                 </div>
+
+                 <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-bold text-gray-800 flex items-center gap-2"><Navigation className="size-5 text-purple-600" /> Recent Trips Activity</h3>
+                        <button onClick={() => setTab("trips")} className="text-xs font-bold text-blue-600 hover:underline">View All</button>
+                    </div>
+                    <div className="space-y-4">
+                        {trips.slice(-4).reverse().map(t => (
+                            <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-50 hover:border-blue-100 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <div className={`p-2 rounded-lg ${t.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'}`}>
+                                        <Truck size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-900">{t.tripNumber} — {t.origin} to {t.destination}</p>
+                                        <p className="text-[10px] text-gray-500">{clientMap[t.client]?.company_name} | {new Date(t.date).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                                <Badge status={t.status} />
+                            </div>
+                        ))}
+                    </div>
                  </div>
                </div>
 
-               {/* RECENT WIDGETS */}
                <div className="space-y-6">
-                 <div className="bg-white p-8 rounded-3xl border shadow-sm">
-                   <h3 className="text-sm font-black text-gray-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                     <Clock className="text-orange-500" size={16} /> Recent Trips
-                   </h3>
-                   <div className="space-y-4">
-                     {trips.slice(0, 4).map(t => (
-                       <div key={t.id} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl transition-colors">
-                         <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><Truck size={14} /></div>
-                         <div className="flex-1 min-w-0">
-                           <p className="text-xs font-black text-gray-800 truncate">{t.origin} → {t.destination}</p>
-                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{clientMap[t.client]?.company_name}</p>
-                         </div>
-                         <Badge status={t.status} />
-                       </div>
-                     ))}
-                   </div>
-                 </div>
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm flex flex-col items-center justify-center text-center">
+                        <CompanyStamp size={140} />
+                        <h4 className="mt-4 font-black text-[#1a5fa8] text-lg">CALVARY CONNECT</h4>
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Official Logistics Portal</p>
+                        <div className="mt-6 w-full grid grid-cols-2 gap-2">
+                            <div className="bg-blue-50 p-3 rounded-xl">
+                                <p className="text-[10px] font-bold text-blue-400 uppercase">Active Trips</p>
+                                <p className="text-xl font-black text-blue-700">{activeTripsCount}</p>
+                            </div>
+                            <div className="bg-purple-50 p-3 rounded-xl">
+                                <p className="text-[10px] font-bold text-purple-400 uppercase">Clients</p>
+                                <p className="text-xl font-black text-purple-700">{activeClientsCount}</p>
+                            </div>
+                        </div>
+                    </div>
 
-                 <div className="bg-[#1e3a5f] p-8 rounded-3xl shadow-xl shadow-[#1e3a5f]/30 text-center relative overflow-hidden group">
-                   <div className="absolute -right-8 -top-8 opacity-10 rotate-12 transition-transform group-hover:scale-125 duration-700">
-                     <CompanyStamp size={200} />
-                   </div>
-                   <CompanyStamp size={100} />
-                   <h4 className="mt-4 font-black text-white text-xl tracking-tight">CALVARY MASTER</h4>
-                   <p className="text-[10px] text-blue-200/60 font-black uppercase tracking-[0.2em] mt-2">Logistics Command Center</p>
-                   <div className="mt-6 pt-6 border-t border-white/10 flex justify-center gap-6">
-                     <div>
-                       <p className="text-[9px] font-black text-blue-300/60 uppercase mb-1">Status</p>
-                       <p className="text-xs font-black text-white flex items-center gap-1"><Shield size={10} className="text-green-400" /> Secure</p>
-                     </div>
-                     <div>
-                       <p className="text-[9px] font-black text-blue-300/60 uppercase mb-1">Region</p>
-                       <p className="text-xs font-black text-white">East Africa</p>
-                     </div>
-                   </div>
-                 </div>
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-sm"><AlertTriangle className="size-4 text-orange-500" /> Pending Invoices</h3>
+                        <div className="space-y-3">
+                            {invoices.filter(i => i.status !== "paid").slice(0, 3).map(i => (
+                                <div key={i.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-900">{i.invoice_number}</p>
+                                        <p className="text-[10px] text-gray-500">{clientMap[i.client]?.company_name}</p>
+                                    </div>
+                                    <p className="text-xs font-black text-red-600">{fmtTZS(i.amount)}</p>
+                                </div>
+                            ))}
+                            <button onClick={() => setTab("invoices")} className="w-full text-center text-[10px] font-black uppercase text-blue-600 hover:underline">Manage all billing</button>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#1e3a5f] p-6 rounded-2xl shadow-lg text-white">
+                        <h3 className="font-bold mb-2 flex items-center gap-2 text-sm"><Sparkles className="size-4 text-blue-300" /> Sales Quick Action</h3>
+                        <p className="text-[11px] text-blue-100 mb-4 leading-relaxed">Need to secure a new route? Use the contract generator to finalize terms in seconds.</p>
+                        <button onClick={() => setTab("contracts")} className="w-full py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg text-xs font-bold transition-colors">Create Agreement</button>
+                    </div>
                </div>
+             </div>
+
+             <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2"><BarChart2 className="size-5 text-purple-600" /> Performance Distribution</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                    {["pending", "created", "loading", "in_transit", "completed"].map(st => {
+                        const count = trips.filter(t => t.status === st).length;
+                        const total = trips.length;
+                        const pct = total > 0 ? (count / total) * 100 : 0;
+                        return (
+                            <div key={st} className="space-y-2">
+                                <div className="flex justify-between items-end">
+                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-tighter">{st.replace('_', ' ')}</p>
+                                    <span className="text-xs font-black text-gray-700">{count}</span>
+                                </div>
+                                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className={`h-full transition-all duration-1000 ${STATUS_COLORS[st]?.text === '#065f46' ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }}></div>
+                                </div>
+                                <p className="text-[9px] text-gray-400 font-bold">{pct.toFixed(0)}% of total</p>
+                            </div>
+                        );
+                    })}
+                </div>
              </div>
            </div>
          )}
 
-         {/* CLIENTS MODULE */}
+         {/* Clients Tab */}
          {tab === "clients" && (
-           <div className="bg-white rounded-3xl border shadow-sm overflow-hidden animate-in fade-in duration-500">
-             <div className="px-8 py-6 border-b flex items-center justify-between bg-gray-50/30">
-               <div>
-                 <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight">Partner Directory</h3>
-                 <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{activeClientsCount} Active Partnerships</p>
-               </div>
-               <Btn onClick={() => setModal({ type: "client" })}><Plus size={16} /> New Client</Btn>
+           <div className="space-y-6 animate-in fade-in">
+             <div className="flex items-center justify-between">
+                <div className="flex bg-white p-1 rounded-xl border shadow-sm">
+                    <button onClick={() => setClientView("grid")} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${clientView === 'grid' ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}>Grid View</button>
+                    <button onClick={() => setClientView("table")} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${clientView === 'table' ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}>Table View</button>
+                </div>
+                <Btn onClick={() => setModal({ type: "client" })}><Plus size={16} /> Add New Client</Btn>
              </div>
-             <div className="overflow-x-auto">
-               <table className="w-full text-sm text-left">
-                 <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-black tracking-widest border-b">
-                   <tr>
-                     <th className="px-8 py-5">Corporate Entity</th>
-                     <th className="px-8 py-5">Key Contact</th>
-                     <th className="px-8 py-5">Communication</th>
-                     <th className="px-8 py-5 text-center">Engagement</th>
-                     <th className="px-8 py-5">Status</th>
-                     <th className="px-8 py-5 text-right">Actions</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y">
-                   {filteredClients.map(c => {
-                     const tCount = trips.filter(t => t.client === c.id).length;
-                     const totalSpent = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
-                     return (
-                       <tr key={c.id} className="hover:bg-gray-50/80 transition-colors group">
-                         <td className="px-8 py-5">
-                           <div className="flex items-center gap-3">
-                             <div className="size-10 rounded-2xl bg-gray-100 flex items-center justify-center font-black text-gray-400 group-hover:bg-[#1e3a5f] group-hover:text-white transition-colors">{c.company_name.charAt(0)}</div>
-                             <div>
-                               <div className="font-black text-gray-800 text-base">{c.company_name}</div>
-                               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{c.address}</div>
-                             </div>
-                           </div>
-                         </td>
-                         <td className="px-8 py-5 font-bold text-gray-600">{c.contact_person}</td>
-                         <td className="px-8 py-5">
-                           <div className="text-xs font-black text-[#1e3a5f]">{c.email}</div>
-                           <div className="text-[11px] font-bold text-gray-400 mt-0.5">{c.phone}</div>
-                         </td>
-                         <td className="px-8 py-5 text-center">
-                           <div className="inline-flex flex-col items-center px-3 py-1 bg-gray-50 rounded-xl">
-                             <span className="text-xs font-black text-gray-800">{tCount} Trips</span>
-                             <span className="text-[9px] font-bold text-green-600 uppercase">{fmt(totalSpent)}</span>
-                           </div>
-                         </td>
-                         <td className="px-8 py-5"><Badge status={c.status} /></td>
-                         <td className="px-8 py-5 text-right">
-                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onClick={() => setModal({ type: "client", data: c })} className="p-2.5 text-[#1e3a5f] hover:bg-[#1e3a5f]/10 rounded-xl transition-colors"><Edit size={16} /></button>
-                             <button onClick={() => deleteClient(c.id)} className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-colors"><Trash2 size={16} /></button>
-                           </div>
-                         </td>
-                       </tr>
-                     );
-                   })}
-                 </tbody>
-               </table>
-             </div>
+
+             {clientView === "grid" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredClients.map(c => {
+                        const rev = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
+                        const tripCount = trips.filter(t => t.client === c.id).length;
+                        return (
+                            <div key={c.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="size-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-[#1e3a5f] group-hover:text-white transition-colors">
+                                        <Briefcase size={24} />
+                                    </div>
+                                    <Badge status={c.status} />
+                                </div>
+                                <h4 className="font-bold text-gray-900 text-lg mb-1">{c.company_name}</h4>
+                                <p className="text-xs text-gray-500 mb-4 flex items-center gap-1"><MapPin size={10} /> {c.address}</p>
+                                
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="bg-gray-50 p-3 rounded-xl">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Revenue</p>
+                                        <p className="text-sm font-black text-green-600">{fmtTZS(rev)}</p>
+                                    </div>
+                                    <div className="bg-gray-50 p-3 rounded-xl">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Trips</p>
+                                        <p className="text-sm font-black text-gray-800">{tripCount}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 mb-6">
+                                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                                        <Users size={14} className="text-gray-400" /> {c.contact_person}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                                        <Bell size={14} className="text-gray-400" /> {c.phone}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                                    <button onClick={() => { setContractState({ client: c.id }); setTab("contracts"); }} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"><FileText size={14} /> Contract</button>
+                                    <div className="flex gap-1">
+                                        <button onClick={() => setModal({ type: "client", data: c })} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={14} /></button>
+                                        <button onClick={() => deleteClient(c.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+             ) : (
+                <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                        <tr>
+                            <th className="px-6 py-4">Company Name</th>
+                            <th className="px-6 py-4">Contact Person</th>
+                            <th className="px-6 py-4">Revenue / Trips</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                        {filteredClients.map(c => {
+                            const rev = trips.filter(t => t.client === c.id && t.status === "completed").reduce((s, t) => s + (t.revenue || 0), 0);
+                            const tripCount = trips.filter(t => t.client === c.id).length;
+                            return (
+                                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="font-bold text-gray-900">{c.company_name}</div>
+                                        <div className="text-[10px] text-gray-400">{c.address}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-gray-800 font-medium">{c.contact_person}</div>
+                                        <div className="text-[10px] text-gray-400">{c.email} | {c.phone}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-xs font-bold text-green-600">{fmtTZS(rev)}</div>
+                                        <div className="text-[10px] text-gray-400">{tripCount} trips</div>
+                                    </td>
+                                    <td className="px-6 py-4"><Badge status={c.status} /></td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button onClick={() => { setContractState({ client: c.id }); setTab("contracts"); }} className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg" title="Create Contract"><FileText size={14} /></button>
+                                        <button onClick={() => setModal({ type: "client", data: c })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                                        <button onClick={() => deleteClient(c.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+             )}
            </div>
          )}
 
-         {/* TRIPS MODULE */}
+         {/* Trips Tab */}
          {tab === "trips" && (
-           <div className="bg-white rounded-3xl border shadow-sm overflow-hidden animate-in fade-in duration-500">
-             <div className="px-8 py-6 border-b flex items-center justify-between bg-gray-50/30">
-               <div>
-                 <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight">Movement Logs</h3>
-                 <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{activeTripsCount} Active Shipments</p>
-               </div>
-               <Btn onClick={() => setModal({ type: "trip" })}><Plus size={16} /> Record Movement</Btn>
+           <div className="bg-white rounded-2xl border shadow-sm overflow-hidden animate-in fade-in">
+             <div className="p-6 border-b flex items-center justify-between bg-gray-50/50">
+               <h3 className="font-bold text-gray-800">Trip Logs</h3>
+               <Btn onClick={() => setModal({ type: "trip" })}><Plus size={16} /> New Trip</Btn>
              </div>
              <div className="overflow-x-auto">
                <table className="w-full text-sm text-left">
-                 <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-black tracking-widest border-b">
+                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
                    <tr>
-                     <th className="px-8 py-5">Identifier</th>
-                     <th className="px-8 py-5">Logistic Path</th>
-                     <th className="px-8 py-5">Consignee</th>
-                     <th className="px-8 py-5">Cargo Info</th>
-                     <th className="px-8 py-5 text-right">Revenue (TZS)</th>
-                     <th className="px-8 py-5">Status</th>
-                     <th className="px-8 py-5 text-right">Actions</th>
+                     <th className="px-6 py-4">Trip # / Date</th>
+                     <th className="px-6 py-4">Route / Cargo</th>
+                     <th className="px-6 py-4">Client / Assets</th>
+                     <th className="px-6 py-4">Revenue</th>
+                     <th className="px-6 py-4">Status</th>
+                     <th className="px-6 py-4 text-right">Actions</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y">
                    {filteredTrips.map(t => (
-                     <tr key={t.id} className="hover:bg-gray-50/80 transition-colors group">
-                       <td className="px-8 py-5">
-                         <div className="font-black text-gray-900 text-sm">{t.tripNumber}</div>
-                         <div className="text-[10px] font-bold text-gray-400 mt-0.5">{new Date(t.date).toLocaleDateString()}</div>
+                     <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                       <td className="px-6 py-4">
+                            <div className="font-black text-gray-900">{t.tripNumber}</div>
+                            <div className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString()}</div>
                        </td>
-                       <td className="px-8 py-5">
-                         <div className="flex items-center gap-3">
-                           <div className="text-gray-800 font-black text-xs uppercase">{t.origin}</div>
-                           <ArrowRight size={14} className="text-gray-300" />
-                           <div className="text-gray-800 font-black text-xs uppercase">{t.destination}</div>
+                       <td className="px-6 py-4">
+                         <div className="flex items-center gap-2 text-gray-800 font-medium">
+                           {t.origin} <ArrowRight size={12} className="text-gray-400" /> {t.destination}
                          </div>
+                         <div className="text-[10px] text-gray-400 italic">{t.cargo_type}</div>
                        </td>
-                       <td className="px-8 py-5">
-                         <div className="font-bold text-gray-700">{clientMap[t.client]?.company_name}</div>
-                         <div className="text-[10px] text-gray-400 font-medium">Ref: {t.client}</div>
+                       <td className="px-6 py-4">
+                            <div className="text-gray-600 font-medium">{clientMap[t.client]?.company_name || "Unknown"}</div>
+                            <div className="text-[10px] text-gray-400">{t.driver} | {t.truck_plate}</div>
                        </td>
-                       <td className="px-8 py-5">
-                         <div className="text-xs font-bold text-gray-800">{t.cargo_type}</div>
-                         <div className="text-[10px] text-gray-400 mt-0.5">{t.truck || "N/A"}</div>
-                       </td>
-                       <td className="px-8 py-5 text-right font-black text-[#1e3a5f]">{Number(t.revenue).toLocaleString()}</td>
-                       <td className="px-8 py-5"><Badge status={t.status} /></td>
-                       <td className="px-8 py-5 text-right">
-                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button onClick={() => setModal({ type: "trip", data: t })} className="p-2.5 text-[#1e3a5f] hover:bg-[#1e3a5f]/10 rounded-xl"><Edit size={16} /></button>
-                           <button onClick={() => deleteTrip(t.id)} className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl"><Trash2 size={16} /></button>
-                         </div>
+                       <td className="px-6 py-4 font-bold text-green-600">{fmtTZS(t.revenue)}</td>
+                       <td className="px-6 py-4"><Badge status={t.status} /></td>
+                       <td className="px-6 py-4 text-right">
+                         <button onClick={() => setModal({ type: "trip", data: t })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                         <button onClick={() => deleteTrip(t.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
                        </td>
                      </tr>
                    ))}
@@ -634,50 +714,41 @@ import {
            </div>
          )}
 
-         {/* INVOICES MODULE */}
+         {/* Invoices Tab */}
          {tab === "invoices" && (
-           <div className="bg-white rounded-3xl border shadow-sm overflow-hidden animate-in fade-in duration-500">
-             <div className="px-8 py-6 border-b flex items-center justify-between bg-gray-50/30">
-               <div>
-                 <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight">Billing Center</h3>
-                 <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{unpaid.length} Pending Collections</p>
-               </div>
-               <Btn onClick={() => setModal({ type: "invoice" })}><Plus size={16} /> New Invoice</Btn>
+           <div className="bg-white rounded-2xl border shadow-sm overflow-hidden animate-in fade-in">
+             <div className="p-6 border-b flex items-center justify-between bg-gray-50/50">
+               <h3 className="font-bold text-gray-800">Financial Invoices</h3>
+               <Btn onClick={() => setModal({ type: "invoice" })}><Plus size={16} /> Create Invoice</Btn>
              </div>
              <div className="overflow-x-auto">
                <table className="w-full text-sm text-left">
-                 <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-black tracking-widest border-b">
+                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
                    <tr>
-                     <th className="px-8 py-5">Invoice #</th>
-                     <th className="px-8 py-5">Client Name</th>
-                     <th className="px-8 py-5 text-right">Total Amount</th>
-                     <th className="px-8 py-5">Issue Date</th>
-                     <th className="px-8 py-5">Deadline</th>
-                     <th className="px-8 py-5">Status</th>
-                     <th className="px-8 py-5 text-right">Actions</th>
+                     <th className="px-6 py-4">Invoice #</th>
+                     <th className="px-6 py-4">Client</th>
+                     <th className="px-6 py-4">Amount</th>
+                     <th className="px-6 py-4">Due Date</th>
+                     <th className="px-6 py-4">Status</th>
+                     <th className="px-6 py-4 text-right">Actions</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y">
-                   {invoices.map(i => (
-                     <tr key={i.id} className="hover:bg-gray-50/80 transition-colors group">
-                       <td className="px-8 py-5 font-black text-gray-900">{i.invoice_number}</td>
-                       <td className="px-8 py-5 font-bold text-gray-600">{clientMap[i.client]?.company_name}</td>
-                       <td className="px-8 py-5 text-right font-black text-blue-600">{fmt(i.amount)}</td>
-                       <td className="px-8 py-5 text-xs text-gray-400 font-bold">{new Date(i.date).toLocaleDateString()}</td>
-                       <td className="px-8 py-5">
-                         <div className={`text-xs font-black ${new Date(i.due_date) < new Date() && i.status !== "paid" ? "text-red-500" : "text-gray-800"}`}>
-                           {new Date(i.due_date).toLocaleDateString()}
-                         </div>
+                   {filteredInvoices.map(i => (
+                     <tr key={i.id} className="hover:bg-gray-50 transition-colors">
+                       <td className="px-6 py-4 font-black text-gray-900">{i.invoice_number}</td>
+                       <td className="px-6 py-4 text-gray-600">{clientMap[i.client]?.company_name || "Unknown"}</td>
+                       <td className="px-6 py-4 font-bold text-blue-600">{fmtTZS(i.amount)}</td>
+                       <td className="px-6 py-4">
+                            <div className={`text-xs font-medium ${new Date(i.due_date) < new Date() && i.status !== 'paid' ? 'text-red-500' : 'text-gray-500'}`}>
+                                {new Date(i.due_date).toLocaleDateString()}
+                            </div>
                        </td>
-                       <td className="px-8 py-5"><Badge status={i.status} /></td>
-                       <td className="px-8 py-5 text-right">
-                         <div className="flex justify-end gap-1">
-                           {i.status !== "paid" && (
-                             <button onClick={() => markPaid(i.id)} className="p-2.5 text-green-600 hover:bg-green-50 rounded-xl" title="Mark as Paid"><CheckCircle2 size={16} /></button>
-                           )}
-                           <button onClick={() => setModal({ type: "invoice", data: i })} className="p-2.5 text-[#1e3a5f] hover:bg-[#1e3a5f]/10 rounded-xl"><Edit size={16} /></button>
-                           <button onClick={() => deleteInvoice(i.id)} className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl"><Trash2 size={16} /></button>
-                         </div>
+                       <td className="px-6 py-4"><Badge status={new Date(i.due_date) < new Date() && i.status !== 'paid' ? 'overdue' : i.status} /></td>
+                       <td className="px-6 py-4 text-right">
+                         {i.status !== "paid" && <button onClick={() => markInvoicePaid(i.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg" title="Mark Paid"><CheckCircle size={14} /></button>}
+                         <button onClick={() => setModal({ type: "invoice", data: i })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                         <button onClick={() => deleteInvoice(i.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
                        </td>
                      </tr>
                    ))}
@@ -687,173 +758,137 @@ import {
            </div>
          )}
 
-         {/* EXPENSES MODULE */}
+         {/* Expenses Tab */}
          {tab === "expenses" && (
-           <div className="space-y-6 animate-in fade-in duration-500">
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-               {[
-                 { label: "Fuel Costs", val: expenses.filter(e => e.category === "Fuel").reduce((s,e) => s + e.amount, 0), icon: Droplet, color: "text-blue-600", bg: "bg-blue-50" },
-                 { label: "Driver Allowances", val: expenses.filter(e => e.category === "Allowance").reduce((s,e) => s + e.amount, 0), icon: Users, color: "text-purple-600", bg: "bg-purple-50" },
-                 { label: "Fees & Tolls", val: expenses.filter(e => e.category === "Fees").reduce((s,e) => s + e.amount, 0), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
-                 { label: "Maintenance", val: expenses.filter(e => e.category === "Maintenance").reduce((s,e) => s + e.amount, 0), icon: Wrench, color: "text-orange-600", bg: "bg-orange-50" },
-               ].map((cat, i) => (
-                 <div key={i} className="bg-white p-5 rounded-3xl border shadow-sm">
-                   <div className="flex items-center gap-3 mb-2">
-                     <div className={`p-2 rounded-xl ${cat.bg} ${cat.color}`}><cat.icon size={16} /></div>
-                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{cat.label}</span>
-                   </div>
-                   <p className="text-lg font-black text-gray-800">{fmt(cat.val)}</p>
-                 </div>
-               ))}
+           <div className="space-y-6 animate-in fade-in">
+             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {["Fuel", "Fees", "Allowance", "Maintenance", "Other"].map(cat => {
+                    const total = expenses.filter(e => e.category === cat).reduce((s,e) => s + (e.amount || 0), 0);
+                    const iconMap: any = { Fuel: <Locate />, Fees: <Shield />, Allowance: <Users />, Maintenance: <Settings />, Other: <Package /> };
+                    return (
+                        <div key={cat} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-gray-50 rounded-lg text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                                    {iconMap[cat] || <Package size={16} />}
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black uppercase text-gray-400 tracking-wider">{cat}</p>
+                                    <p className="text-sm font-black text-gray-800">{fmtTZS(total)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
              </div>
-
-             <div className="bg-white rounded-3xl border shadow-sm overflow-hidden">
-               <div className="px-8 py-6 border-b flex items-center justify-between bg-gray-50/30">
-                 <h3 className="text-lg font-black text-gray-800 uppercase tracking-tight">Expense Ledger</h3>
-                 <Btn onClick={() => setModal({ type: "expense" })}><Plus size={16} /> Log Expense</Btn>
-               </div>
-               <div className="overflow-x-auto">
-                 <table className="w-full text-sm text-left">
-                   <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-black tracking-widest border-b">
-                     <tr>
-                       <th className="px-8 py-5">Transaction Details</th>
-                       <th className="px-8 py-5">Category</th>
-                       <th className="px-8 py-5">Linked Trip</th>
-                       <th className="px-8 py-5 text-right">Amount</th>
-                       <th className="px-8 py-5">Date</th>
-                       <th className="px-8 py-5 text-right">Actions</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y">
-                   {expenses.map(e => (
-                     <tr key={e.id} className="hover:bg-gray-50/80 transition-colors group">
-                       <td className="px-8 py-5 font-black text-gray-900">{e.description}</td>
-                       <td className="px-8 py-5">
-                         <span className="bg-gray-100 px-3 py-1 rounded-full text-[9px] font-black uppercase text-gray-500 tracking-tighter">{e.category}</span>
-                       </td>
-                       <td className="px-8 py-5">
-                         <div className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg w-fit">
-                           {trips.find(t => t.id === e.trip)?.tripNumber || "General"}
-                         </div>
-                       </td>
-                       <td className="px-8 py-5 text-right font-black text-red-500">{fmt(e.amount)}</td>
-                       <td className="px-8 py-5 text-xs text-gray-400 font-bold">{new Date(e.date).toLocaleDateString()}</td>
-                       <td className="px-8 py-5 text-right">
-                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button onClick={() => setModal({ type: "expense", data: e })} className="p-2.5 text-[#1e3a5f] hover:bg-[#1e3a5f]/10 rounded-xl"><Edit size={16} /></button>
-                           <button onClick={() => deleteExpense(e.id)} className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl"><Trash2 size={16} /></button>
-                         </div>
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
+             <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                <div className="p-6 border-b flex items-center justify-between bg-gray-50/50">
+                <h3 className="font-bold text-gray-800">Operational Expenses</h3>
+                <Btn onClick={() => setModal({ type: "expense" })}><Plus size={16} /> Record Expense</Btn>
+                </div>
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest">
+                    <tr>
+                        <th className="px-6 py-4">Description / Trip</th>
+                        <th className="px-6 py-4">Category</th>
+                        <th className="px-6 py-4">Amount</th>
+                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                    {expenses.map(e => (
+                        <tr key={e.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                            <div className="font-bold text-gray-900">{e.description}</div>
+                            <div className="text-[10px] text-gray-400">Trip: {trips.find(t => t.id === e.trip)?.tripNumber || "N/A"}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                            <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-black uppercase text-gray-500">{e.category}</span>
+                        </td>
+                        <td className="px-6 py-4 font-bold text-red-600">{fmtTZS(e.amount)}</td>
+                        <td className="px-6 py-4 text-gray-500">{new Date(e.date).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-right">
+                            <button onClick={() => setModal({ type: "expense", data: e })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
+                            <button onClick={() => deleteExpense(e.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>
+                        </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+                </div>
              </div>
-           </div>
            </div>
          )}
 
-         {/* CONTRACTS MODULE */}
+         {/* Contracts Tab */}
          {tab === "contracts" && (
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <div className="bg-white p-10 rounded-[2.5rem] border shadow-xl shadow-gray-100/50">
-               <div className="flex items-center gap-4 mb-10">
-                 <div className="p-4 bg-blue-50 rounded-[1.5rem] text-blue-600 shadow-sm"><FileText size={28} /></div>
-                 <div>
-                   <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">Contract Master</h3>
-                   <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Generate legal agreements instantly</p>
-                 </div>
-               </div>
-               
-               <div className="space-y-6">
-                 <Field label="Counterparty (Client)">
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
+             <div className="bg-white p-6 rounded-2xl border shadow-sm">
+               <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2"><FileText className="text-blue-600" /> Contract Generator</h3>
+               <div className="space-y-4">
+                 <Field label="Select Client">
                    <Select value={contractState?.client || ""} onChange={(e: any) => setContractState({ ...contractState, client: e.target.value })}>
-                     <option value="">Select a corporate client...</option>
+                     <option value="">Choose a client...</option>
                      {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                    </Select>
                  </Field>
-                 
-                 <Field label="Operational Route Rate">
+                 <Field label="Route & Rates">
                    <Select value={contractState?.routeIdx || ""} onChange={(e: any) => setContractState({ ...contractState, routeIdx: e.target.value })}>
-                     <option value="">Master Rate Sheet (Annexure A)</option>
+                     <option value="">Standard Rate Sheet (All Routes)</option>
                      {RATE_SHEET.map((r, i) => <option key={i} value={i}>{r.from} → {r.destination}</option>)}
                    </Select>
                  </Field>
-                 
-                 <div className="grid grid-cols-2 gap-6">
-                   <Field label="Execution Date">
+                 <div className="grid grid-cols-2 gap-4">
+                   <Field label="Contract Date">
                      <Input type="date" value={contractState?.contract_date || today()} onChange={(e: any) => setContractState({ ...contractState, contract_date: e.target.value })} />
                    </Field>
-                   <Field label="Commencement Date">
+                   <Field label="Start Date">
                      <Input type="date" value={contractState?.start_date || today()} onChange={(e: any) => setContractState({ ...contractState, start_date: e.target.value })} />
                    </Field>
                  </div>
-
-                 <div className="grid grid-cols-2 gap-6">
-                   <Field label="Authorized Signatory">
-                     <Input placeholder="Full Name" value={contractState?.client_signatory || ""} onChange={(e: any) => setContractState({ ...contractState, client_signatory: e.target.value })} />
-                   </Field>
-                   <Field label="Official Title">
-                     <Input placeholder="e.g. Managing Director" value={contractState?.client_title || ""} onChange={(e: any) => setContractState({ ...contractState, client_title: e.target.value })} />
-                   </Field>
+                 <div className="grid grid-cols-2 gap-4">
+                    <Field label="Client Signatory">
+                        <Input placeholder="e.g. John Doe" value={contractState?.client_signatory || ""} onChange={(e: any) => setContractState({ ...contractState, client_signatory: e.target.value })} />
+                    </Field>
+                    <Field label="Signatory Title">
+                        <Input placeholder="e.g. Director" value={contractState?.client_title || ""} onChange={(e: any) => setContractState({ ...contractState, client_title: e.target.value })} />
+                    </Field>
                  </div>
-                 
-                 <div className="pt-6">
-                   <Btn onClick={() => setContractState({ ...contractState, showPreview: true })} className="w-full h-14 !text-base" disabled={!contractState?.client}>
-                     Generate Legal Instrument
-                   </Btn>
-                   <p className="text-center text-[10px] text-gray-400 mt-4 font-bold uppercase tracking-widest">By generating, you agree to Calvary standard legal terms</p>
-                 </div>
+                 <Btn onClick={() => setContractState({ ...contractState, showPreview: true })} style={{ width: "100%", height: 45 }} disabled={!contractState?.client}>
+                   Generate Agreement
+                 </Btn>
                </div>
              </div>
 
-             <div className="space-y-6">
-               <div className="bg-white p-10 rounded-[2.5rem] border shadow-sm">
-                 <h3 className="text-sm font-black text-gray-800 uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
-                   <DollarSign className="text-green-600" size={18} /> Verified Rate Sheet
-                 </h3>
-                 <div className="overflow-auto max-h-[440px] rounded-2xl border border-gray-100 no-scrollbar">
-                   <table className="w-full text-[11px] text-left">
-                     <thead className="bg-gray-50 text-gray-400 uppercase text-[9px] font-black sticky top-0 z-10">
-                       <tr>
-                         <th className="px-4 py-4">Logistic Path</th>
-                         <th className="px-4 py-4 text-right">20ft</th>
-                         <th className="px-4 py-4 text-right">40ft</th>
-                         <th className="px-4 py-4 text-center">Days</th>
+             <div className="bg-white p-6 rounded-2xl border shadow-sm">
+               <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2"><DollarSign className="text-green-600" /> Current Rate Sheet</h3>
+               <div className="overflow-auto max-h-[350px] rounded-lg border">
+                 <table className="w-full text-xs text-left">
+                   <thead className="bg-gray-50 text-gray-500 uppercase text-[9px] font-black">
+                     <tr>
+                       <th className="px-3 py-3">Route</th>
+                       <th className="px-3 py-3">20ft</th>
+                       <th className="px-3 py-3">40ft</th>
+                       <th className="px-3 py-3">Days</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y">
+                     {RATE_SHEET.map((r, i) => (
+                       <tr key={i} className="hover:bg-gray-50">
+                         <td className="px-3 py-3 font-medium">{r.from} → {r.destination}</td>
+                         <td className="px-3 py-3 font-bold">{r.c20.toLocaleString()}</td>
+                         <td className="px-3 py-3 font-bold">{r.c40.toLocaleString()}</td>
+                         <td className="px-3 py-3 text-center">{r.days}</td>
                        </tr>
-                     </thead>
-                     <tbody className="divide-y divide-gray-50">
-                       {RATE_SHEET.map((r, i) => (
-                         <tr key={i} className="hover:bg-blue-50/30 transition-colors">
-                           <td className="px-4 py-4 font-black text-gray-800">{r.from} <ChevronRight size={10} className="inline mx-1 text-gray-300" /> {r.destination}</td>
-                           <td className="px-4 py-4 text-right font-bold text-gray-900">{r.c20.toLocaleString()}</td>
-                           <td className="px-4 py-4 text-right font-bold text-gray-900">{r.c40.toLocaleString()}</td>
-                           <td className="px-4 py-4 text-center">
-                             <span className="bg-gray-100 px-2 py-0.5 rounded-lg font-black text-gray-500">{r.days}d</span>
-                           </td>
-                         </tr>
-                       ))}
-                     </tbody>
-                   </table>
-                 </div>
-               </div>
-               
-               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-[2.5rem] border border-blue-100 flex items-center justify-between group cursor-pointer hover:shadow-lg transition-all">
-                 <div className="flex items-center gap-5">
-                   <div className="size-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform"><Download size={24} /></div>
-                   <div>
-                     <h4 className="font-black text-gray-800 tracking-tight">Standard Operating Procedures</h4>
-                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Download logistics guidelines</p>
-                   </div>
-                 </div>
-                 <ArrowRight className="text-gray-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                     ))}
+                   </tbody>
+                 </table>
                </div>
              </div>
            </div>
          )}
        </div>
-
-       {/* ── 8. Modals & Previews ── */}
 
        {/* Contract Preview Modal */}
        {contractState?.showPreview && (
@@ -865,110 +900,136 @@ import {
          />
        )}
 
-       {/* CRUD Modals */}
+       {/* Modals for CRUD operations */}
        {modal?.type === "client" && (
-         <Modal title={modal.data ? "Update Client Profile" : "Onboard New Client"} onClose={closeModal}>
+         <Modal title={modal.data ? "Edit Client" : "Add New Client"} onClose={closeModal}>
            <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveClient(Object.fromEntries(d)); }}>
              <input type="hidden" name="id" defaultValue={modal.data?.id} />
-             <Field label="Legal Entity Name"><Input name="company_name" defaultValue={modal.data?.company_name} placeholder="e.g. Simba Logistics Ltd" required /></Field>
-             <Field label="Primary Contact Person"><Input name="contact_person" defaultValue={modal.data?.contact_person} placeholder="John Doe" required /></Field>
+             <Field label="Company Name"><Input name="company_name" defaultValue={modal.data?.company_name} required /></Field>
+             <Field label="Contact Person"><Input name="contact_person" defaultValue={modal.data?.contact_person} required /></Field>
              <div className="grid grid-cols-2 gap-4">
-               <Field label="Official Email"><Input name="email" type="email" defaultValue={modal.data?.email} placeholder="contact@company.com" required /></Field>
-               <Field label="Phone Line"><Input name="phone" defaultValue={modal.data?.phone} placeholder="+255..." required /></Field>
+                <Field label="Email Address"><Input name="email" type="email" defaultValue={modal.data?.email} required /></Field>
+                <Field label="Phone Number"><Input name="phone" defaultValue={modal.data?.phone} required /></Field>
              </div>
-             <Field label="Corporate Address"><Input name="address" defaultValue={modal.data?.address} placeholder="P.O. Box..." /></Field>
-             <div className="flex justify-end gap-3 mt-8">
-               <Btn variant="secondary" onClick={closeModal} type="button">Discard</Btn>
-               <Btn type="submit">Complete Onboarding</Btn>
+             <Field label="Physical Address"><Input name="address" defaultValue={modal.data?.address} /></Field>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit">Save Client</Btn>
              </div>
            </form>
          </Modal>
        )}
 
        {modal?.type === "trip" && (
-         <Modal title={modal.data ? "Edit Trip Log" : "Initialize New Trip"} onClose={closeModal}>
-           <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveTrip(Object.fromEntries(d)); }}>
+         <Modal title={modal.data ? "Edit Trip" : "New Trip Log"} onClose={closeModal}>
+           <form onSubmit={(e) => { 
+               e.preventDefault(); 
+               const d = new FormData(e.currentTarget); 
+               saveTrip(Object.fromEntries(d)); 
+            }}>
              <input type="hidden" name="id" defaultValue={modal.data?.id} />
-             <Field label="Select Consignee">
+             <Field label="Select Client">
                <Select name="client" defaultValue={modal.data?.client} required>
+                 <option value="">Choose a client...</option>
                  {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                </Select>
              </Field>
              <div className="grid grid-cols-2 gap-4">
-               <Field label="Origin Point"><Input name="origin" defaultValue={modal.data?.origin} required /></Field>
-               <Field label="Final Destination"><Input name="destination" defaultValue={modal.data?.destination} required /></Field>
+                <Field label="Select Route (Auto-Price)">
+                    <Select onChange={(e: any) => {
+                        if (e.target.value === "") return;
+                        const route = RATE_SHEET[e.target.value];
+                        const form = e.target.closest('form');
+                        form.origin.value = route.from;
+                        form.destination.value = route.destination;
+                        form.revenue.value = route.c20; // Default to 20ft
+                    }}>
+                        <option value="">Custom Route...</option>
+                        {RATE_SHEET.map((r, i) => <option key={i} value={i}>{r.from} → {r.destination}</option>)}
+                    </Select>
+                </Field>
+                <Field label="Trip Date"><Input name="date" type="date" defaultValue={modal.data?.date || today()} /></Field>
              </div>
              <div className="grid grid-cols-2 gap-4">
-               <Field label="Cargo Description"><Input name="cargo_type" defaultValue={modal.data?.cargo_type} /></Field>
+               <Field label="Origin"><Input name="origin" defaultValue={modal.data?.origin} required /></Field>
+               <Field label="Destination"><Input name="destination" defaultValue={modal.data?.destination} required /></Field>
+             </div>
+             <div className="grid grid-cols-2 gap-4">
+               <Field label="Cargo Type"><Input name="cargo_type" defaultValue={modal.data?.cargo_type} /></Field>
                <Field label="Revenue (TZS)"><Input name="revenue" type="number" defaultValue={modal.data?.revenue} required /></Field>
              </div>
              <div className="grid grid-cols-2 gap-4">
-               <Field label="Assigned Driver"><Input name="driver" defaultValue={modal.data?.driver} /></Field>
-               <Field label="Vehicle Plate"><Input name="truck" defaultValue={modal.data?.truck} /></Field>
+               <Field label="Driver Name"><Input name="driver" defaultValue={modal.data?.driver} /></Field>
+               <Field label="Truck Plate"><Input name="truck_plate" defaultValue={modal.data?.truck_plate} /></Field>
              </div>
-             <div className="flex justify-end gap-3 mt-8">
-               <Btn variant="secondary" onClick={closeModal} type="button">Discard</Btn>
-               <Btn type="submit">Record Movement</Btn>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit">Save Trip</Btn>
              </div>
            </form>
          </Modal>
        )}
 
        {modal?.type === "invoice" && (
-         <Modal title={modal.data ? "Modify Invoice" : "Generate Trip Invoice"} onClose={closeModal}>
+         <Modal title={modal.data ? "Edit Invoice" : "Create New Invoice"} onClose={closeModal}>
            <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveInvoice(Object.fromEntries(d)); }}>
              <input type="hidden" name="id" defaultValue={modal.data?.id} />
-             <Field label="Select Billed Client">
+             <Field label="Select Trip (Auto-Amount)">
+                <Select name="trip" defaultValue={modal.data?.trip} onChange={(e: any) => {
+                    const trip = trips.find(t => t.id === e.target.value);
+                    if (trip) {
+                        const form = e.target.closest('form');
+                        form.client.value = trip.client;
+                        form.amount.value = trip.revenue;
+                    }
+                }}>
+                    <option value="">Choose a trip...</option>
+                    {trips.map(t => <option key={t.id} value={t.id}>{t.tripNumber} ({t.origin} → {t.destination})</option>)}
+                </Select>
+             </Field>
+             <Field label="Select Client">
                <Select name="client" defaultValue={modal.data?.client} required>
                  {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                </Select>
              </Field>
-             <Field label="Link to Completed Trip">
-               <Select name="trip_id" defaultValue={modal.data?.trip}>
-                 <option value="">Stand-alone Invoice (No Trip Link)</option>
-                 {trips.filter(t => t.status === "completed").map(t => (
-                   <option key={t.id} value={t.id}>{t.tripNumber} - {t.origin} to {t.destination} ({fmt(t.revenue)})</option>
-                 ))}
-               </Select>
-             </Field>
              <div className="grid grid-cols-2 gap-4">
-               <Field label="Manual Amount (if no trip)"><Input name="amount" type="number" defaultValue={modal.data?.amount} /></Field>
-               <Field label="Maturity Date"><Input name="due_date" type="date" defaultValue={modal.data?.due_date || today()} required /></Field>
+                <Field label="Amount (TZS)"><Input name="amount" type="number" defaultValue={modal.data?.amount} required /></Field>
+                <Field label="Due Date"><Input name="due_date" type="date" defaultValue={modal.data?.due_date || today()} required /></Field>
              </div>
-             <div className="flex justify-end gap-3 mt-8">
+             <div className="flex justify-end gap-2 mt-6">
                <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
-               <Btn type="submit">Finalize Invoice</Btn>
+               <Btn type="submit">Create Invoice</Btn>
              </div>
            </form>
          </Modal>
        )}
 
        {modal?.type === "expense" && (
-         <Modal title={modal.data ? "Edit Expense Entry" : "Record Operational Cost"} onClose={closeModal}>
+         <Modal title={modal.data ? "Edit Expense" : "Record Operational Expense"} onClose={closeModal}>
            <form onSubmit={(e) => { e.preventDefault(); const d = new FormData(e.currentTarget); saveExpense(Object.fromEntries(d)); }}>
              <input type="hidden" name="id" defaultValue={modal.data?.id} />
-             <Field label="Transaction Description"><Input name="description" defaultValue={modal.data?.description} required /></Field>
+             <Field label="Description"><Input name="description" defaultValue={modal.data?.description} required /></Field>
              <div className="grid grid-cols-2 gap-4">
-               <Field label="Ledger Category">
-                 <Select name="category" defaultValue={modal.data?.category}>
-                   <option value="Fuel">Fuel</option>
-                   <option value="Maintenance">Maintenance</option>
-                   <option value="Fees">Fees</option>
-                   <option value="Allowance">Allowance</option>
-                   <option value="Other">Other</option>
-                 </Select>
-               </Field>
-               <Field label="Total Amount (TZS)"><Input name="amount" type="number" defaultValue={modal.data?.amount} required /></Field>
+                <Field label="Link to Trip">
+                    <Select name="trip" defaultValue={modal.data?.trip}>
+                        <option value="">Optional: Choose trip...</option>
+                        {trips.map(t => <option key={t.id} value={t.id}>{t.tripNumber}</option>)}
+                    </Select>
+                </Field>
+                <Field label="Category">
+                    <Select name="category" defaultValue={modal.data?.category}>
+                    <option value="Fuel">Fuel</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Fees">Fees</option>
+                    <option value="Allowance">Allowance</option>
+                    <option value="Other">Other</option>
+                    </Select>
+                </Field>
              </div>
-             <Field label="Link to Specific Trip">
-               <Select name="trip" defaultValue={modal.data?.trip}>
-                 <option value="">General Overhead (No Trip Link)</option>
-                 {trips.map(t => <option key={t.id} value={t.id}>{t.tripNumber} ({t.origin} → {t.destination})</option>)}
-               </Select>
-             </Field>
-             <div className="flex justify-end gap-3 mt-8">
-               <Btn variant="secondary" onClick={closeModal} type="button">Discard</Btn>
-               <Btn type="submit">Record Expense</Btn>
+             <Field label="Amount (TZS)"><Input name="amount" type="number" defaultValue={modal.data?.amount} required /></Field>
+             <div className="flex justify-end gap-2 mt-6">
+               <Btn variant="secondary" onClick={closeModal} type="button">Cancel</Btn>
+               <Btn type="submit">Save Expense</Btn>
              </div>
            </form>
          </Modal>
@@ -976,7 +1037,3 @@ import {
      </DashboardLayout>
    ); 
  }
-
- // ── Custom Icons ───────────────────────────────────────────────────────────────
- const Droplet = ({ size = 24, ...props }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>;
- const Wrench = ({ size = 24, ...props }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>;
