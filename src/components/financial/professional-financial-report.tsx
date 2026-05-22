@@ -76,18 +76,16 @@ export function ProfessionalFinancialReport() {
       const [
         { data: trips },
         { data: expenses },
-        { data: fuelRecords },
+        { data: invoices },
         { data: maintenanceRequests },
-        { data: sales },
-        { data: purchases },
+        { data: fuelTracking },
         { data: allowances }
       ] = await Promise.all([
         supabase.from('trips').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('expenses').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
-        supabase.from('fuel_records').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
+        supabase.from('invoices').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('maintenance_requests').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
-        supabase.from('sales').select('*').gte('date', startDate.toISOString()).lte('date', endDate.toISOString()),
-        supabase.from('purchases').select('*').gte('date', startDate.toISOString()).lte('date', endDate.toISOString()),
+        supabase.from('fuel_tracking').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('driver_allowances').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
       ]);
 
@@ -97,22 +95,27 @@ export function ProfessionalFinancialReport() {
         const monthEnd = new Date(selectedYear, idx + 1, 0);
 
         const monthTrips = trips?.filter(t => {
-          const date = new Date(t.created_at || t.startDate);
+          const date = new Date(t.created_at);
           return date >= monthStart && date <= monthEnd;
         }) || [];
 
-        const monthSales = sales?.filter(s => {
-          const date = new Date(s.date);
+        const monthInvoices = invoices?.filter(i => {
+          const date = new Date(i.created_at);
           return date >= monthStart && date <= monthEnd;
         }) || [];
 
         const monthExpenses = expenses?.filter(e => {
-          const date = new Date(e.created_at || e.date);
+          const date = new Date(e.created_at);
           return date >= monthStart && date <= monthEnd;
         }) || [];
 
-        const monthPurchases = purchases?.filter(p => {
-          const date = new Date(p.date);
+        const monthMaintenance = maintenanceRequests?.filter(m => {
+          const date = new Date(m.created_at);
+          return date >= monthStart && date <= monthEnd;
+        }) || [];
+
+        const monthFuel = fuelTracking?.filter(f => {
+          const date = new Date(f.created_at);
           return date >= monthStart && date <= monthEnd;
         }) || [];
 
@@ -121,11 +124,12 @@ export function ProfessionalFinancialReport() {
           return date >= monthStart && date <= monthEnd;
         }) || [];
 
-        const revenue = monthSales.reduce((sum, s) => sum + (s.total_amount || s.amount || 0), 0);
+        const revenue = monthInvoices.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
         const expensesTotal = 
-          monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0) + 
-          monthPurchases.reduce((sum, p) => sum + (p.total_amount || p.amount || 0), 0) +
-          monthAllowances.reduce((sum, a) => sum + (a.amount || 0), 0);
+          monthExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0) + 
+          monthMaintenance.reduce((sum, m) => sum + Number(m.actual_cost || 0), 0) +
+          monthFuel.reduce((sum, f) => sum + Number(f.cost || 0), 0) +
+          monthAllowances.reduce((sum, a) => sum + Number(a.amount || 0), 0);
 
         return {
           month: month.substring(0, 3),
@@ -137,13 +141,11 @@ export function ProfessionalFinancialReport() {
       });
 
       // Calculate totals
-      const totalRevenue = sales?.reduce((sum, s) => sum + (s.total_amount || s.amount || 0), 0) || 0;
-      const fuelCost = fuelRecords?.reduce((sum, f) => sum + (f.cost || 0), 0) || 0;
-      const maintenanceCost = maintenanceRequests?.reduce((sum, m) => sum + (m.cost || 0), 0) || 0;
-      const allowanceCost = allowances?.reduce((sum, a) => sum + (a.amount || 0), 0) || 0;
-      const otherExpenses = 
-        (expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0) + 
-        (purchases?.reduce((sum, p) => sum + (p.total_amount || p.amount || 0), 0) || 0);
+      const totalRevenue = invoices?.reduce((sum, i) => sum + Number(i.total_amount || 0), 0) || 0;
+      const fuelCost = fuelTracking?.reduce((sum, f) => sum + Number(f.cost || 0), 0) || 0;
+      const maintenanceCost = maintenanceRequests?.reduce((sum, m) => sum + Number(m.actual_cost || 0), 0) || 0;
+      const allowanceCost = allowances?.reduce((sum, a) => sum + Number(a.amount || 0), 0) || 0;
+      const otherExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount || 0), 0) || 0;
       
       const totalExpenses = fuelCost + maintenanceCost + allowanceCost + otherExpenses;
 
@@ -151,7 +153,7 @@ export function ProfessionalFinancialReport() {
         { name: 'Fuel', value: fuelCost, color: '#3b82f6' },
         { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
         { name: 'Allowances', value: allowanceCost, color: '#10b981' },
-        { name: 'Other Operations', value: otherExpenses, color: '#8b5cf6' }
+        { name: 'Other Expenses', value: otherExpenses, color: '#8b5cf6' }
       ].filter(cat => cat.value > 0);
 
       setData({
