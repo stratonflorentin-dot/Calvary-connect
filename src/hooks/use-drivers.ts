@@ -14,7 +14,7 @@ export function useDrivers() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'DRIVER')
+        .ilike('role', 'driver')
         .order('first_name', { ascending: true });
       if (error) throw error;
       setDrivers(data as UserProfile[]);

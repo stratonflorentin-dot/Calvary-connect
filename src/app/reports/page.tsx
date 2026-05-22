@@ -6,11 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, TrendingUp, PieChart, BarChart3 } from 'lucide-react';
 import ExecutiveSummary from './executive-summary';
+import { ProfessionalFinancialReport } from '@/components/financial/professional-financial-report';
 
 export default function ReportsPage() {
     const { role } = useRole();
 
     if (!role) return null;
+
+    const showFinancialTab = ["CEO", "ADMIN", "ACCOUNTANT", "HR"].includes(role);
 
     return (
         <div className="flex min-h-screen bg-background">
@@ -27,15 +30,17 @@ export default function ReportsPage() {
 
                     {/* Tabs */}
                     <Tabs defaultValue="executive" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
+                        <TabsList className={`grid w-full ${showFinancialTab ? 'grid-cols-4 lg:w-[400px]' : 'grid-cols-3 lg:w-[300px]'}`}>
                             <TabsTrigger value="executive" className="gap-2">
                                 <BarChart3 className="size-4" />
                                 <span className="hidden sm:inline">Executive</span>
                             </TabsTrigger>
-                            <TabsTrigger value="financial" className="gap-2">
-                                <TrendingUp className="size-4" />
-                                <span className="hidden sm:inline">Financial</span>
-                            </TabsTrigger>
+                            {showFinancialTab && (
+                                <TabsTrigger value="financial" className="gap-2">
+                                    <TrendingUp className="size-4" />
+                                    <span className="hidden sm:inline">Financial</span>
+                                </TabsTrigger>
+                            )}
                             <TabsTrigger value="operational" className="gap-2">
                                 <PieChart className="size-4" />
                                 <span className="hidden sm:inline">Operational</span>
@@ -50,16 +55,11 @@ export default function ReportsPage() {
                             <ExecutiveSummary />
                         </TabsContent>
 
-                        <TabsContent value="financial" className="mt-6 space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Financial Reports</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-muted-foreground">Detailed financial reports coming soon...</p>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
+                        {showFinancialTab && (
+                            <TabsContent value="financial" className="mt-6 space-y-6">
+                                <ProfessionalFinancialReport />
+                            </TabsContent>
+                        )}
 
                         <TabsContent value="operational" className="mt-6 space-y-6">
                             <Card>
@@ -88,6 +88,7 @@ export default function ReportsPage() {
         </div>
     );
 }
+
 
 
 

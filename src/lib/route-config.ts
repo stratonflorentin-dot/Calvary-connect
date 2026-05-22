@@ -108,12 +108,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
     icon: Briefcase,
   },
-  {
-    path: "/monthly-report",
-    label: "Financial Reporting",
-    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
-    icon: BarChart2,
-  },
+
   {
     path: "/reports",
     label: "Reports & Analytics",

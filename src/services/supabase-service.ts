@@ -49,7 +49,7 @@ export class SupabaseService {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('role', 'driver')
+      .ilike('role', 'driver')
       .order('first_name', { ascending: true });
     if (error) throw error;
     return data || [];
