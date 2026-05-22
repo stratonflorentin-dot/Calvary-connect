@@ -30,6 +30,18 @@ interface FinancialData {
   otherExpenses: number;
   monthlyData: MonthlyFinancialData[];
   expenseBreakdown: ExpenseCategory[];
+  tripPerformance: TripPerformance[];
+}
+
+interface TripPerformance {
+  tripNumber: string;
+  revenue: number;
+  expenses: number;
+  netProfit: number;
+  margin: number;
+  fuelCost: number;
+  allowanceCost: number;
+  otherCost: number;
 }
 
 interface MonthlyFinancialData {
@@ -178,6 +190,35 @@ export function ProfessionalFinancialReport() {
         const otherExpenses = currExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
         const totalExpenses = fuelCost + allowanceCost + maintenanceCost + otherExpenses;
 
+        // Calculate Trip-by-Trip Performance (Requirement 2)
+        const tripPerformance: TripPerformance[] = trips?.map(trip => {
+          const tripInvoices = currInvoices.filter(i => i.trip_id === trip.id);
+          const tripFuel = currFuel.filter(f => f.trip_id === trip.id);
+          const tripAllowances = currAllowances.filter(a => a.trip_id === trip.id);
+          const tripExpenses = currExpenses.filter(e => e.trip_id === trip.id);
+          const tripMaintenance = currMaintenance.filter(m => m.trip_id === trip.id);
+
+          const tripRevenue = tripInvoices.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
+          const tripFuelCost = tripFuel.reduce((sum, f) => sum + Number(f.cost || 0), 0);
+          const tripAllowanceCost = tripAllowances.reduce((sum, a) => sum + Number(a.amount || 0), 0);
+          const tripOtherCost = 
+            tripExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0) + 
+            tripMaintenance.reduce((sum, m) => sum + Number(m.actual_cost || 0), 0);
+          
+          const tripTotalExpenses = tripFuelCost + tripAllowanceCost + tripOtherCost;
+
+          return {
+            tripNumber: trip.trip_number || 'N/A',
+            revenue: tripRevenue,
+            expenses: tripTotalExpenses,
+            netProfit: tripRevenue - tripTotalExpenses,
+            margin: tripRevenue > 0 ? ((tripRevenue - tripTotalExpenses) / tripRevenue) * 100 : 0,
+            fuelCost: tripFuelCost,
+            allowanceCost: tripAllowanceCost,
+            otherCost: tripOtherCost
+          };
+        }).filter(tp => tp.revenue > 0 || tp.expenses > 0) || [];
+
         newReportData[curr] = {
           currency: curr,
           totalRevenue,
@@ -196,7 +237,8 @@ export function ProfessionalFinancialReport() {
             { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
             { name: 'Allowances', value: allowanceCost, color: '#10b981' },
             { name: 'Other Expenses', value: otherExpenses, color: '#8b5cf6' }
-          ].filter(cat => cat.value > 0)
+          ].filter(cat => cat.value > 0),
+          tripPerformance: tripPerformance.sort((a, b) => b.netProfit - a.netProfit)
         };
       });
 
@@ -221,6 +263,40 @@ export function ProfessionalFinancialReport() {
       const otherExpenses = currencies.reduce((sum, curr) => sum + convertToBase(newReportData[curr].otherExpenses, curr), 0);
       const totalExpenses = fuelCost + maintenanceCost + driverCost + otherExpenses;
 
+      // Consolidated Trip Performance
+      const consolidatedTripPerformance: TripPerformance[] = [];
+      const allTripNumbers = Array.from(new Set(currencies.flatMap(curr => newReportData[curr].tripPerformance.map(tp => tp.tripNumber))));
+      
+      allTripNumbers.forEach(tripNum => {
+        let tripRevenue = 0;
+        let tripExpenses = 0;
+        let tripFuel = 0;
+        let tripAllowance = 0;
+        let tripOther = 0;
+
+        currencies.forEach(curr => {
+          const tp = newReportData[curr].tripPerformance.find(p => p.tripNumber === tripNum);
+          if (tp) {
+            tripRevenue += convertToBase(tp.revenue, curr);
+            tripExpenses += convertToBase(tp.expenses, curr);
+            tripFuel += convertToBase(tp.fuelCost, curr);
+            tripAllowance += convertToBase(tp.allowanceCost, curr);
+            tripOther += convertToBase(tp.otherCost, curr);
+          }
+        });
+
+        consolidatedTripPerformance.push({
+          tripNumber: tripNum,
+          revenue: tripRevenue,
+          expenses: tripExpenses,
+          netProfit: tripRevenue - tripExpenses,
+          margin: tripRevenue > 0 ? ((tripRevenue - tripExpenses) / tripRevenue) * 100 : 0,
+          fuelCost: tripFuel,
+          allowanceCost: tripAllowance,
+          otherCost: tripOther
+        });
+      });
+
       newReportData['CONSOLIDATED'] = {
         currency: 'TZS',
         totalRevenue,
@@ -239,7 +315,8 @@ export function ProfessionalFinancialReport() {
           { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
           { name: 'Allowances', value: driverCost, color: '#10b981' },
           { name: 'Other Expenses', value: otherExpenses, color: '#8b5cf6' }
-        ].filter(cat => cat.value > 0)
+        ].filter(cat => cat.value > 0),
+        tripPerformance: consolidatedTripPerformance.sort((a, b) => b.netProfit - a.netProfit)
       };
 
       setReportData(newReportData);
@@ -484,31 +561,110 @@ export function ProfessionalFinancialReport() {
       </div>
 
       {/* Profit Trend */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Profit Trend
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data.monthlyData}>
+                  <defs>
+                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.2}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Legend />
+                  <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" name="Net Profit" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Top Performing Trips
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.tripPerformance.slice(0, 5)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="tripNumber" type="category" width={100} />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Legend />
+                  <Bar dataKey="netProfit" fill="#10b981" name="Net Profit" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Fleet Performance Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Profit Trend
+            <Truck className="h-5 w-5" />
+            Fleet Operational Income Breakdown
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.monthlyData}>
-                <defs>
-                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.2}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                <Legend />
-                <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" name="Net Profit" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="relative overflow-x-auto border rounded-lg">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs uppercase bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3">Trip Number</th>
+                  <th className="px-4 py-3 text-right">Revenue</th>
+                  <th className="px-4 py-3 text-right">Fuel</th>
+                  <th className="px-4 py-3 text-right">Allowances</th>
+                  <th className="px-4 py-3 text-right">Other</th>
+                  <th className="px-4 py-3 text-right">Total Expenses</th>
+                  <th className="px-4 py-3 text-right">Net Profit</th>
+                  <th className="px-4 py-3 text-right">Margin</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {data.tripPerformance.length > 0 ? (
+                  data.tripPerformance.map((trip, idx) => (
+                    <tr key={idx} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{trip.tripNumber}</td>
+                      <td className="px-4 py-3 text-right text-blue-600">{formatCurrency(trip.revenue)}</td>
+                      <td className="px-4 py-3 text-right text-red-500">{formatCurrency(trip.fuelCost)}</td>
+                      <td className="px-4 py-3 text-right text-red-500">{formatCurrency(trip.allowanceCost)}</td>
+                      <td className="px-4 py-3 text-right text-red-500">{formatCurrency(trip.otherCost)}</td>
+                      <td className="px-4 py-3 text-right font-semibold">{formatCurrency(trip.expenses)}</td>
+                      <td className={`px-4 py-3 text-right font-bold ${trip.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(trip.netProfit)}
+                      </td>
+                      <td className={`px-4 py-3 text-right ${trip.margin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {trip.margin.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                      No trip-specific financial data found for the selected period.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
