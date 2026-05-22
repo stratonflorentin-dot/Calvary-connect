@@ -44,8 +44,15 @@ import {
   LayoutDashboard, Search, Plus, Download, RefreshCw, 
   TrendingUp, TrendingDown, Calculator, Landmark, Wallet,
   Clock, AlertTriangle, FileText, Receipt, PieChart, Activity,
-  Users, Fuel, Wrench, Shield, Send, Eye, ArrowRight, ArrowLeft
+  Users, Fuel, Wrench, Shield, Send, Eye, ArrowRight, ArrowLeft,
+  ChevronDown, Filter, FileSpreadsheet, History
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ============================================================
 // INTERFACES
@@ -152,9 +159,10 @@ export function FinancialOperations() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
 
-  // Filter States
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [expenseSearch, setExpenseSearch] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('all');
 
   // Dialog States
   const [showAddInvoice, setShowAddInvoice] = useState(false);
@@ -240,15 +248,19 @@ export function FinancialOperations() {
     return `${symbol} ${Math.abs(amount || 0).toLocaleString()}`;
   };
 
-  const filteredInvoices = invoices.filter(inv => 
-    inv.invoice_number?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
-    inv.client_name?.toLowerCase().includes(invoiceSearch.toLowerCase())
-  );
+  const filteredInvoices = invoices.filter(inv => {
+    const matchesSearch = inv.invoice_number?.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+                         inv.client_name?.toLowerCase().includes(invoiceSearch.toLowerCase());
+    const matchesStatus = invoiceStatusFilter === 'all' || inv.status.toLowerCase() === invoiceStatusFilter.toLowerCase();
+    return matchesSearch && matchesStatus;
+  });
 
-  const filteredExpenses = expenses.filter(exp => 
-    exp.expense_number?.toLowerCase().includes(expenseSearch.toLowerCase()) ||
-    exp.description?.toLowerCase().includes(expenseSearch.toLowerCase())
-  );
+  const filteredExpenses = expenses.filter(exp => {
+    const matchesSearch = exp.expense_number?.toLowerCase().includes(expenseSearch.toLowerCase()) ||
+                         exp.description?.toLowerCase().includes(expenseSearch.toLowerCase());
+    const matchesCategory = expenseCategoryFilter === 'all' || exp.category === expenseCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const handleAddInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -309,15 +321,44 @@ export function FinancialOperations() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={loadData} size="sm" className="gap-2">
-              <RefreshCw className="w-4 h-4" /> Refresh
+            <Button variant="outline" onClick={loadData} size="sm" className="gap-2 h-10 px-4 border-slate-200 hover:bg-slate-50">
+              <RefreshCw className="w-4 h-4 text-slate-500" /> Refresh
             </Button>
-            <Button onClick={() => setShowAddInvoice(true)} size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4" /> New Invoice
-            </Button>
-            <Button onClick={() => setShowAddExpense(true)} size="sm" className="gap-2 bg-amber-600 hover:bg-amber-700">
-              <Plus className="w-4 h-4" /> Record Expense
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-2 h-10 px-4 bg-slate-900 hover:bg-slate-800 text-white shadow-sm">
+                  <Plus className="w-4 h-4" /> New Transaction <ChevronDown className="w-4 h-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-2">
+                <DropdownMenuItem onClick={() => setShowAddInvoice(true)} className="gap-2 py-2 cursor-pointer">
+                  <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600"><FileText className="w-4 h-4" /></div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm">Customer Invoice</span>
+                    <span className="text-[10px] text-slate-500">Bill a client for services</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowAddExpense(true)} className="gap-2 py-2 cursor-pointer">
+                  <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600"><Receipt className="w-4 h-4" /></div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm">Operational Expense</span>
+                    <span className="text-[10px] text-slate-500">Record costs and payments</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 py-2 cursor-pointer">
+                  <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600"><Activity className="w-4 h-4" /></div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm">Journal Entry</span>
+                    <span className="text-[10px] text-slate-500">Manual ledger adjustment</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Link href="/finance/bank-statement">
+              <Button size="sm" className="gap-2 h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+                <Landmark className="w-4 h-4" /> Reconcile Bank
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -449,14 +490,36 @@ export function FinancialOperations() {
           <TabsContent value="invoices" className="space-y-6">
             <Card className="border-none shadow-sm">
               <CardContent className="p-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    placeholder="Search by invoice number or client name..." 
-                    className="pl-10 h-11 bg-slate-50 border-none"
-                    value={invoiceSearch}
-                    onChange={(e) => setInvoiceSearch(e.target.value)}
-                  />
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input 
+                      placeholder="Search by invoice number or client name..." 
+                      className="pl-10 h-11 bg-slate-50 border-none focus-visible:ring-blue-500"
+                      value={invoiceSearch}
+                      onChange={(e) => setInvoiceSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Select value={invoiceStatusFilter} onValueChange={setInvoiceStatusFilter}>
+                      <SelectTrigger className="w-[160px] h-11 bg-white border-slate-200">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-3.5 h-3.5 text-slate-400" />
+                          <SelectValue placeholder="All Status" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="overdue">Overdue</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" className="h-11 px-4 gap-2 border-slate-200">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Export
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -505,14 +568,35 @@ export function FinancialOperations() {
           <TabsContent value="expenses" className="space-y-6">
             <Card className="border-none shadow-sm">
               <CardContent className="p-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    placeholder="Search expenses by number or description..." 
-                    className="pl-10 h-11 bg-slate-50 border-none"
-                    value={expenseSearch}
-                    onChange={(e) => setExpenseSearch(e.target.value)}
-                  />
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input 
+                      placeholder="Search expenses by number or description..." 
+                      className="pl-10 h-11 bg-slate-50 border-none focus-visible:ring-amber-500"
+                      value={expenseSearch}
+                      onChange={(e) => setExpenseSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Select value={expenseCategoryFilter} onValueChange={setExpenseCategoryFilter}>
+                      <SelectTrigger className="w-[180px] h-11 bg-white border-slate-200">
+                        <div className="flex items-center gap-2">
+                          <Filter className="w-3.5 h-3.5 text-slate-400" />
+                          <SelectValue placeholder="All Categories" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {Object.entries(EXPENSE_CATEGORIES).map(([key, config]) => (
+                          <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" className="h-11 px-4 gap-2 border-slate-200">
+                      <History className="w-4 h-4 text-blue-600" /> Audit Trail
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -573,45 +657,21 @@ export function FinancialOperations() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Amount (TSH)</Label>
-                <Input type="number" className="bg-slate-50 border-none" value={newInvoice.total_amount} onChange={(e) => setNewInvoice({...newInvoice, total_amount: e.target.value})} required />
+                <Input type="number" className="bg-slate-50 border-none h-11" value={newInvoice.total_amount} onChange={(e) => setNewInvoice({...newInvoice, total_amount: e.target.value})} required />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Due Date</Label>
-                <Input type="date" className="bg-slate-50 border-none" value={newInvoice.due_date} onChange={(e) => setNewInvoice({...newInvoice, due_date: e.target.value})} required />
+                <Input type="date" className="bg-slate-50 border-none h-11" value={newInvoice.due_date} onChange={(e) => setNewInvoice({...newInvoice, due_date: e.target.value})} required />
               </div>
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Related Trip</Label>
               <Select value={newInvoice.trip_id} onValueChange={(v) => setNewInvoice({...newInvoice, trip_id: v})}>
-                <SelectTrigger className="bg-slate-50 border-none"><SelectValue placeholder="Select a trip (optional)" /></SelectTrigger>
+                <SelectTrigger className="bg-slate-50 border-none h-11"><SelectValue placeholder="Select a trip (optional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No related trip</SelectItem>
                   {trips.map(t => (
                     <SelectItem key={t.id} value={t.id}>{t.origin} → {t.destination} ({t.client})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Related Trip</Label>
-              <Select value={newExpense.trip_id} onValueChange={(v) => setNewExpense({...newExpense, trip_id: v})}>
-                <SelectTrigger className="bg-slate-50 border-none"><SelectValue placeholder="Link to trip (optional)" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">General Expense</SelectItem>
-                  {trips.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.origin} → {t.destination}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Related Trip</Label>
-              <Select value={newExpense.trip_id} onValueChange={(v) => setNewExpense({...newExpense, trip_id: v})}>
-                <SelectTrigger className="bg-slate-50 border-none h-11"><SelectValue placeholder="Link to trip (optional)" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">General Expense</SelectItem>
-                  {trips.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.origin} → {t.destination}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
