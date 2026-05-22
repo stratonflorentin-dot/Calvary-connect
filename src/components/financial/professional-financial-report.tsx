@@ -14,9 +14,10 @@ import {
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend
 } from 'recharts';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444ff', '#8b5cf6', '#06b6d4'];
 
 interface FinancialData {
+  currency: string;
   totalRevenue: number;
   totalExpenses: number;
   netProfit: number;
@@ -45,10 +46,16 @@ interface ExpenseCategory {
   color: string;
 }
 
+interface CurrencyReport {
+  [key: string]: FinancialData;
+}
+
 export function ProfessionalFinancialReport() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [data, setData] = useState<FinancialData | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('TZS');
+  const [reportData, setReportData] = useState<CurrencyReport | null>(null);
+  const [availableCurrencies, setAvailableCurrencies] = useState<string[]>(['TZS']);
   const [isLoading, setIsLoading] = useState(true);
 
   const years = [2024, 2025, 2026];
@@ -79,7 +86,8 @@ export function ProfessionalFinancialReport() {
         { data: invoices },
         { data: maintenanceRequests },
         { data: fuelTracking },
-        { data: allowances }
+        { data: allowances },
+        { data: exchangeRates }
       ] = await Promise.all([
         supabase.from('trips').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('expenses').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
@@ -87,76 +95,134 @@ export function ProfessionalFinancialReport() {
         supabase.from('maintenance_requests').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('fuel_tracking').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('driver_allowances').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
+        supabase.from('currency_exchange_rates').select('*').order('effective_date', { ascending: false }),
       ]);
 
-      // Calculate monthly data
-      const monthlyStats: MonthlyFinancialData[] = months.map((month, idx) => {
-        const monthStart = new Date(selectedYear, idx, 1);
-        const monthEnd = new Date(selectedYear, idx + 1, 0);
+      // Identify all unique currencies across all financial records
+      const currencies = Array.from(new Set([
+        ...(invoices?.map(i => i.currency) || []),
+        ...(expenses?.map(e => e.currency) || []),
+        ...(fuelTracking?.map(f => f.currency) || []),
+        ...(allowances?.map(a => a.currency) || []),
+        ...(maintenanceRequests?.map(m => m.currency) || []),
+        'TZS' // Ensure base currency is always present
+      ].filter(Boolean)));
 
-        const monthTrips = trips?.filter(t => {
-          const date = new Date(t.created_at);
-          return date >= monthStart && date <= monthEnd;
-        }) || [];
+      setAvailableCurrencies(['CONSOLIDATED', ...currencies]);
 
-        const monthInvoices = invoices?.filter(i => {
-          const date = new Date(i.created_at);
-          return date >= monthStart && date <= monthEnd;
-        }) || [];
+      const newReportData: CurrencyReport = {};
 
-        const monthExpenses = expenses?.filter(e => {
-          const date = new Date(e.created_at);
-          return date >= monthStart && date <= monthEnd;
-        }) || [];
+      // Helper for conversion (only for consolidated view)
+      const convertToBase = (amount: number, fromCurrency: string) => {
+        if (fromCurrency === 'TZS') return amount;
+        const rateEntry = exchangeRates?.find(r => r.from_currency === fromCurrency && r.to_currency === 'TZS');
+        return amount * (rateEntry?.rate || 1);
+      };
 
-        const monthMaintenance = maintenanceRequests?.filter(m => {
-          const date = new Date(m.created_at);
-          return date >= monthStart && date <= monthEnd;
-        }) || [];
+      // 1. Calculate Individual Currency Reports (Isolated)
+      currencies.forEach(curr => {
+        const currInvoices = invoices?.filter(i => i.currency === curr) || [];
+        const currExpenses = expenses?.filter(e => e.currency === curr) || [];
+        const currFuel = fuelTracking?.filter(f => f.currency === curr) || [];
+        const currAllowances = allowances?.filter(a => a.currency === curr) || [];
+        const currMaintenance = maintenanceRequests?.filter(m => m.currency === curr) || [];
+        
+        const monthlyStats: MonthlyFinancialData[] = months.map((month, idx) => {
+          const monthStart = new Date(selectedYear, idx, 1);
+          const monthEnd = new Date(selectedYear, idx + 1, 0);
+          const monthTrips = trips?.filter(t => {
+            const date = new Date(t.created_at);
+            return date >= monthStart && date <= monthEnd;
+          }) || [];
+          const monthInvoices = currInvoices.filter(i => {
+            const date = new Date(i.created_at);
+            return date >= monthStart && date <= monthEnd;
+          });
+          const monthExpenses = currExpenses.filter(e => {
+            const date = new Date(e.created_at);
+            return date >= monthStart && date <= monthEnd;
+          });
+          const monthFuel = currFuel.filter(f => {
+            const date = new Date(f.created_at);
+            return date >= monthStart && date <= monthEnd;
+          });
+          const monthAllowances = currAllowances.filter(a => {
+            const date = new Date(a.created_at);
+            return date >= monthStart && date <= monthEnd;
+          });
+          const monthMaintenance = currMaintenance.filter(m => {
+            const date = new Date(m.created_at);
+            return date >= monthStart && date <= monthEnd;
+          });
 
-        const monthFuel = fuelTracking?.filter(f => {
-          const date = new Date(f.created_at);
-          return date >= monthStart && date <= monthEnd;
-        }) || [];
+          const revenue = monthInvoices.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
+          const expensesTotal = 
+            monthExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0) + 
+            monthFuel.reduce((sum, f) => sum + Number(f.cost || 0), 0) + 
+            monthAllowances.reduce((sum, a) => sum + Number(a.amount || 0), 0) +
+            monthMaintenance.reduce((sum, m) => sum + Number(m.actual_cost || 0), 0);
 
-        const monthAllowances = allowances?.filter(a => {
-          const date = new Date(a.created_at);
-          return date >= monthStart && date <= monthEnd;
-        }) || [];
+          return {
+            month: month.substring(0, 3),
+            revenue,
+            expenses: expensesTotal,
+            profit: revenue - expensesTotal,
+            trips: monthTrips.length
+          };
+        });
 
-        const revenue = monthInvoices.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
-        const expensesTotal = 
-          monthExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0) + 
-          monthMaintenance.reduce((sum, m) => sum + Number(m.actual_cost || 0), 0) +
-          monthFuel.reduce((sum, f) => sum + Number(f.cost || 0), 0) +
-          monthAllowances.reduce((sum, a) => sum + Number(a.amount || 0), 0);
+        const totalRevenue = currInvoices.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
+        const fuelCost = currFuel.reduce((sum, f) => sum + Number(f.cost || 0), 0);
+        const allowanceCost = currAllowances.reduce((sum, a) => sum + Number(a.amount || 0), 0);
+        const maintenanceCost = currMaintenance.reduce((sum, m) => sum + Number(m.actual_cost || 0), 0);
+        const otherExpenses = currExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+        const totalExpenses = fuelCost + allowanceCost + maintenanceCost + otherExpenses;
 
-        return {
-          month: month.substring(0, 3),
-          revenue,
-          expenses: expensesTotal,
-          profit: revenue - expensesTotal,
-          trips: monthTrips.length
+        newReportData[curr] = {
+          currency: curr,
+          totalRevenue,
+          totalExpenses,
+          netProfit: totalRevenue - totalExpenses,
+          profitMargin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0,
+          totalTrips: trips?.length || 0,
+          averageRevenuePerTrip: trips && trips.length > 0 ? totalRevenue / trips.length : 0,
+          fuelCost,
+          maintenanceCost,
+          driverCost: allowanceCost,
+          otherExpenses,
+          monthlyData: monthlyStats,
+          expenseBreakdown: [
+            { name: 'Fuel', value: fuelCost, color: '#3b82f6' },
+            { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
+            { name: 'Allowances', value: allowanceCost, color: '#10b981' },
+            { name: 'Other Expenses', value: otherExpenses, color: '#8b5cf6' }
+          ].filter(cat => cat.value > 0)
         };
       });
 
-      // Calculate totals
-      const totalRevenue = invoices?.reduce((sum, i) => sum + Number(i.total_amount || 0), 0) || 0;
-      const fuelCost = fuelTracking?.reduce((sum, f) => sum + Number(f.cost || 0), 0) || 0;
-      const maintenanceCost = maintenanceRequests?.reduce((sum, m) => sum + Number(m.actual_cost || 0), 0) || 0;
-      const allowanceCost = allowances?.reduce((sum, a) => sum + Number(a.amount || 0), 0) || 0;
-      const otherExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount || 0), 0) || 0;
-      
-      const totalExpenses = fuelCost + maintenanceCost + allowanceCost + otherExpenses;
+      // 2. Calculate Consolidated Report (Base: TZS)
+      const consolidatedMonthlyData: MonthlyFinancialData[] = months.map((month, idx) => {
+        const stats = currencies.map(curr => newReportData[curr].monthlyData[idx]);
+        const revenue = currencies.reduce((sum, curr) => sum + convertToBase(newReportData[curr].monthlyData[idx].revenue, curr), 0);
+        const expenses = currencies.reduce((sum, curr) => sum + convertToBase(newReportData[curr].monthlyData[idx].expenses, curr), 0);
+        return {
+          month: month.substring(0, 3),
+          revenue,
+          expenses,
+          profit: revenue - expenses,
+          trips: stats[0]?.trips || 0
+        };
+      });
 
-      const expenseBreakdown: ExpenseCategory[] = [
-        { name: 'Fuel', value: fuelCost, color: '#3b82f6' },
-        { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
-        { name: 'Allowances', value: allowanceCost, color: '#10b981' },
-        { name: 'Other Expenses', value: otherExpenses, color: '#8b5cf6' }
-      ].filter(cat => cat.value > 0);
+      const totalRevenue = currencies.reduce((sum, curr) => sum + convertToBase(newReportData[curr].totalRevenue, curr), 0);
+      const fuelCost = currencies.reduce((sum, curr) => sum + convertToBase(newReportData[curr].fuelCost, curr), 0);
+      const maintenanceCost = currencies.reduce((sum, curr) => sum + convertToBase(newReportData[curr].maintenanceCost, curr), 0);
+      const driverCost = currencies.reduce((sum, curr) => sum + convertToBase(newReportData[curr].driverCost, curr), 0);
+      const otherExpenses = currencies.reduce((sum, curr) => sum + convertToBase(newReportData[curr].otherExpenses, curr), 0);
+      const totalExpenses = fuelCost + maintenanceCost + driverCost + otherExpenses;
 
-      setData({
+      newReportData['CONSOLIDATED'] = {
+        currency: 'TZS',
         totalRevenue,
         totalExpenses,
         netProfit: totalRevenue - totalExpenses,
@@ -165,11 +231,21 @@ export function ProfessionalFinancialReport() {
         averageRevenuePerTrip: trips && trips.length > 0 ? totalRevenue / trips.length : 0,
         fuelCost,
         maintenanceCost,
-        driverCost: allowanceCost,
+        driverCost,
         otherExpenses,
-        monthlyData: monthlyStats,
-        expenseBreakdown
-      });
+        monthlyData: consolidatedMonthlyData,
+        expenseBreakdown: [
+          { name: 'Fuel', value: fuelCost, color: '#3b82f6' },
+          { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
+          { name: 'Allowances', value: driverCost, color: '#10b981' },
+          { name: 'Other Expenses', value: otherExpenses, color: '#8b5cf6' }
+        ].filter(cat => cat.value > 0)
+      };
+
+      setReportData(newReportData);
+      if (!['CONSOLIDATED', ...currencies].includes(selectedCurrency)) {
+        setSelectedCurrency('CONSOLIDATED');
+      }
     } catch (error) {
       console.error('Error loading financial data:', error);
     } finally {
@@ -177,10 +253,10 @@ export function ProfessionalFinancialReport() {
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, currency: string = selectedCurrency) => {
     return new Intl.NumberFormat('en-TZ', {
       style: 'currency',
-      currency: 'TZS',
+      currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(value);
@@ -202,7 +278,8 @@ export function ProfessionalFinancialReport() {
     );
   }
 
-  if (!data) return null;
+  if (!reportData || !reportData[selectedCurrency]) return null;
+  const data = reportData[selectedCurrency];
 
   return (
     <div className="space-y-6">
@@ -210,11 +287,26 @@ export function ProfessionalFinancialReport() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Financial Report</h1>
-          <p className="text-muted-foreground">
-            {selectedMonth ? months[selectedMonth - 1] : 'Annual'} {selectedYear} Financial Overview
-          </p>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <p>
+              {selectedMonth ? months[selectedMonth - 1] : 'Annual'} {selectedYear} Financial Overview
+            </p>
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-bold uppercase">
+              {selectedCurrency}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
+          <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+            <SelectTrigger className="w-[100px] border-blue-200 bg-blue-50/50">
+              <SelectValue placeholder="Currency" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableCurrencies.map(curr => (
+                <SelectItem key={curr} value={curr}>{curr}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
             <SelectTrigger className="w-[120px]">
               <SelectValue />
@@ -247,9 +339,12 @@ export function ProfessionalFinancialReport() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-blue-500 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+              Total Revenue
+              <span className="text-[10px] bg-blue-50 px-1 rounded">{selectedCurrency}</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -262,9 +357,12 @@ export function ProfessionalFinancialReport() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500">
+        <Card className="border-l-4 border-l-red-500 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+              Total Expenses
+              <span className="text-[10px] bg-red-50 px-1 rounded">{selectedCurrency}</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -277,9 +375,12 @@ export function ProfessionalFinancialReport() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
+        <Card className="border-l-4 border-l-green-500 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Net Profit</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+              Net Profit
+              <span className="text-[10px] bg-green-50 px-1 rounded">{selectedCurrency}</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -298,9 +399,12 @@ export function ProfessionalFinancialReport() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500">
+        <Card className="border-l-4 border-l-purple-500 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Revenue/Trip</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+              Avg Revenue/Trip
+              <span className="text-[10px] bg-purple-50 px-1 rounded">{selectedCurrency}</span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -312,6 +416,12 @@ export function ProfessionalFinancialReport() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Currency Warning */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm flex items-center gap-2">
+        <PieChartIcon className="h-4 w-4" />
+        Note: This report is isolated to <strong>{selectedCurrency}</strong> transactions. Cross-currency data is excluded to maintain ledger integrity.
       </div>
 
       {/* Revenue vs Expenses Chart */}
