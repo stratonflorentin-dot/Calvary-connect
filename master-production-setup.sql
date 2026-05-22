@@ -9,9 +9,8 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-BEGIN;
-
 -- 1. CORE SCHEMA (Using ADD COLUMN IF NOT EXISTS for existing tables)
+-- We execute these without a single global transaction to prevent timeouts in Supabase SQL Editor.
 
 -- User Profiles
 CREATE TABLE IF NOT EXISTS user_profiles (id UUID PRIMARY KEY REFERENCES auth.users(id));
@@ -179,7 +178,7 @@ CREATE INDEX IF NOT EXISTS idx_trips_number ON trips(trip_number);
 CREATE INDEX IF NOT EXISTS idx_trips_status ON trips(status);
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_logs(created_at DESC);
 
--- 4. SEED DATA
+-- 4. SEED DATA (Executed in smaller chunks if needed, but keeping grouped for now)
 
 INSERT INTO accounts (code, name, category, type) VALUES
 -- 1000 ASSETS
@@ -318,5 +317,3 @@ CREATE POLICY "Authenticated users can view vehicles" ON vehicles FOR SELECT USI
 CREATE POLICY "Operations can manage vehicles" ON vehicles FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'HR'));
 CREATE POLICY "Authenticated users can view trips" ON trips FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Operations can manage trips" ON trips FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'SALESMAN', 'HR'));
-
-COMMIT;

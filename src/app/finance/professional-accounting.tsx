@@ -136,24 +136,24 @@ export default function CalvaryAccounting() {
         SupabaseService.getInvoices(),
         SupabaseService.getTaxes(),
         supabase.from("accounts").select("*").order("code"),
-        supabase.from("journal_entries").select("*, journal_entry_lines(*)").order("entry_date", { ascending: false })
+        supabase.from("journal_entries").select("*, lines:journal_entry_lines(*)").order("entry_date", { ascending: false })
       ]);
 
-      setAccounts(accs.data || []);
+      setAccounts(accs.data?.map(a => ({
+        ...a,
+        name: a.account_name,
+        bank: a.bank_name,
+        account_number: a.account_number,
+        balance: a.current_balance,
+        swift: a.swift_code,
+        branch: a.branch_name
+      })) || []);
       setExpenses(exps || []);
       setRevenue(revs?.map(r => ({ ...r, amount: r.total_amount || r.amount })) || []);
       setInvoices(invs || []);
       setTaxes(txs || []);
       setCoa(coas.data || []);
-      setJournal(jrnls.data?.map(j => ({
-        ...j,
-        lines: j.journal_entry_lines?.map(l => ({
-          account_code: l.account_code,
-          account_name: l.account_name,
-          debit: l.debit_amount,
-          credit: l.credit_amount
-        }))
-      })) || []);
+      setJournal(jrnls.data || []);
     } catch (error) {
       console.error("Data fetch error:", error);
     } finally {
@@ -212,12 +212,12 @@ export default function CalvaryAccounting() {
   const xbRev = revenue.filter(r=>r.is_cross_border).reduce((s,r)=>s+r.amount,0);
   const xbExp = expenses.filter(e=>e.is_cross_border).reduce((s,e)=>s+e.amount,0);
   const ccRev = revenue.filter(r=>r.cargo_type==="REEFER").reduce((s,r)=>s+r.amount,0);
-  const totalCashTZS = accounts.reduce((s,a)=>s+a.balance*(RATES[a.currency]||1),0);
-  const pendingAR = invoices.filter(i=>i.status!=="paid"&&i.type==="receivable").reduce((s,i)=>s+i.amount,0);
-  const pendingAP = invoices.filter(i=>i.status!=="paid"&&i.type==="payable").reduce((s,i)=>s+i.amount,0);
+  const totalCashTZS = accounts.reduce((s,a)=>s+(Number(a.balance)||0)*(RATES[a.currency]||1),0);
+  const pendingAR = invoices.filter(i=>i.status!=="paid"&&i.type==="receivable").reduce((s,i)=>s+(Number(i.amount)||0),0);
+  const pendingAP = invoices.filter(i=>i.status!=="paid"&&i.type==="payable").reduce((s,i)=>s+(Number(i.amount)||0),0);
 
   // COA
-  const coaGroups = COA_TYPES.map(type=>({ type, rows:coa.filter(a=>a.type===type), total:coa.filter(a=>a.type===type).reduce((s,a)=>s+a.balance,0) }));
+  const coaGroups = COA_TYPES.map(type=>({ type, rows:coa.filter(a=>a.type===type), total:coa.filter(a=>a.type===type).reduce((s,a)=>s+(Number(a.balance)||0),0) }));
   const totalAssets = coaGroups.find(g=>g.type==="Asset")?.total||0;
   const totalLiab   = coaGroups.find(g=>g.type==="Liability")?.total||0;
   const totalEquity = coaGroups.find(g=>g.type==="Equity")?.total||0;
@@ -227,7 +227,7 @@ export default function CalvaryAccounting() {
     const rows = coa.filter(a=>a.type===type);
     const groups = {};
     rows.forEach(a=>{ const g=a.group||type; if(!groups[g])groups[g]=[]; groups[g].push(a); });
-    return Object.entries(groups).map(([name,accounts])=>({ name, accounts, total:accounts.reduce((s,a)=>s+a.balance,0) }));
+    return Object.entries(groups).map(([name,accounts])=>({ name, accounts, total:accounts.reduce((s,a)=>s+(Number(a.balance)||0),0) }));
   };
   const SECTION_LABELS = { Asset:"1000 ASSETS", Liability:"2000 LIABILITIES", Equity:"3000 EQUITY", Revenue:"4000 REVENUE", Expense:"5000–7000 EXPENSES & COMPLIANCE" };
 
@@ -340,7 +340,13 @@ export default function CalvaryAccounting() {
     if(!coaF.code||!coaF.name) return;
     setLoading(true);
     try {
-      await supabase.from("chart_of_accounts").insert({ ...coaF, balance: parseFloat(coaF.balance) || 0 });
+      await supabase.from("accounts").insert({
+        code: coaF.code,
+        name: coaF.name,
+        type: coaF.type,
+        balance: parseFloat(coaF.balance) || 0,
+        updated_at: new Date().toISOString()
+      });
       await fetchData();
       setModal(null); setCoaF(blankCoa);
     } catch (error) {
@@ -353,7 +359,16 @@ export default function CalvaryAccounting() {
     if(!accF.name||!accF.account_number) return;
     setLoading(true);
     try {
-      await supabase.from("bank_accounts").insert({ ...accF, balance: parseFloat(accF.balance) || 0 });
+      await supabase.from("bank_accounts").insert({
+        account_name: accF.name,
+        currency: accF.currency,
+        account_number: accF.account_number,
+        bank_name: accF.bank,
+        swift_code: accF.swift,
+        branch_name: accF.branch,
+        current_balance: parseFloat(accF.balance) || 0,
+        is_active: true
+      });
       await fetchData();
       setModal(null); setAccF(blankAcc);
     } catch (error) {
@@ -369,9 +384,9 @@ export default function CalvaryAccounting() {
       const { data: je, error: jeErr } = await supabase
         .from("journal_entries")
         .insert({
-          date: jeF.date,
+          entry_date: jeF.date,
           description: jeF.description,
-          reference: jeF.reference || `JE-${Date.now()}`
+          reference_number: jeF.reference || `JE-${Date.now()}`
         })
         .select()
         .single();
@@ -388,7 +403,27 @@ export default function CalvaryAccounting() {
           credit_amount: parseFloat(l.credit) || 0
         }));
 
-      await supabase.from("journal_entry_lines").insert(lines);
+      const { error: lineErr } = await supabase.from("journal_entry_lines").insert(lines);
+      if (lineErr) throw lineErr;
+
+      // Update account balances based on JE lines
+      const balancePromises = lines.map(async line => {
+        const { data: acc } = await supabase.from("accounts").select("balance, type").eq("code", line.account_code).single();
+        if (acc) {
+          let newBalance = Number(acc.balance || 0);
+          // Normal debit accounts (Assets, Expenses) increase with debit, decrease with credit
+          // Normal credit accounts (Liabilities, Equity, Revenue) increase with credit, decrease with debit
+          const isDebitNormal = acc.type === "Asset" || acc.type === "Expense";
+          if (isDebitNormal) {
+            newBalance += (line.debit_amount - line.credit_amount);
+          } else {
+            newBalance += (line.credit_amount - line.debit_amount);
+          }
+          return supabase.from("accounts").update({ balance: newBalance }).eq("code", line.account_code);
+        }
+      });
+      await Promise.all(balancePromises);
+
       await fetchData();
       setModal(null); setJeF(blankJe);
     } catch (error) {
@@ -412,7 +447,8 @@ export default function CalvaryAccounting() {
   const del = async (setter, id, table) => {
     setLoading(true);
     try {
-      await supabase.from(table).delete().eq(table === "chart_of_accounts" ? "code" : "id", id);
+      const realTable = table === "chart_of_accounts" ? "accounts" : table;
+      await supabase.from(realTable).delete().eq(realTable === "accounts" ? "code" : "id", id);
       await fetchData();
       setConfirm(null);
     } catch (error) {
@@ -499,7 +535,12 @@ export default function CalvaryAccounting() {
   const saveCOARow = async () => {
     setLoading(true);
     try {
-      await supabase.from("chart_of_accounts").update({ ...editBuf, balance: parseFloat(editBuf.balance) || 0 }).eq("code", editId);
+      await supabase.from("accounts").update({
+        name: editBuf.name,
+        type: editBuf.type,
+        balance: parseFloat(editBuf.balance) || 0,
+        updated_at: new Date().toISOString()
+      }).eq("code", editId);
       await fetchData();
       cancelEdit();
     } catch (error) {
@@ -523,7 +564,15 @@ export default function CalvaryAccounting() {
   const saveAccount = async () => {
     setLoading(true);
     try {
-      await supabase.from("bank_accounts").update({ ...editBuf, balance: parseFloat(editBuf.balance) || 0 }).eq("id", editId);
+      await supabase.from("bank_accounts").update({
+        account_name: editBuf.name,
+        currency: editBuf.currency,
+        account_number: editBuf.account_number,
+        bank_name: editBuf.bank,
+        swift_code: editBuf.swift,
+        branch_name: editBuf.branch,
+        current_balance: parseFloat(editBuf.balance) || 0
+      }).eq("id", editId);
       await fetchData();
       cancelEdit(); setEditAccOpen(false);
     } catch (error) {
