@@ -19,6 +19,9 @@ async function getCurrentUser() {
     name: profile?.name || user.email || 'Unknown',
     role: profile?.role || 'USER'
   };
+}
+
+export class SupabaseService {
   static async markInvoicePaid(id: string, accountId: string) {
     const user = await getCurrentUser();
     const { data: invoice, error: invError } = await supabase.from('invoices').select('*').eq('id', id).single();
@@ -53,9 +56,7 @@ async function getCurrentUser() {
         `Marked invoice ${invoice.invoice_number} as paid and updated bank account ${accountId}`);
     }
   }
-}
 
-export class SupabaseService {
   // Utility for offline-aware requests
   private static async performAction(table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', data: any, id?: string) {
     if (!SyncManager.isOnline()) {
