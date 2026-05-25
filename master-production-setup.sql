@@ -485,9 +485,9 @@ DO $$
 DECLARE 
     r RECORD;
 BEGIN
-    FOR r IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public') 
+    FOR r IN (SELECT policyname, tablename, schemaname FROM pg_policies WHERE schemaname IN ('public', 'storage')) 
     LOOP
-        EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(r.policyname) || ' ON ' || quote_ident(r.tablename);
+        EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(r.policyname) || ' ON ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename);
     END LOOP;
 END $$;
 
@@ -495,46 +495,41 @@ END $$;
 -- Note: In Supabase, you can't easily write one policy for all tables, so we define them per table.
 
 -- USER PROFILES
-CREATE POLICY "Admin full access" ON user_profiles FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
-CREATE POLICY "Users view own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users update own profile" ON user_profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Public manage profiles" ON user_profiles FOR ALL USING (true) WITH CHECK (true);
 
 -- VEHICLES
-CREATE POLICY "Admin manage vehicles" ON vehicles FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'HR'));
-CREATE POLICY "Public view vehicles" ON vehicles FOR SELECT USING (true);
+CREATE POLICY "Public manage vehicles" ON vehicles FOR ALL USING (true) WITH CHECK (true);
 
 -- TRIPS
-CREATE POLICY "Admin manage trips" ON trips FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'HR', 'SALESMAN'));
-CREATE POLICY "Public view trips" ON trips FOR SELECT USING (true);
+CREATE POLICY "Public manage trips" ON trips FOR ALL USING (true) WITH CHECK (true);
 
 -- FINANCE (Expenses, Invoices, Bank, Accounts, Sales, Taxes)
-CREATE POLICY "Admin manage finance" ON expenses FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR', 'OPERATOR'));
-CREATE POLICY "Admin manage invoices" ON invoices FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage bank" ON bank_accounts FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage bank statements" ON bank_statements FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage coa" ON accounts FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage journal" ON journal_entries FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage journal lines" ON journal_entry_lines FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage sales" ON sales FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage purchases" ON purchases FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage taxes" ON taxes FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Public manage finance" ON expenses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage invoices" ON invoices FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage bank" ON bank_accounts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage bank statements" ON bank_statements FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage coa" ON accounts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage journal" ON journal_entries FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage journal lines" ON journal_entry_lines FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage sales" ON sales FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage purchases" ON purchases FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage taxes" ON taxes FOR ALL USING (true) WITH CHECK (true);
 
 -- OPERATIONS (Fuel, Allowances, Maintenance, Parts)
-CREATE POLICY "Admin manage fuel" ON fuel_requests FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'ACCOUNTANT'));
-CREATE POLICY "Admin manage allowances" ON allowances FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'ACCOUNTANT', 'HR'));
-CREATE POLICY "Admin manage maintenance" ON maintenance_requests FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'));
-CREATE POLICY "Admin manage spare parts" ON spare_parts FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'));
-CREATE POLICY "Admin manage parts requests" ON parts_requests FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'));
+CREATE POLICY "Public manage fuel" ON fuel_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage allowances" ON allowances FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage maintenance" ON maintenance_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage spare parts" ON spare_parts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage parts requests" ON parts_requests FOR ALL USING (true) WITH CHECK (true);
 
 -- HR & PERFORMANCE
-CREATE POLICY "Admin manage meetings" ON meetings FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
-CREATE POLICY "Admin manage performance" ON performance_reviews FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
-CREATE POLICY "Admin manage insurance" ON insurance_policies FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
-CREATE POLICY "Admin manage reports" ON reports FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR', 'ACCOUNTANT'));
+CREATE POLICY "Public manage meetings" ON meetings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage performance" ON performance_reviews FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage insurance" ON insurance_policies FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage reports" ON reports FOR ALL USING (true) WITH CHECK (true);
 
 -- AUDIT LOGS
-CREATE POLICY "Admin view audit logs" ON audit_logs FOR SELECT USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
-CREATE POLICY "System insert audit logs" ON audit_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public manage audit logs" ON audit_logs FOR ALL USING (true) WITH CHECK (true);
 
 -- 6. STORAGE SETUP (Avatars)
 

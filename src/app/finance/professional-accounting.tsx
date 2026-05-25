@@ -5,7 +5,7 @@ import {
   ArrowDownLeft, RefreshCw, FileText, Receipt, BarChart3,
   BookOpen, AlertTriangle, CheckCircle2, ChevronRight,
   Wallet, Scale, Landmark, Truck, Pencil, Trash2, Save,
-  Loader2, Menu, Bell, Settings
+  Loader2, Menu, Bell, Settings, Upload
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { SupabaseService } from "@/services/supabase-service";
