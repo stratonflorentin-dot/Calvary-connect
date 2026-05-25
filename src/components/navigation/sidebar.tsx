@@ -158,7 +158,7 @@ export function Sidebar({ role }:{ role:UserRole }){
                       </Link>
                       
                       {/* Quick Nav Axis for Financial Ledger */}
-                      {item.path === "/finance" && (
+                      {(item.path === "/finance" || item.path === "/finance/professional-accounting") && (
                         <Link 
                           href="/" 
                           className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/nav:opacity-100 transition-all p-1.5 hover:bg-white/10 rounded-lg text-cyan-400 hover:text-cyan-300"

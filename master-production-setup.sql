@@ -20,6 +20,8 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS role TEXT;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS license_number TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS license_expiry DATE;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
@@ -46,6 +48,7 @@ ALTER TABLE trips ADD COLUMN IF NOT EXISTS driver_id UUID;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS truck_id UUID REFERENCES vehicles(id);
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'PENDING';
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS revenue DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS price DECIMAL(15,2) DEFAULT 0;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
@@ -63,11 +66,13 @@ ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES custom
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
--- Accounts
+-- Accounts (Chart of Accounts)
 CREATE TABLE IF NOT EXISTS accounts (code VARCHAR(20) PRIMARY KEY);
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS name VARCHAR(100);
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS category VARCHAR(50);
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS type VARCHAR(10);
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS balance DECIMAL(15, 2) DEFAULT 0;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS "group" VARCHAR(50);
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
@@ -75,19 +80,89 @@ ALTER TABLE accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZON
 CREATE TABLE IF NOT EXISTS bank_accounts (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
 ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS account_name VARCHAR(100);
 ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS account_number VARCHAR(50);
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS swift_code VARCHAR(20);
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS branch_name VARCHAR(100);
 ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS current_balance DECIMAL(15, 2) DEFAULT 0;
+ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Bank Statements / Transactions
+CREATE TABLE IF NOT EXISTS bank_statements (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID REFERENCES bank_accounts(id) ON DELETE CASCADE,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    description TEXT,
+    amount DECIMAL(15, 2) NOT NULL,
+    type VARCHAR(10) CHECK (type IN ('credit', 'debit')),
+    ref VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Journal Entries
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    description TEXT,
+    reference_number VARCHAR(50) UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Journal Entry Lines
+CREATE TABLE IF NOT EXISTS journal_entry_lines (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    journal_entry_id UUID REFERENCES journal_entries(id) ON DELETE CASCADE,
+    account_code VARCHAR(20) REFERENCES accounts(code),
+    account_name VARCHAR(100),
+    debit_amount DECIMAL(15, 2) DEFAULT 0,
+    credit_amount DECIMAL(15, 2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Invoices
 CREATE TABLE IF NOT EXISTS invoices (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(50) UNIQUE;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_name VARCHAR(200);
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total_amount DECIMAL(15, 2);
-ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'draft';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 2);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS due_date DATE;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'receivable';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS is_cross_border BOOLEAN DEFAULT false;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS linked_revenue UUID;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS linked_expense UUID;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Sales / Revenue
+CREATE TABLE IF NOT EXISTS sales (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    date DATE DEFAULT CURRENT_DATE,
+    client VARCHAR(200),
+    description TEXT,
+    amount DECIMAL(15, 2),
+    total_amount DECIMAL(15, 2),
+    cargo_type VARCHAR(50),
+    is_cross_border BOOLEAN DEFAULT false,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Purchases
+CREATE TABLE IF NOT EXISTS purchases (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    date DATE DEFAULT CURRENT_DATE,
+    vendor VARCHAR(200),
+    description TEXT,
+    amount DECIMAL(15, 2),
+    total_amount DECIMAL(15, 2),
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Expenses
 CREATE TABLE IF NOT EXISTS expenses (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
@@ -96,64 +171,146 @@ ALTER TABLE expenses ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 2);
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'General';
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vendor VARCHAR(200);
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50);
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS date DATE DEFAULT CURRENT_DATE;
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS is_cross_border BOOLEAN DEFAULT false;
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS border_point VARCHAR(100);
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
--- Fuel Tracking
-CREATE TABLE IF NOT EXISTS fuel_tracking (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS vehicle_id UUID REFERENCES vehicles(id);
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS fuel_type VARCHAR(50);
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS quantity DECIMAL(10, 2);
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS cost DECIMAL(15, 2);
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS station_name VARCHAR(100);
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
-ALTER TABLE fuel_tracking ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+-- Fuel Requests
+CREATE TABLE IF NOT EXISTS fuel_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vehicle_id UUID REFERENCES vehicles(id),
+    driver_id UUID REFERENCES user_profiles(id),
+    driver_name VARCHAR(200),
+    amount DECIMAL(15, 2),
+    fuel_type VARCHAR(50),
+    station_name VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Driver Allowances
-CREATE TABLE IF NOT EXISTS driver_allowances (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
-ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS driver_id UUID REFERENCES user_profiles(id);
-ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
-ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
-ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 2);
-ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS type VARCHAR(50);
-ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
-ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
-ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+CREATE TABLE IF NOT EXISTS allowances (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS driver_id UUID REFERENCES user_profiles(id);
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS worker_name VARCHAR(200);
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS role VARCHAR(50);
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 2);
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+ALTER TABLE allowances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
--- Currency Exchange Rates (For intentional conversions)
-CREATE TABLE IF NOT EXISTS currency_exchange_rates (
+-- Taxes
+CREATE TABLE IF NOT EXISTS taxes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    from_currency VARCHAR(3) NOT NULL,
-    to_currency VARCHAR(3) NOT NULL,
-    rate DECIMAL(15, 6) NOT NULL,
-    effective_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(from_currency, to_currency, effective_date)
+    tax_name VARCHAR(100),
+    type VARCHAR(50),
+    amount DECIMAL(15, 2),
+    due_date DATE,
+    period VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Maintenance Requests
 CREATE TABLE IF NOT EXISTS maintenance_requests (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS vehicle_id UUID REFERENCES vehicles(id);
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS estimated_cost DECIMAL(15, 2);
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS actual_cost DECIMAL(15, 2) DEFAULT 0;
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'PENDING';
+ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS reported_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Spare Parts
 CREATE TABLE IF NOT EXISTS spare_parts (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
 ALTER TABLE spare_parts ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE spare_parts ADD COLUMN IF NOT EXISTS category VARCHAR(50);
 ALTER TABLE spare_parts ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 0;
 ALTER TABLE spare_parts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE spare_parts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Parts Requests
+CREATE TABLE IF NOT EXISTS parts_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    part_id UUID REFERENCES spare_parts(id),
+    vehicle_id UUID REFERENCES vehicles(id),
+    quantity_requested INTEGER,
+    urgency VARCHAR(20),
+    reason TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Meetings
+CREATE TABLE IF NOT EXISTS meetings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(200),
+    description TEXT,
+    date TIMESTAMP WITH TIME ZONE,
+    participants JSONB, -- Array of participant names or IDs
+    created_by UUID REFERENCES user_profiles(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Performance Reviews
+CREATE TABLE IF NOT EXISTS performance_reviews (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID REFERENCES user_profiles(id),
+    rating INTEGER,
+    review_text TEXT,
+    goals TEXT,
+    review_date DATE,
+    created_by UUID REFERENCES user_profiles(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Insurance Policies
+CREATE TABLE IF NOT EXISTS insurance_policies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    policy_name VARCHAR(200),
+    policy_type VARCHAR(50),
+    insurance_company VARCHAR(200),
+    policy_number VARCHAR(100),
+    premium_amount DECIMAL(15, 2),
+    coverage_amount DECIMAL(15, 2),
+    start_date DATE,
+    end_date DATE,
+    renewal_date DATE,
+    vehicle_id UUID REFERENCES vehicles(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Reports
+CREATE TABLE IF NOT EXISTS reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(200),
+    type VARCHAR(50),
+    content TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS table_name VARCHAR(50);
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS action VARCHAR(20);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES user_profiles(id);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_name VARCHAR(200);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS change_summary TEXT;
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS details JSONB;
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- 2. DATA MIGRATIONS (Safe Dynamic SQL)
@@ -296,24 +453,95 @@ ON CONFLICT (code) DO UPDATE SET
     category = EXCLUDED.category,
     type = EXCLUDED.type;
 
--- 5. RLS POLICIES (Reset)
+-- 5. RLS POLICIES (Comprehensive)
 
+-- Enable RLS on all tables
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_statements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entry_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fuel_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE allowances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE taxes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE maintenance_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spare_parts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE parts_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE performance_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE insurance_policies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Admins have full access" ON user_profiles;
-DROP POLICY IF EXISTS "Users can view their own profile" ON user_profiles;
-DROP POLICY IF EXISTS "Authenticated users can view vehicles" ON vehicles;
-DROP POLICY IF EXISTS "Operations can manage vehicles" ON vehicles;
-DROP POLICY IF EXISTS "Authenticated users can view trips" ON trips;
-DROP POLICY IF EXISTS "Operations can manage trips" ON trips;
+-- DROP ALL EXISTING POLICIES FOR CLEAN RESET
+DO $$ 
+DECLARE 
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public') 
+    LOOP
+        EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(r.policyname) || ' ON ' || quote_ident(r.tablename);
+    END LOOP;
+END $$;
 
-CREATE POLICY "Admins have full access" ON user_profiles FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
-CREATE POLICY "Users can view their own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Authenticated users can view vehicles" ON vehicles FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY "Operations can manage vehicles" ON vehicles FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'HR'));
-CREATE POLICY "Authenticated users can view trips" ON trips FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY "Operations can manage trips" ON trips FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'SALESMAN', 'HR'));
+-- ADMIN BYPASS (CEO, ADMIN, HR have full access to everything)
+-- Note: In Supabase, you can't easily write one policy for all tables, so we define them per table.
+
+-- USER PROFILES
+CREATE POLICY "Admin full access" ON user_profiles FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
+CREATE POLICY "Users view own profile" ON user_profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users update own profile" ON user_profiles FOR UPDATE USING (auth.uid() = id);
+
+-- VEHICLES
+CREATE POLICY "Admin manage vehicles" ON vehicles FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'HR'));
+CREATE POLICY "Public view vehicles" ON vehicles FOR SELECT USING (true);
+
+-- TRIPS
+CREATE POLICY "Admin manage trips" ON trips FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'HR', 'SALESMAN'));
+CREATE POLICY "Public view trips" ON trips FOR SELECT USING (true);
+
+-- FINANCE (Expenses, Invoices, Bank, Accounts, Sales, Taxes)
+CREATE POLICY "Admin manage finance" ON expenses FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR', 'OPERATOR'));
+CREATE POLICY "Admin manage invoices" ON invoices FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage bank" ON bank_accounts FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage bank statements" ON bank_statements FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage coa" ON accounts FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage journal" ON journal_entries FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage journal lines" ON journal_entry_lines FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage sales" ON sales FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage purchases" ON purchases FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage taxes" ON taxes FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'ACCOUNTANT', 'HR'));
+
+-- OPERATIONS (Fuel, Allowances, Maintenance, Parts)
+CREATE POLICY "Admin manage fuel" ON fuel_requests FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'ACCOUNTANT'));
+CREATE POLICY "Admin manage allowances" ON allowances FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'ACCOUNTANT', 'HR'));
+CREATE POLICY "Admin manage maintenance" ON maintenance_requests FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'));
+CREATE POLICY "Admin manage spare parts" ON spare_parts FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'));
+CREATE POLICY "Admin manage parts requests" ON parts_requests FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'));
+
+-- HR & PERFORMANCE
+CREATE POLICY "Admin manage meetings" ON meetings FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
+CREATE POLICY "Admin manage performance" ON performance_reviews FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
+CREATE POLICY "Admin manage insurance" ON insurance_policies FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
+CREATE POLICY "Admin manage reports" ON reports FOR ALL USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR', 'ACCOUNTANT'));
+
+-- AUDIT LOGS
+CREATE POLICY "Admin view audit logs" ON audit_logs FOR SELECT USING (auth.jwt()->>'role' IN ('CEO', 'ADMIN', 'HR'));
+CREATE POLICY "System insert audit logs" ON audit_logs FOR INSERT WITH CHECK (true);
+
+-- 6. STORAGE SETUP (Avatars)
+
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Avatar Access" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+CREATE POLICY "User Upload Avatars" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+CREATE POLICY "User Update Avatars" ON storage.objects FOR UPDATE USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);

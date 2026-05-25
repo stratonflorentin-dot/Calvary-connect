@@ -5,10 +5,14 @@ import {
   ArrowDownLeft, RefreshCw, FileText, Receipt, BarChart3,
   BookOpen, AlertTriangle, CheckCircle2, ChevronRight,
   Wallet, Scale, Landmark, Truck, Pencil, Trash2, Save,
-  Loader2
+  Loader2, Menu, Bell, Settings
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { SupabaseService } from "@/services/supabase-service";
+import { Sidebar } from "@/components/navigation/sidebar";
+import { useRole } from "@/hooks/use-role";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 import { BankStatementImport } from "./bank-statement-import";
 
@@ -115,6 +119,7 @@ const accGrad = c => ({ USD:"from-indigo-600 to-blue-700", TZS:"from-emerald-600
 const tcol = { Asset:{bg:"bg-blue-50",border:"border-blue-200",text:"text-blue-700",dot:"#3b82f6",badge:"blue"}, Liability:{bg:"bg-red-50",border:"border-red-200",text:"text-red-700",dot:"#ef4444",badge:"red"}, Equity:{bg:"bg-purple-50",border:"border-purple-200",text:"text-purple-700",dot:"#8b5cf6",badge:"purple"}, Revenue:{bg:"bg-emerald-50",border:"border-emerald-200",text:"text-emerald-700",dot:"#10b981",badge:"green"}, Expense:{bg:"bg-amber-50",border:"border-amber-200",text:"text-amber-700",dot:"#f59e0b",badge:"amber"} };
 
 export default function CalvaryAccounting() {
+  const { role, isAdmin } = useRole();
   const [tab, setTab] = useState("overview");
   const [modal, setModal] = useState(null);
   const [accounts, setAccounts] = useState([]);
@@ -337,29 +342,40 @@ export default function CalvaryAccounting() {
     }
   };
   const addCOA = async () => {
-    if(!coaF.code||!coaF.name) return;
+    if(!coaF.code||!coaF.name) {
+      toast({ title: "Validation Error", description: "Account code and name are required.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      await supabase.from("accounts").insert({
+      const { error } = await supabase.from("accounts").insert({
         code: coaF.code,
         name: coaF.name,
         type: coaF.type,
         balance: parseFloat(coaF.balance) || 0,
         updated_at: new Date().toISOString()
       });
+      
+      if (error) throw error;
+      
+      toast({ title: "Account Added", description: `${coaF.name} has been added to Chart of Accounts.` });
       await fetchData();
       setModal(null); setCoaF(blankCoa);
     } catch (error) {
       console.error("Error adding COA:", error);
+      toast({ title: "Error", description: error.message || "Failed to add account to Chart of Accounts.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
   const addAccount = async () => {
-    if(!accF.name||!accF.account_number) return;
+    if(!accF.name||!accF.account_number) {
+      toast({ title: "Validation Error", description: "Account name and number are required.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      await supabase.from("bank_accounts").insert({
+      const { error } = await supabase.from("bank_accounts").insert({
         account_name: accF.name,
         currency: accF.currency,
         account_number: accF.account_number,
@@ -369,10 +385,15 @@ export default function CalvaryAccounting() {
         current_balance: parseFloat(accF.balance) || 0,
         is_active: true
       });
+
+      if (error) throw error;
+
+      toast({ title: "Bank Account Added", description: `${accF.name} has been successfully registered.` });
       await fetchData();
       setModal(null); setAccF(blankAcc);
     } catch (error) {
       console.error("Error adding account:", error);
+      toast({ title: "Error", description: error.message || "Failed to add bank account. Please check your connection.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -592,17 +613,24 @@ export default function CalvaryAccounting() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {confirm && <Confirm {...confirm} onCancel={()=>setConfirm(null)}/>}
+    <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+      {/* ── SIDEBAR ── */}
+      <Sidebar role={role || "ADMIN"} />
 
-      {loading && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-10 h-10 text-indigo-600 animate-spin"/>
-            <p className="text-sm font-bold text-slate-600">Synchronizing Ledger Data...</p>
+      {/* ── MAIN CONTENT ── */}
+      <main className="flex-1 md:ml-64 min-w-0">
+        {confirm && <Confirm {...confirm} onCancel={()=>setConfirm(null)}/>}
+
+        {loading && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-10 h-10 text-indigo-600 animate-spin"/>
+              <p className="text-sm font-bold text-slate-600">Synchronizing Ledger Data...</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ... existing modals ... */}
 
       {/* EXPENSE MODAL */}
       {modal==="expense" && (
@@ -798,7 +826,7 @@ export default function CalvaryAccounting() {
       })()}
 
       {/* PAGE SHELL */}
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-6 space-y-5">
 
         {showImport && (
           <div className="fixed inset-0 z-[110] bg-white overflow-y-auto">
@@ -1397,6 +1425,7 @@ export default function CalvaryAccounting() {
         )}
 
       </div>
-    </div>
+    </main>
+  </div>
   );
 }

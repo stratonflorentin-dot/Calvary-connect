@@ -47,10 +47,10 @@ export class SupabaseService {
   // Fleet Vehicle Management
   static async getDrivers() {
     const { data, error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('*')
       .ilike('role', 'driver')
-      .order('first_name', { ascending: true });
+      .order('name', { ascending: true });
     if (error) throw error;
     return data || [];
   }
@@ -871,7 +871,7 @@ export class SupabaseService {
     const { data, error } = await supabase
       .from('insurance_policies')
       .select('*')
-      .order('expiry_date', { ascending: true });
+      .order('renewal_date', { ascending: true });
     if (error) throw error;
     return data || [];
   }
