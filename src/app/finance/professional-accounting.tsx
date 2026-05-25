@@ -130,6 +130,7 @@ export default function CalvaryAccounting() {
   const [coa, setCoa]           = useState([]);
   const [journal, setJournal]   = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [cashHoldings, setCashHoldings] = useState<Record<string, number>>({});
 
   const fetchData = async () => {
     setLoading(true);
@@ -144,7 +145,7 @@ export default function CalvaryAccounting() {
         supabase.from("journal_entries").select("*, lines:journal_entry_lines(*)").order("entry_date", { ascending: false })
       ]);
 
-      setAccounts(accs.data?.map(a => ({
+      const accountsData = accs.data?.map(a => ({
         ...a,
         name: a.account_name,
         bank: a.bank_name,
@@ -152,13 +153,24 @@ export default function CalvaryAccounting() {
         balance: a.current_balance,
         swift: a.swift_code,
         branch: a.branch_name
-      })) || []);
+      })) || [];
+
+      setAccounts(accountsData);
       setExpenses(exps || []);
       setRevenue(revs?.map(r => ({ ...r, amount: r.total_amount || r.amount })) || []);
       setInvoices(invs || []);
       setTaxes(txs || []);
       setCoa(coas.data || []);
       setJournal(jrnls.data || []);
+
+      // Aggregate cash holdings by native currency
+      const holdings: Record<string, number> = {};
+      accountsData.forEach(acc => {
+        const cur = acc.currency || "TZS";
+        holdings[cur] = (holdings[cur] || 0) + (parseFloat(acc.balance) || 0);
+      });
+      setCashHoldings(holdings);
+
     } catch (error) {
       console.error("Data fetch error:", error);
     } finally {
@@ -454,13 +466,19 @@ export default function CalvaryAccounting() {
     }
   };
   const markPaid = async id => {
+    if (!selAcc) {
+      toast({ title: "Account Required", description: "Please select a bank account to process the payment.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      await SupabaseService.updateInvoice(id, { status: "paid" });
+      await SupabaseService.markInvoicePaid(id, selAcc);
       await fetchData();
       setSelectedInvoice(p => p ? { ...p, status: "paid" } : null);
+      toast({ title: "Payment Recorded", description: "Invoice marked as paid and bank balance updated." });
     } catch (error) {
       console.error("Error marking paid:", error);
+      toast({ title: "Error", description: "Failed to process payment. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -872,13 +890,36 @@ export default function CalvaryAccounting() {
         {tab==="overview"&&(
           <div className="space-y-5">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[{label:"Total Revenue",value:fmtTZS(totalRev),sub:`${revenue.length} trips`,grad:"from-emerald-500 to-teal-600",icon:TrendingUp},{label:"Total Expenses",value:fmtTZS(totalExp),sub:`${expenses.length} entries`,grad:"from-rose-500 to-red-600",icon:TrendingDown},{label:"Net Profit",value:fmtTZS(netProfit),sub:`${totalRev>0?((netProfit/totalRev)*100).toFixed(1):0}% margin`,grad:netProfit>=0?"from-indigo-500 to-blue-600":"from-red-600 to-rose-700",icon:DollarSign},{label:"Total Cash",value:fmtTZS(totalCashTZS),sub:`${accounts.length} accounts combined`,grad:"from-amber-500 to-orange-600",icon:Wallet}].map(s=>(
+              {[{label:"Total Revenue",value:fmtTZS(totalRev),sub:`${revenue.length} trips`,grad:"from-emerald-500 to-teal-600",icon:TrendingUp},{label:"Total Expenses",value:fmtTZS(totalExp),sub:`${expenses.length} entries`,grad:"from-rose-500 to-red-600",icon:TrendingDown},{label:"Net Profit",value:fmtTZS(netProfit),sub:`${totalRev>0?((netProfit/totalRev)*100).toFixed(1):0}% margin`,grad:netProfit>=0?"from-indigo-500 to-blue-600":"from-red-600 to-rose-700",icon:DollarSign}].map(s=>(
                 <div key={s.label} className={`bg-gradient-to-br ${s.grad} rounded-2xl p-5 text-white`}>
                   <div className="flex items-center justify-between mb-3"><p className="text-white/70 text-xs font-semibold uppercase tracking-wide">{s.label}</p><s.icon className="w-5 h-5 text-white/30"/></div>
                   <p className="text-2xl font-bold">{s.value}</p>
                   <p className="text-white/60 text-xs mt-1">{s.sub}</p>
                 </div>
               ))}
+              
+              {/* Multi-Currency Cash Holdings Card */}
+              <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-white/70 text-xs font-semibold uppercase tracking-wide">Total Cash</p>
+                  <Wallet className="w-5 h-5 text-white/30"/>
+                </div>
+                <div className="space-y-1.5 max-h-[80px] overflow-y-auto scrollbar-hide">
+                  {Object.entries(cashHoldings).length > 0 ? (
+                    Object.entries(cashHoldings).map(([cur, amount]) => (
+                      <div key={cur} className="flex justify-between items-baseline border-b border-white/10 last:border-0 pb-0.5">
+                        <span className="text-xs font-bold text-white/60">{cur}</span>
+                        <span className="text-sm font-bold">{fmtCur(amount, cur)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-lg font-bold">TZS 0</p>
+                  )}
+                </div>
+                <p className="text-white/60 text-[10px] mt-2 border-t border-white/10 pt-1">
+                  Combined ≈ {fmtTZS(totalCashTZS)}
+                </p>
+              </div>
             </div>
 
             {/* Both accounts side by side */}
@@ -982,11 +1023,30 @@ export default function CalvaryAccounting() {
               <div><h2 className="text-xl font-bold text-slate-900">Bank Accounts</h2><p className="text-sm text-slate-500">Create, edit or delete any account · hover cards for actions</p></div>
               <Btn label="Add Account" onClick={()=>setModal("addAccount")} icon={Plus}/>
             </div>
-            <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-6 text-white">
-              <p className="text-white/70 text-sm mb-1">Total Cash Position (TZS equivalent)</p>
-              <p className="text-4xl font-bold">{fmtTZS(totalCashTZS)}</p>
-              <p className="text-white/60 text-xs mt-2">{accounts.length} account{accounts.length!==1?"s":""} · USD={RATES.USD.toLocaleString()}, KES={RATES.KES}, ZMW={RATES.ZMW}, UGX={RATES.UGX}</p>
+            
+            {/* Multi-Currency Cash Position Banner */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <p className="text-white/70 text-sm mb-1 uppercase tracking-wider font-semibold">Total Cash Position (TZS equivalent)</p>
+                  <p className="text-5xl font-extrabold">{fmtTZS(totalCashTZS)}</p>
+                  <p className="text-white/60 text-xs mt-3">{accounts.length} account{accounts.length!==1?"s":""} · USD={RATES.USD.toLocaleString()}, KES={RATES.KES}, ZMW={RATES.ZMW}, UGX={RATES.UGX}</p>
+                </div>
+                
+                <div className="flex-1 max-w-md bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
+                  <p className="text-[10px] font-bold text-white/50 uppercase mb-2">Native Currency Breakdown</p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                    {Object.entries(cashHoldings).map(([cur, amount]) => (
+                      <div key={cur} className="flex justify-between items-baseline border-b border-white/10 pb-1">
+                        <span className="text-xs font-bold text-white/70">{cur}</span>
+                        <span className="text-sm font-bold">{fmtCur(amount, cur)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {accounts.map(acc=>{
                 const cr=acc.transactions.filter(t=>t.type==="credit").reduce((s,t)=>s+t.amount,0);

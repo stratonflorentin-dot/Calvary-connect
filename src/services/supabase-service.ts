@@ -19,6 +19,40 @@ async function getCurrentUser() {
     name: profile?.name || user.email || 'Unknown',
     role: profile?.role || 'USER'
   };
+  static async markInvoicePaid(id: string, accountId: string) {
+    const user = await getCurrentUser();
+    const { data: invoice, error: invError } = await supabase.from('invoices').select('*').eq('id', id).single();
+    if (invError) throw invError;
+
+    const { error: updateError } = await supabase.from('invoices').update({ status: 'paid' }).eq('id', id);
+    if (updateError) throw updateError;
+
+    // Record the bank transaction
+    const { error: txError } = await supabase.from('bank_statements').insert({
+      account_id: accountId,
+      date: new Date().toISOString().split('T')[0],
+      description: `Payment for Invoice ${invoice.invoice_number}`,
+      amount: invoice.amount,
+      type: invoice.type === 'receivable' ? 'credit' : 'debit',
+      ref: invoice.invoice_number
+    });
+    if (txError) throw txError;
+
+    // Update bank balance
+    const { data: account } = await supabase.from('bank_accounts').select('current_balance').eq('id', accountId).single();
+    if (account) {
+      const newBalance = invoice.type === 'receivable' 
+        ? parseFloat(account.current_balance) + parseFloat(invoice.amount)
+        : parseFloat(account.current_balance) - parseFloat(invoice.amount);
+      
+      await supabase.from('bank_accounts').update({ current_balance: newBalance }).eq('id', accountId);
+    }
+
+    if (user && SyncManager.isOnline()) {
+      await AuditService.logCRUD(user, 'UPDATE', 'invoices', id, invoice, { ...invoice, status: 'paid' },
+        `Marked invoice ${invoice.invoice_number} as paid and updated bank account ${accountId}`);
+    }
+  }
 }
 
 export class SupabaseService {
@@ -148,6 +182,30 @@ export class SupabaseService {
     
     if (error) throw error;
     
+    // Automatically create a Sale and Invoice when a trip is created
+    try {
+      const sale = await this.createSale({
+        client: trip.client_name || 'Trip Customer',
+        description: `Revenue for Trip ${data.trip_number || data.id}`,
+        total_amount: trip.revenue || trip.price || 0,
+        date: new Date().toISOString().split('T')[0],
+        status: 'pending'
+      });
+
+      await this.createInvoice({
+        invoice_number: `INV-${Date.now()}`,
+        customer_name: trip.client_name || 'Trip Customer',
+        amount: trip.revenue || trip.price || 0,
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'pending',
+        type: 'receivable',
+        trip_id: data.id,
+        linked_revenue: sale.id
+      });
+    } catch (e) {
+      console.error("Failed to auto-create financial records for trip:", e);
+    }
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'trips', data.id, null, data,
         `Created trip for ${trip.vehicle_id || trip.driver_id}`);
@@ -206,6 +264,22 @@ export class SupabaseService {
     
     if (error) throw error;
     
+    // Automatically create a Payable Invoice when an expense is created
+    try {
+      await this.createInvoice({
+        invoice_number: `BILL-${Date.now()}`,
+        customer_name: expense.vendor || 'Expense Vendor',
+        amount: expense.amount,
+        due_date: expense.date || new Date().toISOString().split('T')[0],
+        status: 'pending',
+        type: 'payable',
+        linked_expense: data.id,
+        trip_id: expense.trip_id
+      });
+    } catch (e) {
+      console.error("Failed to auto-create invoice for expense:", e);
+    }
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'expenses', data.id, null, data,
         `Created expense: ${expense.category} - ${expense.amount}`);
@@ -376,6 +450,22 @@ export class SupabaseService {
       created_at: new Date().toISOString()
     });
     
+    // Automatically create a Payable Invoice for worker allowance
+    try {
+      await this.createInvoice({
+        invoice_number: `ALW-${Date.now()}`,
+        customer_name: allowance.workerName,
+        amount: allowance.amount,
+        due_date: new Date().toISOString().split('T')[0],
+        status: 'pending',
+        type: 'payable',
+        trip_id: allowance.trip_id,
+        description: `Allowance: ${allowance.type} for ${allowance.workerName}`
+      });
+    } catch (e) {
+      console.error("Failed to auto-create invoice for allowance:", e);
+    }
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'allowances', data.id, null, data,
         `Created allowance for ${allowance.workerName} - ${allowance.amount}`);

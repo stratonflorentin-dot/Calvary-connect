@@ -33,6 +33,8 @@ interface DashboardMetrics {
   pendingInvoices: number;
   paidInvoices: number;
   outstandingAmount: number;
+  cashHoldings: Record<string, number>;
+  totalCashTZS: number;
 }
 
 interface MonthlyData {
@@ -60,15 +62,29 @@ export function ProfessionalCEODashboard() {
         { data: drivers },
         { data: expenses },
         { data: invoices },
-        { data: fuelRecords }
+        { data: fuelRecords },
+        { data: bankAccounts }
       ] = await Promise.all([
         supabase.from('trips').select('*'),
-        supabase.from('fleet_vehicles').select('*'),
-        supabase.from('drivers').select('*'),
+        supabase.from('vehicles').select('*'),
+        supabase.from('user_profiles').select('*').eq('role', 'driver'),
         supabase.from('expenses').select('*'),
         supabase.from('invoices').select('*'),
-        supabase.from('fuel_records').select('*'),
+        supabase.from('fuel_requests').select('*'),
+        supabase.from('bank_accounts').select('*')
       ]);
+
+      const RATES: Record<string, number> = { TZS: 1, USD: 2600, KES: 20, ZMW: 140, UGX: 0.71 };
+
+      // Calculate cash holdings
+      const holdings: Record<string, number> = {};
+      let totalCashTZS = 0;
+      bankAccounts?.forEach(acc => {
+        const cur = acc.currency || "TZS";
+        const bal = parseFloat(acc.current_balance) || 0;
+        holdings[cur] = (holdings[cur] || 0) + bal;
+        totalCashTZS += bal * (RATES[cur] || 1);
+      });
 
       // Get all unique years from data for historical view
       const allDates = [
@@ -134,16 +150,18 @@ export function ProfessionalCEODashboard() {
         completedTrips: trips?.filter(t => t.status === 'COMPLETED').length || 0,
         activeTrips: trips?.filter(t => t.status === 'ACTIVE' || t.status === 'IN_PROGRESS').length || 0,
         totalVehicles: vehicles?.length || 0,
-        availableVehicles: vehicles?.filter(v => v.status === 'AVAILABLE').length || 0,
-        inUseVehicles: vehicles?.filter(v => v.status === 'IN_USE').length || 0,
-        maintenanceVehicles: vehicles?.filter(v => v.status === 'MAINTENANCE').length || 0,
+        availableVehicles: vehicles?.filter(v => v.status === 'AVAILABLE' || v.status === 'available').length || 0,
+        inUseVehicles: vehicles?.filter(v => v.status === 'IN_USE' || v.status === 'in_progress').length || 0,
+        maintenanceVehicles: vehicles?.filter(v => v.status === 'MAINTENANCE' || v.status === 'maintenance').length || 0,
         totalDrivers: drivers?.length || 0,
         activeDrivers: drivers?.filter(d => d.status === 'active').length || 0,
         totalFuelCost,
         totalFuelLiters,
         pendingInvoices: invoices?.filter(i => i.status !== 'paid').length || 0,
         paidInvoices: invoices?.filter(i => i.status === 'paid').length || 0,
-        outstandingAmount
+        outstandingAmount,
+        cashHoldings: holdings,
+        totalCashTZS
       });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -179,12 +197,83 @@ export function ProfessionalCEODashboard() {
     return new Intl.NumberFormat('en-TZ').format(value);
   };
 
+  const formatCur = (n: number, cur = "TZS") => {
+    if (cur === "USD") return "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (cur === "KES") return "KES " + Math.round(n || 0).toLocaleString();
+    if (cur === "ZMW") return "ZMW " + Math.round(n || 0).toLocaleString();
+    if (cur === "UGX") return "UGX " + Math.round(n || 0).toLocaleString();
+    return formatCurrency(n);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Executive Dashboard</h1>
-        <p className="text-muted-foreground">Real-time fleet operations overview</p>
+        <p className="text-muted-foreground">Real-time financial & fleet operations overview</p>
+      </div>
+
+      {/* Financial Health Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-white/70 uppercase tracking-wider">Total Cash Position</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{formatCurrency(metrics.totalCashTZS)}</div>
+            <div className="mt-4 grid grid-cols-2 gap-2 max-h-[100px] overflow-y-auto scrollbar-hide pr-2">
+              {Object.entries(metrics.cashHoldings).map(([cur, amount]) => (
+                <div key={cur} className="flex justify-between items-baseline border-b border-white/10 pb-1">
+                  <span className="text-[10px] font-bold text-white/60">{cur}</span>
+                  <span className="text-xs font-bold">{formatCur(amount, cur)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-none shadow-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-white/70 uppercase tracking-wider">Operational Profitability</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-end">
+              <div>
+                <p className="text-xs text-white/60 mb-1">Net Profit</p>
+                <p className="text-3xl font-bold">{formatCurrency(metrics.netProfit)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-white/60 mb-1">Margin</p>
+                <p className="text-xl font-bold">{metrics.totalRevenue > 0 ? ((metrics.netProfit / metrics.totalRevenue) * 100).toFixed(1) : 0}%</p>
+              </div>
+            </div>
+            <div className="w-full bg-white/20 rounded-full h-1.5 mt-2">
+              <div 
+                className="bg-white h-1.5 rounded-full transition-all duration-500" 
+                style={{ width: `${Math.min(100, Math.max(0, metrics.totalRevenue > 0 ? (metrics.netProfit / metrics.totalRevenue) * 100 : 0))}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white border-none shadow-lg">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-white/70 uppercase tracking-wider">Receivables & Liquidity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-end">
+              <div>
+                <p className="text-xs text-white/60 mb-1">Outstanding</p>
+                <p className="text-3xl font-bold">{formatCurrency(metrics.outstandingAmount)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-white/60 mb-1">Pending</p>
+                <p className="text-xl font-bold">{metrics.pendingInvoices}</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-white/70 italic">* Represents future cash inflow upon collection</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* KPI Cards */}
