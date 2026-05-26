@@ -327,16 +327,16 @@ export function StatCards() {
         <div
           key={index}
           className={cn(
-            "rounded-xl border bg-white p-3 sm:p-4 shadow-sm hover:shadow-md transition-all",
-            stat.trend === "alert" && "border-orange-200 bg-orange-50/30",
+            "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all text-slate-900 dark:text-slate-50 flex flex-col justify-between h-full min-h-[110px]",
+            stat.trend === "alert" && "border-orange-200 dark:border-orange-900 bg-orange-50/30 dark:bg-orange-950/20",
           )}
         >
           <div className="flex items-center justify-between gap-2">
-            <div className={cn("p-2 rounded-lg", stat.bgColor)}>
-              <stat.icon className={cn("size-4 sm:size-5", stat.color)} />
+            <div className={cn("p-2 rounded-lg shrink-0", stat.bgColor, stat.bgColor.includes("bg-") && `dark:${stat.bgColor.replace("100", "950/40").replace("50", "950/20")}`)}>
+              <stat.icon className={cn("size-4 sm:size-5", stat.color, stat.color.includes("text-") && `dark:${stat.color.replace("600", "400").replace("700", "400")}`)} />
             </div>
             {stat.trend && (
-              <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 {stat.trend === "up" && "↑"}
                 {stat.trend === "down" && "↓"}
                 {stat.trend === "alert" && "⚠"}
@@ -344,10 +344,10 @@ export function StatCards() {
             )}
           </div>
           <div className="mt-2">
-            <p className="text-sm sm:text-base font-bold text-gray-900">
+            <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-50 truncate tracking-tight">
               {stat.value}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider truncate mt-0.5">
               {stat.title}
             </p>
           </div>

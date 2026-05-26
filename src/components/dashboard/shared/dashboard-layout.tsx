@@ -218,29 +218,31 @@ export function StatCard({
         stiffness: 260,
         damping: 18
       }}
-      className="rounded-2xl border bg-white p-4 shadow-sm cursor-pointer transition-shadow"
+      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm cursor-pointer transition-colors text-slate-900 dark:text-slate-50 flex flex-col justify-between h-full min-h-[120px]"
     >
       <div className="flex items-center justify-between mb-2">
-        <div className={cn("p-2 rounded-lg", bgColor)}>
-          <Icon className={cn("size-5", color)} />
+        <div className={cn("p-2 rounded-lg shrink-0", bgColor, bgColor.includes("bg-") && `dark:${bgColor.replace("100", "950/40").replace("50", "950/20")}`)}>
+          <Icon className={cn("size-5", color, color.includes("text-") && `dark:${color.replace("600", "400").replace("700", "400")}`)} />
         </div>
         {trend !== undefined && (
           <span
             className={cn(
-              "text-xs font-medium px-2 py-0.5 rounded-full",
+              "text-xs font-semibold px-2 py-0.5 rounded-full shrink-0",
               trend >= 0
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700",
+                ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400",
             )}
           >
             {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}%
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1">
-        {title}
-      </p>
+      <div>
+        <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-50 truncate tracking-tight">{value}</p>
+        <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-extrabold mt-1 truncate">
+          {title}
+        </p>
+      </div>
     </motion.div>
   );
 
