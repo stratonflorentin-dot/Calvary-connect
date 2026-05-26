@@ -6,6 +6,7 @@ import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrappe
 import { PWAProvider } from '@/components/pwa/pwa-provider';
 import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
 import { DriverSilentTrackingRoot } from '@/components/tracking/driver-silent-tracking-root';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -70,15 +71,22 @@ export default function RootLayout({
         <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
-        <PWAProvider>
-          <SupabaseProvider>
-            <DriverSilentTrackingRoot />
-            {children}
-            <Toaster />
-            <RoleSelectorWrapper />
-            <PWAInstallPrompt />
-          </SupabaseProvider>
-        </PWAProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <PWAProvider>
+            <SupabaseProvider>
+              <DriverSilentTrackingRoot />
+              {children}
+              <Toaster />
+              <RoleSelectorWrapper />
+              <PWAInstallPrompt />
+            </SupabaseProvider>
+          </PWAProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
