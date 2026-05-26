@@ -140,13 +140,13 @@ export function Sidebar({ role }:{ role:UserRole }){
     <>
       <button onClick={()=>setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden fixed top-4 left-4 z-[60] p-2 rounded-lg bg-sidebar text-white shadow-lg"><Menu className="size-5"/></button>
       {mobileMenuOpen&&<div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={()=>setMobileMenuOpen(false)}/>}
-      <aside className={`flex flex-col w-64 fixed inset-y-0 bg-white text-slate-800 border-r border-gray-200 z-50 transition-transform duration-300 md:translate-x-0 ${mobileMenuOpen?'translate-x-0':'-translate-x-full'}`}>
+      <aside className={`flex flex-col w-64 fixed inset-y-0 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 border-r border-gray-200 dark:border-slate-800 z-50 transition-all duration-300 md:translate-x-0 ${mobileMenuOpen?'translate-x-0':'-translate-x-full'}`}>
         <div className="p-8 pb-4">
-          <h1 className="font-headline text-2xl font-extrabold tracking-tighter text-[#0369A1] uppercase flex items-center gap-2">
-            <div className="bg-[#0369A1] text-white p-1 rounded-md"><Zap className="size-5" /></div>
-            LogiPRO
+          <h1 className="font-headline text-2xl font-extrabold tracking-tighter text-[#0369A1] dark:text-blue-400 uppercase flex items-center gap-2">
+            <div className="bg-[#0369A1] dark:bg-blue-600 text-white p-1 rounded-md"><Zap className="size-5" /></div>
+            Calvary
           </h1>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold mt-1">Admin Panel</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 font-bold mt-1">Connect Panel</p>
         </div>
 
         <nav className="flex-1 px-4 space-y-8 overflow-y-auto no-scrollbar pb-10">
@@ -159,8 +159,8 @@ export function Sidebar({ role }:{ role:UserRole }){
                 <div className="space-y-1">
                   {items.map(item=>(
                     <div key={item.path} className="relative group/nav">
-                      <Link href={item.path} className={cn("flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl text-sm font-medium transition-all group",pathname===item.path?"bg-[#e0f2fe] text-[#0369A1] shadow-sm":"text-slate-600 hover:text-[#0369A1] hover:bg-slate-50")}>
-                        {(() => { const Icon = routeIconMap[item.path] || LayoutDashboard; return <Icon className={cn("size-5",pathname===item.path?"text-[#0369A1]":"text-slate-400 group-hover:text-[#0369A1]")}/>; })()}
+                      <Link href={item.path} className={cn("flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl text-sm font-medium transition-all group",pathname===item.path?"bg-[#e0f2fe] dark:bg-blue-950/40 text-[#0369A1] dark:text-blue-400 shadow-sm":"text-slate-600 dark:text-slate-400 hover:text-[#0369A1] dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900/50")}>
+                        {(() => { const Icon = routeIconMap[item.path] || LayoutDashboard; return <Icon className={cn("size-5",pathname===item.path?"text-[#0369A1] dark:text-blue-400":"text-slate-400 dark:text-slate-500 group-hover:text-[#0369A1] dark:group-hover:text-blue-400")}/>; })()}
                         <span>{item.label}</span>
                       </Link>
                       
@@ -182,16 +182,16 @@ export function Sidebar({ role }:{ role:UserRole }){
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-200 bg-gray-50 backdrop-blur-md">
-          <div className="px-4 py-3 flex items-center gap-3 bg-white rounded-2xl mb-4 group relative border border-gray-200 shadow-sm">
-            <Avatar className="size-10 border border-gray-200"><AvatarImage src={user?.avatar}/><AvatarFallback className="bg-[#0369A1] text-white">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+        <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 backdrop-blur-md">
+          <div className="px-4 py-3 flex items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl mb-4 group relative border border-gray-200 dark:border-slate-800 shadow-sm transition-colors">
+            <Avatar className="size-10 border border-gray-200 dark:border-slate-800"><AvatarImage src={user?.avatar}/><AvatarFallback className="bg-[#0369A1] dark:bg-blue-600 text-white">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-800 truncate">{user?.name||"Super Admin"}</p>
-              <p className="text-[10px] text-[#0369A1] font-bold uppercase tracking-wider">{effectiveRole}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{user?.name||"Super Admin"}</p>
+              <p className="text-[10px] text-[#0369A1] dark:text-blue-400 font-bold uppercase tracking-wider">{effectiveRole}</p>
             </div>
-            <label className="absolute -top-1 -right-1 size-6 bg-[#0369A1] text-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-white"><Camera className="size-3"/><input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading}/></label>
+            <label className="absolute -top-1 -right-1 size-6 bg-[#0369A1] dark:bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-white dark:border-slate-800"><Camera className="size-3"/><input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading}/></label>
           </div>
-          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all group" onClick={signOut}><LogOut className="size-5 group-hover:rotate-12 transition-transform"/><span>{t.logout}</span></button>
+          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400 transition-all group" onClick={signOut}><LogOut className="size-5 group-hover:rotate-12 transition-transform"/><span>{t.logout}</span></button>
         </div>
       </aside>
     </>
