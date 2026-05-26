@@ -114,96 +114,33 @@ export function useCurrency() {
     }
   }, []);
 
+  const toggleCurrency = useCallback(() => {
+    setBaseCurrency(prev => {
+      const next = prev === "USD" ? "TZS" : "USD";
+      localStorage.setItem("fleet_currency", next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("fleet_currency") as Currency;
+    if (saved) setBaseCurrency(saved);
+  }, []);
+
+  const exchangeRate = (rates["TZS"] || 1) / (rates["USD"] || (1 / FALLBACK_RATES["USD"]));
+
   return {
     rates,
     convert,
     format,
     loading,
+    isLoading: loading,
     currency: baseCurrency,
     setCurrency: setBaseCurrency,
+    toggleCurrency,
+    exchangeRate,
+    refreshRate: fetchRates,
     availableCurrencies: Object.keys(FALLBACK_RATES) as Currency[]
   };
 }
-      console.log(`API ${api.url} failed, trying next...`);
-      continue;
-    }
-  }
 
-  console.warn("All exchange rate APIs failed, using fallback rate");
-  return null;
-}
-
-export function useCurrency() {
-  const [currency, setCurrency] = useState<Currency>("USD");
-  const [exchangeRate, setExchangeRate] = useState(FALLBACK_RATE);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load cached rate immediately on mount
-  useEffect(() => {
-    const cachedRate = localStorage.getItem(CACHE_KEY);
-    if (cachedRate) {
-      setExchangeRate(parseFloat(cachedRate));
-    }
-    setIsLoading(false);
-  }, []);
-
-  // Fetch exchange rate (only once across all component instances)
-  useEffect(() => {
-    let isMounted = true;
-
-    const updateRate = async () => {
-      const rate = await fetchExchangeRateWithCache();
-      if (isMounted) {
-        setExchangeRate(rate);
-      }
-    };
-
-    // Small delay to let cache load first
-    const timer = setTimeout(updateRate, 100);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, []);
-
-  // Manual refresh function
-  const refreshRate = async () => {
-    localStorage.removeItem(CACHE_KEY);
-    localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-    const rate = await fetchExchangeRateWithCache();
-    setExchangeRate(rate);
-  };
-
-  useEffect(() => {
-    const saved = localStorage.getItem("fleet_currency") as Currency;
-    if (saved) setCurrency(saved);
-  }, []);
-
-  const toggleCurrency = () => {
-    const next = currency === "USD" ? "TZS" : "USD";
-    setCurrency(next);
-    localStorage.setItem("fleet_currency", next);
-  };
-
-  const format = (amount: number) => {
-    if (currency === "TZS") {
-      const converted = amount * exchangeRate;
-      return `Tsh ${converted.toLocaleString("en-TZ", { maximumFractionDigits: 0 })}`;
-    }
-
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  };
-
-  return {
-    currency,
-    toggleCurrency,
-    format,
-    exchangeRate,
-    refreshRate,
-    isLoading,
-  };
-}
