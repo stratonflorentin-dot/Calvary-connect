@@ -31,6 +31,7 @@ import {
   Anchor,
   Menu,
   X,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
@@ -70,12 +71,15 @@ const routeIconMap:Record<string,any>={
 };
 
 const CATEGORY_LABELS:Record<string,string>={
-  dashboard:"Overview",
-  logistics:"Logistics & Dispatch",
-  fleet:"Fleet & Assets",
-  finance:"Financial Operations",
-  people:"Human Resources",
-  system:"Administration"
+  dashboard:"Dashboard",
+  sales:"Sales",
+  logistics:"Shipments",
+  fleet:"Fleet",
+  inventory:"Inventory",
+  finance:"Accounting",
+  reports:"Reports",
+  people:"HR",
+  system:"Settings"
 };
 
 export function Sidebar({ role }:{ role:UserRole }){
@@ -136,10 +140,13 @@ export function Sidebar({ role }:{ role:UserRole }){
     <>
       <button onClick={()=>setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden fixed top-4 left-4 z-[60] p-2 rounded-lg bg-sidebar text-white shadow-lg"><Menu className="size-5"/></button>
       {mobileMenuOpen&&<div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={()=>setMobileMenuOpen(false)}/>}
-      <aside className={`flex flex-col w-64 fixed inset-y-0 bg-[#1a1a2e] text-white border-r border-white/5 z-50 transition-transform duration-300 md:translate-x-0 ${mobileMenuOpen?'translate-x-0':'-translate-x-full'}`}>
-        <div className="p-8">
-          <h1 className="font-headline text-2xl font-extrabold tracking-tighter text-white uppercase">Calvary</h1>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-400 font-bold">Connect Fleet</p>
+      <aside className={`flex flex-col w-64 fixed inset-y-0 bg-white text-slate-800 border-r border-gray-200 z-50 transition-transform duration-300 md:translate-x-0 ${mobileMenuOpen?'translate-x-0':'-translate-x-full'}`}>
+        <div className="p-8 pb-4">
+          <h1 className="font-headline text-2xl font-extrabold tracking-tighter text-[#0369A1] uppercase flex items-center gap-2">
+            <div className="bg-[#0369A1] text-white p-1 rounded-md"><Zap className="size-5" /></div>
+            LogiPRO
+          </h1>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold mt-1">Admin Panel</p>
         </div>
 
         <nav className="flex-1 px-4 space-y-8 overflow-y-auto no-scrollbar pb-10">
@@ -148,12 +155,12 @@ export function Sidebar({ role }:{ role:UserRole }){
             if(!items||items.length===0) return null;
             return (
               <div key={key} className="space-y-2">
-                <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-4">{label}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold px-4">{label}</p>
                 <div className="space-y-1">
                   {items.map(item=>(
                     <div key={item.path} className="relative group/nav">
-                      <Link href={item.path} className={cn("flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all group",pathname===item.path?"bg-[#2952A3] text-white shadow-lg shadow-blue-900/20":"text-white/50 hover:text-white hover:bg-white/5")}>
-                        {(() => { const Icon = routeIconMap[item.path] || LayoutDashboard; return <Icon className={cn("size-5",pathname===item.path?"text-cyan-400":"text-white/30 group-hover:text-cyan-400")}/>; })()}
+                      <Link href={item.path} className={cn("flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl text-sm font-medium transition-all group",pathname===item.path?"bg-[#e0f2fe] text-[#0369A1] shadow-sm":"text-slate-600 hover:text-[#0369A1] hover:bg-slate-50")}>
+                        {(() => { const Icon = routeIconMap[item.path] || LayoutDashboard; return <Icon className={cn("size-5",pathname===item.path?"text-[#0369A1]":"text-slate-400 group-hover:text-[#0369A1]")}/>; })()}
                         <span>{item.label}</span>
                       </Link>
                       
@@ -161,7 +168,7 @@ export function Sidebar({ role }:{ role:UserRole }){
                       {(item.path === "/finance" || item.path === "/finance/professional-accounting") && (
                         <Link 
                           href="/" 
-                          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/nav:opacity-100 transition-all p-1.5 hover:bg-white/10 rounded-lg text-cyan-400 hover:text-cyan-300"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover/nav:opacity-100 transition-all p-1.5 hover:bg-slate-200 rounded-lg text-[#0369A1] hover:text-[#0284c7]"
                           title="Quick Return to Dashboard"
                         >
                           <LayoutDashboard className="size-4" />
@@ -175,16 +182,16 @@ export function Sidebar({ role }:{ role:UserRole }){
           })}
         </nav>
 
-        <div className="p-4 border-t border-white/5 bg-white/5 backdrop-blur-md">
-          <div className="px-4 py-3 flex items-center gap-3 bg-white/5 rounded-2xl mb-4 group relative border border-white/5">
-            <Avatar className="size-10 border border-white/10 ring-2 ring-cyan-400/20"><AvatarImage src={user?.avatar}/><AvatarFallback className="bg-[#2952A3] text-white">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+        <div className="p-4 border-t border-gray-200 bg-gray-50 backdrop-blur-md">
+          <div className="px-4 py-3 flex items-center gap-3 bg-white rounded-2xl mb-4 group relative border border-gray-200 shadow-sm">
+            <Avatar className="size-10 border border-gray-200"><AvatarImage src={user?.avatar}/><AvatarFallback className="bg-[#0369A1] text-white">{user?.name?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white truncate">{user?.name||"Staff Member"}</p>
-              <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">{effectiveRole}</p>
+              <p className="text-sm font-bold text-slate-800 truncate">{user?.name||"Super Admin"}</p>
+              <p className="text-[10px] text-[#0369A1] font-bold uppercase tracking-wider">{effectiveRole}</p>
             </div>
-            <label className="absolute -top-1 -right-1 size-6 bg-cyan-500 text-[#1a1a2e] rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-lg border-2 border-[#1a1a2e]"><Camera className="size-3"/><input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading}/></label>
+            <label className="absolute -top-1 -right-1 size-6 bg-[#0369A1] text-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-white"><Camera className="size-3"/><input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading}/></label>
           </div>
-          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-all group" onClick={signOut}><LogOut className="size-5 group-hover:rotate-12 transition-transform"/><span>{t.logout}</span></button>
+          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all group" onClick={signOut}><LogOut className="size-5 group-hover:rotate-12 transition-transform"/><span>{t.logout}</span></button>
         </div>
       </aside>
     </>

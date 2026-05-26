@@ -38,6 +38,7 @@ export default function ExpensesPage() {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const [expenses, setExpenses] = useState<any[]>([]);
+    const [vehicles, setVehicles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -50,27 +51,28 @@ export default function ExpensesPage() {
     }, [role]);
 
     useEffect(() => {
-        const loadExpenses = async () => {
+        const loadData = async () => {
             if (!user) return;
             if (role === 'DRIVER') return;
             
             try {
                 setLoading(true);
-                // Load real data from Supabase
-                const { data: expensesData } = await supabase
-                    .from('expenses')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                // Load expenses and vehicles in parallel
+                const [expensesRes, vehiclesRes] = await Promise.all([
+                    supabase.from('expenses').select('*, vehicle_id, vehicleId').order('created_at', { ascending: false }),
+                    supabase.from('vehicles').select('*')
+                ]);
                 
-                setExpenses(expensesData || []);
+                setExpenses(expensesRes.data || []);
+                setVehicles(vehiclesRes.data || []);
             } catch (error) {
-                console.error('Error loading expenses data:', error);
+                console.error('Error loading data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        loadExpenses();
+        loadData();
     }, [user, role]);
 
     const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -80,6 +82,8 @@ export default function ExpensesPage() {
 
         try {
             const formData = new FormData(e.currentTarget);
+            const vehicleId = formData.get('vehicle_id') as string;
+            
             const expenseData = {
                 description: formData.get('description') as string,
                 amount: parseFloat(formData.get('amount') as string),
@@ -87,6 +91,8 @@ export default function ExpensesPage() {
                 date: formData.get('date') as string,
                 clientReference: formData.get('clientReference') as string,
                 driver_id: user.id,
+                vehicle_id: vehicleId === 'none' ? null : vehicleId,
+                vehicleId: vehicleId === 'none' ? null : vehicleId, // Set both for consistency
                 status: 'pending',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -228,6 +234,22 @@ export default function ExpensesPage() {
                                         </Select>
                                     </div>
                                     <div>
+                                        <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
+                                        <Select name="vehicle_id">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select vehicle" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">No vehicle</SelectItem>
+                                                {vehicles.map((v) => (
+                                                    <SelectItem key={v.id} value={v.id}>
+                                                        {v.plate_number || v.plateNumber}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
                                         <Label htmlFor="date">Date</Label>
                                         <Input id="date" name="date" type="date" required />
                                     </div>
@@ -281,6 +303,7 @@ export default function ExpensesPage() {
                                     <TableRow>
                                         <TableHead>Description</TableHead>
                                         <TableHead>Reference</TableHead>
+                                        <TableHead>Vehicle</TableHead>
                                         <TableHead>Category</TableHead>
                                         <TableHead>Amount</TableHead>
                                         <TableHead>Date</TableHead>
@@ -293,6 +316,19 @@ export default function ExpensesPage() {
                                         <TableRow key={expense.id}>
                                             <TableCell className="font-medium">{expense.description}</TableCell>
                                             <TableCell>{expense.clientReference || '-'}</TableCell>
+                                            <TableCell>
+                                                {(() => {
+                                                    const vId = expense.vehicle_id || expense.vehicleId;
+                                                    const vehicle = vehicles.find(v => v.id === vId);
+                                                    return vehicle ? (
+                                                        <Badge variant="secondary" className="font-mono">
+                                                            {vehicle.plate_number || vehicle.plateNumber}
+                                                        </Badge>
+                                                    ) : (
+                                                        <span className="text-muted-foreground text-xs">N/A</span>
+                                                    );
+                                                })()}
+                                            </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="capitalize">
                                                     {expense.category}

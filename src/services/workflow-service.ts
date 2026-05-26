@@ -67,7 +67,9 @@ export class WorkflowService {
       amount: request.amount,
       description: `Fuel for Vehicle ${request.vehicleId} (Ref: ${request.id})`,
       vehicleId: request.vehicleId,
+      vehicle_id: request.vehicleId, // Ensure both variants are set
       driverId: request.driverId,
+      driver_id: request.driverId, // Ensure both variants are set
       category: "Direct Logistics Costs",
       status: "approved",
       approvedBy: approvedBy

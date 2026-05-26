@@ -1,103 +1,129 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-export type Currency = "USD" | "TZS";
+export type Currency = "USD" | "TZS" | "KES" | "ZMW" | "UGX";
 
-const CACHE_KEY = "fleet_exchange_rate";
-const CACHE_TIMESTAMP_KEY = "fleet_exchange_rate_timestamp";
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours instead of 1 hour to reduce API calls
-const FALLBACK_RATE = 2600;
+const CACHE_KEY = "fleet_exchange_rate_v2"; // Versioned cache key
+const CACHE_TIMESTAMP_KEY = "fleet_exchange_rate_timestamp_v2";
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
+const FALLBACK_RATES: Record<Currency, number> = {
+  TZS: 1,
+  USD: 2600,
+  KES: 20,
+  ZMW: 140,
+  UGX: 0.71
+};
 
-// Global fetch promise to prevent multiple simultaneous requests
-let globalFetchPromise: Promise<number | null> | null = null;
+// Global fetch promise
+let globalFetchPromise: Promise<Record<string, number> | null> | null = null;
 
-async function fetchExchangeRateWithCache(): Promise<number> {
-  // Check cache first
-  if (typeof window === 'undefined') return FALLBACK_RATE;
-  const cachedRate = localStorage.getItem(CACHE_KEY);
-  const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+export function useCurrency() {
+  const [rates, setRates] = useState<Record<string, number>>(FALLBACK_RATES);
+  const [baseCurrency, setBaseCurrency] = useState<Currency>("TZS");
+  const [loading, setLoading] = useState(true);
 
-  if (cachedRate && cachedTimestamp) {
-    const age = Date.now() - parseInt(cachedTimestamp, 10);
-    if (age < CACHE_DURATION_MS) {
-      const rate = parseFloat(cachedRate);
-      if (rate > 0) {
-        console.log(
-          `Using cached exchange rate: 1 USD = ${rate} TZS (age: ${Math.round(age / 1000 / 60)} mins)`,
-        );
-        return rate;
+  const fetchRates = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    
+    const cachedRates = localStorage.getItem(CACHE_KEY);
+    const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+
+    if (cachedRates && cachedTimestamp) {
+      const age = Date.now() - parseInt(cachedTimestamp, 10);
+      if (age < CACHE_DURATION_MS) {
+        const parsed = JSON.parse(cachedRates);
+        setRates(parsed);
+        setLoading(false);
+        return;
       }
     }
-  }
 
-  // Use global promise to prevent multiple simultaneous fetches
-  if (globalFetchPromise) {
+    if (globalFetchPromise) {
+      const result = await globalFetchPromise;
+      if (result) setRates(result);
+      setLoading(false);
+      return;
+    }
+
+    globalFetchPromise = (async () => {
+      try {
+        const response = await fetch("https://v6.exchangerate-api.com/v6/aeb0b1098eebe19d1f2e1b4e/latest/USD");
+        if (!response.ok) throw new Error("API failed");
+        const data = await response.json();
+        const newRates = data.conversion_rates;
+        
+        // Convert USD-based rates to TZS-based rates (1 unit of currency = X TZS)
+        const tzsRate = newRates.TZS;
+        const normalizedRates: Record<string, number> = {};
+        
+        Object.keys(FALLBACK_RATES).forEach(cur => {
+          if (cur === 'TZS') normalizedRates[cur] = 1;
+          else if (newRates[cur]) {
+            // How many TZS for 1 unit of cur
+            normalizedRates[cur] = tzsRate / newRates[cur];
+          } else {
+            normalizedRates[cur] = FALLBACK_RATES[cur as Currency];
+          }
+        });
+
+        localStorage.setItem(CACHE_KEY, JSON.stringify(normalizedRates));
+        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        return normalizedRates;
+      } catch (e) {
+        console.error("Currency fetch error:", e);
+        return FALLBACK_RATES;
+      }
+    })();
+
     const result = await globalFetchPromise;
-    return result || FALLBACK_RATE;
-  }
-
-  globalFetchPromise = fetchExchangeRateFromAPI();
-
-  try {
-    const rate = await globalFetchPromise;
-    return rate || FALLBACK_RATE;
-  } finally {
+    if (result) setRates(result);
+    setLoading(false);
     globalFetchPromise = null;
-  }
-}
+  }, []);
 
-async function fetchExchangeRateFromAPI(): Promise<number | null> {
-  const apis = [
-    // Primary API with user's key - free tier has limits
-    {
-      url: "https://v6.exchangerate-api.com/v6/aeb0b1098eebe19d1f2e1b4e/latest/USD",
-      parser: (data: any) => data.conversion_rates?.TZS,
-      priority: 1,
-    },
-    // Fallback APIs (no key required, higher limits)
-    {
-      url: "https://api.exchangerate-api.com/v4/latest/USD",
-      parser: (data: any) => data.rates?.TZS,
-      priority: 2,
-    },
-    {
-      url: "https://open.er-api.com/v6/latest/USD",
-      parser: (data: any) => data.rates?.TZS,
-      priority: 3,
-    },
-  ];
+  useEffect(() => {
+    fetchRates();
+  }, [fetchRates]);
 
-  for (const api of apis) {
+  const convert = useCallback((amount: number, from: string, to: string = "TZS") => {
+    if (from === to) return amount;
+    const amountInTzs = amount * (rates[from] || FALLBACK_RATES[from as Currency] || 1);
+    const targetRate = rates[to] || FALLBACK_RATES[to as Currency] || 1;
+    return amountInTzs / targetRate;
+  }, [rates]);
+
+  const format = useCallback((amount: number, currencyCode: string = "TZS") => {
     try {
-      const response = await fetch(api.url);
+      const locale = {
+        TZS: 'en-TZ',
+        USD: 'en-US',
+        KES: 'en-KE',
+        ZMW: 'en-ZM',
+        UGX: 'en-UG'
+      }[currencyCode] || 'en-US';
 
-      // Handle rate limiting (429)
-      if (response.status === 429) {
-        console.warn(`API rate limited (429): ${api.url}. Trying next API...`);
-        continue;
-      }
+      return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currencyCode,
+        minimumFractionDigits: currencyCode === 'TZS' ? 0 : 2,
+        maximumFractionDigits: currencyCode === 'TZS' ? 0 : 2,
+      }).format(amount);
+    } catch (e) {
+      return `${currencyCode} ${amount.toLocaleString()}`;
+    }
+  }, []);
 
-      if (!response.ok) {
-        console.warn(`API error ${response.status}: ${api.url}`);
-        continue;
-      }
-
-      const data = await response.json();
-      const rate = api.parser(data);
-
-      if (rate && rate > 0) {
-        // Cache the successful rate
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(CACHE_KEY, rate.toString());
-          localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-        }
-        console.log(
-          `Exchange rate updated: 1 USD = ${rate} TZS (via ${api.url})`,
-        );
-        return rate;
-      }
-    } catch (error) {
+  return {
+    rates,
+    convert,
+    format,
+    loading,
+    currency: baseCurrency,
+    setCurrency: setBaseCurrency,
+    availableCurrencies: Object.keys(FALLBACK_RATES) as Currency[]
+  };
+}
       console.log(`API ${api.url} failed, trying next...`);
       continue;
     }

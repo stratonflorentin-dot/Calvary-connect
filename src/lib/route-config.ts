@@ -46,10 +46,25 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: [...ALL_APP_ROLES],
     category: "dashboard",
   },
-  // --- Logistics ---
+  // --- Sales ---
+  {
+    path: "/sales",
+    label: "Sales Pipelines",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
+    icon: Briefcase,
+    category: "sales",
+  },
+  {
+    path: "/customers",
+    label: "Customers",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    icon: Building2,
+    category: "sales",
+  },
+  // --- Shipments ---
   {
     path: "/trips",
-    label: "Trips & Dispatch",
+    label: "Shipments & Trips",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN"],
     category: "logistics",
   },
@@ -66,25 +81,10 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "HR"],
     category: "logistics",
   },
-  {
-    path: "/customers",
-    label: "Customers",
-    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
-    icon: Building2,
-    category: "logistics",
-  },
-  {
-    path: "/sales",
-    label: "Sales Pipelines",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
-    icon: Briefcase,
-    category: "logistics",
-  },
-
   // --- Fleet & Assets ---
   {
     path: "/fleet",
-    label: "Fleet Assets",
+    label: "Vehicles",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
     category: "fleet",
   },
@@ -94,17 +94,18 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR"],
     category: "fleet",
   },
+  // --- Inventory ---
   {
     path: "/inventory",
-    label: "Inventory",
+    label: "Stock Items",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
-    category: "fleet",
+    category: "inventory",
   },
   {
     path: "/parts-requests",
     label: "Parts Requests",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
-    category: "fleet",
+    category: "inventory",
   },
   {
     path: "/fuel-approvals",
@@ -113,10 +114,10 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "fleet",
   },
 
-  // --- Financial Operations ---
+  // --- Accounting ---
   {
     path: "/finance",
-    label: "Financial Ledger",
+    label: "Accounting Ledger",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
     category: "finance",
   },
@@ -132,18 +133,19 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "SALESMAN"],
     category: "finance",
   },
+  // --- Reports ---
   {
     path: "/reports",
     label: "Financial Reports",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
     icon: BarChart2,
-    category: "finance",
+    category: "reports",
   },
 
-  // --- People & HR ---
+  // --- HR ---
   {
     path: "/users",
-    label: "Staff Directory",
+    label: "All Employees",
     allowedRoles: ["CEO", "ADMIN", "HR"],
     category: "people",
   },
@@ -155,21 +157,21 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: "/allowances",
-    label: "Payroll & Allowances",
+    label: "Payroll",
     allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
     category: "people",
   },
 
-  // --- System ---
+  // --- Settings ---
   {
     path: "/audit",
-    label: "Audit Logs",
+    label: "Audit Trail",
     allowedRoles: ["CEO", "ADMIN"],
     category: "system",
   },
   {
     path: "/ai-insights",
-    label: "AI Strategy",
+    label: "Company Settings",
     allowedRoles: ["CEO", "ADMIN"],
     category: "system",
   },

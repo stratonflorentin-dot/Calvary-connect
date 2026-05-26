@@ -265,6 +265,11 @@ export default function TripsPage() {
         client: editingTrip.client,
         status: editingTrip.status,
         payment_status: editingTrip.payment_status || 'PENDING',
+        cost_fuel: editingTrip.cost_fuel ? parseFloat(editingTrip.cost_fuel) : 0,
+        cost_tolls: editingTrip.cost_tolls ? parseFloat(editingTrip.cost_tolls) : 0,
+        cost_border: editingTrip.cost_border ? parseFloat(editingTrip.cost_border) : 0,
+        cost_customs: editingTrip.cost_customs ? parseFloat(editingTrip.cost_customs) : 0,
+        waybill_number: editingTrip.waybill_number,
         updated_at: new Date().toISOString()
       };
 
@@ -858,6 +863,69 @@ export default function TripsPage() {
                       </div>
                     </div>
 
+                    {/* LogiPro Operational Costs Section */}
+                    <div className="rounded-xl bg-gray-50 p-4 border border-gray-100 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-slate-800">Operational Costs & Documentation</h3>
+                        <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">LogiPro Tracker</Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-waybill">Waybill Number</Label>
+                          <Input
+                            id="edit-waybill"
+                            value={editingTrip.waybill_number || ''}
+                            onChange={(e) => setEditingTrip({ ...editingTrip, waybill_number: e.target.value })}
+                            placeholder="WB-..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-fuel">Fuel Cost</Label>
+                          <Input
+                            id="edit-fuel"
+                            type="number"
+                            step="0.01"
+                            value={editingTrip.cost_fuel || ''}
+                            onChange={(e) => setEditingTrip({ ...editingTrip, cost_fuel: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-tolls">Road Tolls</Label>
+                          <Input
+                            id="edit-tolls"
+                            type="number"
+                            step="0.01"
+                            value={editingTrip.cost_tolls || ''}
+                            onChange={(e) => setEditingTrip({ ...editingTrip, cost_tolls: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-border">Border Permits</Label>
+                          <Input
+                            id="edit-border"
+                            type="number"
+                            step="0.01"
+                            value={editingTrip.cost_border || ''}
+                            onChange={(e) => setEditingTrip({ ...editingTrip, cost_border: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-customs">Customs Fees</Label>
+                          <Input
+                            id="edit-customs"
+                            type="number"
+                            step="0.01"
+                            value={editingTrip.cost_customs || ''}
+                            onChange={(e) => setEditingTrip({ ...editingTrip, cost_customs: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="edit-payment-status">Payment Status</Label>
                       <Select
@@ -980,7 +1048,7 @@ export default function TripsPage() {
                             {trip.tripType && (
                               <Badge 
                                 variant="outline" 
-                                className={trip.tripType === 'transit' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}
+                                className={trip.tripType === 'transit' ? 'bg-blue-50 text-[#0369A1] border-[#0369A1]/30' : 'bg-green-50 text-green-700'}
                               >
                                 {trip.tripType === 'transit' ? '🌐 Transit' : '🏠 Local'}
                                 {trip.tripType === 'local' && trip.tripCategory && ` (${trip.tripCategory})`}
@@ -997,26 +1065,45 @@ export default function TripsPage() {
                                 variant="outline" 
                                 className={
                                   trip.payment_status === 'PENDING' 
-                                    ? 'bg-red-50 text-red-700 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+                                    ? 'bg-red-50 text-red-700 border-red-200'
                                     : trip.payment_status === 'ADVANCE'
-                                    ? 'bg-yellow-50 text-yellow-700 border-yellow-200 shadow-[0_0_8px_rgba(234,179,8,0.4)]'
-                                    : 'bg-green-50 text-green-700 border-green-200 shadow-[0_0_8px_rgba(34,197,94,0.4)]'
+                                    ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                    : 'bg-green-50 text-green-700 border-green-200'
                                 }
                               >
-                                <span className="flex items-center gap-1">
-                                  <span className={`w-2 h-2 rounded-full ${
-                                    trip.payment_status === 'PENDING' 
-                                      ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]'
-                                      : trip.payment_status === 'ADVANCE'
-                                      ? 'bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.8)]'
-                                      : 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.8)]'
-                                  }`}></span>
+                                <span className="flex items-center gap-1 font-bold">
                                   {trip.payment_status === 'PENDING' && '💳 PENDING'}
                                   {trip.payment_status === 'ADVANCE' && '💰 ADVANCE'}
                                   {trip.payment_status === 'PAID' && '✅ PAID'}
                                 </span>
                               </Badge>
                             )}
+                          </div>
+                          
+                          {/* LogiPro Milestone Stepper */}
+                          <div className="mt-4 mb-2 max-w-lg">
+                            <div className="flex items-center justify-between relative">
+                              <div className="absolute left-0 top-1/2 w-full h-1 bg-gray-100 -translate-y-1/2 z-0 rounded-full"></div>
+                              {(() => {
+                                const statuses = ["PENDING", "IN_PROGRESS", "COMPLETED"];
+                                const currentIndex = statuses.indexOf(trip.status);
+                                return statuses.map((status, idx) => {
+                                  const isCompleted = currentIndex >= idx;
+                                  const isActive = currentIndex === idx;
+                                  return (
+                                    <div key={status} className="relative z-10 flex flex-col items-center gap-1 bg-white px-2">
+                                      <div className={cn("w-4 h-4 rounded-full border-2 transition-all", 
+                                        isCompleted ? "bg-[#0369A1] border-[#0369A1]" : "bg-white border-gray-300",
+                                        isActive && "ring-4 ring-sky-100 scale-125"
+                                      )}>
+                                        {isCompleted && <div className="w-1.5 h-1.5 bg-white rounded-full mx-auto mt-0.5"></div>}
+                                      </div>
+                                      <span className={cn("text-[10px] font-bold tracking-widest", isCompleted ? "text-[#0369A1]" : "text-gray-400")}>{status}</span>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                            </div>
                           </div>
                           {trip.client && (
                             <p className="text-sm text-muted-foreground">Client: {trip.client}</p>

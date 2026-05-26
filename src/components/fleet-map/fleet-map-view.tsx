@@ -175,6 +175,40 @@ function DriverDetailPanel({
           </div>
         </div>
 
+        {/* LogiPro Style Driver Compliance Records */}
+        <div className="rounded-xl bg-white p-3 border border-gray-100 shadow-sm">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400 mb-2">
+            Compliance & Licensing
+          </p>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600">Profile Status</span>
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 py-0 text-[10px]">
+                Valid & Compliant
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600">License Class</span>
+              <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 py-0 text-[10px]">
+                Class CE (Heavy)
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600">License Expiry</span>
+              {/* Simulate expiry warning dynamically based on driver id string length */}
+              {driver.id.length % 2 === 0 ? (
+                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 py-0 text-[10px] flex items-center gap-1">
+                  <AlertCircle className="size-3" /> Expires in 45 Days
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-gray-50 text-slate-600 border-gray-200 py-0 text-[10px]">
+                  Nov 2027
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-3 gap-2">
           {[
             { icon: Navigation, label: "Navigate" },

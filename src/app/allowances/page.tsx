@@ -5,6 +5,7 @@ import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Coins, Calculator, Truck, Globe, Thermometer, Package, Plus, RefreshCw } from 'lucide-react';

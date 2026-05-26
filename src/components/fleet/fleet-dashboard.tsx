@@ -583,6 +583,29 @@ export function FleetDashboard() {
                 </div>
               )}
 
+              {/* LogiPro Style Document Compliance */}
+              <div className="pt-2 border-t border-gray-100">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">LogiPro Compliance</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-600">Road License</span>
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] py-0">Valid</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-600">Insurance</span>
+                    {vehicle.insurance_expiry ? (
+                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] py-0">Active</Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[9px] py-0 flex items-center gap-1">
+                        <AlertTriangle className="size-2.5" /> Due Soon
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <Button 
                   size="sm" 

@@ -237,6 +237,80 @@ export default function CeoDashboard() {
       {/* Enhanced Stat Cards - Unified Component */}
       <StatCards />
 
+      {/* LogiPro Style Action Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Shipments Needing Action */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg font-bold text-slate-800">Shipments Needing Action</CardTitle>
+            <Button variant="ghost" size="sm" className="text-[#0369A1] hover:bg-sky-50">View all</Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 mt-4">
+              {activeTrips.slice(0, 3).map((trip, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:shadow-sm transition-all bg-white">
+                  <div className="flex items-center gap-4">
+                    <Badge variant="secondary" className={
+                      trip.status === 'DELIVERED' ? 'bg-purple-100 text-purple-700 hover:bg-purple-100' :
+                      trip.status === 'IN_TRANSIT' ? 'bg-sky-100 text-sky-700 hover:bg-sky-100' :
+                      'bg-orange-100 text-orange-700 hover:bg-orange-100'
+                    }>
+                      {trip.status || 'PENDING'}
+                    </Badge>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">SH-{new Date().getFullYear()}-{1000 + idx}</p>
+                      <p className="text-xs text-slate-500">{trip.client || 'General Client'}</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/trips/${trip.id}`} className="text-slate-600 hover:text-[#0369A1]">
+                      View &rarr;
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+              {activeTrips.length === 0 && (
+                <div className="text-center py-4 text-slate-500 text-sm">No shipments currently need action.</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* My Cash Requests */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg font-bold text-slate-800">My Cash Requests</CardTitle>
+            <Button variant="ghost" size="sm" className="text-[#0369A1] hover:bg-sky-50">+ New</Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                <p className="text-2xl font-bold text-slate-700">
+                  {expenses.filter(e => e.status === 'draft').length || 0}
+                </p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Draft</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-100">
+                <p className="text-2xl font-bold text-amber-600">
+                  {expenses.filter(e => e.status === 'pending').length || 0}
+                </p>
+                <p className="text-[10px] text-amber-600 uppercase tracking-widest font-semibold mt-1">Pending</p>
+              </div>
+              <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100">
+                <p className="text-2xl font-bold text-purple-600">
+                  {expenses.filter(e => e.status === 'approved').length || 0}
+                </p>
+                <p className="text-[10px] text-purple-600 uppercase tracking-widest font-semibold mt-1">To Retire</p>
+              </div>
+              <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100">
+                <p className="text-2xl font-bold text-red-600">0</p>
+                <p className="text-[10px] text-red-600 uppercase tracking-widest font-semibold mt-1">Overdue</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Revenue & Profit Chart Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Revenue Overview */}
@@ -249,29 +323,29 @@ export default function CeoDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-green-50 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Total Revenue</p>
-                <p className="text-lg font-bold text-green-600">
+              <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-green-500 hover:shadow-md transition-all">
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Revenue</p>
+                <p className="text-2xl font-bold text-slate-800 mt-2">
                   {format(totalRevenue)}
                 </p>
               </div>
-              <div className="bg-red-50 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Total Expenses</p>
-                <p className="text-lg font-bold text-red-600">
+              <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-red-500 hover:shadow-md transition-all">
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Expenses</p>
+                <p className="text-2xl font-bold text-slate-800 mt-2">
                   {format(totalExpenses)}
                 </p>
               </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Net Profit</p>
+              <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-[#0369A1] hover:shadow-md transition-all">
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Net Profit</p>
                 <p
-                  className={`text-lg font-bold ${netProfit >= 0 ? "text-blue-600" : "text-red-600"}`}
+                  className={`text-2xl font-bold mt-2 ${netProfit >= 0 ? "text-[#0369A1]" : "text-red-600"}`}
                 >
                   {format(netProfit)}
                 </p>
               </div>
-              <div className="bg-purple-50 rounded-lg p-4">
-                <p className="text-xs text-muted-foreground">Completed Trips</p>
-                <p className="text-lg font-bold text-purple-600">
+              <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-purple-500 hover:shadow-md transition-all">
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Completed Trips</p>
+                <p className="text-2xl font-bold text-slate-800 mt-2">
                   {completedTrips.length}
                 </p>
               </div>
@@ -399,23 +473,23 @@ export default function CeoDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="bg-green-50 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-green-600">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-3 text-center hover:border-green-400 transition-all cursor-pointer group">
+                <p className="text-2xl font-bold text-slate-800 group-hover:text-green-600">
                   {availableVehicles}
                 </p>
-                <p className="text-[10px] text-muted-foreground">Available</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Available</p>
               </div>
-              <div className="bg-blue-50 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-blue-600">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-3 text-center hover:border-[#0369A1] transition-all cursor-pointer group">
+                <p className="text-2xl font-bold text-slate-800 group-hover:text-[#0369A1]">
                   {inUseVehicles}
                 </p>
-                <p className="text-[10px] text-muted-foreground">In Use</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">In Transit</p>
               </div>
-              <div className="bg-amber-50 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-amber-600">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-3 text-center hover:border-amber-400 transition-all cursor-pointer group">
+                <p className="text-2xl font-bold text-slate-800 group-hover:text-amber-600">
                   {maintenanceVehicles}
                 </p>
-                <p className="text-[10px] text-muted-foreground">Maintenance</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Maintenance</p>
               </div>
             </div>
             <DataTable
@@ -490,6 +564,15 @@ export default function CeoDashboard() {
                       >
                         {row.status?.replace("_", " ")}
                       </Badge>
+                    ),
+                  },
+                  {
+                    key: "actions",
+                    label: "",
+                    render: (row) => (
+                      <Link href={`/trips/${row.id}`} className="text-[#0369A1] hover:text-[#0284c7] font-semibold text-sm flex items-center gap-1 group">
+                        View <ChevronRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
                     ),
                   },
                 ]}
@@ -586,24 +669,24 @@ export default function CeoDashboard() {
             </TabsList>
             <TabsContent value="overview">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold text-green-600">
+                <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-green-500">
+                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Revenue</p>
+                  <p className="text-2xl font-bold text-slate-800 mt-2">
                     {format(totalRevenue)}
                   </p>
                 </div>
-                <div className="bg-red-50 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground">
+                <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-red-500">
+                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
                     Total Expenses
                   </p>
-                  <p className="text-2xl font-bold text-red-600">
+                  <p className="text-2xl font-bold text-slate-800 mt-2">
                     {format(totalExpenses)}
                   </p>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-xs text-muted-foreground">Net Profit</p>
+                <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-[#0369A1]">
+                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Net Profit</p>
                   <p
-                    className={`text-2xl font-bold ${netProfit >= 0 ? "text-blue-600" : "text-red-600"}`}
+                    className={`text-2xl font-bold mt-2 ${netProfit >= 0 ? "text-[#0369A1]" : "text-red-600"}`}
                   >
                     {format(netProfit)}
                   </p>

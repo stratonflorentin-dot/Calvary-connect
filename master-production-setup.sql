@@ -22,6 +22,8 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS license_number TEXT;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS license_expiry DATE;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS license_class TEXT DEFAULT 'Standard';
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS compliance_status TEXT DEFAULT 'valid';
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
@@ -36,8 +38,28 @@ ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'available';
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS mileage INTEGER DEFAULT 0;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fuel_capacity INTEGER DEFAULT 0;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS current_driver_id UUID REFERENCES user_profiles(id);
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS road_license_expiry DATE;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS inspection_expiry DATE;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Vehicle Documents / Inspections
+CREATE TABLE IF NOT EXISTS vehicle_inspections (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS vehicle_id UUID REFERENCES vehicles(id);
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS inspection_date DATE;
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS inspector_name TEXT;
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'passed';
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Tire Tracking
+CREATE TABLE IF NOT EXISTS tire_tracking (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE tire_tracking ADD COLUMN IF NOT EXISTS vehicle_id UUID REFERENCES vehicles(id);
+ALTER TABLE tire_tracking ADD COLUMN IF NOT EXISTS tire_serial TEXT;
+ALTER TABLE tire_tracking ADD COLUMN IF NOT EXISTS position TEXT;
+ALTER TABLE tire_tracking ADD COLUMN IF NOT EXISTS installation_date DATE;
+ALTER TABLE tire_tracking ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+ALTER TABLE tire_tracking ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Trips
 CREATE TABLE IF NOT EXISTS trips (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
@@ -49,8 +71,34 @@ ALTER TABLE trips ADD COLUMN IF NOT EXISTS truck_id UUID REFERENCES vehicles(id)
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'PENDING';
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS revenue DECIMAL(15,2) DEFAULT 0;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS price DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS cost_fuel DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS cost_tolls DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS cost_border DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS cost_customs DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS waybill_number TEXT;
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS quotation_id UUID;
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Quotations
+CREATE TABLE IF NOT EXISTS quotations (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS quote_number VARCHAR(50) UNIQUE;
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS customer_id UUID; -- References customers
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS origin TEXT;
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS destination TEXT;
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS amount DECIMAL(15,2);
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'draft';
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS valid_until DATE;
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Delivery Notes
+CREATE TABLE IF NOT EXISTS delivery_notes (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE delivery_notes ADD COLUMN IF NOT EXISTS dn_number VARCHAR(50) UNIQUE;
+ALTER TABLE delivery_notes ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
+ALTER TABLE delivery_notes ADD COLUMN IF NOT EXISTS delivery_date DATE;
+ALTER TABLE delivery_notes ADD COLUMN IF NOT EXISTS receiver_name TEXT;
+ALTER TABLE delivery_notes ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE delivery_notes ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Customers
 CREATE TABLE IF NOT EXISTS customers (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
@@ -164,6 +212,16 @@ CREATE TABLE IF NOT EXISTS purchases (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Cash Requests
+CREATE TABLE IF NOT EXISTS cash_requests (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE cash_requests ADD COLUMN IF NOT EXISTS request_number VARCHAR(50) UNIQUE;
+ALTER TABLE cash_requests ADD COLUMN IF NOT EXISTS requester_id UUID REFERENCES user_profiles(id);
+ALTER TABLE cash_requests ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
+ALTER TABLE cash_requests ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 2);
+ALTER TABLE cash_requests ADD COLUMN IF NOT EXISTS purpose TEXT;
+ALTER TABLE cash_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'draft'; -- draft, pending, approved, to_retire, retired
+ALTER TABLE cash_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
 -- Expenses
 CREATE TABLE IF NOT EXISTS expenses (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
 ALTER TABLE expenses ADD COLUMN IF NOT EXISTS expense_number VARCHAR(50);
@@ -251,6 +309,40 @@ CREATE TABLE IF NOT EXISTS parts_requests (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- HR: Departments
+CREATE TABLE IF NOT EXISTS departments (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE departments ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE departments ADD COLUMN IF NOT EXISTS manager_id UUID REFERENCES user_profiles(id);
+ALTER TABLE departments ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id);
+
+-- HR: Leave Management
+CREATE TABLE IF NOT EXISTS leave_requests (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS employee_id UUID REFERENCES user_profiles(id);
+ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS leave_type TEXT;
+ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS end_date DATE;
+ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- HR: Attendance
+CREATE TABLE IF NOT EXISTS attendance_logs (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS employee_id UUID REFERENCES user_profiles(id);
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS date DATE;
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS check_in TIME;
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS check_out TIME;
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'present';
+ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- HR: Payroll Runs
+CREATE TABLE IF NOT EXISTS payroll_runs (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE payroll_runs ADD COLUMN IF NOT EXISTS period_month INTEGER;
+ALTER TABLE payroll_runs ADD COLUMN IF NOT EXISTS period_year INTEGER;
+ALTER TABLE payroll_runs ADD COLUMN IF NOT EXISTS total_amount DECIMAL(15, 2);
+ALTER TABLE payroll_runs ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'draft';
+ALTER TABLE payroll_runs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
 -- Meetings
 CREATE TABLE IF NOT EXISTS meetings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -302,6 +394,14 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Company Settings
+CREATE TABLE IF NOT EXISTS company_settings (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS company_name TEXT;
+ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS tax_id TEXT;
+ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS base_currency TEXT DEFAULT 'TZS';
+ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
@@ -479,6 +579,16 @@ ALTER TABLE performance_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE insurance_policies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vehicle_inspections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tire_tracking ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quotations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE delivery_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cash_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leave_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payroll_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE company_settings ENABLE ROW LEVEL SECURITY;
 
 -- DROP ALL EXISTING POLICIES FOR CLEAN RESET
 DO $$ 
@@ -527,6 +637,18 @@ CREATE POLICY "Public manage meetings" ON meetings FOR ALL USING (true) WITH CHE
 CREATE POLICY "Public manage performance" ON performance_reviews FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public manage insurance" ON insurance_policies FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public manage reports" ON reports FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage departments" ON departments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage leave" ON leave_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage attendance" ON attendance_logs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage payroll" ON payroll_runs FOR ALL USING (true) WITH CHECK (true);
+
+-- LOGIPRO EXTRAS
+CREATE POLICY "Public manage inspections" ON vehicle_inspections FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage tires" ON tire_tracking FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage quotes" ON quotations FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage delivery" ON delivery_notes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage cash" ON cash_requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public manage settings" ON company_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- AUDIT LOGS
 CREATE POLICY "Public manage audit logs" ON audit_logs FOR ALL USING (true) WITH CHECK (true);

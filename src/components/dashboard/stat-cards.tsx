@@ -175,8 +175,8 @@ export function StatCards() {
         title: "Total Fleet",
         value: stats.totalVehicles,
         icon: Truck,
-        color: "text-blue-600",
-        bgColor: "bg-blue-50",
+        color: "text-[#0369A1]",
+        bgColor: "bg-sky-50",
         trend: "stable",
       },
       {
