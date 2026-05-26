@@ -331,12 +331,18 @@ export function ProfessionalFinancialReport() {
   };
 
   const formatCurrency = (value: number, currency: string = selectedCurrency) => {
-    return new Intl.NumberFormat('en-TZ', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
+    const formattedCurrency = currency === 'CONSOLIDATED' ? 'TZS' : currency;
+    try {
+      return new Intl.NumberFormat('en-TZ', {
+        style: 'currency',
+        currency: formattedCurrency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(value);
+    } catch (e) {
+      // Fallback in case of any other unexpected invalid currency code
+      return `${formattedCurrency} ${value.toLocaleString()}`;
+    }
   };
 
   const formatNumber = (value: number) => {
