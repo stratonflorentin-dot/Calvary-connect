@@ -107,17 +107,17 @@ export function PWAInstallPrompt() {
 
   return (
     <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[60]">
-      <Card className="shadow-2xl border-primary/20 bg-white">
+      <Card className="shadow-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50">
         <CardHeader className="pb-2 pt-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Download className="h-5 w-5 text-primary" />
+            <CardTitle className="text-base flex items-center gap-2 text-slate-900 dark:text-slate-50">
+              <Download className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               Install Calvary Connect
             </CardTitle>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 shrink-0"
+              className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800"
               onClick={handleDismiss}
             >
               <X className="h-4 w-4" />
@@ -127,20 +127,20 @@ export function PWAInstallPrompt() {
         <CardContent className="space-y-3 pb-4">
           {platform === 'ios' && (
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Add Calvary Connect to your iPhone home screen:
               </p>
-              <ol className="text-sm space-y-1.5 text-muted-foreground">
+              <ol className="text-sm space-y-1.5 text-slate-600 dark:text-slate-400">
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-foreground w-4 shrink-0">1.</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-50 w-4 shrink-0">1.</span>
                   <span>Tap the <Share2 className="h-4 w-4 inline mx-0.5 text-blue-500" /> Share button in Safari</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-foreground w-4 shrink-0">2.</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-50 w-4 shrink-0">2.</span>
                   <span>Scroll down and tap <strong>"Add to Home Screen"</strong></span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="font-semibold text-foreground w-4 shrink-0">3.</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-50 w-4 shrink-0">3.</span>
                   <span>Tap <strong>"Add"</strong> to install</span>
                 </li>
               </ol>
@@ -149,10 +149,10 @@ export function PWAInstallPrompt() {
 
           {platform === 'android' && deferredPrompt && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Install the app for the best experience — works offline too!
               </p>
-              <Button onClick={handleInstallClick} className="w-full gap-2">
+              <Button onClick={handleInstallClick} className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 font-semibold shadow-md">
                 <Smartphone className="h-4 w-4" />
                 Install App
               </Button>
@@ -161,8 +161,8 @@ export function PWAInstallPrompt() {
 
           {platform === 'android' && !deferredPrompt && (
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Add Calvary Connect to your home screen:</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600 dark:text-slate-400">Add Calvary Connect to your home screen:</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Tap the browser menu <strong>⋮</strong> → <strong>"Add to Home screen"</strong>
               </p>
             </div>
@@ -170,10 +170,10 @@ export function PWAInstallPrompt() {
 
           {(platform === 'desktop') && deferredPrompt && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Install as a desktop app for quick access:
               </p>
-              <Button onClick={handleInstallClick} className="w-full gap-2">
+              <Button onClick={handleInstallClick} className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700 font-semibold shadow-md">
                 <Monitor className="h-4 w-4" />
                 Install Desktop App
               </Button>
@@ -182,17 +182,17 @@ export function PWAInstallPrompt() {
 
           {platform === 'unknown' && (
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Install Calvary Connect for quick access:
               </p>
-              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <div className="bg-muted p-2 rounded">
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded text-slate-700 dark:text-slate-300">
                   <strong>iOS:</strong> Share → Add to Home Screen
                 </div>
-                <div className="bg-muted p-2 rounded">
+                <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded text-slate-700 dark:text-slate-300">
                   <strong>Android:</strong> Menu ⋮ → Add to Home screen
                 </div>
-                <div className="bg-muted p-2 rounded col-span-2">
+                <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded col-span-2 text-slate-700 dark:text-slate-300">
                   <strong>Desktop:</strong> Chrome menu → Install app
                 </div>
               </div>
