@@ -253,17 +253,17 @@ CREATE TABLE IF NOT EXISTS fuel_requests (
 );
 
 -- Driver Allowances
-CREATE TABLE IF NOT EXISTS allowances (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS driver_id UUID REFERENCES user_profiles(id);
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS worker_name VARCHAR(200);
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS role VARCHAR(50);
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 2);
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS type VARCHAR(50);
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
-ALTER TABLE allowances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+CREATE TABLE IF NOT EXISTS driver_allowances (id UUID PRIMARY KEY DEFAULT uuid_generate_v4());
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS driver_id UUID REFERENCES user_profiles(id);
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS driver_name VARCHAR(200);
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS role VARCHAR(50);
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id);
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 2);
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Taxes
 CREATE TABLE IF NOT EXISTS taxes (
@@ -430,7 +430,12 @@ END $$;
 
 -- 3. INDEXES (After all columns are guaranteed to exist)
 
-CREATE INDEX IF NOT EXISTS idx_vehicles_plate ON vehicles(plate_number);
+
+-- Indexes for driver_allowances
+CREATE INDEX IF NOT EXISTS idx_driver_allowances_driver_id ON driver_allowances(driver_id);
+CREATE INDEX IF NOT EXISTS idx_driver_allowances_trip_id ON driver_allowances(trip_id);
+CREATE INDEX IF NOT EXISTS idx_driver_allowances_status ON driver_allowances(status);
+
 CREATE INDEX IF NOT EXISTS idx_trips_number ON trips(trip_number);
 CREATE INDEX IF NOT EXISTS idx_trips_status ON trips(status);
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_logs(created_at DESC);
@@ -569,7 +574,16 @@ ALTER TABLE journal_entry_lines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fuel_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE allowances ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for driver_allowances
+CREATE POLICY "Drivers can view their own allowances"
+  ON driver_allowances
+  FOR SELECT USING (auth.uid() = driver_id);
+
+CREATE POLICY "Admins can manage allowances"
+  ON driver_allowances
+  FOR ALL USING (auth.role() IN ('ADMIN', 'ACCOUNTANT', 'CEO', 'HR'));
+
 ALTER TABLE taxes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE maintenance_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE spare_parts ENABLE ROW LEVEL SECURITY;
