@@ -237,7 +237,7 @@ export default function CeoDashboard() {
       {/* Enhanced Stat Cards - Unified Component */}
       <StatCards />
 
-      {/* LogiPro Style Action Row */}
+      {/* Action Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Shipments Needing Action */}
         <Card className="lg:col-span-2">

@@ -175,7 +175,7 @@ function DriverDetailPanel({
           </div>
         </div>
 
-        {/* LogiPro Style Driver Compliance Records */}
+        {/* Driver Compliance Records */}
         <div className="rounded-xl bg-white p-3 border border-gray-100 shadow-sm">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400 mb-2">
             Compliance & Licensing

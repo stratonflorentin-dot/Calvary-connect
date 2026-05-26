@@ -583,10 +583,10 @@ export function FleetDashboard() {
                 </div>
               )}
 
-              {/* LogiPro Style Document Compliance */}
+              {/* Document Compliance */}
               <div className="pt-2 border-t border-gray-100">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">LogiPro Compliance</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Calvary Compliance</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">

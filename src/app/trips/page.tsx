@@ -863,11 +863,11 @@ export default function TripsPage() {
                       </div>
                     </div>
 
-                    {/* LogiPro Operational Costs Section */}
-                    <div className="rounded-xl bg-gray-50 p-4 border border-gray-100 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-slate-800">Operational Costs & Documentation</h3>
-                        <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">LogiPro Tracker</Badge>
+                    {/* Operational Costs Section */}
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-semibold text-slate-800">Operational & Route Costs</h4>
+                        <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">Calvary Connect Tracker</Badge>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">
@@ -1080,7 +1080,7 @@ export default function TripsPage() {
                             )}
                           </div>
                           
-                          {/* LogiPro Milestone Stepper */}
+                          {/* Milestone Stepper */}
                           <div className="mt-4 mb-2 max-w-lg">
                             <div className="flex items-center justify-between relative">
                               <div className="absolute left-0 top-1/2 w-full h-1 bg-gray-100 -translate-y-1/2 z-0 rounded-full"></div>
