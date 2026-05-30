@@ -32,6 +32,7 @@ import {
   Menu,
   X,
   Zap,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
@@ -48,6 +49,7 @@ import { toast } from "@/hooks/use-toast";
 const routeIconMap:Record<string,any>={
   "/":LayoutDashboard,
   "/trips":Route,
+  "/trip-history":ClipboardList,
   "/bookings":CalendarDays,
   "/map":MapPin,
   "/customers":Building2,

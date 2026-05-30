@@ -69,6 +69,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "logistics",
   },
   {
+    path: "/trip-history",
+    label: "Trip History",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
+    category: "logistics",
+  },
+  {
     path: "/bookings",
     label: "Bookings",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
