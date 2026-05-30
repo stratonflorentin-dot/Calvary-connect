@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Download, Printer, Plus } from 'lucide-react';
+import { FileText, Download, Printer, Plus, Settings } from 'lucide-react';
 import { RATE_SHEET, ContractData, formatContractHTML, downloadContract, printContract } from '@/lib/contract-service';
+import { fetchRateSheets, RateSheetRoute } from '@/lib/rate-sheet-service';
 import { useToast } from '@/hooks/use-toast';
 
 export function TransportAgreementGenerator() {
@@ -18,6 +19,8 @@ export function TransportAgreementGenerator() {
   const [isOpen, setIsOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHTML, setPreviewHTML] = useState('');
+  const [dbRates, setDbRates] = useState<RateSheetRoute[]>([]);
+  const [loadingRates, setLoadingRates] = useState(false);
   
   const [formData, setFormData] = useState<ContractData>({
     clientName: '',
@@ -26,7 +29,7 @@ export function TransportAgreementGenerator() {
     clientCity: '',
     clientPhone: '',
     clientEmail: '',
-    destination: Object.keys(RATE_SHEET)[0],
+    destination: '',
     contractType: 'Long Term',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
@@ -38,10 +41,25 @@ export function TransportAgreementGenerator() {
     signatoryTitle: ''
   });
 
-  const handleGeneratePreview = () => {
-    if (!formData.clientName || !formData.clientPOBox || !formData.clientRoad || !formData.clientCity) {
-      toast({ title: 'Error', description: 'Please fill in all client details', variant: 'destructive' });
-      return;
+  useEffect(() => {
+    loadDatabaseRates();
+  }, []);
+
+  const loadDatabaseRates = async () => {
+    setLoadingRates(true);
+    try {
+      const rates = await fetchRateSheets();
+      setDbRates(rates);
+      if (rates.length > 0) {
+        setFormData(prev => ({ ...prev, destination: rates[0].route_name }));
+      }
+    } catch (error) {
+      console.error('Error loading rates:', error);
+      toast({ title: 'Warning', description: 'Using default rates' });
+    } finally {
+      setLoadingRates(false);
+    }
+  };
     }
     const html = formatContractHTML(formData);
     setPreviewHTML(html);
@@ -78,7 +96,7 @@ export function TransportAgreementGenerator() {
           <DialogHeader>
             <DialogTitle>Create Transport Contract</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Customer Section */}
             <div className="space-y-4">
@@ -172,14 +190,20 @@ export function TransportAgreementGenerator() {
                 <Label htmlFor="destination">Destination Route *</Label>
                 <Select value={formData.destination} onValueChange={(value) => setFormData({ ...formData, destination: value })}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder={loadingRates ? "Loading routes..." : "Select a destination"} />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
-                    {Object.keys(RATE_SHEET).map((route) => (
-                      <SelectItem key={route} value={route}>
-                        {route}
+                    {dbRates.length === 0 ? (
+                      <SelectItem value="" disabled>
+                        {loadingRates ? "Loading..." : "No routes available"}
                       </SelectItem>
-                    ))}
+                    ) : (
+                      dbRates.map((route) => (
+                        <SelectItem key={route.id} value={route.route_name}>
+                          {route.route_name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -311,13 +335,51 @@ export function TransportAgreementGenerator() {
 
 // Display available routes
 export function RateSheetPreview() {
+  const [rates, setRates] = useState<RateSheetRoute[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadRates();
+  }, []);
+
+  const loadRates = async () => {
+    try {
+      const data = await fetchRateSheets();
+      setRates(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Available Routes & Rates
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-muted-foreground py-8">Loading routes...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
           Available Routes & Rates
         </CardTitle>
+        <Button variant="outline" size="sm" className="gap-2" asChild>
+          <a href="/admin/settings">
+            <Settings className="h-4 w-4" />
+            Manage Rates
+          </a>
+        </Button>
       </CardHeader>
       <CardContent>
         <Table>
@@ -331,15 +393,23 @@ export function RateSheetPreview() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Object.entries(RATE_SHEET).map(([route, rates]) => (
-              <TableRow key={route}>
-                <TableCell className="font-medium">{route}</TableCell>
-                <TableCell className="text-right">{rates['20FT']}</TableCell>
-                <TableCell className="text-right">{rates['40FT']}</TableCell>
-                <TableCell className="text-right">{rates['LOOSE']}</TableCell>
-                <TableCell className="text-center">{rates['DAYS']} days</TableCell>
+            {rates.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  No routes configured
+                </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              rates.map((route) => (
+                <TableRow key={route.id}>
+                  <TableCell className="font-medium">{route.route_name}</TableCell>
+                  <TableCell className="text-right">${route.container_20ft.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">${route.container_40ft.toLocaleString()}</TableCell>
+                  <TableCell className="text-right">${route.loose_cargo.toLocaleString()}</TableCell>
+                  <TableCell className="text-center">{route.transit_days} days</TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>
@@ -371,7 +441,7 @@ interface AgreementData {
   date: string;
   startDate: string;
   endDate: string;
-  
+
   // Supplier
   supplierCompany: string;
   supplierAddress: string;
@@ -379,7 +449,7 @@ interface AgreementData {
   supplierTel: string;
   supplierEmail: string;
   supplierTin: string;
-  
+
   // Client
   clientCompany: string;
   clientAddress: string;
@@ -387,27 +457,27 @@ interface AgreementData {
   clientTel: string;
   clientEmail: string;
   clientTin: string;
-  
+
   // Scope
   scopeDescription: string;
   generatorModel: string;
   rentalDuration: number;
-  
+
   // Financial
   rates: RateLine[];
   totalContractValue: number;
-  
+
   // Bank Details
   bankName: string;
   bankBranch: string;
   accountNumber: string;
   accountName: string;
-  
+
   // Terms
   paymentTerms: string;
   deliveryLocation: string;
   deliveryDate: string;
-  
+
   // Signatories
   supplierDirector: string;
   clientDirector: string;
@@ -428,39 +498,39 @@ export function TransportAgreementGenerator({ initialData, onClose }: TransportA
     date: initialData?.date || format(new Date(), 'yyyy-MM-dd'),
     startDate: initialData?.startDate || format(new Date(), 'yyyy-MM-dd'),
     endDate: initialData?.endDate || format(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    
+
     supplierCompany: initialData?.supplierCompany || 'Calvary Investment Company Limited',
     supplierAddress: initialData?.supplierAddress || 'P.O. Box 12929',
     supplierLocation: initialData?.supplierLocation || 'Dar es Salaam, Tanzania',
     supplierTel: initialData?.supplierTel || '',
     supplierEmail: initialData?.supplierEmail || '',
     supplierTin: initialData?.supplierTin || '',
-    
+
     clientCompany: initialData?.clientCompany || '',
     clientAddress: initialData?.clientAddress || '',
     clientLocation: initialData?.clientLocation || '',
     clientTel: initialData?.clientTel || '',
     clientEmail: initialData?.clientEmail || '',
     clientTin: initialData?.clientTin || '',
-    
+
     scopeDescription: initialData?.scopeDescription || 'Transportation and logistics services',
     generatorModel: initialData?.generatorModel || '',
     rentalDuration: initialData?.rentalDuration || 365,
-    
+
     rates: initialData?.rates || [
       { id: '1', description: 'Transport Services (per trip)', rate: 0, amount: 0 }
     ],
     totalContractValue: initialData?.totalContractValue || 0,
-    
+
     bankName: initialData?.bankName || '',
     bankBranch: initialData?.bankBranch || '',
     accountNumber: initialData?.accountNumber || '',
     accountName: initialData?.accountName || '',
-    
+
     paymentTerms: initialData?.paymentTerms || '100% upfront or 50% advance, 50% on delivery',
     deliveryLocation: initialData?.deliveryLocation || '',
     deliveryDate: initialData?.deliveryDate || '',
-    
+
     supplierDirector: initialData?.supplierDirector || 'Charles Mwakyembe',
     clientDirector: initialData?.clientDirector || ''
   });
@@ -482,7 +552,7 @@ export function TransportAgreementGenerator({ initialData, onClose }: TransportA
   const updateRateLine = (id: string, field: keyof RateLine, value: string | number) => {
     setAgreementData(prev => ({
       ...prev,
-      rates: prev.rates.map(item => 
+      rates: prev.rates.map(item =>
         item.id === id ? { ...item, [field]: value } : item
       )
     }));
@@ -708,7 +778,7 @@ ${agreementData.supplierDirector}              ${agreementData.clientDirector}
 
 Date: ${format(new Date(), 'dd/MM/yyyy')}
     `;
-    
+
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -726,19 +796,19 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Agreement Number</Label>
-          <Input value={agreementData.agreementNumber} onChange={(e) => setAgreementData({...agreementData, agreementNumber: e.target.value})} />
+          <Input value={agreementData.agreementNumber} onChange={(e) => setAgreementData({ ...agreementData, agreementNumber: e.target.value })} />
         </div>
         <div className="space-y-2">
           <Label>Ref No</Label>
-          <Input value={agreementData.refNo} onChange={(e) => setAgreementData({...agreementData, refNo: e.target.value})} />
+          <Input value={agreementData.refNo} onChange={(e) => setAgreementData({ ...agreementData, refNo: e.target.value })} />
         </div>
         <div className="space-y-2">
           <Label>Date</Label>
-          <Input type="date" value={agreementData.date} onChange={(e) => setAgreementData({...agreementData, date: e.target.value})} />
+          <Input type="date" value={agreementData.date} onChange={(e) => setAgreementData({ ...agreementData, date: e.target.value })} />
         </div>
         <div className="space-y-2">
           <Label>End Date</Label>
-          <Input type="date" value={agreementData.endDate} onChange={(e) => setAgreementData({...agreementData, endDate: e.target.value})} />
+          <Input type="date" value={agreementData.endDate} onChange={(e) => setAgreementData({ ...agreementData, endDate: e.target.value })} />
         </div>
       </div>
 
@@ -747,12 +817,12 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
         <div className="space-y-3">
           <h3 className="font-semibold text-red-600">SUPPLIER</h3>
           <div className="space-y-2">
-            <Input placeholder="Company Name" value={agreementData.supplierCompany} onChange={(e) => setAgreementData({...agreementData, supplierCompany: e.target.value})} />
-            <Input placeholder="Address" value={agreementData.supplierAddress} onChange={(e) => setAgreementData({...agreementData, supplierAddress: e.target.value})} />
-            <Input placeholder="Location" value={agreementData.supplierLocation} onChange={(e) => setAgreementData({...agreementData, supplierLocation: e.target.value})} />
-            <Input placeholder="Telephone" value={agreementData.supplierTel} onChange={(e) => setAgreementData({...agreementData, supplierTel: e.target.value})} />
-            <Input placeholder="Email" value={agreementData.supplierEmail} onChange={(e) => setAgreementData({...agreementData, supplierEmail: e.target.value})} />
-            <Input placeholder="TIN" value={agreementData.supplierTin} onChange={(e) => setAgreementData({...agreementData, supplierTin: e.target.value})} />
+            <Input placeholder="Company Name" value={agreementData.supplierCompany} onChange={(e) => setAgreementData({ ...agreementData, supplierCompany: e.target.value })} />
+            <Input placeholder="Address" value={agreementData.supplierAddress} onChange={(e) => setAgreementData({ ...agreementData, supplierAddress: e.target.value })} />
+            <Input placeholder="Location" value={agreementData.supplierLocation} onChange={(e) => setAgreementData({ ...agreementData, supplierLocation: e.target.value })} />
+            <Input placeholder="Telephone" value={agreementData.supplierTel} onChange={(e) => setAgreementData({ ...agreementData, supplierTel: e.target.value })} />
+            <Input placeholder="Email" value={agreementData.supplierEmail} onChange={(e) => setAgreementData({ ...agreementData, supplierEmail: e.target.value })} />
+            <Input placeholder="TIN" value={agreementData.supplierTin} onChange={(e) => setAgreementData({ ...agreementData, supplierTin: e.target.value })} />
           </div>
         </div>
 
@@ -760,12 +830,12 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
         <div className="space-y-3">
           <h3 className="font-semibold text-red-600">CLIENT</h3>
           <div className="space-y-2">
-            <Input placeholder="Company Name" value={agreementData.clientCompany} onChange={(e) => setAgreementData({...agreementData, clientCompany: e.target.value})} />
-            <Input placeholder="Address" value={agreementData.clientAddress} onChange={(e) => setAgreementData({...agreementData, clientAddress: e.target.value})} />
-            <Input placeholder="Location" value={agreementData.clientLocation} onChange={(e) => setAgreementData({...agreementData, clientLocation: e.target.value})} />
-            <Input placeholder="Telephone" value={agreementData.clientTel} onChange={(e) => setAgreementData({...agreementData, clientTel: e.target.value})} />
-            <Input placeholder="Email" value={agreementData.clientEmail} onChange={(e) => setAgreementData({...agreementData, clientEmail: e.target.value})} />
-            <Input placeholder="TIN" value={agreementData.clientTin} onChange={(e) => setAgreementData({...agreementData, clientTin: e.target.value})} />
+            <Input placeholder="Company Name" value={agreementData.clientCompany} onChange={(e) => setAgreementData({ ...agreementData, clientCompany: e.target.value })} />
+            <Input placeholder="Address" value={agreementData.clientAddress} onChange={(e) => setAgreementData({ ...agreementData, clientAddress: e.target.value })} />
+            <Input placeholder="Location" value={agreementData.clientLocation} onChange={(e) => setAgreementData({ ...agreementData, clientLocation: e.target.value })} />
+            <Input placeholder="Telephone" value={agreementData.clientTel} onChange={(e) => setAgreementData({ ...agreementData, clientTel: e.target.value })} />
+            <Input placeholder="Email" value={agreementData.clientEmail} onChange={(e) => setAgreementData({ ...agreementData, clientEmail: e.target.value })} />
+            <Input placeholder="TIN" value={agreementData.clientTin} onChange={(e) => setAgreementData({ ...agreementData, clientTin: e.target.value })} />
           </div>
         </div>
       </div>
@@ -773,7 +843,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
       {/* Scope */}
       <div className="space-y-2">
         <Label>Scope Description</Label>
-        <Textarea rows={2} value={agreementData.scopeDescription} onChange={(e) => setAgreementData({...agreementData, scopeDescription: e.target.value})} />
+        <Textarea rows={2} value={agreementData.scopeDescription} onChange={(e) => setAgreementData({ ...agreementData, scopeDescription: e.target.value })} />
       </div>
 
       {/* Rates Table */}
@@ -803,10 +873,10 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
       <div className="space-y-3">
         <h3 className="font-semibold text-red-600">Bank Details</h3>
         <div className="grid grid-cols-2 gap-4">
-          <Input placeholder="Bank Name" value={agreementData.bankName} onChange={(e) => setAgreementData({...agreementData, bankName: e.target.value})} />
-          <Input placeholder="Branch" value={agreementData.bankBranch} onChange={(e) => setAgreementData({...agreementData, bankBranch: e.target.value})} />
-          <Input placeholder="Account Number" value={agreementData.accountNumber} onChange={(e) => setAgreementData({...agreementData, accountNumber: e.target.value})} />
-          <Input placeholder="Account Name" value={agreementData.accountName} onChange={(e) => setAgreementData({...agreementData, accountName: e.target.value})} />
+          <Input placeholder="Bank Name" value={agreementData.bankName} onChange={(e) => setAgreementData({ ...agreementData, bankName: e.target.value })} />
+          <Input placeholder="Branch" value={agreementData.bankBranch} onChange={(e) => setAgreementData({ ...agreementData, bankBranch: e.target.value })} />
+          <Input placeholder="Account Number" value={agreementData.accountNumber} onChange={(e) => setAgreementData({ ...agreementData, accountNumber: e.target.value })} />
+          <Input placeholder="Account Name" value={agreementData.accountName} onChange={(e) => setAgreementData({ ...agreementData, accountName: e.target.value })} />
         </div>
       </div>
 
@@ -814,11 +884,11 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Supplier Director</Label>
-          <Input value={agreementData.supplierDirector} onChange={(e) => setAgreementData({...agreementData, supplierDirector: e.target.value})} />
+          <Input value={agreementData.supplierDirector} onChange={(e) => setAgreementData({ ...agreementData, supplierDirector: e.target.value })} />
         </div>
         <div className="space-y-2">
           <Label>Client Director</Label>
-          <Input value={agreementData.clientDirector} onChange={(e) => setAgreementData({...agreementData, clientDirector: e.target.value})} />
+          <Input value={agreementData.clientDirector} onChange={(e) => setAgreementData({ ...agreementData, clientDirector: e.target.value })} />
         </div>
       </div>
 
