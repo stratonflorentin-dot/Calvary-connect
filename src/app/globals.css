@@ -4,64 +4,96 @@
 
 @layer base {
   :root {
-    /* Calvary Connect Brand Colors */
-    --background: 226 25% 96%; /* #F0F1F5 */
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 60% 40%; /* #2952A3 Deep Professional Blue-Grey */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 221 20% 90%;
-    --secondary-foreground: 221 60% 40%;
-    --muted: 221 20% 94%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 190 70% 60%; /* #52CAE0 Vibrant Aqua-Blue */
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 60% 40%;
+    /* ─── Calvary Connect — Comfortable Light Theme ───
+       Warm off-white background, deep navy text, muted borders.
+       Much easier on the eyes than pure white. */
+
+    --background: 220 18% 94%;        /* #EEF0F5 — warm light slate, not blinding white */
+    --foreground: 220 25% 18%;        /* #252D3D — deep navy text for readability */
+
+    --card: 220 20% 97%;              /* #F5F6FA — slightly lighter card surface */
+    --card-foreground: 220 25% 18%;
+
+    --popover: 220 20% 97%;
+    --popover-foreground: 220 25% 18%;
+
+    --primary: 213 80% 42%;           /* #1565C0 — rich professional blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 88%;         /* #D8DCE8 — muted blue-grey */
+    --secondary-foreground: 220 25% 25%;
+
+    --muted: 220 15% 91%;             /* #E2E5EE */
+    --muted-foreground: 220 14% 46%;  /* #6C7A96 — readable mid-grey */
+
+    --accent: 199 72% 50%;            /* #1BA3CC — calm teal-blue accent */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 4 80% 52%;         /* #E53935 */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 18% 84%;            /* #CDD1DE — visible but soft */
+    --input: 220 18% 84%;
+    --ring: 213 80% 42%;
     --radius: 0.75rem;
 
-    --chart-1: 221 60% 40%;
-    --chart-2: 190 70% 60%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 142 70% 45%;
-    --chart-5: 0 84% 60%;
+    /* ─── Sidebar: Deep navy (always dark, regardless of page theme) ─── */
+    --sidebar: 222 35% 14%;           /* #18213A */
+    --sidebar-foreground: 215 30% 88%; /* #CBD5E8 */
+    --sidebar-primary: 213 80% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 35% 20%;
+    --sidebar-accent-foreground: 215 30% 95%;
+    --sidebar-border: 222 30% 20%;
+    --sidebar-ring: 213 80% 55%;
 
-    --sidebar-background: 222 47% 11%; /* Navy sidebar */
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 221 60% 40%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 221 60% 30%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 221 60% 40%;
+    /* Chart palette */
+    --chart-1: 213 80% 42%;
+    --chart-2: 199 72% 50%;
+    --chart-3: 38 90% 52%;
+    --chart-4: 145 65% 40%;
+    --chart-5: 4 80% 52%;
   }
 
   .dark {
-    --background: 222 47% 4%; /* slate-950 */
-    --foreground: 210 40% 98%; /* slate-50 */
-    --card: 222 47% 8%; /* slate-900 */
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 4%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%; /* blue-500 */
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 222 47% 8%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 222 47% 8%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 222 47% 8%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* ─── Calvary Connect — Premium Dark Theme ───
+       NOT pitch black. Uses a warm charcoal (#16202E) as base —
+       easier on eyes than slate-950, still feels premium & professional. */
+
+    --background: 216 35% 11%;        /* #141E2D — deep navy-charcoal, not black */
+    --foreground: 215 25% 88%;        /* #CDD4E6 — soft off-white text */
+
+    --card: 216 33% 14%;              /* #192335 — subtle card lift */
+    --card-foreground: 215 25% 88%;
+
+    --popover: 216 33% 12%;
+    --popover-foreground: 215 25% 88%;
+
+    --primary: 213 80% 58%;           /* #3B8CE8 — bright-but-calm blue */
+    --primary-foreground: 216 35% 10%;
+
+    --secondary: 216 28% 20%;         /* #243047 — muted dark-blue */
+    --secondary-foreground: 215 25% 80%;
+
+    --muted: 216 28% 18%;             /* #1F2C3F */
+    --muted-foreground: 215 18% 58%;  /* #7E90AB — readable mid-tone */
+
+    --accent: 199 65% 52%;            /* #2AADE0 */
+    --accent-foreground: 216 35% 10%;
+
+    --destructive: 4 72% 45%;         /* #C0392B */
+    --destructive-foreground: 215 25% 90%;
+
+    --border: 216 28% 22%;            /* #253248 — visible, not glaring */
+    --input: 216 28% 22%;
+    --ring: 213 80% 58%;
+
+    /* Chart palette */
+    --chart-1: 213 80% 58%;
+    --chart-2: 199 65% 52%;
+    --chart-3: 38 90% 56%;
+    --chart-4: 145 60% 44%;
+    --chart-5: 4 72% 52%;
   }
 }
 
@@ -76,63 +108,44 @@
   }
 }
 
-/* Mobile-specific optimizations */
+/* ─── Mobile optimizations ─── */
 @media (max-width: 768px) {
   body {
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
     overflow-x: hidden;
   }
-  
-  /* Prevent double-tap zoom */
   * {
     touch-action: manipulation;
   }
-  
-  /* Better button touch targets */
   button, a, input, textarea, select {
     min-height: 44px;
   }
 }
 
-/* Utility: push content above the mobile bottom tab bar (60px) + device safe area */
+/* Utility: push content above the mobile bottom tab bar */
 .safe-area-padding,
 .mobile-content {
   padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
 }
 
-/* Standalone PWA — extra top safe area for status bar on notched devices */
+/* Standalone PWA — extra top safe area */
 @media all and (display-mode: standalone) {
   body {
     padding-top: env(safe-area-inset-top, 0px);
   }
 }
 
-/* Custom Scrollbar for Story Stat Cards */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+/* ─── Scrollbar Utilities ─── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Scrollbar hide utility - for mobile bottom nav */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Thin scrollbar for sidebar navigation */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Thin scrollbar for sidebar */
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: hsl(var(--sidebar-border) / 0.5);
   border-radius: 2px;
@@ -141,150 +154,84 @@
   background: hsl(var(--sidebar-border) / 0.8);
 }
 
-.story-snap {
-  scroll-snap-type: x mandatory;
-}
-.story-snap > * {
-  scroll-snap-align: start;
-}
+.story-snap { scroll-snap-type: x mandatory; }
+.story-snap > * { scroll-snap-align: start; }
 
-/* Cross-platform responsive design improvements */
-
-/* Desktop and tablet optimizations */
+/* ─── Desktop scrollbar ─── */
 @media (min-width: 769px) {
-  body {
-    overflow-x: hidden;
-  }
-  
-  /* Better scrollbar styling for desktop */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  
+  body { overflow-x: hidden; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track {
     background: hsl(var(--muted));
     border-radius: 4px;
   }
-  
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
+    background: hsl(var(--muted-foreground) / 0.25);
     border-radius: 4px;
   }
-  
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted-foreground) / 0.45);
   }
 }
 
-/* Large screen optimizations (Mac, Windows desktop) */
+/* ─── Large screens ─── */
 @media (min-width: 1440px) {
-  html {
-    font-size: 16px;
-  }
+  html { font-size: 16px; }
 }
 
-/* Touch device optimizations (iOS, Android) */
+/* ─── Touch device ─── */
 @media (pointer: coarse) {
-  /* Remove hover effects on touch devices */
-  button:hover,
-  a:hover {
-    transform: none !important;
-  }
-  
-  /* Increase touch targets */
+  button:hover, a:hover { transform: none !important; }
   button, a, input, textarea, select, [role="button"] {
     min-height: 48px;
     min-width: 48px;
   }
-  
-  /* Disable text selection on interactive elements */
   button, [role="button"], a {
     -webkit-user-select: none;
     user-select: none;
   }
 }
 
-/* iOS-specific fixes */
+/* ─── iOS fixes ─── */
 @supports (-webkit-touch-callout: none) {
-  /* Prevent callout menu on iOS */
-  * {
-    -webkit-touch-callout: none;
-  }
-  
-  /* Fix iOS zoom on input focus */
-  input, textarea, select {
-    font-size: 16px;
-  }
-  
-  /* Safe area for iPhone notch/Dynamic Island */
-  .ios-safe-top {
-    padding-top: env(safe-area-inset-top);
-  }
-  
-  .ios-safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+  * { -webkit-touch-callout: none; }
+  input, textarea, select { font-size: 16px; }
+  .ios-safe-top { padding-top: env(safe-area-inset-top); }
+  .ios-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
 
-/* Android-specific fixes */
+/* ─── Android fixes ─── */
 @supports not (-webkit-touch-callout: none) {
-  /* Android Chrome specific styles */
-  body {
-    /* Prevent pull-to-refresh on Android */
-    overscroll-behavior-y: contain;
-  }
+  body { overscroll-behavior-y: contain; }
 }
 
-/* Print styles for reports */
+/* ─── Print ─── */
 @media print {
-  .no-print {
-    display: none !important;
-  }
-  
-  body {
-    background: white;
-    color: black;
-  }
-  
-  .print-break {
-    page-break-before: always;
-  }
+  .no-print { display: none !important; }
+  body { background: white; color: black; }
+  .print-break { page-break-before: always; }
 }
 
-/* High contrast mode support (accessibility) */
+/* ─── Accessibility ─── */
 @media (prefers-contrast: high) {
-  :root {
-    --border: 222 47% 11%;
-  }
+  :root { --border: 220 25% 60%; }
+  .dark { --border: 215 25% 40%; }
 }
 
-/* Reduced motion support (accessibility) */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-/* Dark mode support for OS preference */
-@media (prefers-color-scheme: dark) {
-  /* Respect OS dark mode preference */
-}
-
-/* Landscape mode optimizations for mobile */
+/* ─── Landscape mobile ─── */
 @media (max-width: 768px) and (orientation: landscape) {
-  .landscape-hide {
-    display: none;
-  }
+  .landscape-hide { display: none; }
 }
 
-/* Fix for Windows high DPI displays */
+/* ─── Windows HiDPI ─── */
 @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-  img {
-    image-rendering: -webkit-optimize-contrast;
-  }
+  img { image-rendering: -webkit-optimize-contrast; }
 }
