@@ -1,5 +1,5 @@
 -- ==========================================================================
--- CALVARY CONNECT - PAYROLL & COMPENSATION PATCH
+-- CALVARY CONNECT - PAYROLL & COMPENSATION PATCH  
 -- Run this in your Supabase SQL Editor to support the manual payroll system!
 -- ==========================================================================
 
@@ -9,9 +9,30 @@ ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS role VARCHAR(50);
 ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'allowance';
 ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'TZS';
 ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- 2. Add indexes for faster payroll querying
 CREATE INDEX IF NOT EXISTS idx_driver_allowances_type ON driver_allowances(type);
+CREATE INDEX IF NOT EXISTS idx_driver_allowances_driver_id ON driver_allowances(driver_id);
+CREATE INDEX IF NOT EXISTS idx_driver_allowances_status ON driver_allowances(status);
 
--- 3. Success message
-SELECT '✅ Payroll schema patch completed successfully!' as status;
+-- 3. Ensure expenses table supports Staff Costs category
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS category VARCHAR(100);
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL;
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS driver_id UUID REFERENCES user_profiles(id) ON DELETE SET NULL;
+
+-- 4. Ensure invoices table has linked_expense + description
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS linked_expense UUID REFERENCES expenses(id) ON DELETE SET NULL;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS description TEXT;
+
+-- 5. Ensure user_profiles has salary field
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS salary NUMERIC(12,2) DEFAULT 0;
+
+-- 6. Grant access for service role
+GRANT ALL ON driver_allowances TO service_role;
+GRANT ALL ON allowances TO service_role;
+GRANT ALL ON expenses TO service_role;
+GRANT ALL ON invoices TO service_role;
+
+-- 7. Success message
+SELECT '✅ Calvary Payroll schema patch v2 completed successfully!' AS status;
