@@ -7,7 +7,7 @@ try {
 
   console.log("Committing changes...");
   try {
-    const commitMsg = 'Modernize Trip History UI and fix Allowances page compilation error';
+    const commitMsg = 'Fix driver_allowances not-null constraint violation error on manual payroll submission';
     const commitOut = execSync(`git commit -m "${commitMsg}"`).toString();
     console.log(commitOut);
   } catch (err) {

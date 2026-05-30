@@ -11,6 +11,17 @@ ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAU
 ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS reason TEXT;
 ALTER TABLE driver_allowances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
+-- 1.5. Drop NOT NULL constraints on worker_name and role if they exist from legacy schema
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'driver_allowances' AND column_name = 'worker_name') THEN
+    ALTER TABLE driver_allowances ALTER COLUMN worker_name DROP NOT NULL;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'driver_allowances' AND column_name = 'role') THEN
+    ALTER TABLE driver_allowances ALTER COLUMN role DROP NOT NULL;
+  END IF;
+END $$;
+
 -- 2. Add indexes for faster payroll querying
 CREATE INDEX IF NOT EXISTS idx_driver_allowances_type ON driver_allowances(type);
 CREATE INDEX IF NOT EXISTS idx_driver_allowances_driver_id ON driver_allowances(driver_id);

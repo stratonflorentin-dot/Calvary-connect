@@ -61,6 +61,7 @@ export async function savePayrollAction(payrollData: {
       .insert({
         driver_id: payrollData.employeeId,
         driver_name: payrollData.employeeName,
+        worker_name: payrollData.employeeName, // Fallback for legacy schemas
         role: payrollData.role,
         amount: payrollData.netSalary,
         type: "payroll",
