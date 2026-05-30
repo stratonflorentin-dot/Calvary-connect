@@ -305,19 +305,19 @@ export default function AllowancesPage() {
   const statsTotalWorkers = workers.length;
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <div className="flex min-h-screen bg-background text-foreground font-sans">
       <Sidebar role={role || 'DRIVER'} />
       
       <main className="flex-1 md:ml-60 p-6 md:p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-8">
           
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300 bg-clip-text text-transparent">
                 Calvary Worker Payroll & Allowances Center
               </h1>
-              <p className="text-slate-400 mt-1">
+              <p className="text-muted-foreground mt-1">
                 Manually manage base salaries, process allowances, and track monthly staff compensation.
               </p>
             </div>
@@ -327,7 +327,7 @@ export default function AllowancesPage() {
                 variant="outline"
                 onClick={loadData}
                 disabled={loading}
-                className="border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-200"
+                className="border-border bg-card hover:bg-muted text-foreground"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Sync System
@@ -337,67 +337,67 @@ export default function AllowancesPage() {
 
           {/* Premium Overview Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-xl hover:border-amber-500/50 transition-all duration-300">
+            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-amber-500/50 transition-all duration-300">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-amber-500">Pending Approval</p>
-                  <p className="text-2xl font-bold text-amber-400 mt-1">{format(statsPending)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Awaiting manager process</p>
+                  <p className="text-2xl font-bold text-amber-500 dark:text-amber-400 mt-1">{format(statsPending)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Awaiting manager process</p>
                 </div>
                 <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center">
-                  <Calculator className="w-6 h-6 text-amber-400 animate-pulse" />
+                  <Calculator className="w-6 h-6 text-amber-500 dark:text-amber-400 animate-pulse" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-xl hover:border-blue-500/50 transition-all duration-300">
+            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-blue-500/50 transition-all duration-300">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-blue-500">Approved Ledger</p>
-                  <p className="text-2xl font-bold text-blue-400 mt-1">{format(statsApproved)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Synced to bills & expenses</p>
+                  <p className="text-2xl font-bold text-blue-500 dark:text-blue-400 mt-1">{format(statsApproved)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Synced to bills & expenses</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center">
-                  <Coins className="w-6 h-6 text-blue-400" />
+                  <Coins className="w-6 h-6 text-blue-500 dark:text-blue-400" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-xl hover:border-green-500/50 transition-all duration-300">
+            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-green-500/50 transition-all duration-300">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-green-500">Disbursed Wages</p>
-                  <p className="text-2xl font-bold text-green-400 mt-1">{format(statsPaid)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Successfully paid workers</p>
+                  <p className="text-2xl font-bold text-green-500 dark:text-green-400 mt-1">{format(statsPaid)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Successfully paid workers</p>
                 </div>
                 <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-center">
-                  <Landmark className="w-6 h-6 text-green-400" />
+                  <Landmark className="w-6 h-6 text-green-500 dark:text-green-400" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-md shadow-xl hover:border-indigo-500/50 transition-all duration-300">
+            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-indigo-500/50 transition-all duration-300">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">Active Directory</p>
-                  <p className="text-2xl font-bold text-indigo-400 mt-1">{statsTotalWorkers}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Registered company profiles</p>
+                  <p className="text-2xl font-bold text-indigo-500 dark:text-indigo-400 mt-1">{statsTotalWorkers}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Registered company profiles</p>
                 </div>
                 <div className="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center">
-                  <User className="w-6 h-6 text-indigo-400" />
+                  <User className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex border-b border-slate-800 gap-1">
+          <div className="flex border-b border-border gap-1">
             <button
               onClick={() => setActiveTab('process')}
               className={`px-6 py-3 font-semibold text-sm transition-all duration-200 border-b-2 flex items-center gap-2 ${
                 activeTab === 'process'
-                  ? 'border-blue-500 text-blue-400 bg-slate-900/30'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-800'
+                  ? 'border-primary text-primary bg-card'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
               }`}
             >
               <Coins className="w-4 h-4" />
@@ -407,8 +407,8 @@ export default function AllowancesPage() {
               onClick={() => setActiveTab('history')}
               className={`px-6 py-3 font-semibold text-sm transition-all duration-200 border-b-2 flex items-center gap-2 ${
                 activeTab === 'history'
-                  ? 'border-blue-500 text-blue-400 bg-slate-900/30'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-800'
+                  ? 'border-primary text-primary bg-card'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
               }`}
             >
               <FileText className="w-4 h-4" />
@@ -420,18 +420,18 @@ export default function AllowancesPage() {
           {activeTab === 'process' && (
             <div className="space-y-6">
               {/* Directory Filter Bar */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/30 border border-slate-800/80 p-4 rounded-xl backdrop-blur-sm">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border p-4 rounded-xl backdrop-blur-sm">
                 <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search workers by name, role or email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-slate-950 border-slate-800 text-slate-200 placeholder:text-slate-500 focus-visible:ring-blue-500"
+                    className="pl-9 bg-background border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
                 </div>
-                <div className="text-xs text-slate-500 flex items-center gap-2">
-                  <Info className="w-3.5 h-3.5 text-blue-500" />
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Info className="w-3.5 h-3.5 text-primary" />
                   Updating an employee's Base Salary updates their global master profile.
                 </div>
               </div>
@@ -439,12 +439,12 @@ export default function AllowancesPage() {
               {/* Workers Input Grid */}
               <div className="grid grid-cols-1 gap-6">
                 {loading ? (
-                  <div className="text-center py-16 bg-slate-900/20 border border-slate-800 rounded-2xl">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto" />
-                    <p className="text-slate-400 mt-3 font-medium">Analyzing worker directories...</p>
+                  <div className="text-center py-16 bg-card border border-border rounded-2xl">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto" />
+                    <p className="text-muted-foreground mt-3 font-medium">Analyzing worker directories...</p>
                   </div>
                 ) : filteredWorkers.length === 0 ? (
-                  <div className="text-center py-16 bg-slate-900/20 border border-slate-800 rounded-2xl text-slate-500">
+                  <div className="text-center py-16 bg-card border border-border rounded-2xl text-muted-foreground">
                     No active worker profiles match your criteria.
                   </div>
                 ) : (
@@ -458,32 +458,32 @@ export default function AllowancesPage() {
                     return (
                       <Card 
                         key={worker.id} 
-                        className="bg-slate-900/30 border-slate-800/80 hover:border-slate-700/80 transition-all duration-200 overflow-hidden shadow-md"
+                        className="bg-card border-border hover:border-muted-foreground/30 transition-all duration-200 overflow-hidden shadow-md"
                       >
                         {/* Worker Identity Header */}
-                        <div className="p-4 md:p-6 bg-slate-900/60 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="p-4 md:p-6 bg-muted/30 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-slate-100 font-bold border border-blue-400/20 shadow-md">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold border border-blue-400/20 shadow-md">
                               {worker.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold text-slate-200">{worker.name}</h3>
-                                <Badge className="bg-slate-800 text-slate-300 border-slate-700 font-medium">
+                                <h3 className="text-lg font-bold text-foreground">{worker.name}</h3>
+                                <Badge className="bg-muted text-foreground border-border font-medium">
                                   {worker.role}
                                 </Badge>
                               </div>
-                              <p className="text-xs text-slate-500 mt-0.5">{worker.email}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{worker.email}</p>
                             </div>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-4">
                             <div>
-                              <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-500">Period</label>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Period</label>
                               <select
                                 value={periods[worker.id]}
                                 onChange={(e) => setPeriods(prev => ({ ...prev, [worker.id]: e.target.value }))}
-                                className="mt-1 block w-44 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 py-1.5 px-3 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="mt-1 block w-44 rounded-lg bg-background border border-border text-foreground py-1.5 px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                               >
                                 <option value="May 2026">May 2026</option>
                                 <option value="June 2026">June 2026</option>
@@ -493,11 +493,11 @@ export default function AllowancesPage() {
                             </div>
 
                             <div>
-                              <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-500">Method</label>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Method</label>
                               <select
                                 value={paymentMethods[worker.id]}
                                 onChange={(e) => setPaymentMethods(prev => ({ ...prev, [worker.id]: e.target.value }))}
-                                className="mt-1 block w-40 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 py-1.5 px-3 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="mt-1 block w-40 rounded-lg bg-background border border-border text-foreground py-1.5 px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                               >
                                 <option value="Bank Transfer">Bank Transfer</option>
                                 <option value="Mobile Money">Mobile Money</option>
@@ -512,23 +512,23 @@ export default function AllowancesPage() {
                           
                           {/* Base Salary */}
                           <div>
-                            <label className="block text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1.5">
-                              <DollarSign className="w-3.5 h-3.5 text-blue-500" />
+                            <label className="block text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                              <DollarSign className="w-3.5 h-3.5 text-primary" />
                               Base Salary (TZS)
                             </label>
                             <div className="relative">
                               <Input
                                 value={baseSalary.toLocaleString()}
                                 onChange={(e) => handleNumChange(worker.id, e.target.value, setBaseSalaries)}
-                                className="bg-slate-950 border-slate-800 text-slate-200 focus-visible:ring-blue-500 font-mono text-sm pr-12"
+                                className="bg-background border-border text-foreground focus-visible:ring-primary font-mono text-sm pr-12"
                               />
-                              <span className="absolute right-3 top-2.5 text-xs text-slate-600 font-bold">TZS</span>
+                              <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">TZS</span>
                             </div>
                           </div>
 
                           {/* Allowances */}
                           <div>
-                            <label className="block text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1.5">
+                            <label className="block text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
                               <Plus className="w-3.5 h-3.5 text-green-500" />
                               Allowances (TZS)
                             </label>
@@ -536,15 +536,15 @@ export default function AllowancesPage() {
                               <Input
                                 value={allowances.toLocaleString()}
                                 onChange={(e) => handleNumChange(worker.id, e.target.value, setAllowancesInputs)}
-                                className="bg-slate-950 border-slate-800 text-slate-200 focus-visible:ring-green-500 font-mono text-sm pr-12"
+                                className="bg-background border-border text-foreground focus-visible:ring-green-500 font-mono text-sm pr-12"
                               />
-                              <span className="absolute right-3 top-2.5 text-xs text-slate-600 font-bold">TZS</span>
+                              <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">TZS</span>
                             </div>
                           </div>
 
                           {/* Deductions */}
                           <div>
-                            <label className="block text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1.5">
+                            <label className="block text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
                               <XCircle className="w-3.5 h-3.5 text-red-500" />
                               Deductions (TZS)
                             </label>
@@ -552,17 +552,17 @@ export default function AllowancesPage() {
                               <Input
                                 value={deductions.toLocaleString()}
                                 onChange={(e) => handleNumChange(worker.id, e.target.value, setDeductionsInputs)}
-                                className="bg-slate-950 border-slate-800 text-slate-200 focus-visible:ring-red-500 font-mono text-sm pr-12"
+                                className="bg-background border-border text-foreground focus-visible:ring-red-500 font-mono text-sm pr-12"
                               />
-                              <span className="absolute right-3 top-2.5 text-xs text-slate-600 font-bold">TZS</span>
+                              <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">TZS</span>
                             </div>
                           </div>
 
                           {/* Live Net Calculations & Action */}
-                          <div className="bg-slate-950/40 border border-slate-800 p-4 rounded-xl flex items-center justify-between col-span-1 sm:col-span-2 lg:col-span-1">
+                          <div className="bg-muted/40 border border-border p-4 rounded-xl flex items-center justify-between col-span-1 sm:col-span-2 lg:col-span-1">
                             <div>
-                              <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Calculated Net</p>
-                              <p className={`text-xl font-black mt-1 font-mono ${netSalary >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Calculated Net</p>
+                              <p className={`text-xl font-black mt-1 font-mono ${netSalary >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                 {format(netSalary)}
                               </p>
                             </div>
@@ -570,7 +570,7 @@ export default function AllowancesPage() {
                             <Button
                               onClick={() => handleProcessPayroll(worker)}
                               disabled={isProcessing || netSalary <= 0}
-                              className="bg-blue-600 hover:bg-blue-500 text-slate-100 shadow-md font-semibold px-4"
+                              className="bg-primary hover:bg-primary/95 text-primary-foreground shadow-md font-semibold px-4"
                             >
                               {isProcessing ? 'Processing...' : 'Run Payroll'}
                             </Button>
@@ -579,14 +579,14 @@ export default function AllowancesPage() {
                         </div>
 
                         {/* Extra Notes Input */}
-                        <div className="px-4 md:px-6 pb-4 md:pb-6 border-t border-slate-800/50 pt-4 bg-slate-900/10">
+                        <div className="px-4 md:px-6 pb-4 md:pb-6 border-t border-border pt-4 bg-muted/10">
                           <div className="relative flex items-center gap-3">
-                            <Info className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                            <Info className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                             <Input
                               placeholder="Add optional notes (e.g., 'Overtime 5 hours', 'Advance repayment')..."
                               value={notes[worker.id]}
                               onChange={(e) => setNotes(prev => ({ ...prev, [worker.id]: e.target.value }))}
-                              className="bg-transparent border-none p-0 text-xs text-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-700"
+                              className="bg-transparent border-none p-0 text-xs text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
                             />
                           </div>
                         </div>
@@ -600,30 +600,30 @@ export default function AllowancesPage() {
 
           {/* History Ledger View */}
           {activeTab === 'history' && (
-            <Card className="bg-slate-900/30 border-slate-800/80 shadow-xl backdrop-blur-sm overflow-hidden">
-              <CardHeader className="border-b border-slate-800/80 p-6 bg-slate-900/40">
-                <CardTitle className="text-xl font-bold text-slate-200">Payroll Ledgers & Allowance Logs</CardTitle>
-                <CardDescription className="text-slate-400">
+            <Card className="bg-card border-border shadow-xl backdrop-blur-sm overflow-hidden">
+              <CardHeader className="border-b border-border p-6 bg-muted/20">
+                <CardTitle className="text-xl font-bold text-foreground">Payroll Ledgers & Allowance Logs</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   History of manual payroll entries and automatic driver allowances processed in Supabase.
                 </CardDescription>
 
                 {/* History Filter Bar */}
                 <div className="flex flex-col sm:flex-row items-center gap-4 mt-6">
                   <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="Search history by employee name or details..."
                       value={historySearch}
                       onChange={(e) => setHistorySearch(e.target.value)}
-                      className="pl-9 bg-slate-950 border-slate-800 text-slate-200 focus-visible:ring-blue-500"
+                      className="pl-9 bg-background border-border text-foreground focus-visible:ring-primary"
                     />
                   </div>
 
-                  <div className="flex gap-1 bg-slate-950 p-1 border border-slate-800 rounded-lg w-full sm:w-auto">
+                  <div className="flex gap-1 bg-background p-1 border border-border rounded-lg w-full sm:w-auto">
                     <button
                       onClick={() => setHistoryFilter('all')}
                       className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${
-                        historyFilter === 'all' ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'
+                        historyFilter === 'all' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       All Records
@@ -631,7 +631,7 @@ export default function AllowancesPage() {
                     <button
                       onClick={() => setHistoryFilter('payroll')}
                       className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${
-                        historyFilter === 'payroll' ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'
+                        historyFilter === 'payroll' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       Manual Payroll
@@ -639,7 +639,7 @@ export default function AllowancesPage() {
                     <button
                       onClick={() => setHistoryFilter('trip')}
                       className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${
-                        historyFilter === 'trip' ? 'bg-slate-800 text-blue-400' : 'text-slate-400 hover:text-slate-200'
+                        historyFilter === 'trip' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       Trip Allowances
@@ -651,26 +651,26 @@ export default function AllowancesPage() {
               <CardContent className="p-0">
                 {loading ? (
                   <div className="text-center py-16">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto" />
-                    <p className="text-slate-400 mt-3 text-sm">Synchronizing logs...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                    <p className="text-muted-foreground mt-3 text-sm">Synchronizing logs...</p>
                   </div>
                 ) : filteredHistory.length === 0 ? (
-                  <div className="text-center py-16 text-slate-500">
+                  <div className="text-center py-16 text-muted-foreground">
                     No payroll or allowance records match the active criteria.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="bg-slate-950/60 border-b border-slate-800/80">
-                        <TableRow className="border-b border-slate-800/80 hover:bg-transparent">
-                          <TableHead className="text-slate-400 font-bold text-xs uppercase py-4">Employee</TableHead>
-                          <TableHead className="text-slate-400 font-bold text-xs uppercase py-4">Category</TableHead>
-                          <TableHead className="text-slate-400 font-bold text-xs uppercase py-4">Period / Route</TableHead>
-                          <TableHead className="text-slate-400 font-bold text-xs uppercase py-4">Breakdown</TableHead>
-                          <TableHead className="text-slate-400 font-bold text-xs uppercase py-4">Net Salary</TableHead>
-                          <TableHead className="text-slate-400 font-bold text-xs uppercase py-4">Status</TableHead>
-                          <TableHead className="text-slate-400 font-bold text-xs uppercase py-4">Processed At</TableHead>
-                          <TableHead className="text-right text-slate-400 font-bold text-xs uppercase py-4 pr-6">Ledger Actions</TableHead>
+                      <TableHeader className="bg-muted/40 border-b border-border">
+                        <TableRow className="border-b border-border hover:bg-transparent">
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Employee</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Category</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Period / Route</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Breakdown</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Net Salary</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Status</TableHead>
+                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Processed At</TableHead>
+                          <TableHead className="text-right text-muted-foreground font-bold text-xs uppercase py-4 pr-6">Ledger Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       
@@ -681,17 +681,17 @@ export default function AllowancesPage() {
                           const isActionLoading = actionLoading === item.id;
 
                           return (
-                            <TableRow key={item.id} className="border-b border-slate-800/50 hover:bg-slate-900/10">
+                            <TableRow key={item.id} className="border-b border-border/80 hover:bg-muted/10">
                               
                               {/* Employee */}
                               <TableCell className="py-4">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 bg-slate-800 rounded-lg flex items-center justify-center font-bold text-xs border border-slate-700">
+                                  <div className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center font-bold text-xs border border-border text-foreground">
                                     {item.employee_name?.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                                   </div>
                                   <div>
-                                    <p className="font-semibold text-slate-200">{item.employee_name}</p>
-                                    <Badge className="bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-950 text-[10px] font-medium mt-0.5">
+                                    <p className="font-semibold text-foreground">{item.employee_name}</p>
+                                    <Badge className="bg-muted text-muted-foreground border-border hover:bg-muted text-[10px] font-medium mt-0.5">
                                       {item.worker_role || 'Employee'}
                                     </Badge>
                                   </div>
@@ -702,22 +702,22 @@ export default function AllowancesPage() {
                               <TableCell className="py-4">
                                 <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${
                                   isManual 
-                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' 
-                                    : 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 dark:text-blue-400' 
+                                    : 'bg-purple-500/10 border-purple-500/20 text-purple-500 dark:text-purple-400'
                                 }`}>
                                   {isManual ? 'Manual Payroll' : 'Trip Allowance'}
                                 </span>
                               </TableCell>
 
                               {/* Period / Route */}
-                              <TableCell className="py-4 text-xs font-semibold text-slate-300">
+                              <TableCell className="py-4 text-xs font-semibold text-foreground">
                                 {isManual ? (
                                   <div className="flex items-center gap-1">
-                                    <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                                    <Calendar className="w-3.5 h-3.5 text-primary" />
                                     {parsed?.period || 'Monthly'}
                                   </div>
                                 ) : (
-                                  <span className="text-slate-400 max-w-xs truncate block">
+                                  <span className="text-muted-foreground max-w-xs truncate block">
                                     Trip-based calculation
                                   </span>
                                 )}
@@ -726,21 +726,21 @@ export default function AllowancesPage() {
                               {/* Breakdown details */}
                               <TableCell className="py-4 max-w-xs text-xs">
                                 {isManual && parsed ? (
-                                  <div className="space-y-1 text-slate-400 font-mono">
+                                  <div className="space-y-1 text-muted-foreground font-mono">
                                     <p>Base: TZS {parsed.baseSalary?.toLocaleString()}</p>
                                     <p>Alw: TZS {parsed.allowances?.toLocaleString()}</p>
                                     <p>Ded: TZS {parsed.deductions?.toLocaleString()}</p>
-                                    {parsed.note && <p className="text-[10px] text-slate-600 italic">"{parsed.note}"</p>}
+                                    {parsed.note && <p className="text-[10px] text-muted-foreground/60 italic">"{parsed.note}"</p>}
                                   </div>
                                 ) : (
-                                  <span className="text-slate-500 italic max-w-xs block truncate">
+                                  <span className="text-muted-foreground italic max-w-xs block truncate">
                                     {item.reason}
                                   </span>
                                 )}
                               </TableCell>
 
                               {/* Net Salary Amount */}
-                              <TableCell className="py-4 font-mono font-bold text-sm text-slate-200">
+                              <TableCell className="py-4 font-mono font-bold text-sm text-foreground">
                                 {format(item.amount)}
                               </TableCell>
 
@@ -749,10 +749,10 @@ export default function AllowancesPage() {
                                 <Badge 
                                   variant="outline"
                                   className={`font-semibold capitalize text-[10px] ${
-                                    item.status === 'paid' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                    item.status === 'approved' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                    item.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                    'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'
+                                    item.status === 'paid' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' :
+                                    item.status === 'approved' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
+                                    item.status === 'rejected' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' :
+                                    'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
                                   }`}
                                 >
                                   {item.status}
@@ -760,7 +760,7 @@ export default function AllowancesPage() {
                               </TableCell>
 
                               {/* Date */}
-                              <TableCell className="py-4 text-xs text-slate-500">
+                              <TableCell className="py-4 text-xs text-muted-foreground">
                                 {new Date(item.created_at).toLocaleDateString()}
                               </TableCell>
 
@@ -773,7 +773,7 @@ export default function AllowancesPage() {
                                         size="sm" 
                                         onClick={() => handleApprovePayroll(item.id)}
                                         disabled={isActionLoading}
-                                        className="bg-blue-600 hover:bg-blue-500 text-slate-100 text-[10px] h-7 px-3 font-semibold shadow-md"
+                                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] h-7 px-3 font-semibold shadow-md"
                                       >
                                         Approve
                                       </Button>
@@ -782,7 +782,7 @@ export default function AllowancesPage() {
                                         variant="outline"
                                         onClick={() => handleRejectPayroll(item.id)}
                                         disabled={isActionLoading}
-                                        className="border-slate-800 hover:bg-slate-800 text-slate-300 text-[10px] h-7 px-3 font-semibold"
+                                        className="border-border hover:bg-muted text-foreground text-[10px] h-7 px-3 font-semibold"
                                       >
                                         Reject
                                       </Button>
@@ -794,7 +794,7 @@ export default function AllowancesPage() {
                                     variant="ghost"
                                     onClick={() => handleDeletePayroll(item.id)}
                                     disabled={isActionLoading}
-                                    className="text-slate-600 hover:text-red-400 hover:bg-red-500/10 h-7 w-7 p-0 flex items-center justify-center rounded-lg"
+                                    className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 h-7 w-7 p-0 flex items-center justify-center rounded-lg"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </Button>
