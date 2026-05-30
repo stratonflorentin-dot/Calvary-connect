@@ -409,8 +409,14 @@ ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS table_name VARCHAR(50);
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS action VARCHAR(20);
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES user_profiles(id);
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_name VARCHAR(200);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_role VARCHAR(100);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS record_id UUID;
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS old_data JSONB;
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS new_data JSONB;
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS change_summary TEXT;
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS details JSONB;
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_agent TEXT;
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- 2. DATA MIGRATIONS (Safe Dynamic SQL)
@@ -676,3 +682,70 @@ ON CONFLICT (id) DO NOTHING;
 CREATE POLICY "Public Avatar Access" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
 CREATE POLICY "User Upload Avatars" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
 CREATE POLICY "User Update Avatars" ON storage.objects FOR UPDATE USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ============================================================================
+-- AUDIT LOG RPC FUNCTIONS
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION log_audit_change(
+    p_user_id UUID,
+    p_user_name TEXT,
+    p_user_role TEXT,
+    p_action TEXT,
+    p_table_name TEXT,
+    p_record_id UUID,
+    p_old_data JSONB DEFAULT NULL,
+    p_new_data JSONB DEFAULT NULL,
+    p_change_summary TEXT DEFAULT NULL
+) RETURNS VOID AS $$
+BEGIN
+    INSERT INTO audit_logs (
+        user_id, user_name, user_role, action, table_name, 
+        record_id, old_data, new_data, change_summary,
+        ip_address, user_agent
+    ) VALUES (
+        p_user_id, p_user_name, p_user_role, p_action, p_table_name,
+        p_record_id, p_old_data, p_new_data, p_change_summary,
+        current_setting('request.headers', true)::jsonb->>'x-real-ip',
+        current_setting('request.headers', true)::jsonb->>'user-agent'
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION log_audit_change TO authenticated;
+
+CREATE OR REPLACE FUNCTION notify_ceo_admin_on_change(
+    p_sender_id UUID,
+    p_sender_name TEXT,
+    p_table_name TEXT,
+    p_action TEXT,
+    p_record_id UUID,
+    p_summary TEXT
+) RETURNS VOID AS $$
+DECLARE
+    v_recipient_id UUID;
+BEGIN
+    FOR v_recipient_id IN 
+        SELECT id FROM user_profiles 
+        WHERE role IN ('CEO', 'ADMIN')
+        AND id != p_sender_id
+    LOOP
+        INSERT INTO notifications (
+            user_id, sender_id, sender_name, title, message, type, category, action_url
+        ) VALUES (
+            v_recipient_id,
+            p_sender_id,
+            p_sender_name,
+            p_table_name || ' ' || p_action,
+            p_sender_name || ' ' || p_action || ' a ' || p_table_name || ' record: ' || p_summary,
+            CASE 
+                WHEN p_action = 'DELETE' THEN 'warning'
+                WHEN p_table_name IN ('purchases', 'sales', 'invoices') AND p_action IN ('CREATE', 'UPDATE') THEN 'success'
+                ELSE 'info'
+            END,
+            'audit',
+            '/finance'
+        );
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

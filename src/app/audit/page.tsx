@@ -65,31 +65,35 @@ export default function AuditTrailPage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 md:pl-72 text-slate-900 dark:text-slate-100">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Financial Audit Trail</h1>
-              <p className="text-slate-500">Trace every interaction and financial activity across the organization</p>
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
+                Financial Audit Trail
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                Trace every interaction and financial activity across the organization
+              </p>
             </div>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <Input 
                   placeholder="Search logs..." 
-                  className="pl-10 w-64 bg-white"
+                  className="pl-10 w-64 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-50 focus-visible:ring-indigo-500 rounded-xl shadow-sm"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
               <Select value={tableFilter} onValueChange={setTableFilter}>
-                <SelectTrigger className="w-48 bg-white">
-                  <Filter className="w-4 h-4 mr-2" />
+                <SelectTrigger className="w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-50 rounded-xl shadow-sm">
+                  <Filter className="w-4 h-4 mr-2 text-slate-400" />
                   <SelectValue placeholder="Filter by module" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
                   <SelectItem value="all">All Modules</SelectItem>
                   <SelectItem value="trips">Logistics (Trips)</SelectItem>
                   <SelectItem value="sales">Revenue (Sales)</SelectItem>
@@ -102,75 +106,90 @@ export default function AuditTrailPage() {
             </div>
           </div>
 
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-0">
-              <CardTitle className="text-lg font-medium">Activity Log</CardTitle>
+          <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden">
+            <CardHeader className="pb-0 pt-6">
+              <CardTitle className="text-lg font-bold text-slate-900 dark:text-slate-50">Activity Log</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Module</TableHead>
-                    <TableHead>Summary</TableHead>
-                    <TableHead className="text-right">Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10">
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span className="text-slate-500">Loading audit trail...</span>
-                        </div>
-                      </TableCell>
+            <CardContent className="pt-4">
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800">
+                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">Timestamp</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">User</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">Action</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">Module</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">Summary</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px] text-right">Details</TableHead>
                     </TableRow>
-                  ) : filteredLogs.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10 text-slate-500">
-                        No activity found matching your filters.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredLogs.map((log) => (
-                      <TableRow key={log.id} className="hover:bg-slate-50 transition-colors">
-                        <TableCell className="text-sm text-slate-500">
-                          {format(new Date(log.created_at), 'MMM d, HH:mm:ss')}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center mr-2">
-                              <User className="w-4 h-4 text-indigo-600" />
-                            </div>
-                            <div>
-                              <div className="font-medium text-slate-900">{log.user_name}</div>
-                              <div className="text-xs text-slate-500 uppercase">{log.user_role}</div>
-                            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-3 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading audit trail pipeline...</span>
                           </div>
-                        </TableCell>
-                        <TableCell>{getActionBadge(log.action)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center text-slate-600">
-                            {getTableIcon(log.table_name)}
-                            <span className="capitalize">{log.table_name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="max-w-md">
-                          <span className="text-slate-700">{log.change_summary}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <ChevronRight className="w-4 h-4" />
-                          </Button>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : filteredLogs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12 text-slate-500 dark:text-slate-400 text-sm font-medium">
+                          No audit activity logs found matching your filters.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredLogs.map((log) => (
+                        <TableRow 
+                          key={log.id} 
+                          className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 border-slate-100 dark:border-slate-800 transition-colors"
+                        >
+                          <TableCell className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                            {log.created_at ? format(new Date(log.created_at), 'MMM d, HH:mm:ss') : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center mr-3 shrink-0">
+                                <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-slate-900 dark:text-slate-100 truncate text-sm">
+                                  {log.user_name || 'System / Auto-Agent'}
+                                </div>
+                                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                                  {log.user_role || 'ADMIN'}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{getActionBadge(log.action)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center text-sm font-semibold text-slate-700 dark:text-slate-300">
+                              {getTableIcon(log.table_name)}
+                              <span className="capitalize">{log.table_name || 'unknown'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-md">
+                            <span className="text-xs md:text-sm text-slate-600 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed">
+                              {log.change_summary || `Updated records in ${log.table_name || 'system'}`}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-slate-400 hover:text-slate-900 dark:hover:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>

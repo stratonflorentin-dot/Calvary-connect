@@ -39,6 +39,7 @@ import {
   Briefcase,
   Calculator,
   ArrowRight,
+  Navigation,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo } from "react";
