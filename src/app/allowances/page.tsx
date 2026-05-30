@@ -305,10 +305,10 @@ export default function AllowancesPage() {
   const statsTotalWorkers = workers.length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans md:ml-64">
+    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans">
       <Sidebar role={role || 'DRIVER'} />
       
-      <main className="w-full p-6 md:p-8 overflow-auto">
+      <main className="flex-1 md:ml-60 p-6 md:p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-8">
           
           {/* Header */}
