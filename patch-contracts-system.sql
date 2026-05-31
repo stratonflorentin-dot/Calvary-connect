@@ -16,6 +16,17 @@ ALTER TABLE transport_contracts
   ADD COLUMN IF NOT EXISTS special_notes TEXT,
   ADD COLUMN IF NOT EXISTS generated_html TEXT;
 
+-- Add missing columns to rate_sheets table if they do not exist
+ALTER TABLE rate_sheets
+  ADD COLUMN IF NOT EXISTS rate_sheet_name VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS contract_template_id UUID REFERENCES contract_templates(id),
+  ADD COLUMN IF NOT EXISTS expiry_date DATE,
+  ADD COLUMN IF NOT EXISTS fuel_adjustment_enabled BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS fuel_base_price DECIMAL(10,2),
+  ADD COLUMN IF NOT EXISTS rates JSONB,
+  ADD COLUMN IF NOT EXISTS special_conditions TEXT,
+  ADD COLUMN IF NOT EXISTS updated_by UUID;
+
 -- Fix the rate_sheet_id foreign key to point to the correct table
 -- (The above may have pointed to contract_templates by mistake, fix it)
 DO $$
