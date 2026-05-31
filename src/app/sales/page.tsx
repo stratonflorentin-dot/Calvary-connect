@@ -18,14 +18,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { 
+import {
   Building2, FileText, Users, Plus, Search, Phone, Mail, MapPin,
-  DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, ArrowRight, 
+  DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, ArrowRight,
   Briefcase, FileSignature, Printer, Download, Route, Truck, Container,
   Thermometer, Weight, Ruler, CalendarDays, X, Eye, Save, Pencil, Trash2
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ContractGenerator } from './contract-generator';
+import { TransportAgreementGenerator } from './transport-agreement-generator';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ interface TransportContract {
   company_name?: string;
   contract_type: string;
   service_types?: string[];
-  routes?: Array<{origin: string; destination: string; rate: number}>;
+  routes?: Array<{ origin: string; destination: string; rate: number }>;
   start_date: string;
   end_date?: string;
   min_monthly_trips?: number;
@@ -166,7 +167,7 @@ function SalesModuleContent() {
   const { user } = useSupabase();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  
+
   const [activeTab, setActiveTab] = useState(tabParam || 'customers');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [quotations, setQuotations] = useState<RouteQuotation[]>([]);
@@ -174,7 +175,7 @@ function SalesModuleContent() {
   const [rateSheets, setRateSheets] = useState<RateSheetEntry[]>([]);
   const [opportunities, setOpportunities] = useState<SalesOpportunity[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Dialog states
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [showQuotationDialog, setShowQuotationDialog] = useState(false);
@@ -185,18 +186,29 @@ function SalesModuleContent() {
   const [previewContract, setPreviewContract] = useState<TransportContract | null>(null);
 
   // Rate sheets from JSONB format (contract_templates system)
-  const [jsonbRateSheets, setJsonbRateSheets] = useState<Array<{id: string; rate_sheet_name: string; effective_date: string; currency: string; rates: any[]; special_conditions: string; is_active: boolean}>>([]);
+  const [jsonbRateSheets, setJsonbRateSheets] = useState<Array<{ id: string; rate_sheet_name: string; effective_date: string; currency: string; rates: any[]; special_conditions: string; is_active: boolean }>>([]);
   const [showRateSheetDialog, setShowRateSheetDialog] = useState(false);
   const [viewingRateSheet, setViewingRateSheet] = useState<any>(null);
   const [editingRateSheet, setEditingRateSheet] = useState<any>(null);
+  const [newRateSheet, setNewRateSheet] = useState({
+    route_name: '',
+    service_type: 'local_transport',
+    distance_km: 0,
+    currency: 'TZS',
+    container_20ft: 0,
+    container_40ft: 0,
+    loose_rate_mt: 0,
+    transit_days: 0,
+    special_conditions: '',
+  });
 
   // Form states
   const [customerForm, setCustomerForm] = useState({
-    company_name: '', contact_person: '', email: '', phone: '', 
+    company_name: '', contact_person: '', email: '', phone: '',
     address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '',
     payment_terms: '30 days', status: 'prospect', notes: ''
   });
-  
+
   const [quotationForm, setQuotationForm] = useState({
     customer_id: '', service_type: 'local_transport', origin: '', destination: '',
     distance_km: 0, cargo_type: '', cargo_weight_mt: '', container_size: '20ft',
@@ -205,7 +217,7 @@ function SalesModuleContent() {
   });
 
   const [contractForm, setContractForm] = useState({
-    customer_id: '', quotation_id: '', contract_type: 'long_term', 
+    customer_id: '', quotation_id: '', contract_type: 'long_term',
     start_date: format(new Date(), 'yyyy-MM-dd'), end_date: '',
     min_monthly_trips: 10, contract_value: '', payment_terms: '30 days',
     notes: ''
@@ -220,6 +232,7 @@ function SalesModuleContent() {
 
   // Permissions
   const canCreate = role === 'CEO' || role === 'ADMIN' || role === 'SALESMAN';
+  console.log('User role:', role, 'Can create:', canCreate);
 
   // Fetch data
   useEffect(() => {
@@ -251,7 +264,14 @@ function SalesModuleContent() {
       .from('route_quotations')
       .select('*, customers!customer_id(company_name)')
       .order('created_at', { ascending: false });
-    if (!error) setQuotations(data?.map(q => ({...q, company_name: q.customers?.company_name})) || []);
+    if (!error) {
+      const processedData = data?.map(q => ({
+        ...q,
+        company_name: q.customers?.company_name || '',
+        service_type: q.service_type || 'unknown',
+      })) || [];
+      setQuotations(processedData);
+    }
   }
 
   async function fetchContracts() {
@@ -259,10 +279,17 @@ function SalesModuleContent() {
       .from('transport_contracts')
       .select('*, customers!customer_id(company_name)')
       .order('created_at', { ascending: false });
-    if (!error) setContracts(data?.map(c => ({...c, company_name: c.customers?.company_name})) || []);
+    if (!error) setContracts(data?.map(c => ({ ...c, company_name: c.customers?.company_name })) || []);
   }
 
   async function fetchRateSheets() {
+    // First check if the created_by column exists, if not add it
+    try {
+      await supabase.rpc('add_created_by_column_if_not_exists');
+    } catch (e) {
+      console.log('Error checking/adding created_by column:', e);
+    }
+
     const { data, error } = await supabase
       .from('rate_sheets')
       .select('*')
@@ -287,7 +314,15 @@ function SalesModuleContent() {
       .from('sales_opportunities')
       .select('*, customers!customer_id(company_name)')
       .order('created_at', { ascending: false });
-    if (!error) setOpportunities(data?.map(o => ({...o, company_name: o.customers?.company_name})) || []);
+    if (!error) {
+      const processedData = data?.map(o => ({
+        ...o,
+        company_name: o.customers?.company_name || '',
+        service_type: o.service_type || 'unknown',
+        stage: o.stage || 'lead',
+      })) || [];
+      setOpportunities(processedData);
+    }
   }
 
   // Save functions
@@ -321,7 +356,7 @@ function SalesModuleContent() {
     const subtotal = base + fuel + quotationForm.border_fees + quotationForm.escort_fees;
     const vat = subtotal * (quotationForm.vat_rate / 100);
     const total = subtotal + vat;
-    
+
     const { error } = await supabase.from('route_quotations').insert([{
       customer_id: quotationForm.customer_id,
       service_type: quotationForm.service_type,
@@ -346,7 +381,7 @@ function SalesModuleContent() {
       notes: quotationForm.notes,
       created_by: user?.id
     }]);
-    
+
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
@@ -401,7 +436,7 @@ function SalesModuleContent() {
 
   // Helper functions
   function getStatusColor(status: string) {
-    switch(status) {
+    switch (status) {
       case 'active': case 'sent': case 'won': return 'bg-green-500';
       case 'pending': case 'draft': return 'bg-yellow-500';
       case 'expired': case 'lost': return 'bg-red-500';
@@ -410,7 +445,7 @@ function SalesModuleContent() {
   }
 
   function getStageColor(stage: string) {
-    switch(stage) {
+    switch (stage) {
       case 'contract_won': return 'bg-green-500';
       case 'contract_lost': return 'bg-red-500';
       case 'negotiation': return 'bg-orange-500';
@@ -431,7 +466,7 @@ function SalesModuleContent() {
 
   // Contract status badge helper
   function getContractStatusBadge(status: string) {
-    switch(status) {
+    switch (status) {
       case 'active': return { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Active' };
       case 'draft': return { bg: 'bg-slate-100', text: 'text-slate-800', label: 'Draft' };
       case 'expired': return { bg: 'bg-red-100', text: 'text-red-800', label: 'Expired' };
@@ -547,23 +582,23 @@ function SalesModuleContent() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Company Name *</Label>
-                          <Input value={customerForm.company_name} onChange={e => setCustomerForm({...customerForm, company_name: e.target.value})} />
+                          <Input value={customerForm.company_name} onChange={e => setCustomerForm({ ...customerForm, company_name: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Contact Person *</Label>
-                          <Input value={customerForm.contact_person} onChange={e => setCustomerForm({...customerForm, contact_person: e.target.value})} />
+                          <Input value={customerForm.contact_person} onChange={e => setCustomerForm({ ...customerForm, contact_person: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Phone *</Label>
-                          <Input value={customerForm.phone} onChange={e => setCustomerForm({...customerForm, phone: e.target.value})} />
+                          <Input value={customerForm.phone} onChange={e => setCustomerForm({ ...customerForm, phone: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Email</Label>
-                          <Input type="email" value={customerForm.email} onChange={e => setCustomerForm({...customerForm, email: e.target.value})} />
+                          <Input type="email" value={customerForm.email} onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>City</Label>
-                          <Select value={customerForm.city} onValueChange={v => setCustomerForm({...customerForm, city: v})}>
+                          <Select value={customerForm.city} onValueChange={v => setCustomerForm({ ...customerForm, city: v })}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="Dar es Salaam">Dar es Salaam</SelectItem>
@@ -575,11 +610,11 @@ function SalesModuleContent() {
                         </div>
                         <div className="space-y-2">
                           <Label>Credit Limit (TZS)</Label>
-                          <Input type="number" value={customerForm.credit_limit} onChange={e => setCustomerForm({...customerForm, credit_limit: e.target.value})} />
+                          <Input type="number" value={customerForm.credit_limit} onChange={e => setCustomerForm({ ...customerForm, credit_limit: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Status</Label>
-                          <Select value={customerForm.status} onValueChange={v => setCustomerForm({...customerForm, status: v})}>
+                          <Select value={customerForm.status} onValueChange={v => setCustomerForm({ ...customerForm, status: v })}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="prospect">Prospect</SelectItem>
@@ -590,11 +625,11 @@ function SalesModuleContent() {
                         </div>
                         <div className="col-span-2 space-y-2">
                           <Label>Address</Label>
-                          <Textarea value={customerForm.address} onChange={e => setCustomerForm({...customerForm, address: e.target.value})} />
+                          <Textarea value={customerForm.address} onChange={e => setCustomerForm({ ...customerForm, address: e.target.value })} />
                         </div>
                         <div className="col-span-2 space-y-2">
                           <Label>Notes</Label>
-                          <Textarea value={customerForm.notes} onChange={e => setCustomerForm({...customerForm, notes: e.target.value})} />
+                          <Textarea value={customerForm.notes} onChange={e => setCustomerForm({ ...customerForm, notes: e.target.value })} />
                         </div>
                       </div>
                       <DialogFooter>
@@ -620,23 +655,23 @@ function SalesModuleContent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {customers.map(customer => (
-                      <TableRow key={customer.id}>
-                        <TableCell className="font-medium">{customer.customer_code}</TableCell>
-                        <TableCell>{customer.company_name}</TableCell>
-                        <TableCell>{customer.contact_person}</TableCell>
-                        <TableCell>{customer.phone}</TableCell>
-                        <TableCell>{customer.city}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(customer.status)}>
-                            {customer.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>TZS {(customer.credit_limit || 0).toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                      {customers.map(customer => (
+                        <TableRow key={customer.id}>
+                          <TableCell className="font-medium">{customer.customer_code}</TableCell>
+                          <TableCell>{customer.company_name}</TableCell>
+                          <TableCell>{customer.contact_person}</TableCell>
+                          <TableCell>{customer.phone}</TableCell>
+                          <TableCell>{customer.city}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(customer.status)}>
+                              {customer.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>TZS {(customer.credit_limit || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
@@ -662,7 +697,7 @@ function SalesModuleContent() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Customer</Label>
-                          <Select value={quotationForm.customer_id} onValueChange={v => setQuotationForm({...quotationForm, customer_id: v})}>
+                          <Select value={quotationForm.customer_id} onValueChange={v => setQuotationForm({ ...quotationForm, customer_id: v })}>
                             <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
                             <SelectContent>
                               {customers.map(c => (
@@ -674,7 +709,7 @@ function SalesModuleContent() {
                         <div className="space-y-2">
                           <Label>Service Type</Label>
                           <Select value={quotationForm.service_type} onValueChange={v => {
-                            setQuotationForm({...quotationForm, service_type: v});
+                            setQuotationForm({ ...quotationForm, service_type: v });
                           }}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
@@ -686,27 +721,27 @@ function SalesModuleContent() {
                         </div>
                         <div className="space-y-2">
                           <Label>Origin</Label>
-                          <Input value={quotationForm.origin} onChange={e => setQuotationForm({...quotationForm, origin: e.target.value})} placeholder="e.g., Dar es Salaam" />
+                          <Input value={quotationForm.origin} onChange={e => setQuotationForm({ ...quotationForm, origin: e.target.value })} placeholder="e.g., Dar es Salaam" />
                         </div>
                         <div className="space-y-2">
                           <Label>Destination</Label>
-                          <Input value={quotationForm.destination} onChange={e => setQuotationForm({...quotationForm, destination: e.target.value})} placeholder="e.g., Lusaka" />
+                          <Input value={quotationForm.destination} onChange={e => setQuotationForm({ ...quotationForm, destination: e.target.value })} placeholder="e.g., Lusaka" />
                         </div>
                         <div className="space-y-2">
                           <Label>Distance (km)</Label>
-                          <Input type="number" value={quotationForm.distance_km} onChange={e => setQuotationForm({...quotationForm, distance_km: parseInt(e.target.value) || 0})} />
+                          <Input type="number" value={quotationForm.distance_km} onChange={e => setQuotationForm({ ...quotationForm, distance_km: parseInt(e.target.value) || 0 })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Cargo Type</Label>
-                          <Input value={quotationForm.cargo_type} onChange={e => setQuotationForm({...quotationForm, cargo_type: e.target.value})} placeholder="e.g., Electronics, Maize" />
+                          <Input value={quotationForm.cargo_type} onChange={e => setQuotationForm({ ...quotationForm, cargo_type: e.target.value })} placeholder="e.g., Electronics, Maize" />
                         </div>
                         <div className="space-y-2">
                           <Label>Weight (MT)</Label>
-                          <Input type="number" value={quotationForm.cargo_weight_mt} onChange={e => setQuotationForm({...quotationForm, cargo_weight_mt: e.target.value})} />
+                          <Input type="number" value={quotationForm.cargo_weight_mt} onChange={e => setQuotationForm({ ...quotationForm, cargo_weight_mt: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Container Size</Label>
-                          <Select value={quotationForm.container_size} onValueChange={v => setQuotationForm({...quotationForm, container_size: v})}>
+                          <Select value={quotationForm.container_size} onValueChange={v => setQuotationForm({ ...quotationForm, container_size: v })}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="20ft">20ft Container</SelectItem>
@@ -718,31 +753,31 @@ function SalesModuleContent() {
                         </div>
                         <div className="space-y-2">
                           <Label>Rate per km (TZS)</Label>
-                          <Input type="number" value={quotationForm.rate_per_km} onChange={e => setQuotationForm({...quotationForm, rate_per_km: parseFloat(e.target.value) || 0})} />
+                          <Input type="number" value={quotationForm.rate_per_km} onChange={e => setQuotationForm({ ...quotationForm, rate_per_km: parseFloat(e.target.value) || 0 })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Fuel Surcharge %</Label>
-                          <Input type="number" value={quotationForm.fuel_surcharge_pct} onChange={e => setQuotationForm({...quotationForm, fuel_surcharge_pct: parseFloat(e.target.value) || 0})} />
+                          <Input type="number" value={quotationForm.fuel_surcharge_pct} onChange={e => setQuotationForm({ ...quotationForm, fuel_surcharge_pct: parseFloat(e.target.value) || 0 })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Border Fees (TZS)</Label>
-                          <Input type="number" value={quotationForm.border_fees} onChange={e => setQuotationForm({...quotationForm, border_fees: parseFloat(e.target.value) || 0})} />
+                          <Input type="number" value={quotationForm.border_fees} onChange={e => setQuotationForm({ ...quotationForm, border_fees: parseFloat(e.target.value) || 0 })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Escort Fees (TZS)</Label>
-                          <Input type="number" value={quotationForm.escort_fees} onChange={e => setQuotationForm({...quotationForm, escort_fees: parseFloat(e.target.value) || 0})} />
+                          <Input type="number" value={quotationForm.escort_fees} onChange={e => setQuotationForm({ ...quotationForm, escort_fees: parseFloat(e.target.value) || 0 })} />
                         </div>
                         <div className="space-y-2">
                           <Label>VAT Rate %</Label>
-                          <Input type="number" value={quotationForm.vat_rate} onChange={e => setQuotationForm({...quotationForm, vat_rate: parseFloat(e.target.value) || 0})} />
+                          <Input type="number" value={quotationForm.vat_rate} onChange={e => setQuotationForm({ ...quotationForm, vat_rate: parseFloat(e.target.value) || 0 })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Validity (days)</Label>
-                          <Input type="number" value={quotationForm.validity_days} onChange={e => setQuotationForm({...quotationForm, validity_days: parseInt(e.target.value) || 30})} />
+                          <Input type="number" value={quotationForm.validity_days} onChange={e => setQuotationForm({ ...quotationForm, validity_days: parseInt(e.target.value) || 30 })} />
                         </div>
                         <div className="col-span-2 space-y-2">
                           <Label>Notes</Label>
-                          <Textarea value={quotationForm.notes} onChange={e => setQuotationForm({...quotationForm, notes: e.target.value})} />
+                          <Textarea value={quotationForm.notes} onChange={e => setQuotationForm({ ...quotationForm, notes: e.target.value })} />
                         </div>
                       </div>
                       <Separator className="my-4" />
@@ -752,20 +787,20 @@ function SalesModuleContent() {
                           <div>Base Amount:</div>
                           <div className="text-right">TZS {(quotationForm.distance_km * quotationForm.rate_per_km).toLocaleString()}</div>
                           <div>Fuel Surcharge ({quotationForm.fuel_surcharge_pct}%):</div>
-                          <div className="text-right">TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (quotationForm.fuel_surcharge_pct/100)).toLocaleString()}</div>
+                          <div className="text-right">TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (quotationForm.fuel_surcharge_pct / 100)).toLocaleString()}</div>
                           <div>Border Fees:</div>
                           <div className="text-right">TZS {quotationForm.border_fees.toLocaleString()}</div>
                           <div>Subtotal:</div>
                           <div className="text-right font-medium">
-                            TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct/100) + quotationForm.border_fees + quotationForm.escort_fees).toLocaleString()}
+                            TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees).toLocaleString()}
                           </div>
                           <div>VAT ({quotationForm.vat_rate}%):</div>
                           <div className="text-right">
-                            TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct/100) + quotationForm.border_fees + quotationForm.escort_fees) * (quotationForm.vat_rate/100)).toLocaleString()}
+                            TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees) * (quotationForm.vat_rate / 100)).toLocaleString()}
                           </div>
                           <div className="font-bold">Total Amount:</div>
                           <div className="text-right font-bold text-lg text-green-600">
-                            TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct/100) + quotationForm.border_fees + quotationForm.escort_fees) * (1 + quotationForm.vat_rate/100)).toLocaleString()}
+                            TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees) * (1 + quotationForm.vat_rate / 100)).toLocaleString()}
                           </div>
                         </div>
                       </div>
@@ -792,21 +827,21 @@ function SalesModuleContent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {quotations.map(q => (
-                      <TableRow key={q.id}>
-                        <TableCell className="font-medium">{q.quotation_number}</TableCell>
-                        <TableCell>{q.company_name}</TableCell>
-                        <TableCell>{q.origin} → {q.destination}</TableCell>
-<TableCell>{String(q.service_type || "").replace('_', ' ')}</TableCell>
-                        <TableCell>TZS {(q.total_amount || 0).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(q.status)}>{q.status}</Badge>
-                        </TableCell>
-                        <TableCell>{format(new Date(q.expiry_date), 'MMM dd, yyyy')}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                      {quotations.map(q => (
+                        <TableRow key={q.id}>
+                          <TableCell className="font-medium">{q.quotation_number}</TableCell>
+                          <TableCell>{q.company_name}</TableCell>
+                          <TableCell>{q.origin} → {q.destination}</TableCell>
+                          <TableCell>{String(q.service_type || "").replace('_', ' ')}</TableCell>
+                          <TableCell>TZS {(q.total_amount || 0).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(q.status)}>{q.status}</Badge>
+                          </TableCell>
+                          <TableCell>{format(new Date(q.expiry_date), 'MMM dd, yyyy')}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
@@ -815,13 +850,18 @@ function SalesModuleContent() {
           {/* Contracts Tab */}
           <TabsContent value="contracts">
             {showContractGenerator ? (
-              <ContractGenerator
-                onClose={() => setShowContractGenerator(false)}
-                onSaved={() => {
-                  setShowContractGenerator(false);
-                  fetchContracts();
-                }}
-              />
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-lg font-semibold">Calvary Transport Agreement</h2>
+                    <p className="text-sm text-muted-foreground">Generate and print the Calvary transport contract template.</p>
+                  </div>
+                  <Button variant="outline" onClick={() => setShowContractGenerator(false)}>
+                    Close
+                  </Button>
+                </div>
+                <TransportAgreementGenerator />
+              </div>
             ) : (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -1051,12 +1091,47 @@ function SalesModuleContent() {
                           {rateSheets.map(r => (
                             <TableRow key={r.id}>
                               <TableCell className="font-medium">{r.route_name}</TableCell>
-                              <TableCell className="capitalize">{r.service_type.replace('_', ' ')}</TableCell>
+                              <TableCell className="capitalize">{String(r.service_type || "").replace('_', ' ')}</TableCell>
                               <TableCell>{r.distance_km} km</TableCell>
                               <TableCell>{r.container_20ft ? r.container_20ft.toLocaleString() : '-'}</TableCell>
                               <TableCell>{r.container_40ft ? r.container_40ft.toLocaleString() : '-'}</TableCell>
                               <TableCell>{r.loose_rate_mt ? r.loose_rate_mt.toLocaleString() : '-'}</TableCell>
                               <TableCell>{r.transit_days}</TableCell>
+                              <TableCell>
+                                {canCreate && (
+                                  <div className="flex gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setEditingRateSheet({ ...r });
+                                      setShowRateSheetDialog(true);
+                                    }}>
+                                      Edit
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={async () => {
+                                      if (confirm('Are you sure you want to delete this rate sheet?')) {
+                                        try {
+                                          const { error } = await supabase
+                                            .from('rate_sheets')
+                                            .delete()
+                                            .eq('id', r.id);
+
+                                          if (error) throw error;
+
+                                          toast({ title: 'Success', description: 'Rate sheet deleted successfully', variant: 'success' });
+
+                                          // Refresh rate sheets
+                                          const { data: refreshed, error: fetchErr } = await supabase.from('rate_sheets').select('*').eq('is_active', true);
+                                          if (!fetchErr) setRateSheets(refreshed || []);
+                                        } catch (e: any) {
+                                          console.error('Error deleting rate sheet:', e);
+                                          toast({ title: 'Error', description: e.message || 'Failed to delete rate sheet', variant: 'destructive' });
+                                        }
+                                      }
+                                    }}>
+                                      Delete
+                                    </Button>
+                                  </div>
+                                )}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1096,7 +1171,7 @@ function SalesModuleContent() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Customer</Label>
-                          <Select value={opportunityForm.customer_id} onValueChange={v => setOpportunityForm({...opportunityForm, customer_id: v})}>
+                          <Select value={opportunityForm.customer_id} onValueChange={v => setOpportunityForm({ ...opportunityForm, customer_id: v })}>
                             <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
                             <SelectContent>
                               {customers.map(c => (
@@ -1107,11 +1182,11 @@ function SalesModuleContent() {
                         </div>
                         <div className="space-y-2">
                           <Label>Opportunity Name</Label>
-                          <Input value={opportunityForm.opportunity_name} onChange={e => setOpportunityForm({...opportunityForm, opportunity_name: e.target.value})} placeholder="e.g., Q1 Logistics Contract" />
+                          <Input value={opportunityForm.opportunity_name} onChange={e => setOpportunityForm({ ...opportunityForm, opportunity_name: e.target.value })} placeholder="e.g., Q1 Logistics Contract" />
                         </div>
                         <div className="space-y-2">
                           <Label>Service Type</Label>
-                          <Select value={opportunityForm.service_type} onValueChange={v => setOpportunityForm({...opportunityForm, service_type: v})}>
+                          <Select value={opportunityForm.service_type} onValueChange={v => setOpportunityForm({ ...opportunityForm, service_type: v })}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {SERVICE_TYPES.map(t => (
@@ -1122,15 +1197,15 @@ function SalesModuleContent() {
                         </div>
                         <div className="space-y-2">
                           <Label>Monthly Revenue (TZS)</Label>
-                          <Input type="number" value={opportunityForm.estimated_monthly_revenue} onChange={e => setOpportunityForm({...opportunityForm, estimated_monthly_revenue: e.target.value})} />
+                          <Input type="number" value={opportunityForm.estimated_monthly_revenue} onChange={e => setOpportunityForm({ ...opportunityForm, estimated_monthly_revenue: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Probability (%)</Label>
-                          <Input type="number" min="0" max="100" value={opportunityForm.probability} onChange={e => setOpportunityForm({...opportunityForm, probability: parseInt(e.target.value) || 0})} />
+                          <Input type="number" min="0" max="100" value={opportunityForm.probability} onChange={e => setOpportunityForm({ ...opportunityForm, probability: parseInt(e.target.value) || 0 })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Stage</Label>
-                          <Select value={opportunityForm.stage} onValueChange={v => setOpportunityForm({...opportunityForm, stage: v})}>
+                          <Select value={opportunityForm.stage} onValueChange={v => setOpportunityForm({ ...opportunityForm, stage: v })}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="lead">Lead</SelectItem>
@@ -1144,15 +1219,15 @@ function SalesModuleContent() {
                         </div>
                         <div className="space-y-2">
                           <Label>Expected Close Date</Label>
-                          <Input type="date" value={opportunityForm.expected_close_date} onChange={e => setOpportunityForm({...opportunityForm, expected_close_date: e.target.value})} />
+                          <Input type="date" value={opportunityForm.expected_close_date} onChange={e => setOpportunityForm({ ...opportunityForm, expected_close_date: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Competitor</Label>
-                          <Input value={opportunityForm.competitor} onChange={e => setOpportunityForm({...opportunityForm, competitor: e.target.value})} placeholder="Who are we competing with?" />
+                          <Input value={opportunityForm.competitor} onChange={e => setOpportunityForm({ ...opportunityForm, competitor: e.target.value })} placeholder="Who are we competing with?" />
                         </div>
                         <div className="col-span-2 space-y-2">
                           <Label>Notes</Label>
-                          <Textarea value={opportunityForm.notes} onChange={e => setOpportunityForm({...opportunityForm, notes: e.target.value})} />
+                          <Textarea value={opportunityForm.notes} onChange={e => setOpportunityForm({ ...opportunityForm, notes: e.target.value })} />
                         </div>
                       </div>
                       <DialogFooter>
@@ -1178,28 +1253,28 @@ function SalesModuleContent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {opportunities.map(o => (
-                      <TableRow key={o.id}>
-                        <TableCell className="font-medium">{o.opportunity_name}</TableCell>
-                        <TableCell>{o.company_name}</TableCell>
-<TableCell>{String(o.service_type || "").replace('_', ' ')}</TableCell>
-                        <TableCell>TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
-                              <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${o.probability}%` }}></div>
+                      {opportunities.map(o => (
+                        <TableRow key={o.id}>
+                          <TableCell className="font-medium">{o.opportunity_name}</TableCell>
+                          <TableCell>{o.company_name}</TableCell>
+                          <TableCell>{String(o.service_type || "").replace('_', ' ')}</TableCell>
+                          <TableCell>TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 bg-gray-200 rounded-full h-2">
+                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${o.probability}%` }}></div>
+                              </div>
+                              <span className="text-sm">{o.probability}%</span>
                             </div>
-                            <span className="text-sm">{o.probability}%</span>
-                          </div>
-                        </TableCell>
-<TableCell>
-  <Badge className={getStageColor(o.stage)}>{String(o.stage || "").replace('_', ' ')}</Badge>
-</TableCell>
-                        <TableCell>{format(new Date(o.expected_close_date), 'MMM dd, yyyy')}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStageColor(o.stage)}>{String(o.stage || "").replace('_', ' ')}</Badge>
+                          </TableCell>
+                          <TableCell>{format(new Date(o.expected_close_date), 'MMM dd, yyyy')}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
