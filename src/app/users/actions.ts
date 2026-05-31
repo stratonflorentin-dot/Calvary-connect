@@ -110,9 +110,9 @@ async function syncInvitedProfilesWithAuth(
 export async function inviteUserAction(userData: any) {
   const supabaseAdmin = getAdminClient();
 
-  // Generate Employee ID based on department if not provided
+  // Generate Employee ID based on department (or role fallback) if not provided
   if (!userData.employee_id) {
-    userData.employee_id = await generateEmployeeId(userData.department);
+    userData.employee_id = await generateEmployeeId(userData.department, userData.role);
   }
 
   const { data, error } = await supabaseAdmin
@@ -215,22 +215,57 @@ export async function linkUserProfileAction(email: string, authId: string, name:
   return data;
 }
 
-async function generateEmployeeId(departmentName?: string): Promise<string> {
-  const prefixes: Record<string, string> = {
-    'Administration': 'ADM',
-    'Finance': 'FIN',
-    'HR': 'HR',
-    'IT': 'IT',
-    'Operations': 'OPS',
-    'Sales': 'SAL',
-    'Workshop': 'WRK'
-  };
+// Map from department name → prefix
+const DEPARTMENT_PREFIXES: Record<string, string> = {
+  'Administration': 'ADM',
+  'Finance': 'FIN',
+  'HR': 'HR',
+  'IT': 'IT',
+  'Operations': 'OPS',
+  'Sales': 'SAL',
+  'Workshop': 'WRK',
+};
 
-  const prefix = departmentName ? (prefixes[departmentName] || 'EMP') : 'EMP';
+// Map from system role → prefix (fallback when department is not set)
+const ROLE_PREFIXES: Record<string, string> = {
+  'CEO': 'ADM',
+  'ADMIN': 'ADM',
+  'HR': 'HR',
+  'OPERATOR': 'OPS',
+  'DRIVER': 'OPS',
+  'MECHANIC': 'WRK',
+  'ACCOUNTANT': 'FIN',
+  'SALESMAN': 'SAL',
+};
+
+// Map from system role → department name (for backfilling the department field)
+const ROLE_TO_DEPARTMENT: Record<string, string> = {
+  'CEO': 'Administration',
+  'ADMIN': 'Administration',
+  'HR': 'HR',
+  'OPERATOR': 'Operations',
+  'DRIVER': 'Operations',
+  'MECHANIC': 'Workshop',
+  'ACCOUNTANT': 'Finance',
+  'SALESMAN': 'Sales',
+};
+
+function resolvePrefix(department?: string | null, role?: string | null): string {
+  if (department && DEPARTMENT_PREFIXES[department]) {
+    return DEPARTMENT_PREFIXES[department];
+  }
+  if (role && ROLE_PREFIXES[role]) {
+    return ROLE_PREFIXES[role];
+  }
+  return 'EMP';
+}
+
+async function generateEmployeeId(departmentName?: string, roleName?: string): Promise<string> {
+  const prefix = resolvePrefix(departmentName, roleName);
   const supabaseAdmin = getAdminClient();
 
   // Find the highest existing employee_id for this prefix
-  const { data, error } = await supabaseAdmin
+  const { data } = await supabaseAdmin
     .from("user_profiles")
     .select("employee_id")
     .like("employee_id", `${prefix}-%`);
@@ -256,7 +291,7 @@ async function generateEmployeeId(departmentName?: string): Promise<string> {
 export async function backfillEmployeeIdsAction(dryRun: boolean = true) {
   const supabaseAdmin = getAdminClient();
 
-  // Fetch all profiles without employee_id, ordered by created_at (or id) ASC
+  // Fetch all profiles without employee_id, ordered by created_at ASC
   const { data: profiles, error } = await supabaseAdmin
     .from("user_profiles")
     .select("*")
@@ -269,18 +304,13 @@ export async function backfillEmployeeIdsAction(dryRun: boolean = true) {
   const prefixCounters: Record<string, number> = {};
 
   for (const profile of profiles || []) {
-    const prefixes: Record<string, string> = {
-      'Administration': 'ADM',
-      'Finance': 'FIN',
-      'HR': 'HR',
-      'IT': 'IT',
-      'Operations': 'OPS',
-      'Sales': 'SAL',
-      'Workshop': 'WRK'
-    };
+    // Derive prefix from department first, then fall back to role
+    const prefix = resolvePrefix(profile.department, profile.role);
+    // Derive the department name to backfill if missing
+    const resolvedDepartment = profile.department
+      || (profile.role ? ROLE_TO_DEPARTMENT[profile.role] : null)
+      || null;
 
-    const prefix = profile.department ? (prefixes[profile.department] || 'EMP') : 'EMP';
-    
     if (prefixCounters[prefix] === undefined) {
       const { data: existing } = await supabaseAdmin
         .from("user_profiles")
@@ -311,19 +341,28 @@ export async function backfillEmployeeIdsAction(dryRun: boolean = true) {
       id: profile.id,
       name: profile.name || 'Unknown',
       email: profile.email || 'N/A',
-      department: profile.department || 'N/A',
+      department: resolvedDepartment || profile.role || 'N/A',
       oldId: profile.employee_id,
       newId
     });
 
     if (!dryRun) {
+      const updatePayload: Record<string, any> = {
+        employee_id: newId,
+        updated_at: new Date().toISOString(),
+      };
+      // Also backfill the department field if it was missing
+      if (!profile.department && resolvedDepartment) {
+        updatePayload.department = resolvedDepartment;
+      }
       await supabaseAdmin
         .from("user_profiles")
-        .update({ employee_id: newId, updated_at: new Date().toISOString() })
+        .update(updatePayload)
         .eq("id", profile.id);
     }
   }
 
   return results;
 }
+
 
