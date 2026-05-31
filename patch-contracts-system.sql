@@ -28,6 +28,17 @@ ALTER TABLE rate_sheets
   ADD COLUMN IF NOT EXISTS special_conditions TEXT,
   ADD COLUMN IF NOT EXISTS updated_by UUID;
 
+DO $$
+BEGIN
+  -- Relax legacy NOT NULL constraints for JSONB rate sheets
+  ALTER TABLE rate_sheets ALTER COLUMN route_name DROP NOT NULL;
+  ALTER TABLE rate_sheets ALTER COLUMN origin DROP NOT NULL;
+  ALTER TABLE rate_sheets ALTER COLUMN destination DROP NOT NULL;
+  ALTER TABLE rate_sheets ALTER COLUMN service_type DROP NOT NULL;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Relaxing rate_sheets legacy constraints skipped: %', SQLERRM;
+END $$;
+
 -- Fix the rate_sheet_id foreign key to point to the correct table
 -- (The above may have pointed to contract_templates by mistake, fix it)
 DO $$
