@@ -17,7 +17,7 @@ export async function getWorkersAction() {
     const supabaseAdmin = getAdminClient();
     const { data, error } = await supabaseAdmin
       .from("user_profiles")
-      .select("id, name, email, role, status, salary, avatar_url, phone, hire_date")
+      .select("id, name, email, role, status, salary, avatar_url, phone, hire_date, employee_id")
       .order("name", { ascending: true });
 
     if (error) throw error;
@@ -45,6 +45,15 @@ export async function savePayrollAction(payrollData: {
     const supabaseAdmin = getAdminClient();
     const now = new Date().toISOString();
 
+    // Fetch the profile to get their unique department-prefixed employee_id
+    const { data: profile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("employee_id")
+      .eq("id", payrollData.employeeId)
+      .single();
+    
+    const employeeIdText = profile?.employee_id || null;
+
     // Package the detailed salary breakdown in the reason field
     const reasonBreakdown = JSON.stringify({
       baseSalary: payrollData.baseSalary,
@@ -60,6 +69,7 @@ export async function savePayrollAction(payrollData: {
       .from("driver_allowances")
       .insert({
         driver_id: payrollData.employeeId,
+        employee_id: employeeIdText,
         driver_name: payrollData.employeeName,
         worker_name: payrollData.employeeName, // Fallback for legacy schemas
         role: payrollData.role,
@@ -82,7 +92,7 @@ export async function savePayrollAction(payrollData: {
         .from("allowances")
         .insert({
           id: driverAllowanceRecord.id, // Keep IDs identical
-          employee_id: payrollData.employeeId,
+          employee_id: employeeIdText || payrollData.employeeId,
           worker_name: payrollData.employeeName,
           amount: payrollData.netSalary,
           type: "payroll",
@@ -112,7 +122,7 @@ export async function getPayrollHistoryAction() {
       .from("driver_allowances")
       .select(`
         *,
-        user_profiles!driver_id(name, avatar_url, role)
+        user_profiles!driver_id(name, avatar_url, role, employee_id)
       `)
       .order("created_at", { ascending: false });
 
@@ -123,7 +133,8 @@ export async function getPayrollHistoryAction() {
       ...item,
       employee_name: item.user_profiles?.name || item.driver_name || "Unknown Worker",
       avatar_url: item.user_profiles?.avatar_url || null,
-      worker_role: item.user_profiles?.role || item.role || "Employee"
+      worker_role: item.user_profiles?.role || item.role || "Employee",
+      employee_id: item.employee_id || item.user_profiles?.employee_id || "N/A"
     })) || [];
 
     return { success: true, history: formatted };
@@ -139,16 +150,22 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
     const supabaseAdmin = getAdminClient();
     const now = new Date().toISOString();
 
-    // 1. Fetch the payroll record from driver_allowances
+    // 1. Fetch the payroll record from driver_allowances, joining the user profile
     const { data: record, error: fetchErr } = await supabaseAdmin
       .from("driver_allowances")
-      .select("*")
+      .select(`
+        *,
+        user_profiles!driver_id(employee_id)
+      `)
       .eq("id", id)
       .single();
 
     if (fetchErr || !record) {
       throw new Error("Payroll record not found: " + (fetchErr?.message || "Unknown error"));
     }
+
+    // Determine the final employee ID string
+    const employeeIdText = record.employee_id || record.user_profiles?.employee_id || null;
 
     // Parse the reason JSON to extract breakdown
     let baseSalary = record.amount;
@@ -199,6 +216,7 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
         amount: record.amount,
         description: desc,
         driver_id: record.driver_id,
+        employee_id: employeeIdText,
         category: "Staff Costs",
         status: "approved",
         approved_by: approvedByUserId,
@@ -222,6 +240,7 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
         status: "pending",
         type: "payable",
         linked_expense: expense?.id || null,
+        employee_id: employeeIdText,
         description: `Payroll invoice for ${workerName} - Period: ${period}`
       });
 

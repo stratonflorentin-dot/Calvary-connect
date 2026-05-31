@@ -147,6 +147,30 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     icon: BarChart2,
     category: "reports",
   },
+  {
+    path: "/admin/reports/fleet/driver-performance",
+    label: "Driver Performance",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    category: "reports",
+  },
+  {
+    path: "/admin/reports/fleet/route-profitability",
+    label: "Route Profitability",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    category: "reports",
+  },
+  {
+    path: "/admin/reports/fleet/fuel",
+    label: "Fuel Consumption",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    category: "reports",
+  },
+  {
+    path: "/admin/reports/fleet/revenue-by-vehicle",
+    label: "Vehicle Revenue",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    category: "reports",
+  },
 
   // --- HR ---
   {

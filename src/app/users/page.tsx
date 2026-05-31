@@ -33,9 +33,11 @@ interface UserProfile {
   login_count?: number;
   invited_at?: string;
   invited_by?: string;
+  employee_id?: string;
+  department?: string;
 }
 
-import { inviteUserAction, getUsersAction, deleteUserAction, updateUserAction } from './actions';
+import { inviteUserAction, getUsersAction, deleteUserAction, updateUserAction, backfillEmployeeIdsAction } from './actions';
 import { effectiveUserStatus } from '@/lib/user-status-utils';
 
 export default function UsersPage() {
@@ -172,7 +174,8 @@ export default function UsersPage() {
 
   const filteredUsers = users?.filter(u =>
     u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.employee_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -185,6 +188,7 @@ export default function UsersPage() {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         role: formData.get('role') as string,
+        department: formData.get('department') as string,
         status: 'invited',
         status_reason: 'Waiting for user to complete signup',
         invited_at: new Date().toISOString(),
@@ -289,6 +293,7 @@ export default function UsersPage() {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         role: formData.get('role') as string,
+        department: formData.get('department') as string,
         status: newStatus,
         status_reason: formData.get('status_reason') as string,
         updated_at: new Date().toISOString(),
@@ -346,6 +351,44 @@ export default function UsersPage() {
           </div>
 
           <div className="flex gap-2">
+            {(role === 'CEO' || role === 'ADMIN') && (
+              <Button
+                variant="outline"
+                className="rounded-full gap-2 border-dashed border-sky-500 text-sky-700 hover:text-sky-800 hover:bg-sky-50"
+                onClick={async () => {
+                  const runBackfill = async (dryRun: boolean) => {
+                    try {
+                      const results = await backfillEmployeeIdsAction(dryRun);
+                      if (results.length === 0) {
+                        alert("All employees already have Employee IDs assigned!");
+                        return;
+                      }
+                      
+                      const listText = results.map(r => `${r.name} (${r.email}): ${r.oldId || 'None'} → ${r.newId} [${r.department}]`).join('\n');
+                      
+                      if (dryRun) {
+                        const confirmSave = confirm(
+                          `DRY-RUN RESULTS (Simulated Employee ID generation):\n\n${listText}\n\nWould you like to write these changes to the database?`
+                        );
+                        if (confirmSave) {
+                          await runBackfill(false);
+                        }
+                      } else {
+                        alert(`SUCCESS!\n\nSuccessfully saved the following changes to the database:\n\n${listText}`);
+                        // Refresh users list
+                        const updatedUsers = await getUsersAction();
+                        setUsers(updatedUsers || []);
+                      }
+                    } catch (err: any) {
+                      alert("Error: " + err.message);
+                    }
+                  };
+                  await runBackfill(true);
+                }}
+              >
+                <Users className="size-4" /> Backfill IDs
+              </Button>
+            )}
             <Button 
               variant="outline" 
               className="rounded-full gap-2"
@@ -406,6 +449,23 @@ export default function UsersPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Select name="department" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Operations">Operations (OPS)</SelectItem>
+                      <SelectItem value="Finance">Finance (FIN)</SelectItem>
+                      <SelectItem value="IT">IT</SelectItem>
+                      <SelectItem value="Administration">Administration (ADM)</SelectItem>
+                      <SelectItem value="HR">HR</SelectItem>
+                      <SelectItem value="Workshop">Workshop (WRK)</SelectItem>
+                      <SelectItem value="Sales">Sales (SAL)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="photo">Profile Photo</Label>
                   <div className="flex items-center gap-4">
                     {photoPreview ? (
@@ -443,6 +503,10 @@ export default function UsersPage() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
+                </div>
+                <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-700">
+                  <span className="font-bold block">Employee ID Auto-Generation</span>
+                  <span>Employee ID will be auto-generated based on the selected department when you save (e.g. OPS-001, FIN-002).</span>
                 </div>
                 <Button type="submit" className="w-full" disabled={uploading}>
                   {uploading ? 'Inviting...' : 'Send Invitation'}
@@ -518,6 +582,20 @@ export default function UsersPage() {
               <DialogTitle>Edit User</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleEditUser} className="space-y-4 pt-4">
+              {editingUser?.employee_id && (
+                <div className="space-y-2">
+                  <Label>Employee ID</Label>
+                  <Input 
+                    type="text" 
+                    value={editingUser.employee_id} 
+                    readOnly 
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 font-mono cursor-not-allowed" 
+                  />
+                  <p className="text-[10px] text-gray-400">
+                    Auto-generated. Cannot be changed.
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Full Name</Label>
                 <Input id="edit-name" name="name" defaultValue={editingUser?.name} placeholder="Full name" required />
@@ -541,6 +619,23 @@ export default function UsersPage() {
                     <SelectItem value="MECHANIC">Mechanic</SelectItem>
                     <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
                     <SelectItem value="SALESMAN">Salesman</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-department">Department</Label>
+                <Select name="department" defaultValue={editingUser?.department || 'Operations'}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Operations">Operations</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem>
+                    <SelectItem value="IT">IT</SelectItem>
+                    <SelectItem value="Administration">Administration</SelectItem>
+                    <SelectItem value="HR">HR</SelectItem>
+                    <SelectItem value="Workshop">Workshop</SelectItem>
+                    <SelectItem value="Sales">Sales</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -655,6 +750,7 @@ export default function UsersPage() {
             <Table className="min-w-full">
               <TableHeader className="bg-muted/50">
                 <TableRow>
+                  <TableHead className="min-w-[80px]">Employee ID</TableHead>
                   <TableHead className="min-w-[100px]">User</TableHead>
                   {(role === 'CEO' || role === 'ADMIN') && <TableHead className="min-w-[100px]">Password</TableHead>}
                   <TableHead className="min-w-[80px]">Role</TableHead>
@@ -665,11 +761,16 @@ export default function UsersPage() {
               </TableHeader>
               <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={(role === 'CEO' || role === 'ADMIN') ? 6 : 5} className="text-center py-8">Loading users...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={(role === 'CEO' || role === 'ADMIN') ? 7 : 6} className="text-center py-8">Loading users...</TableCell></TableRow>
               ) : filteredUsers?.length === 0 ? (
-                <TableRow><TableCell colSpan={(role === 'CEO' || role === 'ADMIN') ? 6 : 5} className="text-center py-8">No users found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={(role === 'CEO' || role === 'ADMIN') ? 7 : 6} className="text-center py-8">No users found.</TableCell></TableRow>
               ) : filteredUsers?.map((u) => (
                 <TableRow key={u.id}>
+                  <TableCell>
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 font-mono">
+                      {u.employee_id || '—'}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">

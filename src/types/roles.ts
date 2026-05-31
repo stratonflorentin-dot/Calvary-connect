@@ -103,19 +103,25 @@ export interface Expense {
     | "repair"
     | "insurance"
     | "registration"
+    | "allowance"
+    | "payroll"
     | "other";
   amount: number;
   description: string;
-  vehicleId: string;
+  vehicleId?: string;
+  vehicle_id?: string;
   driverId?: string;
+  driver_id?: string;
   tripId?: string;
   clientReference?: string;
   category: string;
   receiptUrl?: string;
   approvedBy?: string;
   status: "pending" | "approved" | "rejected";
-  created_at: any;
-  updated_at: any;
+  employee_id?: string;
+  employeeId?: string;
+  created_at?: any;
+  updated_at?: any;
 }
 
 // Maintenance Management

@@ -36,6 +36,7 @@ interface Worker {
   avatar_url: string | null;
   phone: string | null;
   hire_date: string | null;
+  employee_id?: string | null;
 }
 
 interface PayrollRecord {
@@ -51,6 +52,7 @@ interface PayrollRecord {
   employee_name?: string;
   worker_role?: string;
   avatar_url?: string | null;
+  employee_id?: string | null;
 }
 
 export default function AllowancesPage() {
@@ -283,7 +285,8 @@ export default function AllowancesPage() {
   const filteredWorkers = workers.filter(w => 
     w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     w.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    w.email.toLowerCase().includes(searchQuery.toLowerCase())
+    w.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (w.employee_id && w.employee_id.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Search & Type filter for history
@@ -291,7 +294,8 @@ export default function AllowancesPage() {
     const isManual = item.type === 'payroll';
     const matchesSearch = item.employee_name?.toLowerCase().includes(historySearch.toLowerCase()) ||
       item.worker_role?.toLowerCase().includes(historySearch.toLowerCase()) ||
-      item.reason.toLowerCase().includes(historySearch.toLowerCase());
+      item.reason.toLowerCase().includes(historySearch.toLowerCase()) ||
+      item.employee_id?.toLowerCase().includes(historySearch.toLowerCase());
     
     if (historyFilter === 'payroll') return isManual && matchesSearch;
     if (historyFilter === 'trip') return !isManual && matchesSearch;
@@ -472,6 +476,11 @@ export default function AllowancesPage() {
                                 <Badge className="bg-muted text-foreground border-border font-medium">
                                   {worker.role}
                                 </Badge>
+                                {(worker as any).employee_id && (worker as any).employee_id !== 'N/A' && (
+                                  <Badge variant="outline" className="border-primary/50 text-primary font-mono text-[10px] tracking-wide">
+                                    {(worker as any).employee_id}
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">{worker.email}</p>
                             </div>
@@ -691,9 +700,16 @@ export default function AllowancesPage() {
                                   </div>
                                   <div>
                                     <p className="font-semibold text-foreground">{item.employee_name}</p>
-                                    <Badge className="bg-muted text-muted-foreground border-border hover:bg-muted text-[10px] font-medium mt-0.5">
-                                      {item.worker_role || 'Employee'}
-                                    </Badge>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <Badge className="bg-muted text-muted-foreground border-border hover:bg-muted text-[10px] font-medium">
+                                        {item.worker_role || 'Employee'}
+                                      </Badge>
+                                      {item.employee_id && item.employee_id !== 'N/A' && (
+                                        <Badge variant="outline" className="border-primary/30 text-primary font-mono text-[9px] py-0 px-1.5 h-4 flex items-center">
+                                          {item.employee_id}
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </TableCell>

@@ -110,6 +110,11 @@ async function syncInvitedProfilesWithAuth(
 export async function inviteUserAction(userData: any) {
   const supabaseAdmin = getAdminClient();
 
+  // Generate Employee ID based on department if not provided
+  if (!userData.employee_id) {
+    userData.employee_id = await generateEmployeeId(userData.department);
+  }
+
   const { data, error } = await supabaseAdmin
     .from("user_profiles")
     .insert([userData])
@@ -151,6 +156,12 @@ export async function deleteUserAction(userId: string) {
 
 export async function updateUserAction(userId: string, updateData: any) {
   const supabaseAdmin = getAdminClient();
+
+  // employee_id is immutable — never update it on edit
+  if (updateData) {
+    delete updateData.employee_id;
+    delete updateData.employeeId;
+  }
 
   const { error } = await supabaseAdmin
     .from("user_profiles")
@@ -203,3 +214,116 @@ export async function linkUserProfileAction(email: string, authId: string, name:
   if (error) throw new Error(error.message);
   return data;
 }
+
+async function generateEmployeeId(departmentName?: string): Promise<string> {
+  const prefixes: Record<string, string> = {
+    'Administration': 'ADM',
+    'Finance': 'FIN',
+    'HR': 'HR',
+    'IT': 'IT',
+    'Operations': 'OPS',
+    'Sales': 'SAL',
+    'Workshop': 'WRK'
+  };
+
+  const prefix = departmentName ? (prefixes[departmentName] || 'EMP') : 'EMP';
+  const supabaseAdmin = getAdminClient();
+
+  // Find the highest existing employee_id for this prefix
+  const { data, error } = await supabaseAdmin
+    .from("user_profiles")
+    .select("employee_id")
+    .like("employee_id", `${prefix}-%`);
+
+  let nextNumber = 1;
+  if (data && data.length > 0) {
+    const numbers = data
+      .map(d => {
+        const parts = d.employee_id?.split('-');
+        const num = parseInt(parts?.[parts.length - 1] || '');
+        return isNaN(num) ? 0 : num;
+      })
+      .filter(num => num > 0);
+
+    if (numbers.length > 0) {
+      nextNumber = Math.max(...numbers) + 1;
+    }
+  }
+
+  return `${prefix}-${String(nextNumber).padStart(3, '0')}`;
+}
+
+export async function backfillEmployeeIdsAction(dryRun: boolean = true) {
+  const supabaseAdmin = getAdminClient();
+
+  // Fetch all profiles without employee_id, ordered by created_at (or id) ASC
+  const { data: profiles, error } = await supabaseAdmin
+    .from("user_profiles")
+    .select("*")
+    .or("employee_id.is.null,employee_id.eq.")
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const results: Array<{ id: string; name: string; email: string; department: string; oldId: string | null; newId: string }> = [];
+  const prefixCounters: Record<string, number> = {};
+
+  for (const profile of profiles || []) {
+    const prefixes: Record<string, string> = {
+      'Administration': 'ADM',
+      'Finance': 'FIN',
+      'HR': 'HR',
+      'IT': 'IT',
+      'Operations': 'OPS',
+      'Sales': 'SAL',
+      'Workshop': 'WRK'
+    };
+
+    const prefix = profile.department ? (prefixes[profile.department] || 'EMP') : 'EMP';
+    
+    if (prefixCounters[prefix] === undefined) {
+      const { data: existing } = await supabaseAdmin
+        .from("user_profiles")
+        .select("employee_id")
+        .like("employee_id", `${prefix}-%`);
+
+      let max = 0;
+      if (existing && existing.length > 0) {
+        const numbers = existing
+          .map(d => {
+            const parts = d.employee_id?.split('-');
+            const num = parseInt(parts?.[parts.length - 1] || '');
+            return isNaN(num) ? 0 : num;
+          })
+          .filter(num => num > 0);
+
+        if (numbers.length > 0) {
+          max = Math.max(...numbers);
+        }
+      }
+      prefixCounters[prefix] = max;
+    }
+
+    prefixCounters[prefix] += 1;
+    const newId = `${prefix}-${String(prefixCounters[prefix]).padStart(3, '0')}`;
+
+    results.push({
+      id: profile.id,
+      name: profile.name || 'Unknown',
+      email: profile.email || 'N/A',
+      department: profile.department || 'N/A',
+      oldId: profile.employee_id,
+      newId
+    });
+
+    if (!dryRun) {
+      await supabaseAdmin
+        .from("user_profiles")
+        .update({ employee_id: newId, updated_at: new Date().toISOString() })
+        .eq("id", profile.id);
+    }
+  }
+
+  return results;
+}
+

@@ -4,7 +4,7 @@ import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, TrendingUp, PieChart, BarChart3 } from 'lucide-react';
+import { FileText, TrendingUp, PieChart, BarChart3, Users } from 'lucide-react';
 import ExecutiveSummary from './executive-summary';
 import { ProfessionalFinancialReport } from '@/components/financial/professional-financial-report';
 
@@ -61,15 +61,106 @@ export default function ReportsPage() {
                             </TabsContent>
                         )}
 
-                        <TabsContent value="operational" className="mt-6 space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Operational Reports</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-muted-foreground">Fleet and operational metrics coming soon...</p>
-                                </CardContent>
-                            </Card>
+                        <TabsContent value="operational" className="mt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                
+                                {/* Driver Performance */}
+                                <Card className="hover:shadow-md transition-all border-gray-200">
+                                    <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                                        <div className="bg-sky-100 dark:bg-sky-950 p-3 rounded-2xl">
+                                            <Users className="size-6 text-sky-700 dark:text-sky-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg font-bold">Driver Performance</CardTitle>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Trips count, distance, fuel & rating analytics</p>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 pt-2">
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                            Evaluate individual driver efficiency, completed trips, average safety ratings, fuel usage, and delivery performance.
+                                        </p>
+                                        <Link 
+                                            href="/admin/reports/fleet/driver-performance"
+                                            className="inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                                        >
+                                            View Performance Dashboard
+                                        </Link>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Route Profitability */}
+                                <Card className="hover:shadow-md transition-all border-gray-200">
+                                    <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                                        <div className="bg-emerald-100 dark:bg-emerald-950 p-3 rounded-2xl">
+                                            <TrendingUp className="size-6 text-emerald-700 dark:text-emerald-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg font-bold">Route Profitability</CardTitle>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Route revenue, border, toll & margin audit</p>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 pt-2">
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                            Analyze specific shipping lanes to understand gross profit margins, borders/tolls costs, and identify the most profitable routes.
+                                        </p>
+                                        <Link 
+                                            href="/admin/reports/fleet/route-profitability"
+                                            className="inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                                        >
+                                            Analyze Route Profits
+                                        </Link>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Fuel Consumption */}
+                                <Card className="hover:shadow-md transition-all border-gray-200">
+                                    <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                                        <div className="bg-amber-100 dark:bg-amber-950 p-3 rounded-2xl">
+                                            <PieChart className="size-6 text-amber-700 dark:text-amber-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg font-bold">Fuel Consumption</CardTitle>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Liters dispensed, fuel costs & L/100km metrics</p>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 pt-2">
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                            Audit fuel logs per vehicle, sum total fuel dispensed and costs, and calculate exact L/100km fuel consumption ratios.
+                                        </p>
+                                        <Link 
+                                            href="/admin/reports/fleet/fuel"
+                                            className="inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                                        >
+                                            Track Fuel Consumption
+                                        </Link>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Vehicle Revenue */}
+                                <Card className="hover:shadow-md transition-all border-gray-200">
+                                    <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                                        <div className="bg-purple-100 dark:bg-purple-950 p-3 rounded-2xl">
+                                            <FileText className="size-6 text-purple-700 dark:text-purple-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg font-bold">Vehicle Revenue</CardTitle>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Operational profits, trip costs & margins per truck</p>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 pt-2">
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                            Examine vehicle-level gross earnings, direct fuel/toll expenses, net profit, and general financial performance logs.
+                                        </p>
+                                        <Link 
+                                            href="/admin/reports/fleet/revenue-by-vehicle"
+                                            className="inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                                        >
+                                            Audit Vehicle Revenues
+                                        </Link>
+                                    </CardContent>
+                                </Card>
+
+                            </div>
                         </TabsContent>
 
                         <TabsContent value="custom" className="mt-6 space-y-6">

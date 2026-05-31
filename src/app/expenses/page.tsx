@@ -29,6 +29,7 @@ interface Expense {
     createdAt: string;
     approvedBy?: string;
     clientReference?: string;
+    employee_id?: string;
 }
 
 export default function ExpensesPage() {
@@ -302,6 +303,7 @@ export default function ExpensesPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Description</TableHead>
+                                        <TableHead>Emp ID</TableHead>
                                         <TableHead>Reference</TableHead>
                                         <TableHead>Vehicle</TableHead>
                                         <TableHead>Category</TableHead>
@@ -315,6 +317,15 @@ export default function ExpensesPage() {
                                     {expenses?.map((expense) => (
                                         <TableRow key={expense.id}>
                                             <TableCell className="font-medium">{expense.description}</TableCell>
+                                            <TableCell>
+                                                {expense.employee_id ? (
+                                                    <Badge variant="outline" className="border-primary/30 text-primary font-mono text-[10px]">
+                                                        {expense.employee_id}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs">-</span>
+                                                )}
+                                            </TableCell>
                                             <TableCell>{expense.clientReference || '-'}</TableCell>
                                             <TableCell>
                                                 {(() => {

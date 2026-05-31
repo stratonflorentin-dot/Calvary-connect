@@ -7,8 +7,8 @@ export interface AuditLogEntry {
   action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'VIEW';
   tableName: string;
   recordId?: string;
-  oldData?: Record<string, any>;
-  newData?: Record<string, any>;
+  oldData?: Record<string, any> | null;
+  newData?: Record<string, any> | null;
   changeSummary: string;
 }
 
@@ -115,8 +115,8 @@ export class AuditService {
     action: 'CREATE' | 'UPDATE' | 'DELETE' | 'VIEW',
     tableName: string,
     recordId: string,
-    oldData: Record<string, any> | undefined,
-    newData: Record<string, any> | undefined,
+    oldData: Record<string, any> | null | undefined,
+    newData: Record<string, any> | null | undefined,
     summary: string,
     notifyAdmins: boolean = true
   ): Promise<void> {
