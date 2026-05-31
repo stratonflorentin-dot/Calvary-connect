@@ -120,9 +120,7 @@ export function RateSheetManager() {
                                     Add Route
                                 </Button>
                             </DialogTrigger>
-                        </Dialog>
-                    )}
-                        <DialogContent className="max-w-2xl">
+                            <DialogContent className="max-w-2xl">
                             <DialogHeader>
                                 <DialogTitle>{editingId ? 'Edit Route' : 'Add New Route'}</DialogTitle>
                             </DialogHeader>
@@ -239,7 +237,8 @@ export function RateSheetManager() {
                                 </div>
                             </div>
                         </DialogContent>
-                    </Dialog>
+                        </Dialog>
+                    )}
                 </CardHeader>
                 <CardContent>
                     <Table>

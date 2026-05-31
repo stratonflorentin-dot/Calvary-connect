@@ -374,6 +374,106 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
     }
   };
 
+  const handleDownloadDocx = async () => {
+    if (!selectedCustomer) {
+      toast({ title: 'Error', description: 'Please select a customer.', variant: 'destructive' });
+      return;
+    }
+    if (!selectedTemplate) {
+      toast({ title: 'Error', description: 'Please select a contract template.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const payload = {
+        contract_number: 'CN-' + (new Date().getTime()),
+        contract_date: contractDetails.contract_date,
+        start_date: contractDetails.start_date,
+        end_date: contractDetails.end_date,
+        client_signatory_name: contractDetails.client_signatory_name,
+        client_signatory_title: contractDetails.client_signatory_title,
+        special_notes: contractDetails.special_notes,
+        template: selectedTemplateData,
+        rate_sheet: selectedRateSheetData,
+        customer: selectedCustomerData
+      };
+
+      const res = await fetch('/api/contracts/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: payload })
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Failed to generate contract');
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Contract-${selectedCustomerData?.company_name || 'agreement'}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      console.error('Download error', e);
+      toast({ title: 'Error', description: e.message || 'Failed to download contract', variant: 'destructive' });
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!selectedCustomer) {
+      toast({ title: 'Error', description: 'Please select a customer.', variant: 'destructive' });
+      return;
+    }
+    if (!selectedTemplate) {
+      toast({ title: 'Error', description: 'Please select a contract template.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const payload = {
+        contract_number: 'CN-' + (new Date().getTime()),
+        contract_date: contractDetails.contract_date,
+        start_date: contractDetails.start_date,
+        end_date: contractDetails.end_date,
+        client_signatory_name: contractDetails.client_signatory_name,
+        client_signatory_title: contractDetails.client_signatory_title,
+        special_notes: contractDetails.special_notes,
+        template: selectedTemplateData,
+        rate_sheet: selectedRateSheetData,
+        customer: selectedCustomerData
+      };
+
+      const res = await fetch('/api/contracts/generate?format=pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: payload })
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Failed to generate PDF');
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Contract-${selectedCustomerData?.company_name || 'agreement'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      console.error('Download PDF error', e);
+      toast({ title: 'Error', description: e.message || 'Failed to download PDF', variant: 'destructive' });
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
 
   return (
@@ -664,6 +764,14 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
             <Button size="sm" onClick={handleSaveContract} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               <Save className="h-4 w-4 mr-2" />
               {saving ? 'Saving...' : 'Save Contract'}
+            </Button>
+            <Button size="sm" onClick={handleDownloadDocx} className="ml-2">
+              <Download className="h-4 w-4 mr-2" />
+              Download .docx
+            </Button>
+            <Button size="sm" onClick={handleDownloadPdf} className="ml-2">
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
             </Button>
           </div>
           <div 
