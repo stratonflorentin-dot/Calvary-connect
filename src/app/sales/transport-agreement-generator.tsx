@@ -336,14 +336,26 @@ export function TransportAgreementGenerator() {
   );
 }
 
+type SheetType = 'route' | 'freight';
+
+type RateSheetItem = RateSheetRoute & {
+  rate_sheet_name?: string;
+  effective_date?: string;
+  rates?: any[];
+  special_conditions?: string;
+  service_type?: string;
+  sheetType?: SheetType;
+};
+
 // Display available routes
 export function RateSheetPreview() {
   const { toast } = useToast();
-  const [rates, setRates] = useState<RateSheetRoute[]>([]);
+  const [rates, setRates] = useState<RateSheetItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewType, setViewType] = useState<SheetType>('route');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingRate, setEditingRate] = useState<RateSheetRoute | null>(null);
-  const [routeForm, setRouteForm] = useState<RateSheetRoute>({
+  const [editingRate, setEditingRate] = useState<RateSheetItem | null>(null);
+  const [sheetForm, setSheetForm] = useState<RateSheetItem>({
     id: undefined,
     route_name: '',
     origin: '',
@@ -355,6 +367,7 @@ export function RateSheetPreview() {
     transit_days: 0,
     currency: 'TZS',
     is_active: true,
+    sheetType: 'route',
   });
 
   useEffect(() => {
@@ -365,7 +378,7 @@ export function RateSheetPreview() {
     setLoading(true);
     try {
       const data = await fetchRateSheets();
-      setRates(data);
+      setRates(data as RateSheetItem[]);
     } catch (error) {
       console.error('Error loading rates:', error);
       toast({ title: 'Error', description: 'Unable to load rate sheets', variant: 'destructive' });
@@ -374,13 +387,19 @@ export function RateSheetPreview() {
     }
   };
 
-  const openRateDialog = (rate?: RateSheetRoute) => {
+  const routeSheets = rates.filter((rate) => !rate.rate_sheet_name);
+  const freightSheets = rates.filter((rate) => !!rate.rate_sheet_name);
+
+  const openRateDialog = (rate?: RateSheetItem, type?: SheetType) => {
     if (rate) {
+      const sheetType = rate.rate_sheet_name ? 'freight' : 'route';
       setEditingRate(rate);
-      setRouteForm({ ...rate });
+      setSheetForm({ ...rate, sheetType });
+      setViewType(sheetType);
     } else {
+      const sheetType = type || viewType;
       setEditingRate(null);
-      setRouteForm({
+      setSheetForm({
         id: undefined,
         route_name: '',
         origin: '',
@@ -392,19 +411,32 @@ export function RateSheetPreview() {
         transit_days: 0,
         currency: 'TZS',
         is_active: true,
+        sheetType,
+        rate_sheet_name: '',
+        effective_date: new Date().toISOString().split('T')[0],
+        rates: [],
+        special_conditions: '',
       });
+      setViewType(sheetType);
     }
     setIsDialogOpen(true);
   };
 
   const handleSaveRateSheet = async () => {
-    if (!routeForm.route_name || !routeForm.origin || !routeForm.destination) {
-      toast({ title: 'Missing fields', description: 'Route name, origin, and destination are required', variant: 'destructive' });
-      return;
+    if (sheetForm.sheetType === 'route') {
+      if (!sheetForm.route_name || !sheetForm.origin || !sheetForm.destination) {
+        toast({ title: 'Missing fields', description: 'Route name, origin, and destination are required', variant: 'destructive' });
+        return;
+      }
+    } else {
+      if (!sheetForm.rate_sheet_name) {
+        toast({ title: 'Missing fields', description: 'Rate sheet name is required for freight sheets', variant: 'destructive' });
+        return;
+      }
     }
 
     try {
-      await upsertRateSheet(routeForm);
+      await upsertRateSheet(sheetForm);
       toast({ title: 'Success', description: editingRate ? 'Rate sheet updated' : 'Rate sheet created' });
       setIsDialogOpen(false);
       setEditingRate(null);
@@ -437,27 +469,51 @@ export function RateSheetPreview() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Available Routes & Rates
+            Available Rate Sheets
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-muted-foreground py-8">Loading routes...</div>
+          <div className="text-center text-muted-foreground py-8">Loading rate sheets...</div>
         </CardContent>
       </Card>
     );
   }
 
+  const currentSheets = viewType === 'freight' ? freightSheets : routeSheets;
+  const isRouteView = viewType === 'route';
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Available Routes & Rates
-        </CardTitle>
+      <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2">
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            {viewType === 'freight' ? 'Freight Rate Sheets' : 'Route Rate Sheet'}
+          </CardTitle>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className={viewType === 'route' ? 'bg-slate-100 text-slate-900' : 'gap-2'}
+              onClick={() => setViewType('route')}
+            >
+              Route Rate Sheet
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className={viewType === 'freight' ? 'bg-slate-100 text-slate-900' : 'gap-2'}
+              onClick={() => setViewType('freight')}
+            >
+              Freight Rate Sheets
+            </Button>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => openRateDialog()}>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => openRateDialog(undefined, viewType)}>
             <Plus className="h-4 w-4" />
-            New Route
+            New {viewType === 'freight' ? 'Freight Sheet' : 'Route Sheet'}
           </Button>
           <Button variant="outline" size="sm" className="gap-2" asChild>
             <a href="/admin/settings">
@@ -467,33 +523,64 @@ export function RateSheetPreview() {
           </Button>
         </div>
       </CardHeader>
+
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Route</TableHead>
-              <TableHead className="text-right">20ft Container</TableHead>
-              <TableHead className="text-right">40ft Container</TableHead>
-              <TableHead className="text-right">Loose Cargo</TableHead>
-              <TableHead className="text-center">Transit Days</TableHead>
+              {isRouteView ? (
+                <>
+                  <TableHead>Route</TableHead>
+                  <TableHead>Origin</TableHead>
+                  <TableHead>Destination</TableHead>
+                  <TableHead className="text-right">20ft</TableHead>
+                  <TableHead className="text-right">40ft</TableHead>
+                  <TableHead className="text-right">Loose</TableHead>
+                  <TableHead className="text-center">Days</TableHead>
+                  <TableHead className="text-right">Currency</TableHead>
+                </>
+              ) : (
+                <>
+                  <TableHead>Rate Sheet</TableHead>
+                  <TableHead>Effective</TableHead>
+                  <TableHead className="text-right">Routes</TableHead>
+                  <TableHead className="text-center">Truck Type</TableHead>
+                  <TableHead className="text-right">Currency</TableHead>
+                </>
+              )}
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rates.length === 0 ? (
+            {currentSheets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  No routes configured
+                <TableCell colSpan={isRouteView ? 9 : 6} className="text-center text-muted-foreground py-8">
+                  No {viewType === 'freight' ? 'freight rate sheets' : 'route rate sheets'} configured
                 </TableCell>
               </TableRow>
             ) : (
-              rates.map((route) => (
+              currentSheets.map((route) => (
                 <TableRow key={route.id}>
-                  <TableCell className="font-medium">{route.route_name}</TableCell>
-                  <TableCell className="text-right">${route.container_20ft.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">${route.container_40ft.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">${route.loose_cargo.toLocaleString()}</TableCell>
-                  <TableCell className="text-center">{route.transit_days} days</TableCell>
+                  {isRouteView ? (
+                    <>
+                      <TableCell className="font-medium">{route.route_name}</TableCell>
+                      <TableCell>{route.origin}</TableCell>
+                      <TableCell>{route.destination}</TableCell>
+                      <TableCell className="text-right">{route.container_20ft?.toLocaleString() || '-'}</TableCell>
+                      <TableCell className="text-right">{route.container_40ft?.toLocaleString() || '-'}</TableCell>
+                      <TableCell className="text-right">{route.loose_cargo?.toLocaleString() || '-'}</TableCell>
+                      <TableCell className="text-center">{route.transit_days || '-'}</TableCell>
+                      <TableCell className="text-right">{route.currency || 'TZS'}</TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell className="font-medium">{route.rate_sheet_name}</TableCell>
+                      <TableCell>{route.effective_date ? new Date(route.effective_date).toLocaleDateString() : '-'}</TableCell>
+                      <TableCell className="text-right">{route.rates?.length || 0}</TableCell>
+                      <TableCell className="text-center">{route.truck_type || '-'}</TableCell>
+                      <TableCell className="text-right">{route.currency || 'TZS'}</TableCell>
+                    </>
+                  )}
                   <TableCell className="text-right space-x-2">
                     <Button variant="ghost" size="icon" onClick={() => openRateDialog(route)}>
                       <Pencil className="h-4 w-4" />
@@ -512,96 +599,171 @@ export function RateSheetPreview() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>{editingRate ? 'Edit Rate Sheet' : 'New Rate Sheet'}</DialogTitle>
+            <DialogTitle>{editingRate ? 'Edit' : 'New'} {sheetForm.sheetType === 'freight' ? 'Freight Rate Sheet' : 'Route Rate Sheet'}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Route Name</Label>
-                <Input
-                  value={routeForm.route_name}
-                  onChange={(e) => setRouteForm({ ...routeForm, route_name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Origin</Label>
-                <Input
-                  value={routeForm.origin}
-                  onChange={(e) => setRouteForm({ ...routeForm, origin: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Destination</Label>
-                <Input
-                  value={routeForm.destination}
-                  onChange={(e) => setRouteForm({ ...routeForm, destination: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Truck Type</Label>
-                <Input
-                  value={routeForm.truck_type}
-                  onChange={(e) => setRouteForm({ ...routeForm, truck_type: e.target.value })}
-                />
-              </div>
-            </div>
+            {sheetForm.sheetType === 'route' ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Route Name</Label>
+                    <Input
+                      value={sheetForm.route_name}
+                      onChange={(e) => setSheetForm({ ...sheetForm, route_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Origin</Label>
+                    <Input
+                      value={sheetForm.origin}
+                      onChange={(e) => setSheetForm({ ...sheetForm, origin: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Destination</Label>
+                    <Input
+                      value={sheetForm.destination}
+                      onChange={(e) => setSheetForm({ ...sheetForm, destination: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Truck Type</Label>
+                    <Input
+                      value={sheetForm.truck_type}
+                      onChange={(e) => setSheetForm({ ...sheetForm, truck_type: e.target.value })}
+                    />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>20ft Rate</Label>
-                <Input
-                  type="number"
-                  value={routeForm.container_20ft}
-                  onChange={(e) => setRouteForm({ ...routeForm, container_20ft: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>40ft Rate</Label>
-                <Input
-                  type="number"
-                  value={routeForm.container_40ft}
-                  onChange={(e) => setRouteForm({ ...routeForm, container_40ft: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Loose Cargo Rate</Label>
-                <Input
-                  type="number"
-                  value={routeForm.loose_cargo}
-                  onChange={(e) => setRouteForm({ ...routeForm, loose_cargo: Number(e.target.value) })}
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>20ft Rate</Label>
+                    <Input
+                      type="number"
+                      value={sheetForm.container_20ft}
+                      onChange={(e) => setSheetForm({ ...sheetForm, container_20ft: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>40ft Rate</Label>
+                    <Input
+                      type="number"
+                      value={sheetForm.container_40ft}
+                      onChange={(e) => setSheetForm({ ...sheetForm, container_40ft: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Loose Cargo Rate</Label>
+                    <Input
+                      type="number"
+                      value={sheetForm.loose_cargo}
+                      onChange={(e) => setSheetForm({ ...sheetForm, loose_cargo: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Transit Days</Label>
-                <Input
-                  type="number"
-                  value={routeForm.transit_days}
-                  onChange={(e) => setRouteForm({ ...routeForm, transit_days: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Currency</Label>
-                <Select value={routeForm.currency} onValueChange={(value) => setRouteForm({ ...routeForm, currency: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="TZS">TZS</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Transit Days</Label>
+                    <Input
+                      type="number"
+                      value={sheetForm.transit_days}
+                      onChange={(e) => setSheetForm({ ...sheetForm, transit_days: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Currency</Label>
+                    <Select value={sheetForm.currency} onValueChange={(value) => setSheetForm({ ...sheetForm, currency: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="TZS">TZS</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Rate Sheet Name</Label>
+                    <Input
+                      value={sheetForm.rate_sheet_name}
+                      onChange={(e) => setSheetForm({ ...sheetForm, rate_sheet_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Effective Date</Label>
+                    <Input
+                      type="date"
+                      value={sheetForm.effective_date || ''}
+                      onChange={(e) => setSheetForm({ ...sheetForm, effective_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Cargo Routes</Label>
+                    <Input
+                      value={sheetForm.origin}
+                      placeholder="Optional origin description"
+                      onChange={(e) => setSheetForm({ ...sheetForm, origin: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Destination Description</Label>
+                    <Input
+                      value={sheetForm.destination}
+                      placeholder="Optional destination description"
+                      onChange={(e) => setSheetForm({ ...sheetForm, destination: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Currency</Label>
+                    <Select value={sheetForm.currency} onValueChange={(value) => setSheetForm({ ...sheetForm, currency: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="TZS">TZS</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Truck Type</Label>
+                    <Input
+                      value={sheetForm.truck_type}
+                      onChange={(e) => setSheetForm({ ...sheetForm, truck_type: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Special Conditions</Label>
+                  <Textarea
+                    value={sheetForm.special_conditions || ''}
+                    onChange={(e) => setSheetForm({ ...sheetForm, special_conditions: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveRateSheet}>{editingRate ? 'Update Route' : 'Create Route'}</Button>
+            <Button onClick={handleSaveRateSheet}>{editingRate ? 'Update Sheet' : 'Create Sheet'}</Button>
           </div>
         </DialogContent>
       </Dialog>
