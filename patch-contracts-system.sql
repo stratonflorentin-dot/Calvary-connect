@@ -42,9 +42,7 @@ END $$;
 
 -- ── 2. Create contract number generator function ──
 
-DROP FUNCTION IF EXISTS generate_contract_number();
-
-CREATE OR REPLACE FUNCTION generate_contract_number()
+CREATE OR REPLACE FUNCTION generate_next_contract_number()
 RETURNS TEXT AS $$
 DECLARE
   year_str TEXT := TO_CHAR(NOW(), 'YYYY');

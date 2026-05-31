@@ -324,7 +324,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
     setSaving(true);
     try {
       // Generate contract number via RPC
-      const { data: contractNumber, error: rpcError } = await supabase.rpc('generate_contract_number');
+      const { data: contractNumber, error: rpcError } = await supabase.rpc('generate_next_contract_number');
       if (rpcError) throw rpcError;
 
       // Calculate contract value from rate sheet if available
