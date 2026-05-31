@@ -113,6 +113,37 @@ export async function POST(req: Request) {
 
     const content = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(content);
+
+    // Preprocess Word XML files to normalize/repair split mustache tags
+    try {
+      const xmlFileNames = Object.keys(zip.files).filter((n) => /word\/(document|header\d*|footer\d*)\.xml$/.test(n));
+      for (const name of xmlFileNames) {
+        try {
+          let xml = zip.file(name).asText();
+          const before = xml;
+
+          // Collapse stray spaces inside braces and remove XML tags between mustache delimiters
+          xml = xml.replace(/\{\{[\s\S]*?\}\}/g, (m) => {
+            const inner = m.slice(2, -2);
+            const cleaned = inner.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+            return '{{' + cleaned + '}}';
+          });
+
+          // Fix cases where braces are separated like "{ {" or "} }"
+          xml = xml.replace(/\{\s+\{/g, '{{').replace(/\}\s+\}/g, '}}');
+
+          if (xml !== before) {
+            zip.file(name, xml);
+            console.log(`Normalized mustache tags in ${name}`);
+          }
+        } catch (e) {
+          // Non-fatal: continue processing other xml parts
+          console.warn(`Failed to preprocess ${name}:`, e);
+        }
+      }
+    } catch (e) {
+      console.warn('Preprocessing of DOCX XML failed', e);
+    }
     let doc: any;
     try {
       doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
