@@ -197,7 +197,7 @@ export function TransportAgreementGenerator() {
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px]">
                     {dbRates.length === 0 ? (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="none" disabled>
                         {loadingRates ? "Loading..." : "No routes available"}
                       </SelectItem>
                     ) : (
