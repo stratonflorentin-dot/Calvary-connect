@@ -66,7 +66,30 @@ export async function POST(req: Request) {
 
       const html = await buildHtml(data);
 
-      const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+      // Try to locate a system-installed Chrome/Chromium as a fallback
+      const possibleChromePaths = [
+        process.env.CHROME_PATH,
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files\\Chromium\\Application\\chrome.exe'
+      ].filter(Boolean) as string[];
+
+      let executablePath: string | undefined;
+      for (const p of possibleChromePaths) {
+        try {
+          if (p && fs.existsSync(p)) {
+            executablePath = p;
+            break;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      const launchArgs: any = { args: ['--no-sandbox', '--disable-setuid-sandbox'] };
+      if (executablePath) launchArgs.executablePath = executablePath;
+
+      const browser = await puppeteer.launch(launchArgs);
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: 'networkidle0' });
       const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -90,14 +113,28 @@ export async function POST(req: Request) {
 
     const content = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(content);
-    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
-
+    let doc: any;
     try {
+      doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
       doc.render(data);
     } catch (err: any) {
-      const e = err;
-      console.error('Docxtemplater render error', e);
-      return new Response('Template render error: ' + (e?.message || String(e)), { status: 500 });
+      console.error('Docxtemplater render error', err);
+      // If docxtemplater provides detailed errors, return them to help fix the template
+      const details: string[] = [];
+      if (err && err.properties && Array.isArray(err.properties.errors)) {
+        for (const e of err.properties.errors) {
+          const ctx = e?.properties?.context || e?.context || JSON.stringify(e);
+          const explain = e?.properties?.explanation || e?.explanation || '';
+          details.push(`${ctx}: ${explain}`);
+        }
+      } else if (err && err.message) {
+        details.push(err.message);
+      } else {
+        details.push(String(err));
+      }
+
+      const msg = `DOCX template parse error. Likely duplicate or malformed tags (e.g. {{...}}) in the Word template. Details: ${details.join(' | ')}`;
+      return new Response(msg, { status: 400 });
     }
 
     const buf = doc.getZip().generate({ type: 'nodebuffer' });
