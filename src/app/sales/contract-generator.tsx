@@ -176,7 +176,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
 
         <!-- Preamble -->
         <div style="margin-bottom: 30px; text-align: justify;">
-          <p>${(template.preamble || '').replace('{{client_name}}', selectedCustomerData?.company_name || '').replace('{{client_address}}', selectedCustomerData?.address || 'P.O. Box [Address]')}</p>
+          <p>${((template.preamble ?? '') as string).toString().replace('{{client_name}}', (selectedCustomerData?.company_name || '').toString()).replace('{{client_address}}', (selectedCustomerData?.address || 'P.O. Box [Address]').toString())}</p>
         </div>
 
         <hr style="margin: 30px 0;">
@@ -591,7 +591,13 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2 pt-4">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button variant="outline" onClick={() => setShowPreview(true)}>
+            <Button variant="outline" onClick={() => {
+              if (!selectedCustomer || !selectedTemplate) {
+                toast({ title: 'Select data', description: 'Please select a customer and template before previewing.', variant: 'destructive' });
+                return;
+              }
+              setShowPreview(true);
+            }}>
               <FileText className="h-4 w-4 mr-2" />
               Preview
             </Button>
