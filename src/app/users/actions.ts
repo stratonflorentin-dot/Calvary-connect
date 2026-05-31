@@ -157,15 +157,36 @@ export async function deleteUserAction(userId: string) {
 export async function updateUserAction(userId: string, updateData: any) {
   const supabaseAdmin = getAdminClient();
 
+  // Whitelist of columns that are safe to update on user_profiles
+  const ALLOWED_COLUMNS = [
+    'name', 'email', 'role', 'phone', 'avatar_url', 'status',
+    'license_number', 'license_expiry', 'license_class', 'compliance_status',
+    'updated_at', 'last_login_at', 'last_activity_at', 'login_count',
+    'status_reason', 'salary', 'department', 'password',
+    'invited_at', 'invited_by',
+  ];
+
   // employee_id is immutable — never update it on edit
   if (updateData) {
     delete updateData.employee_id;
     delete updateData.employeeId;
   }
 
+  // Only keep whitelisted fields
+  const sanitized: Record<string, any> = {};
+  for (const key of ALLOWED_COLUMNS) {
+    if (key in updateData && updateData[key] !== undefined) {
+      sanitized[key] = updateData[key];
+    }
+  }
+
+  if (Object.keys(sanitized).length === 0) {
+    return true; // nothing to update
+  }
+
   const { error } = await supabaseAdmin
     .from("user_profiles")
-    .update(updateData)
+    .update(sanitized)
     .eq("id", userId);
 
   if (error) throw new Error(error.message);
