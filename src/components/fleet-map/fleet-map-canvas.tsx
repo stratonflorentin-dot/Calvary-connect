@@ -47,9 +47,11 @@ type Props = {
   onSelectDriver: (driver: FleetMapDriver) => void;
 };
 
-function scheduleInvalidate(map: import("leaflet").Map) {
+function scheduleInvalidate(map: import("leaflet").Map | null | undefined) {
   const run = () => {
-    map.invalidateSize({ animate: false });
+    if (map) {
+      map.invalidateSize({ animate: false });
+    }
   };
   run();
   requestAnimationFrame(run);
@@ -70,6 +72,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     const initRef = useRef(false);
     const [mapReady, setMapReady] = useState(false);
     const lastFitCountRef = useRef(0);
+    const initialCenterRef = useRef(defaultCenter);
 
     const fitAllDrivers = () => {
       const map = mapInstanceRef.current;
@@ -109,11 +112,11 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         if (!container) return;
 
         if ((container as HTMLElement & { _leaflet_id?: number })._leaflet_id) {
-          try { delete (container as HTMLElement & { _leaflet_id?: number })._leaflet_id; } catch(e) {}
+          try { delete (container as HTMLElement & { _leaflet_id?: number })._leaflet_id; } catch (e) { }
         }
 
         map = L.map(container, {
-          center: defaultCenter,
+          center: initialCenterRef.current,
           zoom: locations.length > 0 ? 10 : 7,
           zoomControl: false,
           attributionControl: true,
@@ -218,7 +221,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         initRef.current = false;
         setMapReady(false);
       };
-    }, [defaultCenter]);
+    }, []);
 
     useEffect(() => {
       if (!mapReady) return;
@@ -291,7 +294,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
             speed: loc.speed,
             lastUpdate: loc.lastUpdate,
           });
-          
+
           (marker as any)._lastPopupHtml = initialPopupHtml;
 
           marker.bindPopup(
