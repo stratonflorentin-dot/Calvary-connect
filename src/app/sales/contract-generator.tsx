@@ -176,7 +176,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
 
         <!-- Preamble -->
         <div style="margin-bottom: 30px; text-align: justify;">
-          <p>${template.preamble?.replace('{{client_name}}', selectedCustomerData.company_name).replace('{{client_address}}', selectedCustomerData.address || 'P.O. Box [Address]')}</p>
+          <p>${(template.preamble || '').replace('{{client_name}}', selectedCustomerData?.company_name || '').replace('{{client_address}}', selectedCustomerData?.address || 'P.O. Box [Address]')}</p>
         </div>
 
         <hr style="margin: 30px 0;">
