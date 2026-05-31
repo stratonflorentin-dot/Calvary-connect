@@ -797,7 +797,7 @@ function SalesModuleContent() {
                         <TableCell className="font-medium">{q.quotation_number}</TableCell>
                         <TableCell>{q.company_name}</TableCell>
                         <TableCell>{q.origin} → {q.destination}</TableCell>
-                        <TableCell>{q.service_type.replace('_', ' ')}</TableCell>
+<TableCell>{String(q.service_type || "").replace('_', ' ')}</TableCell>
                         <TableCell>TZS {(q.total_amount || 0).toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(q.status)}>{q.status}</Badge>
@@ -1182,7 +1182,7 @@ function SalesModuleContent() {
                       <TableRow key={o.id}>
                         <TableCell className="font-medium">{o.opportunity_name}</TableCell>
                         <TableCell>{o.company_name}</TableCell>
-                        <TableCell>{o.service_type.replace('_', ' ')}</TableCell>
+<TableCell>{String(o.service_type || "").replace('_', ' ')}</TableCell>
                         <TableCell>TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -1192,9 +1192,9 @@ function SalesModuleContent() {
                             <span className="text-sm">{o.probability}%</span>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge className={getStageColor(o.stage)}>{o.stage.replace('_', ' ')}</Badge>
-                        </TableCell>
+<TableCell>
+  <Badge className={getStageColor(o.stage)}>{String(o.stage || "").replace('_', ' ')}</Badge>
+</TableCell>
                         <TableCell>{format(new Date(o.expected_close_date), 'MMM dd, yyyy')}</TableCell>
                       </TableRow>
                     ))}

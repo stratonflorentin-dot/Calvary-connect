@@ -26,7 +26,7 @@ export function calculateDriverAllowance(trip: TripForAllowance): number {
 
   // Distance component
   if (trip.distance) {
-    const distance = parseInt(trip.distance.toString().replace(/[^0-9]/g, ''));
+    const distance = parseInt(String(trip.distance).replace(/[^0-9]/g, ''));
     if (!isNaN(distance)) {
       baseAmount += Math.floor(distance * 0.5);
     }
@@ -34,7 +34,7 @@ export function calculateDriverAllowance(trip: TripForAllowance): number {
 
   // Time component
   if (trip.estimated_time) {
-    const hours = parseInt(trip.estimated_time.toString().replace(/[^0-9]/g, ''));
+    const hours = parseInt(String(trip.estimated_time).replace(/[^0-9]/g, ''));
     if (!isNaN(hours)) {
       baseAmount += hours * 100;
     }
@@ -93,10 +93,10 @@ export function generateAllowanceReason(trip: TripForAllowance): string {
 export function getAllowanceBreakdown(trip: TripForAllowance) {
   const baseAmount = 500;
   const distanceAmount = trip.distance
-    ? Math.floor(parseInt(trip.distance.toString().replace(/[^0-9]/g, '')) * 0.5)
+    ? Math.floor(parseInt(String(trip.distance).replace(/[^0-9]/g, '')) * 0.5)
     : 0;
   const timeAmount = trip.estimated_time
-    ? parseInt(trip.estimated_time.toString().replace(/[^0-9]/g, '')) * 100
+    ? parseInt(String(trip.estimated_time).replace(/[^0-9]/g, '')) * 100
     : 0;
   const crossBorderBonus = trip.is_cross_border ? 1500 : 0;
   const coldChainBonus = (trip.has_reefer || trip.cargo_type === 'REEFER') ? 300 : 0;

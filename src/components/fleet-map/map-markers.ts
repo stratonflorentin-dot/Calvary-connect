@@ -1,5 +1,5 @@
-function esc(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+function esc(s: string | null | undefined) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 }
 
 /** Inline-styled markers — Tailwind does not apply inside Leaflet divIcon HTML. */
