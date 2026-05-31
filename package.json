@@ -44,6 +44,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "docx-templates": "^4.15.0",
     "docxtemplater": "^3.68.7",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",

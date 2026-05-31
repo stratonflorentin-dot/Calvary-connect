@@ -61,7 +61,7 @@ interface Customer {
 
 export function ContractGenerator({ customerId, onClose, onSaved }: { customerId?: string; onClose?: () => void; onSaved?: () => void }) {
   const { user } = useSupabase();
-  const [templates, setTemplates] = useState<ContractTemplate[]>([]);
+  const [templates, setTemplates] = useState<ContractTemplate[]>([]);"C:\Users\hp\Downloads\Calvary_Transport_Contract_Template.docx"
   const [rateSheets, setRateSheets] = useState<RateSheet[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
@@ -72,6 +72,14 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
   const [showPreview, setShowPreview] = useState(false);
   const [editingRates, setEditingRates] = useState<any[] | null>(null);
   const [editingModalOpen, setEditingModalOpen] = useState(false);
+  const [newRateSheetModalOpen, setNewRateSheetModalOpen] = useState(false);
+  const [newRateSheet, setNewRateSheet] = useState({
+    rate_sheet_name: '',
+    effective_date: new Date().toISOString().split('T')[0],
+    currency: 'USD',
+    special_conditions: '',
+    rates: [],
+  });
   
   const [contractDetails, setContractDetails] = useState({
     contract_date: new Date().toISOString().split('T')[0],
@@ -99,8 +107,8 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
       setCustomers(customersRes.data || []);
       
       // Set defaults
-      if (templatesRes.data?.length > 0) setSelectedTemplate(templatesRes.data[0].id);
-      if (ratesRes.data?.length > 0) setSelectedRateSheet(ratesRes.data[0].id);
+      if (templatesRes.data && templatesRes.data.length > 0) setSelectedTemplate(templatesRes.data[0].id);
+      if (ratesRes.data && ratesRes.data.length > 0) setSelectedRateSheet(ratesRes.data[0].id);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -375,6 +383,13 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
   };
 
   const handleDownloadDocx = async () => {
+    console.log('Selected customer:', selectedCustomer);
+    console.log('Selected template:', selectedTemplate);
+    console.log('Contract details:', contractDetails);
+    console.log('Selected template data:', selectedTemplateData);
+    console.log('Selected rate sheet data:', selectedRateSheetData);
+    console.log('Selected customer data:', selectedCustomerData);
+
     if (!selectedCustomer) {
       toast({ title: 'Error', description: 'Please select a customer.', variant: 'destructive' });
       return;
@@ -398,6 +413,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
         customer: selectedCustomerData
       };
 
+      console.log('Sending payload to backend:', payload);
       const res = await fetch('/api/contracts/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -521,21 +537,28 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
           </div>
 
           {/* Rate Sheet Selection */}
-          <div className="space-y-2">
-            <Label>Rate Sheet (Annexure A)</Label>
-            <Select value={selectedRateSheet} onValueChange={setSelectedRateSheet}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {rateSheets.map((sheet) => (
-                  <SelectItem key={sheet.id} value={sheet.id}>
-                    {sheet.rate_sheet_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+<div className="space-y-2">
+  <Label>Rate Sheet (Annexure A)</Label>
+  <div className="flex gap-2">
+    <Select value={selectedRateSheet} onValueChange={setSelectedRateSheet}>
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {rateSheets.map((sheet) => (
+          <SelectItem key={sheet.id} value={sheet.id}>
+            {sheet.rate_sheet_name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+    {canEditRates && (
+      <Button size="sm" variant="outline" onClick={() => setNewRateSheetModalOpen(true)}>
+        Add New Rate Sheet
+      </Button>
+    )}
+  </div>
+</div>
 
           {/* Contract Dates */}
           <div className="grid grid-cols-2 gap-4">
@@ -631,16 +654,35 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
               Rate Sheet Preview
             </CardTitle>
             {canEditRates && (
-              <div>
-                <Button size="sm" variant="outline" onClick={() => { setEditingModalOpen(true); setEditingRates(selectedRateSheetData?.rates || []); }}>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => {
+                  setEditingModalOpen(true);
+                  setEditingRates(selectedRateSheetData?.rates || []);
+                }}>
                   Edit Annexure A
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => {
+                  const newRate = {
+                    from: '',
+                    destination: '',
+                    container_20ft: 0,
+                    container_40ft: 0,
+                    loose: 0,
+                    truck_type: '',
+                    transit_days: 0,
+                  };
+                  const updatedRates = [...(selectedRateSheetData?.rates || []), newRate];
+                  setEditingRates(updatedRates);
+                  setEditingModalOpen(true);
+                }}>
+                  Add New Rate
                 </Button>
               </div>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="max-h-[400px] overflow-y-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead>Route</TableHead>
                   <TableHead>Destination</TableHead>
@@ -650,25 +692,124 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {selectedRateSheetData.rates?.slice(0, 5).map((rate, idx) => (
+                {selectedRateSheetData.rates?.map((rate, idx) => (
                   <TableRow key={idx}>
                     <TableCell>{rate.from}</TableCell>
                     <TableCell>{rate.destination}</TableCell>
-                      <TableCell className="text-right">{rate.container_20ft?.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{rate.container_40ft?.toLocaleString()}</TableCell>
-                      <TableCell className="text-center">{rate.transit_days}</TableCell>
+                    <TableCell className="text-right">{rate.container_20ft?.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{rate.container_40ft?.toLocaleString()}</TableCell>
+                    <TableCell className="text-center">{rate.transit_days}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            {selectedRateSheetData.rates?.length > 5 && (
-              <p className="text-sm text-muted-foreground mt-2 text-center">
-                ... and {selectedRateSheetData.rates.length - 5} more routes
-              </p>
-            )}
           </CardContent>
         </Card>
       )}
+
+      {/* New Rate Sheet Dialog */}
+      <Dialog open={newRateSheetModalOpen} onOpenChange={setNewRateSheetModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Add New Rate Sheet</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Rate Sheet Name</Label>
+              <Input
+                value={newRateSheet.rate_sheet_name}
+                onChange={(e) => setNewRateSheet({ ...newRateSheet, rate_sheet_name: e.target.value })}
+                placeholder="e.g., Q3 2024 Freight Rates"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Effective Date</Label>
+              <Input
+                type="date"
+                value={newRateSheet.effective_date}
+                onChange={(e) => setNewRateSheet({ ...newRateSheet, effective_date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <Select
+                value={newRateSheet.currency}
+                onValueChange={(value) => setNewRateSheet({ ...newRateSheet, currency: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="TZS">TZS</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Special Conditions</Label>
+              <Textarea
+                value={newRateSheet.special_conditions}
+                onChange={(e) => setNewRateSheet({ ...newRateSheet, special_conditions: e.target.value })}
+                placeholder="Any special conditions or notes..."
+                rows={2}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setNewRateSheetModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={async () => {
+                try {
+                  if (!newRateSheet.rate_sheet_name) {
+                    toast({ title: 'Error', description: 'Rate sheet name is required', variant: 'destructive' });
+                    return;
+                  }
+
+                  const { data, error } = await supabase
+                    .from('rate_sheets')
+                    .insert([{
+                      rate_sheet_name: newRateSheet.rate_sheet_name,
+                      effective_date: newRateSheet.effective_date,
+                      currency: newRateSheet.currency,
+                      special_conditions: newRateSheet.special_conditions,
+                      rates: newRateSheet.rates,
+                      is_active: true,
+                      created_by: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user?.id || '') ? user?.id : null,
+                    }])
+                    .select()
+                    .single();
+
+                  if (error) {
+                    console.error('Detailed error:', error);
+                    throw error;
+                  }
+
+                  toast({ title: 'Success', description: 'Rate sheet created successfully' });
+                  setNewRateSheetModalOpen(false);
+                  setNewRateSheet({
+                    rate_sheet_name: '',
+                    effective_date: new Date().toISOString().split('T')[0],
+                    currency: 'USD',
+                    special_conditions: '',
+                    rates: [],
+                  });
+
+                  // Refresh rate sheets
+                  const { data: refreshed, error: fetchErr } = await supabase.from('rate_sheets').select('*').eq('is_active', true).not('rate_sheet_name', 'is', null);
+                  if (!fetchErr) setRateSheets(refreshed || []);
+                  if (data) setSelectedRateSheet(data.id);
+                } catch (e: any) {
+                  console.error('Error creating rate sheet:', e);
+                  toast({ title: 'Error', description: e.message || 'Failed to create rate sheet', variant: 'destructive' });
+                }
+              }}>
+                Save Rate Sheet
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Rates Modal */}
       {canEditRates && selectedRateSheetData && (
@@ -692,8 +833,20 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
                 <tbody>
                   {(editingRates || selectedRateSheetData.rates).map((r: any, i: number) => (
                     <tr key={i} className="border-t">
-                      <td className="py-2">{r.from}</td>
-                      <td>{r.destination}</td>
+                      <td className="py-2">
+                        <Input value={r.from} onChange={(e) => {
+                          const copy = (editingRates || [...selectedRateSheetData.rates]).slice();
+                          copy[i] = { ...copy[i], from: e.target.value };
+                          setEditingRates(copy);
+                        }} />
+                      </td>
+                      <td>
+                        <Input value={r.destination} onChange={(e) => {
+                          const copy = (editingRates || [...selectedRateSheetData.rates]).slice();
+                          copy[i] = { ...copy[i], destination: e.target.value };
+                          setEditingRates(copy);
+                        }} />
+                      </td>
                       <td className="text-right">
                         <Input value={String(r.container_20ft || 0)} onChange={(e) => {
                           const copy = (editingRates || [...selectedRateSheetData.rates]).slice();
@@ -739,7 +892,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
                       .select()
                       .single();
                     if (error) throw error;
-                    toast({ title: 'Saved', description: 'Rates updated', variant: 'success' });
+                    toast({ title: 'Saved', description: 'Rates updated' });
                     setEditingModalOpen(false);
                     setEditingRates(null);
                     // refresh rate sheets

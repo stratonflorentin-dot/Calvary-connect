@@ -5,6 +5,7 @@ import { useRole } from '@/hooks/use-role';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, TrendingUp, PieChart, BarChart3, Users } from 'lucide-react';
+import Link from 'next/link';
 import ExecutiveSummary from './executive-summary';
 import { ProfessionalFinancialReport } from '@/components/financial/professional-financial-report';
 

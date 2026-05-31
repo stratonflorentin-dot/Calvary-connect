@@ -7,13 +7,13 @@ import { SyncManager } from '@/lib/offline-sync';
 async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  
+
   const { data: profile } = await supabase
     .from('user_profiles')
     .select('name, role')
     .eq('id', user.id)
     .single();
-    
+
   return {
     id: user.id,
     name: profile?.name || user.email || 'Unknown',
@@ -21,7 +21,23 @@ async function getCurrentUser() {
   };
 }
 
+const EXCHANGE_RATES: Record<string, number> = {
+  TZS: 1,
+  USD: 2600,
+  KES: 20,
+  ZMW: 140,
+  UGX: 0.71
+};
+
 export class SupabaseService {
+  static convertCurrency(amount: number, from: string = 'TZS', to: string = 'TZS') {
+    const fromRate = EXCHANGE_RATES[from] || 1;
+    const toRate = EXCHANGE_RATES[to] || 1;
+    const amountInTzs = amount * fromRate;
+    const converted = amountInTzs / toRate;
+    return to === 'TZS' ? Math.round(converted) : Number(converted.toFixed(2));
+  }
+
   static async markInvoicePaid(id: string, accountId: string) {
     const user = await getCurrentUser();
     const { data: invoice, error: invError } = await supabase.from('invoices').select('*').eq('id', id).single();
@@ -30,24 +46,27 @@ export class SupabaseService {
     const { error: updateError } = await supabase.from('invoices').update({ status: 'paid' }).eq('id', id);
     if (updateError) throw updateError;
 
-    // Record the bank transaction
+    // Fetch bank account and convert payment amount into account currency, if needed
+    const { data: account, error: accError } = await supabase.from('bank_accounts').select('current_balance, currency').eq('id', accountId).single();
+    if (accError) throw accError;
+    const accountCurrency = account?.currency || 'TZS';
+    const paymentAmount = SupabaseService.convertCurrency(parseFloat(invoice.amount), invoice.currency || 'TZS', accountCurrency);
+
     const { error: txError } = await supabase.from('bank_statements').insert({
       account_id: accountId,
       date: new Date().toISOString().split('T')[0],
-      description: `Payment for Invoice ${invoice.invoice_number}`,
-      amount: invoice.amount,
+      description: `Payment for Invoice ${invoice.invoice_number} (${invoice.currency || 'TZS'})`,
+      amount: paymentAmount,
       type: invoice.type === 'receivable' ? 'credit' : 'debit',
       ref: invoice.invoice_number
     });
     if (txError) throw txError;
 
-    // Update bank balance
-    const { data: account } = await supabase.from('bank_accounts').select('current_balance').eq('id', accountId).single();
     if (account) {
-      const newBalance = invoice.type === 'receivable' 
-        ? parseFloat(account.current_balance) + parseFloat(invoice.amount)
-        : parseFloat(account.current_balance) - parseFloat(invoice.amount);
-      
+      const currentBalance = parseFloat(account.current_balance || 0);
+      const newBalance = invoice.type === 'receivable'
+        ? currentBalance + paymentAmount
+        : currentBalance - paymentAmount;
       await supabase.from('bank_accounts').update({ current_balance: newBalance }).eq('id', accountId);
     }
 
@@ -89,7 +108,7 @@ export class SupabaseService {
     if (error) throw error;
     return data || [];
   }
-    static async getVehicles(filters?: { type?: string; status?: string }) {
+  static async getVehicles(filters?: { type?: string; status?: string }) {
     let query = supabase.from('vehicles').select('*');
     if (filters?.type) {
       query = query.eq('type', filters.type);
@@ -109,45 +128,45 @@ export class SupabaseService {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
-    
+
     // Log audit
     if (user && SyncManager.isOnline()) {
-      await AuditService.logCRUD(user, 'CREATE', 'vehicles', data.id, null, data, 
+      await AuditService.logCRUD(user, 'CREATE', 'vehicles', data.id, null, data,
         `Created vehicle ${vehicle.plateNumber || vehicle.name}`);
     }
-    
+
     return data;
   }
 
   static async updateVehicle(id: string, updates: Partial<FleetVehicle>) {
     const user = await getCurrentUser();
-    
+
     // Get old data for audit
-    const { data: oldData } = SyncManager.isOnline() 
+    const { data: oldData } = SyncManager.isOnline()
       ? await supabase.from('vehicles').select('*').eq('id', id).single()
       : { data: null };
-    
+
     const data = await this.performAction('vehicles', 'UPDATE', updates, id);
-    
+
     // Log audit
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'vehicles', id, oldData, data,
         `Updated vehicle ${updates.plateNumber || id}`);
     }
-    
+
     return data;
   }
 
   static async deleteVehicle(id: string) {
     const user = await getCurrentUser();
-    
+
     // Get old data for audit
     const { data: oldData } = SyncManager.isOnline()
       ? await supabase.from('vehicles').select('*').eq('id', id).single()
       : { data: null };
-    
+
     await this.performAction('vehicles', 'DELETE', null, id);
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'vehicles', id, oldData, null,
         `Deleted vehicle ${oldData?.plateNumber || id}`);
@@ -157,14 +176,14 @@ export class SupabaseService {
   // Trip Management
   static async getTrips(filters?: { status?: TripStatus; driverId?: string }) {
     let query = supabase.from('trips').select('*');
-    
+
     if (filters?.status) {
       query = query.eq('status', filters.status);
     }
     if (filters?.driverId) {
       query = query.eq('driver_id', filters.driverId);
     }
-    
+
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -180,9 +199,9 @@ export class SupabaseService {
       })
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     // Automatically create a Sale and Invoice when a trip is created
     try {
       const sale = await this.createSale({
@@ -211,42 +230,42 @@ export class SupabaseService {
       await AuditService.logCRUD(user, 'CREATE', 'trips', data.id, null, data,
         `Created trip for ${trip.vehicle_id || trip.driver_id}`);
     }
-    
+
     return data;
   }
 
   static async updateTrip(id: string, updates: Partial<Trip>) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('trips').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('trips')
       .update(updates)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'trips', id, oldData, data,
         `Updated trip ${id}`);
     }
-    
+
     return data;
   }
 
   // Expense Management
   static async getExpenses(filters?: { status?: string; driverId?: string }) {
     let query = supabase.from('expenses').select('*');
-    
+
     if (filters?.status) {
       query = query.eq('status', filters.status);
     }
     if (filters?.driverId) {
       query = query.eq('driver_id', filters.driverId);
     }
-    
+
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -262,15 +281,16 @@ export class SupabaseService {
       })
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     // Automatically create a Payable Invoice when an expense is created
     try {
       await this.createInvoice({
         invoice_number: `BILL-${Date.now()}`,
         customer_name: expense.vendor || 'Expense Vendor',
         amount: expense.amount,
+        currency: expense.currency || 'TZS',
         due_date: expense.date || new Date().toISOString().split('T')[0],
         status: 'pending',
         type: 'payable',
@@ -285,38 +305,38 @@ export class SupabaseService {
       await AuditService.logCRUD(user, 'CREATE', 'expenses', data.id, null, data,
         `Created expense: ${expense.category} - ${expense.amount}`);
     }
-    
+
     return data;
   }
 
   static async updateExpense(id: string, updates: Partial<Expense>) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('expenses').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('expenses')
       .update(updates)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'expenses', id, oldData, data,
         `Updated expense ${id}`);
     }
-    
+
     return data;
   }
 
   static async deleteExpense(id: string) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('expenses').select('*').eq('id', id).single();
-    
+
     const { error } = await supabase.from('expenses').delete().eq('id', id);
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'expenses', id, oldData, null,
         `Deleted expense ${id}`);
@@ -326,14 +346,14 @@ export class SupabaseService {
   // Maintenance Requests
   static async getMaintenanceRequests(filters?: { status?: string; vehicleId?: string }) {
     let query = supabase.from('maintenance_requests').select('*');
-    
+
     if (filters?.status) {
       query = query.eq('status', filters.status);
     }
     if (filters?.vehicleId) {
       query = query.eq('vehicle_id', filters.vehicleId);
     }
-    
+
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -345,44 +365,44 @@ export class SupabaseService {
       ...request,
       created_at: new Date().toISOString()
     });
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'maintenance_requests', data.id, null, data,
         `Created maintenance request for ${request.vehicle_id}`);
     }
-    
+
     return data;
   }
 
   static async updateMaintenanceRequest(id: string, updates: Partial<MaintenanceRequest>) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('maintenance_requests').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('maintenance_requests')
       .update(updates)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'maintenance_requests', id, oldData, data,
         `Updated maintenance request ${id}`);
     }
-    
+
     return data;
   }
 
   // Spare Parts
   static async getSpareParts(filters?: { category?: string }) {
     let query = supabase.from('spare_parts').select('*');
-    
+
     if (filters?.category) {
       query = query.eq('category', filters.category);
     }
-    
+
     const { data, error } = await query.order('name', { ascending: true });
     if (error) throw error;
     return data || [];
@@ -394,23 +414,23 @@ export class SupabaseService {
       ...part,
       created_at: new Date().toISOString()
     });
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'spare_parts', data.id, null, data,
         `Created spare part: ${part.name}`);
     }
-    
+
     return data;
   }
 
   // Parts Requests
   static async getPartsRequests(filters?: { status?: string }) {
     let query = supabase.from('parts_requests').select('*');
-    
+
     if (filters?.status) {
       query = query.eq('status', filters.status);
     }
-    
+
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -422,23 +442,23 @@ export class SupabaseService {
       ...request,
       created_at: new Date().toISOString()
     });
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'parts_requests', data.id, null, data,
         `Created parts request for ${request.part_id} - ${request.quantity_requested}`);
     }
-    
+
     return data;
   }
 
   // Allowances
   static async getAllowances(filters?: { employeeId?: string }) {
     let query = supabase.from('allowances').select('*');
-    
+
     if (filters?.employeeId) {
       query = query.eq('employee_id', filters.employeeId);
     }
-    
+
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
@@ -450,7 +470,7 @@ export class SupabaseService {
       ...allowance,
       created_at: new Date().toISOString()
     });
-    
+
     // Automatically create a Payable Invoice for worker allowance
     try {
       await this.createInvoice({
@@ -471,28 +491,28 @@ export class SupabaseService {
       await AuditService.logCRUD(user, 'CREATE', 'allowances', data.id, null, data,
         `Created allowance for ${allowance.workerName} - ${allowance.amount}`);
     }
-    
+
     return data;
   }
 
   static async updateAllowance(id: string, updates: Partial<Allowance>) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('allowances').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('allowances')
       .update(updates)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'allowances', id, oldData, data,
         `Updated allowance for ${oldData?.workerName || id}`);
     }
-    
+
     return data;
   }
 
@@ -519,19 +539,19 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'purchases', data.id, null, data,
         `Created purchase from ${purchase.client_name || purchase.clientName} for ${purchase.amount}`);
     }
-    
+
     return data;
   }
 
   static async updatePurchase(id: string, updates: any) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('purchases').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('purchases')
       .update({
@@ -542,22 +562,22 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'purchases', id, oldData, data,
         `Updated purchase ${id}`);
     }
-    
+
     return data;
   }
 
   static async deletePurchase(id: string) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('purchases').select('*').eq('id', id).single();
-    
+
     const { error } = await supabase.from('purchases').delete().eq('id', id);
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'purchases', id, oldData, null,
         `Deleted purchase ${id}`);
@@ -585,19 +605,19 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'sales', data.id, null, data,
         `Created sale to ${sale.clientName} for ${sale.amount}`);
     }
-    
+
     return data;
   }
 
   static async updateSale(id: string, updates: any) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('sales').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('sales')
       .update({
@@ -608,22 +628,22 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'sales', id, oldData, data,
         `Updated sale ${id}`);
     }
-    
+
     return data;
   }
 
   static async deleteSale(id: string) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('sales').select('*').eq('id', id).single();
-    
+
     const { error } = await supabase.from('sales').delete().eq('id', id);
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'sales', id, oldData, null,
         `Deleted sale ${id}`);
@@ -651,19 +671,19 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'invoices', data.id, null, data,
         `Created invoice for ${invoice.clientName} - ${invoice.amount}`);
     }
-    
+
     return data;
   }
 
   static async updateInvoice(id: string, updates: any) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('invoices').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('invoices')
       .update({
@@ -674,22 +694,22 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'invoices', id, oldData, data,
         `Updated invoice ${id}`);
     }
-    
+
     return data;
   }
 
   static async deleteInvoice(id: string) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('invoices').select('*').eq('id', id).single();
-    
+
     const { error } = await supabase.from('invoices').delete().eq('id', id);
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'invoices', id, oldData, null,
         `Deleted invoice ${id}`);
@@ -718,19 +738,19 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'fuel_requests', data.id, null, data,
         `Created fuel request for ${request.driverName || request.vehicleId} - ${request.amount}`);
     }
-    
+
     return data;
   }
 
   static async updateFuelRequest(id: string, updates: any) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('fuel_requests').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('fuel_requests')
       .update({
@@ -741,22 +761,22 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'fuel_requests', id, oldData, data,
         `Updated fuel request ${id}`);
     }
-    
+
     return data;
   }
 
   static async deleteFuelRequest(id: string) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('fuel_requests').select('*').eq('id', id).single();
-    
+
     const { error } = await supabase.from('fuel_requests').delete().eq('id', id);
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'fuel_requests', id, oldData, null,
         `Deleted fuel request ${id}`);
@@ -784,19 +804,19 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'taxes', data.id, null, data,
         `Created ${tax.type} tax for ${tax.period} - ${tax.amount}`);
     }
-    
+
     return data;
   }
 
   static async updateTax(id: string, updates: any) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('taxes').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('taxes')
       .update({
@@ -807,22 +827,22 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'taxes', id, oldData, data,
         `Updated tax ${id}`);
     }
-    
+
     return data;
   }
 
   static async deleteTax(id: string) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('taxes').select('*').eq('id', id).single();
-    
+
     const { error } = await supabase.from('taxes').delete().eq('id', id);
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'taxes', id, oldData, null,
         `Deleted tax ${id}`);
@@ -851,19 +871,19 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'reports', data.id, null, data,
         `Created report: ${report.title}`);
     }
-    
+
     return data;
   }
 
   static async updateReport(id: string, updates: any) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('reports').select('*').eq('id', id).single();
-    
+
     const { data, error } = await supabase
       .from('reports')
       .update({
@@ -874,22 +894,22 @@ export class SupabaseService {
       .select()
       .single();
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'UPDATE', 'reports', id, oldData, data,
         `Updated report ${id}`);
     }
-    
+
     return data;
   }
 
   static async deleteReport(id: string) {
     const user = await getCurrentUser();
     const { data: oldData } = await supabase.from('reports').select('*').eq('id', id).single();
-    
+
     const { error } = await supabase.from('reports').delete().eq('id', id);
     if (error) throw error;
-    
+
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'DELETE', 'reports', id, oldData, null,
         `Deleted report ${id}`);

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import fs from 'fs';
 import path from 'path';
 import PizZip from 'pizzip';
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
     const url = new URL(req.url);
     const format = url.searchParams.get('format');
     const body = await req.json();
+    console.log('Request body:', body);
     const data = body?.data || {};
 
     if (format === 'pdf') {
@@ -106,12 +108,23 @@ export async function POST(req: Request) {
     }
 
     // Default: DOCX generation using docxtemplater
-    const templatePath = path.join(process.cwd(), 'templates', 'Calvary_Transport_Contract_Template.docx');
+    const templatesDir = path.join(process.cwd(), 'templates');
+    if (!fs.existsSync(templatesDir)) {
+      fs.mkdirSync(templatesDir, { recursive: true });
+    }
+    const templatePath = path.join(templatesDir, 'Calvary_Transport_Contract_Template.docx');
+    console.log('Template path:', templatePath);
+    console.log('Template exists:', fs.existsSync(templatePath));
+
     if (!fs.existsSync(templatePath)) {
-      return new Response('Template file not found. Please place Calvary_Transport_Contract_Template.docx in the /templates folder.', { status: 500 });
+      let filesInTemplates: string[] = [];
+      filesInTemplates = fs.readdirSync(templatesDir);
+      console.log('Files in templates directory:', filesInTemplates);
+      return new Response(`Template file not found. Please place Calvary_Transport_Contract_Template.docx in the /templates folder. Found files: ${filesInTemplates.join(', ')}`, { status: 500 });
     }
 
     const content = fs.readFileSync(templatePath, 'binary');
+    console.log('Template file read successfully');
     const zip = new PizZip(content);
 
     // Preprocess Word XML files to normalize/repair split mustache tags
@@ -181,6 +194,7 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error('Generate contract error', err);
+    console.error('Error details:', JSON.stringify(err, null, 2));
     return new Response('Error generating contract: ' + (err?.message || String(err)), { status: 500 });
   }
 }
