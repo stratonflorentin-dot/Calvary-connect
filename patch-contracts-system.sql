@@ -21,6 +21,7 @@ ALTER TABLE rate_sheets
   ADD COLUMN IF NOT EXISTS rate_sheet_name VARCHAR(100),
   ADD COLUMN IF NOT EXISTS contract_template_id UUID REFERENCES contract_templates(id),
   ADD COLUMN IF NOT EXISTS expiry_date DATE,
+  ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'USD',
   ADD COLUMN IF NOT EXISTS fuel_adjustment_enabled BOOLEAN DEFAULT TRUE,
   ADD COLUMN IF NOT EXISTS fuel_base_price DECIMAL(10,2),
   ADD COLUMN IF NOT EXISTS rates JSONB,
