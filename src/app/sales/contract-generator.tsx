@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Download, Printer, Calendar, DollarSign, MapPin, Truck } from 'lucide-react';
+import { FileText, Download, Printer, Calendar, DollarSign, MapPin, Truck, Save, CheckCircle } from 'lucide-react';
 
 interface ContractTemplate {
   id: string;
@@ -58,7 +58,7 @@ interface Customer {
   phone: string;
 }
 
-export function ContractGenerator({ customerId, onClose }: { customerId?: string; onClose?: () => void }) {
+export function ContractGenerator({ customerId, onClose, onSaved }: { customerId?: string; onClose?: () => void; onSaved?: () => void }) {
   const { user } = useSupabase();
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [rateSheets, setRateSheets] = useState<RateSheet[]>([]);
@@ -67,6 +67,7 @@ export function ContractGenerator({ customerId, onClose }: { customerId?: string
   const [selectedRateSheet, setSelectedRateSheet] = useState<string>('');
   const [selectedCustomer, setSelectedCustomer] = useState<string>(customerId || '');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   
   const [contractDetails, setContractDetails] = useState({
@@ -86,7 +87,7 @@ export function ContractGenerator({ customerId, onClose }: { customerId?: string
     try {
       const [templatesRes, ratesRes, customersRes] = await Promise.all([
         supabase.from('contract_templates').select('*').eq('is_active', true),
-        supabase.from('rate_sheets').select('*').eq('is_active', true),
+        supabase.from('rate_sheets').select('*').eq('is_active', true).not('rate_sheet_name', 'is', null),
         supabase.from('customers').select('id, company_name, address, contact_person, email, phone').is('deleted_at', null)
       ]);
       
@@ -310,6 +311,63 @@ export function ContractGenerator({ customerId, onClose }: { customerId?: string
     }
   };
 
+  const handleSaveContract = async () => {
+    if (!selectedCustomer) {
+      toast({ title: 'Error', description: 'Please select a customer.', variant: 'destructive' });
+      return;
+    }
+    if (!selectedTemplate) {
+      toast({ title: 'Error', description: 'Please select a contract template.', variant: 'destructive' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Generate contract number via RPC
+      const { data: contractNumber, error: rpcError } = await supabase.rpc('generate_contract_number');
+      if (rpcError) throw rpcError;
+
+      // Calculate contract value from rate sheet if available
+      let contractValue = 0;
+      if (selectedRateSheetData?.rates?.length) {
+        contractValue = selectedRateSheetData.rates.reduce((sum, r) => sum + (r.container_20ft || 0), 0);
+      }
+
+      // Insert contract record
+      const { error: insertError } = await supabase.from('transport_contracts').insert([{
+        contract_number: contractNumber,
+        customer_id: selectedCustomer,
+        template_id: selectedTemplate,
+        rate_sheet_id: selectedRateSheet || null,
+        contract_type: 'standard',
+        contract_date: contractDetails.contract_date,
+        start_date: contractDetails.start_date,
+        end_date: contractDetails.end_date || null,
+        contract_value: contractValue,
+        currency: selectedRateSheetData?.currency || 'USD',
+        status: 'draft',
+        client_signatory_name: contractDetails.client_signatory_name || null,
+        client_signatory_title: contractDetails.client_signatory_title || null,
+        special_notes: contractDetails.special_notes || null,
+        generated_html: generateContractHTML(),
+        created_by: user?.id
+      }]);
+
+      if (insertError) throw insertError;
+
+      toast({ title: 'Contract saved!', description: `Contract ${contractNumber} created successfully` });
+      
+      // Notify parent and close
+      if (onSaved) onSaved();
+      if (onClose) onClose();
+    } catch (e: any) {
+      console.error('Save contract error:', e);
+      toast({ title: 'Error saving contract', description: e.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
 
   return (
@@ -413,16 +471,40 @@ export function ContractGenerator({ customerId, onClose }: { customerId?: string
             </div>
           </div>
 
+          {/* Special Notes */}
+          <div className="space-y-2">
+            <Label>Special Notes (Optional)</Label>
+            <Textarea
+              value={contractDetails.special_notes}
+              onChange={(e) => setContractDetails({...contractDetails, special_notes: e.target.value})}
+              placeholder="Any additional notes for this contract..."
+              rows={2}
+            />
+          </div>
+
           {/* Action Buttons */}
-          <div className="flex gap-2 pt-4">
+          <div className="flex flex-wrap gap-2 pt-4">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button variant="outline" onClick={() => setShowPreview(true)}>
               <FileText className="h-4 w-4 mr-2" />
               Preview
             </Button>
-            <Button onClick={handlePrint}>
+            <Button variant="outline" onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Print / PDF
+            </Button>
+            <Button onClick={handleSaveContract} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Contract
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
@@ -475,6 +557,16 @@ export function ContractGenerator({ customerId, onClose }: { customerId?: string
           <DialogHeader>
             <DialogTitle>Contract Preview</DialogTitle>
           </DialogHeader>
+          <div className="flex gap-2 mb-4">
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print / PDF
+            </Button>
+            <Button size="sm" onClick={handleSaveContract} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? 'Saving...' : 'Save Contract'}
+            </Button>
+          </div>
           <div 
             className="mt-4"
             dangerouslySetInnerHTML={{ __html: generateContractHTML() }}

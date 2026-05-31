@@ -22,9 +22,10 @@ import {
   Building2, FileText, Users, Plus, Search, Phone, Mail, MapPin,
   DollarSign, TrendingUp, CheckCircle, Clock, AlertCircle, ArrowRight, 
   Briefcase, FileSignature, Printer, Download, Route, Truck, Container,
-  Thermometer, Weight, Ruler, CalendarDays, X
+  Thermometer, Weight, Ruler, CalendarDays, X, Eye, Save, Pencil, Trash2
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
+import { ContractGenerator } from './contract-generator';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -78,17 +79,23 @@ interface TransportContract {
   customer_id: string;
   company_name?: string;
   contract_type: string;
-  service_types: string[];
-  routes: Array<{origin: string; destination: string; rate: number}>;
+  service_types?: string[];
+  routes?: Array<{origin: string; destination: string; rate: number}>;
   start_date: string;
   end_date?: string;
-  min_monthly_trips: number;
+  min_monthly_trips?: number;
   contract_value: number;
   currency: string;
-  payment_terms: string;
+  payment_terms?: string;
   status: string;
-  signed_by_client: boolean;
-  signed_by_calvary: boolean;
+  signed_by_client?: boolean;
+  signed_by_calvary?: boolean;
+  template_id?: string;
+  rate_sheet_id?: string;
+  generated_html?: string;
+  client_signatory_name?: string;
+  client_signatory_title?: string;
+  contract_date?: string;
   created_at: string;
 }
 
@@ -174,6 +181,14 @@ function SalesModuleContent() {
   const [showContractDialog, setShowContractDialog] = useState(false);
   const [showOpportunityDialog, setShowOpportunityDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showContractGenerator, setShowContractGenerator] = useState(false);
+  const [previewContract, setPreviewContract] = useState<TransportContract | null>(null);
+
+  // Rate sheets from JSONB format (contract_templates system)
+  const [jsonbRateSheets, setJsonbRateSheets] = useState<Array<{id: string; rate_sheet_name: string; effective_date: string; currency: string; rates: any[]; special_conditions: string; is_active: boolean}>>([]);
+  const [showRateSheetDialog, setShowRateSheetDialog] = useState(false);
+  const [viewingRateSheet, setViewingRateSheet] = useState<any>(null);
+  const [editingRateSheet, setEditingRateSheet] = useState<any>(null);
 
   // Form states
   const [customerForm, setCustomerForm] = useState({
@@ -212,6 +227,7 @@ function SalesModuleContent() {
     fetchQuotations();
     fetchContracts();
     fetchRateSheets();
+    fetchJsonbRateSheets();
     fetchOpportunities();
   }, []);
 
@@ -251,8 +267,19 @@ function SalesModuleContent() {
       .from('rate_sheets')
       .select('*')
       .eq('is_active', true)
+      .not('route_name', 'is', null)
       .order('route_name');
     if (!error) setRateSheets(data || []);
+  }
+
+  async function fetchJsonbRateSheets() {
+    const { data, error } = await supabase
+      .from('rate_sheets')
+      .select('*')
+      .eq('is_active', true)
+      .not('rate_sheet_name', 'is', null)
+      .order('created_at', { ascending: false });
+    if (!error) setJsonbRateSheets(data || []);
   }
 
   async function fetchOpportunities() {
@@ -397,8 +424,23 @@ function SalesModuleContent() {
   const activeCustomers = customers.filter(c => c.status === 'active').length;
   const totalQuotations = quotations.length;
   const totalContracts = contracts.length;
+  const activeContracts = contracts.filter(c => c.status === 'active').length;
   const totalOpportunities = opportunities.length;
-  const pipelineValue = opportunities.reduce((sum, o) => sum + (o.estimated_monthly_revenue || 0), 0);
+  const pipelineValue = opportunities.reduce((sum, o) => sum + (o.estimated_monthly_revenue || 0), 0)
+    + contracts.filter(c => c.status !== 'terminated' && c.status !== 'expired').reduce((sum, c) => sum + (c.contract_value || 0), 0);
+
+  // Contract status badge helper
+  function getContractStatusBadge(status: string) {
+    switch(status) {
+      case 'active': return { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Active' };
+      case 'draft': return { bg: 'bg-slate-100', text: 'text-slate-800', label: 'Draft' };
+      case 'expired': return { bg: 'bg-red-100', text: 'text-red-800', label: 'Expired' };
+      case 'terminated': return { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Terminated' };
+      case 'pending_signature': return { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Pending Signature' };
+      case 'suspended': return { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Suspended' };
+      default: return { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
+    }
+  }
 
   if (loading) return (
     <div className="flex min-h-screen bg-gray-100">
@@ -772,158 +814,266 @@ function SalesModuleContent() {
 
           {/* Contracts Tab */}
           <TabsContent value="contracts">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Briefcase className="h-5 w-5" />
-                  Transport Contracts
-                </CardTitle>
-                {canCreate && (
-                  <Dialog open={showContractDialog} onOpenChange={setShowContractDialog}>
-                    <DialogTrigger asChild>
-                      <Button><Plus className="h-4 w-4 mr-2" /> New Contract</Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Create Transport Contract</DialogTitle>
-                      </DialogHeader>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Customer</Label>
-                          <Select value={contractForm.customer_id} onValueChange={v => setContractForm({...contractForm, customer_id: v})}>
-                            <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                            <SelectContent>
-                              {customers.map(c => (
-                                <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Contract Type</Label>
-                          <Select value={contractForm.contract_type} onValueChange={v => setContractForm({...contractForm, contract_type: v})}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="spot">Spot Contract</SelectItem>
-                              <SelectItem value="long_term">Long Term</SelectItem>
-                              <SelectItem value="project_based">Project Based</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Start Date</Label>
-                          <Input type="date" value={contractForm.start_date} onChange={e => setContractForm({...contractForm, start_date: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>End Date (optional)</Label>
-                          <Input type="date" value={contractForm.end_date} onChange={e => setContractForm({...contractForm, end_date: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Min Monthly Trips</Label>
-                          <Input type="number" value={contractForm.min_monthly_trips} onChange={e => setContractForm({...contractForm, min_monthly_trips: parseInt(e.target.value) || 0})} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Contract Value (TZS)</Label>
-                          <Input type="number" value={contractForm.contract_value} onChange={e => setContractForm({...contractForm, contract_value: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Payment Terms</Label>
-                          <Select value={contractForm.payment_terms} onValueChange={v => setContractForm({...contractForm, payment_terms: v})}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="7 days">7 Days</SelectItem>
-                              <SelectItem value="15 days">15 Days</SelectItem>
-                              <SelectItem value="30 days">30 Days</SelectItem>
-                              <SelectItem value="45 days">45 Days</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-2 space-y-2">
-                          <Label>Notes</Label>
-                          <Textarea value={contractForm.notes} onChange={e => setContractForm({...contractForm, notes: e.target.value})} />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowContractDialog(false)}>Cancel</Button>
-                        <Button onClick={saveContract}>Create Contract</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+            {showContractGenerator ? (
+              <ContractGenerator
+                onClose={() => setShowContractGenerator(false)}
+                onSaved={() => {
+                  setShowContractGenerator(false);
+                  fetchContracts();
+                }}
+              />
+            ) : (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="h-5 w-5" />
+                    Transport Contracts
+                    <Badge variant="outline" className="ml-2">{totalContracts}</Badge>
+                  </CardTitle>
+                  {canCreate && (
+                    <Button onClick={() => setShowContractGenerator(true)}>
+                      <Plus className="h-4 w-4 mr-2" /> New Contract
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Contract #</TableHead>
+                          <TableHead>Customer</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Period</TableHead>
+                          <TableHead>Value</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contracts.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No contracts yet. Click "+ New Contract" to generate one.
+                            </TableCell>
+                          </TableRow>
+                        ) : contracts.map(c => {
+                          const statusBadge = getContractStatusBadge(c.status);
+                          return (
+                            <TableRow key={c.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setPreviewContract(c)}>
+                              <TableCell>
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 font-mono">
+                                  {c.contract_number}
+                                </span>
+                              </TableCell>
+                              <TableCell className="font-medium">{c.company_name || '—'}</TableCell>
+                              <TableCell className="capitalize">{(c.contract_type || 'standard').replace('_', ' ')}</TableCell>
+                              <TableCell>
+                                {c.start_date ? format(new Date(c.start_date), 'MMM yyyy') : '—'}
+                                {c.end_date && ` → ${format(new Date(c.end_date), 'MMM yyyy')}`}
+                              </TableCell>
+                              <TableCell>{c.currency || 'USD'} {(c.contract_value || 0).toLocaleString()}</TableCell>
+                              <TableCell>
+                                <Badge className={`${statusBadge.bg} ${statusBadge.text} text-xs`}>
+                                  {statusBadge.label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                  <Button variant="ghost" size="sm" onClick={() => setPreviewContract(c)} title="Preview">
+                                    <Eye className="h-4 w-4 text-blue-500" />
+                                  </Button>
+                                  {c.generated_html && (
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      const w = window.open('', '_blank');
+                                      if (w) {
+                                        w.document.write(`<html><head><title>${c.contract_number}</title></head><body>${c.generated_html}</body></html>`);
+                                        w.document.close();
+                                        w.print();
+                                      }
+                                    }} title="Print PDF">
+                                      <Printer className="h-4 w-4 text-slate-500" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Contract Preview Dialog */}
+            <Dialog open={!!previewContract} onOpenChange={() => setPreviewContract(null)}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <FileSignature className="h-5 w-5" />
+                    Contract {previewContract?.contract_number}
+                  </DialogTitle>
+                </DialogHeader>
+                {previewContract?.generated_html ? (
+                  <div>
+                    <div className="flex gap-2 mb-4">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        const w = window.open('', '_blank');
+                        if (w) {
+                          w.document.write(`<html><head><title>${previewContract.contract_number}</title></head><body>${previewContract.generated_html}</body></html>`);
+                          w.document.close();
+                          w.print();
+                        }
+                      }}>
+                        <Printer className="h-4 w-4 mr-2" /> Print / PDF
+                      </Button>
+                    </div>
+                    <div dangerouslySetInnerHTML={{ __html: previewContract.generated_html }} />
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <p>No contract document was generated for this contract.</p>
+                    <p className="text-sm mt-2">Contract details:</p>
+                    <div className="text-left mt-4 space-y-2 max-w-md mx-auto">
+                      <p><strong>Customer:</strong> {previewContract?.company_name}</p>
+                      <p><strong>Type:</strong> {previewContract?.contract_type}</p>
+                      <p><strong>Value:</strong> {previewContract?.currency} {previewContract?.contract_value?.toLocaleString()}</p>
+                      <p><strong>Status:</strong> {previewContract?.status}</p>
+                    </div>
+                  </div>
                 )}
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Contract #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Period</TableHead>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {contracts.map(c => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.contract_number}</TableCell>
-                        <TableCell>{c.company_name}</TableCell>
-                        <TableCell className="capitalize">{c.contract_type.replace('_', ' ')}</TableCell>
-                        <TableCell>{format(new Date(c.start_date), 'MMM yyyy')} {c.end_date && `- ${format(new Date(c.end_date), 'MMM yyyy')}`}</TableCell>
-                        <TableCell>TZS {(c.contract_value || 0).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(c.status)}>{c.status}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                </div>
-              </CardContent>
-            </Card>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Rate Sheets Tab */}
           <TabsContent value="rate-sheets">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Standard Rate Sheet
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Route</TableHead>
-                        <TableHead>Service Type</TableHead>
-                        <TableHead>Distance</TableHead>
-                        <TableHead>20ft (TZS)</TableHead>
-                        <TableHead>40ft (TZS)</TableHead>
-                        <TableHead>Loose/MT</TableHead>
-                        <TableHead>Transit Days</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {rateSheets.map(r => (
-                        <TableRow key={r.id}>
-                          <TableCell className="font-medium">{r.route_name}</TableCell>
-                          <TableCell className="capitalize">{r.service_type.replace('_', ' ')}</TableCell>
-                          <TableCell>{r.distance_km} km</TableCell>
-                          <TableCell>{r.container_20ft ? r.container_20ft.toLocaleString() : '-'}</TableCell>
-                          <TableCell>{r.container_40ft ? r.container_40ft.toLocaleString() : '-'}</TableCell>
-                          <TableCell>{r.loose_rate_mt ? r.loose_rate_mt.toLocaleString() : '-'}</TableCell>
-                          <TableCell>{r.transit_days}</TableCell>
-                        </TableRow>
+            <div className="space-y-6">
+              {/* JSONB Rate Sheets (from contract system) */}
+              {jsonbRateSheets.length > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Freight Rate Sheets
+                      <Badge variant="outline" className="ml-2">{jsonbRateSheets.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {jsonbRateSheets.map(rs => (
+                        <div key={rs.id} className="border rounded-lg overflow-hidden">
+                          <div
+                            className="flex items-center justify-between p-4 bg-slate-50 cursor-pointer hover:bg-slate-100"
+                            onClick={() => setViewingRateSheet(viewingRateSheet?.id === rs.id ? null : rs)}
+                          >
+                            <div>
+                              <h3 className="font-semibold text-sm">{rs.rate_sheet_name}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                Effective: {rs.effective_date ? new Date(rs.effective_date).toLocaleDateString() : '—'} · {rs.currency} · {rs.rates?.length || 0} routes
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge className="bg-emerald-100 text-emerald-800 text-xs">Active</Badge>
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </div>
+                          {viewingRateSheet?.id === rs.id && (
+                            <div className="p-4 border-t">
+                              <div className="overflow-x-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>From</TableHead>
+                                      <TableHead>Destination</TableHead>
+                                      <TableHead className="text-right">20ft ({rs.currency})</TableHead>
+                                      <TableHead className="text-right">40ft ({rs.currency})</TableHead>
+                                      <TableHead className="text-right">Loose ({rs.currency})</TableHead>
+                                      <TableHead className="text-center">Truck</TableHead>
+                                      <TableHead className="text-center">Days</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {rs.rates?.map((rate: any, idx: number) => (
+                                      <TableRow key={idx}>
+                                        <TableCell className="text-sm">{rate.from}</TableCell>
+                                        <TableCell className="text-sm font-medium">{rate.destination}</TableCell>
+                                        <TableCell className="text-right text-sm">{rate.container_20ft?.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right text-sm">{rate.container_40ft?.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right text-sm">{rate.loose?.toLocaleString()}</TableCell>
+                                        <TableCell className="text-center text-sm">{rate.truck_type}</TableCell>
+                                        <TableCell className="text-center text-sm">{rate.transit_days}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                              {rs.special_conditions && (
+                                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                                  <strong>Note:</strong> {rs.special_conditions}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Legacy flat rate sheets */}
+              {rateSheets.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Route Rate Sheet
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Route</TableHead>
+                            <TableHead>Service Type</TableHead>
+                            <TableHead>Distance</TableHead>
+                            <TableHead>20ft (TZS)</TableHead>
+                            <TableHead>40ft (TZS)</TableHead>
+                            <TableHead>Loose/MT</TableHead>
+                            <TableHead>Transit Days</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {rateSheets.map(r => (
+                            <TableRow key={r.id}>
+                              <TableCell className="font-medium">{r.route_name}</TableCell>
+                              <TableCell className="capitalize">{r.service_type.replace('_', ' ')}</TableCell>
+                              <TableCell>{r.distance_km} km</TableCell>
+                              <TableCell>{r.container_20ft ? r.container_20ft.toLocaleString() : '-'}</TableCell>
+                              <TableCell>{r.container_40ft ? r.container_40ft.toLocaleString() : '-'}</TableCell>
+                              <TableCell>{r.loose_rate_mt ? r.loose_rate_mt.toLocaleString() : '-'}</TableCell>
+                              <TableCell>{r.transit_days}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {rateSheets.length === 0 && jsonbRateSheets.length === 0 && (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No rate sheets found. Run the SQL migration to seed default rates.
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           {/* Opportunities Tab */}
