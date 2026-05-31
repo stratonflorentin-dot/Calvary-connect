@@ -9,9 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Download, Printer, Plus, Settings, Trash2 } from 'lucide-react';
+import { FileText, Download, Printer, Plus, Settings, Trash2, Pencil } from 'lucide-react';
 import { RATE_SHEET, ContractData, formatContractHTML, downloadContract, printContract } from '@/lib/contract-service';
-import { fetchRateSheets, RateSheetRoute } from '@/lib/rate-sheet-service';
+import { fetchRateSheets, upsertRateSheet, deleteRateSheet, RateSheetRoute } from '@/lib/rate-sheet-service';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
 import { format } from 'date-fns';
@@ -70,231 +70,257 @@ export function TransportAgreementGenerator() {
   };
 
   const handlePrint = () => {
-  if (!previewHTML) {
-    handleGeneratePreview();
-  } else {
-    printContract(previewHTML);
-  }
-};
+    if (!previewHTML) {
+      handleGeneratePreview();
+    } else {
+      printContract(previewHTML);
+    }
+  };
 
-const handleDownload = () => {
-  if (!previewHTML) {
-    handleGeneratePreview();
-  } else {
-    downloadContract(previewHTML, formData.clientName);
-    toast({ title: 'Success', description: 'Contract downloaded successfully' });
-  }
-};
+  const handleDownload = () => {
+    if (!previewHTML) {
+      handleGeneratePreview();
+    } else {
+      downloadContract(previewHTML, formData.clientName);
+      toast({ title: 'Success', description: 'Contract downloaded successfully' });
+    }
+  };
 
-return (
-  <>
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="size-4" />
-          Create Transport Contract
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create Transport Contract</DialogTitle>
-        </DialogHeader>
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="size-4" />
+            Create Transport Contract
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Transport Contract</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Customer Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm">Customer</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="clientName">Customer Name *</Label>
-                <Input
-                  id="clientName"
-                  value={formData.clientName}
-                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                  placeholder="e.g. Karimjee Value Chain Limited"
-                />
+          <div className="space-y-6">
+            {/* Customer Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Customer</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="clientName">Customer Name *</Label>
+                  <Input
+                    id="clientName"
+                    value={formData.clientName}
+                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                    placeholder="e.g. Karimjee Value Chain Limited"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clientPOBox">P.O. Box *</Label>
+                  <Input
+                    id="clientPOBox"
+                    value={formData.clientPOBox}
+                    onChange={(e) => setFormData({ ...formData, clientPOBox: e.target.value })}
+                    placeholder="e.g. 409"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="clientPOBox">P.O. Box *</Label>
-                <Input
-                  id="clientPOBox"
-                  value={formData.clientPOBox}
-                  onChange={(e) => setFormData({ ...formData, clientPOBox: e.target.value })}
-                  placeholder="e.g. 409"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="clientRoad">Road/Address *</Label>
+                  <Input
+                    id="clientRoad"
+                    value={formData.clientRoad}
+                    onChange={(e) => setFormData({ ...formData, clientRoad: e.target.value })}
+                    placeholder="e.g. Nyerere Road"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clientCity">City *</Label>
+                  <Input
+                    id="clientCity"
+                    value={formData.clientCity}
+                    onChange={(e) => setFormData({ ...formData, clientCity: e.target.value })}
+                    placeholder="e.g. Dar es Salaam"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="clientPhone">Phone</Label>
+                  <Input
+                    id="clientPhone"
+                    value={formData.clientPhone}
+                    onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
+                    placeholder="+255..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clientEmail">Email</Label>
+                  <Input
+                    id="clientEmail"
+                    type="email"
+                    value={formData.clientEmail}
+                    onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
+                    placeholder="client@example.com"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Contract Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Contract Type</h3>
               <div className="space-y-2">
-                <Label htmlFor="clientRoad">Road/Address *</Label>
-                <Input
-                  id="clientRoad"
-                  value={formData.clientRoad}
-                  onChange={(e) => setFormData({ ...formData, clientRoad: e.target.value })}
-                  placeholder="e.g. Nyerere Road"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="clientCity">City *</Label>
-                <Input
-                  id="clientCity"
-                  value={formData.clientCity}
-                  onChange={(e) => setFormData({ ...formData, clientCity: e.target.value })}
-                  placeholder="e.g. Dar es Salaam"
-                />
+                <Label htmlFor="contractType">Contract Type *</Label>
+                <Select value={formData.contractType} onValueChange={(value) => setFormData({ ...formData, contractType: value as any })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Long Term">Long Term</SelectItem>
+                    <SelectItem value="Single Trip">Single Trip</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Destination Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Route Details</h3>
               <div className="space-y-2">
-                <Label htmlFor="clientPhone">Phone</Label>
-                <Input
-                  id="clientPhone"
-                  value={formData.clientPhone}
-                  onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
-                  placeholder="+255..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="clientEmail">Email</Label>
-                <Input
-                  id="clientEmail"
-                  type="email"
-                  value={formData.clientEmail}
-                  onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
-                  placeholder="client@example.com"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Contract Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm">Contract Type</h3>
-            <div className="space-y-2">
-              <Label htmlFor="contractType">Contract Type *</Label>
-              <Select value={formData.contractType} onValueChange={(value) => setFormData({ ...formData, contractType: value as any })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Long Term">Long Term</SelectItem>
-                  <SelectItem value="Single Trip">Single Trip</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Destination Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm">Route Details</h3>
-            <div className="space-y-2">
-              <Label htmlFor="destination">Destination Route *</Label>
-              <Select value={formData.destination} onValueChange={(value) => setFormData({ ...formData, destination: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingRates ? "Loading routes..." : "Select a destination"} />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px]">
-                  {dbRates.length === 0 ? (
-                    <SelectItem value="" disabled>
-                      {loadingRates ? "Loading..." : "No routes available"}
-                    </SelectItem>
-                  ) : (
-                    dbRates.map((route) => (
-                      <SelectItem key={route.id} value={route.route_name}>
-                        {route.route_name}
+                <Label htmlFor="destination">Destination Route *</Label>
+                <Select value={formData.destination} onValueChange={(value) => setFormData({ ...formData, destination: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingRates ? "Loading routes..." : "Select a destination"} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {dbRates.length === 0 ? (
+                      <SelectItem value="" disabled>
+                        {loadingRates ? "Loading..." : "No routes available"}
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                    ) : (
+                      dbRates.map((route) => (
+                        <SelectItem key={route.id} value={route.route_name}>
+                          {route.route_name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Dates Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Start Date</h3>
+              <div className="space-y-2">
+                <Input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                />
+              </div>
+              <h3 className="font-semibold text-sm">End Date (optional)</h3>
+              <div className="space-y-2">
+                <Input
+                  type="date"
+                  placeholder="mm/dd/yyyy"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Min Monthly Trips Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Min Monthly Trips</h3>
+              <div className="space-y-2">
+                <Input
+                  type="number"
+                  value={formData.minMonthlyTrips}
+                  onChange={(e) => setFormData({ ...formData, minMonthlyTrips: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            {/* Contract Value Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Contract Value (TZS)</h3>
+              <div className="space-y-2">
+                <Input
+                  type="number"
+                  value={formData.contractValue}
+                  onChange={(e) => setFormData({ ...formData, contractValue: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            {/* Payment Terms Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Payment Terms *</h3>
+              <div className="space-y-2">
+                <Select value={formData.paymentTerms} onValueChange={(value) => setFormData({ ...formData, paymentTerms: value as any })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30 Days">30 Days</SelectItem>
+                    <SelectItem value="60 Days">60 Days</SelectItem>
+                    <SelectItem value="90 Days">90 Days</SelectItem>
+                    <SelectItem value="COD">COD (Cash on Delivery)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Notes Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Notes</h3>
+              <div className="space-y-2">
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Any additional terms or conditions..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={handleGeneratePreview}>
+                <FileText className="size-4 mr-2" />
+                Preview
+              </Button>
+              <Button onClick={handleDownload} className="flex-1">
+                <Download className="size-4 mr-2" />
+                Download
+              </Button>
+              <Button onClick={handlePrint} className="flex-1">
+                <Printer className="size-4 mr-2" />
+                Print
+              </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          {/* Dates Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm">Start Date</h3>
-            <div className="space-y-2">
-              <Input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              />
-            </div>
-            <h3 className="font-semibold text-sm">End Date (optional)</h3>
-            <div className="space-y-2">
-              <Input
-                type="date"
-                placeholder="mm/dd/yyyy"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Min Monthly Trips Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm">Min Monthly Trips</h3>
-            <div className="space-y-2">
-              <Input
-                type="number"
-                value={formData.minMonthlyTrips}
-                onChange={(e) => setFormData({ ...formData, minMonthlyTrips: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          {/* Contract Value Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm">Contract Value (TZS)</h3>
-            <div className="space-y-2">
-              <Input
-                type="number"
-                value={formData.contractValue}
-                onChange={(e) => setFormData({ ...formData, contractValue: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          {/* Payment Terms Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm">Payment Terms *</h3>
-            <div className="space-y-2">
-              <Select value={formData.paymentTerms} onValueChange={(value) => setFormData({ ...formData, paymentTerms: value as any })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30 Days">30 Days</SelectItem>
-                  <SelectItem value="60 Days">60 Days</SelectItem>
-                  <SelectItem value="90 Days">90 Days</SelectItem>
-                  <SelectItem value="COD">COD (Cash on Delivery)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Notes Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm">Notes</h3>
-            <div className="space-y-2">
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Any additional terms or conditions..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Contract Preview - {formData.clientName}</DialogTitle>
+          </DialogHeader>
+          {previewHTML && (
+            <div
+              className="prose max-w-none p-4"
+              dangerouslySetInnerHTML={{ __html: previewHTML }}
+            />
+          )}
           <div className="flex gap-2 pt-4">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button variant="outline" onClick={handleGeneratePreview}>
-              <FileText className="size-4 mr-2" />
-              Preview
-            </Button>
             <Button onClick={handleDownload} className="flex-1">
               <Download className="size-4 mr-2" />
               Download
@@ -304,53 +330,104 @@ return (
               Print
             </Button>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-
-    {/* Preview Dialog */}
-    <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Contract Preview - {formData.clientName}</DialogTitle>
-        </DialogHeader>
-        {previewHTML && (
-          <div
-            className="prose max-w-none p-4"
-            dangerouslySetInnerHTML={{ __html: previewHTML }}
-          />
-        )}
-        <div className="flex gap-2 pt-4">
-          <Button onClick={handleDownload} className="flex-1">
-            <Download className="size-4 mr-2" />
-            Download
-          </Button>
-          <Button onClick={handlePrint} className="flex-1">
-            <Printer className="size-4 mr-2" />
-            Print
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  </>
-);
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 // Display available routes
 export function RateSheetPreview() {
+  const { toast } = useToast();
   const [rates, setRates] = useState<RateSheetRoute[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingRate, setEditingRate] = useState<RateSheetRoute | null>(null);
+  const [routeForm, setRouteForm] = useState<RateSheetRoute>({
+    id: undefined,
+    route_name: '',
+    origin: '',
+    destination: '',
+    container_20ft: 0,
+    container_40ft: 0,
+    loose_cargo: 0,
+    truck_type: '',
+    transit_days: 0,
+    currency: 'TZS',
+    is_active: true,
+  });
 
   useEffect(() => {
     loadRates();
   }, []);
 
   const loadRates = async () => {
+    setLoading(true);
     try {
       const data = await fetchRateSheets();
       setRates(data);
+    } catch (error) {
+      console.error('Error loading rates:', error);
+      toast({ title: 'Error', description: 'Unable to load rate sheets', variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openRateDialog = (rate?: RateSheetRoute) => {
+    if (rate) {
+      setEditingRate(rate);
+      setRouteForm({ ...rate });
+    } else {
+      setEditingRate(null);
+      setRouteForm({
+        id: undefined,
+        route_name: '',
+        origin: '',
+        destination: '',
+        container_20ft: 0,
+        container_40ft: 0,
+        loose_cargo: 0,
+        truck_type: '',
+        transit_days: 0,
+        currency: 'TZS',
+        is_active: true,
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveRateSheet = async () => {
+    if (!routeForm.route_name || !routeForm.origin || !routeForm.destination) {
+      toast({ title: 'Missing fields', description: 'Route name, origin, and destination are required', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      await upsertRateSheet(routeForm);
+      toast({ title: 'Success', description: editingRate ? 'Rate sheet updated' : 'Rate sheet created' });
+      setIsDialogOpen(false);
+      setEditingRate(null);
+      loadRates();
+    } catch (error) {
+      console.error('Error saving rate sheet:', error);
+      toast({ title: 'Error', description: 'Failed to save rate sheet', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteRateSheet = async (id?: string) => {
+    if (!id) return;
+    if (!window.confirm('Delete this rate sheet? It will no longer appear in contract routes.')) {
+      return;
+    }
+
+    try {
+      await deleteRateSheet(id);
+      toast({ title: 'Deleted', description: 'Rate sheet removed' });
+      loadRates();
+    } catch (error) {
+      console.error('Error deleting rate sheet:', error);
+      toast({ title: 'Error', description: 'Failed to delete rate sheet', variant: 'destructive' });
     }
   };
 
@@ -377,12 +454,18 @@ export function RateSheetPreview() {
           <FileText className="h-5 w-5" />
           Available Routes & Rates
         </CardTitle>
-        <Button variant="outline" size="sm" className="gap-2" asChild>
-          <a href="/admin/settings">
-            <Settings className="h-4 w-4" />
-            Manage Rates
-          </a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => openRateDialog()}>
+            <Plus className="h-4 w-4" />
+            New Route
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2" asChild>
+            <a href="/admin/settings">
+              <Settings className="h-4 w-4" />
+              Settings
+            </a>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -393,12 +476,13 @@ export function RateSheetPreview() {
               <TableHead className="text-right">40ft Container</TableHead>
               <TableHead className="text-right">Loose Cargo</TableHead>
               <TableHead className="text-center">Transit Days</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No routes configured
                 </TableCell>
               </TableRow>
@@ -410,12 +494,117 @@ export function RateSheetPreview() {
                   <TableCell className="text-right">${route.container_40ft.toLocaleString()}</TableCell>
                   <TableCell className="text-right">${route.loose_cargo.toLocaleString()}</TableCell>
                   <TableCell className="text-center">{route.transit_days} days</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button variant="ghost" size="icon" onClick={() => openRateDialog(route)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteRateSheet(route.id)}>
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </CardContent>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{editingRate ? 'Edit Rate Sheet' : 'New Rate Sheet'}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Route Name</Label>
+                <Input
+                  value={routeForm.route_name}
+                  onChange={(e) => setRouteForm({ ...routeForm, route_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Origin</Label>
+                <Input
+                  value={routeForm.origin}
+                  onChange={(e) => setRouteForm({ ...routeForm, origin: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Destination</Label>
+                <Input
+                  value={routeForm.destination}
+                  onChange={(e) => setRouteForm({ ...routeForm, destination: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Truck Type</Label>
+                <Input
+                  value={routeForm.truck_type}
+                  onChange={(e) => setRouteForm({ ...routeForm, truck_type: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>20ft Rate</Label>
+                <Input
+                  type="number"
+                  value={routeForm.container_20ft}
+                  onChange={(e) => setRouteForm({ ...routeForm, container_20ft: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>40ft Rate</Label>
+                <Input
+                  type="number"
+                  value={routeForm.container_40ft}
+                  onChange={(e) => setRouteForm({ ...routeForm, container_40ft: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Loose Cargo Rate</Label>
+                <Input
+                  type="number"
+                  value={routeForm.loose_cargo}
+                  onChange={(e) => setRouteForm({ ...routeForm, loose_cargo: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Transit Days</Label>
+                <Input
+                  type="number"
+                  value={routeForm.transit_days}
+                  onChange={(e) => setRouteForm({ ...routeForm, transit_days: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <Select value={routeForm.currency} onValueChange={(value) => setRouteForm({ ...routeForm, currency: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TZS">TZS</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveRateSheet}>{editingRate ? 'Update Route' : 'Create Route'}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
