@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
+import { useRole } from '@/hooks/use-role';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -69,6 +70,8 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [editingRates, setEditingRates] = useState<any[] | null>(null);
+  const [editingModalOpen, setEditingModalOpen] = useState(false);
   
   const [contractDetails, setContractDetails] = useState({
     contract_date: new Date().toISOString().split('T')[0],
@@ -108,6 +111,9 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
   const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
   const selectedRateSheetData = rateSheets.find(r => r.id === selectedRateSheet);
   const selectedCustomerData = customers.find(c => c.id === selectedCustomer);
+
+  const { hasPermission } = useRole();
+  const canEditRates = hasPermission(['CEO', 'ADMIN', 'SALESMAN']);
 
   const generateContractHTML = () => {
     if (!selectedTemplateData || !selectedCustomerData) return '';
@@ -513,11 +519,18 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
       {/* Rate Sheet Quick View */}
       {selectedRateSheetData && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
               Rate Sheet Preview
             </CardTitle>
+            {canEditRates && (
+              <div>
+                <Button size="sm" variant="outline" onClick={() => { setEditingModalOpen(true); setEditingRates(selectedRateSheetData?.rates || []); }}>
+                  Edit Annexure A
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <Table>
@@ -535,9 +548,9 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
                   <TableRow key={idx}>
                     <TableCell>{rate.from}</TableCell>
                     <TableCell>{rate.destination}</TableCell>
-                    <TableCell className="text-right">{rate.container_20ft?.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{rate.container_40ft?.toLocaleString()}</TableCell>
-                    <TableCell className="text-center">{rate.transit_days}</TableCell>
+                      <TableCell className="text-right">{rate.container_20ft?.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{rate.container_40ft?.toLocaleString()}</TableCell>
+                      <TableCell className="text-center">{rate.transit_days}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -549,6 +562,92 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Edit Rates Modal */}
+      {canEditRates && selectedRateSheetData && (
+        <Dialog open={editingModalOpen} onOpenChange={setEditingModalOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Edit Annexure A - Rates</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <table className="w-full table-fixed border-collapse">
+                <thead>
+                  <tr className="text-left">
+                    <th>From</th>
+                    <th>Destination</th>
+                    <th className="text-right">20ft</th>
+                    <th className="text-right">40ft</th>
+                    <th className="text-right">Loose</th>
+                    <th className="text-center">Days</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(editingRates || selectedRateSheetData.rates).map((r: any, i: number) => (
+                    <tr key={i} className="border-t">
+                      <td className="py-2">{r.from}</td>
+                      <td>{r.destination}</td>
+                      <td className="text-right">
+                        <Input value={String(r.container_20ft || 0)} onChange={(e) => {
+                          const copy = (editingRates || [...selectedRateSheetData.rates]).slice();
+                          copy[i] = { ...copy[i], container_20ft: Number(e.target.value) };
+                          setEditingRates(copy);
+                        }} />
+                      </td>
+                      <td className="text-right">
+                        <Input value={String(r.container_40ft || 0)} onChange={(e) => {
+                          const copy = (editingRates || [...selectedRateSheetData.rates]).slice();
+                          copy[i] = { ...copy[i], container_40ft: Number(e.target.value) };
+                          setEditingRates(copy);
+                        }} />
+                      </td>
+                      <td className="text-right">
+                        <Input value={String(r.loose || 0)} onChange={(e) => {
+                          const copy = (editingRates || [...selectedRateSheetData.rates]).slice();
+                          copy[i] = { ...copy[i], loose: Number(e.target.value) };
+                          setEditingRates(copy);
+                        }} />
+                      </td>
+                      <td className="text-center">
+                        <Input value={String(r.transit_days || 0)} onChange={(e) => {
+                          const copy = (editingRates || [...selectedRateSheetData.rates]).slice();
+                          copy[i] = { ...copy[i], transit_days: Number(e.target.value) };
+                          setEditingRates(copy);
+                        }} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setEditingModalOpen(false); setEditingRates(null); }}>Cancel</Button>
+                <Button onClick={async () => {
+                  try {
+                    const newRates = editingRates || selectedRateSheetData.rates;
+                    const { data, error } = await supabase
+                      .from('rate_sheets')
+                      .update({ rates: newRates, updated_at: new Date().toISOString() })
+                      .eq('id', selectedRateSheetData.id)
+                      .select()
+                      .single();
+                    if (error) throw error;
+                    toast({ title: 'Saved', description: 'Rates updated', variant: 'success' });
+                    setEditingModalOpen(false);
+                    setEditingRates(null);
+                    // refresh rate sheets
+                    const { data: refreshed, error: fetchErr } = await supabase.from('rate_sheets').select('*').eq('is_active', true).not('rate_sheet_name', 'is', null);
+                    if (!fetchErr) setRateSheets(refreshed || []);
+                  } catch (e: any) {
+                    console.error('Error saving rates', e);
+                    toast({ title: 'Error', description: e.message || 'Failed to save rates', variant: 'destructive' });
+                  }
+                }}>Save Rates</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Preview Dialog */}

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Edit2, Trash2, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useRole } from '@/hooks/use-role';
 import { fetchRateSheets, upsertRateSheet, deleteRateSheet, RateSheetRoute } from '@/lib/rate-sheet-service';
 
 export function RateSheetManager() {
@@ -33,6 +34,9 @@ export function RateSheetManager() {
     useEffect(() => {
         loadRates();
     }, []);
+
+    const { hasPermission, isInitialized } = useRole();
+    const canEdit = hasPermission(['CEO', 'ADMIN', 'SALESMAN']);
 
     const loadRates = async () => {
         setLoading(true);
@@ -108,13 +112,16 @@ export function RateSheetManager() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0">
                     <CardTitle>Manage Transport Routes & Rates</CardTitle>
-                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                        <DialogTrigger asChild>
-                            <Button onClick={() => handleOpenDialog()} className="gap-2">
-                                <Plus className="size-4" />
-                                Add Route
-                            </Button>
-                        </DialogTrigger>
+                    {canEdit && (
+                        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                            <DialogTrigger asChild>
+                                <Button onClick={() => handleOpenDialog()} className="gap-2">
+                                    <Plus className="size-4" />
+                                    Add Route
+                                </Button>
+                            </DialogTrigger>
+                        </Dialog>
+                    )}
                         <DialogContent className="max-w-2xl">
                             <DialogHeader>
                                 <DialogTitle>{editingId ? 'Edit Route' : 'Add New Route'}</DialogTitle>
@@ -265,22 +272,28 @@ export function RateSheetManager() {
                                         <TableCell className="text-center">{rate.transit_days}</TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex gap-2 justify-center">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        handleOpenDialog(rate);
-                                                    }}
-                                                >
-                                                    <Edit2 className="size-4 text-blue-600" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => rate.id && handleDelete(rate.id)}
-                                                >
-                                                    <Trash2 className="size-4 text-red-600" />
-                                                </Button>
+                                                {canEdit ? (
+                                                    <>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                handleOpenDialog(rate);
+                                                            }}
+                                                        >
+                                                            <Edit2 className="size-4 text-blue-600" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => rate.id && handleDelete(rate.id)}
+                                                        >
+                                                            <Trash2 className="size-4 text-red-600" />
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-sm text-muted-foreground">Read only</span>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>
