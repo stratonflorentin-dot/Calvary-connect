@@ -193,6 +193,8 @@ function SalesModuleContent() {
   const [newRateSheet, setNewRateSheet] = useState({
     route_name: '',
     service_type: 'local_transport',
+    origin: '',
+    destination: '',
     distance_km: 0,
     currency: 'TZS',
     container_20ft: 0,
@@ -200,6 +202,7 @@ function SalesModuleContent() {
     loose_rate_mt: 0,
     transit_days: 0,
     special_conditions: '',
+    is_active: true,
   });
 
   // Form states
@@ -432,6 +435,59 @@ function SalesModuleContent() {
       setShowOpportunityDialog(false);
       fetchOpportunities();
     }
+  }
+
+  async function saveRateSheet() {
+    if (!newRateSheet.route_name || !newRateSheet.origin || !newRateSheet.destination) {
+      toast({ title: 'Error', description: 'Route name, origin and destination are required', variant: 'destructive' });
+      return;
+    }
+
+    const rateSheetPayload = {
+      ...newRateSheet,
+      container_20ft: Number(newRateSheet.container_20ft) || 0,
+      container_40ft: Number(newRateSheet.container_40ft) || 0,
+      loose_rate_mt: Number(newRateSheet.loose_rate_mt) || 0,
+      transit_days: Number(newRateSheet.transit_days) || 0,
+      distance_km: Number(newRateSheet.distance_km) || 0,
+      is_active: true,
+    } as any;
+
+    try {
+      if (editingRateSheet?.id) {
+        const { error } = await supabase.from('rate_sheets').update(rateSheetPayload).eq('id', editingRateSheet.id);
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Rate sheet updated successfully', variant: 'success' });
+      } else {
+        const { error } = await supabase.from('rate_sheets').insert([rateSheetPayload]);
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Rate sheet created successfully', variant: 'success' });
+      }
+      setShowRateSheetDialog(false);
+      setEditingRateSheet(null);
+      resetRateSheetForm();
+      fetchRateSheets();
+    } catch (error: any) {
+      console.error('Error saving rate sheet:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to save rate sheet', variant: 'destructive' });
+    }
+  }
+
+  function resetRateSheetForm() {
+    setNewRateSheet({
+      route_name: '',
+      service_type: 'local_transport',
+      origin: '',
+      destination: '',
+      distance_km: 0,
+      currency: 'TZS',
+      container_20ft: 0,
+      container_40ft: 0,
+      loose_rate_mt: 0,
+      transit_days: 0,
+      special_conditions: '',
+      is_active: true,
+    });
   }
 
   // Helper functions
@@ -991,6 +1047,100 @@ function SalesModuleContent() {
           {/* Rate Sheets Tab */}
           <TabsContent value="rate-sheets">
             <div className="space-y-6">
+              {canCreate && (
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Create and manage route rate sheets for pricing and transport planning.</p>
+                  </div>
+                  <Dialog open={showRateSheetDialog} onOpenChange={(open) => {
+                    if (!open) {
+                      setEditingRateSheet(null);
+                      resetRateSheetForm();
+                    }
+                    setShowRateSheetDialog(open);
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => {
+                        setEditingRateSheet(null);
+                        resetRateSheetForm();
+                      }} className="gap-2">
+                        <Plus className="h-4 w-4" /> New Rate Sheet
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>{editingRateSheet ? 'Edit Route Rate Sheet' : 'New Route Rate Sheet'}</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Route Name</Label>
+                            <Input value={newRateSheet.route_name} onChange={e => setNewRateSheet({ ...newRateSheet, route_name: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Service Type</Label>
+                            <Select value={newRateSheet.service_type} onValueChange={v => setNewRateSheet({ ...newRateSheet, service_type: v })}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {SERVICE_TYPES.map(t => (
+                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Origin</Label>
+                            <Input value={newRateSheet.origin} onChange={e => setNewRateSheet({ ...newRateSheet, origin: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Destination</Label>
+                            <Input value={newRateSheet.destination} onChange={e => setNewRateSheet({ ...newRateSheet, destination: e.target.value })} />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Distance (km)</Label>
+                            <Input type="number" value={newRateSheet.distance_km} onChange={e => setNewRateSheet({ ...newRateSheet, distance_km: parseInt(e.target.value) || 0 })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>20ft Rate</Label>
+                            <Input type="number" value={newRateSheet.container_20ft} onChange={e => setNewRateSheet({ ...newRateSheet, container_20ft: Number(e.target.value) || 0 })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>40ft Rate</Label>
+                            <Input type="number" value={newRateSheet.container_40ft} onChange={e => setNewRateSheet({ ...newRateSheet, container_40ft: Number(e.target.value) || 0 })} />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Loose Rate / MT</Label>
+                            <Input type="number" value={newRateSheet.loose_rate_mt} onChange={e => setNewRateSheet({ ...newRateSheet, loose_rate_mt: Number(e.target.value) || 0 })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Transit Days</Label>
+                            <Input type="number" value={newRateSheet.transit_days} onChange={e => setNewRateSheet({ ...newRateSheet, transit_days: Number(e.target.value) || 0 })} />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Special Conditions</Label>
+                          <Textarea value={newRateSheet.special_conditions} onChange={e => setNewRateSheet({ ...newRateSheet, special_conditions: e.target.value })} rows={3} />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                          setShowRateSheetDialog(false);
+                          setEditingRateSheet(null);
+                          resetRateSheetForm();
+                        }}>Cancel</Button>
+                        <Button onClick={saveRateSheet}>{editingRateSheet ? 'Update Rate Sheet' : 'Create Rate Sheet'}</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              )}
+
               {/* JSONB Rate Sheets (from contract system) */}
               {jsonbRateSheets.length > 0 && (
                 <Card>
@@ -1085,6 +1235,7 @@ function SalesModuleContent() {
                             <TableHead>40ft (TZS)</TableHead>
                             <TableHead>Loose/MT</TableHead>
                             <TableHead>Transit Days</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1102,6 +1253,20 @@ function SalesModuleContent() {
                                   <div className="flex gap-2">
                                     <Button variant="ghost" size="sm" onClick={() => {
                                       setEditingRateSheet({ ...r });
+                                      setNewRateSheet({
+                                        route_name: r.route_name || '',
+                                        service_type: r.service_type || 'local_transport',
+                                        origin: r.origin || '',
+                                        destination: r.destination || '',
+                                        distance_km: r.distance_km || 0,
+                                        currency: (r as any).currency || 'TZS',
+                                        container_20ft: r.container_20ft || 0,
+                                        container_40ft: r.container_40ft || 0,
+                                        loose_rate_mt: r.loose_rate_mt || 0,
+                                        transit_days: r.transit_days || 0,
+                                        special_conditions: (r as any).special_conditions || '',
+                                        is_active: r.is_active !== false,
+                                      });
                                       setShowRateSheetDialog(true);
                                     }}>
                                       Edit
@@ -1111,7 +1276,7 @@ function SalesModuleContent() {
                                         try {
                                           const { error } = await supabase
                                             .from('rate_sheets')
-                                            .delete()
+                                            .update({ is_active: false })
                                             .eq('id', r.id);
 
                                           if (error) throw error;
