@@ -265,7 +265,7 @@ function SalesModuleContent() {
   async function fetchQuotations() {
     const { data, error } = await supabase
       .from('route_quotations')
-      .select('*, customers!customer_id(company_name)')
+      .select('*, customers(company_name)')
       .order('created_at', { ascending: false });
     if (!error) {
       const processedData = data?.map(q => ({
@@ -280,7 +280,7 @@ function SalesModuleContent() {
   async function fetchContracts() {
     const { data, error } = await supabase
       .from('transport_contracts')
-      .select('*, customers!customer_id(company_name)')
+      .select('*, customers(company_name)')
       .order('created_at', { ascending: false });
     if (!error) setContracts(data?.map(c => ({ ...c, company_name: c.customers?.company_name })) || []);
   }
@@ -315,7 +315,7 @@ function SalesModuleContent() {
   async function fetchOpportunities() {
     const { data, error } = await supabase
       .from('sales_opportunities')
-      .select('*, customers!customer_id(company_name)')
+      .select('*, customers(company_name)')
       .order('created_at', { ascending: false });
     if (!error) {
       const processedData = data?.map(o => ({

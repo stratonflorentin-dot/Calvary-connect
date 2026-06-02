@@ -134,16 +134,43 @@ FLEET_SCHEMA.tables.push(
 
 // Data fetchers for AI context
 export async function getFleetContext() {
+  async function safeQuery(queryFn: () => Promise<any>, fallbackKey = 'data') {
+    try {
+      const res = await queryFn();
+      if (res && res.error) {
+        console.warn('Supabase query error:', res.error.message || res.error);
+        return { [fallbackKey]: [] };
+      }
+      return res || { [fallbackKey]: [] };
+    } catch (err) {
+      console.warn('Supabase query threw:', err);
+      return { [fallbackKey]: [] };
+    }
+  }
+
   const [vehicles, trips, expenses, users, contracts, clients, fuelLogs, maintenance, rateSheets] = await Promise.all([
-    supabase.from('vehicles').select('*').limit(200),
-    supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(200),
-    supabase.from('expenses').select('*').order('date', { ascending: false }).limit(200),
-    supabase.from('user_profiles').select('*').limit(200),
-    supabase.from('contracts').select('*,clients(name)').limit(200),
-    supabase.from('clients').select('*').limit(200),
-    supabase.from('fuel_logs').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200),
-    supabase.from('maintenance_records').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200),
-    supabase.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50)
+    safeQuery(() => supabase.from('vehicles').select('*').limit(200)),
+    safeQuery(() => supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(200)),
+    safeQuery(() => supabase.from('expenses').select('*').order('date', { ascending: false }).limit(200)),
+    safeQuery(() => supabase.from('user_profiles').select('*').limit(200)),
+    safeQuery(() => supabase.from('contracts').select('*,clients(name)').limit(200)),
+    safeQuery(() => supabase.from('clients').select('*').limit(200)),
+    // Relationship selects can fail if FK relationship missing; try vehicles(plate_number) then fallback to '*'
+    safeQuery(async () => {
+      let r = await supabase.from('fuel_logs').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200);
+      if (r.error) {
+        r = await supabase.from('fuel_logs').select('*').order('date', { ascending: false }).limit(200);
+      }
+      return r;
+    }),
+    safeQuery(async () => {
+      let r = await supabase.from('maintenance_records').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200);
+      if (r.error) {
+        r = await supabase.from('maintenance_records').select('*').order('date', { ascending: false }).limit(200);
+      }
+      return r;
+    }),
+    safeQuery(() => supabase.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50))
   ]);
 
   return {

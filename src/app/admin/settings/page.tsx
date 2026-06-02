@@ -4,7 +4,7 @@ import { useRole } from '@/hooks/use-role';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RateSheetManager } from '@/components/rate-sheet-manager';
-import { AlertCircle } from 'lucide-react';
+import IconFallback from '@/components/icons/IconFallback.client';
 
 export default function AdminSettingsPage() {
     const { role } = useRole();
@@ -17,7 +17,7 @@ export default function AdminSettingsPage() {
                 <main className="flex-1 md:ml-60 p-8">
                     <Card className="border-red-200 bg-red-50">
                         <CardContent className="flex items-center gap-3 p-6">
-                            <AlertCircle className="size-6 text-red-600" />
+                            <IconFallback name="AlertCircle" className="size-6 text-red-600" />
                             <div>
                                 <h3 className="font-semibold text-red-900">Access Denied</h3>
                                 <p className="text-sm text-red-700">Only administrators can access this page.</p>

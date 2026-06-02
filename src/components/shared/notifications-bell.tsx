@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, AlertTriangle, Info, CheckCircle, AlertCircle } from 'lucide-react';
+import { Bell, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import IconFallback from '@/components/icons/IconFallback.client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,9 +46,9 @@ export function NotificationsBell() {
           setLoading(false);
           return;
         }
-        
+
         console.log('Supabase client available, loading notifications...');
-        
+
         // Use empty notifications for now - database disabled
         setNotifications([]);
       } catch (error) {
@@ -64,17 +65,18 @@ export function NotificationsBell() {
   const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
 
   const handleMarkAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
+    setNotifications(prev =>
+      prev.map(notif =>
         notif.id === id ? { ...notif, isRead: true } : notif
       )
     );
   };
 
+  // Use dynamic fallback for icons in case lucide-react fails to load at runtime
   const getIcon = (severity: string) => {
     switch (severity) {
       case 'critical': return <AlertTriangle className="size-4 text-rose-500" />;
-      case 'warning': return <AlertCircle className="size-4 text-amber-500" />;
+      case 'warning': return <IconFallback name="AlertCircle" className="size-4 text-amber-500" />;
       case 'success': return <CheckCircle className="size-4 text-emerald-500" />;
       default: return <Info className="size-4 text-blue-500" />;
     }
@@ -109,8 +111,8 @@ export function NotificationsBell() {
             </div>
           ) : (
             notifications.map((notif) => (
-              <DropdownMenuItem 
-                key={notif.id} 
+              <DropdownMenuItem
+                key={notif.id}
                 className={cn(
                   "p-4 cursor-pointer focus:bg-accent border-b last:border-0 flex flex-col items-start gap-1 transition-colors",
                   !notif.isRead && "bg-primary/5"

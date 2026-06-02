@@ -30,8 +30,9 @@ import {
   Gauge,
   Clock,
   Crosshair,
-  AlertCircle,
+  // AlertCircle used via dynamic fallback to avoid runtime import errors
 } from "lucide-react";
+import IconFallback from '@/components/icons/IconFallback.client';
 
 const FleetMapCanvas = dynamic(
   () =>
@@ -199,7 +200,7 @@ function DriverDetailPanel({
               {/* Simulate expiry warning dynamically based on driver id string length */}
               {driver.id.length % 2 === 0 ? (
                 <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 py-0 text-[10px] flex items-center gap-1">
-                  <AlertCircle className="size-3" /> Expires in 45 Days
+                  <IconFallback name="AlertCircle" className="size-3" /> Expires in 45 Days
                 </Badge>
               ) : (
                 <Badge variant="outline" className="bg-gray-50 text-slate-600 border-gray-200 py-0 text-[10px]">
