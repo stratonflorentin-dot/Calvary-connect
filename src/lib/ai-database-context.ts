@@ -64,20 +64,128 @@ export const FLEET_SCHEMA: DatabaseSchema = {
   ]
 };
 
+// Extend schema with additional tables used by AI
+FLEET_SCHEMA.tables.push(
+  {
+    name: 'contracts',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'contract_number', type: 'TEXT' },
+      { name: 'client_id', type: 'UUID' },
+      { name: 'status', type: "TEXT /* draft/sent/active/expired/terminated */" },
+      { name: 'effective_date', type: 'DATE' },
+      { name: 'expiry_date', type: 'DATE' },
+      { name: 'term_months', type: 'INTEGER' },
+      { name: 'transporter_name', type: 'TEXT' },
+      { name: 'client_signed_at', type: 'TIMESTAMP' },
+      { name: 'transporter_signed_at', type: 'TIMESTAMP' },
+      { name: 'terminated_at', type: 'TIMESTAMP' },
+      { name: 'created_at', type: 'TIMESTAMP' }
+    ]
+  },
+  {
+    name: 'clients',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'name', type: 'TEXT' },
+      { name: 'address', type: 'TEXT' },
+      { name: 'contact_person', type: 'TEXT' },
+      { name: 'email', type: 'TEXT' },
+      { name: 'phone', type: 'TEXT' }
+    ]
+  },
+  {
+    name: 'fuel_logs',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'vehicle_id', type: 'UUID' },
+      { name: 'litres', type: 'DECIMAL' },
+      { name: 'cost_per_litre', type: 'DECIMAL' },
+      { name: 'total_cost', type: 'DECIMAL' },
+      { name: 'date', type: 'DATE' },
+      { name: 'location', type: 'TEXT' }
+    ]
+  },
+  {
+    name: 'maintenance_records',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'vehicle_id', type: 'UUID' },
+      { name: 'type', type: "TEXT /* service/repair/inspection */" },
+      { name: 'description', type: 'TEXT' },
+      { name: 'cost', type: 'DECIMAL' },
+      { name: 'date', type: 'DATE' },
+      { name: 'next_service_date', type: 'DATE' },
+      { name: 'status', type: "TEXT /* pending/completed/overdue */" }
+    ]
+  },
+  {
+    name: 'rate_sheets',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'rate_sheet_name', type: 'TEXT' },
+      { name: 'effective_date', type: 'DATE' },
+      { name: 'currency', type: 'TEXT' },
+      { name: 'rates', type: 'JSONB' },
+      { name: 'is_active', type: 'BOOLEAN' }
+    ]
+  }
+);
+
 // Data fetchers for AI context
 export async function getFleetContext() {
-  const [vehicles, trips, expenses, users] = await Promise.all([
-    supabase.from('vehicles').select('*').limit(50),
-    supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(100),
-    supabase.from('expenses').select('*').order('date', { ascending: false }).limit(100),
-    supabase.from('user_profiles').select('*').limit(50)
+  const [vehicles, trips, expenses, users, contracts, clients, fuelLogs, maintenance, rateSheets] = await Promise.all([
+    supabase.from('vehicles').select('*').limit(200),
+    supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(200),
+    supabase.from('expenses').select('*').order('date', { ascending: false }).limit(200),
+    supabase.from('user_profiles').select('*').limit(200),
+    supabase.from('contracts').select('*,clients(name)').limit(200),
+    supabase.from('clients').select('*').limit(200),
+    supabase.from('fuel_logs').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200),
+    supabase.from('maintenance_records').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200),
+    supabase.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50)
   ]);
 
   return {
     vehicles: vehicles.data || [],
     trips: trips.data || [],
     expenses: expenses.data || [],
-    users: users.data || []
+    users: users.data || [],
+    contracts: contracts.data || [],
+    clients: clients.data || [],
+    fuelLogs: (fuelLogs.data || []).map((f: any) => ({ ...f, vehicle: f.vehicles })),
+    maintenance: (maintenance.data || []).map((m: any) => ({ ...m, vehicle: m.vehicles })),
+    rateSheets: rateSheets.data || []
+  };
+}
+
+export function computeBusinessMetrics(ctx: any) {
+  const completedTrips = (ctx.trips || []).filter((t: any) => t.status === 'completed');
+  const totalRevenue = completedTrips.reduce((s: number, t: any) => s + (Number(t.revenue) || 0), 0);
+  const totalExpenses = (ctx.expenses || []).reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+  const totalFuelCost = (ctx.fuelLogs || []).reduce((s: number, f: any) => s + (Number(f.total_cost) || 0), 0);
+  const totalMaintenanceCost = (ctx.maintenance || []).filter((m: any) => m.status === 'completed').reduce((s: number, m: any) => s + (Number(m.cost) || 0), 0);
+  const inUseVehicles = (ctx.vehicles || []).filter((v: any) => v.status === 'in_use').length;
+  const expiringContracts = (ctx.contracts || []).filter((c: any) => {
+    if (!c.expiry_date) return false;
+    const days = Math.ceil((new Date(c.expiry_date).getTime() - Date.now()) / 86400000);
+    return days <= 30 && days >= 0;
+  });
+
+  return {
+    totalRevenue,
+    totalExpenses,
+    netProfit: totalRevenue - totalExpenses,
+    profitMargin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue * 100).toFixed(1) : '0',
+    fleetUtilization: (ctx.vehicles || []).length > 0 ? (inUseVehicles / (ctx.vehicles || []).length * 100).toFixed(1) : '0',
+    activeTripsCount: (ctx.trips || []).filter((t: any) => ['in_transit', 'loading', 'pending'].includes(t.status)).length,
+    completedTripsCount: completedTrips.length,
+    totalFuelCost,
+    totalMaintenanceCost,
+    activeContracts: (ctx.contracts || []).filter((c: any) => c.status === 'active').length,
+    expiringContracts: expiringContracts.length,
+    overdueMaintenanceCount: (ctx.maintenance || []).filter((m: any) => m.status === 'overdue').length,
+    costPerTrip: completedTrips.length > 0 ? totalExpenses / completedTrips.length : 0
   };
 }
 

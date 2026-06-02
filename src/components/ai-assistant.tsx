@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getFleetContext } from '@/lib/ai-database-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,23 @@ interface AIAssistantProps {
 
 export function AIAssistant({ initialPrompt }: AIAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [dbContext, setDbContext] = useState<any | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (isOpen && !dbContext) {
+      (async () => {
+        try {
+          const ctx = await getFleetContext();
+          if (!mounted) return;
+          setDbContext(ctx);
+        } catch (err) {
+          // ignore
+        }
+      })();
+    }
+    return () => { mounted = false; };
+  }, [isOpen]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState(initialPrompt || '');
   const [isLoading, setIsLoading] = useState(false);
@@ -66,7 +84,7 @@ export function AIAssistant({ initialPrompt }: AIAssistantProps) {
       {!isOpen ? (
         <Button
           onClick={() => setIsOpen(true)}
-          className="rounded-full w-12 h-12 bg-blue-600 hover:bg-blue-700"
+          className="rounded-full w-12 h-12 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30"
         >
           <Bot className="w-5 h-5" />
         </Button>
@@ -82,6 +100,17 @@ export function AIAssistant({ initialPrompt }: AIAssistantProps) {
             </Button>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col overflow-hidden">
+            <div className="mb-2 flex gap-2">
+              <Button size="sm" onClick={() => { setInput('Generate a 3-month revenue forecast and list top 3 assumptions.'); }}>
+                Forecast Revenue
+              </Button>
+              <Button size="sm" onClick={() => { setInput('List expiring contracts within 30 days and recommended renewals.'); }}>
+                Expiring Contracts
+              </Button>
+              <Button size="sm" onClick={() => { setInput('Run a maintenance risk audit: overdue services and recommended actions.'); }}>
+                Maintenance Audit
+              </Button>
+            </div>
             <div className="flex-1 overflow-y-auto space-y-3 mb-3">
               {messages.length === 0 && (
                 <p className="text-xs text-gray-500 text-center mt-4">
@@ -91,11 +120,10 @@ export function AIAssistant({ initialPrompt }: AIAssistantProps) {
               {messages.map((msg, i) => (
                 <div
                   key={i}
-                  className={`text-xs p-2 rounded ${
-                    msg.role === 'user'
+                  className={`text-xs p-2 rounded ${msg.role === 'user'
                       ? 'bg-blue-100 ml-4'
                       : 'bg-gray-100 mr-4'
-                  }`}
+                    }`}
                 >
                   {msg.content}
                 </div>

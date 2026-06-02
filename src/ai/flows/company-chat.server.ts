@@ -1,10 +1,5 @@
-// ============================================================
-// CALVARY INVESTMENT CO. LTD — AI Analyst System Prompt
-// File: ai/flows/company-chat.ts
-// Paste this as the value of SYSTEM_PROMPT
-// ============================================================
-
-'use client';
+// Server-safe SYSTEM_PROMPT builder for AI routes
+// This file is intentionally NOT a client module and can be imported from server code.
 
 export const SYSTEM_PROMPT = (liveMetrics: any = {}, dbContext: any = {}) => `
 You are the Calvary AI Analyst — the intelligent business assistant
@@ -25,7 +20,7 @@ Vehicle type: C28 trucks and trailers
 Operating countries: Tanzania, Rwanda, Zambia, Burundi, Malawi, DRC
 
 === CURRENT LIVE METRICS ===
-Fleet size: ${liveMetrics.fleetSize} vehicles
+Fleet size: ${liveMetrics.fleetSize}
 Fleet utilization: ${liveMetrics.utilization}
 Active trips: ${liveMetrics.activeTrips}
 Monthly revenue: ${liveMetrics.revenue}
@@ -37,7 +32,6 @@ Overdue maintenance: ${liveMetrics.overdueMaintenanceCount ?? 'N/A'}
 Total fuel spend: ${liveMetrics.totalFuelCost ?? 'N/A'}
 
 === FORECAST MODEL (3-MONTH HORIZON) ===
-=== FORECAST MODEL ===
 Use the live forecast inputs supplied in 'liveMetrics' when available. If missing, fall back to computed business metrics from computeBusinessMetrics(dbContext).
 
 Inputs (use these in scenario modeling):
@@ -50,11 +44,11 @@ When producing projections, always include a confidence band: ±8% month 1, wide
 
 === FREIGHT RATES (USD per container) ===
 ${dbContext?.rateSheets?.length > 0
-    ? dbContext.rateSheets
-      .flatMap(s => Array.isArray(s.rates) ? s.rates : [])
-      .map(r => `${r.from ?? 'Dar Port'} → ${r.destination}: $${r.container_20ft ?? r.rate ?? 'TBC'}`)
-      .join('\n')
-    : `Dar Port → Kigali, Rwanda:        $3,100
+        ? dbContext.rateSheets
+            .flatMap((s: any) => Array.isArray(s.rates) ? s.rates : [])
+            .map((r: any) => `${r.from ?? 'Dar Port'} → ${r.destination}: $${r.container_20ft ?? r.rate ?? 'TBC'}`)
+            .join('\n')
+        : `Dar Port → Kigali, Rwanda:        $3,100
 Dar Port → Lusaka, Zambia:        $4,000
 Dar Port → Solwezi, Zambia:       $4,800
 Dar Port → Bujumbura, Burundi:    $3,200
@@ -67,7 +61,7 @@ Dar Port → Lubumbashi, DRC:       $6,400
 Dar Port → Kolwezi, DRC:          $7,200
 Dar Port → Likasi, DRC:           $8,500
 (Fallback — update rate_sheets in Supabase)`
-  }
+    }
 Note: All rates confirmed by email before loading.
 Payments in TZS at agreed exchange rate.
 
@@ -92,22 +86,22 @@ DRC adds: OCC, whiskey parking fees, IM4 entry, customs release.
 === DATABASE CONTEXT ===
 ${dbContext ? `
 Vehicles: ${JSON.stringify(dbContext.vehicles.slice(0, 8))}
-Recent trips (10): ${JSON.stringify(dbContext.trips.slice(0, 10).map(t => ({
-    origin: t.origin, destination: t.destination,
-    status: t.status, revenue: t.revenue,
-    driver: t.user_profiles?.name,
-    vehicle: t.vehicles?.plate_number,
-    date: t.created_at
-  })))}
-Active contracts: ${JSON.stringify(dbContext.contracts
-    .filter(c => c.status === 'active')
-    .map(c => ({ number: c.contract_number, client: c.clients?.name, expires: c.expiry_date })))}
-Fuel logs (5): ${JSON.stringify(dbContext.fuelLogs.slice(0, 5).map(f => ({
-      vehicle: f.vehicles?.plate_number, litres: f.litres,
-      cost: f.total_cost, date: f.date
+Recent trips (10): ${JSON.stringify(dbContext.trips.slice(0, 10).map((t: any) => ({
+        origin: t.origin, destination: t.destination,
+        status: t.status, revenue: t.revenue,
+        driver: t.user_profiles?.name,
+        vehicle: t.vehicles?.plate_number,
+        date: t.created_at
     })))}
+Active contracts: ${JSON.stringify(dbContext.contracts
+        .filter((c: any) => c.status === 'active')
+        .map((c: any) => ({ number: c.contract_number, client: c.clients?.name, expires: c.expiry_date })))}
+Fuel logs (5): ${JSON.stringify(dbContext.fuelLogs.slice(0, 5).map((f: any) => ({
+            vehicle: f.vehicles?.plate_number, litres: f.litres,
+            cost: f.total_cost, date: f.date
+        })))}
 Maintenance alerts: ${JSON.stringify(dbContext.maintenance
-      .filter(m => m.status === 'overdue' || m.status === 'pending').slice(0, 5))}
+            .filter((m: any) => m.status === 'overdue' || m.status === 'pending').slice(0, 5))}
 ` : 'No database context provided — using live metrics only.'}
 
 === AI CAPABILITIES ===
@@ -140,19 +134,3 @@ When asked to forecast:
 `;
 
 export default SYSTEM_PROMPT;
-
-export async function askCompanyAI(
-  userMessage: string,
-  history: Array<{ role: string; content: string }> = [],
-  liveMetrics: any = {},
-  dbContext?: any
-) {
-  const res = await fetch('/api/ai/ask-company', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: userMessage, history, liveMetrics })
-  });
-  if (!res.ok) throw new Error('AI request failed');
-  const data = await res.json();
-  return data.text;
-}

@@ -1,82 +1,407 @@
-// Contract generation service with rate matrix
-// Based on your transportation routes and pricing structure
+// Contract Management Service - Supabase Backend + Legacy Contract Generation
+// Combines new contract management system with existing contract generation
+import { supabase } from './supabase';
+import type {
+  Contract,
+  ContractStatus,
+  CreateContractDTO,
+  SignContractDTO,
+  TerminateContractDTO,
+  ContractHistory
+} from '@/types/contract';
+
+// ============================================================================
+// CONTRACT MANAGEMENT SYSTEM (NEW)
+// ============================================================================
+
+/**
+ * Generate next contract number in format CT-{YEAR}-{4-digit-sequence}
+ */
+export async function generateContractNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+
+  // Get the highest sequence for this year
+  const { data, error } = await supabase
+    .from('contracts')
+    .select('contract_number')
+    .like('contract_number', `CT-${year}-%`)
+    .order('contract_number', { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+
+  let sequence = 1;
+  if (data && data.length > 0) {
+    const lastNumber = data[0].contract_number;
+    const parts = lastNumber.split('-');
+    sequence = parseInt(parts[2]) + 1;
+  }
+
+  return `CT-${year}-${String(sequence).padStart(4, '0')}`;
+}
+
+/**
+ * Fetch all contracts with optional filters
+ */
+export async function fetchContracts(filters?: {
+  status?: ContractStatus;
+  clientId?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  let query = supabase
+    .from('contracts')
+    .select(`
+      *,
+      client:clients(*),
+      contract_history(*)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  if (filters?.clientId) {
+    query = query.eq('client_id', filters.clientId);
+  }
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset) {
+    query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Fetch single contract with full details
+ */
+export async function fetchContract(contractId: string): Promise<Contract> {
+  const { data, error } = await supabase
+    .from('contracts')
+    .select(`
+      *,
+      client:clients(*)
+    `)
+    .eq('id', contractId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Create new contract
+ */
+export async function createContract(
+  clientId: string,
+  dto: CreateContractDTO,
+  userId: string
+): Promise<Contract> {
+  const contractNumber = await generateContractNumber();
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .insert({
+      contract_number: contractNumber,
+      client_id: clientId,
+      effective_date: dto.effectiveDate,
+      expiry_date: dto.expiryDate,
+      term_months: dto.termMonths,
+      auto_renew: dto.autoRenew || false,
+      status: 'draft',
+      created_by: userId,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Record creation in history
+  await addContractHistory(data.id, 'created', `Contract ${contractNumber} created`, userId);
+
+  return data;
+}
+
+/**
+ * Update contract metadata
+ */
+export async function updateContract(
+  contractId: string,
+  updates: Partial<Contract>
+): Promise<Contract> {
+  const { data, error } = await supabase
+    .from('contracts')
+    .update(updates)
+    .eq('id', contractId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Mark contract as sent
+ */
+export async function markContractAsSent(
+  contractId: string,
+  userId: string
+): Promise<Contract> {
+  const contract = await updateContract(contractId, { status: 'sent' });
+  await addContractHistory(contractId, 'sent', 'Contract marked as sent', userId);
+  return contract;
+}
+
+/**
+ * Sign contract as client
+ */
+export async function signContractAsClient(
+  contractId: string,
+  signatory: SignContractDTO,
+  userId: string
+): Promise<Contract> {
+  const now = new Date().toISOString();
+
+  const contract = await updateContract(contractId, {
+    client_signatory_name: signatory.signatory_name,
+    client_signatory_position: signatory.signatory_position,
+    client_signature_data: signatory.signature_data,
+    client_signed_at: now,
+  });
+
+  await addContractHistory(
+    contractId,
+    'client_signed',
+    `Signed by ${signatory.signatory_name} (${signatory.signatory_position})`,
+    userId
+  );
+
+  return contract;
+}
+
+/**
+ * Countersign contract as transporter
+ */
+export async function signContractAsTransporter(
+  contractId: string,
+  signatory: SignContractDTO,
+  userId: string
+): Promise<Contract> {
+  const now = new Date().toISOString();
+
+  const contract = await updateContract(contractId, {
+    transporter_signatory_name: signatory.signatory_name,
+    transporter_signatory_position: signatory.signatory_position,
+    transporter_signature_data: signatory.signature_data,
+    transporter_signed_at: now,
+  });
+
+  await addContractHistory(
+    contractId,
+    'transporter_signed',
+    `Countersigned by ${signatory.signatory_name} (${signatory.signatory_position})`,
+    userId
+  );
+
+  return contract;
+}
+
+/**
+ * Upload signed PDF
+ */
+export async function uploadSignedPdf(
+  contractId: string,
+  pdfUrl: string,
+  userId: string
+): Promise<Contract> {
+  const contract = await updateContract(contractId, {
+    signed_pdf_url: pdfUrl,
+  });
+
+  await addContractHistory(contractId, 'pdf_uploaded', 'Signed PDF uploaded', userId);
+  return contract;
+}
+
+/**
+ * Mark contract as active
+ */
+export async function markContractAsActive(
+  contractId: string,
+  userId: string
+): Promise<Contract> {
+  const contract = await updateContract(contractId, { status: 'active' });
+  await addContractHistory(contractId, 'activated', 'Contract activated', userId);
+  return contract;
+}
+
+/**
+ * Terminate contract
+ */
+export async function terminateContract(
+  contractId: string,
+  reason: string,
+  userId: string
+): Promise<Contract> {
+  const contract = await updateContract(contractId, { status: 'terminated' });
+  await addContractHistory(
+    contractId,
+    'terminated',
+    `Contract terminated. Reason: ${reason}`,
+    userId
+  );
+  return contract;
+}
+
+/**
+ * Add history entry
+ */
+export async function addContractHistory(
+  contractId: string,
+  event: string,
+  description: string,
+  userId: string
+): Promise<ContractHistory> {
+  const { data, error } = await supabase
+    .from('contract_history')
+    .insert({
+      contract_id: contractId,
+      event,
+      description,
+      user_id: userId,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Fetch contract history
+ */
+export async function fetchContractHistory(contractId: string): Promise<ContractHistory[]> {
+  const { data, error } = await supabase
+    .from('contract_history')
+    .select('*')
+    .eq('contract_id', contractId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Get status badge colors - FIX #1
+ */
+export function getStatusColor(status: ContractStatus): { bg: string; text: string } {
+  const colors = {
+    draft: { bg: 'bg-gray-100', text: 'text-gray-800' },
+    sent: { bg: 'bg-blue-100', text: 'text-blue-800' },
+    active: { bg: 'bg-green-100', text: 'text-green-800' },
+    expired: { bg: 'bg-red-100', text: 'text-red-800' },
+    terminated: { bg: 'bg-red-100', text: 'text-red-800' },
+  };
+  return colors[status] || colors.draft;
+}
+
+/**
+ * Get visible actions based on contract status - FIX #2
+ */
+export function getVisibleActions(status: ContractStatus): string[] {
+  const actions = {
+    draft: ['edit', 'markSent', 'sign', 'terminate'],
+    sent: ['view', 'signClient', 'terminate'],
+    active: ['view', 'countersign', 'uploadPdf', 'terminate'],
+    expired: ['view', 'archive'],
+    terminated: ['view', 'archive'],
+  };
+  return actions[status] || [];
+}
+
+// ============================================================================
+// LEGACY CONTRACT GENERATION (EXISTING - PRESERVED FOR BACKWARD COMPATIBILITY)
+// ============================================================================
 
 export const RATE_SHEET = {
-    "KIGALI - RWANDA": { "20FT": "$3,100.00", "40FT": "$3,100.00", "LOOSE": "$3,100.00", "TYPE": "C28", "DAYS": 3 },
-    "LUSAKA - ZAMBIA": { "20FT": "$4,000.00", "40FT": "$4,000.00", "LOOSE": "$4,000.00", "TYPE": "C28", "DAYS": 5 },
-    "SOLWEZI - ZAMBIA": { "20FT": "$4,800.00", "40FT": "$4,800.00", "LOOSE": "$4,800.00", "TYPE": "C28", "DAYS": 6 },
-    "BUJUMBURA - BURUNDI": { "20FT": "$3,200.00", "40FT": "$3,200.00", "LOOSE": "$3,200.00", "TYPE": "C28", "DAYS": 3 },
-    "LILONGWE - MALAWI": { "20FT": "$4,000.00", "40FT": "$4,000.00", "LOOSE": "$4,000.00", "TYPE": "C28", "DAYS": 4 },
-    "BLANTYRE - MALAWI": { "20FT": "$4,400.00", "40FT": "$4,400.00", "LOOSE": "$4,400.00", "TYPE": "C28", "DAYS": 4 },
-    "KITWE - ZAMBIA": { "20FT": "$4,000.00", "40FT": "$4,000.00", "LOOSE": "$4,400.00", "TYPE": "C28", "DAYS": 5 },
-    "GOMA - DRC": { "20FT": "$4,400.00", "40FT": "$4,400.00", "LOOSE": "$4,400.00", "TYPE": "C28", "DAYS": 4 },
-    "BUKAVU - DRC": { "20FT": "$4,800.00", "40FT": "$4,800.00", "LOOSE": "$4,800.00", "TYPE": "C28", "DAYS": 5 },
-    "LUBUMBASHI - DRC": { "20FT": "$6,400.00", "40FT": "$6,400.00", "LOOSE": "$6,400.00", "TYPE": "C28", "DAYS": 7 },
-    "KOLWEZI - DRC": { "20FT": "$7,200.00", "40FT": "$7,200.00", "LOOSE": "$7,200.00", "TYPE": "C28", "DAYS": 8 },
-    "LIKASI - DRC": { "20FT": "$8,500.00", "40FT": "$8,500.00", "LOOSE": "$8,500.00", "TYPE": "C28", "DAYS": 9 },
+  "KIGALI - RWANDA": { "20FT": "$3,100.00", "40FT": "$3,100.00", "LOOSE": "$3,100.00", "TYPE": "C28", "DAYS": 3 },
+  "LUSAKA - ZAMBIA": { "20FT": "$4,000.00", "40FT": "$4,000.00", "LOOSE": "$4,000.00", "TYPE": "C28", "DAYS": 5 },
+  "SOLWEZI - ZAMBIA": { "20FT": "$4,800.00", "40FT": "$4,800.00", "LOOSE": "$4,800.00", "TYPE": "C28", "DAYS": 6 },
+  "BUJUMBURA - BURUNDI": { "20FT": "$3,200.00", "40FT": "$3,200.00", "LOOSE": "$3,200.00", "TYPE": "C28", "DAYS": 3 },
+  "LILONGWE - MALAWI": { "20FT": "$4,000.00", "40FT": "$4,000.00", "LOOSE": "$4,000.00", "TYPE": "C28", "DAYS": 4 },
+  "BLANTYRE - MALAWI": { "20FT": "$4,400.00", "40FT": "$4,400.00", "LOOSE": "$4,400.00", "TYPE": "C28", "DAYS": 4 },
+  "KITWE - ZAMBIA": { "20FT": "$4,000.00", "40FT": "$4,000.00", "LOOSE": "$4,400.00", "TYPE": "C28", "DAYS": 5 },
+  "GOMA - DRC": { "20FT": "$4,400.00", "40FT": "$4,400.00", "LOOSE": "$4,400.00", "TYPE": "C28", "DAYS": 4 },
+  "BUKAVU - DRC": { "20FT": "$4,800.00", "40FT": "$4,800.00", "LOOSE": "$4,800.00", "TYPE": "C28", "DAYS": 5 },
+  "LUBUMBASHI - DRC": { "20FT": "$6,400.00", "40FT": "$6,400.00", "LOOSE": "$6,400.00", "TYPE": "C28", "DAYS": 7 },
+  "KOLWEZI - DRC": { "20FT": "$7,200.00", "40FT": "$7,200.00", "LOOSE": "$7,200.00", "TYPE": "C28", "DAYS": 8 },
+  "LIKASI - DRC": { "20FT": "$8,500.00", "40FT": "$8,500.00", "LOOSE": "$8,500.00", "TYPE": "C28", "DAYS": 9 },
 };
 
 export const CORE_CLAUSES = [
-    {
-        number: "1",
-        title: "Purpose of the agreement",
-        content: "This agreement describes the terms and conditions under which the Transporter agrees to transport and deliver container with its loaded cargo and on behalf of The Client."
-    },
-    {
-        number: "2",
-        title: "Performance of the agreement (The Transporter)",
-        content: "The Transporter shall collect and deliver the consignment to be carried as instructed by The Client. Be responsible for any loss/damage to the consignment and shall indemnify The Client for such loss unless occasioned by proven 'Force Majeure'. Provide the Client with minimum twice daily updates (AM & PM) on status of cargo."
-    },
-    {
-        number: "3",
-        title: "Client Responsibilities",
-        content: "The client shall request truck on FOT terms. The Client will make sure that all shipping line and port charges are paid, and complete necessary customs documentation promptly to avoid storage and demurrage charges."
-    },
-    {
-        number: "4",
-        title: "Operations & Health and Safety",
-        content: "All the operations of the Transporter are to be conducted in a safe manner and in compliance with all rules, laws and regulations of the United Republic of Tanzania and neighboring countries. Ensure drivers are checked with alcohol test before starting journey and fully equipped with necessary PPE."
-    },
-    {
-        number: "5",
-        title: "Duration of Road Carriage Agreement",
-        content: "This Agreement shall be valid for a period of One year from the date of contract and may be subject to renewal upon consent of both parties in writing."
-    },
-    {
-        number: "6",
-        title: "Risk, Ownership & Indemnity",
-        content: "Ownership of the goods shall remain vested in the Actual Consignee. However, the liability of the goods and container from the point once loaded on trucks and in transit shall solely rest with the Transporter. The transporter shall indemnify the Client from all liabilities and claims made against the Client while goods are in possession of the Transporter."
-    }
+  {
+    number: "1",
+    title: "Purpose of the agreement",
+    content: "This agreement describes the terms and conditions under which the Transporter agrees to transport and deliver container with its loaded cargo and on behalf of The Client."
+  },
+  {
+    number: "2",
+    title: "Performance of the agreement (The Transporter)",
+    content: "The Transporter shall collect and deliver the consignment to be carried as instructed by The Client. Be responsible for any loss/damage to the consignment and shall indemnify The Client for such loss unless occasioned by proven 'Force Majeure'. Provide the Client with minimum twice daily updates (AM & PM) on status of cargo."
+  },
+  {
+    number: "3",
+    title: "Client Responsibilities",
+    content: "The client shall request truck on FOT terms. The Client will make sure that all shipping line and port charges are paid, and complete necessary customs documentation promptly to avoid storage and demurrage charges."
+  },
+  {
+    number: "4",
+    title: "Operations & Health and Safety",
+    content: "All the operations of the Transporter are to be conducted in a safe manner and in compliance with all rules, laws and regulations of the United Republic of Tanzania and neighboring countries. Ensure drivers are checked with alcohol test before starting journey and fully equipped with necessary PPE."
+  },
+  {
+    number: "5",
+    title: "Duration of Road Carriage Agreement",
+    content: "This Agreement shall be valid for a period of One year from the date of contract and may be subject to renewal upon consent of both parties in writing."
+  },
+  {
+    number: "6",
+    title: "Risk, Ownership & Indemnity",
+    content: "Ownership of the goods shall remain vested in the Actual Consignee. However, the liability of the goods and container from the point once loaded on trucks and in transit shall solely rest with the Transporter. The transporter shall indemnify the Client from all liabilities and claims made against the Client while goods are in possession of the Transporter."
+  }
 ];
 
 export interface ContractData {
-    clientName: string;
-    clientPOBox: string;
-    clientRoad: string;
-    clientCity: string;
-    clientPhone?: string;
-    clientEmail?: string;
-    destination: string;
-    contractType: "Long Term" | "Single Trip";
-    startDate: string;
-    endDate?: string;
-    minMonthlyTrips?: number;
-    contractValue?: number;
-    paymentTerms: "30 Days" | "60 Days" | "90 Days" | "COD";
-    notes?: string;
-    signatoryName?: string;
-    signatoryTitle?: string;
+  clientName: string;
+  clientPOBox: string;
+  clientRoad: string;
+  clientCity: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  destination: string;
+  contractType: "Long Term" | "Single Trip";
+  startDate: string;
+  endDate?: string;
+  minMonthlyTrips?: number;
+  contractValue?: number;
+  paymentTerms: "30 Days" | "60 Days" | "90 Days" | "COD";
+  notes?: string;
+  signatoryName?: string;
+  signatoryTitle?: string;
 }
 
 export function getDestinationRate(destination: string) {
-    return RATE_SHEET[destination as keyof typeof RATE_SHEET] || null;
+  return RATE_SHEET[destination as keyof typeof RATE_SHEET] || null;
 }
 
 export function formatContractHTML(data: ContractData): string {
-    const rate = getDestinationRate(data.destination);
-    const contractDate = new Date(data.startDate);
+  const rate = getDestinationRate(data.destination);
+  const contractDate = new Date(data.startDate);
 
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -248,21 +573,21 @@ export function formatContractHTML(data: ContractData): string {
 }
 
 export function downloadContract(html: string, clientName: string) {
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Transport_Agreement_${clientName}_${new Date().toISOString().split('T')[0]}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Transport_Agreement_${clientName}_${new Date().toISOString().split('T')[0]}.html`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
 }
 
 export function printContract(html: string) {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.print();
-    }
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
+  }
 }
