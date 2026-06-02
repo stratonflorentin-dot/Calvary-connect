@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { askCompanyAI } from "@/ai/flows/company-chat";
+// AI generation is performed via server API at /api/ai/ask-company
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AIAnalysisDashboard() {
@@ -124,16 +124,27 @@ export default function AIAnalysisDashboard() {
         text: m.text,
       }));
 
-      const answer = await askCompanyAI(userMsg, history, {
-        fleetSize: vehicles.length,
-        activeTrips: activeTrips.length,
-        revenue: format(totalRevenue),
-        expenses: format(totalExpenses),
-        profit: format(netProfit),
-        utilization: `${fleetUtilization.toFixed(1)}%`,
-        crossBorder: crossBorderTrips,
-        coldChain: coldChainTrips,
+      const resp = await fetch('/api/ai/ask-company', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMsg,
+          history,
+          liveMetrics: {
+            fleetSize: vehicles.length,
+            activeTrips: activeTrips.length,
+            revenue: format(totalRevenue),
+            expenses: format(totalExpenses),
+            profit: format(netProfit),
+            utilization: `${fleetUtilization.toFixed(1)}%`,
+            crossBorder: crossBorderTrips,
+            coldChain: coldChainTrips,
+          },
+        }),
       });
+
+      const data = await resp.json();
+      const answer = data?.text || data?.error || 'No response from AI.';
 
       setMessages(prev => [...prev, { role: 'ai', text: answer }]);
     } catch (err: any) {

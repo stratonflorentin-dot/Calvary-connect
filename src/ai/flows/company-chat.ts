@@ -148,22 +148,3 @@ When asked to forecast:
 `;
 
 export default SYSTEM_PROMPT;
-
-import { ai } from '@/ai/genkit';
-
-export async function askCompanyAI(
-  message: string,
-  history: { role: 'user' | 'model'; text: string }[],
-  liveMetrics: any = {},
-  dbContext: any = {}
-) {
-  try {
-    const system = SYSTEM_PROMPT(liveMetrics, dbContext);
-    const formattedHistory = (history || []).map((h) => ({ role: h.role, content: [{ text: h.text }] }));
-    const response = await ai.generate({ system, messages: [...formattedHistory, { role: 'user', content: [{ text: message }] }] });
-    return (response as any).text || 'No analysis produced.';
-  } catch (err: any) {
-    console.error('askCompanyAI error:', err);
-    throw err;
-  }
-}
