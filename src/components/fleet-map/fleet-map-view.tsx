@@ -30,6 +30,7 @@ import {
   Gauge,
   Clock,
   Crosshair,
+  AlertCircle,
 } from "lucide-react";
 
 const FleetMapCanvas = dynamic(
@@ -525,8 +526,8 @@ export default function FleetMapView({
                       <span className="text-[10px] text-slate-400 shrink-0 hidden sm:block">
                         {loc.lastUpdate
                           ? formatDistanceToNow(new Date(loc.lastUpdate), {
-                              addSuffix: true,
-                            })
+                            addSuffix: true,
+                          })
                           : "—"}
                       </span>
                     </button>
