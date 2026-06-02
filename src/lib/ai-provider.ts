@@ -48,8 +48,9 @@ export async function generateAI(opts: { system: string; messages: Msg[] }) {
 
     const tryGenkit = async () => {
         // dynamic import to avoid bundling node-only libs into client
-        const mod = await import('../ai/genkit');
-        const ai = (mod as any).ai;
+        const { createGenkit } = await import('../ai/genkit');
+        if (typeof createGenkit !== 'function') throw new Error('genkit factory not available');
+        const ai = await createGenkit();
         const response = await ai.generate({ system, messages });
         const text = (response as any).text || '';
         return { text, provider: 'genkit' };
