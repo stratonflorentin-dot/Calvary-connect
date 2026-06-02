@@ -53,3 +53,8 @@ Testing after deploy
 Notes for this repo
 - The server route `src/app/api/ai/ask-company/route.ts` now prefers `process.env.OPENROUTER_API_KEY` and falls back to the `genkit` client if not provided.
 - If you prefer the server to always compute the DB context, remove client-sent `dbContext` and call `getFleetContext()` server-side in the API route.
+
+GitHub Actions
+
+- To run the automated AI smoke test on push, add the same secrets to the repository's **Secrets** (Settings → Secrets → Actions) using the names `GROQ_API_KEY` and `OPENROUTER_API_KEY`.
+- The workflow `/.github/workflows/ai-smoke.yml` runs `node ai_test.js` and sets `AI_PROVIDER=genkit` by default for stability.
