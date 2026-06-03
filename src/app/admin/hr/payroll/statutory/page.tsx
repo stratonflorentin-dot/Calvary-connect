@@ -109,7 +109,7 @@ export default function StatutoryReportsPage() {
     const { user } = useSupabase();
     const { role } = useRole();
     const [payrollRuns, setPayrollRuns] = useState<string[]>([]);
-    const [selectedPeriod, setSelectedPeriod] = useState('');
+    const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>(undefined);
     const [summaries, setSummaries] = useState<Record<string, { total: number; status: string }>>({});
     const [details, setDetails] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -129,8 +129,9 @@ export default function StatutoryReportsPage() {
             const response = await fetch(url.toString());
             if (!response.ok) throw new Error('Failed to load statutory payroll data');
             const json = await response.json();
+            const nextPeriod = json.selectedPeriod || json.payrollRuns?.[0] || undefined;
             setPayrollRuns(json.payrollRuns || []);
-            setSelectedPeriod(json.selectedPeriod || json.payrollRuns?.[0] || '');
+            setSelectedPeriod(nextPeriod);
             setSummaries(json.summaries || {});
             setDetails(json.details || []);
         } catch (error: any) {
@@ -236,7 +237,7 @@ export default function StatutoryReportsPage() {
                                             {payrollRuns.length > 0 ? payrollRuns.map((period) => (
                                                 <SelectItem value={period} key={period}>{period}</SelectItem>
                                             )) : (
-                                                <SelectItem value="" disabled>No approved payroll runs</SelectItem>
+                                                <SelectItem value="no-payroll" disabled>No approved payroll runs</SelectItem>
                                             )}
                                         </SelectContent>
                                     </Select>
