@@ -593,13 +593,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       const filePath = `avatars/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from('profile-photos')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+        .from('profile-photos')
         .getPublicUrl(filePath);
 
       await updateProfile({ avatar: publicUrl });

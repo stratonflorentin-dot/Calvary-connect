@@ -23,7 +23,7 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -74,9 +74,10 @@ export default function ProfilePage() {
         try {
           const fileExt = avatarFile.name.split('.').pop();
           const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+          const filePath = `avatars/${fileName}`;
           const { error: uploadError, data } = await supabase.storage
-            .from('avatars')
-            .upload(fileName, avatarFile);
+            .from('profile-photos')
+            .upload(filePath, avatarFile);
 
           if (uploadError) {
             if (uploadError.message?.includes('Bucket not found')) {
@@ -88,9 +89,9 @@ export default function ProfilePage() {
             }
           } else {
             const { data: { publicUrl } } = supabase.storage
-              .from('avatars')
-              .getPublicUrl(fileName);
-            
+              .from('profile-photos')
+              .getPublicUrl(filePath);
+
             avatarUrl = publicUrl;
           }
         } catch (uploadErr: any) {
@@ -109,25 +110,24 @@ export default function ProfilePage() {
         phone: formData.phone,
         employee_id: formData.employeeId,
         department: formData.department,
-        avatar: avatarUrl,
+        avatar_url: avatarUrl,
         updated_at: new Date().toISOString(),
       };
-      
+
       console.log('Updating profile with data:', updateData);
       console.log('User ID:', user.id);
-      
+
       // Try to update first
       let { error: updateError, data: updateData2 } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .update(updateData)
         .eq('id', user.id)
         .select();
-
       // If update fails (user doesn't exist or any error), try to insert
       if (updateError) {
         console.log('Update failed, trying to create new profile...', updateError);
         const { error: insertError, data: insertData } = await supabase
-          .from('profiles')
+          .from('user_profiles')
           .insert([{
             id: user.id,
             email: user.email,
@@ -135,7 +135,7 @@ export default function ProfilePage() {
             created_at: new Date().toISOString(),
           }])
           .select();
-        
+
         if (insertError) {
           console.error('Profile insert error:', insertError);
           // Fallback: Save to localStorage if Supabase fails
@@ -151,7 +151,7 @@ export default function ProfilePage() {
           console.log('Profile created successfully:', insertData);
         }
       }
-      
+
       console.log('Update/Insert successful:', updateData2);
 
       // Try to refresh user data - don't fail if this doesn't work
@@ -192,14 +192,14 @@ export default function ProfilePage() {
           <CardContent className="space-y-6 pt-4">
             {/* Avatar with Edit Button */}
             <div className="relative mx-auto w-fit">
-              <div 
+              <div
                 className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={handleAvatarClick}
               >
                 {user.avatar ? (
-                  <img 
-                    src={user.avatar} 
-                    alt={user.name || 'Profile'} 
+                  <img
+                    src={user.avatar}
+                    alt={user.name || 'Profile'}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -225,7 +225,7 @@ export default function ProfilePage() {
                   <p className="font-medium">{user.name || 'Not set'}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                 <Mail className="size-5 text-muted-foreground" />
                 <div>
@@ -273,9 +273,9 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <Button 
-              variant="destructive" 
-              className="w-full gap-2" 
+            <Button
+              variant="destructive"
+              className="w-full gap-2"
               onClick={() => signOut()}
             >
               <LogOut className="size-4" />
@@ -290,18 +290,18 @@ export default function ProfilePage() {
             <DialogHeader>
               <DialogTitle className="text-xl font-headline">Edit Profile</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-6 py-4">
               {/* Avatar Upload */}
               <div className="flex flex-col items-center gap-3">
-                <div 
+                <div
                   onClick={handleAvatarClick}
                   className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary/20 cursor-pointer hover:border-primary/40 transition-colors"
                 >
                   {avatarPreview || user.avatar ? (
-                    <img 
-                      src={avatarPreview || user.avatar} 
-                      alt="Preview" 
+                    <img
+                      src={avatarPreview || user.avatar}
+                      alt="Preview"
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -320,9 +320,9 @@ export default function ProfilePage() {
                   onChange={handleFileChange}
                   className="hidden"
                 />
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   size="sm"
                   onClick={handleAvatarClick}
                 >
