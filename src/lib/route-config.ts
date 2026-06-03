@@ -96,7 +96,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: "/service-requests",
-    label: "Maintenance",
+    label: "Service Requests",
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR"],
+    category: "fleet",
+  },
+  {
+    path: "/maintenance",
+    label: "Maintenance Records",
     allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR"],
     category: "fleet",
   },
@@ -195,6 +201,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     path: "/admin/hr/payroll/statutory",
     label: "Statutory Reports",
     allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+  },
+  {
+    path: "/hr/meetings",
+    label: "Meetings",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
     category: "people",
   },
 

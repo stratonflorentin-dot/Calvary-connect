@@ -56,6 +56,7 @@ const routeIconMap: Record<string, any> = {
   "/sales": Briefcase,
   "/fleet": Truck,
   "/service-requests": Wrench,
+  "/maintenance": Wrench,
   "/inventory": Package,
   "/parts-requests": Wrench,
   "/fuel-approvals": Truck,
@@ -70,6 +71,7 @@ const routeIconMap: Record<string, any> = {
   "/audit": Shield,
   "/ai-insights": Sparkles,
   "/notifications": Bell,
+  "/hr/meetings": CalendarDays,
   "/profile": UserIcon
 };
 
