@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Sidebar } from '@/components/navigation/sidebar';
+import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
