@@ -36,16 +36,16 @@ export default function MaintenancePage() {
     const { format } = useCurrency();
     const { t } = useLanguage();
     const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
-    const [priorityFilter, setPriorityFilter] = useState('');
-    const [typeFilter, setTypeFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'requested' | 'scheduled' | 'in_progress' | 'completed' | 'postponed' | 'cancelled'>('all');
+    const [priorityFilter, setPriorityFilter] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
+    const [typeFilter, setTypeFilter] = useState<'all' | 'scheduled' | 'preventive' | 'repair' | 'breakdown' | 'inspection'>('all');
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
 
     const { records, loading, stats } = useMaintenance({
-        status: statusFilter || undefined,
-        priority: priorityFilter || undefined,
-        type: typeFilter || undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        priority: priorityFilter === 'all' ? undefined : priorityFilter,
+        type: typeFilter === 'all' ? undefined : typeFilter,
         search: search || undefined,
     });
 
@@ -141,7 +141,7 @@ export default function MaintenancePage() {
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">All</SelectItem>
+                                <SelectItem value="all">All</SelectItem>
                                 <SelectItem value="requested">Requested</SelectItem>
                                 <SelectItem value="scheduled">Scheduled</SelectItem>
                                 <SelectItem value="in_progress">In Progress</SelectItem>
@@ -155,7 +155,7 @@ export default function MaintenancePage() {
                                 <SelectValue placeholder="Type" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">All</SelectItem>
+                                <SelectItem value="all">All</SelectItem>
                                 <SelectItem value="scheduled">Scheduled</SelectItem>
                                 <SelectItem value="preventive">Preventive</SelectItem>
                                 <SelectItem value="repair">Repair</SelectItem>
@@ -168,7 +168,7 @@ export default function MaintenancePage() {
                                 <SelectValue placeholder="Priority" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">All</SelectItem>
+                                <SelectItem value="all">All</SelectItem>
                                 <SelectItem value="critical">Critical</SelectItem>
                                 <SelectItem value="high">High</SelectItem>
                                 <SelectItem value="medium">Medium</SelectItem>

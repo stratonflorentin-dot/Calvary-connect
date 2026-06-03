@@ -256,11 +256,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     path: "/notifications",
     label: "Notifications",
     allowedRoles: [...ALL_APP_ROLES],
+    category: "system",
   },
   {
     path: "/profile",
     label: "My Profile",
     allowedRoles: [...ALL_APP_ROLES],
+    category: "system",
   },
 ];
 

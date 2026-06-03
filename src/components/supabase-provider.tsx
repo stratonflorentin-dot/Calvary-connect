@@ -42,7 +42,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Initialize role from localStorage for admin on mount
+  // Reload / page refresh role restoration logic for admin preview sessions.
+  // If the admin session marker is present, restore the last preview role from localStorage
+  // so navigation between admin pages does not lose the impersonated role.
   useEffect(() => {
     const adminSession = localStorage.getItem('admin_session');
     const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;

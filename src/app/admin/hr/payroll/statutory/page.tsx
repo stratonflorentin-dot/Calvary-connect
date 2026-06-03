@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RefreshCw, Download, FileText, FileSpreadsheet, ShieldAlert } from 'lucide-react';
+import Link from 'next/link';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { toast } from '@/hooks/use-toast';
@@ -293,10 +294,10 @@ export default function StatutoryReportsPage() {
                                 </div>
                                 <div className="flex flex-wrap gap-3">
                                     <Button asChild>
-                                        <a href="/allowances" className="bg-sky-700 text-white hover:bg-sky-800">Open Payroll Management</a>
+                                        <Link href="/allowances" className="bg-sky-700 text-white hover:bg-sky-800">Open Payroll Management</Link>
                                     </Button>
                                     <Button variant="outline" asChild>
-                                        <a href="/admin/hr/payroll/statutory" className="text-slate-700 hover:bg-slate-100">Refresh</a>
+                                        <Link href="/admin/hr/payroll/statutory" className="text-slate-700 hover:bg-slate-100">Refresh</Link>
                                     </Button>
                                 </div>
                             </CardContent>

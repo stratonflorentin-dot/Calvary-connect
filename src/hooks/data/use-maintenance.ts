@@ -108,7 +108,7 @@ export function useMaintenance(filters?: {
         fetchRecords();
 
         // Subscribe to realtime updates
-        channel = supabase
+        const channel: RealtimeChannel = supabase
             .channel('maintenance-changes')
             .on(
                 'postgres_changes',

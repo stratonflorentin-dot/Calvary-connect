@@ -57,29 +57,29 @@ export default function PartsRequestsPage() {
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
-      
+
       try {
         setLoading(true);
-        
+
         // Load real parts requests from database
         const { data: requestsData, error: requestsError } = await supabase
-          .from('maintenance_requests')
+          .from('parts_requests')
           .select('*')
           .order('created_at', { ascending: false });
-        
+
         if (requestsError) {
           console.log('Parts requests error:', requestsError);
           setRequests([]);
         } else {
           setRequests(requestsData || []);
         }
-        
+
         // Load inventory data for alerts
         const { data: inventoryData, error: inventoryError } = await supabase
           .from('inventory')
           .select('*')
           .eq('status', 'active');
-        
+
         if (inventoryError) {
           console.log('Inventory error - skipping:', inventoryError);
           setInventory([]);
@@ -100,22 +100,22 @@ export default function PartsRequestsPage() {
 
   const handleAction = async (requestId: string, status: 'approved' | 'rejected', item: any) => {
     try {
-      // Update the maintenance request status in Supabase
+      // Update the parts request status in Supabase
       const { error } = await supabase
-        .from('maintenance_requests')
+        .from('parts_requests')
         .update({ status })
         .eq('id', requestId);
-      
+
       if (error) {
         console.error('Error updating request status:', error);
         return;
       }
-      
+
       // Update local state to reflect the change
-      setRequests(prev => prev.map(r => 
+      setRequests(prev => prev.map(r =>
         r.id === requestId ? { ...r, status } : r
       ));
-      
+
       console.log(`Request ${requestId} ${status} successfully`);
     } catch (error) {
       console.error('Handle action error:', error);

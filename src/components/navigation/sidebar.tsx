@@ -43,7 +43,9 @@ import { isPrimaryOwnerEmail } from "@/lib/supabase";
 import { getMenuByRole, roleHasTripsAccess } from "@/lib/route-config";
 import { resolveUserRole } from "@/lib/user-role-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 // ✅ Move icon map OUTSIDE the component so it's always available
 const routeIconMap: Record<string, any> = {
@@ -94,6 +96,11 @@ export function Sidebar({ role }: { role: UserRole }) {
   const [storedRole, setStoredRole] = useState<UserRole | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [maintenanceCount, setMaintenanceCount] = useState(0);
+  const [serviceRequestCount, setServiceRequestCount] = useState(0);
+  const [partsRequestCount, setPartsRequestCount] = useState(0);
+  const [meetingCount, setMeetingCount] = useState(0);
 
   const canUseRolePreview = user?.role === "ADMIN" || user?.role === "CEO" || isPrimaryOwnerEmail(user?.email);
   const menuOwnerEmail = isPrimaryOwnerEmail(user?.email) ? user?.email : undefined;
@@ -134,6 +141,48 @@ export function Sidebar({ role }: { role: UserRole }) {
   const effectiveRole = canUseRolePreview ? resolveUserRole(String(storedRole || role || "ADMIN"), "ADMIN") : resolveUserRole(String(role || ""), "OPERATOR");
   const menuItems = getMenuByRole(effectiveRole, false, t, menuOwnerEmail, false);
 
+  useEffect(() => {
+    const fetchBadgeCounts = async () => {
+      if (!user?.id) return;
+
+      try {
+        const [notificationsRes, maintenanceRes, serviceRequestsRes, partsRequestsRes, meetingsRes] = await Promise.all([
+          supabase
+            .from("notifications")
+            .select("id", { count: "exact" })
+            .eq("user_id", user.id)
+            .eq("is_read", false),
+          supabase
+            .from("maintenance_requests")
+            .select("id", { count: "exact" })
+            .eq("status", "pending"),
+          supabase
+            .from("maintenance_requests")
+            .select("id", { count: "exact" })
+            .in("status", ["pending", "in_review"]),
+          supabase
+            .from("parts_requests")
+            .select("id", { count: "exact" })
+            .eq("status", "pending"),
+          supabase
+            .from("meetings")
+            .select("id", { count: "exact" })
+            .in("status", ["scheduled", "in_progress"]),
+        ]);
+
+        setNotificationCount(notificationsRes.data?.length || 0);
+        setMaintenanceCount(maintenanceRes.data?.length || 0);
+        setServiceRequestCount(serviceRequestsRes.data?.length || 0);
+        setPartsRequestCount(partsRequestsRes.data?.length || 0);
+        setMeetingCount(meetingsRes.data?.length || 0);
+      } catch (error) {
+        console.error("Failed to fetch sidebar badge counts:", error);
+      }
+    };
+
+    fetchBadgeCounts();
+  }, [user?.id]);
+
   const groupedMenu = menuItems.reduce((acc, item) => {
     if (!item.category) return acc;
     if (!acc[item.category]) acc[item.category] = [];
@@ -167,6 +216,31 @@ export function Sidebar({ role }: { role: UserRole }) {
                       <Link href={item.path} className={cn("flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl text-sm font-medium transition-all group", pathname === item.path ? "bg-[#e0f2fe] dark:bg-blue-950/40 text-[#0369A1] dark:text-blue-400 shadow-sm" : "text-slate-600 dark:text-slate-400 hover:text-[#0369A1] dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900/50")}>
                         {(() => { const Icon = routeIconMap[item.path] || LayoutDashboard; return <Icon className={cn("size-5", pathname === item.path ? "text-[#0369A1] dark:text-blue-400" : "text-slate-400 dark:text-slate-500 group-hover:text-[#0369A1] dark:group-hover:text-blue-400")} />; })()}
                         <span>{item.label}</span>
+                        {item.path === "/notifications" && notificationCount > 0 && (
+                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                            {notificationCount}
+                          </Badge>
+                        )}
+                        {item.path === "/maintenance" && maintenanceCount > 0 && (
+                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                            {maintenanceCount}
+                          </Badge>
+                        )}
+                        {item.path === "/service-requests" && serviceRequestCount > 0 && (
+                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                            {serviceRequestCount}
+                          </Badge>
+                        )}
+                        {item.path === "/parts-requests" && partsRequestCount > 0 && (
+                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                            {partsRequestCount}
+                          </Badge>
+                        )}
+                        {item.path === "/hr/meetings" && meetingCount > 0 && (
+                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                            {meetingCount}
+                          </Badge>
+                        )}
                       </Link>
 
                       {/* Quick Nav Axis for Financial Ledger */}
