@@ -1,6 +1,8 @@
 import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { ToastProvider } from "@/components/ui/toast-provider";
+import { PageLoader } from "@/components/page-loader";
 import { SupabaseProvider } from '@/components/supabase-provider';
 import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrapper';
 import { PWAProvider } from '@/components/pwa/pwa-provider';
@@ -78,8 +80,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <div className="bg-background text-foreground min-h-screen">
+            <PageLoader />
             <PWAProvider>
               <SupabaseProvider>
+                <ToastProvider />
                 <DriverSilentTrackingRoot />
                 {children}
                 <Toaster />

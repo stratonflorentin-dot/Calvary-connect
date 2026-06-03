@@ -11,6 +11,7 @@ export function useRole() {
 
   // Enhanced console logging for role changes
   useEffect(() => {
+    if (!user && !contextRole) return;
     console.log('[useRole] contextRole:', contextRole, 'user.role:', user?.role, 'email:', user?.email);
   }, [contextRole, user?.role, user?.email]);
 

@@ -17,6 +17,7 @@ import { useUsers } from "@/hooks/data/use-users";
 import { useRole } from "@/hooks/use-role";
 import { useLanguage } from "@/hooks/use-language";
 import { useCurrency } from "@/hooks/use-currency";
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,12 +85,14 @@ export default function CeoDashboard() {
   const { trips, loading: tripsLoading } = useTrips();
   const { expenses, loading: expensesLoading } = useExpenses();
   const { invoices, loading: invoicesLoading } = useInvoices();
-  const { reports, loading: reportsLoading } = useMonthlyReports();
+  const { reports = [], loading: reportsLoading } = useMonthlyReports();
   const { requests: maintenanceRequests, loading: maintenanceLoading } =
     useMaintenanceRequests();
   const { users: drivers, loading: driversLoading } = useUsers({
     role: "DRIVER",
   });
+
+  const recentReports = reports?.slice(0, 6) ?? [];
 
   const [alerts, setAlerts] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
@@ -114,7 +117,7 @@ export default function CeoDashboard() {
         // Load real alerts from maintenance and invoices
         const { data: maintAlerts } = await supabase.from('maintenance_requests').select('*').eq('status', 'pending').limit(2);
         const { data: overdueInvoices } = await supabase.from('invoices').select('*').eq('status', 'pending').lt('due_date', new Date().toISOString()).limit(2);
-        
+
         const combinedAlerts = [
           ...(maintAlerts?.map(m => ({
             id: m.id,
@@ -252,8 +255,8 @@ export default function CeoDashboard() {
                   <div className="flex items-center gap-4">
                     <Badge variant="secondary" className={
                       trip.status === 'DELIVERED' ? 'bg-purple-100 text-purple-700 hover:bg-purple-100' :
-                      trip.status === 'IN_TRANSIT' ? 'bg-sky-100 text-sky-700 hover:bg-sky-100' :
-                      'bg-orange-100 text-orange-700 hover:bg-orange-100'
+                        trip.status === 'IN_TRANSIT' ? 'bg-sky-100 text-sky-700 hover:bg-sky-100' :
+                          'bg-orange-100 text-orange-700 hover:bg-orange-100'
                     }>
                       {trip.status || 'PENDING'}
                     </Badge>
@@ -364,7 +367,7 @@ export default function CeoDashboard() {
                         ),
                         1,
                       )) *
-                      100,
+                    100,
                   );
                   return (
                     <div
