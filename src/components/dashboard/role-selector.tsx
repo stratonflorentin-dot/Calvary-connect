@@ -62,7 +62,7 @@ export function RoleSelector() {
     return null;
   }
 
-  const isAdmin = 
+  const isAdmin =
     isPrimaryOwnerEmail(user.email) ||
     user.role === 'ADMIN' ||
     user.role === 'CEO';
@@ -78,12 +78,8 @@ export function RoleSelector() {
   const handleRoleChange = (newRole: UserRole) => {
     console.log(`[RoleSelector] Changing role from ${currentRole} to ${newRole}`);
 
-    // Direct localStorage update for immediate persistence
-    localStorage.setItem('fleet_command_role', newRole);
-    
-    // ✅ Dispatch custom event for immediate sidebar update
-    window.dispatchEvent(new Event('roleChanged'));
-    
+    changeRole(newRole);
+
     // Get default route for the new role
     const defaultRoute = ROLE_DEFAULT_ROUTES[newRole];
     console.log(`[RoleSelector] Navigating to ${defaultRoute}`);

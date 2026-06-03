@@ -12,7 +12,7 @@ import { RefreshCw, Download, FileText, FileSpreadsheet, ShieldAlert } from 'luc
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { toast } from '@/hooks/use-toast';
-import JSZip from 'jszip';
+import * as JSZip from 'jszip';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar } from 'recharts';
 
 const agencies = [
