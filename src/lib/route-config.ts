@@ -35,7 +35,7 @@ export interface RouteConfig {
   allowedRoles: UserRole[];
   defaultRedirect?: string;
   icon?: any;
-  category?: "dashboard" | "logistics" | "fleet" | "finance" | "people" | "system";
+  category?: "dashboard" | "sales" | "logistics" | "fleet" | "inventory" | "finance" | "reports" | "people" | "system";
 }
 
 // Central route configuration
@@ -191,6 +191,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
     category: "people",
   },
+  {
+    path: "/admin/hr/payroll/statutory",
+    label: "Statutory Reports",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+  },
 
   // --- Settings ---
   {
@@ -232,7 +238,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     label: "Report Issue",
     allowedRoles: ["DRIVER"],
   },
-  
+
   // --- Profile & Shared ---
   {
     path: "/notifications",

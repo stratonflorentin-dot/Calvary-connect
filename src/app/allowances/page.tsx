@@ -7,21 +7,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  Coins, Calculator, Truck, Globe, Plus, RefreshCw, 
-  User, DollarSign, Calendar, Search, Trash2, CheckCircle, 
-  XCircle, Info, Landmark, AlertCircle, FileText 
+import {
+  Coins, Calculator, Truck, Globe, Plus, RefreshCw,
+  User, DollarSign, Calendar, Search, Trash2, CheckCircle,
+  XCircle, Info, Landmark, AlertCircle, FileText
 } from 'lucide-react';
 import { useCurrency } from '@/hooks/use-currency';
 import { toast } from '@/hooks/use-toast';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { 
-  getWorkersAction, 
-  savePayrollAction, 
-  getPayrollHistoryAction, 
-  approvePayrollRecordAction, 
-  rejectPayrollRecordAction, 
+import {
+  getWorkersAction,
+  savePayrollAction,
+  getPayrollHistoryAction,
+  approvePayrollRecordAction,
+  rejectPayrollRecordAction,
   deletePayrollRecordAction,
   updateWorkerSalaryAction
 } from './actions';
@@ -59,7 +59,7 @@ export default function AllowancesPage() {
   const { user } = useSupabase();
   const { role } = useRole();
   const { format } = useCurrency();
-  
+
   // State management
   const [activeTab, setActiveTab] = useState<'process' | 'history'>('process');
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -67,7 +67,7 @@ export default function AllowancesPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Manual payroll input states (indexed by workerId)
   const [baseSalaries, setBaseSalaries] = useState<Record<string, number>>({});
   const [allowancesInputs, setAllowancesInputs] = useState<Record<string, number>>({});
@@ -219,9 +219,9 @@ export default function AllowancesPage() {
     try {
       const res = await approvePayrollRecordAction(id, user.id);
       if (res.success) {
-        toast({ 
-          title: "Payroll Approved", 
-          description: "Compensation record approved, expense logged, and payable invoice generated." 
+        toast({
+          title: "Payroll Approved",
+          description: "Compensation record approved, expense logged, and payable invoice generated."
         });
         await loadHistory();
       } else {
@@ -277,12 +277,12 @@ export default function AllowancesPage() {
       if (reasonStr && reasonStr.startsWith('{')) {
         return JSON.parse(reasonStr);
       }
-    } catch (e) {}
+    } catch (e) { }
     return null;
   };
 
   // Search filter for process list
-  const filteredWorkers = workers.filter(w => 
+  const filteredWorkers = workers.filter(w =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     w.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
     w.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -296,7 +296,7 @@ export default function AllowancesPage() {
       item.worker_role?.toLowerCase().includes(historySearch.toLowerCase()) ||
       item.reason.toLowerCase().includes(historySearch.toLowerCase()) ||
       item.employee_id?.toLowerCase().includes(historySearch.toLowerCase());
-    
+
     if (historyFilter === 'payroll') return isManual && matchesSearch;
     if (historyFilter === 'trip') return !isManual && matchesSearch;
     return matchesSearch;
@@ -311,10 +311,10 @@ export default function AllowancesPage() {
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans">
       <Sidebar role={role || 'DRIVER'} />
-      
+
       <main className="flex-1 md:ml-60 p-6 md:p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-8">
-          
+
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
             <div>
@@ -325,8 +325,8 @@ export default function AllowancesPage() {
                 Manually manage base salaries, process allowances, and track monthly staff compensation.
               </p>
             </div>
-            
-            <div className="flex items-center gap-3">
+
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 variant="outline"
                 onClick={loadData}
@@ -335,6 +335,12 @@ export default function AllowancesPage() {
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Sync System
+              </Button>
+              <Button asChild className="bg-sky-700 text-white hover:bg-sky-800">
+                <a href="/admin/hr/payroll/statutory">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Statutory Reports
+                </a>
               </Button>
             </div>
           </div>
@@ -398,22 +404,20 @@ export default function AllowancesPage() {
           <div className="flex border-b border-border gap-1">
             <button
               onClick={() => setActiveTab('process')}
-              className={`px-6 py-3 font-semibold text-sm transition-all duration-200 border-b-2 flex items-center gap-2 ${
-                activeTab === 'process'
+              className={`px-6 py-3 font-semibold text-sm transition-all duration-200 border-b-2 flex items-center gap-2 ${activeTab === 'process'
                   ? 'border-primary text-primary bg-card'
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-              }`}
+                }`}
             >
               <Coins className="w-4 h-4" />
               Process Worker Payroll
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-6 py-3 font-semibold text-sm transition-all duration-200 border-b-2 flex items-center gap-2 ${
-                activeTab === 'history'
+              className={`px-6 py-3 font-semibold text-sm transition-all duration-200 border-b-2 flex items-center gap-2 ${activeTab === 'history'
                   ? 'border-primary text-primary bg-card'
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-              }`}
+                }`}
             >
               <FileText className="w-4 h-4" />
               Payroll Ledger & History
@@ -460,8 +464,8 @@ export default function AllowancesPage() {
                     const isProcessing = actionLoading === worker.id;
 
                     return (
-                      <Card 
-                        key={worker.id} 
+                      <Card
+                        key={worker.id}
                         className="bg-card border-border hover:border-muted-foreground/30 transition-all duration-200 overflow-hidden shadow-md"
                       >
                         {/* Worker Identity Header */}
@@ -518,7 +522,7 @@ export default function AllowancesPage() {
 
                         {/* Input Controls Grid */}
                         <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                          
+
                           {/* Base Salary */}
                           <div>
                             <label className="block text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -575,7 +579,7 @@ export default function AllowancesPage() {
                                 {format(netSalary)}
                               </p>
                             </div>
-                            
+
                             <Button
                               onClick={() => handleProcessPayroll(worker)}
                               disabled={isProcessing || netSalary <= 0}
@@ -631,32 +635,29 @@ export default function AllowancesPage() {
                   <div className="flex gap-1 bg-background p-1 border border-border rounded-lg w-full sm:w-auto">
                     <button
                       onClick={() => setHistoryFilter('all')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${
-                        historyFilter === 'all' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
-                      }`}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${historyFilter === 'all' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
+                        }`}
                     >
                       All Records
                     </button>
                     <button
                       onClick={() => setHistoryFilter('payroll')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${
-                        historyFilter === 'payroll' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
-                      }`}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${historyFilter === 'payroll' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
+                        }`}
                     >
                       Manual Payroll
                     </button>
                     <button
                       onClick={() => setHistoryFilter('trip')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${
-                        historyFilter === 'trip' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
-                      }`}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${historyFilter === 'trip' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
+                        }`}
                     >
                       Trip Allowances
                     </button>
                   </div>
                 </div>
               </CardHeader>
-              
+
               <CardContent className="p-0">
                 {loading ? (
                   <div className="text-center py-16">
@@ -682,7 +683,7 @@ export default function AllowancesPage() {
                           <TableHead className="text-right text-muted-foreground font-bold text-xs uppercase py-4 pr-6">Ledger Actions</TableHead>
                         </TableRow>
                       </TableHeader>
-                      
+
                       <TableBody>
                         {filteredHistory.map((item) => {
                           const parsed = parseReason(item.reason);
@@ -691,12 +692,12 @@ export default function AllowancesPage() {
 
                           return (
                             <TableRow key={item.id} className="border-b border-border/80 hover:bg-muted/10">
-                              
+
                               {/* Employee */}
                               <TableCell className="py-4">
                                 <div className="flex items-center gap-3">
                                   <div className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center font-bold text-xs border border-border text-foreground">
-                                    {item.employee_name?.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                                    {item.employee_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                                   </div>
                                   <div>
                                     <p className="font-semibold text-foreground">{item.employee_name}</p>
@@ -716,11 +717,10 @@ export default function AllowancesPage() {
 
                               {/* Category */}
                               <TableCell className="py-4">
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${
-                                  isManual 
-                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 dark:text-blue-400' 
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${isManual
+                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 dark:text-blue-400'
                                     : 'bg-purple-500/10 border-purple-500/20 text-purple-500 dark:text-purple-400'
-                                }`}>
+                                  }`}>
                                   {isManual ? 'Manual Payroll' : 'Trip Allowance'}
                                 </span>
                               </TableCell>
@@ -762,14 +762,13 @@ export default function AllowancesPage() {
 
                               {/* Status Badge */}
                               <TableCell className="py-4">
-                                <Badge 
+                                <Badge
                                   variant="outline"
-                                  className={`font-semibold capitalize text-[10px] ${
-                                    item.status === 'paid' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' :
-                                    item.status === 'approved' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
-                                    item.status === 'rejected' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' :
-                                    'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
-                                  }`}
+                                  className={`font-semibold capitalize text-[10px] ${item.status === 'paid' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' :
+                                      item.status === 'approved' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
+                                        item.status === 'rejected' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' :
+                                          'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
+                                    }`}
                                 >
                                   {item.status}
                                 </Badge>
@@ -785,16 +784,16 @@ export default function AllowancesPage() {
                                 <div className="flex justify-end gap-2">
                                   {item.status === 'pending' && (
                                     <>
-                                      <Button 
-                                        size="sm" 
+                                      <Button
+                                        size="sm"
                                         onClick={() => handleApprovePayroll(item.id)}
                                         disabled={isActionLoading}
                                         className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] h-7 px-3 font-semibold shadow-md"
                                       >
                                         Approve
                                       </Button>
-                                      <Button 
-                                        size="sm" 
+                                      <Button
+                                        size="sm"
                                         variant="outline"
                                         onClick={() => handleRejectPayroll(item.id)}
                                         disabled={isActionLoading}
@@ -804,9 +803,9 @@ export default function AllowancesPage() {
                                       </Button>
                                     </>
                                   )}
-                                  
-                                  <Button 
-                                    size="sm" 
+
+                                  <Button
+                                    size="sm"
                                     variant="ghost"
                                     onClick={() => handleDeletePayroll(item.id)}
                                     disabled={isActionLoading}
