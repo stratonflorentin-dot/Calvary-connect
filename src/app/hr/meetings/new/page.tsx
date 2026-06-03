@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,6 @@ interface User {
 
 export default function NewMeetingPage() {
     const router = useRouter();
-    const supabase = createClientComponentClient();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [employees, setEmployees] = useState<User[]>([]);

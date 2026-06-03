@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +52,6 @@ interface MaintenanceRecord {
 export default function MaintenanceDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const supabase = createClientComponentClient();
     const { format } = useCurrency();
     const [record, setRecord] = useState<MaintenanceRecord | null>(null);
     const [loading, setLoading] = useState(true);

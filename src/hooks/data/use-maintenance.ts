@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface MaintenanceRecord {
@@ -63,8 +63,6 @@ export function useMaintenance(filters?: {
     const [records, setRecords] = useState<MaintenanceRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
-    const supabase = createClientComponentClient();
-    let channel: RealtimeChannel | null = null;
 
     const fetchRecords = async () => {
         try {
@@ -74,9 +72,9 @@ export function useMaintenance(filters?: {
             let query = supabase
                 .from('maintenance_records')
                 .select(`
-          *,
-          vehicles:vehicle_id(id, plate_number, make, model)
-        `)
+                    *,
+                    vehicles:vehicle_id(id, plate_number, make, model)
+                `)
                 .order(filters?.sort || 'created_at', { ascending: false });
 
             if (filters?.status) {

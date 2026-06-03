@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,6 @@ import Link from 'next/link';
 
 export default function NewMaintenancePage() {
     const router = useRouter();
-    const supabase = createClientComponentClient();
     const { vehicles, loading: vehiclesLoading } = useFleetVehicles();
     const { trips, loading: tripsLoading } = useTrips();
     const [loading, setLoading] = useState(false);
