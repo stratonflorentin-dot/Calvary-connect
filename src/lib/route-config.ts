@@ -97,13 +97,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/service-requests",
     label: "Service Requests",
-    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR"],
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR", "DRIVER"],
     category: "fleet",
   },
   {
     path: "/maintenance",
     label: "Maintenance Records",
-    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR"],
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR", "DRIVER"],
     category: "fleet",
   },
   // --- Inventory ---
@@ -116,7 +116,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/parts-requests",
     label: "Parts Requests",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "WAREHOUSE_STAFF", "DRIVER"],
     category: "inventory",
   },
   {
