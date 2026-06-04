@@ -9,9 +9,6 @@ export const DRIVER_ROUTE_CONFIG: RouteConfig[] = [
   { path: "/driver/fuel", label: "Fuel", allowedRoles: ["DRIVER"] },
   { path: "/driver/expenses", label: "My Expenses", allowedRoles: ["DRIVER"] },
   { path: "/driver/maintenance", label: "Maintenance", allowedRoles: ["DRIVER"] },
-  { path: "/service-requests", label: "Service Requests", allowedRoles: ["DRIVER"] },
-  { path: "/maintenance", label: "Maintenance Records", allowedRoles: ["DRIVER"] },
-  { path: "/parts-requests", label: "Parts Requests", allowedRoles: ["DRIVER"] },
   { path: "/driver/profile", label: "Driver Profile", allowedRoles: ["DRIVER"] },
   { path: "/notifications", label: "Notifications", allowedRoles: ["DRIVER"] },
 ];
