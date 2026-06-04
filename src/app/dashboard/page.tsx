@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AlertCircle, Zap, FileText, Wallet, TrendingDown, Grid, Truck, Users, AlertTriangle, Clock, DollarSign } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatMiniCard } from '@/components/ui/stat-mini-card';
 import { GradientCard } from '@/components/ui/gradient-card';
+import { DocumentStatusBadge } from '@/components/ui/document-status-badge';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useCurrency } from '@/hooks/use-currency';
 import { useSupabase } from '@/components/supabase-provider';
 
-export default function ExecutiveDashboard() {
+function ExecutiveDashboardContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { user } = useSupabase();
@@ -517,5 +518,14 @@ export default function ExecutiveDashboard() {
     );
 }
 
-// Import DocumentStatusBadge
-import { DocumentStatusBadge } from '@/components/ui/document-status-badge';
+export default function ExecutiveDashboard() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div>
+            </div>
+        }>
+            <ExecutiveDashboardContent />
+        </Suspense>
+    );
+}
