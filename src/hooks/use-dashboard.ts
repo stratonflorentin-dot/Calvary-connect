@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { getSupabaseClient } from '@/lib/supabase-client';
 
 type DashboardMode = 'operations' | 'finance' | 'fleet';
 type PeriodRange = 'mtd' | '7d' | '30d' | 'qtd' | 'ytd' | 'custom';
@@ -162,7 +162,7 @@ export function useDashboard(
     fromDate?: Date,
     toDate?: Date
 ): UseDashboardReturn {
-    const supabase = createClientComponentClient();
+    const supabase = getSupabaseClient();
     const [stats, setStats] = useState<DashboardStats>({
         activeShipments: 0,
         revenueMtd: 0,

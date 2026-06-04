@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { getSupabaseClient } from '@/lib/supabase-client';
 
 interface Vehicle {
     id: string;
@@ -143,7 +143,7 @@ interface UseVehicleDetailReturn {
 }
 
 export function useVehicleDetail(vehicleId: string): UseVehicleDetailReturn {
-    const supabase = createClientComponentClient();
+    const supabase = getSupabaseClient();
     const [vehicle, setVehicle] = useState<Vehicle | null>(null);
     const [trips, setTrips] = useState<Trip[]>([]);
     const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
