@@ -212,23 +212,23 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/hr/insurance",
     label: "Insurance",
-    allowedRoles: ["CEO", "ADMIN", "HR"],
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "ACCOUNTANT"],
     category: "people",
   },
   {
     path: "/hr/insurance/add",
     label: "New Insurance",
-    allowedRoles: ["CEO", "ADMIN", "HR"],
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "ACCOUNTANT"],
   },
   {
     path: "/hr/insurance/bulk-import",
     label: "Bulk Insurance Import",
-    allowedRoles: ["CEO", "ADMIN", "HR"],
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "ACCOUNTANT"],
   },
   {
     path: "/hr/insurance/[id]",
     label: "Insurance Details",
-    allowedRoles: ["CEO", "ADMIN", "HR"],
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "ACCOUNTANT"],
   },
 
   // --- Settings ---
