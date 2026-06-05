@@ -73,6 +73,7 @@ const routeIconMap: Record<string, any> = {
   "/audit": Shield,
   "/ai-insights": Sparkles,
   "/notifications": Bell,
+  "/hr/insurance": Shield,
   "/hr/meetings": CalendarDays,
   "/profile": UserIcon
 };

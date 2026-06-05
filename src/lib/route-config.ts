@@ -209,6 +209,27 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "HR"],
     category: "people",
   },
+  {
+    path: "/hr/insurance",
+    label: "Insurance",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+    category: "people",
+  },
+  {
+    path: "/hr/insurance/add",
+    label: "New Insurance",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+  },
+  {
+    path: "/hr/insurance/bulk-import",
+    label: "Bulk Insurance Import",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+  },
+  {
+    path: "/hr/insurance/[id]",
+    label: "Insurance Details",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+  },
 
   // --- Settings ---
   {
@@ -310,7 +331,7 @@ export function useRouteGuard() {
           return false;
         }
 
-        const route = ROUTE_CONFIG.find((r) => r.path === path);
+        const route = ROUTE_CONFIG.find((r) => routeMatches(path, r.path));
         if (!route) {
           console.error("Route not found:", path);
           return false;
@@ -420,6 +441,16 @@ export function getMenuByRole(
   // Others see only their allowed routes
   return ROUTE_CONFIG.filter((route) =>
     route.allowedRoles.includes(normalizedRole),
+  );
+}
+
+function routeMatches(pathname: string, routePath: string) {
+  if (pathname === routePath) return true;
+  const pathnameSegments = pathname.split('/').filter(Boolean);
+  const routeSegments = routePath.split('/').filter(Boolean);
+  if (pathnameSegments.length !== routeSegments.length) return false;
+  return routeSegments.every((segment, index) =>
+    segment.startsWith('[') ? true : segment === pathnameSegments[index],
   );
 }
 
