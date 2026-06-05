@@ -199,3 +199,64 @@ export interface Notification {
   actionUrl?: string;
   createdAt: any;
 }
+
+// Truck Insurance Management
+export type InsurancePolicyType =
+  | "third_party"
+  | "third_party_cargo"
+  | "comprehensive"
+  | "cross_border";
+
+export type InsuranceStatus = "active" | "expiring_soon" | "expired";
+
+export interface TruckInsurance {
+  id: string;
+  vehicle_id: string;
+  insurer_name: string;
+  policy_type: InsurancePolicyType;
+  tira_reference_number: string;
+  start_date: string; // YYYY-MM-DD
+  expiry_date: string; // YYYY-MM-DD
+  annual_premium: number; // TZS
+  assigned_driver_id?: string;
+  route_coverage_area?: string;
+  status: InsuranceStatus;
+  is_cross_border?: boolean;
+  has_comesa_yellow_card?: boolean;
+  policy_document_url?: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsuranceClaim {
+  id: string;
+  truck_insurance_id: string;
+  vehicle_id: string;
+  claim_date: string;
+  claim_type: string; // "accident", "theft", "damage", "third_party", "cargo"
+  claim_amount: number; // TZS
+  description: string;
+  status: "pending" | "approved" | "rejected" | "resolved";
+  resolution_notes?: string;
+  approved_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsuranceSummary {
+  total_vehicles: number;
+  total_active_policies: number;
+  expiring_within_30_days: number;
+  expired_policies: number;
+  mandatory_tira_compliance: {
+    compliant: number;
+    non_compliant: number;
+  };
+  cross_border_coverage: {
+    with_yellow_card: number;
+    without_yellow_card: number;
+  };
+  total_annual_premium: number; // TZS
+}
