@@ -106,7 +106,7 @@ export function CalvaryFinancialManagement() {
   const [trips, setTrips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { format } = useCurrency();
+  const { format: formatCurrency } = useCurrency();
 
   // Form states
   const [expenseForm, setExpenseForm] = useState({
@@ -389,7 +389,7 @@ export function CalvaryFinancialManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-white/70">Total Revenue</p>
-                <p className="text-2xl font-bold">{format(totalRevenue)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
                 <p className="text-xs text-white/60 mt-1">{revenue.length} trips recorded</p>
               </div>
               <TrendingUp className="h-10 w-10 text-white/30" />
@@ -402,7 +402,7 @@ export function CalvaryFinancialManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-white/70">Total Expenses</p>
-                <p className="text-2xl font-bold">{format(totalExpenses)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalExpenses)}</p>
                 <p className="text-xs text-white/60 mt-1">{expenses.length} entries</p>
               </div>
               <TrendingDown className="h-10 w-10 text-white/30" />
@@ -416,7 +416,7 @@ export function CalvaryFinancialManagement() {
               <div>
                 <p className="text-sm text-white/70">Net Profit</p>
                 <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-white' : 'text-red-200'}`}>
-                  {format(netProfit)}
+                  {formatCurrency(netProfit)}
                 </p>
                 <p className="text-xs text-white/60 mt-1">
                   {totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}% margin
@@ -432,7 +432,7 @@ export function CalvaryFinancialManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-white/70">Cross-Border</p>
-                <p className="text-2xl font-bold">{format(crossBorderRevenue)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(crossBorderRevenue)}</p>
                 <p className="text-xs text-white/60 mt-1">Revenue from DRC/Zambia/Kenya routes</p>
               </div>
               <Globe className="h-10 w-10 text-white/30" />
@@ -470,21 +470,21 @@ export function CalvaryFinancialManagement() {
                       <Globe className="size-5 text-purple-600" />
                       <span className="font-medium">Cross-Border Transit</span>
                     </div>
-                    <span className="font-bold text-purple-600">{format(crossBorderRevenue)}</span>
+                    <span className="font-bold text-purple-600">{formatCurrency(crossBorderRevenue)}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <MapPin className="size-5 text-blue-600" />
                       <span className="font-medium">Local Tanzania</span>
                     </div>
-                    <span className="font-bold text-blue-600">{format(totalRevenue - crossBorderRevenue)}</span>
+                    <span className="font-bold text-blue-600">{formatCurrency(totalRevenue - crossBorderRevenue)}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-cyan-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Thermometer className="size-5 text-cyan-600" />
                       <span className="font-medium">Cold Chain</span>
                     </div>
-                    <span className="font-bold text-cyan-600">{format(coldChainRevenue)}</span>
+                    <span className="font-bold text-cyan-600">{formatCurrency(coldChainRevenue)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -509,7 +509,7 @@ export function CalvaryFinancialManagement() {
                       <div key={cat} className="space-y-1">
                         <div className="flex justify-between text-sm">
                           <span className="capitalize">{cat === 'border' ? 'Border Fees' : cat}</span>
-                          <span className="font-medium">{format(catTotal)} ({percentage.toFixed(1)}%)</span>
+                          <span className="font-medium">{formatCurrency(catTotal)} ({percentage.toFixed(1)}%)</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
@@ -679,7 +679,7 @@ export function CalvaryFinancialManagement() {
                           <span className="text-muted-foreground">Local</span>
                         )}
                       </TableCell>
-                      <TableCell className="font-medium text-red-600">-{format(expense.amount)}</TableCell>
+                      <TableCell className="font-medium text-red-600">-{formatCurrency(expense.amount)}</TableCell>
                       <TableCell>
                         <Badge variant={expense.status === 'approved' ? 'default' : 'secondary'}>
                           {expense.status || 'pending'}
@@ -766,7 +766,7 @@ export function CalvaryFinancialManagement() {
                       <TableCell className="max-w-[200px] truncate">{rev.description}</TableCell>
                       <TableCell>{getCargoTypeBadge(rev.cargo_type)}</TableCell>
                       <TableCell>{rev.client}</TableCell>
-                      <TableCell className="font-medium text-green-600">{format(rev.amount)}</TableCell>
+                      <TableCell className="font-medium text-green-600">{formatCurrency(rev.amount)}</TableCell>
                       <TableCell>
                         <Badge variant={rev.payment_status === 'paid' ? 'default' : 'secondary'}>
                           {rev.payment_status}
@@ -846,7 +846,7 @@ export function CalvaryFinancialManagement() {
                     <TableCell className="font-medium">{inv.invoice_number}</TableCell>
                     <TableCell>{inv.customer_name}</TableCell>
                     <TableCell>{inv.is_cross_border ? <Badge className="bg-purple-500/20 text-purple-700"><Globe className="size-3 mr-1" /> Cross-Border</Badge> : <Badge variant="outline">Local</Badge>}</TableCell>
-                    <TableCell className="font-medium text-green-600">{format(inv.amount)}</TableCell>
+                    <TableCell className="font-medium text-green-600">{formatCurrency(inv.amount)}</TableCell>
                     <TableCell>{format(new Date(inv.due_date), 'PP')}</TableCell>
                     <TableCell>
                       <Badge
@@ -932,7 +932,7 @@ export function CalvaryFinancialManagement() {
                   <TableRow key={tax.id}>
                     <TableCell className="font-medium">{tax.tax_name}</TableCell>
                     <TableCell><Badge variant="outline">{tax.type}</Badge></TableCell>
-                    <TableCell className="font-medium">{format(tax.amount)}</TableCell>
+                    <TableCell className="font-medium">{formatCurrency(tax.amount)}</TableCell>
                     <TableCell className={new Date(tax.due_date) < new Date() && tax.status === 'pending' ? 'text-red-600' : ''}>
                       {format(new Date(tax.due_date), 'PP')}
                       {new Date(tax.due_date) < new Date() && tax.status === 'pending' && (
@@ -974,17 +974,17 @@ export function CalvaryFinancialManagement() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Total Expenses</span>
-                    <span className="font-bold text-purple-600">{format(crossBorderExpenses)}</span>
+                    <span className="font-bold text-purple-600">{formatCurrency(crossBorderExpenses)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Revenue</span>
-                    <span className="font-bold text-green-600">{format(crossBorderRevenue)}</span>
+                    <span className="font-bold text-green-600">{formatCurrency(crossBorderRevenue)}</span>
                   </div>
                   <div className="pt-2 border-t">
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Net from Cross-Border</span>
                       <span className={`font-bold ${crossBorderRevenue - crossBorderExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {format(crossBorderRevenue - crossBorderExpenses)}
+                        {formatCurrency(crossBorderRevenue - crossBorderExpenses)}
                       </span>
                     </div>
                   </div>
@@ -1003,11 +1003,11 @@ export function CalvaryFinancialManagement() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Expenses</span>
-                    <span className="font-bold text-cyan-600">{format(coldChainExpenses)}</span>
+                    <span className="font-bold text-cyan-600">{formatCurrency(coldChainExpenses)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Revenue</span>
-                    <span className="font-bold text-green-600">{format(coldChainRevenue)}</span>
+                    <span className="font-bold text-green-600">{formatCurrency(coldChainRevenue)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -1027,7 +1027,7 @@ export function CalvaryFinancialManagement() {
                     return (
                       <div key={cat} className="flex justify-between items-center">
                         <span className="text-muted-foreground capitalize">{cat}</span>
-                        <span className="font-bold text-amber-600">{format(catTotal)}</span>
+                        <span className="font-bold text-amber-600">{formatCurrency(catTotal)}</span>
                       </div>
                     );
                   })}
@@ -1035,7 +1035,7 @@ export function CalvaryFinancialManagement() {
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Total Fuel</span>
                       <span className="font-bold">
-                        {format(expenses.filter(e => (e.category || '').toLowerCase().includes('fuel')).reduce((sum, e) => sum + e.amount, 0))}
+                        {formatCurrency(expenses.filter(e => (e.category || '').toLowerCase().includes('fuel')).reduce((sum, e) => sum + e.amount, 0))}
                       </span>
                     </div>
                   </div>
@@ -1061,7 +1061,7 @@ export function CalvaryFinancialManagement() {
                   return (
                     <div key={route} className="p-4 border rounded-xl text-center">
                       <p className="font-medium text-sm mb-2">{route}</p>
-                      <p className="text-lg font-bold text-purple-600">{format(routeTotal)}</p>
+                      <p className="text-lg font-bold text-purple-600">{formatCurrency(routeTotal)}</p>
                       <p className="text-xs text-muted-foreground">{routeExpenses.length} entries</p>
                     </div>
                   );

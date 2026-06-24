@@ -993,7 +993,7 @@ import {
                             <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-black uppercase text-gray-500">{e.category}</span>
                         </td>
                         <td className="px-6 py-4 font-bold text-red-600">{fmtTZS(e.amount)}</td>
-                        <td className="px-6 py-4 text-gray-500">{new Date(e.expense_date || e.date).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-gray-500">{new Date(e.expense_date || e.date || new Date()).toLocaleDateString()}</td>
                         <td className="px-6 py-4 text-right">
                             <button onClick={() => setModal({ type: "expense", data: e })} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
                             <button onClick={() => deleteExpense(e.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg ml-1"><Trash2 size={14} /></button>

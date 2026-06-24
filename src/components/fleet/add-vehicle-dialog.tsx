@@ -24,7 +24,7 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
     make: '',
     model: '',
     year: new Date().getFullYear(),
-    status: 'active' as const,
+    status: 'active' as 'active' | 'maintenance' | 'sold' | 'decommissioned',
     mileage: 0,
     fuelCapacity: 0,
     fuelType: 'diesel' as const,
@@ -50,7 +50,7 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
       };
       
       console.log('Submitting vehicle data:', vehicleData);
-      await SupabaseService.createVehicle(vehicleData);
+      await SupabaseService.createVehicle(vehicleData as any);
       
       setOpen(false);
       setFormData({
@@ -142,7 +142,7 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
               <Label htmlFor="type">Type</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value: string) => setFormData(prev => ({ ...prev, type: value }))}
+                onValueChange={(value: string) => setFormData(prev => ({ ...prev, type: value as FleetType }))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -181,7 +181,7 @@ export function AddVehicleDialog({ onVehicleAdded }: AddVehicleDialogProps) {
               <Select
                 value={formData.status}
                 onValueChange={(value: string) => 
-                  setFormData(prev => ({ ...prev, status: value }))
+                  setFormData(prev => ({ ...prev, status: value as any }))
                 }
               >
                 <SelectTrigger>

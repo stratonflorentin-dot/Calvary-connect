@@ -95,6 +95,18 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "fleet",
   },
   {
+    path: "/fleet/compliance",
+    label: "Vehicle Compliance",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+    category: "fleet",
+  },
+  {
+    path: "/fuel",
+    label: "Fuel Management",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "MECHANIC"],
+    category: "fleet",
+  },
+  {
     path: "/service-requests",
     label: "Service Requests",
     allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR", "DRIVER"],
@@ -232,6 +244,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
 
   // --- Settings ---
+  {
+    path: "https://logipro.milelepower.co.tz/",
+    label: "LogiPRO (Legacy)",
+    allowedRoles: [...ALL_APP_ROLES],
+    category: "system",
+  },
   {
     path: "/audit",
     label: "Audit Trail",

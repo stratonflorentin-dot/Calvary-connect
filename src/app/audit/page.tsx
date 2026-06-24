@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 
 export default function AuditTrailPage() {
   const { role } = useRole();
+  const effectiveRole = role || 'ADMIN';
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -66,7 +67,7 @@ export default function AuditTrailPage() {
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      <Sidebar />
+      <Sidebar role={effectiveRole} />
       <main className="flex-1 overflow-y-auto p-4 md:p-8 md:pl-72 text-slate-900 dark:text-slate-100">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

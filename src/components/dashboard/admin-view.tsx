@@ -103,7 +103,7 @@ export default function AdminDashboard() {
   return (
     <DashboardLayout
       title="Admin Control Center"
-      subtitle="System-wide oversight and management"
+      description="System-wide oversight and management"
       role="ADMIN"
     >
       <div className="space-y-6">

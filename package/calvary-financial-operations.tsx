@@ -172,6 +172,15 @@ const EXPENSE_STATUS = {
   reimbursed: { label: 'Reimbursed', bg: 'bg-blue-100', text: 'text-blue-700' },
 };
 
+const categoryColors: Record<string, { bg: string; text: string }> = {
+  ASSETS: { bg: 'bg-blue-50', text: 'text-blue-700' },
+  LIABILITIES: { bg: 'bg-red-50', text: 'text-red-700' },
+  EQUITY: { bg: 'bg-purple-50', text: 'text-purple-700' },
+  REVENUE: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  OPERATING_EXPENSES: { bg: 'bg-amber-50', text: 'text-amber-700' },
+  EXPENSES: { bg: 'bg-amber-50', text: 'text-amber-700' },
+};
+
 // ============================================================
 // MAIN COMPONENT
 // ============================================================

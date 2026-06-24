@@ -150,7 +150,7 @@ export function StatCards() {
           outstandingPayments,
           shipmentsInTransit,
           warehouseUtilization,
-          onTimeDeliveryRate: parseFloat(onTimeDeliveryRate as string),
+          onTimeDeliveryRate,
           customsClearanceTime: 0,
           bankBalance,
           receivables,

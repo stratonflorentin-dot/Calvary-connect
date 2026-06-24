@@ -30,7 +30,7 @@ export const MapCanvas = memo(() => {
 
   return (
     <MapContainer
-      whenCreated={map => (mapRef.current = map)}
+      ref={mapRef}
       center={[0, 0]}
       zoom={5}
       scrollWheelZoom

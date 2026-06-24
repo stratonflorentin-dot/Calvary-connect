@@ -1,6 +1,5 @@
 // Server-side AI provider abstraction.
 // Chooses provider by `AI_PROVIDER` env (openrouter|genkit) or falls back.
-import { NextResponse } from 'next/server';
 
 type Msg = { role: string; content: Array<{ text: string }> };
 
@@ -51,7 +50,7 @@ export async function generateAI(opts: { system: string; messages: Msg[] }) {
         const { createGenkit } = await import('../ai/genkit');
         if (typeof createGenkit !== 'function') throw new Error('genkit factory not available');
         const ai = await createGenkit();
-        const response = await ai.generate({ system, messages });
+        const response = await (ai as any).generate({ system, messages });
         const text = (response as any).text || '';
         return { text, provider: 'genkit' };
     };
@@ -80,8 +79,8 @@ export async function generateAI(opts: { system: string; messages: Msg[] }) {
     if (openKey) {
         try {
             return await tryOpenRouter();
-        } catch (err) {
-            console.warn('OpenRouter failed, falling back to genkit:', err.message || err);
+        } catch (err: any) {
+            console.warn('OpenRouter failed, falling back to genkit:', err?.message || err);
             return await tryGenkit();
         }
     }

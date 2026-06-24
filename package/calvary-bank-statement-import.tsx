@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import {
@@ -150,7 +151,7 @@ export function BankStatementImport() {
         credit: credit || undefined,
         balance: parseFloat(values[5]) || undefined,
         matched: matchedAccount !== null,
-        accountCode: matchedAccount,
+        accountCode: matchedAccount || undefined,
         transactionType: credit > 0 ? 'deposit' : 'withdrawal',
       });
     }
@@ -216,7 +217,7 @@ export function BankStatementImport() {
           debit_amount: tx.debit || null,
           credit_amount: tx.credit || null,
           balance: tx.balance || currentBalance,
-          transaction_type: tx.transactionType || (tx.credit > 0 ? 'deposit' : 'withdrawal'),
+          transaction_type: tx.transactionType || ((tx.credit || 0) > 0 ? 'deposit' : 'withdrawal'),
           reconciled: false,
           created_at: new Date().toISOString(),
         };

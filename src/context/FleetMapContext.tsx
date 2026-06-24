@@ -7,7 +7,7 @@ export const FleetMapContext = createContext<{
   drivers: DriverProfile[];
   selectedId: string | null;
   setSelectedId: (id: string | null) => void;
-  mapRef: React.RefObject<L.Map>;
+  mapRef: React.RefObject<L.Map | null>;
 }>({
   drivers: [],
   selectedId: null,

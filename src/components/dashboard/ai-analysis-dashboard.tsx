@@ -101,7 +101,7 @@ export default function AIAnalysisDashboard() {
 
   const coldChainTrips = activeTrips.filter(
     (t) =>
-      t.has_reefer ||
+      (t as any).has_reefer ||
       t.cargo_type === "REEFER" ||
       t.cargo_type === "cold_chain",
   ).length;
@@ -185,7 +185,7 @@ export default function AIAnalysisDashboard() {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setAiLoading(true);
     try {
-      const history = messages.slice(1).map((m) => ({ role: m.role === 'ai' ? 'model' as const : 'user' as const, text: m.text }));
+      const history = messages.slice(1).map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', content: m.text }));
       const liveMetricsPayload = {
         fleetSize: vehicles.length,
         activeTrips: activeTrips.length,
@@ -528,7 +528,7 @@ export default function AIAnalysisDashboard() {
                           if (aiLoading) return;
                           setAiLoading(true);
                           try {
-                            const history = messages.slice(1).map((m) => ({ role: m.role === 'ai' ? 'model' as const : 'user' as const, text: m.text }));
+                            const history = messages.slice(1).map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', content: m.text }));
                             const scenario = `Scenario: monthlyTrips=${monthlyTrips}, avgRate=${avgRate}, costRatio=${costRatio}, growth=${growthRate}`;
                             const prompt = `Analyze cost breakdown and propose the top 3 cost-reduction actions with estimated savings (short, <=120 words). Use metrics: ${JSON.stringify(businessMetrics || {})} and scenario: ${scenario}`;
                             const answer = await askCompanyAI(prompt, history, {
@@ -565,7 +565,7 @@ export default function AIAnalysisDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {(dbContext?.contracts || []).filter(c => c.expiry_date).slice(0, 6).map((c: any) => {
+                {(dbContext?.contracts || []).filter((c: any) => c.expiry_date).slice(0, 6).map((c: any) => {
                   const days = Math.ceil((new Date(c.expiry_date).getTime() - Date.now()) / 86400000);
                   const color = days <= 7 ? 'bg-red-100 text-red-700' : days <= 30 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
                   return (

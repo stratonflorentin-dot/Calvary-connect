@@ -222,11 +222,11 @@ export function useDashboard(
                     .select('id, status');
 
                 const totalVehicles = vehiclesData?.length || 0;
-                const availableCount = vehiclesData?.filter(v => v.status === 'available').length || 0;
-                const inTransitCount = vehiclesData?.filter(v => v.status === 'in_transit').length || 0;
-                const maintenanceCount = vehiclesData?.filter(v => v.status === 'maintenance').length || 0;
-                const repairCount = vehiclesData?.filter(v => v.status === 'repair').length || 0;
-                const retiredCount = vehiclesData?.filter(v => v.status === 'retired').length || 0;
+                const availableCount = vehiclesData?.filter((v: any) => v.status === 'available').length || 0;
+                const inTransitCount = vehiclesData?.filter((v: any) => v.status === 'in_transit').length || 0;
+                const maintenanceCount = vehiclesData?.filter((v: any) => v.status === 'maintenance').length || 0;
+                const repairCount = vehiclesData?.filter((v: any) => v.status === 'repair').length || 0;
+                const retiredCount = vehiclesData?.filter((v: any) => v.status === 'retired').length || 0;
 
                 setFleetStatus({
                     inTransit: inTransitCount,
@@ -251,8 +251,8 @@ export function useDashboard(
                     .lte('created_at', endDate.toISOString());
 
                 if (tripsData) {
-                    const completed = tripsData.filter(t => t.status === 'completed').length;
-                    const inTransit = tripsData.filter(t => t.status === 'in_transit').length;
+                    const completed = tripsData.filter((t: any) => t.status === 'completed').length;
+                    const inTransit = tripsData.filter((t: any) => t.status === 'in_transit').length;
                     const completionRate = tripsData.length > 0 ? (completed / tripsData.length) * 100 : 0;
 
                     setTripPerformance({
@@ -262,7 +262,7 @@ export function useDashboard(
                         completionRate,
                     });
 
-                    const revenue = tripsData.reduce((sum, trip) => sum + (trip.actual_cost || 0), 0);
+                    const revenue = tripsData.reduce((sum: number, trip: any) => sum + (trip.actual_cost || 0), 0);
                     setStats(prev => ({
                         ...prev,
                         revenueMtd: revenue,
@@ -282,8 +282,8 @@ export function useDashboard(
                     setRecentInvoices(invoicesData);
 
                     const outstanding = invoicesData
-                        .filter(i => i.status !== 'paid')
-                        .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+                        .filter((i: any) => i.status !== 'paid')
+                        .reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
 
                     setStats(prev => ({
                         ...prev,
@@ -298,14 +298,14 @@ export function useDashboard(
                     .select('id, shipment_number, status, client_name');
 
                 if (shipmentsData) {
-                    const activeShipments = shipmentsData.filter(s => s.status === 'active').length;
+                    const activeShipments = shipmentsData.filter((s: any) => s.status === 'active').length;
                     setStats(prev => ({
                         ...prev,
                         activeShipments,
                     }));
 
                     setActionableShipments(
-                        shipmentsData.filter(s => ['delivered', 'pending', 'overdue'].includes(s.status)).slice(0, 10)
+                        shipmentsData.filter((s: any) => ['delivered', 'pending', 'overdue'].includes(s.status)).slice(0, 10)
                     );
                 }
 
@@ -317,7 +317,7 @@ export function useDashboard(
                     .lte('created_at', endDate.toISOString());
 
                 if (expensesData) {
-                    const totalExpenses = expensesData.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+                    const totalExpenses = expensesData.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
                     setStats(prev => ({
                         ...prev,
                         expensesMtd: totalExpenses,
@@ -350,7 +350,7 @@ export function useDashboard(
                         .gte('created_at', monthStart.toISOString())
                         .lte('created_at', monthEnd.toISOString());
 
-                    const revenue = monthTrips?.reduce((sum, trip) => sum + (trip.actual_cost || 0), 0) || 0;
+                    const revenue = monthTrips?.reduce((sum: number, trip: any) => sum + (trip.actual_cost || 0), 0) || 0;
 
                     trendData.push({
                         month: date.toLocaleString('en-TZ', { month: 'short' }),

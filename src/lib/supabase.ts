@@ -16,6 +16,23 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export const ADMIN_EMAIL = 'stratonflorentin@gmail.com';
 export const ADMIN_ROLE = 'CEO';
 
+export async function getCurrentUser() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('name, role')
+    .eq('id', user.id)
+    .single();
+
+  return {
+    id: user.id,
+    name: profile?.name || user.email || 'Unknown',
+    role: profile?.role || 'USER',
+  };
+}
+
 /** Primary install owner (offline admin / legacy bypass). Not every staff @ domain. */
 export function isPrimaryOwnerEmail(email: string | null | undefined): boolean {
   if (!email) return false;

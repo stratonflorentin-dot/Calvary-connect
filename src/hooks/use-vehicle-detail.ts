@@ -41,6 +41,7 @@ interface Trip {
     vehicle_id: string;
     status: string;
     actual_cost: number;
+    distance?: number;
     created_at: string;
 }
 

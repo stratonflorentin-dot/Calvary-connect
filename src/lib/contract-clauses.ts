@@ -405,7 +405,8 @@ export async function generatePDF(html: string, filename: string) {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
     script.onload = () => {
-        if (window.html2pdf) {
+        const win = window as any;
+        if (win.html2pdf) {
             const element = document.createElement('div');
             element.innerHTML = html;
 
@@ -417,7 +418,7 @@ export async function generatePDF(html: string, filename: string) {
                 jsPDF: { format: 'a4', orientation: 'portrait' },
             };
 
-            window.html2pdf().set(options).from(element).save();
+            win.html2pdf().set(options).from(element).save();
         }
     };
     document.head.appendChild(script);

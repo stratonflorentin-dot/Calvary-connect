@@ -51,8 +51,8 @@ When producing projections, always include a confidence band: ±8% month 1, wide
 === FREIGHT RATES (USD per container) ===
 ${dbContext?.rateSheets?.length > 0
     ? dbContext.rateSheets
-      .flatMap(s => Array.isArray(s.rates) ? s.rates : [])
-      .map(r => `${r.from ?? 'Dar Port'} → ${r.destination}: $${r.container_20ft ?? r.rate ?? 'TBC'}`)
+      .flatMap((s: any) => Array.isArray(s.rates) ? s.rates : [])
+      .map((r: any) => `${r.from ?? 'Dar Port'} → ${r.destination}: $${r.container_20ft ?? r.rate ?? 'TBC'}`)
       .join('\n')
     : `Dar Port → Kigali, Rwanda:        $3,100
 Dar Port → Lusaka, Zambia:        $4,000
@@ -92,7 +92,7 @@ DRC adds: OCC, whiskey parking fees, IM4 entry, customs release.
 === DATABASE CONTEXT ===
 ${dbContext ? `
 Vehicles: ${JSON.stringify(dbContext.vehicles.slice(0, 8))}
-Recent trips (10): ${JSON.stringify(dbContext.trips.slice(0, 10).map(t => ({
+Recent trips (10): ${JSON.stringify(dbContext.trips.slice(0, 10).map((t: any) => ({
     origin: t.origin, destination: t.destination,
     status: t.status, revenue: t.revenue,
     driver: t.user_profiles?.name,
@@ -100,14 +100,14 @@ Recent trips (10): ${JSON.stringify(dbContext.trips.slice(0, 10).map(t => ({
     date: t.created_at
   })))}
 Active contracts: ${JSON.stringify(dbContext.contracts
-    .filter(c => c.status === 'active')
-    .map(c => ({ number: c.contract_number, client: c.clients?.name, expires: c.expiry_date })))}
-Fuel logs (5): ${JSON.stringify(dbContext.fuelLogs.slice(0, 5).map(f => ({
+    .filter((c: any) => c.status === 'active')
+    .map((c: any) => ({ number: c.contract_number, client: c.clients?.name, expires: c.expiry_date })))}
+Fuel logs (5): ${JSON.stringify(dbContext.fuelLogs.slice(0, 5).map((f: any) => ({
       vehicle: f.vehicles?.plate_number, litres: f.litres,
       cost: f.total_cost, date: f.date
     })))}
 Maintenance alerts: ${JSON.stringify(dbContext.maintenance
-      .filter(m => m.status === 'overdue' || m.status === 'pending').slice(0, 5))}
+      .filter((m: any) => m.status === 'overdue' || m.status === 'pending').slice(0, 5))}
 ` : 'No database context provided — using live metrics only.'}
 
 === AI CAPABILITIES ===

@@ -457,11 +457,11 @@ function SalesModuleContent() {
       if (editingRateSheet?.id) {
         const { error } = await supabase.from('rate_sheets').update(rateSheetPayload).eq('id', editingRateSheet.id);
         if (error) throw error;
-        toast({ title: 'Success', description: 'Rate sheet updated successfully', variant: 'success' });
+        toast({ title: 'Success', description: 'Rate sheet updated successfully' });
       } else {
         const { error } = await supabase.from('rate_sheets').insert([rateSheetPayload]);
         if (error) throw error;
-        toast({ title: 'Success', description: 'Rate sheet created successfully', variant: 'success' });
+        toast({ title: 'Success', description: 'Rate sheet created successfully' });
       }
       setShowRateSheetDialog(false);
       setEditingRateSheet(null);
@@ -535,7 +535,7 @@ function SalesModuleContent() {
 
   if (loading) return (
     <div className="flex min-h-screen bg-gray-100">
-      <Sidebar />
+      <Sidebar role={role || 'OPERATOR'} />
       <div className="flex-1 p-8">
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -546,7 +546,7 @@ function SalesModuleContent() {
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      <Sidebar />
+      <Sidebar role={role || 'OPERATOR'} />
       <div className="flex-1 p-4 md:p-6 md:ml-64">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Sales & Commercial</h1>
@@ -1455,7 +1455,7 @@ export default function SalesModule() {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen bg-gray-100">
-        <Sidebar />
+        <Sidebar role="OPERATOR" />
         <div className="flex-1 p-8">
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

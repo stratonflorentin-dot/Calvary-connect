@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Clock, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { supabase } from '@/lib/supabase';
 
 export function CeoView() {
   const { user } = useSupabase();

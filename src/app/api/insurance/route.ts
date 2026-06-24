@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { InsuranceService } from '@/services/insurance-service';
+import { InsuranceStatus } from '@/types/roles';
 
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
-        const status = searchParams.get('status');
+        const status = searchParams.get('status') as InsuranceStatus | null;
         const insurer = searchParams.get('insurer');
         const policy_type = searchParams.get('policy_type');
 

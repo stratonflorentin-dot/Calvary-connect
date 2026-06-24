@@ -21,8 +21,9 @@ export class FleetService {
     if (error) throw error;
 
     if (user) {
+      const plateNumber = (vehicle as any).plate_number || vehicle.plateNumber || 'unknown plate';
       await AuditService.logCRUD(user, 'CREATE', 'vehicles', data.id, null, data, 
-        `Registered new vehicle: ${vehicle.plate_number} (${vehicle.type})`);
+        `Registered new vehicle: ${plateNumber} (${vehicle.type})`);
     }
 
     return data.id;

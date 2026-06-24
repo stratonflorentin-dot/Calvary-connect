@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, FileText, Signature } from 'lucide-react';
 import { ContractPreviewModal } from '@/components/contracts/contract-preview-modal';
 import Link from 'next/link';
+import { useSupabase } from '@/components/supabase-provider';
 
 interface SignatureDisplayProps {
     name?: string;
@@ -66,6 +67,7 @@ export default function ContractDetailPage() {
     const params = useParams();
     const router = useRouter();
     const { role } = useRole();
+    const { user } = useSupabase();
     const { toast } = useToast();
     const contractId = params.id as string;
 
@@ -103,7 +105,7 @@ export default function ContractDetailPage() {
     async function handleMarkAsSent() {
         if (!contract) return;
         try {
-            const updated = await markContractAsSent(contractId, role?.id || '');
+            const updated = await markContractAsSent(contractId, user?.id || '');
             setContract(updated);
             await loadContractDetails();
             toast({ title: 'Success', description: 'Contract marked as sent' });
@@ -119,7 +121,7 @@ export default function ContractDetailPage() {
     async function handleActivate() {
         if (!contract) return;
         try {
-            const updated = await markContractAsActive(contractId, role?.id || '');
+            const updated = await markContractAsActive(contractId, user?.id || '');
             setContract(updated);
             await loadContractDetails();
             toast({ title: 'Success', description: 'Contract activated' });
@@ -143,7 +145,7 @@ export default function ContractDetailPage() {
         }
         try {
             setTerminating(true);
-            const updated = await terminateContract(contractId, terminateReason, role?.id || '');
+            const updated = await terminateContract(contractId, terminateReason, user?.id || '');
             setContract(updated);
             setTerminateOpen(false);
             setTerminateReason('');

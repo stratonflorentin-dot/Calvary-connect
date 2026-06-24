@@ -93,6 +93,8 @@ export default function CeoDashboard() {
   });
 
   const recentReports = reports?.slice(0, 6) ?? [];
+  const currentReport = recentReports[0];
+  const currentMonth = currentReport ? new Date(currentReport.month).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "";
 
   const [alerts, setAlerts] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
@@ -196,7 +198,7 @@ export default function CeoDashboard() {
   // Cold chain trips
   const coldChainTrips = activeTrips.filter(
     (t) =>
-      t.has_reefer ||
+      (t as any).has_reefer ||
       t.cargo_type === "REEFER" ||
       t.cargo_type === "cold_chain",
   ).length;
@@ -289,19 +291,19 @@ export default function CeoDashboard() {
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
                 <p className="text-2xl font-bold text-slate-700">
-                  {expenses.filter(e => e.status === 'draft').length || 0}
+                  {expenses.filter(e => (e.status as any) === 'draft').length || 0}
                 </p>
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Draft</p>
               </div>
               <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-100">
                 <p className="text-2xl font-bold text-amber-600">
-                  {expenses.filter(e => e.status === 'pending').length || 0}
+                  {expenses.filter(e => (e.status as any) === 'pending').length || 0}
                 </p>
                 <p className="text-[10px] text-amber-600 uppercase tracking-widest font-semibold mt-1">Pending</p>
               </div>
               <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100">
                 <p className="text-2xl font-bold text-purple-600">
-                  {expenses.filter(e => e.status === 'approved').length || 0}
+                  {expenses.filter(e => (e.status as any) === 'approved').length || 0}
                 </p>
                 <p className="text-[10px] text-purple-600 uppercase tracking-widest font-semibold mt-1">To Retire</p>
               </div>

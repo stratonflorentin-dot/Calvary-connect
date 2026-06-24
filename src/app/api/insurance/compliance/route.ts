@@ -18,7 +18,7 @@ export async function GET(req: Request) {
         summary: {
           total_vehicles: complianceReport.length,
           compliant,
-          non_compliant,
+          non_compliant: nonCompliant,
           compliance_rate: `${((compliant / complianceReport.length) * 100).toFixed(1)}%`,
         },
       });

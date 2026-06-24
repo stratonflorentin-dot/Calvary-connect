@@ -15,11 +15,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Route, Plus, Trash2, Pencil, UserX, MapPin, Search, CalendarDays } from 'lucide-react';
+import { Route, Plus, Trash2, Pencil, UserX, MapPin, Search, CalendarDays, FileText, Receipt } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { africanCities, City, getCityByName, calculateDistance, getEstimatedTime } from '@/lib/african-cities';
 import { getUsersAction } from '@/app/users/actions';
+import { WaybillDialog } from '@/components/trip/waybill-dialog';
+import { TRAInvoiceDialog } from '@/components/financial/tra-invoice-dialog';
+import { cn } from '@/lib/utils';
 
 import { WorkflowService } from '@/services/workflow-service';
 
@@ -49,6 +52,9 @@ export default function TripsPage() {
   const [destinationSearch, setDestinationSearch] = useState('');
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
+
+  const [selectedWaybillTrip, setSelectedWaybillTrip] = useState<any>(null);
+  const [selectedInvoiceTrip, setSelectedInvoiceTrip] = useState<any>(null);
 
   const [tripForm, setTripForm] = useState({
     origin: '',
@@ -166,10 +172,10 @@ export default function TripsPage() {
         return;
       }
 
-      const salesAmount = tripForm.salesAmount ? parseFloat(tripForm.salesAmount) : null;
+      const salesAmount = tripForm.salesAmount ? parseFloat(tripForm.salesAmount) : 0;
       const vatRate = tripForm.tripType === 'transit' ? 0 : 18;
-      const vatAmount = salesAmount ? salesAmount * (vatRate / 100) : null;
-      const totalAmount = salesAmount ? salesAmount + vatAmount : null;
+      const vatAmount = salesAmount ? salesAmount * (vatRate / 100) : 0;
+      const totalAmount = salesAmount ? salesAmount + vatAmount : 0;
 
       const tripData = {
         origin: tripForm.origin,
@@ -220,6 +226,7 @@ export default function TripsPage() {
         vehicle_id: '',
         trailer_id: '',
         cargo: '',
+        cargoWeight: '',
         client: '',
         distance: '',
         estimated_time: '',
@@ -1126,6 +1133,24 @@ export default function TripsPage() {
                           >
                             <CalendarDays className="h-4 w-4" />
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => setSelectedWaybillTrip(trip)}
+                            title="Generate Waybill"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-emerald-600 hover:text-emerald-800"
+                            onClick={() => setSelectedInvoiceTrip(trip)}
+                            title="TRA Tax Invoice"
+                          >
+                            <Receipt className="h-4 w-4" />
+                          </Button>
                           {canEditTrip && (
                             <Button
                               size="sm"
@@ -1174,6 +1199,39 @@ export default function TripsPage() {
           cargoType={tripForm.cargo}
           isSafeRoute={isSafeRoute}
         />
+
+        {selectedWaybillTrip && (
+          <WaybillDialog
+            trip={selectedWaybillTrip}
+            client={{ company_name: selectedWaybillTrip.client }}
+            open={!!selectedWaybillTrip}
+            onClose={() => setSelectedWaybillTrip(null)}
+          />
+        )}
+
+        {selectedInvoiceTrip && (
+          <TRAInvoiceDialog
+            invoice={{
+              id: selectedInvoiceTrip.id,
+              invoice_number: selectedInvoiceTrip.waybill_number || `INV-${selectedInvoiceTrip.id.slice(0, 8).toUpperCase()}`,
+              customer_name: selectedInvoiceTrip.client || "General Client",
+              status: selectedInvoiceTrip.payment_status === "PAID" ? "paid" : "unpaid",
+              amount: selectedInvoiceTrip.salesAmount || 0,
+              created_at: selectedInvoiceTrip.created_at,
+              due_date: selectedInvoiceTrip.created_at,
+              trip_number: selectedInvoiceTrip.id.slice(0, 8).toUpperCase(),
+              origin: selectedInvoiceTrip.origin,
+              destination: selectedInvoiceTrip.destination,
+              vat_applicable: selectedInvoiceTrip.tripType !== 'transit',
+              wht_applicable: true
+            }}
+            client={{
+              company_name: selectedInvoiceTrip.client || "General Client"
+            }}
+            open={!!selectedInvoiceTrip}
+            onClose={() => setSelectedInvoiceTrip(null)}
+          />
+        )}
       </main>
       <BottomTabs role={role!} />
       <RoleSelector />

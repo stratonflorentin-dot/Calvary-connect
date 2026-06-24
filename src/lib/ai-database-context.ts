@@ -134,9 +134,9 @@ FLEET_SCHEMA.tables.push(
 
 // Data fetchers for AI context
 export async function getFleetContext() {
-  async function safeQuery(queryFn: () => Promise<any>, fallbackKey = 'data') {
+  async function safeQuery(queryFn: () => any, fallbackKey = 'data') {
     try {
-      const res = await queryFn();
+      const res = await Promise.resolve(queryFn());
       if (res && res.error) {
         console.warn('Supabase query error:', res.error.message || res.error);
         return { [fallbackKey]: [] };

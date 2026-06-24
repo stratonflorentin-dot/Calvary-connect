@@ -282,7 +282,7 @@ export class InsuranceService {
     if (user) {
       await AuditService.logCRUD(
         user,
-        'BULK_CREATE',
+        'CREATE',
         'truck_insurance',
         'bulk-import',
         null,

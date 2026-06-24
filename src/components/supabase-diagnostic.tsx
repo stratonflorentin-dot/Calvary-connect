@@ -39,7 +39,7 @@ export function SupabaseDiagnostic() {
           });
         }
         
-      } catch (err) {
+      } catch (err: any) {
         console.error('💥 Diagnostic error:', err);
         setDiagnostic({
           type: 'fatal_error',

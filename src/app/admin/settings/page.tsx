@@ -8,12 +8,13 @@ import IconFallback from '@/components/icons/IconFallback.client';
 
 export default function AdminSettingsPage() {
     const { role } = useRole();
+    const effectiveRole = role || 'ADMIN';
 
     // Only allow admins and managers
-    if (role && !['admin', 'manager', 'ceo'].includes(role)) {
+    if (!['ADMIN', 'CEO'].includes(effectiveRole)) {
         return (
             <div className="flex min-h-screen bg-background">
-                <Sidebar role={role} />
+                <Sidebar role={effectiveRole} />
                 <main className="flex-1 md:ml-60 p-8">
                     <Card className="border-red-200 bg-red-50">
                         <CardContent className="flex items-center gap-3 p-6">
@@ -31,7 +32,7 @@ export default function AdminSettingsPage() {
 
     return (
         <div className="flex min-h-screen bg-background">
-            <Sidebar role={role} />
+            <Sidebar role={effectiveRole} />
             <main className="flex-1 md:ml-60 p-4 md:p-8 overflow-auto">
                 <div className="max-w-7xl mx-auto space-y-8">
                     {/* Header */}
@@ -57,7 +58,7 @@ export default function AdminSettingsPage() {
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-muted-foreground">Current Role</p>
-                                <p className="text-sm capitalize">{role}</p>
+                                <p className="text-sm capitalize">{effectiveRole}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-muted-foreground">Last Updated</p>

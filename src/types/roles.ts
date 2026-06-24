@@ -31,6 +31,7 @@ export interface FleetVehicle {
   type: FleetType;
   trailerSubType?: "LOWBED" | "FLATBED"; // Only for TRAILER type
   plateNumber: string;
+  plate_number?: string;
   make: string;
   model: string;
   year: number;
@@ -48,6 +49,7 @@ export interface FleetVehicle {
   nextMaintenanceDue?: any;
   insuranceExpiry?: any;
   registrationExpiry?: any;
+  name?: string;
   created_at: any;
   updated_at: any;
 }
@@ -57,11 +59,19 @@ export type TripStatus =
   | "loaded"
   | "in_transit"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "completed"
+  | "COMPLETED"
+  | "DELIVERED"
+  | "pending"
+  | "loading"
+  | "LOADED"
+  | "IN_TRANSIT";
 
 export interface Trip {
   id: string;
   tripNumber: string;
+  trip_number?: string;
   origin: string;
   destination: string;
   driverId: string;
@@ -71,6 +81,7 @@ export interface Trip {
   hoseId?: string;
   status: TripStatus;
   cargoType: string;
+  cargo_type?: string;
   cargoWeight?: number;
   estimatedDistance?: number;
   actualDistance?: number;
@@ -92,6 +103,17 @@ export interface Trip {
   updated_at: any;
   createdBy: string;
   notes?: string;
+  client_name?: string;
+  price?: number;
+  vehicle_id?: string;
+  driver_id?: string;
+  client?: any;
+  client_id?: string;
+  date?: string;
+  driver_name?: string;
+  driver?: any;
+  truck_plate?: string;
+  truck?: any;
 }
 
 // Expense Management
@@ -120,8 +142,14 @@ export interface Expense {
   status: "pending" | "approved" | "rejected";
   employee_id?: string;
   employeeId?: string;
+  vendor?: string;
+  currency?: string;
+  date?: string;
+  trip_id?: string;
   created_at?: any;
   updated_at?: any;
+  trip?: any;
+  expense_date?: string;
 }
 
 // Maintenance Management
@@ -169,6 +197,8 @@ export interface PartsRequest {
   status: "pending" | "approved" | "rejected" | "issued";
   approvedBy?: string;
   issuedBy?: string;
+  part_id?: string;
+  quantity_requested?: number;
   created_at: any;
   updated_at: any;
 }
@@ -184,6 +214,8 @@ export interface Allowance {
   status: "pending" | "approved" | "paid";
   approvedBy?: string;
   paidAt?: any;
+  workerName?: string;
+  trip_id?: string;
   created_at: any;
   updated_at: any;
 }
@@ -207,23 +239,32 @@ export type InsurancePolicyType =
   | "comprehensive"
   | "cross_border";
 
-export type InsuranceStatus = "active" | "expiring_soon" | "expired";
+export type InsuranceStatus = "active" | "expiring_soon" | "expired" | "cancelled";
 
 export interface TruckInsurance {
   id: string;
   vehicle_id: string;
   insurer_name: string;
+  policy_number?: string;
   policy_type: InsurancePolicyType;
   tira_reference_number: string;
   start_date: string; // YYYY-MM-DD
   expiry_date: string; // YYYY-MM-DD
   annual_premium: number; // TZS
+  currency?: string;
   assigned_driver_id?: string;
   route_coverage_area?: string;
+  covered_countries?: string[];
   status: InsuranceStatus;
   is_cross_border?: boolean;
   has_comesa_yellow_card?: boolean;
+  comesa_yellow_card_number?: string;
+  comesa_expiry_date?: string;
   policy_document_url?: string;
+  policy_document_name?: string;
+  policy_document_uploaded_at?: string;
+  reminder_sent_at?: string;
+  last_verified_at?: string;
   notes?: string;
   created_by: string;
   created_at: string;
