@@ -102,7 +102,7 @@ export function DashboardLayout({
   onAddItem,
   hideSidebar = true,
 }: DashboardLayoutProps) {
-  const { user } = useSupabase();
+  const { user, signOut } = useSupabase();
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -111,31 +111,34 @@ export function DashboardLayout({
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <div className={cn("flex bg-background overflow-hidden w-full", !hideSidebar && "h-screen")}>
+    <div className={cn("flex min-h-screen w-full overflow-hidden bg-slate-50 text-slate-950", !hideSidebar && "h-screen")}>
       {!hideSidebar && <Sidebar role={role as any} />}
       <main className={cn("flex-1 flex flex-col overflow-hidden", !hideSidebar && "md:ml-60")}>
         {/* Top Header */}
-        <header className="bg-white border-b border-border px-4 py-3 md:px-6 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur md:px-6">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="border-slate-200 bg-slate-100 text-slate-700">{role}</Badge>
+                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">Live Operations</Badge>
+              </div>
+              <h1 className="mt-2 text-xl font-semibold tracking-normal text-slate-950 sm:text-2xl">{title}</h1>
               {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
+                <p className="mt-1 max-w-2xl text-sm text-slate-500">{description}</p>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
                 placeholder="Search..."
-                className="pl-8 h-9 w-[200px] lg:w-[300px]"
+                className="h-9 w-full min-w-[180px] border-slate-200 bg-white pl-8 lg:w-[260px]"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-9 w-[130px]">
+              </div>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-9 w-[132px] border-slate-200 bg-white">
                 <Filter className="size-3 mr-2" />
                 <SelectValue placeholder="Filter" />
               </SelectTrigger>
@@ -146,9 +149,9 @@ export function DashboardLayout({
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
               </SelectContent>
-            </Select>
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="h-9 w-[130px]">
+              </Select>
+              <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="h-9 w-[132px] border-slate-200 bg-white">
                 <Calendar className="size-3 mr-2" />
                 <SelectValue placeholder="Date" />
               </SelectTrigger>
@@ -158,28 +161,43 @@ export function DashboardLayout({
                 <SelectItem value="month">This Month</SelectItem>
                 <SelectItem value="year">This Year</SelectItem>
               </SelectContent>
-            </Select>
-            <Button
+              </Select>
+              <Button
               variant="ghost"
               size="icon"
-              className="relative"
+              className="relative border border-slate-200 bg-white"
               onClick={() => setShowNotifications(true)}
             >
               <Bell className="size-5" />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </Button>
-            <Button
+              </Button>
+              <Button
               variant="ghost"
               size="icon"
+              className="border border-slate-200 bg-white"
               onClick={() => setShowSettings(true)}
             >
               <Settings className="size-5" />
-            </Button>
+              </Button>
+              <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 lg:flex">
+                <div className="flex size-7 items-center justify-center rounded-md bg-slate-900 text-xs font-semibold text-white">
+                  {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
+                </div>
+                <div className="max-w-[150px]">
+                  <p className="truncate text-xs font-semibold text-slate-800">{user?.name || "User"}</p>
+                  <p className="truncate text-[10px] uppercase tracking-wide text-slate-500">{user?.role || role}</p>
+                </div>
+              </div>
+              <Button variant="outline" className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={signOut}>
+                <LogOut className="size-4" />
+                <span className="hidden sm:inline">{t.logout || "Logout"}</span>
+              </Button>
+            </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">{children}</div>
       </main>
     </div>
   );

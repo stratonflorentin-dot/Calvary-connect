@@ -21,13 +21,13 @@ import { WelcomeScreen } from '@/components/welcome-screen';
 import { useLanguage } from '@/hooks/use-language';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Languages } from 'lucide-react';
+import { Languages, LogOut } from 'lucide-react';
 
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
   const { role, isAdmin } = useRole();
-  const { user, isLoading } = useSupabase();
+  const { user, isLoading, signOut } = useSupabase();
   const { toggleLanguage, lang } = useLanguage();
   const [showWelcome, setShowWelcome] = useState(true);
 
@@ -98,6 +98,10 @@ export default function Home() {
               <span className="font-bold text-xs">{lang === 'en' ? 'SW' : 'EN'}</span>
             </Button>
             <NotificationsBell />
+            <Button variant="outline" size="sm" onClick={signOut} className="hidden sm:flex rounded-full gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 h-9 px-3">
+              <LogOut className="size-4" />
+              <span className="font-bold text-xs">Logout</span>
+            </Button>
           </div>
         </header>
 

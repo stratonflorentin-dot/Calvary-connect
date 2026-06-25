@@ -41,43 +41,54 @@ const routeIconMap: Record<string, any> = {
   '/audit': Shield,
   '/notifications': Bell,
   '/profile': UserIcon,
+  '/hr/insurance': Shield,
+  '/hr/meetings': CalendarDays,
 };
 
 export function BottomTabs({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { user } = useSupabase();
+  const { user, signOut } = useSupabase();
 
   // Get menu items for the current role
   const menuItems = getMenuByRole(role, false, t, user?.email);
 
-  // Only show up to 5 main items (customize as needed)
   const tabs = menuItems.slice(0, 5);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(60px+env(safe-area-inset-bottom))] bg-white border-t border-border flex items-center px-2 pb-[env(safe-area-inset-bottom)] z-50 overflow-x-auto scrollbar-hide">
-      <div className="flex items-center min-w-full">
-        {menuItems.map((tab) => {
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur">
+      <div className="flex h-[64px] items-center gap-1 overflow-x-auto scrollbar-hide">
+        {tabs.map((tab) => {
           const isActive = pathname === tab.path;
           const Icon = routeIconMap[tab.path] || LayoutDashboard;
           return (
             <Link
               key={tab.path}
               href={tab.path}
-              className="flex flex-col items-center justify-center gap-1 min-w-[72px] px-3 relative transition-transform active:scale-95 duration-150 py-2"
+              className={cn(
+                "relative flex min-w-[74px] flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs transition-all active:scale-95",
+                isActive ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              )}
             >
               <Icon className={cn(
                 "size-5 transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground"
+                isActive ? "text-white" : "text-slate-500"
               )} />
               <span className={cn(
-                "text-[10px] whitespace-nowrap transition-colors",
-                isActive ? "text-primary font-medium" : "text-muted-foreground"
+                "max-w-[64px] truncate whitespace-nowrap text-[10px] transition-colors",
+                isActive ? "font-semibold text-white" : "text-slate-500"
               )}>{tab.label}</span>
-              {isActive && <div className="size-1 rounded-full bg-primary absolute bottom-0" />}
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={signOut}
+          className="flex min-w-[74px] flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs text-red-600 transition-all hover:bg-red-50 active:scale-95"
+        >
+          <LogOut className="size-5" />
+          <span className="text-[10px] font-semibold">{t.logout || "Logout"}</span>
+        </button>
       </div>
     </nav>
   );

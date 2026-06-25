@@ -528,6 +528,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
   };
 
   const updateRole = async (newRole: UserRole) => {
