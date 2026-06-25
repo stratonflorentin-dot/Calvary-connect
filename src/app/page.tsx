@@ -19,9 +19,11 @@ import { CurrencyDisplay } from '@/components/shared/currency-display';
 import { AIAnalysisDashboard } from '@/components/dashboard/ai-analysis-dashboard';
 import { WelcomeScreen } from '@/components/welcome-screen';
 import { useLanguage } from '@/hooks/use-language';
+import { useSidebar } from '@/hooks/use-sidebar';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Languages, LogOut } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -29,6 +31,7 @@ export default function Home() {
   const { role, isAdmin } = useRole();
   const { user, isLoading, signOut } = useSupabase();
   const { toggleLanguage, lang } = useLanguage();
+  const { isCollapsed } = useSidebar();
   const [showWelcome, setShowWelcome] = useState(true);
 
   if (isLoading) {
@@ -85,7 +88,10 @@ export default function Home() {
     <div className="min-h-screen bg-background flex transition-colors duration-300">
       <Sidebar role={role} />
 
-      <main className="flex-1 md:ml-60 min-h-screen pb-24 md:pb-8 p-4 md:p-8 overflow-x-hidden">
+      <main className={cn(
+        "flex-1 min-h-screen pb-24 md:pb-8 p-4 md:p-8 overflow-x-hidden transition-all duration-300",
+        isCollapsed ? "md:ml-20" : "md:ml-64"
+      )}>
         {/* Sticky top header */}
         <header className="sticky top-0 h-14 md:h-16 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b flex items-center justify-between px-4 md:px-6 z-40 mb-4 md:mb-6 -mx-4 md:-mx-8">
           <div className="md:hidden font-headline tracking-tighter text-primary text-lg font-bold">Calvary Connect</div>

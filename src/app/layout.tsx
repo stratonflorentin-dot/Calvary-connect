@@ -9,6 +9,7 @@ import { PWAProvider } from '@/components/pwa/pwa-provider';
 import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
 import { DriverSilentTrackingRoot } from '@/components/tracking/driver-silent-tracking-root';
 import { ThemeProvider } from '@/components/theme-provider';
+import { SidebarProvider } from '@/hooks/use-sidebar';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -82,14 +83,16 @@ export default function RootLayout({
           <div className="bg-background text-foreground min-h-screen">
             <PageLoader />
             <PWAProvider>
-              <SupabaseProvider>
-                <ToastProvider />
-                <DriverSilentTrackingRoot />
-                {children}
-                <Toaster />
-                <RoleSelectorWrapper />
-                <PWAInstallPrompt />
-              </SupabaseProvider>
+              <SidebarProvider>
+                <SupabaseProvider>
+                  <ToastProvider />
+                  <DriverSilentTrackingRoot />
+                  {children}
+                  <Toaster />
+                  <RoleSelectorWrapper />
+                  <PWAInstallPrompt />
+                </SupabaseProvider>
+              </SidebarProvider>
             </PWAProvider>
           </div>
         </ThemeProvider>
