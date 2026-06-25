@@ -111,7 +111,7 @@ export function DashboardLayout({
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <div className={cn("flex min-h-screen w-full overflow-hidden bg-background text-foreground", !hideSidebar && "h-screen")}
+    <div className={cn("flex min-h-screen w-full overflow-hidden bg-background text-foreground", !hideSidebar && "h-screen")}>
       {!hideSidebar && <Sidebar role={role as any} />}
       <main className={cn("flex-1 flex flex-col overflow-hidden", !hideSidebar && "md:ml-60")}>
         {/* Top Header */}

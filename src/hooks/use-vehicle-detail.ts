@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSupabaseClient } from '@/lib/supabase-client';
+import { supabase } from '@/lib/supabase';
 
 interface Vehicle {
     id: string;
@@ -144,7 +144,6 @@ interface UseVehicleDetailReturn {
 }
 
 export function useVehicleDetail(vehicleId: string): UseVehicleDetailReturn {
-    const supabase = getSupabaseClient();
     const [vehicle, setVehicle] = useState<Vehicle | null>(null);
     const [trips, setTrips] = useState<Trip[]>([]);
     const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);

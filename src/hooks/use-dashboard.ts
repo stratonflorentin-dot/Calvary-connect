@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSupabaseClient } from '@/lib/supabase-client';
+import { supabase } from '@/lib/supabase';
 
 type DashboardMode = 'operations' | 'finance' | 'fleet';
 type PeriodRange = 'mtd' | '7d' | '30d' | 'qtd' | 'ytd' | 'custom';
@@ -162,7 +162,6 @@ export function useDashboard(
     fromDate?: Date,
     toDate?: Date
 ): UseDashboardReturn {
-    const supabase = getSupabaseClient();
     const [stats, setStats] = useState<DashboardStats>({
         activeShipments: 0,
         revenueMtd: 0,
