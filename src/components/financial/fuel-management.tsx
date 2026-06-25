@@ -192,10 +192,10 @@ export function FuelManagement() {
                   </div>
                   <div className="space-y-1">
                     <Label>Link to Trip</Label>
-                    <Select value={form.trip_id} onValueChange={v => setForm(p => ({ ...p, trip_id: v }))}>
+                    <Select value={form.trip_id === "" ? "none" : form.trip_id} onValueChange={v => setForm(p => ({ ...p, trip_id: v === "none" ? "" : v }))}>
                       <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {trips.map(t => (
                           <SelectItem key={t.id} value={t.id}>
                             {t.trip_number || t.tripNumber || t.id.slice(0,8)} — {t.origin}→{t.destination}
