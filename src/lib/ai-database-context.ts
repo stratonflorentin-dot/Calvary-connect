@@ -153,22 +153,34 @@ export async function getFleetContext() {
     safeQuery(() => supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(200)),
     safeQuery(() => supabase.from('expenses').select('*').order('date', { ascending: false }).limit(200)),
     safeQuery(() => supabase.from('user_profiles').select('*').limit(200)),
-    safeQuery(() => supabase.from('contracts').select('*,clients(name)').limit(200)),
+    safeQuery(async () => {
+      let r = await supabase.from('contracts').select('*').limit(200);
+      if (r.error) return { data: [] };
+      return r;
+    }),
     safeQuery(() => supabase.from('clients').select('*').limit(200)),
     // Relationship selects can fail if FK relationship missing; try vehicles(plate_number) then fallback to '*'
     safeQuery(async () => {
-      let r = await supabase.from('fuel_logs').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200);
-      if (r.error) {
-        r = await supabase.from('fuel_logs').select('*').order('date', { ascending: false }).limit(200);
+      try {
+        let r = await supabase.from('fuel_logs').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200);
+        if (r.error) {
+          r = await supabase.from('fuel_logs').select('*').order('date', { ascending: false }).limit(200);
+        }
+        return r;
+      } catch (e) {
+        return { data: [] };
       }
-      return r;
     }),
     safeQuery(async () => {
-      let r = await supabase.from('maintenance_records').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200);
-      if (r.error) {
-        r = await supabase.from('maintenance_records').select('*').order('date', { ascending: false }).limit(200);
+      try {
+        let r = await supabase.from('maintenance_records').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200);
+        if (r.error) {
+          r = await supabase.from('maintenance_records').select('*').order('date', { ascending: false }).limit(200);
+        }
+        return r;
+      } catch (e) {
+        return { data: [] };
       }
-      return r;
     }),
     safeQuery(() => supabase.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50))
   ]);

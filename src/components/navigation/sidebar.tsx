@@ -151,35 +151,60 @@ export function Sidebar({ role }: { role: UserRole }) {
       if (!user?.id) return;
 
       try {
+        // Helper to get count from any table query, even if it fails
+        const safeCount = async (query: any) => {
+          try {
+            const { data, error } = await query;
+            if (error) {
+              console.warn('Sidebar badge query error:', error.message);
+              return 0;
+            }
+            return data?.length || 0;
+          } catch (e) {
+            console.warn('Sidebar badge query threw:', e);
+            return 0;
+          }
+        };
+
         const [notificationsRes, maintenanceRes, serviceRequestsRes, partsRequestsRes, meetingsRes] = await Promise.all([
-          supabase
-            .from("notifications")
-            .select("id", { count: "exact" })
-            .eq("user_id", user.id)
-            .eq("is_read", false),
-          supabase
-            .from("maintenance_requests")
-            .select("id", { count: "exact" })
-            .eq("status", "pending"),
-          supabase
-            .from("maintenance_requests")
-            .select("id", { count: "exact" })
-            .in("status", ["pending", "in_review"]),
-          supabase
-            .from("parts_requests")
-            .select("id", { count: "exact" })
-            .eq("status", "pending"),
-          supabase
-            .from("meetings")
-            .select("id", { count: "exact" })
-            .in("status", ["scheduled", "in_progress"]),
+          safeCount(
+            supabase
+              .from("notifications")
+              .select("id", { count: "exact" })
+              .eq("user_id", user.id)
+              .eq("is_read", false)
+          ),
+          safeCount(
+            supabase
+              .from("maintenance_requests")
+              .select("id", { count: "exact" })
+              .eq("status", "pending")
+          ),
+          safeCount(
+            supabase
+              .from("maintenance_requests")
+              .select("id", { count: "exact" })
+              .in("status", ["pending", "in_review"])
+          ),
+          safeCount(
+            supabase
+              .from("parts_requests")
+              .select("id", { count: "exact" })
+              .eq("status", "pending")
+          ),
+          safeCount(
+            supabase
+              .from("meetings")
+              .select("id", { count: "exact" })
+              .in("status", ["scheduled", "in_progress"])
+          ),
         ]);
 
-        setNotificationCount(notificationsRes.data?.length || 0);
-        setMaintenanceCount(maintenanceRes.data?.length || 0);
-        setServiceRequestCount(serviceRequestsRes.data?.length || 0);
-        setPartsRequestCount(partsRequestsRes.data?.length || 0);
-        setMeetingCount(meetingsRes.data?.length || 0);
+        setNotificationCount(notificationsRes);
+        setMaintenanceCount(maintenanceRes);
+        setServiceRequestCount(serviceRequestsRes);
+        setPartsRequestCount(partsRequestsRes);
+        setMeetingCount(meetingsRes);
       } catch (error) {
         console.error("Failed to fetch sidebar badge counts:", error);
       }
