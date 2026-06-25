@@ -57,9 +57,9 @@ function ExecutiveDashboardContent() {
                 </div>
 
                 {pendingCashRequestsCount > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg animate-pulse">
-                        <AlertTriangle className="w-4 h-4 text-amber-600" />
-                        <span className="text-sm font-semibold text-amber-700">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-warning/10 border border-warning/20 rounded-lg animate-pulse">
+                        <AlertTriangle className="w-4 h-4 text-warning" />
+                        <span className="text-sm font-semibold text-warning">
                             {pendingCashRequestsCount} pending cash requests
                         </span>
                         <Button size="sm" variant="ghost" className="ml-2">→</Button>
@@ -101,7 +101,7 @@ function ExecutiveDashboardContent() {
                         </Select>
                     </div>
 
-                    <Button className="bg-sky-700 hover:bg-sky-800 text-white">Apply</Button>
+                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Apply</Button>
                 </div>
 
                 <div className="mt-3 pt-3 border-t text-xs text-muted-foreground flex justify-between">
@@ -115,47 +115,47 @@ function ExecutiveDashboardContent() {
                 <StatMiniCard
                     title="Active Shipments"
                     value={stats.activeShipments}
-                    icon={<Zap className="w-4 h-4 text-yellow-500" />}
-                    iconBg="bg-gray-100"
+                    icon={<Zap className="w-4 h-4 text-warning" />}
+                    iconBg="bg-muted"
                     valueColor="text-foreground"
                     href="/shipments?status=active"
                 />
                 <StatMiniCard
                     title="Revenue MTD"
                     value={format(stats.revenueMtd)}
-                    icon={<DollarSign className="w-4 h-4 text-green-500" />}
-                    iconBg="bg-gray-100"
+                    icon={<DollarSign className="w-4 h-4 text-success" />}
+                    iconBg="bg-muted"
                     valueColor="text-foreground"
                 />
                 <StatMiniCard
                     title="Outstanding"
                     value={format(stats.outstanding)}
-                    icon={<FileText className="w-4 h-4 text-amber-500" />}
-                    iconBg="bg-gray-100"
+                    icon={<FileText className="w-4 h-4 text-warning" />}
+                    iconBg="bg-muted"
                     valueColor="text-foreground"
                     href="/accounting/invoices?status=sent"
                 />
                 <StatMiniCard
                     title="AR Balance"
                     value={format(stats.arBalance)}
-                    icon={<Wallet className="w-4 h-4 text-blue-500" />}
-                    iconBg="bg-gray-100"
+                    icon={<Wallet className="w-4 h-4 text-info" />}
+                    iconBg="bg-muted"
                     valueColor="text-foreground"
                     href="/accounting/reports/ar-ledger"
                 />
                 <StatMiniCard
                     title="Expenses MTD"
                     value={format(stats.expensesMtd)}
-                    icon={<TrendingDown className="w-4 h-4 text-red-500" />}
-                    iconBg="bg-gray-100"
+                    icon={<TrendingDown className="w-4 h-4 text-destructive" />}
+                    iconBg="bg-muted"
                     valueColor="text-foreground"
                     href="/accounting/expenses"
                 />
                 <StatMiniCard
                     title="Available Vehicles"
                     value={`${stats.availableVehicles}/${stats.totalVehicles}`}
-                    icon={<Grid className="w-4 h-4 text-purple-500" />}
-                    iconBg="bg-gray-100"
+                    icon={<Grid className="w-4 h-4 text-accent" />}
+                    iconBg="bg-muted"
                     valueColor="text-foreground"
                     href="/fleet/vehicles"
                 />
@@ -164,34 +164,34 @@ function ExecutiveDashboardContent() {
             {/* FLEET STATUS BAR */}
             <Card className="p-4">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-purple-600" />
+                    <Truck className="w-4 h-4 text-accent" />
                     Fleet Status
                 </h3>
                 <div className="flex h-8 bg-muted rounded-full overflow-hidden mb-3">
                     <div
-                        className="bg-teal-500"
+                        className="bg-info"
                         style={{ width: `${(fleetStatus.inTransit / stats.totalVehicles) * 100}%` }}
                     ></div>
                     <div
-                        className="bg-green-500"
+                        className="bg-success"
                         style={{ width: `${(fleetStatus.available / stats.totalVehicles) * 100}%` }}
                     ></div>
                     <div
-                        className="bg-amber-500"
+                        className="bg-warning"
                         style={{ width: `${(fleetStatus.maintenance / stats.totalVehicles) * 100}%` }}
                     ></div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-teal-500 rounded-full"></div>
+                        <div className="w-3 h-3 bg-info rounded-full"></div>
                         <span>In Transit: {fleetStatus.inTransit}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <div className="w-3 h-3 bg-success rounded-full"></div>
                         <span>Available: {fleetStatus.available}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                        <div className="w-3 h-3 bg-warning rounded-full"></div>
                         <span>Maintenance: {fleetStatus.maintenance}</span>
                     </div>
                 </div>
@@ -201,29 +201,29 @@ function ExecutiveDashboardContent() {
             <GradientCard
                 title="Shipment Operational Finance"
                 icon={<Truck className="w-5 h-5 text-white" />}
-                iconBg="bg-green-600"
-                headerGradient="bg-gradient-to-r from-green-500 to-green-600"
+                iconBg="bg-success"
+                headerGradient="bg-gradient-to-r from-success to-success/80"
             >
                 <div className="grid grid-cols-5 gap-3">
-                    <div className="bg-slate-50 p-3 rounded-lg text-center">
-                        <p className="text-xs text-slate-600 mb-1">Requested</p>
-                        <p className="text-sm font-bold text-slate-700">{format(shipmentFinance.requested)}</p>
+                    <div className="bg-muted/50 p-3 rounded-lg text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Requested</p>
+                        <p className="text-sm font-bold text-foreground">{format(shipmentFinance.requested)}</p>
                     </div>
-                    <div className="bg-blue-50 p-3 rounded-lg text-center">
-                        <p className="text-xs text-blue-600 mb-1">Committed</p>
-                        <p className="text-sm font-bold text-blue-700">{format(shipmentFinance.committed)}</p>
+                    <div className="bg-info/10 p-3 rounded-lg text-center">
+                        <p className="text-xs text-info mb-1">Committed</p>
+                        <p className="text-sm font-bold text-info">{format(shipmentFinance.committed)}</p>
                     </div>
-                    <div className="bg-emerald-50 p-3 rounded-lg text-center">
-                        <p className="text-xs text-emerald-600 mb-1">Actual</p>
-                        <p className="text-sm font-bold text-emerald-700">{format(shipmentFinance.actual)}</p>
+                    <div className="bg-success/10 p-3 rounded-lg text-center">
+                        <p className="text-xs text-success mb-1">Actual</p>
+                        <p className="text-sm font-bold text-success">{format(shipmentFinance.actual)}</p>
                     </div>
-                    <div className="bg-red-50 p-3 rounded-lg text-center">
-                        <p className="text-xs text-red-600 mb-1">Critical Var.</p>
-                        <p className="text-sm font-bold text-red-700">{shipmentFinance.criticalVariance}</p>
+                    <div className="bg-destructive/10 p-3 rounded-lg text-center">
+                        <p className="text-xs text-destructive mb-1">Critical Var.</p>
+                        <p className="text-sm font-bold text-destructive">{shipmentFinance.criticalVariance}</p>
                     </div>
-                    <div className="bg-amber-50 p-3 rounded-lg text-center">
-                        <p className="text-xs text-amber-600 mb-1">Warn Var.</p>
-                        <p className="text-sm font-bold text-amber-700">{shipmentFinance.warningVariance}</p>
+                    <div className="bg-warning/10 p-3 rounded-lg text-center">
+                        <p className="text-xs text-warning mb-1">Warn Var.</p>
+                        <p className="text-sm font-bold text-warning">{shipmentFinance.warningVariance}</p>
                     </div>
                 </div>
             </GradientCard>
@@ -234,8 +234,8 @@ function ExecutiveDashboardContent() {
                 <GradientCard
                     title="Revenue Trend"
                     icon={<TrendingDown className="w-5 h-5 text-white" />}
-                    iconBg="bg-green-600"
-                    headerGradient="bg-gradient-to-r from-green-400 to-green-500"
+                    iconBg="bg-success"
+                    headerGradient="bg-gradient-to-r from-success/80 to-success/60"
                 >
                     <div className="space-y-4">
                         <div className="flex items-end justify-end gap-1 h-32">
@@ -245,7 +245,7 @@ function ExecutiveDashboardContent() {
                                 return (
                                     <div key={idx} className="flex flex-col items-center gap-2 flex-1">
                                         <div
-                                            className="w-full bg-gradient-to-t from-green-400 to-green-500 rounded-t-md transition-all"
+                                            className="w-full bg-gradient-to-t from-success/80 to-success/60 rounded-t-md transition-all"
                                             style={{ height: `${height}px` }}
                                         ></div>
                                         <span className="text-xs text-muted-foreground">{month.month}</span>
@@ -266,29 +266,29 @@ function ExecutiveDashboardContent() {
                 <GradientCard
                     title="Trip Performance"
                     icon={<Truck className="w-5 h-5 text-white" />}
-                    iconBg="bg-blue-600"
-                    headerGradient="bg-gradient-to-r from-blue-500 to-blue-600"
+                    iconBg="bg-info"
+                    headerGradient="bg-gradient-to-r from-info/80 to-info/60"
                 >
                     <div className="space-y-4">
                         <div className="grid grid-cols-3 gap-3">
-                            <div className="bg-blue-50 p-3 rounded-lg text-center">
-                                <p className="text-xs text-blue-600 mb-1">In Transit</p>
-                                <p className="text-sm font-bold text-blue-700">{tripPerformance.inTransit}</p>
+                            <div className="bg-info/10 p-3 rounded-lg text-center">
+                                <p className="text-xs text-info mb-1">In Transit</p>
+                                <p className="text-sm font-bold text-info">{tripPerformance.inTransit}</p>
                             </div>
-                            <div className="bg-green-50 p-3 rounded-lg text-center">
-                                <p className="text-xs text-green-600 mb-1">Completed</p>
-                                <p className="text-sm font-bold text-green-700">{tripPerformance.completed}</p>
+                            <div className="bg-success/10 p-3 rounded-lg text-center">
+                                <p className="text-xs text-success mb-1">Completed</p>
+                                <p className="text-sm font-bold text-success">{tripPerformance.completed}</p>
                             </div>
-                            <div className="bg-gray-50 p-3 rounded-lg text-center">
-                                <p className="text-xs text-gray-600 mb-1">Total</p>
-                                <p className="text-sm font-bold text-gray-700">{tripPerformance.total}</p>
+                            <div className="bg-muted/50 p-3 rounded-lg text-center">
+                                <p className="text-xs text-muted-foreground mb-1">Total</p>
+                                <p className="text-sm font-bold text-foreground">{tripPerformance.total}</p>
                             </div>
                         </div>
                         <div className="border-t pt-3">
                             <p className="text-sm text-muted-foreground mb-2">Completion Rate</p>
                             <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                                 <div
-                                    className="bg-gradient-to-r from-green-400 to-green-600 h-full transition-all"
+                                    className="bg-gradient-to-r from-success/80 to-success h-full transition-all"
                                     style={{ width: `${tripPerformance.completionRate}%` }}
                                 ></div>
                             </div>
@@ -354,7 +354,7 @@ function ExecutiveDashboardContent() {
                         <Card className="p-4">
                             <h3 className="font-semibold mb-4">Quick Actions</h3>
                             <div className="space-y-2">
-                                <Button className="w-full bg-sky-700 hover:bg-sky-800 text-white justify-start">
+                                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground justify-start">
                                     + New Quotation
                                 </Button>
                                 <Button variant="outline" className="w-full justify-start">
@@ -397,8 +397,8 @@ function ExecutiveDashboardContent() {
                     </div>
 
                     {/* Documents Expiring */}
-                    <Card className="p-4 border-red-500 border">
-                        <h3 className="font-semibold text-red-600 mb-4 flex items-center gap-2">
+                    <Card className="p-4 border-destructive border">
+                        <h3 className="font-semibold text-destructive mb-4 flex items-center gap-2">
                             <AlertTriangle className="w-4 h-4" />
                             Documents Expiring ({expiringDocs.length})
                         </h3>
@@ -409,7 +409,7 @@ function ExecutiveDashboardContent() {
                                 {expiringDocs.slice(0, 8).map(doc => (
                                     <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
                                         <div className="flex items-center gap-3 flex-1">
-                                            <Badge variant="outline" className="bg-purple-50">{doc.vehicle_code}</Badge>
+                                            <Badge variant="outline" className="bg-accent/10">{doc.vehicle_code}</Badge>
                                             <span className="text-sm">{doc.doc_type}</span>
                                         </div>
                                         <div className="text-right">
@@ -437,7 +437,7 @@ function ExecutiveDashboardContent() {
                                         <div className="flex items-start gap-3 mb-2">
                                             <Badge
                                                 variant={item.severity === 'CRITICAL' ? 'destructive' : 'secondary'}
-                                                className={item.severity === 'CRITICAL' ? 'bg-red-600' : 'bg-amber-600'}
+                                                className={item.severity === 'CRITICAL' ? 'bg-destructive' : 'bg-warning'}
                                             >
                                                 {item.severity}
                                             </Badge>
@@ -457,21 +457,21 @@ function ExecutiveDashboardContent() {
                     <Card className="p-4">
                         <h3 className="font-semibold mb-4">My Cash Requests</h3>
                         <div className="grid grid-cols-2 gap-2 mb-4">
-                            <div className="bg-blue-50 p-2 rounded-lg text-center text-xs">
-                                <p className="text-blue-600 font-semibold">0</p>
-                                <p className="text-blue-600">Draft</p>
+                            <div className="bg-info/10 p-2 rounded-lg text-center text-xs">
+                                <p className="text-info font-semibold">0</p>
+                                <p className="text-info">Draft</p>
                             </div>
-                            <div className="bg-amber-50 p-2 rounded-lg text-center text-xs">
-                                <p className="text-amber-600 font-semibold">0</p>
-                                <p className="text-amber-600">Pending</p>
+                            <div className="bg-warning/10 p-2 rounded-lg text-center text-xs">
+                                <p className="text-warning font-semibold">0</p>
+                                <p className="text-warning">Pending</p>
                             </div>
-                            <div className="bg-green-50 p-2 rounded-lg text-center text-xs">
-                                <p className="text-green-600 font-semibold">0</p>
-                                <p className="text-green-600">Retired</p>
+                            <div className="bg-success/10 p-2 rounded-lg text-center text-xs">
+                                <p className="text-success font-semibold">0</p>
+                                <p className="text-success">Retired</p>
                             </div>
-                            <div className="bg-red-50 p-2 rounded-lg text-center text-xs">
-                                <p className="text-red-600 font-semibold">0</p>
-                                <p className="text-red-600">Overdue</p>
+                            <div className="bg-destructive/10 p-2 rounded-lg text-center text-xs">
+                                <p className="text-destructive font-semibold">0</p>
+                                <p className="text-destructive">Overdue</p>
                             </div>
                         </div>
                         <Button size="sm" variant="outline" className="w-full">
@@ -484,8 +484,8 @@ function ExecutiveDashboardContent() {
                         title="Top Clients"
                         subtitle="Month To Date"
                         icon={<Users className="w-5 h-5 text-white" />}
-                        iconBg="bg-purple-600"
-                        headerGradient="bg-gradient-to-r from-purple-500 to-purple-600"
+                        iconBg="bg-accent"
+                        headerGradient="bg-gradient-to-r from-accent/80 to-accent/60"
                     >
                         <div className="space-y-3">
                             {[
@@ -499,12 +499,12 @@ function ExecutiveDashboardContent() {
                                 const width = (client.revenue / maxRevenue) * 100;
                                 return (
                                     <div key={client.rank} className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-xs font-bold">
+                                        <div className="w-6 h-6 rounded-full bg-warning flex items-center justify-center text-xs font-bold text-warning-foreground">
                                             {client.rank}
                                         </div>
                                         <span className="text-sm font-semibold flex-1">{client.name}</span>
                                         <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                                            <div className="bg-purple-500 h-full" style={{ width: `${width}%` }}></div>
+                                            <div className="bg-accent h-full" style={{ width: `${width}%` }}></div>
                                         </div>
                                         <span className="text-xs font-bold">{format(client.revenue)}</span>
                                     </div>
@@ -522,7 +522,7 @@ export default function ExecutiveDashboard() {
     return (
         <Suspense fallback={
             <div className="flex min-h-screen items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
         }>
             <ExecutiveDashboardContent />

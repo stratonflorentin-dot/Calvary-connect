@@ -30,7 +30,7 @@ export default function FleetPage() {
     return (
       <main className="min-h-screen bg-background safe-area-padding">
         <div className="p-8">
-          <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
+          <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
           <p className="text-muted-foreground text-sm">You don't have permission to access fleet management.</p>
         </div>
         <BottomTabs role={role!} />

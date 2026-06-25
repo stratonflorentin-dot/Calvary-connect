@@ -17,9 +17,7 @@ import {
   Wrench,
   Calculator,
   LogOut,
-  History,
   Receipt,
-  Home,
   Shield,
   Camera,
   User as UserIcon,
@@ -27,8 +25,6 @@ import {
   Building2,
   CalendarDays,
   Globe,
-  Thermometer,
-  Anchor,
   Menu,
   X,
   Zap,
@@ -42,9 +38,12 @@ import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
 import { useLanguage } from "@/hooks/use-language";
 import { useSupabase } from "@/components/supabase-provider";
-import { NotificationBell } from "@/components/notifications/notification-bell";
 import { isPrimaryOwnerEmail } from "@/lib/supabase";
-import { getMenuByRole } from "@/lib/route-config";
+import {
+  NAVIGATION_CATEGORY_LABELS,
+  NAVIGATION_CATEGORY_ORDER,
+  getNavigationMenuByRole,
+} from "@/lib/route-config";
 import { resolveUserRole } from "@/lib/user-role-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -87,18 +86,6 @@ const routeIconMap: Record<string, any> = {
   "https://logipro.milelepower.co.tz/": Globe
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  sales: "Sales",
-  logistics: "Shipments",
-  fleet: "Fleet",
-  inventory: "Inventory",
-  finance: "Accounting",
-  reports: "Reports",
-  people: "HR",
-  system: "Settings"
-};
-
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const { t } = useLanguage();
@@ -116,8 +103,6 @@ export function Sidebar({ role }: { role: UserRole }) {
   
   // Ref for quick return scroll behavior
   const lastScrollY = useRef(0);
-  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
-  
   const canUseRolePreview = user?.role === "ADMIN" || user?.role === "CEO" || isPrimaryOwnerEmail(user?.email);
   const menuOwnerEmail = isPrimaryOwnerEmail(user?.email) ? user?.email : undefined;
 
@@ -177,7 +162,7 @@ export function Sidebar({ role }: { role: UserRole }) {
   }, []);
 
   const effectiveRole = canUseRolePreview ? resolveUserRole(String(storedRole || role || "ADMIN"), "ADMIN") : resolveUserRole(String(role || ""), "OPERATOR");
-  const menuItems = getMenuByRole(effectiveRole, false, t, menuOwnerEmail, false);
+  const menuItems = getNavigationMenuByRole(effectiveRole, false, t, menuOwnerEmail, false);
 
   useEffect(() => {
     const fetchBadgeCounts = async () => {
@@ -277,7 +262,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       {/* Sidebar */}
       <aside className={cn(
         "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
-        "bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 border-r border-gray-200 dark:border-slate-800 shadow-sm",
+        "bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm",
         isCollapsed ? "w-20" : "w-64",
         // Mobile transition
         "md:translate-x-0",
@@ -287,32 +272,33 @@ export function Sidebar({ role }: { role: UserRole }) {
           {!isCollapsed ? (
             <>
               <div className="flex items-center gap-2">
-                <div className="bg-[#0369A1] dark:bg-blue-600 text-white p-1.5 rounded-md">
+                <div className="bg-sidebar-primary text-sidebar-primary-foreground p-1.5 rounded-md">
                   <Zap className="size-5" />
                 </div>
-                <h1 className="font-headline text-xl font-extrabold tracking-tighter text-[#0369A1] dark:text-blue-400 uppercase">
+                <h1 className="font-headline text-xl font-extrabold tracking-tighter text-sidebar-primary uppercase">
                   Calvary
                 </h1>
               </div>
-              <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-slate-500 hover:text-[#0369A1]">
+              <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-muted-foreground hover:text-sidebar-primary">
                 <ChevronLeft className="size-5" />
               </Button>
             </>
           ) : (
-            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[#0369A1]">
+            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-sidebar-primary">
               <ChevronRight className="size-5" />
             </Button>
           )}
         </div>
-        {!isCollapsed && <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 font-bold px-6 -mt-2 mb-2">Connect Panel</p>}
+        {!isCollapsed && <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold px-6 -mt-2 mb-2">Connect Panel</p>}
 
         <nav className="flex-1 px-2 space-y-6 overflow-y-auto no-scrollbar pb-10">
-          {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
+          {NAVIGATION_CATEGORY_ORDER.map((key) => {
+            const label = NAVIGATION_CATEGORY_LABELS[key];
             const items = groupedMenu[key];
             if (!items || items.length === 0) return null;
             return (
               <div key={key} className="space-y-2">
-                {!isCollapsed && <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold px-4">{label}</p>}
+                {!isCollapsed && <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold px-4">{label}</p>}
                 <div className="space-y-1">
                   {items.map(item => {
                     const Icon = routeIconMap[item.path] || LayoutDashboard;
@@ -328,15 +314,15 @@ export function Sidebar({ role }: { role: UserRole }) {
                         className={cn(
                           "flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-all group",
                           pathname === item.path 
-                            ? "bg-[#e0f2fe] dark:bg-blue-950/40 text-[#0369A1] dark:text-blue-400 shadow-sm" 
-                            : "text-slate-600 dark:text-slate-400 hover:text-[#0369A1] dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" 
+                            : "text-muted-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/50"
                         )}
                       >
                         <Icon className={cn(
                           "size-5 flex-shrink-0", 
                           pathname === item.path 
-                            ? "text-[#0369A1] dark:text-blue-400" 
-                            : "text-slate-400 dark:text-slate-500 group-hover:text-[#0369A1] dark:group-hover:text-blue-400"
+                            ? "text-sidebar-accent-foreground" 
+                            : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
                         )} />
                         {!isCollapsed && <span className="truncate">{item.label}</span>}
                         {/* Badges only show when not collapsed */}
@@ -374,36 +360,36 @@ export function Sidebar({ role }: { role: UserRole }) {
           })}
         </nav>
 
-        <div className="p-3 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 backdrop-blur-md">
+        <div className="p-3 border-t border-sidebar-border bg-muted/50 backdrop-blur-md">
           {/* Quick Return Button */}
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={scrollToTop} 
-            className="w-full mb-2 text-[#0369A1] hover:bg-[#0369A1]/10"
+            className="w-full mb-2 text-sidebar-primary hover:bg-sidebar-primary/10"
           >
             <ArrowUpCircle className="size-4 mr-2" />
             {!isCollapsed && "Back to Top"}
           </Button>
           
           <div className={cn(
-            "px-3 py-3 flex items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl mb-2 group relative border border-gray-200 dark:border-slate-800 shadow-sm transition-colors",
+            "px-3 py-3 flex items-center gap-3 bg-card rounded-2xl mb-2 group relative border border-border shadow-sm transition-colors",
             isCollapsed && "justify-center px-0"
           )}>
-            <Avatar className="size-10 border border-gray-200 dark:border-slate-800">
+            <Avatar className="size-10 border border-border">
               <AvatarImage src={user?.avatar} />
-              <AvatarFallback className="bg-[#0369A1] dark:bg-blue-600 text-white text-sm">
+              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm">
                 {user?.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{user?.name || "Super Admin"}</p>
-                <p className="text-[10px] text-[#0369A1] dark:text-blue-400 font-bold uppercase tracking-wider">{effectiveRole}</p>
+                <p className="text-sm font-bold text-card-foreground truncate">{user?.name || "Super Admin"}</p>
+                <p className="text-[10px] text-sidebar-primary font-bold uppercase tracking-wider">{effectiveRole}</p>
               </div>
             )}
             {!isCollapsed && (
-              <label className="absolute -top-1 -right-1 size-6 bg-[#0369A1] dark:bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-white dark:border-slate-800">
+              <label className="absolute -top-1 -right-1 size-6 bg-sidebar-primary text-sidebar-primary-foreground rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-background">
                 <Camera className="size-3" />
                 <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading} />
               </label>
@@ -412,7 +398,7 @@ export function Sidebar({ role }: { role: UserRole }) {
           <button 
             className={cn(
               "flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-sm font-bold transition-all group",
-              "text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400",
+              "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
               isCollapsed && "justify-center px-0"
             )}
             onClick={signOut}

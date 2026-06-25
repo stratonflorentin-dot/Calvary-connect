@@ -175,32 +175,32 @@ export function StatCards() {
         title: "Total Fleet",
         value: stats.totalVehicles,
         icon: Truck,
-        color: "text-[#0369A1]",
-        bgColor: "bg-sky-50",
+        color: "text-primary",
+        bgColor: "bg-primary/10",
         trend: "stable",
       },
       {
         title: "Active Vehicles",
         value: stats.activeVehicles,
         icon: CheckCircle2,
-        color: "text-green-600",
-        bgColor: "bg-green-50",
+        color: "text-success",
+        bgColor: "bg-success/10",
         trend: "stable",
       },
       {
         title: "Fleet Utilization",
         value: `${stats.vehicleUtilization}%`,
         icon: TrendingUp,
-        color: "text-purple-600",
-        bgColor: "bg-purple-50",
+        color: "text-accent",
+        bgColor: "bg-accent/10",
         trend: stats.vehicleUtilization > 70 ? "up" : "down",
       },
       {
         title: "Maintenance Alerts",
         value: stats.maintenanceAlerts,
         icon: AlertTriangle,
-        color: "text-orange-600",
-        bgColor: "bg-orange-50",
+        color: "text-warning",
+        bgColor: "bg-warning/10",
         trend: stats.maintenanceAlerts > 0 ? "alert" : "stable",
       },
     ];
@@ -210,32 +210,32 @@ export function StatCards() {
         title: "Monthly Revenue",
         value: format(stats.monthlyRevenue),
         icon: DollarSign,
-        color: "text-emerald-600",
-        bgColor: "bg-emerald-50",
+        color: "text-success",
+        bgColor: "bg-success/10",
         trend: "up",
       },
       {
         title: "Operating Expenses",
         value: format(stats.monthlyExpenses),
         icon: TrendingUp,
-        color: "text-red-600",
-        bgColor: "bg-red-50",
+        color: "text-destructive",
+        bgColor: "bg-destructive/10",
         trend: "stable",
       },
       {
         title: "Net Profit",
         value: format(stats.netProfit),
         icon: TrendingUp,
-        color: stats.netProfit > 0 ? "text-green-600" : "text-red-600",
-        bgColor: stats.netProfit > 0 ? "bg-green-50" : "bg-red-50",
+        color: stats.netProfit > 0 ? "text-success" : "text-destructive",
+        bgColor: stats.netProfit > 0 ? "bg-success/10" : "bg-destructive/10",
         trend: stats.netProfit > 0 ? "up" : "down",
       },
       {
         title: "Outstanding Payments",
         value: format(stats.outstandingPayments),
         icon: AlertCircle,
-        color: "text-amber-600",
-        bgColor: "bg-amber-50",
+        color: "text-warning",
+        bgColor: "bg-warning/10",
         trend: "stable",
       },
     ];
@@ -245,24 +245,24 @@ export function StatCards() {
         title: "Shipments In Transit",
         value: stats.shipmentsInTransit,
         icon: Package,
-        color: "text-indigo-600",
-        bgColor: "bg-indigo-50",
+        color: "text-accent",
+        bgColor: "bg-accent/10",
         trend: "stable",
       },
       {
         title: "On-Time Delivery",
         value: `${stats.onTimeDeliveryRate}%`,
         icon: Clock,
-        color: "text-cyan-600",
-        bgColor: "bg-cyan-50",
+        color: "text-info",
+        bgColor: "bg-info/10",
         trend: stats.onTimeDeliveryRate > 90 ? "up" : "down",
       },
       {
         title: "Warehouse Items",
         value: stats.warehouseUtilization,
         icon: Container,
-        color: "text-pink-600",
-        bgColor: "bg-pink-50",
+        color: "text-accent",
+        bgColor: "bg-accent/10",
         trend: "stable",
       },
     ];
@@ -272,16 +272,16 @@ export function StatCards() {
         title: "Days of Cash",
         value: `${stats.daysOfCash}d`,
         icon: Clock,
-        color: "text-teal-600",
-        bgColor: "bg-teal-50",
+        color: "text-info",
+        bgColor: "bg-info/10",
         trend: stats.daysOfCash > 30 ? "up" : "alert",
       },
       {
         title: "Receivables",
         value: format(stats.receivables),
         icon: MapPin,
-        color: "text-slate-600",
-        bgColor: "bg-slate-50",
+        color: "text-muted-foreground",
+        bgColor: "bg-muted/50",
         trend: "stable",
       },
     ];
@@ -327,13 +327,13 @@ export function StatCards() {
         <div
           key={index}
           className={cn(
-            "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all text-slate-900 dark:text-slate-50 flex flex-col justify-between h-full min-h-[110px]",
-            stat.trend === "alert" && "border-orange-200 dark:border-orange-900 bg-orange-50/30 dark:bg-orange-950/20",
+            "app-surface p-3 sm:p-4 hover:shadow-md transition-all flex flex-col justify-between h-full min-h-[110px]",
+            stat.trend === "alert" && "border-warning/20 bg-warning/5",
           )}
         >
           <div className="flex items-center justify-between gap-2">
-            <div className={cn("p-2 rounded-lg shrink-0", stat.bgColor, stat.bgColor.includes("bg-") && `dark:${stat.bgColor.replace("100", "950/40").replace("50", "950/20")}`)}>
-              <stat.icon className={cn("size-4 sm:size-5", stat.color, stat.color.includes("text-") && `dark:${stat.color.replace("600", "400").replace("700", "400")}`)} />
+            <div className={cn("p-2 rounded-lg shrink-0", stat.bgColor)}>
+              <stat.icon className={cn("size-4 sm:size-5", stat.color)} />
             </div>
             {stat.trend && (
               <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -344,10 +344,10 @@ export function StatCards() {
             )}
           </div>
           <div className="mt-2">
-            <p className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-50 truncate tracking-tight">
+            <p className="text-sm sm:text-base font-bold text-foreground truncate tracking-tight">
               {stat.value}
             </p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider truncate mt-0.5">
+            <p className="text-[10px] text-muted-foreground font-extrabold uppercase tracking-wider truncate mt-0.5">
               {stat.title}
             </p>
           </div>

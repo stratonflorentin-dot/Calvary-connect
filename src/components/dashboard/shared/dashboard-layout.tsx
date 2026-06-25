@@ -111,20 +111,20 @@ export function DashboardLayout({
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <div className={cn("flex min-h-screen w-full overflow-hidden bg-slate-50 text-slate-950", !hideSidebar && "h-screen")}>
+    <div className={cn("flex min-h-screen w-full overflow-hidden bg-background text-foreground", !hideSidebar && "h-screen")}
       {!hideSidebar && <Sidebar role={role as any} />}
       <main className={cn("flex-1 flex flex-col overflow-hidden", !hideSidebar && "md:ml-60")}>
         {/* Top Header */}
-        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur md:px-6">
+        <header className="sticky top-0 z-10 border-b border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur md:px-6">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge className="border-slate-200 bg-slate-100 text-slate-700">{role}</Badge>
-                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">Live Operations</Badge>
+                <Badge className="border-border bg-muted text-muted-foreground">{role}</Badge>
+                <Badge className="border-success/20 bg-success/10 text-success">Live Operations</Badge>
               </div>
-              <h1 className="mt-2 text-xl font-semibold tracking-normal text-slate-950 sm:text-2xl">{title}</h1>
+              <h1 className="mt-2 text-xl font-semibold tracking-normal text-foreground sm:text-2xl">{title}</h1>
               {description && (
-                <p className="mt-1 max-w-2xl text-sm text-slate-500">{description}</p>
+                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -132,13 +132,13 @@ export function DashboardLayout({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
                 placeholder="Search..."
-                className="h-9 w-full min-w-[180px] border-slate-200 bg-white pl-8 lg:w-[260px]"
+                className="h-9 w-full min-w-[180px] border-input bg-background pl-8 lg:w-[260px]"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               </div>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-9 w-[132px] border-slate-200 bg-white">
+              <SelectTrigger className="h-9 w-[132px] border-input bg-background">
                 <Filter className="size-3 mr-2" />
                 <SelectValue placeholder="Filter" />
               </SelectTrigger>
@@ -151,7 +151,7 @@ export function DashboardLayout({
               </SelectContent>
               </Select>
               <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="h-9 w-[132px] border-slate-200 bg-white">
+              <SelectTrigger className="h-9 w-[132px] border-input bg-background">
                 <Calendar className="size-3 mr-2" />
                 <SelectValue placeholder="Date" />
               </SelectTrigger>
@@ -165,30 +165,30 @@ export function DashboardLayout({
               <Button
               variant="ghost"
               size="icon"
-              className="relative border border-slate-200 bg-white"
+              className="relative border border-input bg-background"
               onClick={() => setShowNotifications(true)}
             >
               <Bell className="size-5" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full" />
               </Button>
               <Button
               variant="ghost"
               size="icon"
-              className="border border-slate-200 bg-white"
+              className="border border-input bg-background"
               onClick={() => setShowSettings(true)}
             >
               <Settings className="size-5" />
               </Button>
-              <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 lg:flex">
-                <div className="flex size-7 items-center justify-center rounded-md bg-slate-900 text-xs font-semibold text-white">
+              <div className="hidden items-center gap-2 rounded-lg border border-input bg-card px-3 py-2 lg:flex">
+                <div className="flex size-7 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
                   {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
                 </div>
                 <div className="max-w-[150px]">
-                  <p className="truncate text-xs font-semibold text-slate-800">{user?.name || "User"}</p>
-                  <p className="truncate text-[10px] uppercase tracking-wide text-slate-500">{user?.role || role}</p>
+                  <p className="truncate text-xs font-semibold text-card-foreground">{user?.name || "User"}</p>
+                  <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{user?.role || role}</p>
                 </div>
               </div>
-              <Button variant="outline" className="gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={signOut}>
+              <Button variant="outline" className="gap-2 border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={signOut}>
                 <LogOut className="size-4" />
                 <span className="hidden sm:inline">{t.logout || "Logout"}</span>
               </Button>
@@ -236,11 +236,11 @@ export function StatCard({
         stiffness: 260,
         damping: 18
       }}
-      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm cursor-pointer transition-colors text-slate-900 dark:text-slate-50 flex flex-col justify-between h-full min-h-[120px]"
+      className="app-surface p-4 cursor-pointer transition-colors flex flex-col justify-between h-full min-h-[120px]"
     >
       <div className="flex items-center justify-between mb-2">
-        <div className={cn("p-2 rounded-lg shrink-0", bgColor, bgColor.includes("bg-") && `dark:${bgColor.replace("100", "950/40").replace("50", "950/20")}`)}>
-          <Icon className={cn("size-5", color, color.includes("text-") && `dark:${color.replace("600", "400").replace("700", "400")}`)} />
+        <div className={cn("p-2 rounded-lg shrink-0", bgColor)}>
+          <Icon className={cn("size-5", color)} />
         </div>
         {trend !== undefined && (
           <span
@@ -256,8 +256,8 @@ export function StatCard({
         )}
       </div>
       <div>
-        <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-50 truncate tracking-tight">{value}</p>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-extrabold mt-1 truncate">
+        <p className="text-xl sm:text-2xl font-bold text-foreground truncate tracking-tight">{value}</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-extrabold mt-1 truncate">
           {title}
         </p>
       </div>
@@ -291,7 +291,7 @@ export function DataTable({
   onView,
 }: DataTableProps) {
   return (
-    <div className="rounded-2xl border bg-white overflow-hidden">
+    <div className="app-table-shell">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
@@ -448,10 +448,10 @@ export function AlertPanel({ alerts }: { alerts: AlertItem[] }) {
           className={cn(
             "p-3 rounded-xl border-l-4",
             alert.severity === "critical"
-              ? "bg-red-50 border-l-red-500"
+              ? "bg-destructive/10 border-l-destructive"
               : alert.severity === "warning"
-                ? "bg-amber-50 border-l-amber-500"
-                : "bg-blue-50 border-l-blue-500",
+                ? "bg-warning/10 border-l-warning"
+                : "bg-info/10 border-l-info",
           )}
         >
           <div className="flex items-start gap-2">
@@ -459,10 +459,10 @@ export function AlertPanel({ alerts }: { alerts: AlertItem[] }) {
               className={cn(
                 "size-4 mt-0.5 shrink-0",
                 alert.severity === "critical"
-                  ? "text-red-500"
+                  ? "text-destructive"
                   : alert.severity === "warning"
-                    ? "text-amber-500"
-                    : "text-blue-500",
+                    ? "text-warning"
+                    : "text-info",
               )}
             />
             <div>

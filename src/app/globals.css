@@ -4,234 +4,359 @@
 
 @layer base {
   :root {
-    /* ─── Calvary Connect — Comfortable Light Theme ───
-       Warm off-white background, deep navy text, muted borders.
-       Much easier on the eyes than pure white. */
+    --background: 218 25% 96%;
+    --foreground: 222 32% 14%;
 
-    --background: 220 18% 94%;        /* #EEF0F5 — warm light slate, not blinding white */
-    --foreground: 220 25% 18%;        /* #252D3D — deep navy text for readability */
+    --card: 0 0% 100%;
+    --card-foreground: 222 32% 14%;
 
-    --card: 220 20% 97%;              /* #F5F6FA — slightly lighter card surface */
-    --card-foreground: 220 25% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 32% 14%;
 
-    --popover: 220 20% 97%;
-    --popover-foreground: 220 25% 18%;
-
-    --primary: 213 80% 42%;           /* #1565C0 — rich professional blue */
+    --primary: 215 78% 39%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 88%;         /* #D8DCE8 — muted blue-grey */
-    --secondary-foreground: 220 25% 25%;
+    --secondary: 214 24% 91%;
+    --secondary-foreground: 222 26% 22%;
 
-    --muted: 220 15% 91%;             /* #E2E5EE */
-    --muted-foreground: 220 14% 46%;  /* #6C7A96 — readable mid-grey */
+    --muted: 216 24% 93%;
+    --muted-foreground: 219 13% 42%;
 
-    --accent: 199 72% 50%;            /* #1BA3CC — calm teal-blue accent */
+    --accent: 174 60% 36%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 4 80% 52%;         /* #E53935 */
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 18% 84%;            /* #CDD1DE — visible but soft */
-    --input: 220 18% 84%;
-    --ring: 213 80% 42%;
-    --radius: 0.75rem;
+    --border: 216 22% 84%;
+    --input: 216 22% 84%;
+    --ring: 215 78% 39%;
+    --radius: 0.5rem;
 
-    /* ─── Sidebar: Deep navy (always dark, regardless of page theme) ─── */
-    --sidebar: 222 35% 14%;           /* #18213A */
-    --sidebar-foreground: 215 30% 88%; /* #CBD5E8 */
-    --sidebar-primary: 213 80% 55%;
+    --success: 145 62% 34%;
+    --warning: 38 92% 48%;
+    --info: 199 78% 42%;
+
+    --sidebar: 222 38% 13%;
+    --sidebar-background: 222 38% 13%;
+    --sidebar-foreground: 214 28% 88%;
+    --sidebar-primary: 215 78% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 35% 20%;
-    --sidebar-accent-foreground: 215 30% 95%;
-    --sidebar-border: 222 30% 20%;
-    --sidebar-ring: 213 80% 55%;
+    --sidebar-accent: 222 34% 19%;
+    --sidebar-accent-foreground: 214 28% 96%;
+    --sidebar-border: 222 30% 22%;
+    --sidebar-ring: 215 78% 52%;
 
-    /* Chart palette */
-    --chart-1: 213 80% 42%;
-    --chart-2: 199 72% 50%;
-    --chart-3: 38 90% 52%;
-    --chart-4: 145 65% 40%;
-    --chart-5: 4 80% 52%;
+    --chart-1: 215 78% 39%;
+    --chart-2: 174 60% 36%;
+    --chart-3: 38 92% 48%;
+    --chart-4: 145 62% 34%;
+    --chart-5: 0 72% 48%;
   }
 
   .dark {
-    /* ─── Calvary Connect — Premium Dark Theme ───
-       NOT pitch black. Uses a warm charcoal (#16202E) as base —
-       easier on eyes than slate-950, still feels premium & professional. */
+    --background: 222 34% 10%;
+    --foreground: 214 28% 91%;
 
-    --background: 216 35% 11%;        /* #141E2D — deep navy-charcoal, not black */
-    --foreground: 215 25% 88%;        /* #CDD4E6 — soft off-white text */
+    --card: 222 30% 14%;
+    --card-foreground: 214 28% 91%;
 
-    --card: 216 33% 14%;              /* #192335 — subtle card lift */
-    --card-foreground: 215 25% 88%;
+    --popover: 222 30% 12%;
+    --popover-foreground: 214 28% 91%;
 
-    --popover: 216 33% 12%;
-    --popover-foreground: 215 25% 88%;
+    --primary: 214 84% 62%;
+    --primary-foreground: 222 34% 10%;
 
-    --primary: 213 80% 58%;           /* #3B8CE8 — bright-but-calm blue */
-    --primary-foreground: 216 35% 10%;
+    --secondary: 222 24% 20%;
+    --secondary-foreground: 214 24% 84%;
 
-    --secondary: 216 28% 20%;         /* #243047 — muted dark-blue */
-    --secondary-foreground: 215 25% 80%;
+    --muted: 222 24% 18%;
+    --muted-foreground: 216 16% 65%;
 
-    --muted: 216 28% 18%;             /* #1F2C3F */
-    --muted-foreground: 215 18% 58%;  /* #7E90AB — readable mid-tone */
+    --accent: 174 56% 46%;
+    --accent-foreground: 222 34% 10%;
 
-    --accent: 199 65% 52%;            /* #2AADE0 */
-    --accent-foreground: 216 35% 10%;
+    --destructive: 0 64% 52%;
+    --destructive-foreground: 0 0% 100%;
 
-    --destructive: 4 72% 45%;         /* #C0392B */
-    --destructive-foreground: 215 25% 90%;
+    --border: 222 22% 23%;
+    --input: 222 22% 23%;
+    --ring: 214 84% 62%;
 
-    --border: 216 28% 22%;            /* #253248 — visible, not glaring */
-    --input: 216 28% 22%;
-    --ring: 213 80% 58%;
+    --success: 145 56% 46%;
+    --warning: 38 92% 56%;
+    --info: 199 78% 56%;
 
-    /* Chart palette */
-    --chart-1: 213 80% 58%;
-    --chart-2: 199 65% 52%;
-    --chart-3: 38 90% 56%;
-    --chart-4: 145 60% 44%;
-    --chart-5: 4 72% 52%;
+    --sidebar: 222 40% 9%;
+    --sidebar-background: 222 40% 9%;
+    --sidebar-foreground: 214 28% 88%;
+    --sidebar-primary: 214 84% 62%;
+    --sidebar-primary-foreground: 222 34% 10%;
+    --sidebar-accent: 222 30% 16%;
+    --sidebar-accent-foreground: 214 28% 96%;
+    --sidebar-border: 222 28% 20%;
+    --sidebar-ring: 214 84% 62%;
+
+    --chart-1: 214 84% 62%;
+    --chart-2: 174 56% 46%;
+    --chart-3: 38 92% 56%;
+    --chart-4: 145 56% 46%;
+    --chart-5: 0 64% 58%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
+
+  html {
+    text-rendering: optimizeLegibility;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply min-h-screen bg-background font-body text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-normal text-foreground;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.16);
+    color: hsl(var(--foreground));
+  }
 }
 
-/* ─── Mobile optimizations ─── */
+@layer components {
+  .app-surface {
+    @apply rounded-lg border border-border bg-card text-card-foreground shadow-sm;
+  }
+
+  .app-section {
+    @apply rounded-lg border border-border bg-card/95 p-4 shadow-sm md:p-5;
+  }
+
+  .app-toolbar {
+    @apply flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card/95 p-3 shadow-sm;
+  }
+
+  .app-kpi {
+    @apply rounded-lg border border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/30;
+  }
+
+  .app-muted-panel {
+    @apply rounded-lg border border-border bg-muted/45 p-4;
+  }
+
+  .app-table-shell {
+    @apply overflow-hidden rounded-lg border border-border bg-card shadow-sm;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .safe-area-padding,
+  .mobile-content {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .no-scrollbar::-webkit-scrollbar,
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar,
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--sidebar-border) / 0.5);
+    border-radius: 999px;
+  }
+
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--sidebar-border) / 0.8);
+  }
+
+  .story-snap {
+    scroll-snap-type: x mandatory;
+  }
+
+  .story-snap > * {
+    scroll-snap-align: start;
+  }
+}
+
 @media (max-width: 768px) {
   body {
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
     overflow-x: hidden;
   }
+
   * {
     touch-action: manipulation;
   }
-  button, a, input, textarea, select {
+
+  button,
+  a,
+  input,
+  textarea,
+  select {
     min-height: 44px;
   }
 }
 
-/* Utility: push content above the mobile bottom tab bar */
-.safe-area-padding,
-.mobile-content {
-  padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
-}
-
-/* Standalone PWA — extra top safe area */
 @media all and (display-mode: standalone) {
   body {
     padding-top: env(safe-area-inset-top, 0px);
   }
 }
 
-/* ─── Scrollbar Utilities ─── */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Thin scrollbar for sidebar */
-.scrollbar-thin::-webkit-scrollbar { width: 4px; }
-.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: hsl(var(--sidebar-border) / 0.5);
-  border-radius: 2px;
-}
-.scrollbar-thin:hover::-webkit-scrollbar-thumb {
-  background: hsl(var(--sidebar-border) / 0.8);
-}
-
-.story-snap { scroll-snap-type: x mandatory; }
-.story-snap > * { scroll-snap-align: start; }
-
-/* ─── Desktop scrollbar ─── */
 @media (min-width: 769px) {
-  body { overflow-x: hidden; }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  body {
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
   ::-webkit-scrollbar-track {
     background: hsl(var(--muted));
-    border-radius: 4px;
+    border-radius: 999px;
   }
+
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.25);
-    border-radius: 4px;
+    background: hsl(var(--muted-foreground) / 0.28);
+    border-radius: 999px;
   }
+
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.45);
+    background: hsl(var(--muted-foreground) / 0.48);
   }
 }
 
-/* ─── Large screens ─── */
 @media (min-width: 1440px) {
-  html { font-size: 16px; }
+  html {
+    font-size: 16px;
+  }
 }
 
-/* ─── Touch device ─── */
 @media (pointer: coarse) {
-  button:hover, a:hover { transform: none !important; }
-  button, a, input, textarea, select, [role="button"] {
+  button:hover,
+  a:hover {
+    transform: none !important;
+  }
+
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"] {
     min-height: 48px;
     min-width: 48px;
   }
-  button, [role="button"], a {
+
+  button,
+  [role="button"],
+  a {
     -webkit-user-select: none;
     user-select: none;
   }
 }
 
-/* ─── iOS fixes ─── */
 @supports (-webkit-touch-callout: none) {
-  * { -webkit-touch-callout: none; }
-  input, textarea, select { font-size: 16px; }
-  .ios-safe-top { padding-top: env(safe-area-inset-top); }
-  .ios-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  * {
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .ios-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .ios-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
-/* ─── Android fixes ─── */
 @supports not (-webkit-touch-callout: none) {
-  body { overscroll-behavior-y: contain; }
+  body {
+    overscroll-behavior-y: contain;
+  }
 }
 
-/* ─── Print ─── */
 @media print {
-  .no-print { display: none !important; }
-  body { background: white; color: black; }
-  .print-break { page-break-before: always; }
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .print-break {
+    page-break-before: always;
+  }
 }
 
-/* ─── Accessibility ─── */
 @media (prefers-contrast: high) {
-  :root { --border: 220 25% 60%; }
-  .dark { --border: 215 25% 40%; }
+  :root {
+    --border: 220 25% 58%;
+  }
+
+  .dark {
+    --border: 215 25% 42%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-/* ─── Landscape mobile ─── */
 @media (max-width: 768px) and (orientation: landscape) {
-  .landscape-hide { display: none; }
+  .landscape-hide {
+    display: none;
+  }
 }
 
-/* ─── Windows HiDPI ─── */
 @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
-  img { image-rendering: -webkit-optimize-contrast; }
+  img {
+    image-rendering: -webkit-optimize-contrast;
+  }
 }

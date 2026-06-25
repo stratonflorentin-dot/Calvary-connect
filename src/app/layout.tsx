@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Calvary Connect | Fleet Management',
-  description: 'Professional fleet management platform for Calvary Connect — manage logistics, drivers, vehicles, and operations on iOS, Android, or Web.',
+  description: 'Professional fleet management platform for Calvary Connect - manage logistics, drivers, vehicles, and operations on iOS, Android, or Web.',
   keywords: ['fleet management', 'logistics', 'driver management', 'vehicle tracking', 'Calvary Connect'],
   authors: [{ name: 'Calvary Connect' }],
   creator: 'Calvary Connect',
@@ -70,7 +70,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
