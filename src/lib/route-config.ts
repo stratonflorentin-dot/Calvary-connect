@@ -36,7 +36,32 @@ export interface RouteConfig {
   defaultRedirect?: string;
   icon?: any;
   category?: "dashboard" | "sales" | "logistics" | "fleet" | "inventory" | "finance" | "reports" | "people" | "system";
+  showInNavigation?: boolean;
 }
+
+export const NAVIGATION_CATEGORY_ORDER: NonNullable<RouteConfig["category"]>[] = [
+  "dashboard",
+  "sales",
+  "logistics",
+  "fleet",
+  "inventory",
+  "finance",
+  "reports",
+  "people",
+  "system",
+];
+
+export const NAVIGATION_CATEGORY_LABELS: Record<NonNullable<RouteConfig["category"]>, string> = {
+  dashboard: "Command",
+  sales: "Sales",
+  logistics: "Dispatch",
+  fleet: "Fleet",
+  inventory: "Inventory",
+  finance: "Finance",
+  reports: "Reports",
+  people: "People",
+  system: "System",
+};
 
 // Central route configuration
 export const ROUTE_CONFIG: RouteConfig[] = [
@@ -133,7 +158,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: "/fuel-approvals",
-    label: "Fuel Management",
+    label: "Fuel Approvals",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
     category: "fleet",
   },
@@ -231,16 +256,19 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     path: "/hr/insurance/add",
     label: "New Insurance",
     allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "ACCOUNTANT"],
+    showInNavigation: false,
   },
   {
     path: "/hr/insurance/bulk-import",
     label: "Bulk Insurance Import",
     allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "ACCOUNTANT"],
+    showInNavigation: false,
   },
   {
     path: "/hr/insurance/[id]",
     label: "Insurance Details",
     allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "ACCOUNTANT"],
+    showInNavigation: false,
   },
 
   // --- Settings ---
@@ -249,6 +277,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     label: "LogiPRO (Legacy)",
     allowedRoles: [...ALL_APP_ROLES],
     category: "system",
+    showInNavigation: false,
   },
   {
     path: "/audit",
@@ -258,7 +287,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: "/ai-insights",
-    label: "Company Settings",
+    label: "AI Operations",
     allowedRoles: ["CEO", "ADMIN"],
     category: "system",
   },
@@ -268,26 +297,31 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     path: "/driver/trips",
     label: "My Trips",
     allowedRoles: ["DRIVER"],
+    showInNavigation: false,
   },
   {
     path: "/driver/fuel",
     label: "Fuel Log",
     allowedRoles: ["DRIVER"],
+    showInNavigation: false,
   },
   {
     path: "/driver/expenses",
     label: "My Expenses",
     allowedRoles: ["DRIVER"],
+    showInNavigation: false,
   },
   {
     path: "/driver/profile",
     label: "Driver Profile",
     allowedRoles: ["DRIVER"],
+    showInNavigation: false,
   },
   {
     path: "/driver/maintenance",
     label: "Report Issue",
     allowedRoles: ["DRIVER"],
+    showInNavigation: false,
   },
 
   // --- Profile & Shared ---
@@ -314,20 +348,28 @@ export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
   MECHANIC: "/service-requests",
   SALESMAN: "/sales",
   ACCOUNTANT: "/finance",
-  HR: "/finance",
+  HR: "/users",
   WAREHOUSE_STAFF: "/inventory",
 };
+
+function routeDebug(level: "log" | "warn" | "error", ...args: unknown[]) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.NEXT_PUBLIC_ROUTE_DEBUG === "true"
+  ) {
+    console[level](...args);
+  }
+}
 
 // Route guard hook
 export function useRouteGuard() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isLoading: isUserLoading } = useSupabase();
-  const { role, isAdmin, isInitialized } = useRole();
+  const { role, isInitialized } = useRole();
 
-  // Enhanced console logging for navigation tracking
   useEffect(() => {
-    console.log("Navigated to:", pathname);
+    routeDebug("log", "Navigated to:", pathname);
   }, [pathname]);
 
   const checkAccess = useCallback(
@@ -340,18 +382,18 @@ export function useRouteGuard() {
           user?.role === 'CEO';
 
         if (isOwnerOrAdmin) {
-          console.log(`[RouteGuard] Owner/Admin access granted for ${path}`);
+          routeDebug("log", `[RouteGuard] Owner/Admin access granted for ${path}`);
           return true;
         }
 
         if (!role) {
-          console.warn("[RouteGuard] No role provided for access check");
+          routeDebug("warn", "[RouteGuard] No role provided for access check");
           return false;
         }
 
         const route = ROUTE_CONFIG.find((r) => routeMatches(path, r.path));
         if (!route) {
-          console.error("Route not found:", path);
+          routeDebug("warn", "Route not found:", path);
           return false;
         }
 
@@ -359,12 +401,12 @@ export function useRouteGuard() {
         if (!normalizedRole) return false;
         const hasAccess = route.allowedRoles.includes(normalizedRole);
         if (!hasAccess) {
-          console.warn("Access denied:", role, path);
+          routeDebug("warn", "Access denied:", role, path);
         }
 
         return hasAccess;
       } catch (error) {
-        console.error("[RouteGuard] Error checking access:", error);
+        routeDebug("error", "[RouteGuard] Error checking access:", error);
         return false;
       }
     },
@@ -374,7 +416,7 @@ export function useRouteGuard() {
   const redirectToDefault = useCallback(
     (userRole: UserRole) => {
       const defaultRoute = ROLE_DEFAULT_ROUTES[userRole];
-      console.log(`[RouteGuard] Redirecting ${userRole} to ${defaultRoute}`);
+      routeDebug("log", `[RouteGuard] Redirecting ${userRole} to ${defaultRoute}`);
       router.push(defaultRoute);
     },
     [router],
@@ -391,22 +433,22 @@ export function useRouteGuard() {
 
     // Admin user should never be redirected, even when switching roles
     if (isAdminUser) {
-      console.log("[RouteGuard] Admin user detected, skipping all redirects");
+      routeDebug("log", "[RouteGuard] Admin user detected, skipping all redirects");
       return;
     }
 
     if (!user) {
-      console.log("[RouteGuard] No user, waiting...");
+      routeDebug("log", "[RouteGuard] No user, waiting...");
       return;
     }
 
     if (!role) {
-      console.log("[RouteGuard] No role, waiting...");
+      routeDebug("log", "[RouteGuard] No role, waiting...");
       return;
     }
 
     const hasAccess = checkAccess(pathname);
-    console.log(`[RouteGuard] ${pathname} access for ${role}: ${hasAccess}`);
+    routeDebug("log", `[RouteGuard] ${pathname} access for ${role}: ${hasAccess}`);
 
     if (!hasAccess) {
       redirectToDefault(role);
@@ -427,7 +469,7 @@ export function useRouteGuard() {
 // Get menu items for role
 export function getMenuByRole(
   role: UserRole | null,
-  isAdmin: boolean,
+  _isAdmin: boolean,
   t: Record<string, string>,
   userEmail?: string | null,
   respectRoleSwitch: boolean = false, // ✅ New flag
@@ -443,7 +485,7 @@ export function getMenuByRole(
     isOwnerOrAdminEmail &&
     !respectRoleSwitch
   ) {
-    console.log("[RouteConfig] Owner gets full menu access");
+    routeDebug("log", "[RouteConfig] Owner gets full menu access");
     return ROUTE_CONFIG;
   }
 
@@ -459,6 +501,18 @@ export function getMenuByRole(
   // Others see only their allowed routes
   return ROUTE_CONFIG.filter((route) =>
     route.allowedRoles.includes(normalizedRole),
+  );
+}
+
+export function getNavigationMenuByRole(
+  role: UserRole | null,
+  isAdmin: boolean,
+  t: Record<string, string>,
+  userEmail?: string | null,
+  respectRoleSwitch: boolean = false,
+): RouteConfig[] {
+  return getMenuByRole(role, isAdmin, t, userEmail, respectRoleSwitch).filter(
+    (route) => route.showInNavigation !== false && !!route.category,
   );
 }
 
