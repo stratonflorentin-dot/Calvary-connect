@@ -493,20 +493,20 @@ function SalesModuleContent() {
   // Helper functions
   function getStatusColor(status: string) {
     switch (status) {
-      case 'active': case 'sent': case 'won': return 'bg-green-500';
-      case 'pending': case 'draft': return 'bg-yellow-500';
-      case 'expired': case 'lost': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'active': case 'sent': case 'won': return 'bg-success';
+      case 'pending': case 'draft': return 'bg-warning';
+      case 'expired': case 'lost': return 'bg-destructive';
+      default: return 'bg-muted';
     }
   }
 
   function getStageColor(stage: string) {
     switch (stage) {
-      case 'contract_won': return 'bg-green-500';
-      case 'contract_lost': return 'bg-red-500';
-      case 'negotiation': return 'bg-orange-500';
-      case 'quotation_sent': return 'bg-blue-500';
-      default: return 'bg-yellow-500';
+      case 'contract_won': return 'bg-success';
+      case 'contract_lost': return 'bg-destructive';
+      case 'negotiation': return 'bg-warning';
+      case 'quotation_sent': return 'bg-primary';
+      default: return 'bg-warning';
     }
   }
 
@@ -523,86 +523,86 @@ function SalesModuleContent() {
   // Contract status badge helper
   function getContractStatusBadge(status: string) {
     switch (status) {
-      case 'active': return { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Active' };
-      case 'draft': return { bg: 'bg-slate-100', text: 'text-slate-800', label: 'Draft' };
-      case 'expired': return { bg: 'bg-red-100', text: 'text-red-800', label: 'Expired' };
-      case 'terminated': return { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Terminated' };
-      case 'pending_signature': return { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Pending Signature' };
-      case 'suspended': return { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Suspended' };
-      default: return { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
+      case 'active': return { bg: 'bg-success/10', text: 'text-success', label: 'Active' };
+      case 'draft': return { bg: 'bg-muted/50', text: 'text-muted-foreground', label: 'Draft' };
+      case 'expired': return { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Expired' };
+      case 'terminated': return { bg: 'bg-warning/10', text: 'text-warning', label: 'Terminated' };
+      case 'pending_signature': return { bg: 'bg-primary/10', text: 'text-primary', label: 'Pending Signature' };
+      case 'suspended': return { bg: 'bg-warning/10', text: 'text-warning', label: 'Suspended' };
+      default: return { bg: 'bg-muted/50', text: 'text-muted-foreground', label: status };
     }
   }
 
   if (loading) return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-muted">
       <Sidebar role={role || 'OPERATOR'} />
       <div className="flex-1 p-8">
         <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-muted">
       <Sidebar role={role || 'OPERATOR'} />
       <div className="flex-1 p-4 md:p-6 md:ml-64">
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Sales & Commercial</h1>
-          <p className="text-sm md:text-base text-gray-600 mt-1">Manage customers, quotations, contracts, and sales pipeline</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Sales & Commercial</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">Manage customers, quotations, contracts, and sales pipeline</p>
         </div>
 
         {/* Stats - Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-white shadow-sm border border-gray-200">
+          <Card className="bg-card shadow-sm border border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500 mb-1">Total Customers</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalCustomers}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Total Customers</p>
+                  <p className="text-2xl font-bold text-foreground">{totalCustomers}</p>
                 </div>
-                <div className="bg-blue-100 p-3 rounded-lg flex-shrink-0">
-                  <Users className="h-6 w-6 text-blue-600" />
+                <div className="bg-primary/10 p-3 rounded-lg flex-shrink-0">
+                  <Users className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white shadow-sm border border-gray-200">
+          <Card className="bg-card shadow-sm border border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500 mb-1">Active Quotations</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalQuotations}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Active Quotations</p>
+                  <p className="text-2xl font-bold text-foreground">{totalQuotations}</p>
                 </div>
-                <div className="bg-amber-100 p-3 rounded-lg flex-shrink-0">
-                  <FileText className="h-6 w-6 text-amber-600" />
+                <div className="bg-warning/10 p-3 rounded-lg flex-shrink-0">
+                  <FileText className="h-6 w-6 text-warning" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white shadow-sm border border-gray-200">
+          <Card className="bg-card shadow-sm border border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500 mb-1">Contracts</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalContracts}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Contracts</p>
+                  <p className="text-2xl font-bold text-foreground">{totalContracts}</p>
                 </div>
-                <div className="bg-emerald-100 p-3 rounded-lg flex-shrink-0">
-                  <FileSignature className="h-6 w-6 text-emerald-600" />
+                <div className="bg-success/10 p-3 rounded-lg flex-shrink-0">
+                  <FileSignature className="h-6 w-6 text-success" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white shadow-sm border border-gray-200">
+          <Card className="bg-card shadow-sm border border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500 mb-1">Pipeline Value</p>
-                  <p className="text-2xl font-bold text-gray-900">TZS {pipelineValue.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Pipeline Value</p>
+                  <p className="text-2xl font-bold text-foreground">TZS {pipelineValue.toLocaleString()}</p>
                 </div>
-                <div className="bg-purple-100 p-3 rounded-lg flex-shrink-0">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                <div className="bg-accent/10 p-3 rounded-lg flex-shrink-0">
+                  <TrendingUp className="h-6 w-6 text-accent" />
                 </div>
               </div>
             </CardContent>
@@ -837,7 +837,7 @@ function SalesModuleContent() {
                         </div>
                       </div>
                       <Separator className="my-4" />
-                      <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="bg-muted/50 p-4 rounded-lg">
                         <h4 className="font-semibold mb-2">Cost Breakdown</h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>Base Amount:</div>
@@ -855,7 +855,7 @@ function SalesModuleContent() {
                             TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees) * (quotationForm.vat_rate / 100)).toLocaleString()}
                           </div>
                           <div className="font-bold">Total Amount:</div>
-                          <div className="text-right font-bold text-lg text-green-600">
+                          <div className="text-right font-bold text-lg text-success">
                             TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees) * (1 + quotationForm.vat_rate / 100)).toLocaleString()}
                           </div>
                         </div>
@@ -956,9 +956,9 @@ function SalesModuleContent() {
                         ) : contracts.map(c => {
                           const statusBadge = getContractStatusBadge(c.status);
                           return (
-                            <TableRow key={c.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setPreviewContract(c)}>
+                            <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setPreviewContract(c)}>
                               <TableCell>
-                                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 font-mono">
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary font-mono">
                                   {c.contract_number}
                                 </span>
                               </TableCell>
@@ -977,7 +977,7 @@ function SalesModuleContent() {
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
                                   <Button variant="ghost" size="sm" onClick={() => setPreviewContract(c)} title="Preview">
-                                    <Eye className="h-4 w-4 text-blue-500" />
+                                    <Eye className="h-4 w-4 text-primary" />
                                   </Button>
                                   {c.generated_html && (
                                     <Button variant="ghost" size="sm" onClick={() => {
@@ -988,7 +988,7 @@ function SalesModuleContent() {
                                         w.print();
                                       }
                                     }} title="Print PDF">
-                                      <Printer className="h-4 w-4 text-slate-500" />
+                                      <Printer className="h-4 w-4 text-muted-foreground" />
                                     </Button>
                                   )}
                                 </div>
@@ -1156,7 +1156,7 @@ function SalesModuleContent() {
                       {jsonbRateSheets.map(rs => (
                         <div key={rs.id} className="border rounded-lg overflow-hidden">
                           <div
-                            className="flex items-center justify-between p-4 bg-slate-50 cursor-pointer hover:bg-slate-100"
+                            className="flex items-center justify-between p-4 bg-muted/50 cursor-pointer hover:bg-muted"
                             onClick={() => setViewingRateSheet(viewingRateSheet?.id === rs.id ? null : rs)}
                           >
                             <div>
@@ -1166,7 +1166,7 @@ function SalesModuleContent() {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge className="bg-emerald-100 text-emerald-800 text-xs">Active</Badge>
+                              <Badge className="bg-success/10 text-success text-xs">Active</Badge>
                               <Eye className="h-4 w-4 text-muted-foreground" />
                             </div>
                           </div>
@@ -1201,7 +1201,7 @@ function SalesModuleContent() {
                                 </Table>
                               </div>
                               {rs.special_conditions && (
-                                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                                <div className="mt-3 p-3 bg-warning/10 border border-warning/20 rounded text-xs text-warning">
                                   <strong>Note:</strong> {rs.special_conditions}
                                 </div>
                               )}
@@ -1426,8 +1426,8 @@ function SalesModuleContent() {
                           <TableCell>TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <div className="w-16 bg-gray-200 rounded-full h-2">
-                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${o.probability}%` }}></div>
+                              <div className="w-16 bg-muted rounded-full h-2">
+                                <div className="bg-primary h-2 rounded-full" style={{ width: `${o.probability}%` }}></div>
                               </div>
                               <span className="text-sm">{o.probability}%</span>
                             </div>
@@ -1454,11 +1454,11 @@ function SalesModuleContent() {
 export default function SalesModule() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen bg-gray-100">
+      <div className="flex min-h-screen bg-muted">
         <Sidebar role="OPERATOR" />
         <div className="flex-1 p-8">
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         </div>
       </div>

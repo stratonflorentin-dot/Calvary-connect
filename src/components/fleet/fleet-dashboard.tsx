@@ -191,18 +191,18 @@ export function FleetDashboard() {
     switch (upperType) {
       case 'DUMP_TRUCK':
       case 'TRUCK_HEAD':
-        return 'text-blue-600 bg-blue-50';
+        return 'text-primary bg-primary/10';
       case 'ESCORT_CAR':
-        return 'text-purple-600 bg-purple-50';
+        return 'text-accent bg-accent/10';
       case 'TRAILER':
-        return 'text-amber-600 bg-amber-50';
+        return 'text-warning bg-warning/10';
       case 'REEFER':
       case 'COLD_CHAIN':
-        return 'text-cyan-600 bg-cyan-50';
+        return 'text-info bg-info/10';
       case 'LOWBED':
       case 'HEAVY_CARGO':
-        return 'text-orange-600 bg-orange-50';
-      default: return 'text-gray-600 bg-gray-50';
+        return 'text-warning bg-warning/10';
+      default: return 'text-muted-foreground bg-muted/50';
     }
   };
 
@@ -210,17 +210,17 @@ export function FleetDashboard() {
     switch (status?.toLowerCase()) {
       case 'active':
       case 'assigned':
-        return { label: 'Active', bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500', icon: <CheckCircle className="size-4" /> };
+        return { label: 'Active', bg: 'bg-success/10', text: 'text-success', dot: 'bg-success', icon: <CheckCircle className="size-4" /> };
       case 'maintenance':
-        return { label: 'Maintenance', bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500', icon: <Wrench className="size-4" /> };
+        return { label: 'Maintenance', bg: 'bg-destructive/10', text: 'text-destructive', dot: 'bg-destructive', icon: <Wrench className="size-4" /> };
       case 'idle':
-        return { label: 'Idle', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500', icon: <Clock className="size-4" /> };
+        return { label: 'Idle', bg: 'bg-warning/10', text: 'text-warning', dot: 'bg-warning', icon: <Clock className="size-4" /> };
       case 'sold':
-        return { label: 'Sold', bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500', icon: <AlertTriangle className="size-4" /> };
+        return { label: 'Sold', bg: 'bg-destructive/10', text: 'text-destructive', dot: 'bg-destructive', icon: <AlertTriangle className="size-4" /> };
       case 'decommissioned':
-        return { label: 'Offline', bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-500', icon: <Clock className="size-4" /> };
+        return { label: 'Offline', bg: 'bg-muted/50', text: 'text-muted-foreground', dot: 'bg-muted', icon: <Clock className="size-4" /> };
       default: 
-        return { label: status || 'Unknown', bg: 'bg-gray-100', text: 'text-gray-700', dot: 'bg-gray-500', icon: <Clock className="size-4" /> };
+        return { label: status || 'Unknown', bg: 'bg-muted/50', text: 'text-muted-foreground', dot: 'bg-muted', icon: <Clock className="size-4" /> };
     }
   };
 
@@ -272,18 +272,18 @@ export function FleetDashboard() {
         
         <Card className="border-red-200">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3 text-red-600">
+            <div className="flex items-center gap-3 text-destructive">
               <AlertCircle className="size-5" />
               <h3 className="font-semibold">Error Loading Fleet Data</h3>
             </div>
-            <p className="text-sm text-red-600 mt-2">{error}</p>
+            <p className="text-sm text-destructive mt-2">{error}</p>
             
             {debugInfo && (
               <details className="mt-4">
-                <summary className="text-sm cursor-pointer text-red-600 hover:text-red-800">
+                <summary className="text-sm cursor-pointer text-destructive hover:text-destructive/80">
                   Debug Information
                 </summary>
-                <pre className="text-xs bg-red-50 p-2 rounded mt-2 overflow-auto">
+                <pre className="text-xs bg-destructive/10 p-2 rounded mt-2 overflow-auto">
                   {JSON.stringify(debugInfo, null, 2)}
                 </pre>
               </details>
@@ -310,9 +310,9 @@ export function FleetDashboard() {
             <p className="text-muted-foreground mb-4">
               It looks like the vehicles table hasn&apos;t been set up yet. Please run the database setup script first.
             </p>
-            <div className="text-left bg-gray-50 p-4 rounded-lg text-sm">
+            <div className="text-left bg-muted/50 p-4 rounded-lg text-sm">
               <p className="font-medium mb-2">To fix this issue:</p>
-              <ol className="list-decimal list-inside space-y-1 text-gray-600">
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                 <li>Open Supabase SQL Editor</li>
                 <li>Run the complete-supabase-setup-final-idempotent.sql script</li>
                 <li>Refresh this page</li>
@@ -341,55 +341,55 @@ export function FleetDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground font-medium">Total Fleet</span>
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Truck className="size-4 text-blue-600" />
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Truck className="size-4 text-primary" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-slate-900">{fleetStats.total}</p>
+            <p className="text-2xl font-bold text-foreground">{fleetStats.total}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground font-medium">Active Now</span>
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <Activity className="size-4 text-green-600" />
+              <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+                <Activity className="size-4 text-success" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-green-600">{fleetStats.active}</p>
+            <p className="text-2xl font-bold text-success">{fleetStats.active}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground font-medium">Idle</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Clock className="size-4 text-amber-600" />
+              <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+                <Clock className="size-4 text-warning" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-amber-600">{fleetStats.idle}</p>
+            <p className="text-2xl font-bold text-warning">{fleetStats.idle}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground font-medium">Maintenance</span>
-              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                <Wrench className="size-4 text-red-600" />
+              <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                <Wrench className="size-4 text-destructive" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-red-600">{fleetStats.maintenance}</p>
+            <p className="text-2xl font-bold text-destructive">{fleetStats.maintenance}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground font-medium">Utilization</span>
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Gauge className="size-4 text-purple-600" />
+              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Gauge className="size-4 text-accent" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-purple-600">{fleetStats.utilization}%</p>
+            <p className="text-2xl font-bold text-accent">{fleetStats.utilization}%</p>
           </CardContent>
         </Card>
       </div>
@@ -403,8 +403,8 @@ export function FleetDashboard() {
                 <p className="text-sm text-muted-foreground">Trucks</p>
                 <p className="text-xl font-bold">{fleetStats.trucks}</p>
               </div>
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Truck className="size-5 text-blue-600" />
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Truck className="size-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -416,8 +416,8 @@ export function FleetDashboard() {
                 <p className="text-sm text-muted-foreground">Escort Cars</p>
                 <p className="text-xl font-bold">{fleetStats.escortCars}</p>
               </div>
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <Car className="size-5 text-purple-600" />
+              <div className="p-2 bg-accent/10 rounded-lg">
+                <Car className="size-5 text-accent" />
               </div>
             </div>
           </CardContent>
@@ -429,8 +429,8 @@ export function FleetDashboard() {
                 <p className="text-sm text-muted-foreground">Trailers</p>
                 <p className="text-xl font-bold">{fleetStats.trailers}</p>
               </div>
-              <div className="p-2 bg-amber-50 rounded-lg">
-                <Package className="size-5 text-amber-600" />
+              <div className="p-2 bg-warning/10 rounded-lg">
+                <Package className="size-5 text-warning" />
               </div>
             </div>
           </CardContent>
@@ -442,8 +442,8 @@ export function FleetDashboard() {
                 <p className="text-sm text-muted-foreground">Reefers</p>
                 <p className="text-xl font-bold">{fleetStats.reefers}</p>
               </div>
-              <div className="p-2 bg-cyan-50 rounded-lg">
-                <Snowflake className="size-5 text-cyan-600" />
+              <div className="p-2 bg-info/10 rounded-lg">
+                <Snowflake className="size-5 text-info" />
               </div>
             </div>
           </CardContent>
@@ -455,8 +455,8 @@ export function FleetDashboard() {
                 <p className="text-sm text-muted-foreground">Lowbeds</p>
                 <p className="text-xl font-bold">{fleetStats.lowbeds}</p>
               </div>
-              <div className="p-2 bg-orange-50 rounded-lg">
-                <Anchor className="size-5 text-orange-600" />
+              <div className="p-2 bg-warning/10 rounded-lg">
+                <Anchor className="size-5 text-warning" />
               </div>
             </div>
           </CardContent>
@@ -464,7 +464,7 @@ export function FleetDashboard() {
       </div>
 
       {/* Filter and Actions - Responsive Layout */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
+      <div className="bg-card rounded-xl border border-border p-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-wrap">
             {['all', 'active', 'idle', 'maintenance'].map((tab) => (
@@ -473,8 +473,8 @@ export function FleetDashboard() {
                 onClick={() => setFilter(tab)}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors capitalize ${
                   filter === tab
-                    ? 'bg-amber-500 text-white'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted'
                 }`}
               >
                 {tab}
@@ -487,7 +487,7 @@ export function FleetDashboard() {
               variant={filter === 'truck' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('truck')}
-              className={filter === 'truck' ? 'bg-blue-600' : ''}
+              className={filter === 'truck' ? 'bg-primary' : ''}
             >
               <Truck className="size-4 mr-2" />
               Trucks
@@ -496,7 +496,7 @@ export function FleetDashboard() {
               variant={filter === 'reefer' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('reefer')}
-              className={filter === 'reefer' ? 'bg-cyan-600' : ''}
+              className={filter === 'reefer' ? 'bg-info' : ''}
             >
               <Snowflake className="size-4 mr-2" />
               Cold Chain
@@ -505,7 +505,7 @@ export function FleetDashboard() {
               variant={filter === 'lowbed' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('lowbed')}
-              className={filter === 'lowbed' ? 'bg-orange-600' : ''}
+              className={filter === 'lowbed' ? 'bg-warning' : ''}
             >
               <Anchor className="size-4 mr-2" />
               Heavy Cargo
@@ -514,7 +514,7 @@ export function FleetDashboard() {
               variant={filter === 'car' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('car')}
-              className={filter === 'car' ? 'bg-purple-600' : ''}
+              className={filter === 'car' ? 'bg-accent' : ''}
             >
               <Car className="size-4 mr-2" />
               Escort Cars
@@ -523,7 +523,7 @@ export function FleetDashboard() {
               variant={filter === 'trailer' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('trailer')}
-              className={filter === 'trailer' ? 'bg-amber-600' : ''}
+              className={filter === 'trailer' ? 'bg-warning' : ''}
             >
               <Package className="size-4 mr-2" />
               Trailers

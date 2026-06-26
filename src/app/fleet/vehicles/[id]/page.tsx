@@ -61,11 +61,11 @@ export default function VehicleDetailPage() {
     // Determine status badge color
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'available': return 'bg-green-500';
-            case 'in_transit': return 'bg-teal-500';
-            case 'maintenance': return 'bg-amber-500';
-            case 'repair': return 'bg-orange-500';
-            default: return 'bg-gray-500';
+            case 'available': return 'bg-success';
+            case 'in_transit': return 'bg-info';
+            case 'maintenance': return 'bg-warning';
+            case 'repair': return 'bg-warning';
+            default: return 'bg-muted';
         }
     };
 
@@ -83,8 +83,8 @@ export default function VehicleDetailPage() {
 
                         {/* Vehicle Icon & Info */}
                         <div className="flex items-start gap-4 mb-4">
-                            <div className="w-14 h-14 rounded-xl bg-sky-700 flex items-center justify-center">
-                                <Truck className="w-7 h-7 text-white" />
+                            <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
+                                <Truck className="w-7 h-7 text-primary-foreground" />
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold">{vehicle.vehicle_code}</h1>
@@ -107,7 +107,7 @@ export default function VehicleDetailPage() {
                                 {vehicle.registration_number}
                             </Badge>
                             {vehicle.odometer_km === 0 && (
-                                <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                                <Badge variant="secondary" className="bg-warning/10 text-warning">
                                     No Odometer
                                 </Badge>
                             )}
@@ -116,15 +116,15 @@ export default function VehicleDetailPage() {
 
                     {/* Action Buttons */}
                     <div className="flex flex-col gap-2">
-                        <Button className="bg-green-500 hover:bg-green-600 gap-2">
+                        <Button className="bg-success hover:bg-success/90 text-success-foreground gap-2">
                             <Download className="w-4 h-4" />
                             Download Report
                         </Button>
-                        <Button variant="outline" className="text-sky-700 border-sky-200">
+                        <Button variant="outline" className="text-primary border-primary/20">
                             <Edit2 className="w-4 h-4 mr-2" />
                             Edit Vehicle
                         </Button>
-                        <Button className="bg-orange-500 hover:bg-orange-600 text-white gap-2">
+                        <Button className="bg-warning hover:bg-warning/90 text-warning-foreground gap-2">
                             <Wrench className="w-4 h-4" />
                             Log Maintenance
                         </Button>
@@ -137,9 +137,9 @@ export default function VehicleDetailPage() {
                 <StatMiniCard
                     title="Total Cost"
                     value={format(stats.totalCost)}
-                    icon={<Truck className="w-4 h-4 text-orange-500" />}
-                    iconBg="bg-orange-100"
-                    valueColor="text-orange-600"
+                    icon={<Truck className="w-4 h-4 text-warning" />}
+                    iconBg="bg-warning/10"
+                    valueColor="text-warning"
                 />
                 <StatMiniCard
                     title="Fuel Spend"
@@ -151,23 +151,23 @@ export default function VehicleDetailPage() {
                 <StatMiniCard
                     title="Maintenance"
                     value={format(stats.maintenanceCost)}
-                    icon={<Wrench className="w-4 h-4 text-amber-500" />}
-                    iconBg="bg-amber-100"
-                    valueColor="text-amber-600"
+                    icon={<Wrench className="w-4 h-4 text-warning" />}
+                    iconBg="bg-warning/10"
+                    valueColor="text-warning"
                 />
                 <StatMiniCard
                     title="Total Trips"
                     value={stats.totalTrips}
-                    icon={<Truck className="w-4 h-4 text-emerald-500" />}
-                    iconBg="bg-emerald-100"
-                    valueColor="text-emerald-600"
+                    icon={<Truck className="w-4 h-4 text-success" />}
+                    iconBg="bg-success/10"
+                    valueColor="text-success"
                 />
                 <StatMiniCard
                     title="KM Driven"
                     value={stats.kmDriven.toLocaleString('en-TZ')}
-                    icon={<Truck className="w-4 h-4 text-purple-500" />}
-                    iconBg="bg-purple-100"
-                    valueColor="text-purple-600"
+                    icon={<Truck className="w-4 h-4 text-accent" />}
+                    iconBg="bg-accent/10"
+                    valueColor="text-accent"
                 />
                 <StatMiniCard
                     title="Fuel Litres"
@@ -184,31 +184,31 @@ export default function VehicleDetailPage() {
                 <GradientCard
                     title="Performance & Efficiency"
                     icon={<Truck className="w-5 h-5 text-white" />}
-                    iconBg="bg-sky-600"
-                    headerGradient="bg-gradient-to-r from-sky-600 to-sky-700"
+                    iconBg="bg-primary"
+                    headerGradient="bg-gradient-to-r from-primary to-primary/80"
                 >
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-xs text-gray-500 mb-1">Fuel Efficiency</p>
-                            <p className="text-sm font-bold text-gray-700">
+                        <div className="bg-muted/50 p-4 rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-1">Fuel Efficiency</p>
+                            <p className="text-sm font-bold text-foreground">
                                 {stats.fuelEfficiency.toFixed(1)} km/L
                             </p>
                         </div>
-                        <div className="bg-orange-50 p-4 rounded-lg">
-                            <p className="text-xs text-orange-600 mb-1">Cost per km</p>
-                            <p className="text-sm font-bold text-orange-700">
+                        <div className="bg-warning/10 p-4 rounded-lg">
+                            <p className="text-xs text-warning mb-1">Cost per km</p>
+                            <p className="text-sm font-bold text-warning">
                                 TZS {stats.costPerKm.toFixed(2)}
                             </p>
                         </div>
-                        <div className="bg-purple-50 p-4 rounded-lg">
-                            <p className="text-xs text-purple-600 mb-1">Avg Trip Distance</p>
-                            <p className="text-sm font-bold text-purple-700">
+                        <div className="bg-accent/10 p-4 rounded-lg">
+                            <p className="text-xs text-accent mb-1">Avg Trip Distance</p>
+                            <p className="text-sm font-bold text-accent">
                                 {stats.avgTripDistance.toFixed(0)} km
                             </p>
                         </div>
-                        <div className="bg-emerald-50 p-4 rounded-lg">
-                            <p className="text-xs text-emerald-600 mb-1">Uptime %</p>
-                            <p className="text-sm font-bold text-emerald-700">
+                        <div className="bg-success/10 p-4 rounded-lg">
+                            <p className="text-xs text-success mb-1">Uptime %</p>
+                            <p className="text-sm font-bold text-success">
                                 {stats.uptimePercent.toFixed(1)}%
                             </p>
                         </div>
@@ -219,39 +219,39 @@ export default function VehicleDetailPage() {
                 <GradientCard
                     title="Financial Performance"
                     icon={<Truck className="w-5 h-5 text-white" />}
-                    iconBg="bg-orange-600"
-                    headerGradient="bg-gradient-to-r from-orange-500 to-orange-600"
+                    iconBg="bg-warning"
+                    headerGradient="bg-gradient-to-r from-warning to-warning/80"
                 >
                     <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-blue-50 p-3 rounded-lg">
-                                <p className="text-xs text-blue-600">Lifetime Revenue</p>
-                                <p className="text-sm font-bold text-blue-700">
+                            <div className="bg-info/10 p-3 rounded-lg">
+                                <p className="text-xs text-info">Lifetime Revenue</p>
+                                <p className="text-sm font-bold text-info">
                                     {format(stats.lifetimeRevenue)}
                                 </p>
                             </div>
-                            <div className="bg-emerald-50 p-3 rounded-lg">
-                                <p className="text-xs text-emerald-600">Profitability</p>
-                                <p className="text-sm font-bold text-emerald-700">
+                            <div className="bg-success/10 p-3 rounded-lg">
+                                <p className="text-xs text-success">Profitability</p>
+                                <p className="text-sm font-bold text-success">
                                     {format(stats.profitability)}
                                 </p>
                             </div>
                         </div>
-                        <div className="bg-amber-50 p-3 rounded-lg">
-                            <p className="text-xs text-amber-600">Profit Margin %</p>
-                            <p className="text-sm font-bold text-amber-700">
+                        <div className="bg-warning/10 p-3 rounded-lg">
+                            <p className="text-xs text-warning">Profit Margin %</p>
+                            <p className="text-sm font-bold text-warning">
                                 {stats.profitMargin.toFixed(1)}%
                             </p>
                         </div>
-                        <div className="bg-red-50 p-3 rounded-lg">
-                            <p className="text-xs text-red-600">ROI %</p>
-                            <p className="text-sm font-bold text-red-700">
+                        <div className="bg-destructive/10 p-3 rounded-lg">
+                            <p className="text-xs text-destructive">ROI %</p>
+                            <p className="text-sm font-bold text-destructive">
                                 {stats.roi.toFixed(1)}%
                             </p>
                         </div>
-                        <div className="bg-indigo-50 p-3 rounded-lg">
-                            <p className="text-xs text-indigo-600">Revenue per Trip</p>
-                            <p className="text-sm font-bold text-indigo-700">
+                        <div className="bg-accent/10 p-3 rounded-lg">
+                            <p className="text-xs text-accent">Revenue per Trip</p>
+                            <p className="text-sm font-bold text-accent">
                                 {format(stats.revenuePerTrip)}
                             </p>
                         </div>
@@ -263,12 +263,12 @@ export default function VehicleDetailPage() {
             <GradientCard
                 title="Utilization Trend — Last 6 months performance"
                 icon={<Truck className="w-5 h-5 text-white" />}
-                iconBg="bg-purple-600"
-                headerGradient="bg-gradient-to-r from-purple-500 to-purple-600"
+                iconBg="bg-accent"
+                headerGradient="bg-gradient-to-r from-accent to-accent/80"
             >
                 <div className="grid grid-cols-6 gap-3 text-xs text-center">
                     {utilizationByMonth.map((month, idx) => {
-                        const utilizationColor = month.percent > 70 ? 'text-emerald-600' : month.percent > 40 ? 'text-amber-600' : 'text-gray-600';
+                        const utilizationColor = month.percent > 70 ? 'text-success' : month.percent > 40 ? 'text-warning' : 'text-muted-foreground';
                         return (
                             <div key={idx} className="border rounded-lg p-2">
                                 <p className="font-semibold">{month.month}</p>
@@ -302,8 +302,8 @@ export default function VehicleDetailPage() {
                             <GradientCard
                                 title="Specifications"
                                 icon={<Truck className="w-5 h-5 text-white" />}
-                                iconBg="bg-sky-600"
-                                headerGradient="bg-gradient-to-r from-sky-600 to-sky-700"
+                                iconBg="bg-primary"
+                                headerGradient="bg-gradient-to-r from-primary to-primary/80"
                             >
                                 <div className="grid grid-cols-3 gap-4">
                                     {[
@@ -330,26 +330,26 @@ export default function VehicleDetailPage() {
                             <GradientCard
                                 title="Financial & Rates"
                                 icon={<Truck className="w-5 h-5 text-white" />}
-                                iconBg="bg-orange-600"
-                                headerGradient="bg-gradient-to-r from-orange-500 to-orange-600"
+                                iconBg="bg-warning"
+                                headerGradient="bg-gradient-to-r from-warning to-warning/80"
                             >
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-3 gap-3">
-                                        <div className="bg-sky-50 p-3 rounded-lg text-center">
-                                            <p className="text-xs text-sky-600">Daily Rate</p>
-                                            <p className="text-sm font-bold text-sky-700">
+                                        <div className="bg-primary/10 p-3 rounded-lg text-center">
+                                            <p className="text-xs text-primary">Daily Rate</p>
+                                            <p className="text-sm font-bold text-primary">
                                                 TZS {vehicle.daily_rate?.toLocaleString('en-TZ') || '0'}
                                             </p>
                                         </div>
-                                        <div className="bg-sky-50 p-3 rounded-lg text-center">
-                                            <p className="text-xs text-sky-600">Weekly Rate</p>
-                                            <p className="text-sm font-bold text-sky-700">
+                                        <div className="bg-primary/10 p-3 rounded-lg text-center">
+                                            <p className="text-xs text-primary">Weekly Rate</p>
+                                            <p className="text-sm font-bold text-primary">
                                                 TZS {vehicle.weekly_rate?.toLocaleString('en-TZ') || '0'}
                                             </p>
                                         </div>
-                                        <div className="bg-sky-50 p-3 rounded-lg text-center">
-                                            <p className="text-xs text-sky-600">Monthly Rate</p>
-                                            <p className="text-sm font-bold text-sky-700">
+                                        <div className="bg-primary/10 p-3 rounded-lg text-center">
+                                            <p className="text-xs text-primary">Monthly Rate</p>
+                                            <p className="text-sm font-bold text-primary">
                                                 TZS {vehicle.monthly_rate?.toLocaleString('en-TZ') || '0'}
                                             </p>
                                         </div>
@@ -414,21 +414,21 @@ export default function VehicleDetailPage() {
                                 <h3 className="font-semibold text-sm mb-4">Cost Breakdown</h3>
                                 <div className="space-y-2">
                                     <div className="flex h-6 bg-muted rounded-full overflow-hidden">
-                                        <div className="bg-sky-500" style={{ width: '40%' }}></div>
-                                        <div className="bg-orange-500" style={{ width: '35%' }}></div>
-                                        <div className="bg-emerald-500" style={{ width: '25%' }}></div>
+                                        <div className="bg-primary" style={{ width: '40%' }}></div>
+                                        <div className="bg-warning" style={{ width: '35%' }}></div>
+                                        <div className="bg-success" style={{ width: '25%' }}></div>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2 text-xs pt-2">
                                         <div className="flex items-center gap-1">
-                                            <div className="w-2 h-2 bg-sky-500 rounded"></div>
+                                            <div className="w-2 h-2 bg-primary rounded"></div>
                                             <span>Fuel 40%</span>
                                         </div>
                                         <div className="flex items-center gap-1">
-                                            <div className="w-2 h-2 bg-orange-500 rounded"></div>
+                                            <div className="w-2 h-2 bg-warning rounded"></div>
                                             <span>Maint 35%</span>
                                         </div>
                                         <div className="flex items-center gap-1">
-                                            <div className="w-2 h-2 bg-emerald-500 rounded"></div>
+                                            <div className="w-2 h-2 bg-success rounded"></div>
                                             <span>Allow 25%</span>
                                         </div>
                                     </div>
@@ -449,15 +449,15 @@ export default function VehicleDetailPage() {
                                         <option>Repair</option>
                                         <option>Retired</option>
                                     </select>
-                                    <Button className="w-full bg-sky-700 hover:bg-sky-800 text-white">
+                                    <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                                         Update Status
                                     </Button>
                                 </div>
                             </Card>
 
                             {/* Danger Zone */}
-                            <Card className="p-4 border-red-500 border">
-                                <h3 className="font-semibold text-sm text-red-600 mb-4">Danger Zone</h3>
+                            <Card className="p-4 border-destructive border">
+                                <h3 className="font-semibold text-sm text-destructive mb-4">Danger Zone</h3>
                                 <Button variant="destructive" className="w-full">
                                     Delete Vehicle
                                 </Button>
@@ -559,9 +559,9 @@ export default function VehicleDetailPage() {
                                 {documents.map(doc => (
                                     <div key={doc.id} className="border rounded-lg p-3">
                                         <div className="flex items-start gap-2 mb-2">
-                                            <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${doc.status === 'expired' ? 'bg-red-500' :
-                                                    doc.status === 'expiring' ? 'bg-amber-500' :
-                                                        'bg-green-500'
+                                            <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${doc.status === 'expired' ? 'bg-destructive' :
+                                                    doc.status === 'expiring' ? 'bg-warning' :
+                                                        'bg-success'
                                                 }`}></div>
                                             <div className="flex-1">
                                                 <p className="font-semibold text-sm">{doc.doc_name}</p>

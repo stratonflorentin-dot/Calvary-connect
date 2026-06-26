@@ -66,14 +66,14 @@ export default function UsersPage() {
 
   // Role configuration for enhanced badges
   const ROLE_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
-    CEO: { label: 'CEO', color: 'text-purple-700', bgColor: 'bg-purple-100' },
-    ADMIN: { label: 'Admin', color: 'text-red-700', bgColor: 'bg-red-100' },
-    HR: { label: 'HR', color: 'text-pink-700', bgColor: 'bg-pink-100' },
-    OPERATOR: { label: 'Operations', color: 'text-blue-700', bgColor: 'bg-blue-100' },
-    DRIVER: { label: 'Driver', color: 'text-green-700', bgColor: 'bg-green-100' },
-    MECHANIC: { label: 'Mechanic', color: 'text-orange-700', bgColor: 'bg-orange-100' },
-    ACCOUNTANT: { label: 'Accountant', color: 'text-cyan-700', bgColor: 'bg-cyan-100' },
-    SALESMAN: { label: 'Salesman', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+    CEO: { label: 'CEO', color: 'text-accent', bgColor: 'bg-accent/10' },
+    ADMIN: { label: 'Admin', color: 'text-destructive', bgColor: 'bg-destructive/10' },
+    HR: { label: 'HR', color: 'text-info', bgColor: 'bg-info/10' },
+    OPERATOR: { label: 'Operations', color: 'text-primary', bgColor: 'bg-primary/10' },
+    DRIVER: { label: 'Driver', color: 'text-success', bgColor: 'bg-success/10' },
+    MECHANIC: { label: 'Mechanic', color: 'text-warning', bgColor: 'bg-warning/10' },
+    ACCOUNTANT: { label: 'Accountant', color: 'text-info', bgColor: 'bg-info/10' },
+    SALESMAN: { label: 'Salesman', color: 'text-primary', bgColor: 'bg-primary/10' },
   };
 
   const getRoleBadgeClass = (roleName: string) => {
@@ -163,11 +163,11 @@ export default function UsersPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { bg: string; text: string; label: string; dot: string }> = {
-      active: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Active', dot: 'bg-emerald-500' },
-      invited: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Invited', dot: 'bg-amber-500' },
-      dormant: { bg: 'bg-slate-100', text: 'text-slate-700', label: 'Dormant', dot: 'bg-slate-500' },
-      suspended: { bg: 'bg-red-100', text: 'text-red-700', label: 'Suspended', dot: 'bg-red-500' },
-      inactive: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Inactive', dot: 'bg-gray-500' },
+      active: { bg: 'bg-success/10', text: 'text-success', label: 'Active', dot: 'bg-success' },
+      invited: { bg: 'bg-warning/10', text: 'text-warning', label: 'Invited', dot: 'bg-warning' },
+      dormant: { bg: 'bg-muted/50', text: 'text-muted-foreground', label: 'Dormant', dot: 'bg-muted' },
+      suspended: { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Suspended', dot: 'bg-destructive' },
+      inactive: { bg: 'bg-muted/50', text: 'text-muted-foreground', label: 'Inactive', dot: 'bg-muted' },
     };
     return statusConfig[status] || statusConfig.active;
   };
@@ -354,7 +354,7 @@ export default function UsersPage() {
             {(role === 'CEO' || role === 'ADMIN') && (
               <Button
                 variant="outline"
-                className="rounded-full gap-2 border-dashed border-sky-500 text-sky-700 hover:text-sky-800 hover:bg-sky-50"
+                className="rounded-full gap-2 border-dashed border-primary text-primary hover:text-primary/80 hover:bg-primary/10"
                 onClick={async () => {
                   const runBackfill = async (dryRun: boolean) => {
                     try {
@@ -477,7 +477,7 @@ export default function UsersPage() {
                         <button
                           type="button"
                           onClick={clearPhoto}
-                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                          className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -504,7 +504,7 @@ export default function UsersPage() {
                   </div>
                   <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
                 </div>
-                <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-700">
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-xs text-primary">
                   <span className="font-bold block">Employee ID Auto-Generation</span>
                   <span>Employee ID will be auto-generated based on the selected department when you save (e.g. OPS-001, FIN-002).</span>
                 </div>
@@ -519,59 +519,59 @@ export default function UsersPage() {
 
         {/* Team Stats Cards - Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 font-medium">Total Users</span>
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Users className="size-4 text-blue-600" />
+              <span className="text-xs text-muted-foreground font-medium">Total Users</span>
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Users className="size-4 text-primary" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-slate-900">{teamStats.totalUsers}</p>
+            <p className="text-2xl font-bold text-foreground">{teamStats.totalUsers}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 font-medium">Active</span>
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <Activity className="size-4 text-green-600" />
+              <span className="text-xs text-muted-foreground font-medium">Active</span>
+              <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+                <Activity className="size-4 text-success" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-green-600">{teamStats.activeUsers}</p>
+            <p className="text-2xl font-bold text-success">{teamStats.activeUsers}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 font-medium">Pending Invites</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Clock className="size-4 text-amber-600" />
+              <span className="text-xs text-muted-foreground font-medium">Pending Invites</span>
+              <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+                <Clock className="size-4 text-warning" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-amber-600">{teamStats.pendingInvites}</p>
+            <p className="text-2xl font-bold text-warning">{teamStats.pendingInvites}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 font-medium">Dormant</span>
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                <User className="size-4 text-slate-600" />
+              <span className="text-xs text-muted-foreground font-medium">Dormant</span>
+              <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+                <User className="size-4 text-muted-foreground" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-slate-600">{teamStats.dormantUsers}</p>
+            <p className="text-2xl font-bold text-muted-foreground">{teamStats.dormantUsers}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 font-medium">Drivers</span>
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Shield className="size-4 text-purple-600" />
+              <span className="text-xs text-muted-foreground font-medium">Drivers</span>
+              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Shield className="size-4 text-accent" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-purple-600">{teamStats.driversCount}</p>
+            <p className="text-2xl font-bold text-accent">{teamStats.driversCount}</p>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 font-medium">Operators</span>
-              <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
-                <AlertTriangle className="size-4 text-cyan-600" />
+              <span className="text-xs text-muted-foreground font-medium">Operators</span>
+              <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
+                <AlertTriangle className="size-4 text-info" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-cyan-600">{teamStats.operatorsCount}</p>
+            <p className="text-2xl font-bold text-info">{teamStats.operatorsCount}</p>
           </div>
         </div>
 
@@ -648,31 +648,31 @@ export default function UsersPage() {
                   <SelectContent>
                     <SelectItem value="active">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        <div className="w-2 h-2 rounded-full bg-success"></div>
                         <span>Active - Currently using system</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="invited">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-400"></div>
+                        <div className="w-2 h-2 rounded-full bg-warning"></div>
                         <span>Invited - Pre-added, pending signup</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="dormant">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                        <div className="w-2 h-2 rounded-full bg-muted"></div>
                         <span>Dormant - No activity for 30+ days</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="suspended">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                        <div className="w-2 h-2 rounded-full bg-destructive"></div>
                         <span>Suspended - Access revoked</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="inactive">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                        <div className="w-2 h-2 rounded-full bg-muted"></div>
                         <span>Inactive - Manually deactivated</span>
                       </div>
                     </SelectItem>
