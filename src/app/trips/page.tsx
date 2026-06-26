@@ -651,18 +651,28 @@ export default function TripsPage() {
                             setSelectedVehicleType(selectedVehicle?.type || '');
                             setTripForm({ ...tripForm, vehicle_id: value, trailer_id: '' });
                           }}
+                          disabled={vehicles.length === 0}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select truck" />
+                            <SelectValue placeholder={vehicles.length === 0 ? "No vehicles available" : "Select truck"} />
                           </SelectTrigger>
                           <SelectContent>
-                            {vehicles.map((vehicle) => (
-                              <SelectItem key={vehicle.id} value={vehicle.id}>
-                                {vehicle.plate_number} - {vehicle.make} {vehicle.model} ({vehicle.type === 'DUMP_TRUCK' ? 'Dump Truck' : vehicle.type === 'TRUCK_HEAD' ? 'Truck Head' : vehicle.type === 'ESCORT_CAR' ? 'Escort Car' : vehicle.type})
-                              </SelectItem>
-                            ))}
+                            {vehicles.length === 0 ? (
+                              <div className="px-4 py-2 text-sm text-muted-foreground">
+                                No vehicles available. Please add vehicles first.
+                              </div>
+                            ) : (
+                              vehicles.map((vehicle) => (
+                                <SelectItem key={vehicle.id} value={vehicle.id}>
+                                  {vehicle.plate_number} - {vehicle.make} {vehicle.model} ({vehicle.type === 'DUMP_TRUCK' ? 'Dump Truck' : vehicle.type === 'TRUCK_HEAD' ? 'Truck Head' : vehicle.type === 'ESCORT_CAR' ? 'Escort Car' : vehicle.type})
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
+                        {vehicles.length === 0 && (
+                          <p className="text-xs text-destructive">Please add vehicles to the system before creating trips.</p>
+                        )}
                       </div>
                       {/* Show trailer selection only for Truck Head */}
                       {selectedVehicleType === 'TRUCK_HEAD' && (
@@ -671,18 +681,28 @@ export default function TripsPage() {
                           <Select
                             value={tripForm.trailer_id}
                             onValueChange={(value) => setTripForm({ ...tripForm, trailer_id: value })}
+                            disabled={trailers.length === 0}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select trailer" />
+                              <SelectValue placeholder={trailers.length === 0 ? "No trailers available" : "Select trailer"} />
                             </SelectTrigger>
                             <SelectContent>
-                              {trailers.map((trailer) => (
-                                <SelectItem key={trailer.id} value={trailer.id}>
-                                  {trailer.plate_number} - {trailer.make} {trailer.model} {trailer.trailer_sub_type && `(${trailer.trailer_sub_type})`}
-                                </SelectItem>
-                              ))}
+                              {trailers.length === 0 ? (
+                                <div className="px-4 py-2 text-sm text-muted-foreground">
+                                  No trailers available. Please add trailers first.
+                                </div>
+                              ) : (
+                                trailers.map((trailer) => (
+                                  <SelectItem key={trailer.id} value={trailer.id}>
+                                    {trailer.plate_number} - {trailer.make} {trailer.model} {trailer.trailer_sub_type && `(${trailer.trailer_sub_type})`}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
+                          {trailers.length === 0 && (
+                            <p className="text-xs text-destructive">Please add trailers to the system.</p>
+                          )}
                         </div>
                       )}
                     </div>
