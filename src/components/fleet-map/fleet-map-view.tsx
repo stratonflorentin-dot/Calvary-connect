@@ -40,10 +40,10 @@ const FleetMapCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="absolute inset-0 flex items-center justify-center bg-[#0f172a]/5">
+      <div className="absolute inset-0 flex items-center justify-center bg-muted/5">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1e3a5f] border-t-transparent" />
-          <p className="text-sm font-medium text-[#1e3a5f]">Loading fleet map…</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-primary">Loading fleet map…</p>
         </div>
       </div>
     ),
@@ -71,7 +71,7 @@ function LegendItem({
           color,
         )}
       />
-      <span className="text-xs font-medium text-slate-600">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -126,8 +126,8 @@ function DriverDetailPanel({
             className={cn(
               "border-0 text-[10px] font-semibold",
               driver.isOnline
-                ? "bg-emerald-400/20 text-emerald-100"
-                : "bg-white/10 text-slate-200",
+                ? "bg-success/20 text-success/90"
+                : "bg-card/10 text-muted-foreground",
             )}
           >
             {driver.isOnline ? (
@@ -145,53 +145,53 @@ function DriverDetailPanel({
 
       <div className="p-4 space-y-4 flex-1 overflow-y-auto">
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-            <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+          <div className="rounded-xl bg-muted/50 p-3 border border-border">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
               <Gauge className="h-3.5 w-3.5" />
               <span className="text-[10px] font-medium uppercase tracking-wide">Speed</span>
             </div>
-            <p className="text-xl font-bold text-[#1e3a5f]">{driver.speed} km/h</p>
+            <p className="text-xl font-bold text-primary">{driver.speed} km/h</p>
           </div>
-          <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-            <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+          <div className="rounded-xl bg-muted/50 p-3 border border-border">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
               <Clock className="h-3.5 w-3.5" />
               <span className="text-[10px] font-medium uppercase tracking-wide">Updated</span>
             </div>
-            <p className="text-sm font-semibold text-[#1e3a5f] leading-tight">{updated}</p>
+            <p className="text-sm font-semibold text-primary leading-tight">{updated}</p>
           </div>
         </div>
 
-        <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400 mb-2">
+        <div className="rounded-xl bg-muted/50 p-3 border border-border">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
             Coordinates
           </p>
-          <div className="grid grid-cols-2 gap-3 font-mono text-xs text-slate-700">
+          <div className="grid grid-cols-2 gap-3 font-mono text-xs text-foreground">
             <div>
-              <span className="text-slate-400 block text-[10px]">Lat</span>
+              <span className="text-muted-foreground block text-[10px]">Lat</span>
               {driver.latitude.toFixed(5)}
             </div>
             <div>
-              <span className="text-slate-400 block text-[10px]">Lng</span>
+              <span className="text-muted-foreground block text-[10px]">Lng</span>
               {driver.longitude.toFixed(5)}
             </div>
           </div>
         </div>
 
         {/* Driver Compliance Records */}
-        <div className="rounded-xl bg-white p-3 border border-gray-100 shadow-sm">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400 mb-2">
+        <div className="rounded-xl bg-card p-3 border border-border shadow-sm">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
             Compliance & Licensing
           </p>
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">Profile Status</span>
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 py-0 text-[10px]">
+              <span className="text-xs font-semibold text-foreground">Profile Status</span>
+              <Badge variant="outline" className="bg-success/10 text-success border-success/20 py-0 text-[10px]">
                 Valid & Compliant
               </Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-600">License Class</span>
-              <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 py-0 text-[10px]">
+              <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border py-0 text-[10px]">
                 Class CE (Heavy)
               </Badge>
             </div>
@@ -199,11 +199,11 @@ function DriverDetailPanel({
               <span className="text-xs font-semibold text-slate-600">License Expiry</span>
               {/* Simulate expiry warning dynamically based on driver id string length */}
               {driver.id.length % 2 === 0 ? (
-                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 py-0 text-[10px] flex items-center gap-1">
+                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 py-0 text-[10px] flex items-center gap-1">
                   <IconFallback name="AlertCircle" className="size-3" /> Expires in 45 Days
                 </Badge>
               ) : (
-                <Badge variant="outline" className="bg-gray-50 text-slate-600 border-gray-200 py-0 text-[10px]">
+                <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border py-0 text-[10px]">
                   Nov 2027
                 </Badge>
               )}
@@ -221,16 +221,16 @@ function DriverDetailPanel({
               key={label}
               variant="outline"
               size="sm"
-              className="flex flex-col h-auto py-2.5 gap-1 rounded-xl border-slate-200 hover:border-[#2952A3]/40 hover:bg-blue-50/50 transition-all"
+              className="flex flex-col h-auto py-2.5 gap-1 rounded-xl border-border hover:border-primary/40 hover:bg-primary/5 transition-all"
             >
-              <Icon className="h-4 w-4 text-[#2952A3]" />
+              <Icon className="h-4 w-4 text-primary" />
               <span className="text-[10px] font-medium">{label}</span>
             </Button>
           ))}
         </div>
 
         <Button
-          className="w-full rounded-xl bg-[#2952A3] hover:bg-[#1e3a5f] gap-2 h-11 shadow-md"
+          className="w-full rounded-xl bg-primary hover:bg-primary/90 gap-2 h-11 shadow-md"
           onClick={onViewMap}
         >
           <Crosshair className="h-4 w-4" />
@@ -282,7 +282,7 @@ export default function FleetMapView({
   }, []);
 
   return (
-    <div className="fleet-map-root relative h-full w-full min-h-[calc(100dvh-0px)] overflow-hidden bg-slate-300">
+    <div className="fleet-map-root relative h-full w-full min-h-[calc(100dvh-0px)] overflow-hidden bg-muted">
       <FleetMapCanvas
         ref={canvasRef}
         locations={locations}
@@ -305,55 +305,55 @@ export default function FleetMapView({
         >
           <div className="flex items-center justify-between gap-2 mb-3">
             <div>
-              <h1 className="text-base font-bold text-[#0f172a] tracking-tight">
+              <h1 className="text-base font-bold text-foreground tracking-tight">
                 Fleet tracking
               </h1>
-              <p className="text-[11px] text-slate-500">Real-time driver positions</p>
+              <p className="text-[11px] text-muted-foreground">Real-time driver positions</p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
               </span>
-              <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">
+              <span className="text-[10px] font-semibold text-success uppercase tracking-wider">
                 Live
               </span>
             </div>
           </div>
 
           <div className="relative mb-3">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search driver or vehicle…"
-              className="h-10 pl-10 rounded-full border-slate-200/80 bg-white/80 text-sm focus-visible:ring-[#2952A3]/30"
+              className="h-10 pl-10 rounded-full border-border bg-card/80 text-sm focus-visible:ring-primary/30"
             />
           </div>
 
           {loadError && (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
+            <p className="text-xs text-warning bg-warning/10 border border-warning/20 rounded-lg px-3 py-2 mb-2">
               {loadError}
             </p>
           )}
           {driversWithoutGps.length > 0 && locations.length === 0 && (
-            <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mb-2">
+            <p className="text-xs text-muted-foreground bg-muted/50 border border-border rounded-lg px-3 py-2 mb-2">
               Waiting for GPS from: {driversWithoutGps.join(", ")}. Drivers must open the app on
               their phone and allow location.
             </p>
           )}
           {driversWithoutGps.length > 0 && locations.length > 0 && (
-            <p className="text-[10px] text-slate-500 mb-2">
+            <p className="text-[10px] text-muted-foreground mb-2">
               No GPS yet: {driversWithoutGps.join(", ")}
             </p>
           )}
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="rounded-full bg-emerald-500/10 text-emerald-700 border-emerald-200/60 hover:bg-emerald-500/10 gap-1.5 px-3 py-1">
+            <Badge className="rounded-full bg-success/10 text-success border-success/20 hover:bg-success/10 gap-1.5 px-3 py-1">
               <Radio className="h-3 w-3" />
               {onlineCount} online
             </Badge>
-            <Badge className="rounded-full bg-[#2952A3]/10 text-[#1e3a5f] border-[#2952A3]/20 hover:bg-[#2952A3]/10 gap-1.5 px-3 py-1">
+            <Badge className="rounded-full bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 gap-1.5 px-3 py-1">
               <Truck className="h-3 w-3" />
               {locations.length} tracked
             </Badge>
@@ -361,7 +361,7 @@ export default function FleetMapView({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 rounded-full text-xs text-slate-500 ml-auto"
+                className="h-7 rounded-full text-xs text-muted-foreground ml-auto"
                 onClick={onRefresh}
                 disabled={isLoading}
               >
@@ -382,14 +382,14 @@ export default function FleetMapView({
             "hidden lg:block rounded-xl px-4 py-3 pointer-events-auto self-start",
           )}
         >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
             Legend
           </p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <LegendItem color="bg-emerald-500" label="Online driver" />
-            <LegendItem color="bg-slate-400" label="Offline driver" />
-            <LegendItem color="bg-sky-500" label="Border point" shape="ring" />
-            <LegendItem color="bg-indigo-500" label="Major city" shape="ring" />
+            <LegendItem color="bg-success" label="Online driver" />
+            <LegendItem color="bg-muted-foreground" label="Offline driver" />
+            <LegendItem color="bg-info" label="Border point" shape="ring" />
+            <LegendItem color="bg-accent" label="Major city" shape="ring" />
           </div>
         </motion.div>
       </div>
@@ -447,10 +447,10 @@ export default function FleetMapView({
       >
         <div className="lg:hidden pointer-events-auto">
           <div className={cn(glass, "rounded-xl px-3 py-2 inline-flex flex-wrap gap-3")}>
-            <LegendItem color="bg-emerald-500" label="Online" />
-            <LegendItem color="bg-slate-400" label="Offline" />
-            <LegendItem color="bg-sky-500" label="Border" shape="ring" />
-            <LegendItem color="bg-indigo-500" label="City" shape="ring" />
+            <LegendItem color="bg-success" label="Online" />
+            <LegendItem color="bg-muted-foreground" label="Offline" />
+            <LegendItem color="bg-info" label="Border" shape="ring" />
+            <LegendItem color="bg-accent" label="City" shape="ring" />
           </div>
         </div>
 
@@ -460,15 +460,15 @@ export default function FleetMapView({
         >
           <button
             type="button"
-            className="md:hidden w-full flex items-center justify-between px-4 py-2.5 border-b border-slate-100/80"
+            className="md:hidden w-full flex items-center justify-between px-4 py-2.5 border-b border-border/80"
             onClick={() => setMobileSheetOpen((o) => !o)}
           >
-            <span className="text-sm font-semibold text-[#0f172a]">
+            <span className="text-sm font-semibold text-foreground">
               Drivers ({filtered.length})
             </span>
             <ChevronUp
               className={cn(
-                "h-4 w-4 text-slate-400 transition-transform",
+                "h-4 w-4 text-muted-foreground transition-transform",
                 !mobileSheetOpen && "rotate-180",
               )}
             />
@@ -501,30 +501,30 @@ export default function FleetMapView({
                       className={cn(
                         "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all min-w-[200px] md:min-w-0 md:w-full shrink-0 md:shrink",
                         selectedId === loc.id
-                          ? "bg-[#2952A3]/10 border border-[#2952A3]/30 shadow-[0_0_0_1px_rgba(41,82,163,0.15)]"
-                          : "bg-slate-50/80 border border-transparent hover:bg-slate-100/90 hover:border-slate-200/60",
+                          ? "bg-primary/10 border border-primary/30 shadow-[0_0_0_1px_rgba(41,82,163,0.15)]"
+                          : "bg-muted/50/80 border border-transparent hover:bg-muted/90 hover:border-border/60",
                       )}
                     >
                       <span className="relative flex h-2.5 w-2.5 shrink-0">
                         {loc.isOnline && (
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
                         )}
                         <span
                           className={cn(
                             "relative inline-flex rounded-full h-2.5 w-2.5",
-                            loc.isOnline ? "bg-emerald-500" : "bg-slate-300",
+                            loc.isOnline ? "bg-success" : "bg-muted-foreground",
                           )}
                         />
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#0f172a] truncate">
+                        <p className="text-sm font-semibold text-foreground truncate">
                           {loc.driverName}
                         </p>
-                        <p className="text-[11px] text-slate-500 truncate">
+                        <p className="text-[11px] text-muted-foreground truncate">
                           {loc.vehiclePlate} · {loc.speed} km/h
                         </p>
                       </div>
-                      <span className="text-[10px] text-slate-400 shrink-0 hidden sm:block">
+                      <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:block">
                         {loc.lastUpdate
                           ? formatDistanceToNow(new Date(loc.lastUpdate), {
                             addSuffix: true,
