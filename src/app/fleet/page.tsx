@@ -30,8 +30,8 @@ export default function FleetPage() {
     return (
       <main className="min-h-screen bg-background safe-area-padding">
         <div className="p-8">
-          <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
-          <p className="text-muted-foreground text-sm">You don't have permission to access fleet management.</p>
+          <h1 className="text-4xl font-bold text-destructive">Access Denied</h1>
+          <p className="text-base text-muted-foreground mt-2">You don't have permission to access fleet management.</p>
         </div>
         <BottomTabs role={role!} />
         <RoleSelector />
@@ -46,8 +46,8 @@ export default function FleetPage() {
         <div className="p-4 md:p-8">
           <SupabaseSetupAssistant />
           <div className="mb-8">
-            <h1 className="text-3xl font-headline tracking-tighter">Fleet Management</h1>
-            <p className="text-muted-foreground text-sm">Monitor and manage your logistics fleet including trucks, trailers, escort cars, and hoses.</p>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">Fleet Management</h1>
+            <p className="text-base text-muted-foreground mt-2">Monitor and manage your logistics fleet including trucks, trailers, escort cars, and hoses.</p>
           </div>
           <FleetDashboard />
           <div className="mt-8">

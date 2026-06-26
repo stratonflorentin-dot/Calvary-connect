@@ -261,58 +261,58 @@ export function FleetDashboard() {
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold">Fleet Overview</h2>
-            <p className="text-muted-foreground">Manage your vehicles and equipment</p>
+            <h2 className="text-3xl font-bold text-foreground">Fleet Overview</h2>
+            <p className="text-base text-muted-foreground mt-2">Manage your vehicles and equipment</p>
           </div>
           <AddVehicleDialog onVehicleAdded={loadFleetData} />
         </div>
         
-        <Card className="border-red-200">
+        <Card className="border-destructive/50 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 text-destructive">
               <AlertCircle className="size-5" />
-              <h3 className="font-semibold">Error Loading Fleet Data</h3>
+              <h3 className="font-semibold text-lg">Error Loading Fleet Data</h3>
             </div>
-            <p className="text-sm text-destructive mt-2">{error}</p>
+            <p className="text-sm text-destructive mt-3">{error}</p>
             
             {debugInfo && (
               <details className="mt-4">
                 <summary className="text-sm cursor-pointer text-destructive hover:text-destructive/80">
                   Debug Information
                 </summary>
-                <pre className="text-xs bg-destructive/10 p-2 rounded mt-2 overflow-auto">
+                <pre className="text-xs bg-destructive/10 p-3 rounded-xl mt-2 overflow-auto">
                   {JSON.stringify(debugInfo, null, 2)}
                 </pre>
               </details>
             )}
             
-            <div className="flex gap-2 mt-4">
-              <Button onClick={loadFleetData} variant="outline" size="sm">
+            <div className="flex gap-3 mt-6">
+              <Button onClick={loadFleetData} variant="outline" size="sm" className="h-11 px-6">
                 Try Again
               </Button>
               <Button onClick={() => {
                 setError(null);
                 setDebugInfo(null);
-              }} variant="outline" size="sm">
+              }} variant="outline" size="sm" className="h-11 px-6">
                 Clear Error
               </Button>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="shadow-lg">
           <CardContent className="p-6 text-center">
             <Database className="size-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Database Setup Required</h3>
-            <p className="text-muted-foreground mb-4">
-              It looks like the vehicles table hasn&apos;t been set up yet. Please run the database setup script first.
+            <h3 className="text-lg font-semibold mb-2 text-foreground">Database Setup Required</h3>
+            <p className="text-base text-muted-foreground mb-4">
+              It looks like the vehicles table hasn't been set up yet. Please run the database setup script first.
             </p>
-            <div className="text-left bg-muted/50 p-4 rounded-lg text-sm">
-              <p className="font-medium mb-2">To fix this issue:</p>
-              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+            <div className="text-left bg-muted/50 p-4 rounded-xl text-sm">
+              <p className="font-semibold mb-3 text-foreground">To fix this issue:</p>
+              <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
                 <li>Open Supabase SQL Editor</li>
                 <li>Run the complete-supabase-setup-final-idempotent.sql script</li>
                 <li>Refresh this page</li>
@@ -325,68 +325,68 @@ export function FleetDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header with Add Vehicle Button */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Fleet Overview</h2>
-          <p className="text-muted-foreground">Manage your vehicles and equipment</p>
+          <h2 className="text-3xl font-bold text-foreground">Fleet Overview</h2>
+          <p className="text-base text-muted-foreground mt-2">Manage your vehicles and equipment</p>
         </div>
         <AddVehicleDialog onVehicleAdded={loadFleetData} />
       </div>
 
       {/* Fleet Statistics - Responsive Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Total Fleet</span>
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Truck className="size-4 text-primary" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">Total Fleet</span>
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shadow-sm">
+                <Truck className="size-5 text-primary" />
               </div>
             </div>
             <p className="text-2xl font-bold text-foreground">{fleetStats.total}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Active Now</span>
-              <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                <Activity className="size-4 text-success" />
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">Active Now</span>
+              <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center shadow-sm">
+                <Activity className="size-5 text-success" />
               </div>
             </div>
             <p className="text-2xl font-bold text-success">{fleetStats.active}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Idle</span>
-              <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
-                <Clock className="size-4 text-warning" />
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">Idle</span>
+              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shadow-sm">
+                <Clock className="size-5 text-warning" />
               </div>
             </div>
             <p className="text-2xl font-bold text-warning">{fleetStats.idle}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Maintenance</span>
-              <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <Wrench className="size-4 text-destructive" />
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">Maintenance</span>
+              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center shadow-sm">
+                <Wrench className="size-5 text-destructive" />
               </div>
             </div>
             <p className="text-2xl font-bold text-destructive">{fleetStats.maintenance}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Utilization</span>
-              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Gauge className="size-4 text-accent" />
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">Utilization</span>
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shadow-sm">
+                <Gauge className="size-5 text-accent" />
               </div>
             </div>
             <p className="text-2xl font-bold text-accent">{fleetStats.utilization}%</p>
@@ -395,67 +395,67 @@ export function FleetDashboard() {
       </div>
 
       {/* Fleet Type Distribution - Responsive Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Trucks</p>
-                <p className="text-xl font-bold">{fleetStats.trucks}</p>
+                <p className="text-sm text-muted-foreground font-medium">Trucks</p>
+                <p className="text-xl font-bold text-foreground">{fleetStats.trucks}</p>
               </div>
-              <div className="p-2 bg-primary/10 rounded-lg">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shadow-sm">
                 <Truck className="size-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Escort Cars</p>
-                <p className="text-xl font-bold">{fleetStats.escortCars}</p>
+                <p className="text-sm text-muted-foreground font-medium">Escort Cars</p>
+                <p className="text-xl font-bold text-foreground">{fleetStats.escortCars}</p>
               </div>
-              <div className="p-2 bg-accent/10 rounded-lg">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shadow-sm">
                 <Car className="size-5 text-accent" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Trailers</p>
-                <p className="text-xl font-bold">{fleetStats.trailers}</p>
+                <p className="text-sm text-muted-foreground font-medium">Trailers</p>
+                <p className="text-xl font-bold text-foreground">{fleetStats.trailers}</p>
               </div>
-              <div className="p-2 bg-warning/10 rounded-lg">
+              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shadow-sm">
                 <Package className="size-5 text-warning" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Reefers</p>
-                <p className="text-xl font-bold">{fleetStats.reefers}</p>
+                <p className="text-sm text-muted-foreground font-medium">Reefers</p>
+                <p className="text-xl font-bold text-foreground">{fleetStats.reefers}</p>
               </div>
-              <div className="p-2 bg-info/10 rounded-lg">
+              <div className="w-10 h-10 rounded-xl bg-info/10 flex items-center justify-center shadow-sm">
                 <Snowflake className="size-5 text-info" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Lowbeds</p>
-                <p className="text-xl font-bold">{fleetStats.lowbeds}</p>
+                <p className="text-sm text-muted-foreground font-medium">Lowbeds</p>
+                <p className="text-xl font-bold text-foreground">{fleetStats.lowbeds}</p>
               </div>
-              <div className="p-2 bg-warning/10 rounded-lg">
+              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shadow-sm">
                 <Anchor className="size-5 text-warning" />
               </div>
             </div>
@@ -464,17 +464,17 @@ export function FleetDashboard() {
       </div>
 
       {/* Filter and Actions - Responsive Layout */}
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className="bg-card rounded-xl border border-border p-5 shadow-lg">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-wrap">
             {['all', 'active', 'idle', 'maintenance'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors capitalize ${
+                className={`px-4 py-2.5 text-sm font-medium rounded-xl transition-colors capitalize h-11 ${
                   filter === tab
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:bg-muted/50'
                 }`}
               >
                 {tab}
@@ -487,7 +487,7 @@ export function FleetDashboard() {
               variant={filter === 'truck' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('truck')}
-              className={filter === 'truck' ? 'bg-primary' : ''}
+              className={filter === 'truck' ? 'bg-primary h-11 px-4 shadow-md' : 'h-11 px-4'}
             >
               <Truck className="size-4 mr-2" />
               Trucks
@@ -496,7 +496,7 @@ export function FleetDashboard() {
               variant={filter === 'reefer' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('reefer')}
-              className={filter === 'reefer' ? 'bg-info' : ''}
+              className={filter === 'reefer' ? 'bg-info h-11 px-4 shadow-md' : 'h-11 px-4'}
             >
               <Snowflake className="size-4 mr-2" />
               Cold Chain
@@ -505,7 +505,7 @@ export function FleetDashboard() {
               variant={filter === 'lowbed' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('lowbed')}
-              className={filter === 'lowbed' ? 'bg-warning' : ''}
+              className={filter === 'lowbed' ? 'bg-warning h-11 px-4 shadow-md' : 'h-11 px-4'}
             >
               <Anchor className="size-4 mr-2" />
               Heavy Cargo
@@ -514,7 +514,7 @@ export function FleetDashboard() {
               variant={filter === 'car' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('car')}
-              className={filter === 'car' ? 'bg-accent' : ''}
+              className={filter === 'car' ? 'bg-accent h-11 px-4 shadow-md' : 'h-11 px-4'}
             >
               <Car className="size-4 mr-2" />
               Escort Cars
@@ -523,7 +523,7 @@ export function FleetDashboard() {
               variant={filter === 'trailer' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilter('trailer')}
-              className={filter === 'trailer' ? 'bg-warning' : ''}
+              className={filter === 'trailer' ? 'bg-warning h-11 px-4 shadow-md' : 'h-11 px-4'}
             >
               <Package className="size-4 mr-2" />
               Trailers
@@ -533,72 +533,72 @@ export function FleetDashboard() {
       </div>
 
       {/* Fleet List - Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {vehicles.map((vehicle) => (
-          <Card key={vehicle.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
+          <Card key={vehicle.id} className="shadow-lg hover:shadow-xl transition-shadow border-border">
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-lg ${getFleetColor(vehicle.type)}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl ${getFleetColor(vehicle.type)} flex items-center justify-center shadow-sm`}>
                     {getFleetIcon(vehicle.type)}
                   </div>
                   <div>
-                    <CardTitle className="text-lg">{vehicle.plate_number}</CardTitle>
+                    <CardTitle className="text-base font-semibold text-foreground">{vehicle.plate_number}</CardTitle>
                     <p className="text-sm text-muted-foreground">
                       {vehicle.make} {vehicle.model}
                     </p>
                   </div>
                 </div>
-                <Badge className={getStatusColor(vehicle.status)}>
-                  <span className="flex items-center gap-1">
+                <Badge className={getStatusColor(vehicle.status)} variant="outline">
+                  <span className="flex items-center gap-1 font-medium">
                     {getStatusIcon(vehicle.status)}
                     {vehicle.status}
                   </span>
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Year:</span>
-                  <p className="font-medium">{vehicle.year}</p>
+                  <p className="font-semibold text-foreground">{vehicle.year}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Mileage:</span>
-                  <p className="font-medium">{vehicle.mileage?.toLocaleString() || 'N/A'} km</p>
+                  <p className="font-semibold text-foreground">{vehicle.mileage?.toLocaleString() || 'N/A'} km</p>
                 </div>
               </div>
               
               {vehicle.fuel_type && (
                 <div className="text-sm">
                   <span className="text-muted-foreground">Fuel Type:</span>
-                  <p className="font-medium capitalize">{vehicle.fuel_type}</p>
+                  <p className="font-semibold text-foreground capitalize">{vehicle.fuel_type}</p>
                 </div>
               )}
 
               {vehicle.insurance_expiry && (
                 <div className="text-sm">
                   <span className="text-muted-foreground">Insurance Expires:</span>
-                  <p className="font-medium">{new Date(vehicle.insurance_expiry).toLocaleDateString()}</p>
+                  <p className="font-semibold text-foreground">{new Date(vehicle.insurance_expiry).toLocaleDateString()}</p>
                 </div>
               )}
 
               {/* Document Compliance */}
-              <div className="pt-2 border-t border-gray-100">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Calvary Compliance</span>
+              <div className="pt-3 border-t border-border">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Calvary Compliance</span>
                 </div>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-600">Road License</span>
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] py-0">Valid</Badge>
+                    <span className="text-xs text-muted-foreground">Road License</span>
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[9px] py-0.5 px-2 font-medium">Valid</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-600">Insurance</span>
+                    <span className="text-xs text-muted-foreground">Insurance</span>
                     {vehicle.insurance_expiry ? (
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] py-0">Active</Badge>
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[9px] py-0.5 px-2 font-medium">Active</Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[9px] py-0 flex items-center gap-1">
+                      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-[9px] py-0.5 px-2 font-medium flex items-center gap-1">
                         <AlertTriangle className="size-2.5" /> Due Soon
                       </Badge>
                     )}
@@ -606,11 +606,11 @@ export function FleetDashboard() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-3 pt-3">
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="flex-1"
+                  className="flex-1 h-11"
                   onClick={() => {
                     setSelectedVehicle(vehicle);
                     setDetailsOpen(true);
@@ -632,7 +632,7 @@ export function FleetDashboard() {
                 />
                 <Button 
                   size="sm" 
-                  className="flex-1"
+                  className="flex-1 h-11 shadow-md hover:shadow-lg transition-shadow"
                   onClick={() => {
                     setSelectedVehicle(vehicle);
                     openAssignDialog();
@@ -647,11 +647,11 @@ export function FleetDashboard() {
       </div>
 
       {vehicles.length === 0 && !error && (
-        <Card>
-          <CardContent className="p-8 text-center">
+        <Card className="shadow-lg">
+          <CardContent className="p-12 text-center">
             <Truck className="size-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No vehicles found</h3>
-            <p className="text-muted-foreground mb-4">
+            <h3 className="text-lg font-semibold mb-2 text-foreground">No vehicles found</h3>
+            <p className="text-base text-muted-foreground mb-4">
               {filter === 'all' 
                 ? 'No vehicles in the fleet yet.' 
                 : `No ${filter} vehicles found.`
@@ -664,27 +664,27 @@ export function FleetDashboard() {
 
       {/* Assign Vehicle Dialog */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] shadow-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
               <User className="size-5" />
               Assign Vehicle
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-6 py-4">
             <div className="space-y-2">
-              <Label>Vehicle</Label>
-              <div className="p-3 bg-gray-50 rounded-md">
-                <p className="font-medium">{selectedVehicle?.plate_number}</p>
+              <Label className="text-sm font-semibold text-foreground">Vehicle</Label>
+              <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                <p className="font-semibold text-foreground">{selectedVehicle?.plate_number}</p>
                 <p className="text-sm text-muted-foreground">
                   {selectedVehicle?.make} {selectedVehicle?.model}
                 </p>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Select Driver</Label>
+              <Label className="text-sm font-semibold text-foreground">Select Driver</Label>
               <Select value={selectedDriver} onValueChange={setSelectedDriver}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue placeholder="Choose a driver..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -702,10 +702,10 @@ export function FleetDashboard() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-3 pt-4">
               <Button
                 variant="outline"
-                className="flex-1"
+                className="flex-1 h-11"
                 onClick={() => {
                   setAssignOpen(false);
                   setSelectedDriver('');
@@ -715,7 +715,7 @@ export function FleetDashboard() {
                 Cancel
               </Button>
               <Button
-                className="flex-1"
+                className="flex-1 h-11 shadow-md hover:shadow-lg transition-shadow"
                 onClick={handleAssign}
                 disabled={!selectedDriver || assigning}
               >
