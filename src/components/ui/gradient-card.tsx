@@ -21,17 +21,17 @@ export function GradientCard({
     className = ''
 }: GradientCardProps) {
     return (
-        <Card className={`overflow-hidden ${className}`}>
-            <div className={`${headerGradient} p-4 flex items-center gap-3`}>
-                <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
+        <Card className={`overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-200 ${className}`}>
+            <div className={`${headerGradient} p-5 flex items-center gap-3`}>
+                <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0 shadow-lg`}>
                     {icon}
                 </div>
                 <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-white">{title}</h3>
-                    {subtitle && <p className="text-xs text-white/70">{subtitle}</p>}
+                    <h3 className="text-base font-semibold text-white">{title}</h3>
+                    {subtitle && <p className="text-xs text-white/80">{subtitle}</p>}
                 </div>
             </div>
-            <div className="p-4">
+            <div className="p-5 bg-card">
                 {children}
             </div>
         </Card>

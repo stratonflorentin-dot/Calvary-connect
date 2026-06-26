@@ -22,12 +22,12 @@ export function StatMiniCard({
     className = ''
 }: StatMiniCardProps) {
     const content = (
-        <Card className={`p-4 text-center hover:shadow-md transition-shadow ${className}`}>
-            <div className={`w-9 h-9 rounded-lg ${iconBg} flex items-center justify-center mx-auto mb-2`}>
+        <Card className={`p-5 text-center hover:shadow-xl hover:border-primary/50 transition-all duration-200 cursor-pointer group ${className}`}>
+            <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform duration-200`}>
                 {icon}
             </div>
-            <p className="text-xs text-muted-foreground mb-1">{title}</p>
-            <p className={`text-sm font-bold ${valueColor}`}>{value}</p>
+            <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">{title}</p>
+            <p className={`text-lg font-bold ${valueColor}`}>{value}</p>
         </Card>
     );
 
