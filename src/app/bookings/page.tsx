@@ -56,11 +56,11 @@ interface Booking {
 }
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  confirmed: 'bg-blue-100 text-blue-800 border-blue-200',
-  in_progress: 'bg-purple-100 text-purple-800 border-purple-200',
-  completed: 'bg-green-100 text-green-800 border-green-200',
-  cancelled: 'bg-red-100 text-red-800 border-red-200'
+  pending: 'bg-warning/10 text-warning border-warning/20',
+  confirmed: 'bg-primary/10 text-primary border-primary/20',
+  in_progress: 'bg-accent/10 text-accent border-accent/20',
+  completed: 'bg-success/10 text-success border-success/20',
+  cancelled: 'bg-destructive/10 text-destructive border-destructive/20'
 };
 
 const serviceTypeLabels: Record<string, string> = {
@@ -390,62 +390,65 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role} />
       <main className="flex-1 md:ml-60 p-4 md:p-8 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">Bookings</h1>
-              <p className="text-muted-foreground">Manage transport and rental bookings with contracts</p>
+              <h1 className="text-4xl font-bold text-foreground tracking-tight">Bookings</h1>
+              <p className="text-base text-muted-foreground mt-2">Manage transport and rental bookings with contracts</p>
             </div>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow gap-2">
                   <Plus className="size-4" />
                   New Booking
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
                 <DialogHeader>
-                  <DialogTitle>Create New Booking</DialogTitle>
+                  <DialogTitle className="text-xl font-semibold">Create New Booking</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleAddBooking} className="space-y-4">
+                <form onSubmit={handleAddBooking} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="clientName">Client Name *</Label>
+                      <Label htmlFor="clientName" className="text-sm font-semibold text-foreground">Client Name *</Label>
                       <Input 
                         id="clientName" 
                         value={formData.clientName}
                         onChange={(e) => setFormData({...formData, clientName: e.target.value})}
                         required 
+                        className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="clientEmail">Client Email</Label>
+                      <Label htmlFor="clientEmail" className="text-sm font-semibold text-foreground">Client Email</Label>
                       <Input 
                         id="clientEmail" 
                         type="email"
                         value={formData.clientEmail}
                         onChange={(e) => setFormData({...formData, clientEmail: e.target.value})}
+                        className="h-11"
                       />
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="clientPhone">Client Phone</Label>
+                      <Label htmlFor="clientPhone" className="text-sm font-semibold text-foreground">Client Phone</Label>
                       <Input 
                         id="clientPhone" 
                         value={formData.clientPhone}
                         onChange={(e) => setFormData({...formData, clientPhone: e.target.value})}
+                        className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="serviceType">Service Type</Label>
+                      <Label htmlFor="serviceType" className="text-sm font-semibold text-foreground">Service Type</Label>
                       <Select 
                         value={formData.serviceType}
                         onValueChange={(value) => setFormData({...formData, serviceType: value as any})}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -460,65 +463,70 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="origin">Origin</Label>
+                      <Label htmlFor="origin" className="text-sm font-semibold text-foreground">Origin</Label>
                       <Input 
                         id="origin" 
                         value={formData.origin}
                         onChange={(e) => setFormData({...formData, origin: e.target.value})}
                         placeholder="Pickup location"
+                        className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="destination">Destination</Label>
+                      <Label htmlFor="destination" className="text-sm font-semibold text-foreground">Destination</Label>
                       <Input 
                         id="destination" 
                         value={formData.destination}
                         onChange={(e) => setFormData({...formData, destination: e.target.value})}
                         placeholder="Delivery location"
+                        className="h-11"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="startDate">Start Date *</Label>
+                      <Label htmlFor="startDate" className="text-sm font-semibold text-foreground">Start Date *</Label>
                       <Input 
                         id="startDate" 
                         type="date"
                         value={formData.startDate}
                         onChange={(e) => setFormData({...formData, startDate: e.target.value})}
                         required
+                        className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="endDate">End Date (optional)</Label>
+                      <Label htmlFor="endDate" className="text-sm font-semibold text-foreground">End Date (optional)</Label>
                       <Input 
                         id="endDate" 
                         type="date"
                         value={formData.endDate}
                         onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                        className="h-11"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="amount">Amount (TZS) *</Label>
+                      <Label htmlFor="amount" className="text-sm font-semibold text-foreground">Amount (TZS) *</Label>
                       <Input 
                         id="amount" 
                         type="number"
                         value={formData.amount}
                         onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})}
                         required
+                        className="h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="status">Status</Label>
+                      <Label htmlFor="status" className="text-sm font-semibold text-foreground">Status</Label>
                       <Select 
                         value={formData.status}
                         onValueChange={(value) => setFormData({...formData, status: value as any})}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-11">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -533,24 +541,25 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Notes</Label>
+                    <Label htmlFor="notes" className="text-sm font-semibold text-foreground">Notes</Label>
                     <Textarea 
                       id="notes" 
                       value={formData.notes}
                       onChange={(e) => setFormData({...formData, notes: e.target.value})}
                       rows={3}
+                      className="min-h-[80px]"
                     />
                   </div>
 
-                  <Button type="submit" className="w-full">Create Booking</Button>
+                  <Button type="submit" className="w-full h-11 shadow-md hover:shadow-lg transition-shadow">Create Booking</Button>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
 
           {/* Filters */}
-          <Card>
-            <CardContent className="p-4">
+          <Card className="shadow-lg border-border">
+            <CardContent className="p-5">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -558,11 +567,11 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                     placeholder="Search bookings..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-11"
                   />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[180px] h-11">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -579,9 +588,9 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
           </Card>
 
           {/* Bookings Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>All Bookings ({filteredBookings.length})</CardTitle>
+          <Card className="shadow-lg border-border">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold text-foreground">All Bookings ({filteredBookings.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -605,41 +614,41 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                     </TableRow>
                   ) : filteredBookings.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                         No bookings found
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredBookings.map((booking) => (
-                      <TableRow key={booking.id}>
-                        <TableCell className="font-medium">{booking.bookingNumber}</TableCell>
+                      <TableRow key={booking.id} className="hover:bg-muted/50">
+                        <TableCell className="font-medium text-foreground">{booking.bookingNumber}</TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{booking.clientName}</div>
+                            <div className="font-medium text-foreground">{booking.clientName}</div>
                             {booking.clientPhone && (
                               <div className="text-xs text-muted-foreground">{booking.clientPhone}</div>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{serviceTypeLabels[booking.serviceType]}</TableCell>
+                        <TableCell className="text-foreground">{serviceTypeLabels[booking.serviceType]}</TableCell>
                         <TableCell>
                           {booking.origin && booking.destination ? (
-                            <div className="text-sm">
+                            <div className="text-sm text-foreground">
                               {booking.origin} → {booking.destination}
                             </div>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell>{format(parseISO(booking.startDate), 'MMM dd, yyyy')}</TableCell>
-                        <TableCell className="font-medium">{formatCurrency(booking.amount)}</TableCell>
+                        <TableCell className="text-muted-foreground">{format(parseISO(booking.startDate), 'MMM dd, yyyy')}</TableCell>
+                        <TableCell className="font-medium text-foreground">{formatCurrency(booking.amount)}</TableCell>
                         <TableCell>
                           <Select 
                             value={booking.status}
                             onValueChange={(value) => handleUpdateStatus(booking.id, value)}
                           >
-                            <SelectTrigger className="w-[130px] h-8">
-                              <Badge className={statusColors[booking.status]}>
+                            <SelectTrigger className="w-[130px] h-9">
+                              <Badge className={statusColors[booking.status]} variant="outline">
                                 {booking.status.replace('_', ' ')}
                               </Badge>
                             </SelectTrigger>
@@ -655,13 +664,13 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                         <TableCell>
                           <div className="flex gap-1">
                             {booking.contractGenerated && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
                                 <FileText className="size-3 mr-1" />
                                 Gen
                               </Badge>
                             )}
                             {booking.contractStamped && (
-                              <Badge variant="outline" className="text-xs border-red-200 text-red-600">
+                              <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20">
                                 <Stamp className="size-3 mr-1" />
                                 Stamp
                               </Badge>
@@ -674,6 +683,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                               variant="outline" 
                               size="sm"
                               onClick={() => generateContract(booking)}
+                              className="hover:bg-primary/10 hover:text-primary"
                             >
                               <FileText className="size-4" />
                             </Button>
@@ -681,7 +691,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                               variant="outline" 
                               size="sm"
                               onClick={() => handleDeleteBooking(booking.id)}
-                              className="text-destructive hover:bg-destructive hover:text-white"
+                              className="text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="size-4" />
                             </Button>
@@ -699,65 +709,65 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
 
       {/* Contract Dialog */}
       <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
           <DialogHeader>
-            <DialogTitle>Service Contract - {selectedBooking?.bookingNumber}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Service Contract - {selectedBooking?.bookingNumber}</DialogTitle>
           </DialogHeader>
           
-          <div ref={contractRef} className="space-y-6 p-6 border rounded-lg bg-white">
+          <div ref={contractRef} className="space-y-6 p-6 border border-border rounded-xl bg-card">
             {/* Contract Header */}
-            <div className="text-center border-b-2 border-gray-800 pb-6">
-              <h1 className="text-2xl font-bold text-gray-800">CALVARY CONNECT LIMITED</h1>
-              <p className="text-gray-600">Transport & Logistics Services</p>
-              <h2 className="text-xl font-bold mt-4">TRANSPORT SERVICE CONTRACT</h2>
-              <p className="text-sm text-gray-500">Contract #: {selectedBooking?.bookingNumber}</p>
-              <p className="text-sm text-gray-500">Date: {format(new Date(), 'MMMM dd, yyyy')}</p>
+            <div className="text-center border-b-2 border-border pb-6">
+              <h1 className="text-2xl font-bold text-foreground">CALVARY CONNECT LIMITED</h1>
+              <p className="text-muted-foreground">Transport & Logistics Services</p>
+              <h2 className="text-xl font-bold mt-4 text-foreground">TRANSPORT SERVICE CONTRACT</h2>
+              <p className="text-sm text-muted-foreground">Contract #: {selectedBooking?.bookingNumber}</p>
+              <p className="text-sm text-muted-foreground">Date: {format(new Date(), 'MMMM dd, yyyy')}</p>
             </div>
 
             {/* Parties */}
             <div className="grid grid-cols-2 gap-8">
               <div>
-                <h3 className="font-bold border-b mb-2">SERVICE PROVIDER</h3>
-                <p className="font-medium">Calvary Connect Limited</p>
-                <p className="text-sm text-gray-600">Dar es Salaam, Tanzania</p>
-                <p className="text-sm text-gray-600">Phone: +255 XXX XXX XXX</p>
-                <p className="text-sm text-gray-600">Email: info@calvaryconnect.co.tz</p>
+                <h3 className="font-bold border-b border-border mb-2 text-foreground">SERVICE PROVIDER</h3>
+                <p className="font-medium text-foreground">Calvary Connect Limited</p>
+                <p className="text-sm text-muted-foreground">Dar es Salaam, Tanzania</p>
+                <p className="text-sm text-muted-foreground">Phone: +255 XXX XXX XXX</p>
+                <p className="text-sm text-muted-foreground">Email: info@calvaryconnect.co.tz</p>
               </div>
               <div>
-                <h3 className="font-bold border-b mb-2">CLIENT</h3>
-                <p className="font-medium">{selectedBooking?.clientName}</p>
-                <p className="text-sm text-gray-600">{selectedBooking?.clientEmail || 'Email: N/A'}</p>
-                <p className="text-sm text-gray-600">{selectedBooking?.clientPhone || 'Phone: N/A'}</p>
+                <h3 className="font-bold border-b border-border mb-2 text-foreground">CLIENT</h3>
+                <p className="font-medium text-foreground">{selectedBooking?.clientName}</p>
+                <p className="text-sm text-muted-foreground">{selectedBooking?.clientEmail || 'Email: N/A'}</p>
+                <p className="text-sm text-muted-foreground">{selectedBooking?.clientPhone || 'Phone: N/A'}</p>
               </div>
             </div>
 
             {/* Service Details */}
             <div>
-              <h3 className="font-bold border-b mb-4">SERVICE DETAILS</h3>
+              <h3 className="font-bold border-b border-border mb-4 text-foreground">SERVICE DETAILS</h3>
               <table className="w-full border-collapse">
                 <tbody>
-                  <tr className="border-b">
-                    <td className="py-2 font-medium w-1/3">Service Type:</td>
-                    <td className="py-2">{selectedBooking && serviceTypeLabels[selectedBooking.serviceType]}</td>
+                  <tr className="border-b border-border">
+                    <td className="py-2 font-medium w-1/3 text-foreground">Service Type:</td>
+                    <td className="py-2 text-foreground">{selectedBooking && serviceTypeLabels[selectedBooking.serviceType]}</td>
                   </tr>
-                  <tr className="border-b">
-                    <td className="py-2 font-medium">Origin:</td>
-                    <td className="py-2">{selectedBooking?.origin || 'N/A'}</td>
+                  <tr className="border-b border-border">
+                    <td className="py-2 font-medium text-foreground">Origin:</td>
+                    <td className="py-2 text-foreground">{selectedBooking?.origin || 'N/A'}</td>
                   </tr>
-                  <tr className="border-b">
-                    <td className="py-2 font-medium">Destination:</td>
-                    <td className="py-2">{selectedBooking?.destination || 'N/A'}</td>
+                  <tr className="border-b border-border">
+                    <td className="py-2 font-medium text-foreground">Destination:</td>
+                    <td className="py-2 text-foreground">{selectedBooking?.destination || 'N/A'}</td>
                   </tr>
-                  <tr className="border-b">
-                    <td className="py-2 font-medium">Start Date:</td>
-                    <td className="py-2">
+                  <tr className="border-b border-border">
+                    <td className="py-2 font-medium text-foreground">Start Date:</td>
+                    <td className="py-2 text-foreground">
                       {selectedBooking && format(parseISO(selectedBooking.startDate), 'MMMM dd, yyyy')}
                     </td>
                   </tr>
                   {selectedBooking?.endDate && (
-                    <tr className="border-b">
-                      <td className="py-2 font-medium">End Date:</td>
-                      <td className="py-2">
+                    <tr className="border-b border-border">
+                      <td className="py-2 font-medium text-foreground">End Date:</td>
+                      <td className="py-2 text-foreground">
                         {format(parseISO(selectedBooking.endDate), 'MMMM dd, yyyy')}
                       </td>
                     </tr>
@@ -768,22 +778,22 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
 
             {/* Financial Terms */}
             <div>
-              <h3 className="font-bold border-b mb-4">FINANCIAL TERMS</h3>
-              <div className="bg-gray-50 p-4 rounded">
+              <h3 className="font-bold border-b border-border mb-4 text-foreground">FINANCIAL TERMS</h3>
+              <div className="bg-muted/50 p-4 rounded-xl">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">Total Amount:</span>
-                  <span className="text-xl font-bold">
+                  <span className="font-medium text-foreground">Total Amount:</span>
+                  <span className="text-xl font-bold text-foreground">
                     {selectedBooking && formatCurrency(selectedBooking.amount)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mt-2">Payment Terms: Net 30 days from invoice date</p>
+                <p className="text-sm text-muted-foreground mt-2">Payment Terms: Net 30 days from invoice date</p>
               </div>
             </div>
 
             {/* Terms & Conditions */}
             <div>
-              <h3 className="font-bold border-b mb-4">TERMS AND CONDITIONS</h3>
-              <ol className="list-decimal list-inside space-y-2 text-sm">
+              <h3 className="font-bold border-b border-border mb-4 text-foreground">TERMS AND CONDITIONS</h3>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-foreground">
                 <li>The service provider agrees to provide the transport/logistics services as described above.</li>
                 <li>The client agrees to pay the total amount specified above.</li>
                 <li>Cancellation policy: 24-hour notice required for cancellations.</li>
@@ -794,41 +804,41 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
             </div>
 
             {/* Digital Stamp Area */}
-            <div className="border-2 border-red-600 rounded-lg p-6 text-center my-8">
-              <div className="text-red-600 font-bold text-lg mb-2">AUTHORIZED & STAMPED</div>
-              <div className="border-2 border-dashed border-red-400 rounded p-8">
-                <Stamp className="size-12 mx-auto text-red-600 mb-2" />
-                <p className="text-red-600 text-sm">OFFICIAL COMPANY STAMP</p>
-                <p className="text-red-600 text-xs mt-2">Calvary Connect Limited</p>
-                <p className="text-gray-500 text-xs mt-1">Date: {format(new Date(), 'dd/MM/yyyy')}</p>
+            <div className="border-2 border-destructive rounded-xl p-6 text-center my-8">
+              <div className="text-destructive font-bold text-lg mb-2">AUTHORIZED & STAMPED</div>
+              <div className="border-2 border-dashed border-destructive/50 rounded-xl p-8">
+                <Stamp className="size-12 mx-auto text-destructive mb-2" />
+                <p className="text-destructive text-sm">OFFICIAL COMPANY STAMP</p>
+                <p className="text-destructive text-xs mt-2">Calvary Connect Limited</p>
+                <p className="text-muted-foreground text-xs mt-1">Date: {format(new Date(), 'dd/MM/yyyy')}</p>
               </div>
             </div>
 
             {/* Signatures */}
             <div className="grid grid-cols-2 gap-16 mt-12">
               <div>
-                <div className="border-t border-gray-800 pt-2">
-                  <p className="font-bold">Service Provider</p>
-                  <p className="text-sm text-gray-600">Calvary Connect Ltd.</p>
-                  <p className="text-sm text-gray-600">Signature & Date</p>
+                <div className="border-t border-border pt-2">
+                  <p className="font-bold text-foreground">Service Provider</p>
+                  <p className="text-sm text-muted-foreground">Calvary Connect Ltd.</p>
+                  <p className="text-sm text-muted-foreground">Signature & Date</p>
                 </div>
               </div>
               <div>
-                <div className="border-t border-gray-800 pt-2">
-                  <p className="font-bold">Client</p>
-                  <p className="text-sm text-gray-600">{selectedBooking?.clientName}</p>
-                  <p className="text-sm text-gray-600">Signature & Date</p>
+                <div className="border-t border-border pt-2">
+                  <p className="font-bold text-foreground">Client</p>
+                  <p className="text-sm text-muted-foreground">{selectedBooking?.clientName}</p>
+                  <p className="text-sm text-muted-foreground">Signature & Date</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={handleDownloadContract} className="gap-2">
+          <DialogFooter className="gap-3 pt-6">
+            <Button variant="outline" onClick={handleDownloadContract} className="h-11 px-6 gap-2">
               <Download className="size-4" />
               Download
             </Button>
-            <Button onClick={handlePrintContract} className="gap-2">
+            <Button onClick={handlePrintContract} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow gap-2">
               <Printer className="size-4" />
               Print Contract
             </Button>
@@ -852,10 +862,10 @@ function BookingsLoading() {
     <div className="flex min-h-screen bg-background">
       <div className="flex-1 md:ml-60 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-48" />
-            <div className="h-4 bg-muted rounded w-72" />
-            <div className="h-64 bg-muted rounded" />
+          <div className="animate-pulse space-y-8">
+            <div className="h-12 bg-muted rounded-xl w-64" />
+            <div className="h-6 bg-muted rounded-xl w-96" />
+            <div className="h-64 bg-muted rounded-xl" />
           </div>
         </div>
       </div>
