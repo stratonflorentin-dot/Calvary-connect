@@ -126,15 +126,18 @@ export default function TripsPage() {
           allUsers
         ] = await Promise.all([
           supabase.from('trips').select('*').order('created_at', { ascending: false }),
-          supabase.from('vehicles').select('*').in('type', ['DUMP_TRUCK', 'TRUCK_HEAD', 'ESCORT_CAR']),
+          supabase.from('vehicles').select('*'),
           supabase.from('vehicles').select('*').eq('type', 'TRAILER'),
           getUsersAction()
         ]);
 
         const driversData = allUsers?.filter((u: any) => u.role === 'DRIVER') || [];
+        
+        // Filter vehicles for truck selection (exclude trailers)
+        const trucksData = (vehiclesData || []).filter(v => v.type !== 'TRAILER');
 
         setTrips(tripsData || []);
-        setVehicles(vehiclesData || []);
+        setVehicles(trucksData);
         setTrailers(trailersData || []);
         setDrivers(driversData);
       } catch (error) {
