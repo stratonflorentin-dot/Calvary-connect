@@ -36,18 +36,18 @@ import {
  const today = () => new Date().toISOString().split("T")[0]; 
  
  const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = { 
-   completed: { bg: "#d1fae5", text: "#065f46", label: "Completed" }, 
-   in_transit: { bg: "#dbeafe", text: "#1e40af", label: "In Transit" }, 
-   pending:    { bg: "#fef3c7", text: "#92400e", label: "Pending" }, 
-   created:    { bg: "#f3f4f6", text: "#374151", label: "Created" }, 
-   loading:    { bg: "#ede9fe", text: "#5b21b6", label: "Loading" }, 
-   paid:       { bg: "#d1fae5", text: "#065f46", label: "Paid" }, 
-   overdue:    { bg: "#fee2e2", text: "#991b1b", label: "Overdue" }, 
-   active:     { bg: "#d1fae5", text: "#065f46", label: "Active" }, 
-   inactive:   { bg: "#f3f4f6", text: "#6b7280", label: "Inactive" }, 
-   COMPLETED:  { bg: "#d1fae5", text: "#065f46", label: "Completed" },
-   PENDING:    { bg: "#fef3c7", text: "#92400e", label: "Pending" },
-   IN_TRANSIT: { bg: "#dbeafe", text: "#1e40af", label: "In Transit" },
+   completed: { bg: "bg-success/10", text: "text-success", label: "Completed" }, 
+   in_transit: { bg: "bg-primary/10", text: "text-primary", label: "In Transit" }, 
+   pending:    { bg: "bg-warning/10", text: "text-warning", label: "Pending" }, 
+   created:    { bg: "bg-muted/50", text: "text-muted-foreground", label: "Created" }, 
+   loading:    { bg: "bg-accent/10", text: "text-accent", label: "Loading" }, 
+   paid:       { bg: "bg-success/10", text: "text-success", label: "Paid" }, 
+   overdue:    { bg: "bg-destructive/10", text: "text-destructive", label: "Overdue" }, 
+   active:     { bg: "bg-success/10", text: "text-success", label: "Active" }, 
+   inactive:   { bg: "bg-muted/50", text: "text-muted-foreground", label: "Inactive" }, 
+   COMPLETED:  { bg: "bg-success/10", text: "text-success", label: "Completed" },
+   PENDING:    { bg: "bg-warning/10", text: "text-warning", label: "Pending" },
+   IN_TRANSIT: { bg: "bg-primary/10", text: "text-primary", label: "In Transit" },
  }; 
  
  const Badge = ({ status }: { status: string }) => { 

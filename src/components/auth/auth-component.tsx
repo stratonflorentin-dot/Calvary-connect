@@ -94,11 +94,11 @@ export function AuthComponent() {
   const [hasStarted, setHasStarted] = useState(false);
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex items-center justify-center overflow-hidden relative transition-colors duration-500">
+    <div className="min-h-screen w-full bg-muted dark:bg-background text-foreground flex items-center justify-center overflow-hidden relative transition-colors duration-500">
       {/* Background glowing decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px]" />
       </div>
 
       <div className="absolute top-4 right-4 z-50">
@@ -140,16 +140,16 @@ export function AuthComponent() {
           </p>
 
           <div className="flex items-center gap-4 text-slate-500 text-xs pt-2">
-            <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-blue-500" /> SECURE TLS</span>
-            <span className="w-1 h-1 bg-slate-800 rounded-full" />
-            <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-blue-500" /> SHA-256</span>
+            <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-primary" /> SECURE TLS</span>
+            <span className="w-1 h-1 bg-foreground rounded-full" />
+            <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-primary" /> SHA-256</span>
           </div>
         </div>
 
         {/* Right side: Start Prompt Card */}
-        <div className="w-full md:w-[380px] bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-8 backdrop-blur-xl shadow-2xl flex flex-col items-center text-center space-y-6 transition-colors duration-500">
-          <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-950 flex items-center justify-center border border-slate-200 dark:border-slate-800">
-            <Activity className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+        <div className="w-full md:w-[380px] bg-card/60 dark:bg-background/60 border border-border rounded-2xl p-8 backdrop-blur-xl shadow-2xl flex flex-col items-center text-center space-y-6 transition-colors duration-500">
+          <div className="w-16 h-16 rounded-full bg-muted dark:bg-background flex items-center justify-center border border-border">
+            <Activity className="w-8 h-8 text-accent dark:text-accent/80 animate-pulse" />
           </div>
           
           <div className="space-y-1">
@@ -161,17 +161,17 @@ export function AuthComponent() {
 
           {/* Pulsing Start Button */}
           <div className="relative w-full group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg blur opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt" />
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-lg blur opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt" />
             <Button 
               onClick={() => setHasStarted(true)}
-              className="relative w-full py-6 bg-slate-900 dark:bg-slate-950 hover:bg-slate-800 dark:hover:bg-slate-900 text-white font-semibold rounded-lg border border-slate-700 dark:border-slate-800 flex items-center justify-center gap-2 group-hover:border-blue-500/50 transition-all duration-300 shadow-xl"
+              className="relative w-full py-6 bg-foreground hover:bg-foreground/90 text-background font-semibold rounded-lg border border-border flex items-center justify-center gap-2 group-hover:border-primary/50 transition-all duration-300 shadow-xl"
             >
               <span>Start Connection</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
 
-          <div className="text-[10px] text-slate-500">
+          <div className="text-[10px] text-muted-foreground">
             Calvary Investment Company Ltd &copy; {new Date().getFullYear()}
           </div>
         </div>
@@ -189,7 +189,7 @@ export function AuthComponent() {
       {!hasStarted && (
         <button
           onClick={() => setHasStarted(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 h-32 w-10 bg-gradient-to-b from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-l-2xl flex flex-col items-center justify-center gap-2 shadow-[-4px_0_20px_rgba(59,130,246,0.3)] border-y border-l border-white/10 z-40 group transition-all duration-300 hover:w-12"
+          className="fixed right-0 top-1/2 -translate-y-1/2 h-32 w-10 bg-gradient-to-b from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-background rounded-l-2xl flex flex-col items-center justify-center gap-2 shadow-[-4px_0_20px_rgba(59,130,246,0.3)] border-y border-l border-white/10 z-40 group transition-all duration-300 hover:w-12"
         >
           <Lock className="w-4 h-4 group-hover:rotate-12 transition-transform" />
           <span className="text-[10px] font-extrabold uppercase tracking-widest [writing-mode:vertical-lr] select-none">
@@ -203,18 +203,18 @@ export function AuthComponent() {
         initial={{ x: '100%' }}
         animate={{ x: hasStarted ? 0 : '100%' }}
         transition={{ type: 'spring', damping: 24, stiffness: 140 }}
-        className="fixed top-0 right-0 h-full w-full sm:w-[460px] bg-white/95 dark:bg-slate-950/95 border-l border-slate-200 dark:border-slate-800/80 backdrop-blur-2xl shadow-[-10px_0_40px_rgba(0,0,0,0.2)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.7)] z-50 flex flex-col transition-colors duration-500"
+        className="fixed top-0 right-0 h-full w-full sm:w-[460px] bg-card/95 dark:bg-background/95 border-l border-border backdrop-blur-2xl shadow-[-10px_0_40px_rgba(0,0,0,0.2)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.7)] z-50 flex flex-col transition-colors duration-500"
       >
         {/* Drawer Pull/Close handle attached to the left edge of the drawer */}
         <button
           onClick={() => setHasStarted(!hasStarted)}
-          className="absolute left-[-32px] top-1/2 -translate-y-1/2 h-28 w-8 bg-white dark:bg-slate-950 border-y border-l border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white rounded-l-xl flex flex-col items-center justify-center gap-2 shadow-[-5px_0_15px_rgba(0,0,0,0.1)] dark:shadow-[-5px_0_15px_rgba(0,0,0,0.3)] transition-all cursor-pointer group"
+          className="absolute left-[-32px] top-1/2 -translate-y-1/2 h-28 w-8 bg-card dark:bg-background border-y border-l border-border hover:bg-muted dark:hover:bg-muted text-muted-foreground hover:text-foreground rounded-l-xl flex flex-col items-center justify-center gap-2 shadow-[-5px_0_15px_rgba(0,0,0,0.1)] dark:shadow-[-5px_0_15px_rgba(0,0,0,0.3)] transition-all cursor-pointer group"
         >
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-500 transition-colors" />
-          <span className="text-[9px] font-bold uppercase tracking-widest [writing-mode:vertical-lr] select-none text-slate-500 group-hover:text-slate-300">
+          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground group-hover:bg-primary transition-colors" />
+          <span className="text-[9px] font-bold uppercase tracking-widest [writing-mode:vertical-lr] select-none text-muted-foreground group-hover:text-muted-foreground">
             {hasStarted ? 'CLOSE PANEL' : 'PULL TO ENTER'}
           </span>
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-500 transition-colors" />
+          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground group-hover:bg-primary transition-colors" />
         </button>
 
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
@@ -225,32 +225,32 @@ export function AuthComponent() {
             >
               &larr; Back to welcome
             </button>
-            <div className="text-[10px] bg-slate-900 border border-slate-800 text-slate-400 px-2.5 py-1 rounded-full font-mono">
+            <div className="text-[10px] bg-foreground border border-border text-muted-foreground px-2.5 py-1 rounded-full font-mono">
               Verifying Session
             </div>
           </div>
 
-          <Card className="border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md shadow-2xl text-slate-900 dark:text-slate-100 transition-colors duration-500">
+          <Card className="border-border bg-card/60 dark:bg-background/60 backdrop-blur-md shadow-2xl text-foreground transition-colors duration-500">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 font-headline">Portal Access</CardTitle>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Calvary Connect System</p>
+                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent dark:from-primary/80 dark:to-accent/80 font-headline">Portal Access</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">Calvary Connect System</p>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-slate-50 dark:bg-slate-950 flex items-center justify-center border border-slate-200 dark:border-slate-800">
-                  <Lock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <div className="w-10 h-10 rounded-lg bg-muted dark:bg-background flex items-center justify-center border border-border">
+                  <Lock className="w-5 h-5 text-accent dark:text-accent/80" />
                 </div>
               </div>
             </CardHeader>
             <CardContent className="pt-2">
               <Tabs defaultValue="signin" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-slate-950 p-1 rounded-lg">
-                  <TabsTrigger value="signin" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 text-xs py-2">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:bg-slate-800 data-[state=active]:text-white text-slate-400 text-xs py-2">Sign Up</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-foreground p-1 rounded-lg">
+                  <TabsTrigger value="signin" className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground text-xs py-2">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup" className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground text-xs py-2">Sign Up</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="signin" className="mt-4 space-y-4">
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                  <div className="p-3 bg-warning/10 dark:bg-warning/20 border border-warning/20 dark:border-warning/30 rounded-lg text-xs text-warning dark:text-warning/80 leading-relaxed">
                     <strong>First time logging in?</strong> If you have been added as an admin or staff, switch to the <strong>Sign Up</strong> tab to register your credentials.
                   </div>
                   <form onSubmit={handleSignIn} className="space-y-4">
@@ -261,7 +261,7 @@ export function AuthComponent() {
                         name="email"
                         type="email"
                         placeholder="name@company.com"
-                        className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-500 focus:ring-blue-500 h-10 text-sm"
+                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
                         required
                       />
                     </div>
@@ -272,66 +272,66 @@ export function AuthComponent() {
                         name="password"
                         type="password"
                         placeholder="••••••••"
-                        className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-500 focus:ring-blue-500 h-10 text-sm"
+                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
                         required
                       />
                     </div>
                     {error && (
-                      <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-3 rounded-lg">
+                      <div className="text-xs text-destructive dark:text-destructive/80 bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 p-3 rounded-lg">
                         {error}
                       </div>
                     )}
-                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-blue-500/20" disabled={loading}>
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-background font-medium shadow-lg shadow-primary/20" disabled={loading}>
                       {loading ? 'Authenticating...' : 'Sign In'}
                     </Button>
                   </form>
                 </TabsContent>
                 
                 <TabsContent value="signup" className="mt-4 space-y-4">
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30 rounded-lg text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                  <div className="p-3 bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-lg text-xs text-primary dark:text-primary/80 leading-relaxed">
                     <strong>Direct Register:</strong> If you are newly registered by administration, please verify your email and complete credentials setup below.
                   </div>
                   <form onSubmit={handleSignUp} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-name" className="text-slate-600 dark:text-slate-400 text-xs">Full Name</Label>
+                      <Label htmlFor="signup-name" className="text-muted-foreground text-xs">Full Name</Label>
                       <Input
                         id="signup-name"
                         name="name"
                         type="text"
                         placeholder="Enter full name"
-                        className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-500 focus:ring-blue-500 h-10 text-sm"
+                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-email" className="text-slate-600 dark:text-slate-400 text-xs">Authorized Email</Label>
+                      <Label htmlFor="signup-email" className="text-muted-foreground text-xs">Authorized Email</Label>
                       <Input
                         id="signup-email"
                         name="email"
                         type="email"
                         placeholder="name@company.com"
-                        className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-500 focus:ring-blue-500 h-10 text-sm"
+                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-password" className="text-slate-600 dark:text-slate-400 text-xs">New Password</Label>
+                      <Label htmlFor="signup-password" className="text-muted-foreground text-xs">New Password</Label>
                       <Input
                         id="signup-password"
                         name="password"
                         type="password"
                         placeholder="Min 6 characters"
-                        className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-500 focus:ring-blue-500 h-10 text-sm"
+                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-role" className="text-slate-600 dark:text-slate-400 text-xs">Assigned Team Role</Label>
+                      <Label htmlFor="signup-role" className="text-muted-foreground text-xs">Assigned Team Role</Label>
                       <Select name="role" required>
-                        <SelectTrigger className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 h-10 text-sm">
+                        <SelectTrigger className="bg-card dark:bg-background border-border text-foreground h-10 text-sm">
                           <SelectValue placeholder="Select assigned role" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
+                        <SelectContent className="bg-card dark:bg-background border-border text-foreground">
                           <SelectItem value="DRIVER">Driver</SelectItem>
                           <SelectItem value="OPERATOR">Operator</SelectItem>
                           <SelectItem value="MECHANIC">Mechanic</SelectItem>
@@ -346,7 +346,7 @@ export function AuthComponent() {
                         {error}
                       </div>
                     )}
-                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-lg shadow-blue-500/20" disabled={loading}>
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-background font-medium shadow-lg shadow-primary/20" disabled={loading}>
                       {loading ? 'Creating account...' : 'Complete Registration'}
                     </Button>
                   </form>
