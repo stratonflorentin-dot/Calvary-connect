@@ -545,63 +545,63 @@ function SalesModuleContent() {
   );
 
   return (
-    <div className="flex min-h-screen bg-muted">
+    <div className="flex min-h-screen bg-background">
       <Sidebar role={role || 'OPERATOR'} />
-      <div className="flex-1 p-4 md:p-6 md:ml-64">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Sales & Commercial</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">Manage customers, quotations, contracts, and sales pipeline</p>
+      <div className="flex-1 p-4 md:p-8 md:ml-64">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground">Sales & Commercial</h1>
+          <p className="text-base text-muted-foreground mt-2">Manage customers, quotations, contracts, and sales pipeline</p>
         </div>
 
         {/* Stats - Responsive Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-card shadow-sm border border-border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground mb-1">Total Customers</p>
+                  <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Total Customers</p>
                   <p className="text-2xl font-bold text-foreground">{totalCustomers}</p>
                 </div>
-                <div className="bg-primary/10 p-3 rounded-lg flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shadow-sm flex-shrink-0">
                   <Users className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card shadow-sm border border-border">
+          <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground mb-1">Active Quotations</p>
+                  <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Active Quotations</p>
                   <p className="text-2xl font-bold text-foreground">{totalQuotations}</p>
                 </div>
-                <div className="bg-warning/10 p-3 rounded-lg flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center shadow-sm flex-shrink-0">
                   <FileText className="h-6 w-6 text-warning" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card shadow-sm border border-border">
+          <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground mb-1">Contracts</p>
+                  <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Contracts</p>
                   <p className="text-2xl font-bold text-foreground">{totalContracts}</p>
                 </div>
-                <div className="bg-success/10 p-3 rounded-lg flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center shadow-sm flex-shrink-0">
                   <FileSignature className="h-6 w-6 text-success" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card shadow-sm border border-border">
+          <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground mb-1">Pipeline Value</p>
+                  <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Pipeline Value</p>
                   <p className="text-2xl font-bold text-foreground">TZS {pipelineValue.toLocaleString()}</p>
                 </div>
-                <div className="bg-accent/10 p-3 rounded-lg flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shadow-sm flex-shrink-0">
                   <TrendingUp className="h-6 w-6 text-accent" />
                 </div>
               </div>
@@ -610,52 +610,52 @@ function SalesModuleContent() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="quotations">Quotations</TabsTrigger>
-            <TabsTrigger value="contracts">Contracts</TabsTrigger>
-            <TabsTrigger value="rate-sheets">Rate Sheets</TabsTrigger>
-            <TabsTrigger value="opportunities">Pipeline</TabsTrigger>
+          <TabsList className="mb-6 h-11 bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="customers" className="h-9 rounded-lg">Customers</TabsTrigger>
+            <TabsTrigger value="quotations" className="h-9 rounded-lg">Quotations</TabsTrigger>
+            <TabsTrigger value="contracts" className="h-9 rounded-lg">Contracts</TabsTrigger>
+            <TabsTrigger value="rate-sheets" className="h-9 rounded-lg">Rate Sheets</TabsTrigger>
+            <TabsTrigger value="opportunities" className="h-9 rounded-lg">Pipeline</TabsTrigger>
           </TabsList>
 
           {/* Customers Tab */}
           <TabsContent value="customers">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
+            <Card className="shadow-lg border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
                   Customers
                 </CardTitle>
                 {canCreate && (
                   <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
                     <DialogTrigger asChild>
-                      <Button><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
+                      <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
+                    <DialogContent className="max-w-2xl shadow-xl">
                       <DialogHeader>
-                        <DialogTitle>Add New Customer</DialogTitle>
+                        <DialogTitle className="text-xl font-semibold">Add New Customer</DialogTitle>
                       </DialogHeader>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4 space-y-6">
                         <div className="space-y-2">
-                          <Label>Company Name *</Label>
-                          <Input value={customerForm.company_name} onChange={e => setCustomerForm({ ...customerForm, company_name: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Company Name *</Label>
+                          <Input value={customerForm.company_name} onChange={e => setCustomerForm({ ...customerForm, company_name: e.target.value })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Contact Person *</Label>
-                          <Input value={customerForm.contact_person} onChange={e => setCustomerForm({ ...customerForm, contact_person: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Contact Person *</Label>
+                          <Input value={customerForm.contact_person} onChange={e => setCustomerForm({ ...customerForm, contact_person: e.target.value })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Phone *</Label>
-                          <Input value={customerForm.phone} onChange={e => setCustomerForm({ ...customerForm, phone: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Phone *</Label>
+                          <Input value={customerForm.phone} onChange={e => setCustomerForm({ ...customerForm, phone: e.target.value })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Email</Label>
-                          <Input type="email" value={customerForm.email} onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Email</Label>
+                          <Input type="email" value={customerForm.email} onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>City</Label>
+                          <Label className="text-sm font-semibold text-foreground">City</Label>
                           <Select value={customerForm.city} onValueChange={v => setCustomerForm({ ...customerForm, city: v })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="Dar es Salaam">Dar es Salaam</SelectItem>
                               <SelectItem value="Arusha">Arusha</SelectItem>
@@ -665,13 +665,13 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Credit Limit (TZS)</Label>
-                          <Input type="number" value={customerForm.credit_limit} onChange={e => setCustomerForm({ ...customerForm, credit_limit: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Credit Limit (TZS)</Label>
+                          <Input type="number" value={customerForm.credit_limit} onChange={e => setCustomerForm({ ...customerForm, credit_limit: e.target.value })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Status</Label>
+                          <Label className="text-sm font-semibold text-foreground">Status</Label>
                           <Select value={customerForm.status} onValueChange={v => setCustomerForm({ ...customerForm, status: v })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="prospect">Prospect</SelectItem>
                               <SelectItem value="active">Active</SelectItem>
@@ -680,17 +680,17 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="col-span-2 space-y-2">
-                          <Label>Address</Label>
-                          <Textarea value={customerForm.address} onChange={e => setCustomerForm({ ...customerForm, address: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Address</Label>
+                          <Textarea value={customerForm.address} onChange={e => setCustomerForm({ ...customerForm, address: e.target.value })} className="min-h-[80px]" />
                         </div>
                         <div className="col-span-2 space-y-2">
-                          <Label>Notes</Label>
-                          <Textarea value={customerForm.notes} onChange={e => setCustomerForm({ ...customerForm, notes: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Notes</Label>
+                          <Textarea value={customerForm.notes} onChange={e => setCustomerForm({ ...customerForm, notes: e.target.value })} className="min-h-[80px]" />
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowCustomerDialog(false)}>Cancel</Button>
-                        <Button onClick={saveCustomer}>Save Customer</Button>
+                      <DialogFooter className="pt-6">
+                        <Button variant="outline" onClick={() => setShowCustomerDialog(false)} className="h-11 px-6">Cancel</Button>
+                        <Button onClick={saveCustomer} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">Save Customer</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -735,26 +735,26 @@ function SalesModuleContent() {
 
           {/* Quotations Tab */}
           <TabsContent value="quotations">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
+            <Card className="shadow-lg border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Route Quotations
                 </CardTitle>
                 {canCreate && (
                   <Dialog open={showQuotationDialog} onOpenChange={setShowQuotationDialog}>
                     <DialogTrigger asChild>
-                      <Button><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
+                      <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
                       <DialogHeader>
-                        <DialogTitle>Create Route Quotation</DialogTitle>
+                        <DialogTitle className="text-xl font-semibold">Create Route Quotation</DialogTitle>
                       </DialogHeader>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4 space-y-6">
                         <div className="space-y-2">
-                          <Label>Customer</Label>
+                          <Label className="text-sm font-semibold text-foreground">Customer</Label>
                           <Select value={quotationForm.customer_id} onValueChange={v => setQuotationForm({ ...quotationForm, customer_id: v })}>
-                            <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                            <SelectTrigger className="h-11"><SelectValue placeholder="Select customer" /></SelectTrigger>
                             <SelectContent>
                               {customers.map(c => (
                                 <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
@@ -763,11 +763,11 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Service Type</Label>
+                          <Label className="text-sm font-semibold text-foreground">Service Type</Label>
                           <Select value={quotationForm.service_type} onValueChange={v => {
                             setQuotationForm({ ...quotationForm, service_type: v });
                           }}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {SERVICE_TYPES.map(t => (
                                 <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
@@ -776,29 +776,29 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Origin</Label>
-                          <Input value={quotationForm.origin} onChange={e => setQuotationForm({ ...quotationForm, origin: e.target.value })} placeholder="e.g., Dar es Salaam" />
+                          <Label className="text-sm font-semibold text-foreground">Origin</Label>
+                          <Input value={quotationForm.origin} onChange={e => setQuotationForm({ ...quotationForm, origin: e.target.value })} placeholder="e.g., Dar es Salaam" className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Destination</Label>
-                          <Input value={quotationForm.destination} onChange={e => setQuotationForm({ ...quotationForm, destination: e.target.value })} placeholder="e.g., Lusaka" />
+                          <Label className="text-sm font-semibold text-foreground">Destination</Label>
+                          <Input value={quotationForm.destination} onChange={e => setQuotationForm({ ...quotationForm, destination: e.target.value })} placeholder="e.g., Lusaka" className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Distance (km)</Label>
-                          <Input type="number" value={quotationForm.distance_km} onChange={e => setQuotationForm({ ...quotationForm, distance_km: parseInt(e.target.value) || 0 })} />
+                          <Label className="text-sm font-semibold text-foreground">Distance (km)</Label>
+                          <Input type="number" value={quotationForm.distance_km} onChange={e => setQuotationForm({ ...quotationForm, distance_km: parseInt(e.target.value) || 0 })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Cargo Type</Label>
-                          <Input value={quotationForm.cargo_type} onChange={e => setQuotationForm({ ...quotationForm, cargo_type: e.target.value })} placeholder="e.g., Electronics, Maize" />
+                          <Label className="text-sm font-semibold text-foreground">Cargo Type</Label>
+                          <Input value={quotationForm.cargo_type} onChange={e => setQuotationForm({ ...quotationForm, cargo_type: e.target.value })} placeholder="e.g., Electronics, Maize" className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Weight (MT)</Label>
-                          <Input type="number" value={quotationForm.cargo_weight_mt} onChange={e => setQuotationForm({ ...quotationForm, cargo_weight_mt: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Weight (MT)</Label>
+                          <Input type="number" value={quotationForm.cargo_weight_mt} onChange={e => setQuotationForm({ ...quotationForm, cargo_weight_mt: e.target.value })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Container Size</Label>
+                          <Label className="text-sm font-semibold text-foreground">Container Size</Label>
                           <Select value={quotationForm.container_size} onValueChange={v => setQuotationForm({ ...quotationForm, container_size: v })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="20ft">20ft Container</SelectItem>
                               <SelectItem value="40ft">40ft Container</SelectItem>
@@ -808,61 +808,61 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Rate per km (TZS)</Label>
-                          <Input type="number" value={quotationForm.rate_per_km} onChange={e => setQuotationForm({ ...quotationForm, rate_per_km: parseFloat(e.target.value) || 0 })} />
+                          <Label className="text-sm font-semibold text-foreground">Rate per km (TZS)</Label>
+                          <Input type="number" value={quotationForm.rate_per_km} onChange={e => setQuotationForm({ ...quotationForm, rate_per_km: parseFloat(e.target.value) || 0 })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Fuel Surcharge %</Label>
-                          <Input type="number" value={quotationForm.fuel_surcharge_pct} onChange={e => setQuotationForm({ ...quotationForm, fuel_surcharge_pct: parseFloat(e.target.value) || 0 })} />
+                          <Label className="text-sm font-semibold text-foreground">Fuel Surcharge %</Label>
+                          <Input type="number" value={quotationForm.fuel_surcharge_pct} onChange={e => setQuotationForm({ ...quotationForm, fuel_surcharge_pct: parseFloat(e.target.value) || 0 })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Border Fees (TZS)</Label>
-                          <Input type="number" value={quotationForm.border_fees} onChange={e => setQuotationForm({ ...quotationForm, border_fees: parseFloat(e.target.value) || 0 })} />
+                          <Label className="text-sm font-semibold text-foreground">Border Fees (TZS)</Label>
+                          <Input type="number" value={quotationForm.border_fees} onChange={e => setQuotationForm({ ...quotationForm, border_fees: parseFloat(e.target.value) || 0 })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Escort Fees (TZS)</Label>
-                          <Input type="number" value={quotationForm.escort_fees} onChange={e => setQuotationForm({ ...quotationForm, escort_fees: parseFloat(e.target.value) || 0 })} />
+                          <Label className="text-sm font-semibold text-foreground">Escort Fees (TZS)</Label>
+                          <Input type="number" value={quotationForm.escort_fees} onChange={e => setQuotationForm({ ...quotationForm, escort_fees: parseFloat(e.target.value) || 0 })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>VAT Rate %</Label>
-                          <Input type="number" value={quotationForm.vat_rate} onChange={e => setQuotationForm({ ...quotationForm, vat_rate: parseFloat(e.target.value) || 0 })} />
+                          <Label className="text-sm font-semibold text-foreground">VAT Rate %</Label>
+                          <Input type="number" value={quotationForm.vat_rate} onChange={e => setQuotationForm({ ...quotationForm, vat_rate: parseFloat(e.target.value) || 0 })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Validity (days)</Label>
-                          <Input type="number" value={quotationForm.validity_days} onChange={e => setQuotationForm({ ...quotationForm, validity_days: parseInt(e.target.value) || 30 })} />
+                          <Label className="text-sm font-semibold text-foreground">Validity (days)</Label>
+                          <Input type="number" value={quotationForm.validity_days} onChange={e => setQuotationForm({ ...quotationForm, validity_days: parseInt(e.target.value) || 30 })} className="h-11" />
                         </div>
                         <div className="col-span-2 space-y-2">
-                          <Label>Notes</Label>
-                          <Textarea value={quotationForm.notes} onChange={e => setQuotationForm({ ...quotationForm, notes: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Notes</Label>
+                          <Textarea value={quotationForm.notes} onChange={e => setQuotationForm({ ...quotationForm, notes: e.target.value })} className="min-h-[80px]" />
                         </div>
                       </div>
-                      <Separator className="my-4" />
-                      <div className="bg-muted/50 p-4 rounded-lg">
-                        <h4 className="font-semibold mb-2">Cost Breakdown</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>Base Amount:</div>
-                          <div className="text-right">TZS {(quotationForm.distance_km * quotationForm.rate_per_km).toLocaleString()}</div>
-                          <div>Fuel Surcharge ({quotationForm.fuel_surcharge_pct}%):</div>
-                          <div className="text-right">TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (quotationForm.fuel_surcharge_pct / 100)).toLocaleString()}</div>
-                          <div>Border Fees:</div>
-                          <div className="text-right">TZS {quotationForm.border_fees.toLocaleString()}</div>
-                          <div>Subtotal:</div>
-                          <div className="text-right font-medium">
+                      <Separator className="my-6" />
+                      <div className="bg-muted/50 p-5 rounded-xl border border-border">
+                        <h4 className="font-semibold mb-3 text-foreground">Cost Breakdown</h4>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="text-muted-foreground">Base Amount:</div>
+                          <div className="text-right font-medium text-foreground">TZS {(quotationForm.distance_km * quotationForm.rate_per_km).toLocaleString()}</div>
+                          <div className="text-muted-foreground">Fuel Surcharge ({quotationForm.fuel_surcharge_pct}%):</div>
+                          <div className="text-right font-medium text-foreground">TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (quotationForm.fuel_surcharge_pct / 100)).toLocaleString()}</div>
+                          <div className="text-muted-foreground">Border Fees:</div>
+                          <div className="text-right font-medium text-foreground">TZS {quotationForm.border_fees.toLocaleString()}</div>
+                          <div className="text-muted-foreground">Subtotal:</div>
+                          <div className="text-right font-semibold text-foreground">
                             TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees).toLocaleString()}
                           </div>
-                          <div>VAT ({quotationForm.vat_rate}%):</div>
-                          <div className="text-right">
+                          <div className="text-muted-foreground">VAT ({quotationForm.vat_rate}%):</div>
+                          <div className="text-right font-medium text-foreground">
                             TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees) * (quotationForm.vat_rate / 100)).toLocaleString()}
                           </div>
-                          <div className="font-bold">Total Amount:</div>
+                          <div className="font-bold text-foreground">Total Amount:</div>
                           <div className="text-right font-bold text-lg text-success">
                             TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees) * (1 + quotationForm.vat_rate / 100)).toLocaleString()}
                           </div>
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowQuotationDialog(false)}>Cancel</Button>
-                        <Button onClick={saveQuotation}>Create Quotation</Button>
+                      <DialogFooter className="pt-6">
+                        <Button variant="outline" onClick={() => setShowQuotationDialog(false)} className="h-11 px-6">Cancel</Button>
+                        <Button onClick={saveQuotation} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">Create Quotation</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -906,28 +906,28 @@ function SalesModuleContent() {
           {/* Contracts Tab */}
           <TabsContent value="contracts">
             {showContractGenerator ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h2 className="text-lg font-semibold">Calvary Transport Agreement</h2>
-                    <p className="text-sm text-muted-foreground">Generate and print the Calvary transport contract template.</p>
+                    <h2 className="text-2xl font-bold text-foreground">Calvary Transport Agreement</h2>
+                    <p className="text-base text-muted-foreground mt-2">Generate and print the Calvary transport contract template.</p>
                   </div>
-                  <Button variant="outline" onClick={() => setShowContractGenerator(false)}>
+                  <Button variant="outline" onClick={() => setShowContractGenerator(false)} className="h-11 px-6">
                     Close
                   </Button>
                 </div>
                 <TransportAgreementGenerator />
               </div>
             ) : (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="shadow-lg border-border">
+                <CardHeader className="flex flex-row items-center justify-between pb-4">
+                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                     <Briefcase className="h-5 w-5" />
                     Transport Contracts
-                    <Badge variant="outline" className="ml-2">{totalContracts}</Badge>
+                    <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">{totalContracts}</Badge>
                   </CardTitle>
                   {canCreate && (
-                    <Button onClick={() => setShowContractGenerator(true)}>
+                    <Button onClick={() => setShowContractGenerator(true)} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">
                       <Plus className="h-4 w-4 mr-2" /> New Contract
                     </Button>
                   )}
@@ -949,7 +949,7 @@ function SalesModuleContent() {
                       <TableBody>
                         {contracts.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                               No contracts yet. Click "+ New Contract" to generate one.
                             </TableCell>
                           </TableRow>
@@ -962,22 +962,22 @@ function SalesModuleContent() {
                                   {c.contract_number}
                                 </span>
                               </TableCell>
-                              <TableCell className="font-medium">{c.company_name || '—'}</TableCell>
-                              <TableCell className="capitalize">{(c.contract_type || 'standard').replace('_', ' ')}</TableCell>
-                              <TableCell>
+                              <TableCell className="font-medium text-foreground">{c.company_name || '—'}</TableCell>
+                              <TableCell className="capitalize text-foreground">{(c.contract_type || 'standard').replace('_', ' ')}</TableCell>
+                              <TableCell className="text-muted-foreground">
                                 {c.start_date ? format(new Date(c.start_date), 'MMM yyyy') : '—'}
                                 {c.end_date && ` → ${format(new Date(c.end_date), 'MMM yyyy')}`}
                               </TableCell>
-                              <TableCell>{c.currency || 'USD'} {(c.contract_value || 0).toLocaleString()}</TableCell>
+                              <TableCell className="text-foreground">{c.currency || 'USD'} {(c.contract_value || 0).toLocaleString()}</TableCell>
                               <TableCell>
-                                <Badge className={`${statusBadge.bg} ${statusBadge.text} text-xs`}>
+                                <Badge className={`${statusBadge.bg} ${statusBadge.text} text-xs font-medium`} variant="outline">
                                   {statusBadge.label}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
-                                  <Button variant="ghost" size="sm" onClick={() => setPreviewContract(c)} title="Preview">
-                                    <Eye className="h-4 w-4 text-primary" />
+                                  <Button variant="ghost" size="sm" onClick={() => setPreviewContract(c)} title="Preview" className="hover:bg-primary/10 hover:text-primary">
+                                    <Eye className="h-4 w-4" />
                                   </Button>
                                   {c.generated_html && (
                                     <Button variant="ghost" size="sm" onClick={() => {
@@ -987,8 +987,8 @@ function SalesModuleContent() {
                                         w.document.close();
                                         w.print();
                                       }
-                                    }} title="Print PDF">
-                                      <Printer className="h-4 w-4 text-muted-foreground" />
+                                    }} title="Print PDF" className="hover:bg-primary/10 hover:text-primary">
+                                      <Printer className="h-4 w-4" />
                                     </Button>
                                   )}
                                 </div>
@@ -1005,16 +1005,16 @@ function SalesModuleContent() {
 
             {/* Contract Preview Dialog */}
             <Dialog open={!!previewContract} onOpenChange={() => setPreviewContract(null)}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
+                  <DialogTitle className="text-xl font-semibold flex items-center gap-2">
                     <FileSignature className="h-5 w-5" />
                     Contract {previewContract?.contract_number}
                   </DialogTitle>
                 </DialogHeader>
                 {previewContract?.generated_html ? (
                   <div>
-                    <div className="flex gap-2 mb-4">
+                    <div className="flex gap-3 mb-4">
                       <Button variant="outline" size="sm" onClick={() => {
                         const w = window.open('', '_blank');
                         if (w) {
@@ -1022,15 +1022,15 @@ function SalesModuleContent() {
                           w.document.close();
                           w.print();
                         }
-                      }}>
+                      }} className="h-11 px-6">
                         <Printer className="h-4 w-4 mr-2" /> Print / PDF
                       </Button>
                     </div>
                     <div dangerouslySetInnerHTML={{ __html: previewContract.generated_html }} />
                   </div>
                 ) : (
-                  <div className="py-8 text-center text-muted-foreground">
-                    <p>No contract document was generated for this contract.</p>
+                  <div className="py-12 text-center text-muted-foreground">
+                    <p className="text-base">No contract document was generated for this contract.</p>
                     <p className="text-sm mt-2">Contract details:</p>
                     <div className="text-left mt-4 space-y-2 max-w-md mx-auto">
                       <p><strong>Customer:</strong> {previewContract?.company_name}</p>
@@ -1046,11 +1046,11 @@ function SalesModuleContent() {
 
           {/* Rate Sheets Tab */}
           <TabsContent value="rate-sheets">
-            <div className="space-y-6">
+            <div className="space-y-8">
               {canCreate && (
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Create and manage route rate sheets for pricing and transport planning.</p>
+                    <p className="text-base text-muted-foreground">Create and manage route rate sheets for pricing and transport planning.</p>
                   </div>
                   <Dialog open={showRateSheetDialog} onOpenChange={(open) => {
                     if (!open) {
@@ -1063,24 +1063,24 @@ function SalesModuleContent() {
                       <Button onClick={() => {
                         setEditingRateSheet(null);
                         resetRateSheetForm();
-                      }} className="gap-2">
+                      }} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow gap-2">
                         <Plus className="h-4 w-4" /> New Rate Sheet
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
+                    <DialogContent className="max-w-2xl shadow-xl">
                       <DialogHeader>
-                        <DialogTitle>{editingRateSheet ? 'Edit Route Rate Sheet' : 'New Route Rate Sheet'}</DialogTitle>
+                        <DialogTitle className="text-xl font-semibold">{editingRateSheet ? 'Edit Route Rate Sheet' : 'New Route Rate Sheet'}</DialogTitle>
                       </DialogHeader>
-                      <div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-1 gap-4 space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Route Name</Label>
-                            <Input value={newRateSheet.route_name} onChange={e => setNewRateSheet({ ...newRateSheet, route_name: e.target.value })} />
+                            <Label className="text-sm font-semibold text-foreground">Route Name</Label>
+                            <Input value={newRateSheet.route_name} onChange={e => setNewRateSheet({ ...newRateSheet, route_name: e.target.value })} className="h-11" />
                           </div>
                           <div className="space-y-2">
-                            <Label>Service Type</Label>
+                            <Label className="text-sm font-semibold text-foreground">Service Type</Label>
                             <Select value={newRateSheet.service_type} onValueChange={v => setNewRateSheet({ ...newRateSheet, service_type: v })}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 {SERVICE_TYPES.map(t => (
                                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
@@ -1091,50 +1091,50 @@ function SalesModuleContent() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Origin</Label>
-                            <Input value={newRateSheet.origin} onChange={e => setNewRateSheet({ ...newRateSheet, origin: e.target.value })} />
+                            <Label className="text-sm font-semibold text-foreground">Origin</Label>
+                            <Input value={newRateSheet.origin} onChange={e => setNewRateSheet({ ...newRateSheet, origin: e.target.value })} className="h-11" />
                           </div>
                           <div className="space-y-2">
-                            <Label>Destination</Label>
-                            <Input value={newRateSheet.destination} onChange={e => setNewRateSheet({ ...newRateSheet, destination: e.target.value })} />
+                            <Label className="text-sm font-semibold text-foreground">Destination</Label>
+                            <Input value={newRateSheet.destination} onChange={e => setNewRateSheet({ ...newRateSheet, destination: e.target.value })} className="h-11" />
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-4">
                           <div className="space-y-2">
-                            <Label>Distance (km)</Label>
-                            <Input type="number" value={newRateSheet.distance_km} onChange={e => setNewRateSheet({ ...newRateSheet, distance_km: parseInt(e.target.value) || 0 })} />
+                            <Label className="text-sm font-semibold text-foreground">Distance (km)</Label>
+                            <Input type="number" value={newRateSheet.distance_km} onChange={e => setNewRateSheet({ ...newRateSheet, distance_km: parseInt(e.target.value) || 0 })} className="h-11" />
                           </div>
                           <div className="space-y-2">
-                            <Label>20ft Rate</Label>
-                            <Input type="number" value={newRateSheet.container_20ft} onChange={e => setNewRateSheet({ ...newRateSheet, container_20ft: Number(e.target.value) || 0 })} />
+                            <Label className="text-sm font-semibold text-foreground">20ft Rate</Label>
+                            <Input type="number" value={newRateSheet.container_20ft} onChange={e => setNewRateSheet({ ...newRateSheet, container_20ft: Number(e.target.value) || 0 })} className="h-11" />
                           </div>
                           <div className="space-y-2">
-                            <Label>40ft Rate</Label>
-                            <Input type="number" value={newRateSheet.container_40ft} onChange={e => setNewRateSheet({ ...newRateSheet, container_40ft: Number(e.target.value) || 0 })} />
+                            <Label className="text-sm font-semibold text-foreground">40ft Rate</Label>
+                            <Input type="number" value={newRateSheet.container_40ft} onChange={e => setNewRateSheet({ ...newRateSheet, container_40ft: Number(e.target.value) || 0 })} className="h-11" />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Loose Rate / MT</Label>
-                            <Input type="number" value={newRateSheet.loose_rate_mt} onChange={e => setNewRateSheet({ ...newRateSheet, loose_rate_mt: Number(e.target.value) || 0 })} />
+                            <Label className="text-sm font-semibold text-foreground">Loose Rate / MT</Label>
+                            <Input type="number" value={newRateSheet.loose_rate_mt} onChange={e => setNewRateSheet({ ...newRateSheet, loose_rate_mt: Number(e.target.value) || 0 })} className="h-11" />
                           </div>
                           <div className="space-y-2">
-                            <Label>Transit Days</Label>
-                            <Input type="number" value={newRateSheet.transit_days} onChange={e => setNewRateSheet({ ...newRateSheet, transit_days: Number(e.target.value) || 0 })} />
+                            <Label className="text-sm font-semibold text-foreground">Transit Days</Label>
+                            <Input type="number" value={newRateSheet.transit_days} onChange={e => setNewRateSheet({ ...newRateSheet, transit_days: Number(e.target.value) || 0 })} className="h-11" />
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label>Special Conditions</Label>
-                          <Textarea value={newRateSheet.special_conditions} onChange={e => setNewRateSheet({ ...newRateSheet, special_conditions: e.target.value })} rows={3} />
+                          <Label className="text-sm font-semibold text-foreground">Special Conditions</Label>
+                          <Textarea value={newRateSheet.special_conditions} onChange={e => setNewRateSheet({ ...newRateSheet, special_conditions: e.target.value })} rows={3} className="min-h-[80px]" />
                         </div>
                       </div>
-                      <DialogFooter>
+                      <DialogFooter className="pt-6">
                         <Button variant="outline" onClick={() => {
                           setShowRateSheetDialog(false);
                           setEditingRateSheet(null);
                           resetRateSheetForm();
-                        }}>Cancel</Button>
-                        <Button onClick={saveRateSheet}>{editingRateSheet ? 'Update Rate Sheet' : 'Create Rate Sheet'}</Button>
+                        }} className="h-11 px-6">Cancel</Button>
+                        <Button onClick={saveRateSheet} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">{editingRateSheet ? 'Update Rate Sheet' : 'Create Rate Sheet'}</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -1143,35 +1143,35 @@ function SalesModuleContent() {
 
               {/* JSONB Rate Sheets (from contract system) */}
               {jsonbRateSheets.length > 0 && (
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
+                <Card className="shadow-lg border-border">
+                  <CardHeader className="flex flex-row items-center justify-between pb-4">
+                    <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                       <DollarSign className="h-5 w-5" />
                       Freight Rate Sheets
-                      <Badge variant="outline" className="ml-2">{jsonbRateSheets.length}</Badge>
+                      <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">{jsonbRateSheets.length}</Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {jsonbRateSheets.map(rs => (
-                        <div key={rs.id} className="border rounded-lg overflow-hidden">
+                        <div key={rs.id} className="border border-border rounded-xl overflow-hidden">
                           <div
-                            className="flex items-center justify-between p-4 bg-muted/50 cursor-pointer hover:bg-muted"
+                            className="flex items-center justify-between p-4 bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
                             onClick={() => setViewingRateSheet(viewingRateSheet?.id === rs.id ? null : rs)}
                           >
                             <div>
-                              <h3 className="font-semibold text-sm">{rs.rate_sheet_name}</h3>
+                              <h3 className="font-semibold text-sm text-foreground">{rs.rate_sheet_name}</h3>
                               <p className="text-xs text-muted-foreground">
                                 Effective: {rs.effective_date ? new Date(rs.effective_date).toLocaleDateString() : '—'} · {rs.currency} · {rs.rates?.length || 0} routes
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge className="bg-success/10 text-success text-xs">Active</Badge>
+                              <Badge className="bg-success/10 text-success text-xs font-medium" variant="outline">Active</Badge>
                               <Eye className="h-4 w-4 text-muted-foreground" />
                             </div>
                           </div>
                           {viewingRateSheet?.id === rs.id && (
-                            <div className="p-4 border-t">
+                            <div className="p-4 border-t border-border">
                               <div className="overflow-x-auto">
                                 <Table>
                                   <TableHeader>
@@ -1188,13 +1188,13 @@ function SalesModuleContent() {
                                   <TableBody>
                                     {rs.rates?.map((rate: any, idx: number) => (
                                       <TableRow key={idx}>
-                                        <TableCell className="text-sm">{rate.from}</TableCell>
-                                        <TableCell className="text-sm font-medium">{rate.destination}</TableCell>
-                                        <TableCell className="text-right text-sm">{rate.container_20ft?.toLocaleString()}</TableCell>
-                                        <TableCell className="text-right text-sm">{rate.container_40ft?.toLocaleString()}</TableCell>
-                                        <TableCell className="text-right text-sm">{rate.loose?.toLocaleString()}</TableCell>
-                                        <TableCell className="text-center text-sm">{rate.truck_type}</TableCell>
-                                        <TableCell className="text-center text-sm">{rate.transit_days}</TableCell>
+                                        <TableCell className="text-sm text-foreground">{rate.from}</TableCell>
+                                        <TableCell className="text-sm font-medium text-foreground">{rate.destination}</TableCell>
+                                        <TableCell className="text-right text-sm text-foreground">{rate.container_20ft?.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right text-sm text-foreground">{rate.container_40ft?.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right text-sm text-foreground">{rate.loose?.toLocaleString()}</TableCell>
+                                        <TableCell className="text-center text-sm text-foreground">{rate.truck_type}</TableCell>
+                                        <TableCell className="text-center text-sm text-foreground">{rate.transit_days}</TableCell>
                                       </TableRow>
                                     ))}
                                   </TableBody>
@@ -1216,9 +1216,9 @@ function SalesModuleContent() {
 
               {/* Legacy flat rate sheets */}
               {rateSheets.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                <Card className="shadow-lg border-border">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                       <DollarSign className="h-5 w-5" />
                       Route Rate Sheet
                     </CardTitle>
@@ -1240,14 +1240,14 @@ function SalesModuleContent() {
                         </TableHeader>
                         <TableBody>
                           {rateSheets.map(r => (
-                            <TableRow key={r.id}>
-                              <TableCell className="font-medium">{r.route_name}</TableCell>
-                              <TableCell className="capitalize">{String(r.service_type || "").replace('_', ' ')}</TableCell>
-                              <TableCell>{r.distance_km} km</TableCell>
-                              <TableCell>{r.container_20ft ? r.container_20ft.toLocaleString() : '-'}</TableCell>
-                              <TableCell>{r.container_40ft ? r.container_40ft.toLocaleString() : '-'}</TableCell>
-                              <TableCell>{r.loose_rate_mt ? r.loose_rate_mt.toLocaleString() : '-'}</TableCell>
-                              <TableCell>{r.transit_days}</TableCell>
+                            <TableRow key={r.id} className="hover:bg-muted/50">
+                              <TableCell className="font-medium text-foreground">{r.route_name}</TableCell>
+                              <TableCell className="capitalize text-foreground">{String(r.service_type || "").replace('_', ' ')}</TableCell>
+                              <TableCell className="text-muted-foreground">{r.distance_km} km</TableCell>
+                              <TableCell className="text-foreground">{r.container_20ft ? r.container_20ft.toLocaleString() : '-'}</TableCell>
+                              <TableCell className="text-foreground">{r.container_40ft ? r.container_40ft.toLocaleString() : '-'}</TableCell>
+                              <TableCell className="text-foreground">{r.loose_rate_mt ? r.loose_rate_mt.toLocaleString() : '-'}</TableCell>
+                              <TableCell className="text-foreground">{r.transit_days}</TableCell>
                               <TableCell>
                                 {canCreate && (
                                   <div className="flex gap-2">
@@ -1265,13 +1265,12 @@ function SalesModuleContent() {
                                         loose_rate_mt: r.loose_rate_mt || 0,
                                         transit_days: r.transit_days || 0,
                                         special_conditions: (r as any).special_conditions || '',
-                                        is_active: r.is_active !== false,
                                       });
                                       setShowRateSheetDialog(true);
-                                    }}>
+                                    }} className="hover:bg-primary/10 hover:text-primary">
                                       Edit
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={async () => {
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={async () => {
                                       if (confirm('Are you sure you want to delete this rate sheet?')) {
                                         try {
                                           const { error } = await supabase
@@ -1281,7 +1280,7 @@ function SalesModuleContent() {
 
                                           if (error) throw error;
 
-                                          toast({ title: 'Success', description: 'Rate sheet deleted successfully', variant: 'success' });
+                                          toast({ title: 'Success', description: 'Rate sheet deleted successfully' });
 
                                           // Refresh rate sheets
                                           const { data: refreshed, error: fetchErr } = await supabase.from('rate_sheets').select('*').eq('is_active', true);
@@ -1307,7 +1306,7 @@ function SalesModuleContent() {
               )}
 
               {rateSheets.length === 0 && jsonbRateSheets.length === 0 && (
-                <Card>
+                <Card className="shadow-lg">
                   <CardContent className="py-12 text-center text-muted-foreground">
                     No rate sheets found. Run the SQL migration to seed default rates.
                   </CardContent>
@@ -1318,26 +1317,26 @@ function SalesModuleContent() {
 
           {/* Opportunities Tab */}
           <TabsContent value="opportunities">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
+            <Card className="shadow-lg border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
                   Sales Pipeline
                 </CardTitle>
                 {canCreate && (
                   <Dialog open={showOpportunityDialog} onOpenChange={setShowOpportunityDialog}>
                     <DialogTrigger asChild>
-                      <Button><Plus className="h-4 w-4 mr-2" /> Add Opportunity</Button>
+                      <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"><Plus className="h-4 w-4 mr-2" /> Add Opportunity</Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
+                    <DialogContent className="max-w-2xl shadow-xl">
                       <DialogHeader>
-                        <DialogTitle>Add Sales Opportunity</DialogTitle>
+                        <DialogTitle className="text-xl font-semibold">Add Sales Opportunity</DialogTitle>
                       </DialogHeader>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4 space-y-6">
                         <div className="space-y-2">
-                          <Label>Customer</Label>
+                          <Label className="text-sm font-semibold text-foreground">Customer</Label>
                           <Select value={opportunityForm.customer_id} onValueChange={v => setOpportunityForm({ ...opportunityForm, customer_id: v })}>
-                            <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                            <SelectTrigger className="h-11"><SelectValue placeholder="Select customer" /></SelectTrigger>
                             <SelectContent>
                               {customers.map(c => (
                                 <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
@@ -1346,13 +1345,13 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Opportunity Name</Label>
-                          <Input value={opportunityForm.opportunity_name} onChange={e => setOpportunityForm({ ...opportunityForm, opportunity_name: e.target.value })} placeholder="e.g., Q1 Logistics Contract" />
+                          <Label className="text-sm font-semibold text-foreground">Opportunity Name</Label>
+                          <Input value={opportunityForm.opportunity_name} onChange={e => setOpportunityForm({ ...opportunityForm, opportunity_name: e.target.value })} placeholder="e.g., Q1 Logistics Contract" className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Service Type</Label>
+                          <Label className="text-sm font-semibold text-foreground">Service Type</Label>
                           <Select value={opportunityForm.service_type} onValueChange={v => setOpportunityForm({ ...opportunityForm, service_type: v })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {SERVICE_TYPES.map(t => (
                                 <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
@@ -1361,17 +1360,17 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Monthly Revenue (TZS)</Label>
-                          <Input type="number" value={opportunityForm.estimated_monthly_revenue} onChange={e => setOpportunityForm({ ...opportunityForm, estimated_monthly_revenue: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Monthly Revenue (TZS)</Label>
+                          <Input type="number" value={opportunityForm.estimated_monthly_revenue} onChange={e => setOpportunityForm({ ...opportunityForm, estimated_monthly_revenue: e.target.value })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Probability (%)</Label>
-                          <Input type="number" min="0" max="100" value={opportunityForm.probability} onChange={e => setOpportunityForm({ ...opportunityForm, probability: parseInt(e.target.value) || 0 })} />
+                          <Label className="text-sm font-semibold text-foreground">Probability (%)</Label>
+                          <Input type="number" min="0" max="100" value={opportunityForm.probability} onChange={e => setOpportunityForm({ ...opportunityForm, probability: parseInt(e.target.value) || 0 })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Stage</Label>
+                          <Label className="text-sm font-semibold text-foreground">Stage</Label>
                           <Select value={opportunityForm.stage} onValueChange={v => setOpportunityForm({ ...opportunityForm, stage: v })}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="lead">Lead</SelectItem>
                               <SelectItem value="qualification">Qualification</SelectItem>
@@ -1383,21 +1382,21 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Expected Close Date</Label>
-                          <Input type="date" value={opportunityForm.expected_close_date} onChange={e => setOpportunityForm({ ...opportunityForm, expected_close_date: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Expected Close Date</Label>
+                          <Input type="date" value={opportunityForm.expected_close_date} onChange={e => setOpportunityForm({ ...opportunityForm, expected_close_date: e.target.value })} className="h-11" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Competitor</Label>
-                          <Input value={opportunityForm.competitor} onChange={e => setOpportunityForm({ ...opportunityForm, competitor: e.target.value })} placeholder="Who are we competing with?" />
+                          <Label className="text-sm font-semibold text-foreground">Competitor</Label>
+                          <Input value={opportunityForm.competitor} onChange={e => setOpportunityForm({ ...opportunityForm, competitor: e.target.value })} placeholder="Who are we competing with?" className="h-11" />
                         </div>
                         <div className="col-span-2 space-y-2">
-                          <Label>Notes</Label>
-                          <Textarea value={opportunityForm.notes} onChange={e => setOpportunityForm({ ...opportunityForm, notes: e.target.value })} />
+                          <Label className="text-sm font-semibold text-foreground">Notes</Label>
+                          <Textarea value={opportunityForm.notes} onChange={e => setOpportunityForm({ ...opportunityForm, notes: e.target.value })} className="min-h-[80px]" />
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowOpportunityDialog(false)}>Cancel</Button>
-                        <Button onClick={saveOpportunity}>Save Opportunity</Button>
+                      <DialogFooter className="pt-6">
+                        <Button variant="outline" onClick={() => setShowOpportunityDialog(false)} className="h-11 px-6">Cancel</Button>
+                        <Button onClick={saveOpportunity} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">Save Opportunity</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -1419,23 +1418,23 @@ function SalesModuleContent() {
                     </TableHeader>
                     <TableBody>
                       {opportunities.map(o => (
-                        <TableRow key={o.id}>
-                          <TableCell className="font-medium">{o.opportunity_name}</TableCell>
-                          <TableCell>{o.company_name}</TableCell>
-                          <TableCell>{String(o.service_type || "").replace('_', ' ')}</TableCell>
-                          <TableCell>TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}</TableCell>
+                        <TableRow key={o.id} className="hover:bg-muted/50">
+                          <TableCell className="font-medium text-foreground">{o.opportunity_name}</TableCell>
+                          <TableCell className="text-foreground">{o.company_name}</TableCell>
+                          <TableCell className="text-foreground">{String(o.service_type || "").replace('_', ' ')}</TableCell>
+                          <TableCell className="text-foreground">TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <div className="w-16 bg-muted rounded-full h-2">
                                 <div className="bg-primary h-2 rounded-full" style={{ width: `${o.probability}%` }}></div>
                               </div>
-                              <span className="text-sm">{o.probability}%</span>
+                              <span className="text-sm text-foreground">{o.probability}%</span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={getStageColor(o.stage)}>{String(o.stage || "").replace('_', ' ')}</Badge>
+                            <Badge className={getStageColor(o.stage)} variant="outline">{String(o.stage || "").replace('_', ' ')}</Badge>
                           </TableCell>
-                          <TableCell>{format(new Date(o.expected_close_date), 'MMM dd, yyyy')}</TableCell>
+                          <TableCell className="text-muted-foreground">{format(new Date(o.expected_close_date), 'MMM dd, yyyy')}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1454,7 +1453,7 @@ function SalesModuleContent() {
 export default function SalesModule() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen bg-muted">
+      <div className="flex min-h-screen bg-background">
         <Sidebar role="OPERATOR" />
         <div className="flex-1 p-8">
           <div className="flex items-center justify-center h-full">
