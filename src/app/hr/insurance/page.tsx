@@ -32,10 +32,10 @@ import { cn } from '@/lib/utils';
 type TabKey = 'overview' | 'expiring' | 'cross_border' | 'compliance';
 
 const statusStyles: Record<InsuranceStatus | 'cancelled', string> = {
-  active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  expiring_soon: 'bg-amber-50 text-amber-700 border-amber-200',
-  expired: 'bg-rose-50 text-rose-700 border-rose-200',
-  cancelled: 'bg-slate-100 text-slate-600 border-slate-200',
+  active: 'bg-success/10 text-success border-success/20',
+  expiring_soon: 'bg-warning/10 text-warning border-warning/20',
+  expired: 'bg-destructive/10 text-destructive border-destructive/20',
+  cancelled: 'bg-muted/50 text-muted-foreground border-border',
 };
 
 const policyLabels: Record<string, string> = {
@@ -61,19 +61,19 @@ function daysUntil(date: string) {
 
 function getRisk(policy: TruckInsurance) {
   const days = daysUntil(policy.expiry_date);
-  if (policy.status === 'expired' || days < 0) return { label: 'Critical', className: 'bg-rose-600 text-white' };
-  if (days <= 7) return { label: 'Urgent', className: 'bg-orange-600 text-white' };
-  if (days <= 30) return { label: 'Watch', className: 'bg-amber-500 text-white' };
+  if (policy.status === 'expired' || days < 0) return { label: 'Critical', className: 'bg-destructive text-background' };
+  if (days <= 7) return { label: 'Urgent', className: 'bg-warning text-background' };
+  if (days <= 30) return { label: 'Watch', className: 'bg-warning text-background' };
   if (policy.is_cross_border && !policy.has_comesa_yellow_card) {
-    return { label: 'COMESA Gap', className: 'bg-sky-600 text-white' };
+    return { label: 'COMESA Gap', className: 'bg-info text-background' };
   }
-  return { label: 'Covered', className: 'bg-emerald-600 text-white' };
+  return { label: 'Covered', className: 'bg-success text-background' };
 }
 
-function ProgressBar({ value, tone = 'emerald' }: { value: number; tone?: 'emerald' | 'sky' | 'amber' }) {
-  const color = tone === 'sky' ? 'bg-sky-500' : tone === 'amber' ? 'bg-amber-500' : 'bg-emerald-500';
+function ProgressBar({ value, tone = 'success' }: { value: number; tone?: 'success' | 'info' | 'warning' }) {
+  const color = tone === 'info' ? 'bg-info' : tone === 'warning' ? 'bg-warning' : 'bg-success';
   return (
-    <div className="h-2 w-full rounded-full bg-slate-100">
+    <div className="h-2 w-full rounded-full bg-muted">
       <div className={cn('h-2 rounded-full transition-all', color)} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
     </div>
   );
@@ -146,19 +146,19 @@ export default function InsuranceDashboard() {
   const criticalPolicies = insurance.filter((policy) => policy.status === 'expired' || daysUntil(policy.expiry_date) <= 7).length;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-muted">
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge className="border-sky-200 bg-sky-50 text-sky-700">Fleet Compliance</Badge>
-                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">TIRA Ready</Badge>
-                {criticalPolicies > 0 && <Badge className="border-rose-200 bg-rose-50 text-rose-700">{criticalPolicies} urgent</Badge>}
+                <Badge className="border-info/20 bg-info/10 text-info">Fleet Compliance</Badge>
+                <Badge className="border-success/20 bg-success/10 text-success">TIRA Ready</Badge>
+                {criticalPolicies > 0 && <Badge className="border-destructive/20 bg-destructive/10 text-destructive">{criticalPolicies} urgent</Badge>}
               </div>
               <div>
-                <h1 className="text-2xl font-semibold tracking-normal text-slate-950 sm:text-3xl">Insurance Command Center</h1>
-                <p className="mt-2 max-w-3xl text-sm text-slate-600">
+                <h1 className="text-2xl font-semibold tracking-normal text-foreground sm:text-3xl">Insurance Command Center</h1>
+                <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
                   Control policy coverage, renewals, claims readiness, cross-border compliance, and fleet insurance cost from one operations view.
                 </p>
               </div>
@@ -179,7 +179,7 @@ export default function InsuranceDashboard() {
                 </Button>
               </Link>
               <Link href="/hr/insurance/add">
-                <Button className="gap-2 bg-slate-950 text-white hover:bg-slate-800">
+                <Button className="gap-2 bg-foreground text-background hover:bg-foreground/90">
                   <Plus className="h-4 w-4" />
                   New Policy
                 </Button>
@@ -220,46 +220,46 @@ export default function InsuranceDashboard() {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-3">
-          <Card className="border-slate-200 shadow-sm lg:col-span-2">
+          <Card className="border-border shadow-sm lg:col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <ClipboardCheck className="h-5 w-5 text-emerald-600" />
+                    <ClipboardCheck className="h-5 w-5 text-success" />
                     Compliance Health
                   </CardTitle>
                   <CardDescription>TIRA coverage, COMESA readiness, and dispatch risk.</CardDescription>
                 </div>
-                <Badge className={cn('border', tiraRate >= 90 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
+                <Badge className={cn('border', tiraRate >= 90 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
                   {tiraRate.toFixed(1)}% TIRA
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="grid gap-5 md:grid-cols-2">
-              <div className="space-y-4 rounded-lg border border-slate-200 p-4">
+              <div className="space-y-4 rounded-lg border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">TIRA Mandatory Coverage</p>
-                    <p className="text-xs text-slate-500">Minimum third-party coverage per truck</p>
+                    <p className="text-sm font-medium text-foreground">TIRA Mandatory Coverage</p>
+                    <p className="text-xs text-muted-foreground">Minimum third-party coverage per truck</p>
                   </div>
-                  <span className="text-lg font-semibold text-slate-950">{tiraRate.toFixed(0)}%</span>
+                  <span className="text-lg font-semibold text-foreground">{tiraRate.toFixed(0)}%</span>
                 </div>
                 <ProgressBar value={tiraRate} />
-                <div className="flex justify-between text-xs text-slate-600">
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{summary?.mandatory_tira_compliance.compliant ?? 0} compliant</span>
                   <span>{summary?.mandatory_tira_compliance.non_compliant ?? 0} missing</span>
                 </div>
               </div>
-              <div className="space-y-4 rounded-lg border border-slate-200 p-4">
+              <div className="space-y-4 rounded-lg border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">COMESA Yellow Card</p>
-                    <p className="text-xs text-slate-500">Cross-border route readiness</p>
+                    <p className="text-sm font-medium text-foreground">COMESA Yellow Card</p>
+                    <p className="text-xs text-muted-foreground">Cross-border route readiness</p>
                   </div>
-                  <span className="text-lg font-semibold text-slate-950">{yellowCardRate.toFixed(0)}%</span>
+                  <span className="text-lg font-semibold text-foreground">{yellowCardRate.toFixed(0)}%</span>
                 </div>
-                <ProgressBar value={yellowCardRate} tone="sky" />
-                <div className="flex justify-between text-xs text-slate-600">
+                <ProgressBar value={yellowCardRate} tone="info" />
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{summary?.cross_border_coverage.with_yellow_card ?? 0} ready</span>
                   <span>{summary?.cross_border_coverage.without_yellow_card ?? 0} gaps</span>
                 </div>
@@ -267,10 +267,10 @@ export default function InsuranceDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <AlertTriangle className="h-5 w-5 text-warning" />
                 Dispatch Guardrails
               </CardTitle>
               <CardDescription>Rules ops should check before assigning routes.</CardDescription>
@@ -321,7 +321,7 @@ export default function InsuranceDashboard() {
             </div>
 
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabKey)}>
-              <TabsList className="grid w-full grid-cols-2 bg-slate-100 sm:w-auto sm:grid-cols-4">
+              <TabsList className="grid w-full grid-cols-2 bg-muted sm:w-auto sm:grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="expiring">Renewals</TabsTrigger>
                 <TabsTrigger value="cross_border">Cross-Border</TabsTrigger>
@@ -352,20 +352,20 @@ function MetricCard({
   tone: 'emerald' | 'amber' | 'rose' | 'sky';
 }) {
   const tones = {
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    rose: 'bg-rose-50 text-rose-700 border-rose-100',
-    sky: 'bg-sky-50 text-sky-700 border-sky-100',
+    emerald: 'bg-success/10 text-success border-success/20',
+    amber: 'bg-warning/10 text-warning border-warning/20',
+    rose: 'bg-destructive/10 text-destructive border-destructive/20',
+    sky: 'bg-info/10 text-info border-info/20',
   };
 
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="border-border shadow-sm">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-500">{title}</p>
-            <p className="text-2xl font-semibold text-slate-950">{value}</p>
-            <p className="text-xs text-slate-500">{detail}</p>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-2xl font-semibold text-foreground">{value}</p>
+            <p className="text-xs text-muted-foreground">{detail}</p>
           </div>
           <div className={cn('rounded-md border p-2', tones[tone])}>
             <Icon className="h-5 w-5" />
@@ -378,33 +378,33 @@ function MetricCard({
 
 function GuardrailRow({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border border-slate-200 p-3">
-      {ok ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}
-      <span className="text-sm text-slate-700">{label}</span>
+    <div className="flex items-center gap-3 rounded-md border border-border p-3">
+      {ok ? <CheckCircle2 className="h-4 w-4 text-success" /> : <AlertTriangle className="h-4 w-4 text-warning" />}
+      <span className="text-sm text-foreground">{label}</span>
     </div>
   );
 }
 
 function PolicyTable({ policies, loading }: { policies: TruckInsurance[]; loading: boolean }) {
   if (loading) {
-    return <div className="rounded-lg border border-slate-200 p-8 text-center text-sm text-slate-500">Loading insurance command data...</div>;
+    return <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">Loading insurance command data...</div>;
   }
 
   if (policies.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 p-10 text-center">
-        <FileText className="mx-auto h-8 w-8 text-slate-400" />
-        <p className="mt-3 text-sm font-medium text-slate-700">No policies match this view</p>
-        <p className="mt-1 text-xs text-slate-500">Add a policy or adjust your filters to see records.</p>
+      <div className="rounded-lg border border-dashed border-border p-10 text-center">
+        <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
+        <p className="mt-3 text-sm font-medium text-foreground">No policies match this view</p>
+        <p className="mt-1 text-xs text-muted-foreground">Add a policy or adjust your filters to see records.</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200">
+    <div className="overflow-hidden rounded-lg border border-border">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[960px] text-sm">
-          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
               <th className="px-4 py-3 text-left font-semibold">Policy</th>
               <th className="px-4 py-3 text-left font-semibold">Vehicle</th>
@@ -420,36 +420,36 @@ function PolicyTable({ policies, loading }: { policies: TruckInsurance[]; loadin
               const days = daysUntil(policy.expiry_date);
               const risk = getRisk(policy);
               return (
-                <tr key={policy.id} className="hover:bg-slate-50">
+                <tr key={policy.id} className="hover:bg-muted/50">
                   <td className="px-4 py-4">
-                    <div className="font-medium text-slate-950">{policy.insurer_name}</div>
-                    <div className="mt-1 text-xs text-slate-500">{policy.tira_reference_number}</div>
+                    <div className="font-medium text-foreground">{policy.insurer_name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{policy.tira_reference_number}</div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <Truck className="h-4 w-4 text-slate-400" />
+                    <div className="flex items-center gap-2 text-foreground">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
                       <span>{policy.vehicle_id?.slice(0, 8) || 'Unassigned'}</span>
                     </div>
-                    {policy.assigned_driver_id && <div className="mt-1 text-xs text-slate-500">Driver {policy.assigned_driver_id.slice(0, 8)}</div>}
+                    {policy.assigned_driver_id && <div className="mt-1 text-xs text-muted-foreground">Driver {policy.assigned_driver_id.slice(0, 8)}</div>}
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className="border-slate-200 text-slate-700">
+                      <Badge variant="outline" className="border-border text-foreground">
                         {policyLabels[policy.policy_type] ?? policy.policy_type}
                       </Badge>
                       {policy.is_cross_border && (
-                        <Badge className="border-sky-200 bg-sky-50 text-sky-700">
+                        <Badge className="border-info/20 bg-info/10 text-info">
                           <Globe2 className="mr-1 h-3 w-3" />
                           Regional
                         </Badge>
                       )}
-                      {policy.has_comesa_yellow_card && <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">COMESA</Badge>}
+                      {policy.has_comesa_yellow_card && <Badge className="border-success/20 bg-success/10 text-success">COMESA</Badge>}
                     </div>
-                    {policy.route_coverage_area && <div className="mt-2 text-xs text-slate-500">{policy.route_coverage_area}</div>}
+                    {policy.route_coverage_area && <div className="mt-2 text-xs text-muted-foreground">{policy.route_coverage_area}</div>}
                   </td>
                   <td className="px-4 py-4">
-                    <div className="font-medium text-slate-800">{new Date(policy.expiry_date).toLocaleDateString()}</div>
-                    <div className={cn('mt-1 text-xs', days < 0 ? 'text-rose-600' : days <= 30 ? 'text-amber-600' : 'text-slate-500')}>
+                    <div className="font-medium text-foreground">{new Date(policy.expiry_date).toLocaleDateString()}</div>
+                    <div className={cn('mt-1 text-xs', days < 0 ? 'text-destructive' : days <= 30 ? 'text-warning' : 'text-muted-foreground')}>
                       {days < 0 ? `${Math.abs(days)} days overdue` : `${days} days left`}
                     </div>
                   </td>
