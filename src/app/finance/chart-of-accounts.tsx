@@ -42,13 +42,13 @@ interface LedgerTransaction {
 }
 
 const categoryColors: Record<string, { bg: string; text: string; border: string; icon: any }> = {
-  ASSETS: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: Wallet },
-  LIABILITIES: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', icon: CreditCard },
-  EQUITY: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', icon: Building2 },
-  REVENUE: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', icon: TrendingUp },
-  COST_OF_SALES: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', icon: Coins },
-  OPERATING_EXPENSES: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: TrendingDown },
-  OTHER_EXPENSES: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', icon: FileText },
+  ASSETS: { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20', icon: Wallet },
+  LIABILITIES: { bg: 'bg-destructive/10', text: 'text-destructive', border: 'border-destructive/20', icon: CreditCard },
+  EQUITY: { bg: 'bg-accent/10', text: 'text-accent', border: 'border-accent/20', icon: Building2 },
+  REVENUE: { bg: 'bg-success/10', text: 'text-success', border: 'border-success/20', icon: TrendingUp },
+  COST_OF_SALES: { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20', icon: Coins },
+  OPERATING_EXPENSES: { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20', icon: TrendingDown },
+  OTHER_EXPENSES: { bg: 'bg-muted/50', text: 'text-muted-foreground', border: 'border-border', icon: FileText },
 };
 
 // Pre-configured logistics accounts for Calvary
@@ -556,7 +556,7 @@ export function ChartOfAccountsPage() {
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button className="bg-red-600 hover:bg-red-700">
+              <Button className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" /> New Account
               </Button>
             </DialogTrigger>
@@ -688,7 +688,7 @@ export function ChartOfAccountsPage() {
                 variant={activeFilter === cat ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setActiveFilter(cat)}
-                className={activeFilter === cat ? 'bg-slate-900 hover:bg-slate-800' : ''}
+                className={activeFilter === cat ? 'bg-foreground hover:bg-foreground/90' : ''}
               >
                 <Icon className="h-4 w-4 mr-2" />
                 {cat.replace(/_/g, ' ')}
@@ -758,7 +758,7 @@ export function ChartOfAccountsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={account.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                        <Badge className={account.is_active ? 'bg-success/10 text-success' : 'bg-muted/50 text-muted-foreground'}>
                           {account.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
@@ -979,7 +979,7 @@ export function ChartOfAccountsPage() {
                 </div>
                 <Button 
                   onClick={() => setShowAddEntryDialog(true)} 
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-destructive hover:bg-destructive/90 text-background"
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Entry
                 </Button>
@@ -988,22 +988,22 @@ export function ChartOfAccountsPage() {
 
             {/* Account Details Card */}
             {ledgerAccount && (
-              <div className="px-6 py-4 bg-slate-50 border-b">
+              <div className="px-6 py-4 bg-muted/50 border-b">
                 <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-white p-4 rounded-lg shadow-sm border">
+                  <div className="bg-card p-4 rounded-lg shadow-sm border">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Code</p>
-                    <p className="text-xl font-mono font-bold text-slate-900">{ledgerAccount.code}</p>
+                    <p className="text-xl font-mono font-bold text-foreground">{ledgerAccount.code}</p>
                   </div>
-                  <div className="bg-white p-4 rounded-lg shadow-sm border col-span-2">
+                  <div className="bg-card p-4 rounded-lg shadow-sm border col-span-2">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Name</p>
-                    <p className="text-lg font-semibold text-slate-900">{ledgerAccount.name}</p>
+                    <p className="text-lg font-semibold text-foreground">{ledgerAccount.name}</p>
                     {ledgerAccount.description && (
                       <p className="text-sm text-muted-foreground mt-1">{ledgerAccount.description}</p>
                     )}
                   </div>
-                  <div className="bg-white p-4 rounded-lg shadow-sm border">
+                  <div className="bg-card p-4 rounded-lg shadow-sm border">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Current Balance</p>
-                    <p className={`text-xl font-bold ${ledgerAccount.current_balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <p className={`text-xl font-bold ${ledgerAccount.current_balance >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {formatCurrency(ledgerAccount.current_balance, ledgerAccount.currency)}
                     </p>
                     <Badge variant="outline" className="mt-1 text-xs">
@@ -1022,9 +1022,9 @@ export function ChartOfAccountsPage() {
                   <p className="text-muted-foreground">Loading transactions...</p>
                 </div>
               ) : ledgerTransactions.length === 0 ? (
-                <div className="py-12 text-center bg-slate-50 rounded-lg border-2 border-dashed">
-                  <BookOpen className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-lg font-medium text-slate-600">No transactions found</p>
+                <div className="py-12 text-center bg-muted/50 rounded-lg border-2 border-dashed">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-lg font-medium text-foreground">No transactions found</p>
                   <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
                     This account has no transaction history yet. Click "Add Entry" to create your first journal entry.
                   </p>
@@ -1034,24 +1034,24 @@ export function ChartOfAccountsPage() {
                   {/* Ledger Table */}
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
-                      <TableHeader className="bg-slate-100">
-                        <TableRow className="hover:bg-slate-100">
-                          <TableHead className="w-24 font-semibold text-slate-700">Date</TableHead>
-                          <TableHead className="w-28 font-semibold text-slate-700">Entry #</TableHead>
-                          <TableHead className="font-semibold text-slate-700">Description</TableHead>
-                          <TableHead className="w-28 text-right font-semibold text-slate-700">Debit</TableHead>
-                          <TableHead className="w-28 text-right font-semibold text-slate-700">Credit</TableHead>
-                          <TableHead className="w-32 text-right font-semibold text-slate-700">Balance</TableHead>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow className="hover:bg-muted/50">
+                          <TableHead className="w-24 font-semibold text-foreground">Date</TableHead>
+                          <TableHead className="w-28 font-semibold text-foreground">Entry #</TableHead>
+                          <TableHead className="font-semibold text-foreground">Description</TableHead>
+                          <TableHead className="w-28 text-right font-semibold text-foreground">Debit</TableHead>
+                          <TableHead className="w-28 text-right font-semibold text-foreground">Credit</TableHead>
+                          <TableHead className="w-32 text-right font-semibold text-foreground">Balance</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {/* Opening Balance Row */}
                         {ledgerTransactions.length > 0 && (
-                          <TableRow className="bg-slate-50/50 font-medium">
-                            <TableCell colSpan={5} className="text-right text-slate-600">
+                          <TableRow className="bg-muted/30 font-medium">
+                            <TableCell colSpan={5} className="text-right text-muted-foreground">
                               Opening Balance
                             </TableCell>
-                            <TableCell className="text-right font-bold text-slate-700">
+                            <TableCell className="text-right font-bold text-foreground">
                               {formatCurrency(ledgerTransactions[ledgerTransactions.length - 1]?.running_balance - 
                                 (ledgerTransactions[ledgerTransactions.length - 1]?.debit - ledgerTransactions[ledgerTransactions.length - 1]?.credit), ledgerAccount?.currency) || formatCurrency(0, ledgerAccount?.currency)}
                             </TableCell>
@@ -1059,35 +1059,35 @@ export function ChartOfAccountsPage() {
                         )}
                         {/* Transaction Rows */}
                         {[...ledgerTransactions].reverse().map((tx, index) => (
-                          <TableRow key={tx.id} className="hover:bg-slate-50/80">
+                          <TableRow key={tx.id} className="hover:bg-muted/40">
                             <TableCell className="text-sm">
                               {new Date(tx.entry_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </TableCell>
-                            <TableCell className="font-mono text-sm text-blue-600 font-medium">
+                            <TableCell className="font-mono text-sm text-primary font-medium">
                               {tx.entry_number}
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium text-slate-900">{tx.description}</div>
+                              <div className="font-medium text-foreground">{tx.description}</div>
                               {tx.reference && (
                                 <div className="text-xs text-muted-foreground">Ref: {tx.reference}</div>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
                               {tx.debit > 0 ? (
-                                <span className="text-slate-900 font-medium">{formatCurrency(tx.debit, ledgerAccount?.currency)}</span>
+                                <span className="text-foreground font-medium">{formatCurrency(tx.debit, ledgerAccount?.currency)}</span>
                               ) : (
-                                <span className="text-slate-400">—</span>
+                                <span className="text-muted-foreground">—</span>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
                               {tx.credit > 0 ? (
-                                <span className="text-slate-900 font-medium">{formatCurrency(tx.credit, ledgerAccount?.currency)}</span>
+                                <span className="text-foreground font-medium">{formatCurrency(tx.credit, ledgerAccount?.currency)}</span>
                               ) : (
-                                <span className="text-slate-400">—</span>
+                                <span className="text-muted-foreground">—</span>
                               )}
                             </TableCell>
-                            <TableCell className="text-right font-bold bg-slate-50/30">
-                              <span className={tx.running_balance >= 0 ? 'text-green-700' : 'text-red-700'}>
+                            <TableCell className="text-right font-bold bg-muted/20">
+                              <span className={tx.running_balance >= 0 ? 'text-success' : 'text-destructive'}>
                                 {formatCurrency(tx.running_balance, ledgerAccount?.currency)}
                               </span>
                             </TableCell>
@@ -1098,28 +1098,28 @@ export function ChartOfAccountsPage() {
                   </div>
 
                   {/* Summary Footer */}
-                  <div className="bg-slate-900 text-white p-4 rounded-lg flex justify-between items-center">
+                  <div className="bg-foreground text-background p-4 rounded-lg flex justify-between items-center">
                     <div className="flex gap-6">
                       <div>
-                        <p className="text-xs text-slate-400 uppercase">Total Debits</p>
+                        <p className="text-xs text-muted-foreground uppercase">Total Debits</p>
                         <p className="text-lg font-semibold">
                           {formatCurrency(ledgerTransactions.reduce((sum, tx) => sum + tx.debit, 0), ledgerAccount?.currency)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400 uppercase">Total Credits</p>
+                        <p className="text-xs text-muted-foreground uppercase">Total Credits</p>
                         <p className="text-lg font-semibold">
                           {formatCurrency(ledgerTransactions.reduce((sum, tx) => sum + tx.credit, 0), ledgerAccount?.currency)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400 uppercase">Transactions</p>
+                        <p className="text-xs text-muted-foreground uppercase">Transactions</p>
                         <p className="text-lg font-semibold">{ledgerTransactions.length}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-slate-400 uppercase">Closing Balance</p>
-                      <p className="text-2xl font-bold text-green-400">
+                      <p className="text-xs text-muted-foreground uppercase">Closing Balance</p>
+                      <p className="text-2xl font-bold text-success">
                         {formatCurrency(ledgerTransactions[0]?.running_balance || 0, ledgerAccount?.currency)}
                       </p>
                     </div>
@@ -1302,7 +1302,7 @@ export function ChartOfAccountsPage() {
                 type="button"
                 variant="outline" 
                 onClick={addEntryLine}
-                className="text-red-600 border-red-600 hover:bg-red-50"
+                className="text-destructive border-destructive hover:bg-destructive/10"
               >
                 <Plus className="h-4 w-4 mr-2" /> Add Row
               </Button>
@@ -1312,22 +1312,22 @@ export function ChartOfAccountsPage() {
                 const { totalDebit, totalCredit, balanced } = calculateEntryTotals();
                 return (
                   <div className="flex justify-end">
-                    <div className="bg-slate-100 p-4 rounded-lg flex gap-8">
+                    <div className="bg-muted/50 p-4 rounded-lg flex gap-8">
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground uppercase">Total Debits</p>
-                        <p className={`text-lg font-bold ${balanced ? 'text-slate-900' : 'text-red-600'}`}>
+                        <p className={`text-lg font-bold ${balanced ? 'text-foreground' : 'text-destructive'}`}>
                           {formatCurrency(totalDebit, ledgerAccount?.currency)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground uppercase">Total Credits</p>
-                        <p className={`text-lg font-bold ${balanced ? 'text-slate-900' : 'text-red-600'}`}>
+                        <p className={`text-lg font-bold ${balanced ? 'text-foreground' : 'text-destructive'}`}>
                           {formatCurrency(totalCredit, ledgerAccount?.currency)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground uppercase">Difference</p>
-                        <p className={`text-lg font-bold ${balanced ? 'text-green-600' : 'text-red-600'}`}>
+                        <p className={`text-lg font-bold ${balanced ? 'text-success' : 'text-destructive'}`}>
                           {formatCurrency(Math.abs(totalDebit - totalCredit), ledgerAccount?.currency)}
                         </p>
                       </div>
