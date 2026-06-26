@@ -57,23 +57,23 @@ export default function MaintenancePage() {
 
     const getPriorityColor = (priority: string) => {
         switch (priority) {
-            case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30';
-            case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30';
-            case 'medium': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30';
-            case 'low': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'critical': return 'bg-destructive/10 text-destructive dark:bg-destructive/30';
+            case 'high': return 'bg-warning/10 text-warning dark:bg-warning/30';
+            case 'medium': return 'bg-primary/10 text-primary dark:bg-primary/30';
+            case 'low': return 'bg-muted/50 text-muted-foreground dark:bg-muted/30';
+            default: return 'bg-muted/50 text-muted-foreground';
         }
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'requested': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30';
-            case 'scheduled': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30';
-            case 'in_progress': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30';
-            case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/30';
-            case 'postponed': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30';
-            case 'cancelled': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'requested': return 'bg-accent/10 text-accent dark:bg-accent/30';
+            case 'scheduled': return 'bg-primary/10 text-primary dark:bg-primary/30';
+            case 'in_progress': return 'bg-warning/10 text-warning dark:bg-warning/30';
+            case 'completed': return 'bg-success/10 text-success dark:bg-success/30';
+            case 'postponed': return 'bg-warning/10 text-warning dark:bg-warning/30';
+            case 'cancelled': return 'bg-muted/50 text-muted-foreground dark:bg-muted/30';
+            default: return 'bg-muted/50 text-muted-foreground';
         }
     };
 
@@ -91,7 +91,7 @@ export default function MaintenancePage() {
                     <p className="text-muted-foreground mt-1">Fleet servicing, repairs and inspections</p>
                 </div>
                 <Link href="/maintenance/new">
-                    <Button className="bg-red-600 hover:bg-red-700 text-white gap-2">
+                    <Button className="bg-primary hover:bg-primary/90 text-background gap-2">
                         <Plus className="w-4 h-4" />
                         New Record
                     </Button>
@@ -101,13 +101,13 @@ export default function MaintenancePage() {
             {/* Stat Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-x-auto pb-4">
                 {[
-                    { label: 'Total', value: stats.total, color: 'bg-slate-100 dark:bg-slate-900' },
-                    { label: 'Pending Review', value: stats.requested, color: 'bg-purple-100 dark:bg-purple-900/30', icon: AlertTriangle },
-                    { label: 'Scheduled', value: stats.scheduled, color: 'bg-blue-100 dark:bg-blue-900/30', icon: Clock },
-                    { label: 'In Progress', value: stats.in_progress, color: 'bg-amber-100 dark:bg-amber-900/30' },
-                    { label: 'Completed', value: `${stats.completed} (${format(stats.totalCompletedCost)})`, color: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle2 },
-                    { label: 'Postponed', value: stats.postponed, color: 'bg-orange-100 dark:bg-orange-900/30', icon: Pause },
-                    { label: 'Overdue', value: stats.overdue, color: 'bg-gray-100 dark:bg-gray-900/30' },
+                    { label: 'Total', value: stats.total, color: 'bg-muted/50 dark:bg-muted' },
+                    { label: 'Pending Review', value: stats.requested, color: 'bg-accent/10 dark:bg-accent/30', icon: AlertTriangle },
+                    { label: 'Scheduled', value: stats.scheduled, color: 'bg-primary/10 dark:bg-primary/30', icon: Clock },
+                    { label: 'In Progress', value: stats.in_progress, color: 'bg-warning/10 dark:bg-warning/30' },
+                    { label: 'Completed', value: `${stats.completed} (${format(stats.totalCompletedCost)})`, color: 'bg-success/10 dark:bg-success/30', icon: CheckCircle2 },
+                    { label: 'Postponed', value: stats.postponed, color: 'bg-warning/10 dark:bg-warning/30', icon: Pause },
+                    { label: 'Overdue', value: stats.overdue, color: 'bg-muted/50 dark:bg-muted' },
                 ].map((card) => (
                     <div
                         key={card.label}
@@ -214,7 +214,7 @@ export default function MaintenancePage() {
                                                 key={record.id}
                                                 className={cn(
                                                     'border-b hover:bg-muted/50 transition-colors',
-                                                    record.status === 'requested' && 'bg-purple-50/30 dark:bg-purple-900/10'
+                                                    record.status === 'requested' && 'bg-accent/50/30 dark:bg-accent/10'
                                                 )}
                                             >
                                                 <td className="py-3 px-4">
