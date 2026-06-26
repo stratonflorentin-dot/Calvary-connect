@@ -203,6 +203,45 @@ export default function TripsPage() {
       const { data: newTrip, error } = await supabase.from('trips').insert([tripData]).select().single();
       if (error) throw error;
 
+      // Create accounting journal entry for trip revenue
+      if (newTrip && salesAmount > 0) {
+        // Create journal entry for trip revenue
+        const { error: journalError, data: journalEntry } = await supabase.from('journal_entries').insert({
+          entry_number: `JE-${Date.now()}`,
+          entry_date: new Date().toISOString().split('T')[0],
+          description: `Trip Revenue: ${tripForm.origin} → ${tripForm.destination}`,
+          reference: newTrip.id,
+          created_by: user?.id,
+        }).select().single();
+        
+        if (!journalError && journalEntry) {
+          // Debit: Accounts Receivable (or Cash if paid)
+          await supabase.from('journal_entry_lines').insert([
+            {
+              journal_entry_id: journalEntry.id,
+              account_code: '1102', // Bank Account or Accounts Receivable
+              debit: totalAmount,
+              credit: 0,
+              description: 'Trip revenue receivable',
+            },
+            {
+              journal_entry_id: journalEntry.id,
+              account_code: '4001', // Revenue - Transportation Services
+              debit: 0,
+              credit: salesAmount,
+              description: 'Transportation service revenue',
+            },
+            {
+              journal_entry_id: journalEntry.id,
+              account_code: '2201', // VAT Payable
+              debit: 0,
+              credit: vatAmount,
+              description: 'VAT on transportation services',
+            },
+          ]);
+        }
+      }
+
       // Create driver allowance for the trip
       if (newTrip && tripForm.driver_id) {
         const allowanceAmount = calculateAllowance(newTrip);

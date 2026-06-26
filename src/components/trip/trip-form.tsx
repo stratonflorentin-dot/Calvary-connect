@@ -74,9 +74,22 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // Calculate VAT and totals
+    const salesAmount = parseFloat(formData.salesAmount) || 0;
+    const vatAmount = salesAmount * (formData.vatRate / 100);
+    const totalAmount = salesAmount + vatAmount;
+    
+    const tripData = {
+      ...formData,
+      salesAmount,
+      vatAmount,
+      totalAmount,
+    };
+    
+    onSubmit(tripData);
   };
 
   const getFleetIcon = (type: string) => {
