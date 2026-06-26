@@ -95,14 +95,14 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
   const getFleetColor = (type: string) => {
     switch (type.toUpperCase()) {
       case 'DUMP_TRUCK':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-warning/10 text-warning';
       case 'TRUCK_HEAD':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary/10 text-primary';
       case 'TRAILER':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success/10 text-success';
       case 'ESCORT_CAR':
-        return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+        return 'bg-accent/10 text-accent';
+      default: return 'bg-muted/50 text-muted-foreground';
     }
   };
 
@@ -126,24 +126,50 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
               />
             </div>
             <div>
-              <Label htmlFor="origin">Origin</Label>
-              <Input
-                id="origin"
-                value={formData.origin}
-                onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                placeholder="Nairobi"
-                required
-              />
+              <Label htmlFor="origin">Origin (City/Town)</Label>
+              <Select value={formData.origin} onValueChange={(value) => setFormData({ ...formData, origin: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select origin city" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dar es Salaam">Dar es Salaam</SelectItem>
+                  <SelectItem value="Arusha">Arusha</SelectItem>
+                  <SelectItem value="Mwanza">Mwanza</SelectItem>
+                  <SelectItem value="Dodoma">Dodoma</SelectItem>
+                  <SelectItem value="Tanga">Tanga</SelectItem>
+                  <SelectItem value="Morogoro">Morogoro</SelectItem>
+                  <SelectItem value="Mbeya">Mbeya</SelectItem>
+                  <SelectItem value="Kigoma">Kigoma</SelectItem>
+                  <SelectItem value="Moshi">Moshi</SelectItem>
+                  <SelectItem value="Nairobi">Nairobi (Kenya)</SelectItem>
+                  <SelectItem value="Mombasa">Mombasa (Kenya)</SelectItem>
+                  <SelectItem value="Kampala">Kampala (Uganda)</SelectItem>
+                  <SelectItem value="Lusaka">Lusaka (Zambia)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <Label htmlFor="destination">Destination</Label>
-              <Input
-                id="destination"
-                value={formData.destination}
-                onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                placeholder="Mombasa"
-                required
-              />
+              <Label htmlFor="destination">Destination (City/Town)</Label>
+              <Select value={formData.destination} onValueChange={(value) => setFormData({ ...formData, destination: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select destination city" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dar es Salaam">Dar es Salaam</SelectItem>
+                  <SelectItem value="Arusha">Arusha</SelectItem>
+                  <SelectItem value="Mwanza">Mwanza</SelectItem>
+                  <SelectItem value="Dodoma">Dodoma</SelectItem>
+                  <SelectItem value="Tanga">Tanga</SelectItem>
+                  <SelectItem value="Morogoro">Morogoro</SelectItem>
+                  <SelectItem value="Mbeya">Mbeya</SelectItem>
+                  <SelectItem value="Kigoma">Kigoma</SelectItem>
+                  <SelectItem value="Moshi">Moshi</SelectItem>
+                  <SelectItem value="Nairobi">Nairobi (Kenya)</SelectItem>
+                  <SelectItem value="Mombasa">Mombasa (Kenya)</SelectItem>
+                  <SelectItem value="Kampala">Kampala (Uganda)</SelectItem>
+                  <SelectItem value="Lusaka">Lusaka (Zambia)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="cargoType">Cargo Type</Label>
@@ -171,13 +197,13 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
                 <SelectContent>
                   <SelectItem value="transit">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-blue-50">0% VAT</Badge>
+                      <Badge variant="outline" className="bg-primary/10 text-primary">0% VAT</Badge>
                       <span>Transit (International)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="local">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-green-50">18% VAT</Badge>
+                      <Badge variant="outline" className="bg-success/10 text-success">18% VAT</Badge>
                       <span>Local (Domestic)</span>
                     </div>
                   </SelectItem>
@@ -261,7 +287,7 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
                 placeholder="1000.00"
               />
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
               <div>
                 <p className="text-sm text-muted-foreground">Trip Type</p>
                 <p className="font-medium capitalize">{formData.tripType}</p>
@@ -275,7 +301,7 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
               </div>
             </div>
             {formData.salesAmount && (
-              <div className="p-3 bg-blue-50 rounded-md space-y-1">
+              <div className="p-3 bg-primary/10 rounded-md space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
                   <span>{parseFloat(formData.salesAmount).toFixed(2)}</span>
@@ -284,7 +310,7 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
                   <span>VAT ({formData.vatRate}%):</span>
                   <span>{(parseFloat(formData.salesAmount) * (formData.vatRate / 100)).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between font-bold pt-1 border-t border-blue-200">
+                <div className="flex justify-between font-bold pt-1 border-t border-primary/20">
                   <span>Total:</span>
                   <span>{(parseFloat(formData.salesAmount) * (1 + formData.vatRate / 100)).toFixed(2)}</span>
                 </div>
@@ -385,7 +411,7 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
 
           {/* Selected Fleet Summary */}
           {(formData.truckId || formData.trailerId || formData.escortCarId) && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
               <h4 className="font-medium mb-2">Selected Fleet:</h4>
               <div className="flex flex-wrap gap-2">
                 {formData.truckId && (
