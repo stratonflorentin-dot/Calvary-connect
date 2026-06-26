@@ -4,38 +4,38 @@
 
 @layer base {
   :root {
-    --background: 220 20% 96%;
-    --foreground: 215 30% 12%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 30% 12%;
+    --card: 215 25% 27%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 30% 12%;
+    --popover: 215 28% 17%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 217 65% 50%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 25% 92%;
-    --secondary-foreground: 215 30% 18%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 215 20% 85%;
 
-    --muted: 215 25% 93%;
-    --muted-foreground: 215 20% 35%;
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 185 55% 48%;
+    --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 75% 55%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 25% 80%;
-    --input: 215 25% 80%;
-    --ring: 217 65% 50%;
+    --border: 215 20% 40%;
+    --input: 215 20% 40%;
+    --ring: 217 91% 60%;
     --radius: 0.5rem;
 
-    --success: 150 60% 42%;
-    --warning: 35 90% 52%;
-    --info: 200 60% 48%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --info: 199 89% 48%;
 
     --sidebar: 222 38% 13%;
     --sidebar-background: 222 38% 13%;
@@ -55,37 +55,37 @@
   }
 
   .dark {
-    --background: 215 25% 10%;
-    --foreground: 215 20% 95%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 215 25% 14%;
-    --card-foreground: 215 20% 95%;
+    --card: 215 25% 27%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 215 25% 12%;
-    --popover-foreground: 215 20% 95%;
+    --popover: 215 28% 17%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 215 70% 58%;
-    --primary-foreground: 215 25% 10%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 25% 18%;
-    --secondary-foreground: 215 20% 90%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 215 20% 85%;
 
-    --muted: 215 25% 16%;
-    --muted-foreground: 215 15% 70%;
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 185 60% 52%;
-    --accent-foreground: 215 25% 10%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 58%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 25% 28%;
-    --input: 215 25% 28%;
-    --ring: 215 70% 58%;
+    --border: 215 20% 40%;
+    --input: 215 20% 40%;
+    --ring: 217 91% 60%;
 
-    --success: 150 65% 52%;
-    --warning: 35 90% 58%;
-    --info: 200 65% 52%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --info: 199 89% 48%;
 
     --sidebar: 222 40% 9%;
     --sidebar-background: 222 40% 9%;
@@ -125,7 +125,22 @@
   h4,
   h5,
   h6 {
-    @apply font-semibold tracking-normal text-foreground;
+    @apply font-semibold tracking-tight text-foreground;
+  }
+
+  h1 { @apply text-3xl md:text-4xl; }
+  h2 { @apply text-2xl md:text-3xl; }
+  h3 { @apply text-xl md:text-2xl; }
+  h4 { @apply text-lg md:text-xl; }
+  h5 { @apply text-base md:text-lg; }
+  h6 { @apply text-sm md:text-base; }
+
+  p {
+    @apply leading-relaxed;
+  }
+
+  label {
+    @apply text-sm font-medium text-foreground;
   }
 
   ::selection {
@@ -136,27 +151,27 @@
 
 @layer components {
   .app-surface {
-    @apply rounded-lg border border-border bg-card text-card-foreground shadow-sm;
+    @apply rounded-lg border border-border bg-card text-card-foreground shadow-lg;
   }
 
   .app-section {
-    @apply rounded-lg border border-border bg-card/95 p-4 shadow-sm md:p-5;
+    @apply rounded-lg border border-border bg-card p-6 shadow-lg;
   }
 
   .app-toolbar {
-    @apply flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card/95 p-3 shadow-sm;
+    @apply flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4 shadow-lg;
   }
 
   .app-kpi {
-    @apply rounded-lg border border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/30;
+    @apply rounded-lg border border-border bg-card p-6 shadow-lg transition-all hover:border-primary/50 hover:shadow-xl;
   }
 
   .app-muted-panel {
-    @apply rounded-lg border border-border bg-muted/45 p-4;
+    @apply rounded-lg border border-border bg-muted/30 p-6;
   }
 
   .app-table-shell {
-    @apply overflow-hidden rounded-lg border border-border bg-card shadow-sm;
+    @apply overflow-hidden rounded-lg border border-border bg-card shadow-lg;
   }
 }
 
@@ -164,6 +179,31 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* 8px Grid System Spacing Utilities */
+  .gap-1 { gap: 0.25rem; } /* 4px */
+  .gap-2 { gap: 0.5rem; }  /* 8px */
+  .gap-3 { gap: 0.75rem; } /* 12px */
+  .gap-4 { gap: 1rem; }   /* 16px */
+  .gap-5 { gap: 1.25rem; } /* 20px */
+  .gap-6 { gap: 1.5rem; }  /* 24px */
+  .gap-8 { gap: 2rem; }   /* 32px */
+
+  .p-1 { padding: 0.25rem; } /* 4px */
+  .p-2 { padding: 0.5rem; }  /* 8px */
+  .p-3 { padding: 0.75rem; } /* 12px */
+  .p-4 { padding: 1rem; }   /* 16px */
+  .p-5 { padding: 1.25rem; } /* 20px */
+  .p-6 { padding: 1.5rem; }  /* 24px */
+  .p-8 { padding: 2rem; }   /* 32px */
+
+  .m-1 { margin: 0.25rem; } /* 4px */
+  .m-2 { margin: 0.5rem; }  /* 8px */
+  .m-3 { margin: 0.75rem; } /* 12px */
+  .m-4 { margin: 1rem; }   /* 16px */
+  .m-5 { margin: 1.25rem; } /* 20px */
+  .m-6 { margin: 1.5rem; }  /* 24px */
+  .m-8 { margin: 2rem; }   /* 32px */
 
   .safe-area-padding,
   .mobile-content {
@@ -182,20 +222,21 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
+    background: hsl(var(--muted));
+    border-radius: 999px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--sidebar-border) / 0.5);
+    background: hsl(var(--border));
     border-radius: 999px;
   }
 
   .scrollbar-thin:hover::-webkit-scrollbar-thumb {
-    background: hsl(var(--sidebar-border) / 0.8);
+    background: hsl(var(--muted-foreground));
   }
 
   .story-snap {
