@@ -210,11 +210,17 @@ export default function TripsPage() {
 
       // Create accounting journal entry for trip revenue
       if (newTrip && salesAmount > 0) {
+        // Get vehicle information for accounting reference
+        const vehicle = vehicles.find(v => v.id === tripForm.vehicle_id);
+        const trailer = trailers.find(t => t.id === tripForm.trailer_id);
+        const vehicleInfo = vehicle ? `${vehicle.plate_number} (${vehicle.make} ${vehicle.model})` : 'Unknown';
+        const trailerInfo = trailer ? `+ Trailer ${trailer.plate_number}` : '';
+        
         // Create journal entry for trip revenue
         const { error: journalError, data: journalEntry } = await supabase.from('journal_entries').insert({
           entry_number: `JE-${Date.now()}`,
           entry_date: new Date().toISOString().split('T')[0],
-          description: `Trip Revenue: ${tripForm.origin} → ${tripForm.destination}`,
+          description: `Trip Revenue: ${tripForm.origin} → ${tripForm.destination} | Vehicle: ${vehicleInfo}${trailerInfo}`,
           reference: newTrip.id,
           created_by: user?.id,
         }).select().single();
@@ -227,25 +233,25 @@ export default function TripsPage() {
               account_code: '1102', // Bank Account or Accounts Receivable
               debit: totalAmount,
               credit: 0,
-              description: 'Trip revenue receivable',
+              description: `Trip revenue receivable - ${vehicleInfo}${trailerInfo}`,
             },
             {
               journal_entry_id: journalEntry.id,
               account_code: '4001', // Revenue - Transportation Services
               debit: 0,
               credit: salesAmount,
-              description: 'Transportation service revenue',
+              description: `Transportation service revenue - ${vehicleInfo}${trailerInfo}`,
             },
             {
               journal_entry_id: journalEntry.id,
               account_code: '2201', // VAT Payable
               debit: 0,
               credit: vatAmount,
-              description: 'VAT on transportation services',
+              description: `VAT on transportation services - ${vehicleInfo}${trailerInfo}`,
             },
           ]);
 
-          // Notify accountants about new revenue
+          // Notify accountants about new revenue with vehicle info
           const accountantIds = await fetchAccountantUserIds();
           await notifyAccountantsTripRevenue(
             newTrip.id,
