@@ -69,11 +69,11 @@ export default function MeetingsPage() {
 
     const getMeetingTypeColor = (type: string) => {
         switch (type) {
-            case 'staff_meeting': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30';
-            case 'performance_review': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30';
-            case 'training': return 'bg-green-100 text-green-800 dark:bg-green-900/30';
-            case 'disciplinary': return 'bg-red-100 text-red-800 dark:bg-red-900/30';
-            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30';
+            case 'staff_meeting': return 'bg-primary/10 text-primary dark:bg-primary/20';
+            case 'performance_review': return 'bg-accent/10 text-accent dark:bg-accent/20';
+            case 'training': return 'bg-success/10 text-success dark:bg-success/20';
+            case 'disciplinary': return 'bg-destructive/10 text-destructive dark:bg-destructive/20';
+            default: return 'bg-muted/50 text-muted-foreground dark:bg-muted/20';
         }
     };
 
@@ -114,7 +114,7 @@ export default function MeetingsPage() {
                                                 </div>
                                             )}
                                             {meeting.meeting_link && (
-                                                <div className="flex items-center gap-2 text-blue-600">
+                                                <div className="flex items-center gap-2 text-primary">
                                                     <Users className="w-4 h-4" />
                                                     Virtual
                                                 </div>

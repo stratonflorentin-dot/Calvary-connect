@@ -7,7 +7,8 @@ import { toast } from "@/hooks/use-toast";
 import { format, differenceInDays, isPast, parseISO } from "date-fns";
 import {
   Shield, AlertTriangle, CheckCircle2, Clock, FileText,
-  Upload, RefreshCw, ChevronDown, ChevronUp, Bell, X, Save
+  Upload, RefreshCw, ChevronDown, ChevronUp, Bell, X, Save,
+  Globe, Package, Scale, ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,33 +19,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // ─── Document definitions ────────────────────────────────────────────────────
 const VEHICLE_DOCUMENTS = [
-  { key: "insurance_expiry",        label: "Motor Insurance",           icon: "🛡️", critical: true  },
-  { key: "road_license_expiry",     label: "Road License (TANROADS)",   icon: "📋", critical: true  },
-  { key: "fitness_expiry",          label: "Roadworthiness Certificate", icon: "✅", critical: true  },
-  { key: "tra_cert_expiry",         label: "TRA Registration Cert.",    icon: "📄", critical: true  },
-  { key: "comesa_expiry",           label: "COMESA Yellow Card",        icon: "🌍", critical: false },
-  { key: "goods_transit_expiry",    label: "Goods-in-Transit Permit",   icon: "📦", critical: false },
-  { key: "tatoa_expiry",            label: "TATOA Weight Certificate",  icon: "⚖️", critical: false },
-  { key: "fire_extinguisher_expiry",label: "Fire Extinguisher",         icon: "🧯", critical: false },
+  { key: "insurance_expiry",        label: "Motor Insurance",           icon: Shield, critical: true  },
+  { key: "road_license_expiry",     label: "Road License (TANROADS)",   icon: FileText, critical: true  },
+  { key: "fitness_expiry",          label: "Roadworthiness Certificate", icon: CheckCircle2, critical: true  },
+  { key: "tra_cert_expiry",         label: "TRA Registration Cert.",    icon: FileText, critical: true  },
+  { key: "comesa_expiry",           label: "COMESA Yellow Card",        icon: Globe, critical: false },
+  { key: "goods_transit_expiry",    label: "Goods-in-Transit Permit",   icon: Package, critical: false },
+  { key: "tatoa_expiry",            label: "TATOA Weight Certificate",  icon: Scale, critical: false },
+  { key: "fire_extinguisher_expiry",label: "Fire Extinguisher",         icon: ShieldAlert, critical: false },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function getDocStatus(expiryDate?: string | null) {
-  if (!expiryDate) return { status: "missing", label: "Not Set", color: "text-gray-500 bg-gray-100", days: null };
+  if (!expiryDate) return { status: "missing", label: "Not Set", color: "text-muted-foreground bg-muted/50", days: null };
   const d = parseISO(expiryDate);
   const days = differenceInDays(d, new Date());
-  if (isPast(d))          return { status: "expired",  label: `Expired ${Math.abs(days)}d ago`, color: "text-red-700 bg-red-100",    days };
-  if (days <= 14)         return { status: "critical",  label: `${days}d left`,                  color: "text-red-700 bg-red-100",    days };
-  if (days <= 30)         return { status: "warning",   label: `${days}d left`,                  color: "text-amber-700 bg-amber-100", days };
-  if (days <= 60)         return { status: "due-soon",  label: `${days}d left`,                  color: "text-yellow-700 bg-yellow-100", days };
-  return                         { status: "valid",     label: `Valid — ${format(d, "dd MMM yyyy")}`, color: "text-green-700 bg-green-100", days };
+  if (isPast(d))          return { status: "expired",  label: `Expired ${Math.abs(days)}d ago`, color: "text-destructive bg-destructive/10",    days };
+  if (days <= 14)         return { status: "critical",  label: `${days}d left`,                  color: "text-destructive bg-destructive/10",    days };
+  if (days <= 30)         return { status: "warning",   label: `${days}d left`,                  color: "text-warning bg-warning/10", days };
+  if (days <= 60)         return { status: "due-soon",  label: `${days}d left`,                  color: "text-warning bg-warning/10", days };
+  return                         { status: "valid",     label: `Valid — ${format(d, "dd MMM yyyy")}`, color: "text-success bg-success/10", days };
 }
 
 function StatusIcon({ status }: { status: string }) {
-  if (status === "valid")    return <CheckCircle2 className="size-4 text-green-600" />;
-  if (status === "expired" || status === "critical") return <AlertTriangle className="size-4 text-red-600" />;
-  if (status === "warning" || status === "due-soon") return <Clock className="size-4 text-amber-600" />;
-  return <FileText className="size-4 text-gray-400" />;
+  if (status === "valid")    return <CheckCircle2 className="size-4 text-success" />;
+  if (status === "expired" || status === "critical") return <AlertTriangle className="size-4 text-destructive" />;
+  if (status === "warning" || status === "due-soon") return <Clock className="size-4 text-warning" />;
+  return <FileText className="size-4 text-muted-foreground" />;
 }
 
 // ─── Edit Dialog ─────────────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ function EditDocDialog({ vehicle, open, onClose, onSaved }: EditDocDialogProps) 
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="size-5 text-blue-600" />
+            <Shield className="size-5 text-primary" />
             Update Compliance Docs — {vehicle?.plate_number}
           </DialogTitle>
         </DialogHeader>
@@ -108,15 +109,15 @@ function EditDocDialog({ vehicle, open, onClose, onSaved }: EditDocDialogProps) 
           {VEHICLE_DOCUMENTS.map(doc => (
             <div key={doc.key} className="space-y-1">
               <Label className="flex items-center gap-1.5 text-sm font-medium">
-                <span>{doc.icon}</span>
+                <doc.icon className="size-4 text-muted-foreground" />
                 {doc.label}
-                {doc.critical && <span className="text-red-500 text-xs">*required</span>}
+                {doc.critical && <span className="text-destructive text-xs">*required</span>}
               </Label>
               <Input
                 type="date"
                 value={form[doc.key] || ""}
                 onChange={e => setForm(p => ({ ...p, [doc.key]: e.target.value }))}
-                className={cn(!form[doc.key] && doc.critical && "border-red-300")}
+                className={cn(!form[doc.key] && doc.critical && "border-destructive")}
               />
             </div>
           ))}
@@ -163,10 +164,10 @@ export function VehicleComplianceCard({ vehicle, onUpdate, compact = false }: Ve
     : "good";
 
   const healthConfig = {
-    critical:   { label: "Action Required", color: "border-red-400 bg-red-50",    badge: "bg-red-100 text-red-700" },
-    warning:    { label: "Due Soon",        color: "border-amber-400 bg-amber-50", badge: "bg-amber-100 text-amber-700" },
-    incomplete: { label: "Incomplete",      color: "border-gray-300",              badge: "bg-gray-100 text-gray-600" },
-    good:       { label: "Compliant",       color: "border-green-300 bg-green-50/30", badge: "bg-green-100 text-green-700" },
+    critical:   { label: "Action Required", color: "border-destructive bg-destructive/5",    badge: "bg-destructive/10 text-destructive" },
+    warning:    { label: "Due Soon",        color: "border-warning bg-warning/5", badge: "bg-warning/10 text-warning" },
+    incomplete: { label: "Incomplete",      color: "border-muted bg-muted/50",              badge: "bg-muted/50 text-muted-foreground" },
+    good:       { label: "Compliant",       color: "border-success bg-success/5", badge: "bg-success/10 text-success" },
   }[overallHealth];
 
   if (compact) {
@@ -179,22 +180,25 @@ export function VehicleComplianceCard({ vehicle, onUpdate, compact = false }: Ve
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", healthConfig.badge)}>{healthConfig.label}</span>
-              <span className="text-xs text-slate-500">{vehicle.plate_number}</span>
+              <span className="text-xs text-muted-foreground">{vehicle.plate_number}</span>
             </div>
             <div className="flex items-center gap-3 text-xs">
-              {expired > 0 && <span className="text-red-600 font-bold">{expired} expired</span>}
-              {critical > 0 && <span className="text-red-500 font-bold">{critical} critical</span>}
-              {warnings > 0 && <span className="text-amber-600">{warnings} warning</span>}
-              <span className="text-green-600">{valid} valid</span>
-              {expanded ? <ChevronUp className="size-4 text-slate-400" /> : <ChevronDown className="size-4 text-slate-400" />}
+              {expired > 0 && <span className="text-destructive font-bold">{expired} expired</span>}
+              {critical > 0 && <span className="text-destructive font-bold">{critical} critical</span>}
+              {warnings > 0 && <span className="text-warning">{warnings} warning</span>}
+              <span className="text-success">{valid} valid</span>
+              {expanded ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
             </div>
           </div>
 
           {expanded && (
             <div className="mt-3 grid grid-cols-2 gap-2">
               {docStatuses.map(doc => (
-                <div key={doc.key} className="flex items-center justify-between bg-white rounded-lg px-2 py-1.5 border">
-                  <span className="text-xs text-slate-600">{doc.icon} {doc.label}</span>
+                <div key={doc.key} className="flex items-center justify-between bg-card rounded-lg px-2 py-1.5 border border-border">
+                  <div className="flex items-center gap-1.5">
+                    <doc.icon className="size-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{doc.label}</span>
+                  </div>
                   <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", doc.color)}>{doc.label}</span>
                 </div>
               ))}
@@ -216,7 +220,7 @@ export function VehicleComplianceCard({ vehicle, onUpdate, compact = false }: Ve
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-base">{vehicle.plate_number}</CardTitle>
-              <p className="text-xs text-slate-500 mt-0.5">{vehicle.make} {vehicle.model} · {vehicle.type}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{vehicle.make} {vehicle.model} · {vehicle.type}</p>
             </div>
             <span className={cn("px-2 py-1 rounded-full text-xs font-bold", healthConfig.badge)}>
               {healthConfig.label}
@@ -224,19 +228,22 @@ export function VehicleComplianceCard({ vehicle, onUpdate, compact = false }: Ve
           </div>
           {/* Summary pills */}
           <div className="flex gap-2 flex-wrap mt-2">
-            {expired > 0  && <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">{expired} Expired</span>}
-            {critical > 0 && <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">{critical} Critical</span>}
-            {warnings > 0 && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{warnings} Warning</span>}
-            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{valid} Valid</span>
-            {missing > 0  && <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{missing} Missing</span>}
+            {expired > 0  && <span className="text-[10px] bg-destructive/10 text-destructive px-2 py-0.5 rounded-full font-bold">{expired} Expired</span>}
+            {critical > 0 && <span className="text-[10px] bg-destructive/10 text-destructive px-2 py-0.5 rounded-full font-bold">{critical} Critical</span>}
+            {warnings > 0 && <span className="text-[10px] bg-warning/10 text-warning px-2 py-0.5 rounded-full">{warnings} Warning</span>}
+            <span className="text-[10px] bg-success/10 text-success px-2 py-0.5 rounded-full">{valid} Valid</span>
+            {missing > 0  && <span className="text-[10px] bg-muted/50 text-muted-foreground px-2 py-0.5 rounded-full">{missing} Missing</span>}
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {docStatuses.map(doc => (
-            <div key={doc.key} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+            <div key={doc.key} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
               <div className="flex items-center gap-2">
                 <StatusIcon status={doc.status} />
-                <span className="text-sm text-slate-700">{doc.icon} {doc.label}</span>
+                <div className="flex items-center gap-1.5">
+                  <doc.icon className="size-4 text-muted-foreground" />
+                  <span className="text-sm text-foreground">{doc.label}</span>
+                </div>
               </div>
               <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", doc.color)}>
                 {doc.label}
@@ -301,7 +308,7 @@ export function FleetComplianceDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Shield className="size-7 text-blue-600" />
+            <Shield className="size-7 text-primary" />
             Fleet Compliance
           </h2>
           <p className="text-muted-foreground text-sm mt-1">Tanzania regulatory document tracking — TRA, TANROADS, TATOA, Insurance</p>
@@ -314,17 +321,17 @@ export function FleetComplianceDashboard() {
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Expired", value: totalExpired,  color: "text-red-600",   bg: "bg-red-50 border-red-200",    icon: <X className="size-5 text-red-500" /> },
-          { label: "Critical (≤14d)", value: totalCritical, color: "text-red-500", bg: "bg-red-50 border-red-200", icon: <AlertTriangle className="size-5 text-red-400" /> },
-          { label: "Due Soon (≤60d)", value: totalWarning,  color: "text-amber-600", bg: "bg-amber-50 border-amber-200", icon: <Bell className="size-5 text-amber-500" /> },
-          { label: "Valid",    value: totalValid,   color: "text-green-600", bg: "bg-green-50 border-green-200", icon: <CheckCircle2 className="size-5 text-green-500" /> },
+          { label: "Expired", value: totalExpired,  color: "text-destructive",   bg: "bg-destructive/5 border-destructive/20",    icon: <X className="size-5 text-destructive" /> },
+          { label: "Critical (≤14d)", value: totalCritical, color: "text-destructive", bg: "bg-destructive/5 border-destructive/20", icon: <AlertTriangle className="size-5 text-destructive" /> },
+          { label: "Due Soon (≤60d)", value: totalWarning,  color: "text-warning", bg: "bg-warning/5 border-warning/20", icon: <Bell className="size-5 text-warning" /> },
+          { label: "Valid",    value: totalValid,   color: "text-success", bg: "bg-success/5 border-success/20", icon: <CheckCircle2 className="size-5 text-success" /> },
         ].map(stat => (
           <Card key={stat.label} className={cn("border", stat.bg)}>
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
                 <p className={cn("text-3xl font-black", stat.color)}>{stat.value}</p>
-                <p className="text-[10px] text-slate-500">documents</p>
+                <p className="text-[10px] text-muted-foreground">documents</p>
               </div>
               {stat.icon}
             </CardContent>
@@ -334,11 +341,11 @@ export function FleetComplianceDashboard() {
 
       {/* Alert Banner */}
       {(criticalCount > 0 || totalExpired > 0) && (
-        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 flex items-start gap-3">
-          <AlertTriangle className="size-5 text-red-600 mt-0.5 shrink-0" />
+        <div className="bg-destructive/5 border-2 border-destructive/20 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle className="size-5 text-destructive mt-0.5 shrink-0" />
           <div>
-            <p className="font-bold text-red-800">Immediate Action Required</p>
-            <p className="text-sm text-red-700 mt-0.5">
+            <p className="font-bold text-destructive">Immediate Action Required</p>
+            <p className="text-sm text-destructive/80 mt-0.5">
               {totalExpired > 0 && `${totalExpired} document(s) are expired. `}
               {criticalCount > 0 && `${criticalCount} vehicle(s) have documents expiring within 14 days.`}
               {" "}Operating with expired documents may result in fines or fleet grounding.
@@ -351,8 +358,8 @@ export function FleetComplianceDashboard() {
       <div className="flex gap-2 flex-wrap">
         {[
           { key: "all",      label: `All Vehicles (${vehicles.length})` },
-          { key: "critical", label: `Action Required (${criticalCount})`, className: criticalCount > 0 ? "!bg-red-600 !text-white" : "" },
-          { key: "warning",  label: `Due Soon (${warningCount})`,         className: warningCount > 0 ? "!bg-amber-500 !text-white" : "" },
+          { key: "critical", label: `Action Required (${criticalCount})`, className: criticalCount > 0 ? "!bg-destructive !text-destructive-foreground" : "" },
+          { key: "warning",  label: `Due Soon (${warningCount})`,         className: warningCount > 0 ? "!bg-warning !text-warning-foreground" : "" },
           { key: "good",     label: `Compliant (${vehicles.length - criticalCount - warningCount})` },
         ].map(tab => (
           <button
@@ -360,7 +367,7 @@ export function FleetComplianceDashboard() {
             onClick={() => setFilter(tab.key as any)}
             className={cn(
               "px-4 py-2 rounded-lg text-sm font-medium transition-all border",
-              filter === tab.key ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 hover:bg-slate-50 border-slate-200",
+              filter === tab.key ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground hover:bg-muted border-border",
               tab.className
             )}
           >
@@ -372,10 +379,10 @@ export function FleetComplianceDashboard() {
       {/* Vehicle Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3].map(i => <div key={i} className="h-64 bg-slate-100 rounded-xl animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="h-64 bg-muted rounded-xl animate-pulse" />)}
         </div>
       ) : filteredVehicles.length === 0 ? (
-        <div className="text-center py-16 text-slate-400">
+        <div className="text-center py-16 text-muted-foreground">
           <Shield className="size-12 mx-auto mb-3 opacity-30" />
           <p className="font-medium">No vehicles in this category</p>
         </div>
