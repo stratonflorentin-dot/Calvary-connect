@@ -48,7 +48,7 @@ const TABS = [
 
 // ── UI primitives ──────────────────────────────────────────────────────────
 const Badge = ({ children, color = "slate" }) => {
-  const m = { slate: "bg-slate-100 text-slate-600", green: "bg-emerald-50 text-emerald-700 border border-emerald-200", red: "bg-red-50 text-red-700 border border-red-200", amber: "bg-amber-50 text-amber-700 border border-amber-200", blue: "bg-blue-50 text-blue-700 border border-blue-200", purple: "bg-purple-50 text-purple-700 border border-purple-200", cyan: "bg-cyan-50 text-cyan-700 border border-cyan-200", orange: "bg-orange-50 text-orange-700 border border-orange-200" };
+  const m = { slate: "bg-muted/50 text-muted-foreground", green: "bg-success/10 text-success border border-success/20", red: "bg-destructive/10 text-destructive border border-destructive/20", amber: "bg-warning/10 text-warning border border-warning/20", blue: "bg-primary/10 text-primary border border-primary/20", purple: "bg-accent/10 text-accent border border-accent/20", cyan: "bg-info/10 text-info border border-info/20", orange: "bg-warning/10 text-warning border border-warning/20" };
   return <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold ${m[color] || m.slate}`}>{children}</span>;
 };
 const SBadge = ({ status }) => {
@@ -58,10 +58,10 @@ const SBadge = ({ status }) => {
 };
 const Modal = ({ title, subtitle, onClose, children, wide }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? "max-w-3xl" : "max-w-md"} max-h-[92vh] overflow-y-auto`}>
-      <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white z-10">
-        <div><h3 className="font-bold text-slate-900 text-base">{title}</h3>{subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}</div>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+    <div className={`bg-card rounded-2xl shadow-2xl w-full ${wide ? "max-w-3xl" : "max-w-md"} max-h-[92vh] overflow-y-auto`}>
+      <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
+        <div><h3 className="font-bold text-foreground text-base">{title}</h3>{subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}</div>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
       </div>
       <div className="p-5 space-y-4">{children}</div>
     </div>
@@ -69,54 +69,54 @@ const Modal = ({ title, subtitle, onClose, children, wide }) => (
 );
 const Confirm = ({ msg, detail, onConfirm, onCancel }) => (
   <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+    <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
-        <div><p className="font-bold text-slate-900 text-sm">{msg}</p>{detail && <p className="text-xs text-slate-500 mt-1">{detail}</p>}</div>
+        <div className="w-10 h-10 bg-destructive/10 rounded-xl flex items-center justify-center flex-shrink-0"><AlertTriangle className="w-5 h-5 text-destructive" /></div>
+        <div><p className="font-bold text-foreground text-sm">{msg}</p>{detail && <p className="text-xs text-muted-foreground mt-1">{detail}</p>}</div>
       </div>
       <div className="flex gap-2">
-        <button onClick={onCancel} className="flex-1 px-4 py-2.5 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700">Cancel</button>
-        <button onClick={onConfirm} className="flex-1 px-4 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl">Delete</button>
+        <button onClick={onCancel} className="flex-1 px-4 py-2.5 text-sm font-semibold border border-border rounded-xl hover:bg-muted text-muted-foreground">Cancel</button>
+        <button onClick={onConfirm} className="flex-1 px-4 py-2.5 text-sm font-semibold bg-destructive hover:bg-destructive/90 text-background rounded-xl">Delete</button>
       </div>
     </div>
   </div>
 );
 const Field = ({ label, children }) => (
-  <div className="space-y-1.5"><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</label>{children}</div>
+  <div className="space-y-1.5"><label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">{label}</label>{children}</div>
 );
-const iCls = "w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-slate-800 placeholder-slate-400";
-const eCls = "w-full border border-indigo-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-indigo-50/60 text-slate-800";
+const iCls = "w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-card text-foreground placeholder-muted-foreground";
+const eCls = "w-full border border-primary/30 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary bg-primary/5 text-foreground";
 const Sel = ({ value, onChange, options, placeholder }) => (
-  <div className="relative"><select value={value} onChange={e => onChange(e.target.value)} className={`${iCls} appearance-none pr-8`}>{placeholder && <option value="">{placeholder}</option>}{options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select><ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" /></div>
+  <div className="relative"><select value={value} onChange={e => onChange(e.target.value)} className={`${iCls} appearance-none pr-8`}>{placeholder && <option value="">{placeholder}</option>}{options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select><ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" /></div>
 );
 const SmSel = ({ value, onChange, options }) => (
-  <div className="relative"><select value={value} onChange={e => onChange(e.target.value)} className={`${eCls} appearance-none pr-5`}>{options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select><ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" /></div>
+  <div className="relative"><select value={value} onChange={e => onChange(e.target.value)} className={`${eCls} appearance-none pr-5`}>{options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select><ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" /></div>
 );
 const Btn = ({ label, onClick, variant = "primary", icon: Icon, sm, full, disabled }) => {
-  const v = { primary: "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm", success: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm", danger: "bg-red-600 hover:bg-red-700 text-white", outline: "border border-slate-200 hover:bg-slate-50 text-slate-700" };
+  const v = { primary: "bg-primary hover:bg-primary/90 text-background shadow-sm", success: "bg-success hover:bg-success/90 text-background shadow-sm", danger: "bg-destructive hover:bg-destructive/90 text-background", outline: "border border-border hover:bg-muted text-muted-foreground" };
   return <button disabled={disabled} onClick={onClick} className={`flex items-center justify-center gap-2 ${sm ? "px-3 py-1.5 text-xs" : "px-4 py-2.5 text-sm"} font-semibold rounded-xl transition-all disabled:opacity-40 ${v[variant] || v.primary} ${full ? "w-full" : ""}`}>{Icon && <Icon className={sm ? "w-3 h-3" : "w-4 h-4"} />}{label}</button>;
 };
 const THead = ({ cols }) => (
-  <thead><tr className="bg-slate-50 border-b border-slate-100">{cols.map(c => <th key={c} className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{c}</th>)}</tr></thead>
+  <thead><tr className="bg-muted/50 border-b border-border">{cols.map(c => <th key={c} className="text-left px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{c}</th>)}</tr></thead>
 );
 const EmptyRow = ({ cols, msg, icon: Icon = FileText }) => (
-  <tr><td colSpan={cols}><div className="flex flex-col items-center py-12 gap-3 text-slate-400"><Icon className="w-10 h-10 opacity-30" /><p className="text-sm">{msg}</p></div></td></tr>
+  <tr><td colSpan={cols}><div className="flex flex-col items-center py-12 gap-3 text-muted-foreground"><Icon className="w-10 h-10 opacity-30" /><p className="text-sm">{msg}</p></div></td></tr>
 );
 const EditActions = ({ isEditing, onEdit, onSave, onCancel, onDelete }) => (
   isEditing ? (
     <div className="flex gap-1">
-      <button onClick={onSave} className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"><Save className="w-4 h-4" /></button>
-      <button onClick={onCancel} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+      <button onClick={onSave} className="p-1.5 rounded-lg text-success hover:bg-success/10"><Save className="w-4 h-4" /></button>
+      <button onClick={onCancel} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted"><X className="w-4 h-4" /></button>
     </div>
   ) : (
     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-      <button onClick={onEdit} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"><Pencil className="w-3.5 h-3.5" /></button>
-      <button onClick={onDelete} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
+      <button onClick={onEdit} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10"><Pencil className="w-3.5 h-3.5" /></button>
+      <button onClick={onDelete} className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="w-3.5 h-3.5" /></button>
     </div>
   )
 );
-const accGrad = c => ({ USD: "from-indigo-600 to-blue-700", TZS: "from-emerald-600 to-teal-700", KES: "from-violet-600 to-purple-700", ZMW: "from-orange-600 to-amber-700", UGX: "from-rose-600 to-pink-700" }[c] || "from-slate-600 to-slate-700");
-const tcol = { Asset: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", dot: "#3b82f6", badge: "blue" }, Liability: { bg: "bg-red-50", border: "border-red-200", text: "text-red-700", dot: "#ef4444", badge: "red" }, Equity: { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", dot: "#8b5cf6", badge: "purple" }, Revenue: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", dot: "#10b981", badge: "green" }, Expense: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", dot: "#f59e0b", badge: "amber" } };
+const accGrad = c => ({ USD: "from-primary to-accent", TZS: "from-success to-info", KES: "from-accent to-purple", ZMW: "from-warning to-amber", UGX: "from-destructive to-pink" }[c] || "from-muted to-muted-foreground");
+const tcol = { Asset: { bg: "bg-primary/10", border: "border-primary/20", text: "text-primary", dot: "var(--primary)", badge: "blue" }, Liability: { bg: "bg-destructive/10", border: "border-destructive/20", text: "text-destructive", dot: "var(--destructive)", badge: "red" }, Equity: { bg: "bg-accent/10", border: "border-accent/20", text: "text-accent", dot: "var(--accent)", badge: "purple" }, Revenue: { bg: "bg-success/10", border: "border-success/20", text: "text-success", dot: "var(--success)", badge: "green" }, Expense: { bg: "bg-warning/10", border: "border-warning/20", text: "text-warning", dot: "var(--warning)", badge: "amber" } };
 
 export default function CalvaryAccounting() {
   const { role, isAdmin } = useRole();
@@ -271,7 +271,7 @@ export default function CalvaryAccounting() {
   const agBuckets = ["Current", "1–30 days", "31–60 days", "61–90 days", "90+ days"];
   const agTotals = agBuckets.map(b => ({ bucket: b, total: agItems.filter(i => i.bucket === b).reduce((s, i) => s + i.amount, 0), count: agItems.filter(i => i.bucket === b).length }));
   const agGrand = agTotals.reduce((s, b) => s + b.total, 0);
-  const bStyle = { "Current": { badge: "green", bar: "bg-emerald-400", text: "text-emerald-700" }, "1–30 days": { badge: "amber", bar: "bg-amber-400", text: "text-amber-700" }, "31–60 days": { badge: "orange", bar: "bg-orange-400", text: "text-orange-700" }, "61–90 days": { badge: "red", bar: "bg-red-400", text: "text-red-700" }, "90+ days": { badge: "red", bar: "bg-red-600", text: "text-red-800" } };
+  const bStyle = { "Current": { badge: "green", bar: "bg-success", text: "text-success" }, "1–30 days": { badge: "amber", bar: "bg-warning", text: "text-warning" }, "31–60 days": { badge: "orange", bar: "bg-warning", text: "text-warning" }, "61–90 days": { badge: "red", bar: "bg-destructive", text: "text-destructive" }, "90+ days": { badge: "red", bar: "bg-destructive", text: "text-destructive" } };
 
   const getLinked = inv => {
     if (inv.type === "receivable" && inv.linked_revenue) return revenue.find(r => r.id === inv.linked_revenue);
@@ -633,7 +633,7 @@ export default function CalvaryAccounting() {
   });
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="flex min-h-screen bg-muted font-sans selection:bg-primary/10 selection:text-primary">
       {/* ── SIDEBAR ── */}
       <Sidebar role={role || "ADMIN"} />
 
@@ -642,10 +642,10 @@ export default function CalvaryAccounting() {
         {confirm && <Confirm {...confirm} onCancel={() => setConfirm(null)} />}
 
         {loading && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-card/80 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
-              <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-              <p className="text-sm font-bold text-slate-600">Synchronizing Ledger Data...</p>
+              <Loader2 className="w-10 h-10 text-primary animate-spin" />
+              <p className="text-sm font-bold text-muted-foreground">Synchronizing Ledger Data...</p>
             </div>
           </div>
         )}
@@ -655,7 +655,7 @@ export default function CalvaryAccounting() {
         {/* EXPENSE MODAL */}
         {modal === "expense" && (
           <Modal title="Record Expense" subtitle="Auto-creates a vendor invoice" onClose={() => setModal(null)}>
-            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-700 font-medium flex items-center gap-2"><FileText className="w-3.5 h-3.5 flex-shrink-0" />A payable invoice will be created automatically.</div>
+            <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl text-xs text-primary font-medium flex items-center gap-2"><FileText className="w-3.5 h-3.5 flex-shrink-0" />A payable invoice will be created automatically.</div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Category"><Sel value={expF.category} onChange={v => setExpF({ ...expF, category: v })} options={[{ value: "fuel", label: "Fuel (5101)" }, { value: "driver_salaries", label: "Driver Salaries (5102)" }, { value: "allowance", label: "Driver Allowances (5103)" }, { value: "truck_repairs", label: "Truck Repairs (5104)" }, { value: "tires", label: "Tire Expense (5105)" }, { value: "lubricants", label: "Lubricants & Oil (5106)" }, { value: "border", label: "Border & Port Charges (5107)" }, { value: "cargo_handling", label: "Cargo Handling (5108)" }, { value: "toll", label: "Toll Fees (5109)" }, { value: "insurance", label: "Vehicle Insurance (5110)" }, { value: "gps", label: "GPS Tracking (5111)" }, { value: "trip_loading", label: "Trip Loading (5112)" }, { value: "subcontractor", label: "Freight Subcontractor (5113)" }, { value: "office_rent", label: "Office Rent (6101)" }, { value: "office_salaries", label: "Office Salaries (6201)" }, { value: "bank_charges", label: "Bank Charges (6501)" }, { value: "loan_interest", label: "Loan Interest (6502)" }, { value: "other", label: "Other" }]} /></Field>
               <Field label="Vehicle"><Sel value={expF.vehicle} onChange={v => setExpF({ ...expF, vehicle: v })} placeholder="Select vehicle" options={VEHICLES.map(v => ({ value: v, label: v }))} /></Field>
@@ -696,7 +696,7 @@ export default function CalvaryAccounting() {
         {/* INVOICE MODAL */}
         {modal === "invoice" && (
           <Modal title="New Invoice" onClose={() => setModal(null)}>
-            <Field label="Invoice Number"><input className={`${iCls} bg-slate-50 text-slate-400`} value={invF.invoice_number} readOnly /></Field>
+            <Field label="Invoice Number"><input className={`${iCls} bg-muted/50 text-muted-foreground`} value={invF.invoice_number} readOnly /></Field>
             <Field label="Customer / Vendor"><input type="text" className={iCls} value={invF.customer_name} onChange={e => setInvF({ ...invF, customer_name: e.target.value })} placeholder="Name" /></Field>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Amount"><input type="number" className={iCls} value={invF.amount} onChange={e => setInvF({ ...invF, amount: e.target.value })} placeholder="0" /></Field>
@@ -787,19 +787,19 @@ export default function CalvaryAccounting() {
             </div>
             <Field label="Narration"><input type="text" className={iCls} value={jeF.description} onChange={e => setJeF({ ...jeF, description: e.target.value })} placeholder="Describe this transaction…" /></Field>
             <div>
-              <div className="grid grid-cols-12 gap-2 text-xs font-bold text-slate-400 uppercase mb-2 px-1"><div className="col-span-3">Code</div><div className="col-span-4">Account</div><div className="col-span-2">Dr</div><div className="col-span-2">Cr</div><div className="col-span-1" /></div>
+              <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground uppercase mb-2 px-1"><div className="col-span-3">Code</div><div className="col-span-4">Account</div><div className="col-span-2">Dr</div><div className="col-span-2">Cr</div><div className="col-span-1" /></div>
               {jeF.lines.map((ln, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 mb-2 items-center">
                   <div className="col-span-3"><select value={ln.account_code} onChange={e => updateJeLine(i, "account_code", e.target.value)} className={`${iCls} appearance-none text-xs`}><option value="">Select…</option>{coa.map(a => <option key={a.code} value={a.code}>{a.code} – {a.name}</option>)}</select></div>
-                  <div className="col-span-4"><input className={`${iCls} bg-slate-50 text-slate-400 text-xs`} value={ln.account_name} readOnly placeholder="Auto-filled" /></div>
+                  <div className="col-span-4"><input className={`${iCls} bg-muted/50 text-muted-foreground text-xs`} value={ln.account_name} readOnly placeholder="Auto-filled" /></div>
                   <div className="col-span-2"><input type="number" className={`${iCls} text-xs`} value={ln.debit} onChange={e => updateJeLine(i, "debit", e.target.value)} placeholder="0" /></div>
                   <div className="col-span-2"><input type="number" className={`${iCls} text-xs`} value={ln.credit} onChange={e => updateJeLine(i, "credit", e.target.value)} placeholder="0" /></div>
-                  <div className="col-span-1 flex justify-center"><button onClick={() => remJeLine(i)} className="text-slate-300 hover:text-red-400 p-1"><X className="w-3.5 h-3.5" /></button></div>
+                  <div className="col-span-1 flex justify-center"><button onClick={() => remJeLine(i)} className="text-muted-foreground hover:text-destructive p-1"><X className="w-3.5 h-3.5" /></button></div>
                 </div>
               ))}
-              <button onClick={addJeLine} className="text-xs text-indigo-500 hover:text-indigo-700 font-semibold flex items-center gap-1 mt-1"><Plus className="w-3 h-3" />Add line</button>
+              <button onClick={addJeLine} className="text-xs text-primary hover:text-primary/80 font-semibold flex items-center gap-1 mt-1"><Plus className="w-3 h-3" />Add line</button>
             </div>
-            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border text-sm">
+            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl border text-sm">
               <div className="flex gap-6"><span>Dr: <strong>{fmtTZS(jeDr)}</strong></span><span>Cr: <strong>{fmtTZS(jeCr)}</strong></span></div>
               {jeOk ? <Badge color="green"><CheckCircle2 className="w-3 h-3" />Balanced</Badge> : <Badge color="red"><AlertTriangle className="w-3 h-3" />Not balanced</Badge>}
             </div>
@@ -814,28 +814,28 @@ export default function CalvaryAccounting() {
           const linked = getLinked(inv);
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/40 backdrop-blur-sm">
-              <div className="bg-white w-full max-w-lg h-full overflow-y-auto shadow-2xl flex flex-col">
-                <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white z-10">
-                  <div><h3 className="font-bold text-slate-900">{inv.invoice_number}</h3><p className="text-xs text-slate-500">{inv.type === "receivable" ? "Accounts Receivable" : "Accounts Payable"}</p></div>
-                  <button onClick={() => setSelectedInvoice(null)} className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button>
+              <div className="bg-card w-full max-w-lg h-full overflow-y-auto shadow-2xl flex flex-col">
+                <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
+                  <div><h3 className="font-bold text-foreground">{inv.invoice_number}</h3><p className="text-xs text-muted-foreground">{inv.type === "receivable" ? "Accounts Receivable" : "Accounts Payable"}</p></div>
+                  <button onClick={() => setSelectedInvoice(null)} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="p-5 space-y-5 flex-1">
-                  <div className={`rounded-2xl p-5 text-white bg-gradient-to-r ${inv.type === "receivable" ? "from-emerald-600 to-teal-700" : "from-rose-600 to-red-700"}`}>
+                  <div className={`rounded-2xl p-5 text-background bg-gradient-to-r ${inv.type === "receivable" ? "from-success to-info" : "from-destructive to-destructive/80"}`}>
                     <p className="text-white/60 text-xs mb-1">{inv.customer_name}</p>
                     <p className="text-3xl font-bold">{fmtCur(inv.amount, inv.currency || "TZS")}</p>
                     <div className="flex items-center justify-between mt-3"><p className="text-white/70 text-xs">Due {inv.due_date}</p><SBadge status={isOverdue ? "overdue" : inv.status} /></div>
                   </div>
-                  <div className="bg-slate-50 rounded-2xl p-4 space-y-3">
+                  <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
                     {[["Invoice #", inv.invoice_number], ["Type", inv.type === "receivable" ? "Customer Invoice (AR)" : "Vendor Bill (AP)"], ["Status", <SBadge status={isOverdue ? "overdue" : inv.status} />], ["Cross-Border", inv.is_cross_border ? <Badge color="purple"><Globe className="w-3 h-3" />Yes</Badge> : "No"], ["Days", isOverdue ? `${Math.floor((NOW - new Date(inv.due_date)) / 86400000)}d overdue` : `${Math.floor((new Date(inv.due_date) - NOW) / 86400000)}d remaining`]].map(([k, v]) => (
-                      <div key={k} className="flex items-center justify-between"><span className="text-sm text-slate-500">{k}</span><span className="text-sm font-semibold text-slate-800">{v}</span></div>
+                      <div key={k} className="flex items-center justify-between"><span className="text-sm text-muted-foreground">{k}</span><span className="text-sm font-semibold text-foreground">{v}</span></div>
                     ))}
                   </div>
                   {linked && (
-                    <div className="border border-slate-200 rounded-2xl p-4 space-y-2">
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Linked {inv.type === "receivable" ? "Trip Revenue" : "Expense"}</p>
-                      <p className="text-sm font-semibold text-slate-800">{linked.description}</p>
+                    <div className="border border-border rounded-2xl p-4 space-y-2">
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Linked {inv.type === "receivable" ? "Trip Revenue" : "Expense"}</p>
+                      <p className="text-sm font-semibold text-foreground">{linked.description}</p>
                       <div className="flex gap-2 flex-wrap">{inv.type === "receivable" ? <Badge color="slate">{linked.cargo_type}</Badge> : <Badge color="amber">{linked.category}</Badge>}{linked.is_cross_border && <Badge color="purple"><Globe className="w-3 h-3" />Cross-Border</Badge>}<SBadge status={linked.status} /></div>
-                      <p className="text-xs text-slate-500">{linked.date} · {inv.type === "receivable" ? linked.client : linked.vendor}</p>
+                      <p className="text-xs text-muted-foreground">{linked.date} · {inv.type === "receivable" ? linked.client : linked.vendor}</p>
                     </div>
                   )}
                   <div className="flex flex-col gap-2">
@@ -852,12 +852,12 @@ export default function CalvaryAccounting() {
         <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-6 space-y-5">
 
           {showImport && (
-            <div className="fixed inset-0 z-[110] bg-white overflow-y-auto">
-              <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+            <div className="fixed inset-0 z-[110] bg-card overflow-y-auto">
+              <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
                 <h2 className="font-bold">Bank Statement Import & Reconciliation</h2>
                 <button
                   onClick={() => { setShowImport(false); fetchData(); }}
-                  className="p-2 hover:bg-slate-100 rounded-full"
+                  className="p-2 hover:bg-muted rounded-full"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -871,21 +871,21 @@ export default function CalvaryAccounting() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
-                <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center"><Truck className="w-5 h-5 text-white" /></div>
+              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2.5">
+                <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center"><Truck className="w-5 h-5 text-background" /></div>
                 Calvary Accounting
               </h1>
-              <p className="text-sm text-slate-500 mt-0.5 ml-11">East Africa Logistics · Full Ledger Suite</p>
+              <p className="text-sm text-muted-foreground mt-0.5 ml-11">East Africa Logistics · Full Ledger Suite</p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-400 bg-white border border-slate-200 rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-card border border-border rounded-xl px-3 py-2">
               <RefreshCw className="w-3.5 h-3.5" /> {NOW.toDateString()}
             </div>
           </div>
 
           {/* Tab bar */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
+          <div className="bg-card border border-border rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
             {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${tab === t.id ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}>
+              <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${tab === t.id ? "bg-primary text-background shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
                 <t.icon className="w-4 h-4" />{t.label}
               </button>
             ))}
@@ -1011,10 +1011,10 @@ export default function CalvaryAccounting() {
                   ))}
                 </div>
                 <div className="bg-white border border-slate-100 rounded-2xl p-5">
-                  <p className="font-bold text-slate-800 mb-4 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-rose-600" />Expense Categories</p>
+                  <p className="font-bold text-foreground mb-4 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-destructive" />Expense Categories</p>
                   {catBreakdown.sort((a, b) => b.total - a.total).map(c => {
                     const pct = totalExp > 0 ? (c.total / totalExp) * 100 : 0;
-                    return (<div key={c.cat} className="space-y-1 mb-2"><div className="flex justify-between text-sm"><span className="text-slate-600 capitalize font-medium">{c.cat === "border" ? "Border Fees" : c.cat}</span><span className="font-semibold text-slate-800">{fmtTZS(c.total)}</span></div><div className="w-full bg-slate-100 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-gradient-to-r from-rose-400 to-rose-600" style={{ width: `${pct}%` }} /></div></div>);
+                    return (<div key={c.cat} className="space-y-1 mb-2"><div className="flex justify-between text-sm"><span className="text-muted-foreground capitalize font-medium">{c.cat === "border" ? "Border Fees" : c.cat}</span><span className="font-semibold text-foreground">{fmtTZS(c.total)}</span></div><div className="w-full bg-muted rounded-full h-1.5"><div className="h-1.5 rounded-full bg-gradient-to-r from-destructive/60 to-destructive" style={{ width: `${pct}%` }} /></div></div>);
                   })}
                 </div>
               </div>
