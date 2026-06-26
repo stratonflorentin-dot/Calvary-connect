@@ -49,8 +49,10 @@ export function ExpenseManagement() {
         ),
         FleetService.getVehicles()
       ]);
+      console.log('[ExpenseManagement] Loaded vehicles:', vehiclesData);
+      console.log('[ExpenseManagement] Vehicles count:', vehiclesData?.length || 0);
       setExpenses(expensesData);
-      setVehicles(vehiclesData);
+      setVehicles(vehiclesData || []);
     } catch (error) {
       console.error('Error loading expense data:', error);
     } finally {
@@ -299,13 +301,22 @@ export function ExpenseManagement() {
                     <SelectValue placeholder="Select vehicle" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vehicles.map((vehicle) => (
-                      <SelectItem key={vehicle.id} value={vehicle.id}>
-                        {vehicle.plateNumber} - {vehicle.make} {vehicle.model}
-                      </SelectItem>
-                    ))}
+                    {vehicles.length === 0 ? (
+                      <div className="px-4 py-2 text-sm text-muted-foreground">
+                        No vehicles available. Please add vehicles first.
+                      </div>
+                    ) : (
+                      vehicles.map((vehicle) => (
+                        <SelectItem key={vehicle.id} value={vehicle.id}>
+                          {vehicle.plate_number || vehicle.plateNumber} - {vehicle.make} {vehicle.model}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+                {vehicles.length === 0 && (
+                  <p className="text-xs text-destructive mt-1">Please add vehicles to the system first.</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
@@ -350,8 +361,8 @@ export function ExpenseManagement() {
                     </div>
                     <p className="text-sm text-muted-foreground">{expense.description}</p>
                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span>Vehicle: {vehicles.find(v => v.id === expense.vehicleId)?.plateNumber || 'N/A'}</span>
-                      <span>Created: {expense.created_at?.toDate?.()?.toLocaleDateString() || 'N/A'}</span>
+                      <span>Vehicle: {vehicles.find(v => v.id === expense.vehicleId)?.plate_number || vehicles.find(v => v.id === expense.vehicleId)?.plateNumber || 'N/A'}</span>
+                      <span>Created: {expense.created_at?.toDate?.()?.toLocaleDateString() || new Date(expense.created_at || '').toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
