@@ -423,26 +423,26 @@ export default function TripsPage() {
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role!} />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Trips Management</h1>
-              <p className="text-muted-foreground">Manage and monitor all fleet trips</p>
+              <h1 className="text-4xl font-bold tracking-tight text-foreground"> Trips Management</h1>
+              <p className="text-base text-muted-foreground mt-2">Manage and monitor all fleet trips</p>
             </div>
 
             {canCreateTrip && (
               <Dialog open={showTripDialog} onOpenChange={setShowTripDialog}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">
                     <Plus className="mr-2 h-4 w-4" />
                     New Trip
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
                   <DialogHeader>
-                    <DialogTitle>Create New Trip</DialogTitle>
+                    <DialogTitle className="text-xl font-semibold">Create New Trip</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={handleAddTrip} className="space-y-4 pt-4">
+                  <form onSubmit={handleAddTrip} className="space-y-6 pt-4">
                     <div className="grid grid-cols-2 gap-4">
                       {/* Origin City Dropdown */}
                       <div className="space-y-2 relative">
@@ -465,7 +465,7 @@ export default function TripsPage() {
                             className="pl-10"
                           />
                           {showOriginDropdown && originSearch && (
-                            <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                            <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-xl shadow-xl max-h-60 overflow-auto">
                               {africanCities
                                 .filter(city => 
                                   city.name.toLowerCase().includes(originSearch.toLowerCase()) ||
@@ -476,7 +476,7 @@ export default function TripsPage() {
                                   <button
                                     key={`${city.name}-${city.country}`}
                                     type="button"
-                                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2"
+                                    className="w-full text-left px-4 py-3 hover:bg-muted/50 flex items-center gap-2 transition-colors"
                                     onClick={() => {
                                       setTripForm({ ...tripForm, origin: city.name });
                                       setOriginSearch(city.name);
@@ -496,7 +496,7 @@ export default function TripsPage() {
                                       }
                                     }}
                                   >
-                                    <MapPin className="h-4 w-4 text-slate-400" />
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
                                     <div>
                                       <div className="font-medium">{city.name}</div>
                                       <div className="text-xs text-slate-500">{city.country} {city.isMajorHub && '• Major Hub'}</div>
@@ -529,7 +529,7 @@ export default function TripsPage() {
                             className="pl-10"
                           />
                           {showDestinationDropdown && destinationSearch && (
-                            <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                            <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-xl shadow-xl max-h-60 overflow-auto">
                               {africanCities
                                 .filter(city => 
                                   city.name.toLowerCase().includes(destinationSearch.toLowerCase()) ||
@@ -540,7 +540,7 @@ export default function TripsPage() {
                                   <button
                                     key={`${city.name}-${city.country}`}
                                     type="button"
-                                    className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2"
+                                    className="w-full text-left px-4 py-3 hover:bg-muted/50 flex items-center gap-2 transition-colors"
                                     onClick={() => {
                                       setTripForm({ ...tripForm, destination: city.name });
                                       setDestinationSearch(city.name);
@@ -560,10 +560,10 @@ export default function TripsPage() {
                                       }
                                     }}
                                   >
-                                    <MapPin className="h-4 w-4 text-slate-400" />
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
                                     <div>
-                                      <div className="font-medium">{city.name}</div>
-                                      <div className="text-xs text-slate-500">{city.country} {city.isMajorHub && '• Major Hub'}</div>
+                                      <div className="font-medium text-foreground">{city.name}</div>
+                                      <div className="text-xs text-muted-foreground">{city.country} {city.isMajorHub && '• Major Hub'}</div>
                                     </div>
                                   </button>
                                 ))}
@@ -633,7 +633,7 @@ export default function TripsPage() {
                           value={tripForm.driver_id}
                           onValueChange={(value) => setTripForm({ ...tripForm, driver_id: value })}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11">
                             <SelectValue placeholder="Select driver" />
                           </SelectTrigger>
                           <SelectContent>
@@ -656,12 +656,12 @@ export default function TripsPage() {
                           }}
                           disabled={vehicles.length === 0}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11">
                             <SelectValue placeholder={vehicles.length === 0 ? "No vehicles available" : "Select truck"} />
                           </SelectTrigger>
                           <SelectContent>
                             {vehicles.length === 0 ? (
-                              <div className="px-4 py-2 text-sm text-muted-foreground">
+                              <div className="px-4 py-3 text-sm text-muted-foreground">
                                 No vehicles available. Please add vehicles first.
                               </div>
                             ) : (
@@ -674,7 +674,7 @@ export default function TripsPage() {
                           </SelectContent>
                         </Select>
                         {vehicles.length === 0 && (
-                          <p className="text-xs text-destructive">Please add vehicles to the system before creating trips.</p>
+                          <p className="text-xs text-destructive mt-2">Please add vehicles to the system before creating trips.</p>
                         )}
                       </div>
                       {/* Show trailer selection only for Truck Head */}
@@ -686,12 +686,12 @@ export default function TripsPage() {
                             onValueChange={(value) => setTripForm({ ...tripForm, trailer_id: value })}
                             disabled={trailers.length === 0}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="h-11">
                               <SelectValue placeholder={trailers.length === 0 ? "No trailers available" : "Select trailer"} />
                             </SelectTrigger>
                             <SelectContent>
                               {trailers.length === 0 ? (
-                                <div className="px-4 py-2 text-sm text-muted-foreground">
+                                <div className="px-4 py-3 text-sm text-muted-foreground">
                                   No trailers available. Please add trailers first.
                                 </div>
                               ) : (
@@ -704,7 +704,7 @@ export default function TripsPage() {
                             </SelectContent>
                           </Select>
                           {trailers.length === 0 && (
-                            <p className="text-xs text-destructive">Please add trailers to the system.</p>
+                            <p className="text-xs text-destructive mt-2">Please add trailers to the system.</p>
                           )}
                         </div>
                       )}
@@ -718,6 +718,7 @@ export default function TripsPage() {
                           value={tripForm.cargo}
                           onChange={(e) => setTripForm({ ...tripForm, cargo: e.target.value })}
                           placeholder="General Cargo"
+                          className="h-11"
                         />
                       </div>
                       <div className="space-y-2">
@@ -729,6 +730,7 @@ export default function TripsPage() {
                           value={tripForm.cargoWeight}
                           onChange={(e) => setTripForm({ ...tripForm, cargoWeight: e.target.value })}
                           placeholder="25.5"
+                          className="h-11"
                         />
                       </div>
                     </div>
@@ -741,6 +743,7 @@ export default function TripsPage() {
                           value={tripForm.client}
                           onChange={(e) => setTripForm({ ...tripForm, client: e.target.value })}
                           placeholder="Client name"
+                          className="h-11"
                         />
                       </div>
                       <div className="space-y-2">
@@ -751,6 +754,7 @@ export default function TripsPage() {
                           value={tripForm.distance}
                           onChange={(e) => setTripForm({ ...tripForm, distance: e.target.value })}
                           placeholder="500"
+                          className="h-11"
                         />
                       </div>
                     </div>
@@ -762,6 +766,7 @@ export default function TripsPage() {
                         value={tripForm.estimated_time}
                         onChange={(e) => setTripForm({ ...tripForm, estimated_time: e.target.value })}
                         placeholder="8 hours"
+                        className="h-11"
                       />
                     </div>
 
@@ -777,7 +782,7 @@ export default function TripsPage() {
                             tripCategory: value === 'transit' ? '' : 'town'
                           })}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11">
                             <SelectValue placeholder="Select trip type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -799,7 +804,7 @@ export default function TripsPage() {
                             value={tripForm.tripCategory}
                             onValueChange={(value) => setTripForm({ ...tripForm, tripCategory: value })}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="h-11">
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -821,6 +826,7 @@ export default function TripsPage() {
                           value={tripForm.salesAmount}
                           onChange={(e) => setTripForm({ ...tripForm, salesAmount: e.target.value })}
                           placeholder="1000.00"
+                          className="h-11"
                         />
                         {tripForm.salesAmount && (
                           <div className="text-sm text-muted-foreground">
@@ -835,7 +841,7 @@ export default function TripsPage() {
                           value={tripForm.payment_status}
                           onValueChange={(value) => setTripForm({ ...tripForm, payment_status: value })}
                         >
-                          <SelectTrigger id="payment_status">
+                          <SelectTrigger id="payment_status" className="h-11">
                             <SelectValue placeholder="Select payment status" />
                           </SelectTrigger>
                           <SelectContent>
@@ -862,11 +868,11 @@ export default function TripsPage() {
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setShowTripDialog(false)}>
+                    <div className="flex justify-end gap-3 pt-6">
+                      <Button type="button" variant="outline" onClick={() => setShowTripDialog(false)} className="h-11 px-6">
                         Cancel
                       </Button>
-                      <Button type="submit">
+                      <Button type="submit" className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">
                         Create Trip
                       </Button>
                     </div>
@@ -877,12 +883,12 @@ export default function TripsPage() {
 
             {/* Edit Trip Dialog */}
             <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
                 <DialogHeader>
-                  <DialogTitle>Edit Trip</DialogTitle>
+                  <DialogTitle className="text-xl font-semibold">Edit Trip</DialogTitle>
                 </DialogHeader>
                 {editingTrip && (
-                  <form onSubmit={handleEditTrip} className="space-y-4 pt-4">
+                  <form onSubmit={handleEditTrip} className="space-y-6 pt-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="edit-origin">Origin</Label>
@@ -891,6 +897,7 @@ export default function TripsPage() {
                           value={editingTrip.origin}
                           onChange={(e) => setEditingTrip({ ...editingTrip, origin: e.target.value })}
                           required
+                          className="h-11"
                         />
                       </div>
                       <div className="space-y-2">
@@ -900,6 +907,7 @@ export default function TripsPage() {
                           value={editingTrip.destination}
                           onChange={(e) => setEditingTrip({ ...editingTrip, destination: e.target.value })}
                           required
+                          className="h-11"
                         />
                       </div>
                     </div>
