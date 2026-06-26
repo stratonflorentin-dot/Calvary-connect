@@ -962,10 +962,10 @@ export default function TripsPage() {
                     </div>
 
                     {/* Operational Costs Section */}
-                    <div className="pt-4 border-t">
+                    <div className="pt-6 border-t border-border">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-semibold text-slate-800">Operational & Route Costs</h4>
-                        <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">Calvary Connect Tracker</Badge>
+                        <h4 className="text-sm font-semibold text-foreground">Operational & Route Costs</h4>
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Calvary Connect Tracker</Badge>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">
@@ -976,6 +976,7 @@ export default function TripsPage() {
                             value={editingTrip.waybill_number || ''}
                             onChange={(e) => setEditingTrip({ ...editingTrip, waybill_number: e.target.value })}
                             placeholder="WB-..."
+                            className="h-11"
                           />
                         </div>
                         <div className="space-y-2">
@@ -986,6 +987,7 @@ export default function TripsPage() {
                             step="0.01"
                             value={editingTrip.cost_fuel || ''}
                             onChange={(e) => setEditingTrip({ ...editingTrip, cost_fuel: e.target.value })}
+                            className="h-11"
                           />
                         </div>
                       </div>
@@ -999,6 +1001,7 @@ export default function TripsPage() {
                             step="0.01"
                             value={editingTrip.cost_tolls || ''}
                             onChange={(e) => setEditingTrip({ ...editingTrip, cost_tolls: e.target.value })}
+                            className="h-11"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1009,6 +1012,7 @@ export default function TripsPage() {
                             step="0.01"
                             value={editingTrip.cost_border || ''}
                             onChange={(e) => setEditingTrip({ ...editingTrip, cost_border: e.target.value })}
+                            className="h-11"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1019,6 +1023,7 @@ export default function TripsPage() {
                             step="0.01"
                             value={editingTrip.cost_customs || ''}
                             onChange={(e) => setEditingTrip({ ...editingTrip, cost_customs: e.target.value })}
+                            className="h-11"
                           />
                         </div>
                       </div>
@@ -1030,7 +1035,7 @@ export default function TripsPage() {
                         value={editingTrip.payment_status || 'PENDING'}
                         onValueChange={(value) => setEditingTrip({ ...editingTrip, payment_status: value })}
                       >
-                        <SelectTrigger id="edit-payment-status">
+                        <SelectTrigger id="edit-payment-status" className="h-11">
                           <SelectValue placeholder="Select payment status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1056,11 +1061,11 @@ export default function TripsPage() {
                       </Select>
                       </div>
 
-                    <div className="flex justify-end gap-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                    <div className="flex justify-end gap-3 pt-6">
+                      <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)} className="h-11 px-6">
                         Cancel
                       </Button>
-                      <Button type="submit">
+                      <Button type="submit" className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">
                         Save Changes
                       </Button>
                     </div>
@@ -1071,34 +1076,35 @@ export default function TripsPage() {
 
             {/* Manage Access Dialog */}
             <Dialog open={showManageAccessDialog} onOpenChange={setShowManageAccessDialog}>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md shadow-xl">
                 <DialogHeader>
-                  <DialogTitle>Manage Driver Access</DialogTitle>
+                  <DialogTitle className="text-xl font-semibold">Manage Driver Access</DialogTitle>
                 </DialogHeader>
                 {managingTrip && (
-                  <div className="space-y-4 pt-4">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="font-medium">{managingTrip.origin} → {managingTrip.destination}</p>
-                      <p className="text-sm text-muted-foreground">
+                  <div className="space-y-6 pt-4">
+                    <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                      <p className="font-medium text-foreground">{managingTrip.origin} → {managingTrip.destination}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
                         Current Driver: {drivers.find(d => d.id === managingTrip.driver_id)?.name || 'Unassigned'}
                       </p>
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-sm">Remove driver access from this trip?</p>
+                      <p className="text-sm text-foreground">Remove driver access from this trip?</p>
                       <p className="text-xs text-muted-foreground">
                         This will unassign the current driver. The trip will remain but without a driver.
                       </p>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setShowManageAccessDialog(false)}>
+                    <div className="flex justify-end gap-3 pt-4">
+                      <Button type="button" variant="outline" onClick={() => setShowManageAccessDialog(false)} className="h-11 px-6">
                         Cancel
                       </Button>
                       <Button
                         type="button"
                         variant="destructive"
                         onClick={handleRemoveDriverAccess}
+                        className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"
                       >
                         <UserX className="mr-2 h-4 w-4" />
                         Remove Access
@@ -1110,19 +1116,19 @@ export default function TripsPage() {
             </Dialog>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Trips</CardTitle>
+          <Card className="shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold text-foreground">Recent Trips</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">Loading trips...</div>
+                <div className="text-center py-12 text-muted-foreground">Loading trips...</div>
               ) : trips.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No trips found</p>
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">No trips found</p>
                   <Button
                     variant="outline"
-                    className="mt-4"
+                    className="mt-4 h-11 px-6"
                     onClick={() => setShowTripDialog(true)}
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -1132,28 +1138,28 @@ export default function TripsPage() {
               ) : (
                 <div className="space-y-4">
                   {trips.map((trip) => (
-                    <div key={trip.id} className="border rounded-lg p-4">
+                    <div key={trip.id} className="border border-border rounded-xl p-5 hover:bg-muted/50 transition-colors">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <Route className="h-4 w-4 text-muted-foreground" />
-                            <h3 className="font-semibold">{trip.origin} → {trip.destination}</h3>
+                            <h3 className="font-semibold text-foreground">{trip.origin} → {trip.destination}</h3>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
                             Status: {trip.status} | Cargo: {trip.cargo || 'N/A'}
                           </p>
-                          <div className="flex gap-2 mt-1 flex-wrap">
+                          <div className="flex gap-2 mt-2 flex-wrap">
                             {trip.tripType && (
                               <Badge 
                                 variant="outline" 
-                                className={trip.tripType === 'transit' ? 'bg-blue-50 text-[#0369A1] border-[#0369A1]/30' : 'bg-green-50 text-green-700'}
+                                className={trip.tripType === 'transit' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-success/10 text-success border-success/20'}
                               >
                                 {trip.tripType === 'transit' ? '🌐 Transit' : '🏠 Local'}
                                 {trip.tripType === 'local' && trip.tripCategory && ` (${trip.tripCategory})`}
                               </Badge>
                             )}
                             {trip.vatRate !== undefined && (
-                              <Badge variant="outline" className="bg-gray-50">
+                              <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border">
                                 VAT: {trip.vatRate}%
                               </Badge>
                             )}
@@ -1163,10 +1169,10 @@ export default function TripsPage() {
                                 variant="outline" 
                                 className={
                                   trip.payment_status === 'PENDING' 
-                                    ? 'bg-red-50 text-red-700 border-red-200'
+                                    ? 'bg-destructive/10 text-destructive border-destructive/20'
                                     : trip.payment_status === 'ADVANCE'
-                                    ? 'bg-orange-50 text-orange-700 border-orange-200'
-                                    : 'bg-green-50 text-green-700 border-green-200'
+                                    ? 'bg-warning/10 text-warning border-warning/20'
+                                    : 'bg-success/10 text-success border-success/20'
                                 }
                               >
                                 <span className="flex items-center gap-1 font-bold">
@@ -1181,7 +1187,7 @@ export default function TripsPage() {
                           {/* Milestone Stepper */}
                           <div className="mt-4 mb-2 max-w-lg">
                             <div className="flex items-center justify-between relative">
-                              <div className="absolute left-0 top-1/2 w-full h-1 bg-gray-100 -translate-y-1/2 z-0 rounded-full"></div>
+                              <div className="absolute left-0 top-1/2 w-full h-1 bg-muted -translate-y-1/2 z-0 rounded-full"></div>
                               {(() => {
                                 const statuses = ["PENDING", "IN_PROGRESS", "COMPLETED"];
                                 const currentIndex = statuses.indexOf(trip.status);
@@ -1189,14 +1195,14 @@ export default function TripsPage() {
                                   const isCompleted = currentIndex >= idx;
                                   const isActive = currentIndex === idx;
                                   return (
-                                    <div key={status} className="relative z-10 flex flex-col items-center gap-1 bg-white px-2">
+                                    <div key={status} className="relative z-10 flex flex-col items-center gap-1 bg-card px-2">
                                       <div className={cn("w-4 h-4 rounded-full border-2 transition-all", 
-                                        isCompleted ? "bg-[#0369A1] border-[#0369A1]" : "bg-white border-gray-300",
-                                        isActive && "ring-4 ring-sky-100 scale-125"
+                                        isCompleted ? "bg-primary border-primary" : "bg-card border-border",
+                                        isActive && "ring-4 ring-primary/20 scale-125"
                                       )}>
-                                        {isCompleted && <div className="w-1.5 h-1.5 bg-white rounded-full mx-auto mt-0.5"></div>}
+                                        {isCompleted && <div className="w-1.5 h-1.5 bg-primary-foreground rounded-full mx-auto mt-0.5"></div>}
                                       </div>
-                                      <span className={cn("text-[10px] font-bold tracking-widest", isCompleted ? "text-[#0369A1]" : "text-gray-400")}>{status}</span>
+                                      <span className={cn("text-[10px] font-bold tracking-widest", isCompleted ? "text-primary" : "text-muted-foreground")}>{status}</span>
                                     </div>
                                   );
                                 });
@@ -1204,16 +1210,16 @@ export default function TripsPage() {
                             </div>
                           </div>
                           {trip.client && (
-                            <p className="text-sm text-muted-foreground">Client: {trip.client}</p>
+                            <p className="text-sm text-muted-foreground mt-2">Client: {trip.client}</p>
                           )}
                           {trip.salesAmount && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground mt-1">
                               Sales: {parseFloat(trip.salesAmount).toFixed(2)} | VAT: {trip.vatAmount?.toFixed(2) || (parseFloat(trip.salesAmount) * (trip.vatRate || 0) / 100).toFixed(2)} | Total: {trip.totalAmount?.toFixed(2) || (parseFloat(trip.salesAmount) * (1 + (trip.vatRate || 0) / 100)).toFixed(2)}
                             </p>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={trip.status === 'COMPLETED' ? 'default' : 'secondary'}>
+                          <Badge variant={trip.status === 'COMPLETED' ? 'default' : 'secondary'} className="font-medium">
                             {trip.status}
                           </Badge>
                           <Button
@@ -1221,13 +1227,14 @@ export default function TripsPage() {
                             variant="ghost"
                             onClick={() => window.location.href = `/bookings?trip=${trip.id}&client=${encodeURIComponent(trip.client || '')}&origin=${encodeURIComponent(trip.origin || '')}&destination=${encodeURIComponent(trip.destination || '')}&amount=${trip.salesAmount || trip.fare || 0}`}
                             title="Create Booking from Trip"
+                            className="hover:bg-primary/10 hover:text-primary"
                           >
                             <CalendarDays className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-blue-600 hover:text-blue-800"
+                            className="hover:bg-primary/10 hover:text-primary"
                             onClick={() => setSelectedWaybillTrip(trip)}
                             title="Generate Waybill"
                           >
@@ -1236,7 +1243,7 @@ export default function TripsPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-emerald-600 hover:text-emerald-800"
+                            className="hover:bg-success/10 hover:text-success"
                             onClick={() => setSelectedInvoiceTrip(trip)}
                             title="TRA Tax Invoice"
                           >
@@ -1247,6 +1254,7 @@ export default function TripsPage() {
                               size="sm"
                               variant="ghost"
                               onClick={() => openEditDialog(trip)}
+                              className="hover:bg-warning/10 hover:text-warning"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -1255,7 +1263,7 @@ export default function TripsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-orange-500 hover:text-orange-700"
+                              className="hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => openManageAccessDialog(trip)}
                             >
                               <UserX className="h-4 w-4" />
@@ -1265,7 +1273,7 @@ export default function TripsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-red-500 hover:text-red-700"
+                              className="hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => handleDeleteTrip(trip.id)}
                             >
                               <Trash2 className="h-4 w-4" />
