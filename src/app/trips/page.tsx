@@ -25,6 +25,11 @@ import { TRAInvoiceDialog } from '@/components/financial/tra-invoice-dialog';
 import { cn } from '@/lib/utils';
 
 import { WorkflowService } from '@/services/workflow-service';
+import { 
+  notifyAccountantsTripRevenue, 
+  fetchAccountantUserIds,
+  fetchSalesmanUserIds 
+} from '@/services/notification-service';
 
 export default function TripsPage() {
   const { role, isAdmin, isInitialized } = useRole();
@@ -239,6 +244,16 @@ export default function TripsPage() {
               description: 'VAT on transportation services',
             },
           ]);
+
+          // Notify accountants about new revenue
+          const accountantIds = await fetchAccountantUserIds();
+          await notifyAccountantsTripRevenue(
+            newTrip.id,
+            tripForm.origin,
+            tripForm.destination,
+            totalAmount,
+            accountantIds
+          );
         }
       }
 
