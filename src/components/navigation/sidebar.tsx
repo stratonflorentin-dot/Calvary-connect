@@ -251,7 +251,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       {/* Mobile toggle button */}
       <button 
         onClick={toggle} 
-        className="md:hidden fixed top-4 left-4 z-[60] p-2 rounded-lg bg-primary text-white shadow-lg hover:bg-primary/90 transition-all"
+        className="md:hidden fixed top-4 left-4 z-[60] p-2.5 rounded-xl bg-primary text-background shadow-lg hover:bg-primary/90 transition-all duration-200"
       >
         {isOpen ? <X className="size-5" /> : <Menu className="size-5" />}
       </button>
@@ -262,7 +262,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       {/* Sidebar */}
       <aside className={cn(
         "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
-        "bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-sm",
+        "bg-card text-foreground border-r border-border shadow-xl",
         isCollapsed ? "w-20" : "w-64",
         // Mobile transition
         "md:translate-x-0",
@@ -272,19 +272,19 @@ export function Sidebar({ role }: { role: UserRole }) {
           {!isCollapsed ? (
             <>
               <div className="flex items-center gap-2">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground p-1.5 rounded-md">
+                <div className="bg-primary text-background p-1.5 rounded-xl">
                   <Zap className="size-5" />
                 </div>
-                <h1 className="font-headline text-xl font-extrabold tracking-tighter text-sidebar-primary uppercase">
+                <h1 className="font-headline text-xl font-extrabold tracking-tighter text-primary uppercase">
                   Calvary
                 </h1>
               </div>
-              <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-muted-foreground hover:text-sidebar-primary">
+              <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
                 <ChevronLeft className="size-5" />
               </Button>
             </>
           ) : (
-            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-sidebar-primary">
+            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-primary hover:bg-primary/10 transition-colors">
               <ChevronRight className="size-5" />
             </Button>
           )}
@@ -314,15 +314,15 @@ export function Sidebar({ role }: { role: UserRole }) {
                         className={cn(
                           "flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-all group",
                           pathname === item.path 
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm" 
-                            : "text-muted-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/50"
+                            ? "bg-primary text-background shadow-md" 
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         )}
                       >
                         <Icon className={cn(
                           "size-5 flex-shrink-0", 
                           pathname === item.path 
-                            ? "text-sidebar-accent-foreground" 
-                            : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
+                            ? "text-background" 
+                            : "text-muted-foreground group-hover:text-foreground"
                         )} />
                         {!isCollapsed && <span className="truncate">{item.label}</span>}
                         {/* Badges only show when not collapsed */}
@@ -360,36 +360,36 @@ export function Sidebar({ role }: { role: UserRole }) {
           })}
         </nav>
 
-        <div className="p-3 border-t border-sidebar-border bg-muted/50 backdrop-blur-md">
+        <div className="p-3 border-t border-border bg-muted/50 backdrop-blur-md">
           {/* Quick Return Button */}
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={scrollToTop} 
-            className="w-full mb-2 text-sidebar-primary hover:bg-sidebar-primary/10"
+            className="w-full mb-2 text-primary hover:bg-primary/10 transition-colors"
           >
             <ArrowUpCircle className="size-4 mr-2" />
             {!isCollapsed && "Back to Top"}
           </Button>
           
           <div className={cn(
-            "px-3 py-3 flex items-center gap-3 bg-card rounded-2xl mb-2 group relative border border-border shadow-sm transition-colors",
+            "px-3 py-3 flex items-center gap-3 bg-card rounded-2xl mb-2 group relative border border-border shadow-lg transition-colors",
             isCollapsed && "justify-center px-0"
           )}>
             <Avatar className="size-10 border border-border">
               <AvatarImage src={user?.avatar} />
-              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm">
+              <AvatarFallback className="bg-primary text-background text-sm">
                 {user?.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-card-foreground truncate">{user?.name || "Super Admin"}</p>
-                <p className="text-[10px] text-sidebar-primary font-bold uppercase tracking-wider">{effectiveRole}</p>
+                <p className="text-sm font-bold text-foreground truncate">{user?.name || "Super Admin"}</p>
+                <p className="text-[10px] text-primary font-bold uppercase tracking-wider">{effectiveRole}</p>
               </div>
             )}
             {!isCollapsed && (
-              <label className="absolute -top-1 -right-1 size-6 bg-sidebar-primary text-sidebar-primary-foreground rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-background">
+              <label className="absolute -top-1 -right-1 size-6 bg-primary text-background rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-background">
                 <Camera className="size-3" />
                 <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading} />
               </label>
