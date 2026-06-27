@@ -633,7 +633,7 @@ export default function CalvaryAccounting() {
   });
 
   return (
-    <div className="flex min-h-screen bg-muted font-sans selection:bg-primary/10 selection:text-primary">
+    <div className="flex min-h-screen bg-background font-sans selection:bg-primary/10 selection:text-primary">
       {/* ── SIDEBAR ── */}
       <Sidebar role={role || "ADMIN"} />
 
@@ -679,7 +679,7 @@ export default function CalvaryAccounting() {
         {/* REVENUE MODAL */}
         {modal === "revenue" && (
           <Modal title="Record Trip Revenue" subtitle="Auto-creates a client invoice" onClose={() => setModal(null)}>
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 font-medium flex items-center gap-2"><FileText className="w-3.5 h-3.5 flex-shrink-0" />A receivable invoice will be created automatically.</div>
+            <div className="p-3 bg-success/10 border border-success/20 rounded-xl text-xs text-success font-medium flex items-center gap-2"><FileText className="w-3.5 h-3.5 flex-shrink-0" />A receivable invoice will be created automatically.</div>
             <Field label="Route / Description"><input type="text" className={iCls} value={revF.description} onChange={e => setRevF({ ...revF, description: e.target.value })} placeholder="e.g. DSM → Lusaka" /></Field>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Amount"><input type="number" className={iCls} value={revF.amount} onChange={e => setRevF({ ...revF, amount: e.target.value })} placeholder="0" /></Field>
@@ -849,7 +849,7 @@ export default function CalvaryAccounting() {
         })()}
 
         {/* PAGE SHELL */}
-        <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-6 space-y-5">
+        <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-8 space-y-8">
 
           {showImport && (
             <div className="fixed inset-0 z-[110] bg-card overflow-y-auto">
@@ -871,21 +871,21 @@ export default function CalvaryAccounting() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2.5">
-                <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center"><Truck className="w-5 h-5 text-background" /></div>
+              <h1 className="text-4xl font-bold text-foreground flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-lg"><Truck className="w-6 h-6 text-background" /></div>
                 Calvary Accounting
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5 ml-11">East Africa Logistics · Full Ledger Suite</p>
+              <p className="text-base text-muted-foreground mt-2 ml-15">East Africa Logistics · Full Ledger Suite</p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-card border border-border rounded-xl px-3 py-2">
-              <RefreshCw className="w-3.5 h-3.5" /> {NOW.toDateString()}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-card border border-border rounded-xl px-4 py-2.5 shadow-sm">
+              <RefreshCw className="w-4 h-4" /> {NOW.toDateString()}
             </div>
           </div>
 
           {/* Tab bar */}
-          <div className="bg-card border border-border rounded-2xl p-1.5 flex gap-1 overflow-x-auto">
+          <div className="bg-card border border-border rounded-2xl p-1.5 flex gap-1 overflow-x-auto shadow-lg">
             {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${tab === t.id ? "bg-primary text-background shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
+              <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap h-11 ${tab === t.id ? "bg-primary text-background shadow-md" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
                 <t.icon className="w-4 h-4" />{t.label}
               </button>
             ))}
@@ -893,10 +893,10 @@ export default function CalvaryAccounting() {
 
           {/* ── OVERVIEW ── */}
           {tab === "overview" && (
-            <div className="space-y-5">
+            <div className="space-y-8">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[{ label: "Total Revenue", value: fmtTZS(totalRev), sub: `${revenue.length} trips`, grad: "from-emerald-500 to-teal-600", icon: TrendingUp }, { label: "Total Expenses", value: fmtTZS(totalExp), sub: `${expenses.length} entries`, grad: "from-rose-500 to-red-600", icon: TrendingDown }, { label: "Net Profit", value: fmtTZS(netProfit), sub: `${totalRev > 0 ? ((netProfit / totalRev) * 100).toFixed(1) : 0}% margin`, grad: netProfit >= 0 ? "from-indigo-500 to-blue-600" : "from-red-600 to-rose-700", icon: DollarSign }].map(s => (
-                  <div key={s.label} className={`bg-gradient-to-br ${s.grad} rounded-2xl p-5 text-white`}>
+                {[{ label: "Total Revenue", value: fmtTZS(totalRev), sub: `${revenue.length} trips`, grad: "from-success to-info", icon: TrendingUp }, { label: "Total Expenses", value: fmtTZS(totalExp), sub: `${expenses.length} entries`, grad: "from-destructive to-destructive/80", icon: TrendingDown }, { label: "Net Profit", value: fmtTZS(netProfit), sub: `${totalRev > 0 ? ((netProfit / totalRev) * 100).toFixed(1) : 0}% margin`, grad: netProfit >= 0 ? "from-primary to-accent" : "from-destructive to-destructive/80", icon: DollarSign }].map(s => (
+                  <div key={s.label} className={`bg-gradient-to-br ${s.grad} rounded-2xl p-5 text-white shadow-lg`}>
                     <div className="flex items-center justify-between mb-3"><p className="text-white/70 text-xs font-semibold uppercase tracking-wide">{s.label}</p><s.icon className="w-5 h-5 text-white/30" /></div>
                     <p className="text-2xl font-bold">{s.value}</p>
                     <p className="text-white/60 text-xs mt-1">{s.sub}</p>
@@ -904,7 +904,7 @@ export default function CalvaryAccounting() {
                 ))}
 
                 {/* Multi-Currency Cash Holdings Card */}
-                <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white">
+                <div className="bg-gradient-to-br from-warning to-amber-600 rounded-2xl p-5 text-white shadow-lg">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-white/70 text-xs font-semibold uppercase tracking-wide">Total Cash</p>
                     <Wallet className="w-5 h-5 text-white/30" />
@@ -929,8 +929,8 @@ export default function CalvaryAccounting() {
 
               {/* Both accounts side by side */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-slate-800 text-base">Bank Accounts</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-foreground text-lg">Bank Accounts</h3>
                   <Btn label="Add Account" onClick={() => setModal("addAccount")} icon={Plus} sm />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -938,7 +938,7 @@ export default function CalvaryAccounting() {
                     const cr = acc.transactions.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
                     const db = acc.transactions.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
                     return (
-                      <div key={acc.id} className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      <div key={acc.id} className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                         <div className={`bg-gradient-to-br ${accGrad(acc.currency)} p-5 text-white`}>
                           <div className="flex items-start justify-between mb-2">
                             <div className="min-w-0">
@@ -953,30 +953,30 @@ export default function CalvaryAccounting() {
                         </div>
                         <div className="p-4 space-y-3">
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-emerald-50 rounded-xl p-2.5 text-center"><p className="text-xs text-emerald-600 mb-0.5">Credits In</p><p className="font-bold text-emerald-700 text-xs">{fmtCur(cr, acc.currency)}</p></div>
-                            <div className="bg-rose-50 rounded-xl p-2.5 text-center"><p className="text-xs text-rose-600 mb-0.5">Debits Out</p><p className="font-bold text-rose-700 text-xs">{fmtCur(db, acc.currency)}</p></div>
+                            <div className="bg-success/10 rounded-xl p-2.5 text-center"><p className="text-xs text-success mb-0.5">Credits In</p><p className="font-bold text-success text-xs">{fmtCur(cr, acc.currency)}</p></div>
+                            <div className="bg-destructive/10 rounded-xl p-2.5 text-center"><p className="text-xs text-destructive mb-0.5">Debits Out</p><p className="font-bold text-destructive text-xs">{fmtCur(db, acc.currency)}</p></div>
                           </div>
                           <div className="space-y-1">
                             {acc.transactions.slice(0, 2).map(t => (
-                              <div key={t.id} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
-                                <div className="flex items-center gap-1.5 min-w-0">{t.type === "credit" ? <ArrowUpRight className="w-3 h-3 text-emerald-500 flex-shrink-0" /> : <ArrowDownLeft className="w-3 h-3 text-rose-500 flex-shrink-0" />}<span className="text-xs text-slate-600 truncate">{t.description}</span></div>
-                                <span className={`text-xs font-semibold flex-shrink-0 ml-1 ${t.type === "credit" ? "text-emerald-600" : "text-rose-600"}`}>{t.type === "credit" ? "+" : "−"}{fmtCur(t.amount, acc.currency)}</span>
+                              <div key={t.id} className="flex items-center justify-between py-1 border-b border-border last:border-0">
+                                <div className="flex items-center gap-1.5 min-w-0">{t.type === "credit" ? <ArrowUpRight className="w-3 h-3 text-success flex-shrink-0" /> : <ArrowDownLeft className="w-3 h-3 text-destructive flex-shrink-0" />}<span className="text-xs text-muted-foreground truncate">{t.description}</span></div>
+                                <span className={`text-xs font-semibold flex-shrink-0 ml-1 ${t.type === "credit" ? "text-success" : "text-destructive"}`}>{t.type === "credit" ? "+" : "−"}{fmtCur(t.amount, acc.currency)}</span>
                               </div>
                             ))}
-                            {acc.transactions.length === 0 && <p className="text-xs text-slate-400 text-center py-1">No transactions yet</p>}
+                            {acc.transactions.length === 0 && <p className="text-xs text-muted-foreground text-center py-1">No transactions yet</p>}
                           </div>
                           <div className="flex gap-1.5 pt-1">
-                            <button onClick={() => { setSelAcc(acc.id); setTab("bank"); }} className="flex-1 text-xs font-semibold py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl transition-colors flex items-center justify-center gap-1"><FileText className="w-3 h-3" />Statement</button>
-                            <button onClick={() => setShowImport(true)} className="flex-1 text-xs font-semibold py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition-colors flex items-center justify-center gap-1"><Upload className="w-3 h-3" />Import</button>
-                            <button onClick={() => openEditAcc(acc)} className="flex-1 text-xs font-semibold py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl transition-colors flex items-center justify-center gap-1"><Pencil className="w-3 h-3" />Edit</button>
-                            <button onClick={() => setConfirm({ msg: `Delete "${acc.name}"?`, detail: "All transactions will be removed.", onConfirm: () => delAccount(acc.id) })} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => { setSelAcc(acc.id); setTab("bank"); }} className="flex-1 text-xs font-semibold py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-colors flex items-center justify-center gap-1"><FileText className="w-3 h-3" />Statement</button>
+                            <button onClick={() => setShowImport(true)} className="flex-1 text-xs font-semibold py-2 bg-success/10 hover:bg-success/20 text-success rounded-xl transition-colors flex items-center justify-center gap-1"><Upload className="w-3 h-3" />Import</button>
+                            <button onClick={() => openEditAcc(acc)} className="flex-1 text-xs font-semibold py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl transition-colors flex items-center justify-center gap-1"><Pencil className="w-3 h-3" />Edit</button>
+                            <button onClick={() => setConfirm({ msg: `Delete "${acc.name}"?`, detail: "All transactions will be removed.", onConfirm: () => delAccount(acc.id) })} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         </div>
                       </div>
                     );
                   })}
-                  <button onClick={() => setModal("addAccount")} className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all group min-h-[220px]">
-                    <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors"><Plus className="w-6 h-6" /></div>
+                  <button onClick={() => setModal("addAccount")} className="border-2 border-dashed border-border rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all group min-h-[220px]">
+                    <div className="w-12 h-12 rounded-xl bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors"><Plus className="w-6 h-6" /></div>
                     <div className="text-center"><p className="font-semibold text-sm">Add Bank Account</p><p className="text-xs mt-0.5 opacity-70">USD · TZS · KES · ZMW · UGX</p></div>
                   </button>
                 </div>
@@ -984,18 +984,18 @@ export default function CalvaryAccounting() {
 
               {/* AR / AP */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[{ label: "Accounts Receivable", value: pendingAR, type: "receivable", icon: ArrowUpRight, color: "emerald" }, { label: "Accounts Payable", value: pendingAP, type: "payable", icon: ArrowDownLeft, color: "rose" }].map(s => (
-                  <div key={s.label} className="bg-white border border-slate-100 rounded-2xl p-5 space-y-3">
-                    <p className="font-bold text-slate-800 flex items-center gap-2"><s.icon className={`w-4 h-4 text-${s.color}-600`} />{s.label}</p>
-                    <p className={`text-3xl font-bold text-${s.color}-700`}>{fmtTZS(s.value)}</p>
-                    <p className="text-xs text-slate-500">{invoices.filter(i => i.type === s.type && i.status !== "paid").length} pending</p>
+                {[{ label: "Accounts Receivable", value: pendingAR, type: "receivable", icon: ArrowUpRight, color: "success" }, { label: "Accounts Payable", value: pendingAP, type: "payable", icon: ArrowDownLeft, color: "destructive" }].map(s => (
+                  <div key={s.label} className="bg-card border border-border rounded-2xl p-5 space-y-3 shadow-lg">
+                    <p className="font-bold text-foreground flex items-center gap-2"><s.icon className={`w-4 h-4 text-${s.color}`} />{s.label}</p>
+                    <p className={`text-3xl font-bold text-${s.color}`}>{fmtTZS(s.value)}</p>
+                    <p className="text-xs text-muted-foreground">{invoices.filter(i => i.type === s.type && i.status !== "paid").length} pending</p>
                     {invoices.filter(i => i.type === s.type && i.status !== "paid").slice(0, 3).map(inv => (
                       <div key={inv.id} className="flex justify-between text-sm cursor-pointer hover:opacity-80" onClick={() => setSelectedInvoice(inv)}>
-                        <span className="text-slate-600 truncate">{inv.customer_name}</span>
-                        <span className={`font-semibold text-${s.color}-700 ml-2`}>{fmtTZS(inv.amount)}</span>
+                        <span className="text-muted-foreground truncate">{inv.customer_name}</span>
+                        <span className={`font-semibold text-${s.color} ml-2`}>{fmtTZS(inv.amount)}</span>
                       </div>
                     ))}
-                    <button onClick={() => { setInvFilter(s.type); setTab("invoices"); }} className="text-xs text-indigo-600 font-semibold hover:text-indigo-700 flex items-center gap-1">View all <ChevronRight className="w-3 h-3" /></button>
+                    <button onClick={() => { setInvFilter(s.type); setTab("invoices"); }} className="text-xs text-primary font-semibold hover:text-primary/80 flex items-center gap-1">View all <ChevronRight className="w-3 h-3" /></button>
                   </div>
                 ))}
               </div>
@@ -1071,25 +1071,25 @@ export default function CalvaryAccounting() {
                       </div>
                       <div className="p-5 space-y-4">
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-emerald-50 rounded-xl p-3 text-center"><p className="text-xs text-emerald-600 mb-0.5">Credits In</p><p className="font-bold text-emerald-700 text-sm">{fmtCur(cr, acc.currency)}</p></div>
-                          <div className="bg-rose-50 rounded-xl p-3 text-center"><p className="text-xs text-rose-600 mb-0.5">Debits Out</p><p className="font-bold text-rose-700 text-sm">{fmtCur(db, acc.currency)}</p></div>
+                          <div className="bg-success/10 rounded-xl p-3 text-center"><p className="text-xs text-success mb-0.5">Credits In</p><p className="font-bold text-success text-sm">{fmtCur(cr, acc.currency)}</p></div>
+                          <div className="bg-destructive/10 rounded-xl p-3 text-center"><p className="text-xs text-destructive mb-0.5">Debits Out</p><p className="font-bold text-destructive text-sm">{fmtCur(db, acc.currency)}</p></div>
                         </div>
                         <div className="space-y-1.5">
                           {acc.transactions.slice(0, 3).map(t => (
-                            <div key={t.id} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
-                              <div className="flex items-center gap-2 min-w-0">{t.type === "credit" ? <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" /> : <ArrowDownLeft className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />}<span className="text-xs text-slate-700 truncate">{t.description}</span></div>
-                              <span className={`text-xs font-semibold flex-shrink-0 ml-2 ${t.type === "credit" ? "text-emerald-600" : "text-rose-600"}`}>{t.type === "credit" ? "+" : "−"}{fmtCur(t.amount, acc.currency)}</span>
+                            <div key={t.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                              <div className="flex items-center gap-2 min-w-0">{t.type === "credit" ? <ArrowUpRight className="w-3.5 h-3.5 text-success flex-shrink-0" /> : <ArrowDownLeft className="w-3.5 h-3.5 text-destructive flex-shrink-0" />}<span className="text-xs text-muted-foreground truncate">{t.description}</span></div>
+                              <span className={`text-xs font-semibold flex-shrink-0 ml-2 ${t.type === "credit" ? "text-success" : "text-destructive"}`}>{t.type === "credit" ? "+" : "−"}{fmtCur(t.amount, acc.currency)}</span>
                             </div>
                           ))}
-                          {acc.transactions.length === 0 && <p className="text-xs text-slate-400 text-center py-3">No transactions yet</p>}
+                          {acc.transactions.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">No transactions yet</p>}
                         </div>
-                        <button onClick={() => { setSelAcc(acc.id); setTab("bank"); }} className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1">View full statement <ChevronRight className="w-3 h-3" /></button>
+                        <button onClick={() => { setSelAcc(acc.id); setTab("bank"); }} className="text-xs text-primary hover:text-primary/80 font-semibold flex items-center gap-1">View full statement <ChevronRight className="w-3 h-3" /></button>
                       </div>
                     </div>
                   );
                 })}
-                <button onClick={() => setModal("addAccount")} className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all group min-h-[200px]">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors"><Plus className="w-6 h-6" /></div>
+                <button onClick={() => setModal("addAccount")} className="border-2 border-dashed border-border rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-all group min-h-[200px]">
+                  <div className="w-12 h-12 rounded-xl bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors"><Plus className="w-6 h-6" /></div>
                   <div className="text-center"><p className="font-semibold">Add Bank Account</p><p className="text-xs mt-1 opacity-70">USD · TZS · KES · ZMW · UGX</p></div>
                 </button>
               </div>
@@ -1098,30 +1098,30 @@ export default function CalvaryAccounting() {
 
           {/* ── EXPENSES ── */}
           {tab === "expenses" && (
-            <div className="space-y-4">
+            <div className="space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                <div><h2 className="text-xl font-bold text-slate-900">Expense Management</h2><p className="text-sm text-slate-500">Hover a row → <Pencil className="w-3 h-3 inline" /> edit inline · <Trash2 className="w-3 h-3 inline" /> delete</p></div>
+                <div><h2 className="text-2xl font-bold text-foreground">Expense Management</h2><p className="text-sm text-muted-foreground">Hover a row → <Pencil className="w-3 h-3 inline" /> edit inline · <Trash2 className="w-3 h-3 inline" /> delete</p></div>
                 <div className="flex gap-2">
-                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 bg-white" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} /></div>
+                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" /><input className="pl-9 pr-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48 bg-card text-foreground" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} /></div>
                   <Btn label="Add Expense" onClick={() => setModal("expense")} icon={Plus} />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Total</p><p className="text-xl font-bold text-rose-600">{fmtTZS(totalExp)}</p></div>
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Pending Approval</p><p className="text-xl font-bold text-amber-600">{expenses.filter(e => e.status === "pending").length}</p></div>
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Cross-Border Costs</p><p className="text-xl font-bold text-purple-600">{fmtTZS(xbExp)}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Total</p><p className="text-xl font-bold text-destructive">{fmtTZS(totalExp)}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Pending Approval</p><p className="text-xl font-bold text-warning">{expenses.filter(e => e.status === "pending").length}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Cross-Border Costs</p><p className="text-xl font-bold text-accent">{fmtTZS(xbExp)}</p></div>
               </div>
-              <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <THead cols={["Date", "Category", "Description", "Vendor", "Amount", "Invoice", "Status", ""]} />
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-border">
                       {filtExp.length === 0 ? <EmptyRow cols={8} msg="No expenses found" /> : filtExp.map(e => {
                         const li = invoices.find(i => i.linked_expense === e.id);
                         const ed = editId === e.id;
                         return (
-                          <tr key={e.id} className={`group transition-colors ${ed ? "bg-indigo-50/60" : "hover:bg-slate-50/70"}`}>
-                            <td className="px-4 py-2.5">{ed ? <input type="date" className={eCls} value={editBuf.date || ""} onChange={v => setEditBuf({ ...editBuf, date: v.target.value })} /> : <span className="text-xs text-slate-500 whitespace-nowrap">{e.date}</span>}</td>
+                          <tr key={e.id} className={`group transition-colors ${ed ? "bg-primary/10" : "hover:bg-muted/50"}`}>
+                            <td className="px-4 py-2.5">{ed ? <input type="date" className={eCls} value={editBuf.date || ""} onChange={v => setEditBuf({ ...editBuf, date: v.target.value })} /> : <span className="text-xs text-muted-foreground whitespace-nowrap">{e.date}</span>}</td>
                             <td className="px-4 py-2.5">{ed ? <input className={eCls} value={editBuf.category || ""} onChange={v => setEditBuf({ ...editBuf, category: v.target.value })} /> : <Badge color="amber">{e.category}</Badge>}</td>
                             <td className="px-4 py-2.5 max-w-[160px]">{ed ? <input className={eCls} value={editBuf.description || ""} onChange={v => setEditBuf({ ...editBuf, description: v.target.value })} /> : <span className="text-slate-700 truncate block">{e.description}</span>}</td>
                             <td className="px-4 py-2.5">{ed ? <input className={eCls} value={editBuf.vendor || ""} onChange={v => setEditBuf({ ...editBuf, vendor: v.target.value })} /> : <span className="text-xs text-slate-500">{e.vendor || "—"}</span>}</td>
@@ -1133,7 +1133,7 @@ export default function CalvaryAccounting() {
                         );
                       })}
                     </tbody>
-                    <tfoot><tr className="bg-slate-50 border-t-2 border-slate-200 font-bold"><td colSpan={4} className="px-4 py-3 text-slate-600 text-sm">Total</td><td className="px-4 py-3 text-rose-600">{fmtTZS(totalExp)}</td><td colSpan={3} /></tr></tfoot>
+                    <tfoot><tr className="bg-muted/50 border-t-2 border-border font-bold"><td colSpan={4} className="px-4 py-3 text-muted-foreground text-sm">Total</td><td className="px-4 py-3 text-destructive">{fmtTZS(totalExp)}</td><td colSpan={3} /></tr></tfoot>
                   </table>
                 </div>
               </div>
@@ -1142,42 +1142,42 @@ export default function CalvaryAccounting() {
 
           {/* ── REVENUE ── */}
           {tab === "revenue" && (
-            <div className="space-y-4">
+            <div className="space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                <div><h2 className="text-xl font-bold text-slate-900">Trip Revenue</h2><p className="text-sm text-slate-500">Hover a row to edit or delete inline</p></div>
+                <div><h2 className="text-2xl font-bold text-foreground">Trip Revenue</h2><p className="text-sm text-muted-foreground">Hover a row to edit or delete inline</p></div>
                 <div className="flex gap-2">
-                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 bg-white" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} /></div>
+                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" /><input className="pl-9 pr-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48 bg-card text-foreground" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} /></div>
                   <Btn label="Record Revenue" onClick={() => setModal("revenue")} variant="success" icon={Plus} />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Total</p><p className="text-xl font-bold text-emerald-600">{fmtTZS(totalRev)}</p></div>
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Cross-Border</p><p className="text-xl font-bold text-purple-600">{fmtTZS(xbRev)}</p></div>
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Cold Chain</p><p className="text-xl font-bold text-cyan-600">{fmtTZS(ccRev)}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Total</p><p className="text-xl font-bold text-success">{fmtTZS(totalRev)}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Cross-Border</p><p className="text-xl font-bold text-accent">{fmtTZS(xbRev)}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Cold Chain</p><p className="text-xl font-bold text-info">{fmtTZS(ccRev)}</p></div>
               </div>
-              <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <THead cols={["Date", "Route", "Client", "Cargo", "Amount", "Invoice", "Status", ""]} />
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-border">
                       {filtRev.length === 0 ? <EmptyRow cols={8} msg="No revenue records" icon={TrendingUp} /> : filtRev.map(r => {
                         const li = invoices.find(i => i.linked_revenue === r.id);
                         const ed = editId === r.id;
                         return (
-                          <tr key={r.id} className={`group transition-colors ${ed ? "bg-indigo-50/60" : "hover:bg-slate-50/70"}`}>
-                            <td className="px-4 py-2.5">{ed ? <input type="date" className={eCls} value={editBuf.date || ""} onChange={v => setEditBuf({ ...editBuf, date: v.target.value })} /> : <span className="text-xs text-slate-500 whitespace-nowrap">{r.date}</span>}</td>
-                            <td className="px-4 py-2.5 max-w-[160px]">{ed ? <input className={eCls} value={editBuf.description || ""} onChange={v => setEditBuf({ ...editBuf, description: v.target.value })} /> : <span className="text-slate-700 font-medium truncate block">{r.description}</span>}</td>
-                            <td className="px-4 py-2.5">{ed ? <input className={eCls} value={editBuf.client || ""} onChange={v => setEditBuf({ ...editBuf, client: v.target.value })} /> : <span className="text-slate-600">{r.client}</span>}</td>
-                            <td className="px-4 py-2.5">{r.cargo_type === "REEFER" ? <Badge color="cyan"><Thermometer className="w-3 h-3" />Cold</Badge> : r.cargo_type === "LOWBED" ? <Badge color="amber">Heavy</Badge> : <Badge color="slate">General</Badge>}</td>
-                            <td className="px-4 py-2.5">{ed ? <input type="number" className={eCls} value={editBuf.amount || ""} onChange={v => setEditBuf({ ...editBuf, amount: v.target.value })} /> : <span className="font-semibold text-emerald-600 whitespace-nowrap">{fmtTZS(r.amount)}</span>}</td>
-                            <td className="px-4 py-2.5">{li ? <button onClick={() => setSelectedInvoice(li)} className="text-xs text-indigo-600 font-semibold underline">{li.invoice_number}</button> : <span className="text-slate-300 text-xs">—</span>}</td>
+                          <tr key={r.id} className={`group transition-colors ${ed ? "bg-primary/10" : "hover:bg-muted/50"}`}>
+                            <td className="px-4 py-2.5">{ed ? <input type="date" className={eCls} value={editBuf.date || ""} onChange={v => setEditBuf({ ...editBuf, date: v.target.value })} /> : <span className="text-xs text-muted-foreground whitespace-nowrap">{r.date}</span>}</td>
+                            <td className="px-4 py-2.5 max-w-[160px]">{ed ? <input className={eCls} value={editBuf.description || ""} onChange={v => setEditBuf({ ...editBuf, description: v.target.value })} /> : <span className="text-foreground font-medium truncate block">{r.description}</span>}</td>
+                            <td className="px-4 py-2.5">{ed ? <input className={eCls} value={editBuf.client || ""} onChange={v => setEditBuf({ ...editBuf, client: v.target.value })} /> : <span className="text-muted-foreground">{r.client}</span>}</td>
+                            <td className="px-4 py-2.5">{r.cargo_type === "REEFER" ? <Badge color="info"><Thermometer className="w-3 h-3" />Cold</Badge> : r.cargo_type === "LOWBED" ? <Badge color="amber">Heavy</Badge> : <Badge color="slate">General</Badge>}</td>
+                            <td className="px-4 py-2.5">{ed ? <input type="number" className={eCls} value={editBuf.amount || ""} onChange={v => setEditBuf({ ...editBuf, amount: v.target.value })} /> : <span className="font-semibold text-success whitespace-nowrap">{fmtTZS(r.amount)}</span>}</td>
+                            <td className="px-4 py-2.5">{li ? <button onClick={() => setSelectedInvoice(li)} className="text-xs text-primary font-semibold underline">{li.invoice_number}</button> : <span className="text-muted-foreground/50 text-xs">—</span>}</td>
                             <td className="px-4 py-2.5">{ed ? <SmSel value={editBuf.status || "pending"} onChange={v => setEditBuf({ ...editBuf, status: v })} options={[{ value: "pending", label: "Pending" }, { value: "paid", label: "Paid" }]} /> : <SBadge status={r.status} />}</td>
                             <td className="px-4 py-2.5"><EditActions isEditing={ed} onEdit={() => startEdit(r)} onSave={saveRev} onCancel={cancelEdit} onDelete={() => setConfirm({ msg: "Delete this revenue record?", detail: "The linked client invoice remains unless deleted separately.", onConfirm: () => del(setRevenue, r.id) })} /></td>
                           </tr>
                         );
                       })}
                     </tbody>
-                    <tfoot><tr className="bg-slate-50 border-t-2 border-slate-200 font-bold"><td colSpan={4} className="px-4 py-3 text-slate-600 text-sm">Total</td><td className="px-4 py-3 text-emerald-600">{fmtTZS(totalRev)}</td><td colSpan={3} /></tr></tfoot>
+                    <tfoot><tr className="bg-muted/50 border-t-2 border-border font-bold"><td colSpan={4} className="px-4 py-3 text-muted-foreground text-sm">Total</td><td className="px-4 py-3 text-success">{fmtTZS(totalRev)}</td><td colSpan={3} /></tr></tfoot>
                   </table>
                 </div>
               </div>
@@ -1186,42 +1186,42 @@ export default function CalvaryAccounting() {
 
           {/* ── INVOICES ── */}
           {tab === "invoices" && (
-            <div className="space-y-4">
+            <div className="space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                <div><h2 className="text-xl font-bold text-slate-900">Invoices</h2><p className="text-sm text-slate-500">Click row to view · hover to edit · open drawer to mark paid or delete</p></div>
+                <div><h2 className="text-2xl font-bold text-foreground">Invoices</h2><p className="text-sm text-muted-foreground">Click row to view · hover to edit · open drawer to mark paid or delete</p></div>
                 <div className="flex gap-2">
-                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 bg-white" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} /></div>
+                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" /><input className="pl-9 pr-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48 bg-card text-foreground" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} /></div>
                   <Btn label="New Invoice" onClick={() => setModal("invoice")} icon={Plus} />
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
                 {[["all", "All"], ["receivable", "Receivable (AR)"], ["payable", "Payable (AP)"], ["overdue", "Overdue"]].map(([v, l]) => (
-                  <button key={v} onClick={() => setInvFilter(v)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${invFilter === v ? "bg-indigo-600 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{l}</button>
+                  <button key={v} onClick={() => setInvFilter(v)} className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors h-9 ${invFilter === v ? "bg-primary text-background shadow-md" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}>{l}</button>
                 ))}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[{ label: "Total AR", value: fmtTZS(invoices.filter(i => i.type === "receivable" && i.status !== "paid").reduce((s, i) => s + i.amount, 0)), color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-100" }, { label: "Total AP", value: fmtTZS(invoices.filter(i => i.type === "payable" && i.status !== "paid").reduce((s, i) => s + i.amount, 0)), color: "text-rose-600", bg: "bg-rose-50 border-rose-100" }, { label: "Overdue", value: invoices.filter(i => i.status !== "paid" && new Date(i.due_date) < NOW).length + " invoices", color: "text-red-700", bg: "bg-red-50 border-red-100" }, { label: "Paid", value: invoices.filter(i => i.status === "paid").length + " invoices", color: "text-slate-700", bg: "bg-slate-50 border-slate-100" }].map(s => (
-                  <div key={s.label} className={`rounded-2xl border p-4 ${s.bg}`}><p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">{s.label}</p><p className={`text-lg font-bold ${s.color}`}>{s.value}</p></div>
+                {[{ label: "Total AR", value: fmtTZS(invoices.filter(i => i.type === "receivable" && i.status !== "paid").reduce((s, i) => s + i.amount, 0)), color: "text-success", bg: "bg-success/10 border-success/20" }, { label: "Total AP", value: fmtTZS(invoices.filter(i => i.type === "payable" && i.status !== "paid").reduce((s, i) => s + i.amount, 0)), color: "text-destructive", bg: "bg-destructive/10 border-destructive/20" }, { label: "Overdue", value: invoices.filter(i => i.status !== "paid" && new Date(i.due_date) < NOW).length + " invoices", color: "text-destructive", bg: "bg-destructive/10 border-destructive/20" }, { label: "Paid", value: invoices.filter(i => i.status === "paid").length + " invoices", color: "text-foreground", bg: "bg-muted/50 border-border" }].map(s => (
+                  <div key={s.label} className={`rounded-2xl border p-4 shadow-lg ${s.bg}`}><p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1">{s.label}</p><p className={`text-lg font-bold ${s.color}`}>{s.value}</p></div>
                 ))}
               </div>
-              <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <THead cols={["Invoice #", "Party", "Type", "Amount", "Due Date", "Days", "Status", ""]} />
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-border">
                       {filtInv.length === 0 ? <EmptyRow cols={8} msg="No invoices" icon={FileText} /> : filtInv.map(inv => {
                         const isOverdue = new Date(inv.due_date) < NOW && inv.status !== "paid";
                         const days = Math.floor((NOW - new Date(inv.due_date)) / 86400000);
                         const ed = editId === inv.id;
                         return (
-                          <tr key={inv.id} className={`group transition-colors ${ed ? "bg-indigo-50/60" : "hover:bg-indigo-50/30 cursor-pointer"}`} onClick={!ed ? () => setSelectedInvoice(inv) : undefined}>
-                            <td className="px-4 py-2.5 font-mono text-xs font-bold text-indigo-600">{inv.invoice_number}</td>
-                            <td className="px-4 py-2.5">{ed ? <input className={eCls} value={editBuf.customer_name || ""} onChange={v => setEditBuf({ ...editBuf, customer_name: v.target.value })} /> : <span className="text-slate-700 font-medium">{inv.customer_name}</span>}</td>
+                          <tr key={inv.id} className={`group transition-colors ${ed ? "bg-primary/10" : "hover:bg-muted/50 cursor-pointer"}`} onClick={!ed ? () => setSelectedInvoice(inv) : undefined}>
+                            <td className="px-4 py-2.5 font-mono text-xs font-bold text-primary">{inv.invoice_number}</td>
+                            <td className="px-4 py-2.5">{ed ? <input className={eCls} value={editBuf.customer_name || ""} onChange={v => setEditBuf({ ...editBuf, customer_name: v.target.value })} /> : <span className="text-foreground font-medium">{inv.customer_name}</span>}</td>
                             <td className="px-4 py-2.5"><Badge color={inv.type === "receivable" ? "green" : "red"}>{inv.type === "receivable" ? "AR" : "AP"}</Badge></td>
-                            <td className="px-4 py-2.5">{ed ? <input type="number" className={eCls} value={editBuf.amount || ""} onChange={v => setEditBuf({ ...editBuf, amount: v.target.value })} /> : <span className={`font-bold ${inv.type === "receivable" ? "text-emerald-600" : "text-rose-600"}`}>{fmtCur(inv.amount, inv.currency || "TZS")}</span>}</td>
-                            <td className="px-4 py-2.5">{ed ? <SmSel value={editBuf.currency || "TZS"} onChange={v => setEditBuf({ ...editBuf, currency: v })} options={CURRENCIES.map(c => ({ value: c, label: c }))} /> : <span className="text-xs text-slate-500 whitespace-nowrap">{inv.due_date}</span>}</td>
-                            <td className="px-4 py-2.5">{ed ? <input type="date" className={eCls} value={editBuf.due_date || ""} onChange={v => setEditBuf({ ...editBuf, due_date: v.target.value })} /> : <span className="text-xs text-slate-500 whitespace-nowrap">{inv.due_date}</span>}</td>
-                            <td className={`px-4 py-2.5 text-xs font-semibold ${isOverdue ? "text-red-600" : "text-slate-400"}`}>{inv.status === "paid" ? "—" : isOverdue ? `${days}d over` : `${Math.abs(days)}d left`}</td>
+                            <td className="px-4 py-2.5">{ed ? <input type="number" className={eCls} value={editBuf.amount || ""} onChange={v => setEditBuf({ ...editBuf, amount: v.target.value })} /> : <span className={`font-bold ${inv.type === "receivable" ? "text-success" : "text-destructive"}`}>{fmtCur(inv.amount, inv.currency || "TZS")}</span>}</td>
+                            <td className="px-4 py-2.5">{ed ? <SmSel value={editBuf.currency || "TZS"} onChange={v => setEditBuf({ ...editBuf, currency: v })} options={CURRENCIES.map(c => ({ value: c, label: c }))} /> : <span className="text-xs text-muted-foreground whitespace-nowrap">{inv.due_date}</span>}</td>
+                            <td className="px-4 py-2.5">{ed ? <input type="date" className={eCls} value={editBuf.due_date || ""} onChange={v => setEditBuf({ ...editBuf, due_date: v.target.value })} /> : <span className="text-xs text-muted-foreground whitespace-nowrap">{inv.due_date}</span>}</td>
+                            <td className={`px-4 py-2.5 text-xs font-semibold ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>{inv.status === "paid" ? "—" : isOverdue ? `${days}d over` : `${Math.abs(days)}d left`}</td>
                             <td className="px-4 py-2.5">{ed ? <SmSel value={editBuf.status || "pending"} onChange={v => setEditBuf({ ...editBuf, status: v })} options={[{ value: "pending", label: "Pending" }, { value: "paid", label: "Paid" }]} /> : <SBadge status={isOverdue ? "overdue" : inv.status} />}</td>
                             <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}><EditActions isEditing={ed} onEdit={() => startEdit(inv)} onSave={saveInv} onCancel={cancelEdit} onDelete={() => setConfirm({ msg: `Delete ${inv.invoice_number}?`, onConfirm: () => del(setInvoices, inv.id) })} /></td>
                           </tr>
@@ -1236,26 +1236,26 @@ export default function CalvaryAccounting() {
 
           {/* ── TAXES ── */}
           {tab === "taxes" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between"><h2 className="text-xl font-bold text-slate-900">Tax Obligations</h2><Btn label="Record Tax" onClick={() => setModal("tax")} icon={Plus} /></div>
+            <div className="space-y-8">
+              <div className="flex items-center justify-between"><h2 className="text-2xl font-bold text-foreground">Tax Obligations</h2><Btn label="Record Tax" onClick={() => setModal("tax")} icon={Plus} /></div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Pending</p><p className="text-xl font-bold text-amber-600">{fmtTZS(taxes.filter(t => t.status === "pending").reduce((s, t) => s + t.amount, 0))}</p></div>
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Paid</p><p className="text-xl font-bold text-emerald-600">{fmtTZS(taxes.filter(t => t.status === "paid").reduce((s, t) => s + t.amount, 0))}</p></div>
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Overdue Items</p><p className="text-xl font-bold text-red-600">{taxes.filter(t => t.status === "pending" && new Date(t.due_date) < NOW).length}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Pending</p><p className="text-xl font-bold text-warning">{fmtTZS(taxes.filter(t => t.status === "pending").reduce((s, t) => s + t.amount, 0))}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Paid</p><p className="text-xl font-bold text-success">{fmtTZS(taxes.filter(t => t.status === "paid").reduce((s, t) => s + t.amount, 0))}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Overdue Items</p><p className="text-xl font-bold text-destructive">{taxes.filter(t => t.status === "pending" && new Date(t.due_date) < NOW).length}</p></div>
               </div>
-              <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
                 <table className="w-full text-sm">
                   <THead cols={["Tax Name", "Type", "Amount", "Due Date", "Status", ""]} />
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-border">
                     {taxes.length === 0 ? <EmptyRow cols={6} msg="No tax records" /> : taxes.map(t => {
                       const overdue = new Date(t.due_date) < NOW && t.status === "pending";
                       const ed = editId === t.id;
                       return (
-                        <tr key={t.id} className={`group transition-colors ${ed ? "bg-indigo-50/60" : "hover:bg-slate-50/70"}`}>
-                          <td className="px-4 py-2.5">{ed ? <input className={eCls} value={editBuf.tax_name || ""} onChange={v => setEditBuf({ ...editBuf, tax_name: v.target.value })} /> : <span className="font-semibold text-slate-800">{t.tax_name}</span>}</td>
+                        <tr key={t.id} className={`group transition-colors ${ed ? "bg-primary/10" : "hover:bg-muted/50"}`}>
+                          <td className="px-4 py-2.5">{ed ? <input className={eCls} value={editBuf.tax_name || ""} onChange={v => setEditBuf({ ...editBuf, tax_name: v.target.value })} /> : <span className="font-semibold text-foreground">{t.tax_name}</span>}</td>
                           <td className="px-4 py-2.5"><Badge color="blue">{t.type}</Badge></td>
-                          <td className="px-4 py-2.5">{ed ? <input type="number" className={eCls} value={editBuf.amount || ""} onChange={v => setEditBuf({ ...editBuf, amount: v.target.value })} /> : <span className="font-semibold text-slate-800">{fmtTZS(t.amount)}</span>}</td>
-                          <td className="px-4 py-2.5">{ed ? <input type="date" className={eCls} value={editBuf.due_date || ""} onChange={v => setEditBuf({ ...editBuf, due_date: v.target.value })} /> : <span className={`text-sm ${overdue ? "text-red-600 font-semibold" : "text-slate-500"}`}>{t.due_date}{overdue && <span className="ml-2 text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">Overdue</span>}</span>}</td>
+                          <td className="px-4 py-2.5">{ed ? <input type="number" className={eCls} value={editBuf.amount || ""} onChange={v => setEditBuf({ ...editBuf, amount: v.target.value })} /> : <span className="font-semibold text-foreground">{fmtTZS(t.amount)}</span>}</td>
+                          <td className="px-4 py-2.5">{ed ? <input type="date" className={eCls} value={editBuf.due_date || ""} onChange={v => setEditBuf({ ...editBuf, due_date: v.target.value })} /> : <span className={`text-sm ${overdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>{t.due_date}{overdue && <span className="ml-2 text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">Overdue</span>}</span>}</td>
                           <td className="px-4 py-2.5">{ed ? <SmSel value={editBuf.status || "pending"} onChange={v => setEditBuf({ ...editBuf, status: v })} options={[{ value: "pending", label: "Pending" }, { value: "paid", label: "Paid" }]} /> : <SBadge status={t.status} />}</td>
                           <td className="px-4 py-2.5"><EditActions isEditing={ed} onEdit={() => startEdit(t)} onSave={saveTax} onCancel={cancelEdit} onDelete={() => setConfirm({ msg: `Delete tax "${t.tax_name}"?`, onConfirm: () => del(setTaxes, t.id) })} /></td>
                         </tr>
@@ -1269,21 +1269,21 @@ export default function CalvaryAccounting() {
 
           {/* ── BANK STATEMENT ── */}
           {tab === "bank" && (
-            <div className="space-y-4">
+            <div className="space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
                 <div className="flex gap-2 flex-wrap">
                   {accounts.map(a => (
-                    <button key={a.id} onClick={() => setSelAcc(a.id)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${selAcc === a.id ? "bg-indigo-600 text-white" : "border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                    <button key={a.id} onClick={() => setSelAcc(a.id)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all h-11 ${selAcc === a.id ? "bg-primary text-background shadow-md" : "border border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}>
                       {a.currency} <span className="opacity-60 text-xs hidden sm:inline">– {a.name.split("–")[1]?.trim() || a.name}</span>
                     </button>
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 bg-white" placeholder="Search…" value={bankSearch} onChange={e => setBankSearch(e.target.value)} /></div>
-                  <select value={bankFilter} onChange={e => setBankFilter(e.target.value)} className="border border-slate-200 rounded-xl text-sm px-3 py-2 bg-white text-slate-700 focus:outline-none"><option value="all">All</option><option value="credit">Credits</option><option value="debit">Debits</option></select>
+                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" /><input className="pl-9 pr-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48 bg-card text-foreground" placeholder="Search…" value={bankSearch} onChange={e => setBankSearch(e.target.value)} /></div>
+                  <select value={bankFilter} onChange={e => setBankFilter(e.target.value)} className="border border-border rounded-xl text-sm px-3 py-2 bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary"><option value="all">All</option><option value="credit">Credits</option><option value="debit">Debits</option></select>
                 </div>
               </div>
-              <div className={`rounded-2xl p-5 text-white bg-gradient-to-r ${accGrad(activeAcc?.currency)}`}>
+              <div className={`rounded-2xl p-5 text-white bg-gradient-to-r ${accGrad(activeAcc?.currency)} shadow-lg`}>
                 <div className="flex flex-wrap gap-6 items-center">
                   <div><p className="text-white/50 text-xs">Account</p><p className="font-semibold">{activeAcc?.name}</p></div>
                   <div><p className="text-white/50 text-xs">Number</p><p className="font-mono text-sm">{activeAcc?.account_number}</p></div>
@@ -1292,28 +1292,28 @@ export default function CalvaryAccounting() {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Opening Balance</p><p className="font-bold text-slate-800 text-lg">{fmtCur(openBal, activeAcc?.currency)}</p></div>
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4"><p className="text-xs text-emerald-600 mb-1">Total Credits</p><p className="font-bold text-emerald-700 text-lg">{fmtCur(cTotal, activeAcc?.currency)}</p></div>
-                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4"><p className="text-xs text-rose-600 mb-1">Total Debits</p><p className="font-bold text-rose-700 text-lg">{fmtCur(dTotal, activeAcc?.currency)}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Opening Balance</p><p className="font-bold text-foreground text-lg">{fmtCur(openBal, activeAcc?.currency)}</p></div>
+                <div className="bg-success/10 border border-success/20 rounded-2xl p-4 shadow-lg"><p className="text-xs text-success mb-1">Total Credits</p><p className="font-bold text-success text-lg">{fmtCur(cTotal, activeAcc?.currency)}</p></div>
+                <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-4 shadow-lg"><p className="text-xs text-destructive mb-1">Total Debits</p><p className="font-bold text-destructive text-lg">{fmtCur(dTotal, activeAcc?.currency)}</p></div>
               </div>
-              <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <THead cols={["Date", "Ref", "Description", "Category", "Debit", "Credit", "Balance"]} />
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-border">
                       {filtStmt.length === 0 ? <EmptyRow cols={7} msg="No transactions match" /> : filtStmt.map(t => (
-                        <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{t.date}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-slate-400">{t.ref || "—"}</td>
-                          <td className="px-4 py-3 text-slate-700">{t.description}</td>
+                        <tr key={t.id} className="hover:bg-muted/50 transition-colors">
+                          <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{t.date}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{t.ref || "—"}</td>
+                          <td className="px-4 py-3 text-foreground">{t.description}</td>
                           <td className="px-4 py-3"><Badge>{t.category || "Other"}</Badge></td>
-                          <td className="px-4 py-3 text-rose-600 font-medium whitespace-nowrap">{t.type === "debit" ? fmtCur(t.amount, activeAcc?.currency) : "—"}</td>
-                          <td className="px-4 py-3 text-emerald-600 font-medium whitespace-nowrap">{t.type === "credit" ? fmtCur(t.amount, activeAcc?.currency) : "—"}</td>
-                          <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">{fmtCur(t.runBal, activeAcc?.currency)}</td>
+                          <td className="px-4 py-3 text-destructive font-medium whitespace-nowrap">{t.type === "debit" ? fmtCur(t.amount, activeAcc?.currency) : "—"}</td>
+                          <td className="px-4 py-3 text-success font-medium whitespace-nowrap">{t.type === "credit" ? fmtCur(t.amount, activeAcc?.currency) : "—"}</td>
+                          <td className="px-4 py-3 font-bold text-foreground whitespace-nowrap">{fmtCur(t.runBal, activeAcc?.currency)}</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot><tr className="bg-slate-50 border-t-2 border-slate-200 font-bold"><td colSpan={4} className="px-4 py-3 text-slate-600 text-sm">Closing Balance</td><td className="px-4 py-3 text-rose-600">{fmtCur(dTotal, activeAcc?.currency)}</td><td className="px-4 py-3 text-emerald-600">{fmtCur(cTotal, activeAcc?.currency)}</td><td className="px-4 py-3 text-slate-900">{fmtCur(activeAcc?.balance, activeAcc?.currency)}</td></tr></tfoot>
+                    <tfoot><tr className="bg-muted/50 border-t-2 border-border font-bold"><td colSpan={4} className="px-4 py-3 text-muted-foreground text-sm">Closing Balance</td><td className="px-4 py-3 text-destructive">{fmtCur(dTotal, activeAcc?.currency)}</td><td className="px-4 py-3 text-success">{fmtCur(cTotal, activeAcc?.currency)}</td><td className="px-4 py-3 text-foreground">{fmtCur(activeAcc?.balance, activeAcc?.currency)}</td></tr></tfoot>
                   </table>
                 </div>
               </div>
@@ -1322,23 +1322,23 @@ export default function CalvaryAccounting() {
 
           {/* ── CHART OF ACCOUNTS ── */}
           {tab === "coa" && (
-            <div className="space-y-5">
-              <div className="flex items-center justify-between"><h2 className="text-xl font-bold text-slate-900">Chart of Accounts</h2><Btn label="Add Account" onClick={() => setModal("coa")} icon={Plus} /></div>
+            <div className="space-y-8">
+              <div className="flex items-center justify-between"><h2 className="text-2xl font-bold text-foreground">Chart of Accounts</h2><Btn label="Add Account" onClick={() => setModal("coa")} icon={Plus} /></div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[{ label: "Assets", value: totalAssets, c: "text-blue-700", bg: "bg-blue-50 border-blue-100" }, { label: "Liabilities", value: totalLiab, c: "text-red-700", bg: "bg-red-50 border-red-100" }, { label: "Equity", value: totalEquity, c: "text-purple-700", bg: "bg-purple-50 border-purple-100" }, { label: "Net Income", value: netIncome, c: netIncome >= 0 ? "text-emerald-700" : "text-red-700", bg: "bg-emerald-50 border-emerald-100" }].map(s => (
-                  <div key={s.label} className={`rounded-2xl border p-4 ${s.bg}`}><p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">{s.label}</p><p className={`text-xl font-bold ${s.c}`}>{fmtTZS(Math.abs(s.value))}</p></div>
+                {[{ label: "Assets", value: totalAssets, c: "text-primary", bg: "bg-primary/10 border-primary/20" }, { label: "Liabilities", value: totalLiab, c: "text-destructive", bg: "bg-destructive/10 border-destructive/20" }, { label: "Equity", value: totalEquity, c: "text-accent", bg: "bg-accent/10 border-accent/20" }, { label: "Net Income", value: netIncome, c: netIncome >= 0 ? "text-success" : "text-destructive", bg: "bg-success/10 border-success/20" }].map(s => (
+                  <div key={s.label} className={`rounded-2xl border p-4 shadow-lg ${s.bg}`}><p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1">{s.label}</p><p className={`text-xl font-bold ${s.c}`}>{fmtTZS(Math.abs(s.value))}</p></div>
                 ))}
               </div>
-              <div className={`rounded-xl border px-4 py-3 flex items-center justify-between ${Math.abs(totalAssets - totalLiab - totalEquity - netIncome) < 1000 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
-                <div className="flex items-center gap-2"><Scale className="w-4 h-4 text-slate-500" /><span className="text-sm font-semibold text-slate-700">Assets = Liabilities + Equity + Net Income</span></div>
+              <div className={`rounded-xl border px-4 py-3 flex items-center justify-between shadow-sm ${Math.abs(totalAssets - totalLiab - totalEquity - netIncome) < 1000 ? "bg-success/10 border-success/20" : "bg-destructive/10 border-destructive/20"}`}>
+                <div className="flex items-center gap-2"><Scale className="w-4 h-4 text-muted-foreground" /><span className="text-sm font-semibold text-foreground">Assets = Liabilities + Equity + Net Income</span></div>
                 <Badge color={Math.abs(totalAssets - totalLiab - totalEquity - netIncome) < 1000 ? "green" : "red"}>{Math.abs(totalAssets - totalLiab - totalEquity - netIncome) < 1000 ? "✓ Balanced" : "⚠ Check"}</Badge>
               </div>
-              <div className="flex gap-2 flex-wrap">{["All", ...COA_TYPES].map(t => <button key={t} onClick={() => setCoaFilter(t)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${coaFilter === t ? "bg-indigo-600 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>{t}</button>)}</div>
+              <div className="flex gap-2 flex-wrap">{["All", ...COA_TYPES].map(t => <button key={t} onClick={() => setCoaFilter(t)} className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors h-9 ${coaFilter === t ? "bg-primary text-background shadow-md" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted"}`}>{t}</button>)}</div>
               {coaGroups.filter(g => coaFilter === "All" || g.type === coaFilter).map(g => {
                 const tc = tcol[g.type];
                 const subGroups = getSubGroups(g.type);
                 return (
-                  <div key={g.type} className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+                  <div key={g.type} className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
                     {/* Section header */}
                     <div className={`flex items-center justify-between px-5 py-3.5 ${tc.bg} ${tc.border} border-b`}>
                       <div className="flex items-center gap-2.5">
@@ -1351,20 +1351,20 @@ export default function CalvaryAccounting() {
                     {/* Sub-groups */}
                     {subGroups.map(sg => (
                       <div key={sg.name}>
-                        <div className="flex items-center justify-between px-5 py-2 bg-slate-50/80 border-b border-slate-100">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{sg.name}</span>
-                          <span className="text-xs font-semibold text-slate-500">{fmtTZS(Math.abs(sg.total))}</span>
+                        <div className="flex items-center justify-between px-5 py-2 bg-muted/50 border-b border-border">
+                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{sg.name}</span>
+                          <span className="text-xs font-semibold text-muted-foreground">{fmtTZS(Math.abs(sg.total))}</span>
                         </div>
                         <table className="w-full text-sm">
-                          <tbody className="divide-y divide-slate-50">
+                          <tbody className="divide-y divide-border">
                             {sg.accounts.map(a => {
                               const ed = editId === a.code;
                               return (
-                                <tr key={a.code} className={`group transition-colors ${ed ? "bg-indigo-50/60" : "hover:bg-slate-50/60"}`}>
-                                  <td className="px-5 py-2.5 font-mono text-xs text-slate-400 font-bold w-16">{a.code}</td>
-                                  <td className="px-3 py-2.5">{ed ? <input className={eCls} value={editBuf.name || ""} onChange={v => setEditBuf({ ...editBuf, name: v.target.value })} /> : <span className="text-slate-700 text-sm">{a.name}</span>}</td>
+                                <tr key={a.code} className={`group transition-colors ${ed ? "bg-primary/10" : "hover:bg-muted/50"}`}>
+                                  <td className="px-5 py-2.5 font-mono text-xs text-muted-foreground font-bold w-16">{a.code}</td>
+                                  <td className="px-3 py-2.5">{ed ? <input className={eCls} value={editBuf.name || ""} onChange={v => setEditBuf({ ...editBuf, name: v.target.value })} /> : <span className="text-foreground text-sm">{a.name}</span>}</td>
                                   <td className="px-3 py-2.5 w-20"><Badge color={a.normal === "debit" ? "blue" : "purple"}>{a.normal}</Badge></td>
-                                  <td className="px-3 py-2.5 text-right w-36">{ed ? <input type="number" className={`${eCls} text-right`} value={editBuf.balance || ""} onChange={v => setEditBuf({ ...editBuf, balance: v.target.value })} /> : <span className={`font-semibold text-sm ${a.balance < 0 ? "text-rose-600" : "text-slate-800"}`}>{fmtTZS(a.balance)}</span>}</td>
+                                  <td className="px-3 py-2.5 text-right w-36">{ed ? <input type="number" className={`${eCls} text-right`} value={editBuf.balance || ""} onChange={v => setEditBuf({ ...editBuf, balance: v.target.value })} /> : <span className={`font-semibold text-sm ${a.balance < 0 ? "text-destructive" : "text-foreground"}`}>{fmtTZS(a.balance)}</span>}</td>
                                   <td className="px-3 py-2.5 w-20"><EditActions isEditing={ed} onEdit={() => { setEditId(a.code); setEditBuf({ ...a }); }} onSave={saveCOARow} onCancel={cancelEdit} onDelete={() => setConfirm({ msg: `Delete ${a.code} – ${a.name}?`, onConfirm: () => { setCoa(p => p.filter(x => x.code !== a.code)); setConfirm(null); } })} /></td>
                                 </tr>
                               );
@@ -1374,7 +1374,7 @@ export default function CalvaryAccounting() {
                       </div>
                     ))}
                     {/* Section footer */}
-                    <div className={`flex items-center justify-between px-5 py-2.5 border-t-2 border-slate-200 ${tc.bg}`}>
+                    <div className={`flex items-center justify-between px-5 py-2.5 border-t-2 border-border ${tc.bg}`}>
                       <span className={`text-xs font-bold ${tc.text}`}>TOTAL {(SECTION_LABELS[g.type] || g.type).toUpperCase()}</span>
                       <span className={`font-bold text-sm ${tc.text}`}>{fmtTZS(Math.abs(g.total))}</span>
                     </div>
@@ -1386,18 +1386,18 @@ export default function CalvaryAccounting() {
 
           {/* ── JOURNAL ENTRIES ── */}
           {tab === "journal" && (
-            <div className="space-y-4">
+            <div className="space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                <div><h2 className="text-xl font-bold text-slate-900">General Journal</h2><p className="text-sm text-slate-500">Edit the header with <Pencil className="w-3 h-3 inline" /> · delete a mistaken entry with <Trash2 className="w-3 h-3 inline" /> then re-post a corrected one</p></div>
+                <div><h2 className="text-2xl font-bold text-foreground">General Journal</h2><p className="text-sm text-muted-foreground">Edit the header with <Pencil className="w-3 h-3 inline" /> · delete a mistaken entry with <Trash2 className="w-3 h-3 inline" /> then re-post a corrected one</p></div>
                 <div className="flex gap-2">
-                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><input className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 bg-white" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} /></div>
+                  <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" /><input className="pl-9 pr-4 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48 bg-card text-foreground" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} /></div>
                   <Btn label="New Entry" onClick={() => setModal("journal")} icon={Plus} />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Entries</p><p className="text-2xl font-bold text-slate-800">{journal.length}</p></div>
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Total Debits</p><p className="text-2xl font-bold text-rose-600">{fmtTZS(journal.reduce((s, je) => s + je.lines.reduce((ss, l) => ss + l.debit, 0), 0))}</p></div>
-                <div className="bg-white border border-slate-100 rounded-2xl p-4"><p className="text-xs text-slate-500 mb-1">Total Credits</p><p className="text-2xl font-bold text-emerald-600">{fmtTZS(journal.reduce((s, je) => s + je.lines.reduce((ss, l) => ss + l.credit, 0), 0))}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Entries</p><p className="text-2xl font-bold text-foreground">{journal.length}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Total Debits</p><p className="text-2xl font-bold text-destructive">{fmtTZS(journal.reduce((s, je) => s + je.lines.reduce((ss, l) => ss + l.debit, 0), 0))}</p></div>
+                <div className="bg-card border border-border rounded-2xl p-4 shadow-lg"><p className="text-xs text-muted-foreground mb-1">Total Credits</p><p className="text-2xl font-bold text-success">{fmtTZS(journal.reduce((s, je) => s + je.lines.reduce((ss, l) => ss + l.credit, 0), 0))}</p></div>
               </div>
               <div className="space-y-2">
                 {journal.filter(je => !search || je.description.toLowerCase().includes(search.toLowerCase()) || je.reference.toLowerCase().includes(search.toLowerCase())).map(je => {
@@ -1405,47 +1405,47 @@ export default function CalvaryAccounting() {
                   const isOpen = expandedJE === je.id;
                   const ed = editId === je.id;
                   return (
-                    <div key={je.id} className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+                    <div key={je.id} className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
                       <div className="flex items-center justify-between px-5 py-4 gap-3">
                         <button onClick={() => setExpandedJE(isOpen ? null : je.id)} className="flex items-center gap-4 flex-1 text-left hover:opacity-80 transition-opacity">
                           <div className="text-center min-w-[64px]">
-                            {ed ? <input className={`${eCls} text-center w-16`} value={editBuf.reference || ""} onChange={v => setEditBuf({ ...editBuf, reference: v.target.value })} /> : <p className="text-xs font-mono font-bold text-indigo-600">{je.reference}</p>}
-                            {ed ? <input type="date" className={`${eCls} mt-1`} value={editBuf.date || ""} onChange={v => setEditBuf({ ...editBuf, date: v.target.value })} /> : <p className="text-xs text-slate-400">{je.date}</p>}
+                            {ed ? <input className={`${eCls} text-center w-16`} value={editBuf.reference || ""} onChange={v => setEditBuf({ ...editBuf, reference: v.target.value })} /> : <p className="text-xs font-mono font-bold text-primary">{je.reference}</p>}
+                            {ed ? <input type="date" className={`${eCls} mt-1`} value={editBuf.date || ""} onChange={v => setEditBuf({ ...editBuf, date: v.target.value })} /> : <p className="text-xs text-muted-foreground">{je.date}</p>}
                           </div>
-                          <div className="w-px h-8 bg-slate-100 flex-shrink-0" />
+                          <div className="w-px h-8 bg-border flex-shrink-0" />
                           <div className="min-w-0 flex-1">
-                            {ed ? <input className={eCls} value={editBuf.description || ""} onChange={v => setEditBuf({ ...editBuf, description: v.target.value })} /> : <p className="font-semibold text-slate-800 truncate">{je.description}</p>}
-                            <p className="text-xs text-slate-400 mt-0.5">{je.lines.length} lines · {fmtTZS(totalDr)}</p>
+                            {ed ? <input className={eCls} value={editBuf.description || ""} onChange={v => setEditBuf({ ...editBuf, description: v.target.value })} /> : <p className="font-semibold text-foreground truncate">{je.description}</p>}
+                            <p className="text-xs text-muted-foreground mt-0.5">{je.lines.length} lines · {fmtTZS(totalDr)}</p>
                           </div>
-                          {!ed && <div className="flex items-center gap-2 flex-shrink-0"><Badge color="green"><CheckCircle2 className="w-3 h-3" />Balanced</Badge><ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} /></div>}
+                          {!ed && <div className="flex items-center gap-2 flex-shrink-0"><Badge color="green"><CheckCircle2 className="w-3 h-3" />Balanced</Badge><ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} /></div>}
                         </button>
                         <div className="flex gap-1 flex-shrink-0">
                           {ed ? (
-                            <><button onClick={saveJEHeader} className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"><Save className="w-4 h-4" /></button><button onClick={cancelEdit} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button></>
+                            <><button onClick={saveJEHeader} className="p-1.5 rounded-lg text-success hover:bg-success/10"><Save className="w-4 h-4" /></button><button onClick={cancelEdit} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted"><X className="w-4 h-4" /></button></>
                           ) : (
-                            <><button onClick={() => startEdit(je)} title="Edit header" className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors"><Pencil className="w-3.5 h-3.5" /></button><button onClick={() => setConfirm({ msg: `Delete entry ${je.reference}?`, detail: "Delete and re-post a corrected entry to fix line items.", onConfirm: () => del(setJournal, je.id) })} className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button></>
+                            <><button onClick={() => startEdit(je)} title="Edit header" className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"><Pencil className="w-3.5 h-3.5" /></button><button onClick={() => setConfirm({ msg: `Delete entry ${je.reference}?`, detail: "Delete and re-post a corrected entry to fix line items.", onConfirm: () => del(setJournal, je.id) })} className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"><Trash2 className="w-4 h-4" /></button></>
                           )}
                         </div>
                       </div>
                       {isOpen && (
-                        <div className="border-t border-slate-100">
+                        <div className="border-t border-border">
                           <table className="w-full text-sm">
-                            <thead><tr className="bg-slate-50 border-b border-slate-100"><th className="text-left px-5 py-2.5 text-xs text-slate-400 font-semibold">Code</th><th className="text-left px-5 py-2.5 text-xs text-slate-400 font-semibold">Account</th><th className="text-right px-5 py-2.5 text-xs text-slate-400 font-semibold">Debit</th><th className="text-right px-5 py-2.5 text-xs text-slate-400 font-semibold">Credit</th></tr></thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <thead><tr className="bg-muted/50 border-b border-border"><th className="text-left px-5 py-2.5 text-xs text-muted-foreground font-semibold">Code</th><th className="text-left px-5 py-2.5 text-xs text-muted-foreground font-semibold">Account</th><th className="text-right px-5 py-2.5 text-xs text-muted-foreground font-semibold">Debit</th><th className="text-right px-5 py-2.5 text-xs text-muted-foreground font-semibold">Credit</th></tr></thead>
+                            <tbody className="divide-y divide-border">
                               {je.lines.map((l, i) => (
-                                <tr key={i} className="hover:bg-slate-50/50">
-                                  <td className="px-5 py-3 font-mono text-xs text-slate-400 font-bold">{l.account_code}</td>
-                                  <td className={`px-5 py-3 text-slate-700 ${l.credit > 0 ? "pl-10" : ""}`}>{l.account_name}</td>
-                                  <td className="px-5 py-3 text-right font-medium text-slate-800">{l.debit > 0 ? fmtTZS(l.debit) : <span className="text-slate-300">—</span>}</td>
-                                  <td className="px-5 py-3 text-right font-medium text-slate-800">{l.credit > 0 ? fmtTZS(l.credit) : <span className="text-slate-300">—</span>}</td>
+                                <tr key={i} className="hover:bg-muted/50">
+                                  <td className="px-5 py-3 font-mono text-xs text-muted-foreground font-bold">{l.account_code}</td>
+                                  <td className={`px-5 py-3 text-foreground ${l.credit > 0 ? "pl-10" : ""}`}>{l.account_name}</td>
+                                  <td className="px-5 py-3 text-right font-medium text-foreground">{l.debit > 0 ? fmtTZS(l.debit) : <span className="text-muted-foreground/50">—</span>}</td>
+                                  <td className="px-5 py-3 text-right font-medium text-foreground">{l.credit > 0 ? fmtTZS(l.credit) : <span className="text-muted-foreground/50">—</span>}</td>
                                 </tr>
                               ))}
                             </tbody>
-                            <tfoot><tr className="bg-indigo-50 border-t border-indigo-100"><td colSpan={2} className="px-5 py-2.5 text-xs font-bold text-indigo-600">Totals</td><td className="px-5 py-2.5 text-right text-xs font-bold text-slate-800">{fmtTZS(totalDr)}</td><td className="px-5 py-2.5 text-right text-xs font-bold text-slate-800">{fmtTZS(totalDr)}</td></tr></tfoot>
+                            <tfoot><tr className="bg-primary/10 border-t border-primary/20"><td colSpan={2} className="px-5 py-2.5 text-xs font-bold text-primary">Totals</td><td className="px-5 py-2.5 text-right text-xs font-bold text-foreground">{fmtTZS(totalDr)}</td><td className="px-5 py-2.5 text-right text-xs font-bold text-foreground">{fmtTZS(totalDr)}</td></tr></tfoot>
                           </table>
-                          <div className="px-5 py-3 bg-amber-50 border-t border-amber-100 flex items-center gap-2">
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                            <p className="text-xs text-amber-700">To fix line items, delete this entry and post a corrected one. The pencil icon edits the header only.</p>
+                          <div className="px-5 py-3 bg-warning/10 border-t border-warning/20 flex items-center gap-2">
+                            <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0" />
+                            <p className="text-xs text-warning">To fix line items, delete this entry and post a corrected one. The pencil icon edits the header only.</p>
                           </div>
                         </div>
                       )}
@@ -1458,31 +1458,31 @@ export default function CalvaryAccounting() {
 
           {/* ── AGING REPORT ── */}
           {tab === "aging" && (
-            <div className="space-y-5">
+            <div className="space-y-8">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                <div><h2 className="text-xl font-bold text-slate-900">Aging Report</h2><p className="text-sm text-slate-500">As of {NOW.toDateString()} · click any row to open invoice</p></div>
-                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-                  {[["receivable", "Accounts Receivable", "bg-emerald-600"], ["payable", "Accounts Payable", "bg-rose-600"]].map(([v, l, ac]) => (
-                    <button key={v} onClick={() => setAgingType(v)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${agingType === v ? `${ac} text-white shadow-sm` : "text-slate-600 hover:text-slate-800"}`}>{l}</button>
+                <div><h2 className="text-2xl font-bold text-foreground">Aging Report</h2><p className="text-sm text-muted-foreground">As of {NOW.toDateString()} · click any row to open invoice</p></div>
+                <div className="flex gap-2 p-1 bg-muted rounded-xl">
+                  {[["receivable", "Accounts Receivable", "bg-success"], ["payable", "Accounts Payable", "bg-destructive"]].map(([v, l, ac]) => (
+                    <button key={v} onClick={() => setAgingType(v)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all h-9 ${agingType === v ? `${ac} text-background shadow-md` : "text-muted-foreground hover:text-foreground"}`}>{l}</button>
                   ))}
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {agTotals.map(b => { const pct = agGrand > 0 ? (b.total / agGrand) * 100 : 0; const bs = bStyle[b.bucket]; return (<div key={b.bucket} className="bg-white border border-slate-100 rounded-2xl p-4 space-y-2"><Badge color={bs.badge}>{b.bucket}</Badge><p className="text-xl font-bold text-slate-800">{fmtTZS(b.total)}</p><p className="text-xs text-slate-400">{b.count} invoice{b.count !== 1 ? "s" : ""}</p><div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden"><div className={`h-1.5 rounded-full ${bs.bar}`} style={{ width: `${pct}%` }} /></div><p className="text-xs text-slate-400">{pct.toFixed(1)}%</p></div>); })}
+                {agTotals.map(b => { const pct = agGrand > 0 ? (b.total / agGrand) * 100 : 0; const bs = bStyle[b.bucket]; return (<div key={b.bucket} className="bg-card border border-border rounded-2xl p-4 space-y-2 shadow-lg"><Badge color={bs.badge}>{b.bucket}</Badge><p className="text-xl font-bold text-foreground">{fmtTZS(b.total)}</p><p className="text-xs text-muted-foreground">{b.count} invoice{b.count !== 1 ? "s" : ""}</p><div className="w-full bg-muted rounded-full h-1.5 overflow-hidden"><div className={`h-1.5 rounded-full ${bs.bar}`} style={{ width: `${pct}%` }} /></div><p className="text-xs text-muted-foreground">{pct.toFixed(1)}%</p></div>); })}
               </div>
-              <div className={`rounded-2xl border px-5 py-4 flex items-center justify-between ${agingType === "receivable" ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"}`}>
-                <p className={`font-bold text-sm ${agingType === "receivable" ? "text-emerald-800" : "text-rose-800"}`}>Total Outstanding {agingType === "receivable" ? "Receivables" : "Payables"} · {agItems.length} invoices</p>
-                <p className={`text-2xl font-bold ${agingType === "receivable" ? "text-emerald-700" : "text-rose-700"}`}>{fmtTZS(agGrand)}</p>
+              <div className={`rounded-2xl border px-5 py-4 flex items-center justify-between shadow-sm ${agingType === "receivable" ? "bg-success/10 border-success/20" : "bg-destructive/10 border-destructive/20"}`}>
+                <p className={`font-bold text-sm ${agingType === "receivable" ? "text-success" : "text-destructive"}`}>Total Outstanding {agingType === "receivable" ? "Receivables" : "Payables"} · {agItems.length} invoices</p>
+                <p className={`text-2xl font-bold ${agingType === "receivable" ? "text-success" : "text-destructive"}`}>{fmtTZS(agGrand)}</p>
               </div>
               {agItems.filter(i => i.daysOverdue > 30).length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3"><AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" /><div><p className="text-sm font-bold text-amber-800">{agItems.filter(i => i.daysOverdue > 30).length} overdue invoice{agItems.filter(i => i.daysOverdue > 30).length > 1 ? "s" : ""} need attention</p><p className="text-xs text-amber-600 mt-0.5">{fmtTZS(agItems.filter(i => i.daysOverdue > 30).reduce((s, i) => s + i.amount, 0))} at risk</p></div></div>
+                <div className="bg-warning/10 border border-warning/20 rounded-xl px-4 py-3 flex items-start gap-3 shadow-sm"><AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" /><div><p className="text-sm font-bold text-warning">{agItems.filter(i => i.daysOverdue > 30).length} overdue invoice{agItems.filter(i => i.daysOverdue > 30).length > 1 ? "s" : ""} need attention</p><p className="text-xs text-warning mt-0.5">{fmtTZS(agItems.filter(i => i.daysOverdue > 30).reduce((s, i) => s + i.amount, 0))} at risk</p></div></div>
               )}
-              <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <THead cols={["Invoice #", "Party", "Amount", "Due Date", "Days", "Bucket", "Risk"]} />
-                    <tbody className="divide-y divide-slate-50">
-                      {agItems.length === 0 ? <EmptyRow cols={7} msg="All clear – no outstanding items!" icon={CheckCircle2} /> : agItems.sort((a, b) => b.daysOverdue - a.daysOverdue).map(inv => { const bs = bStyle[inv.bucket]; const risk = inv.daysOverdue > 90 ? ["red", "Critical"] : inv.daysOverdue > 60 ? ["red", "High"] : inv.daysOverdue > 30 ? ["orange", "Medium"] : inv.daysOverdue > 0 ? ["amber", "Low"] : ["green", "Current"]; return (<tr key={inv.id} className="hover:bg-slate-50/70 transition-colors cursor-pointer" onClick={() => setSelectedInvoice(inv)}><td className="px-4 py-3 font-mono text-xs font-bold text-indigo-600">{inv.invoice_number}</td><td className="px-4 py-3 text-slate-700 font-medium">{inv.customer_name}</td><td className={`px-4 py-3 font-bold ${agingType === "receivable" ? "text-emerald-600" : "text-rose-600"}`}>{fmtCur(inv.amount, inv.currency || "TZS")}</td><td className="px-4 py-3 text-slate-500 text-xs">{inv.due_date}</td><td className={`px-4 py-3 font-bold text-sm ${bs.text}`}>{inv.daysOverdue <= 0 ? `${Math.abs(inv.daysOverdue)}d left` : `${inv.daysOverdue}d over`}</td><td className="px-4 py-3"><Badge color={bs.badge}>{inv.bucket}</Badge></td><td className="px-4 py-3"><Badge color={risk[0]}>{risk[1]}</Badge></td></tr>); })}
+                    <tbody className="divide-y divide-border">
+                      {agItems.length === 0 ? <EmptyRow cols={7} msg="All clear – no outstanding items!" icon={CheckCircle2} /> : agItems.sort((a, b) => b.daysOverdue - a.daysOverdue).map(inv => { const bs = bStyle[inv.bucket]; const risk = inv.daysOverdue > 90 ? ["red", "Critical"] : inv.daysOverdue > 60 ? ["red", "High"] : inv.daysOverdue > 30 ? ["orange", "Medium"] : inv.daysOverdue > 0 ? ["amber", "Low"] : ["green", "Current"]; return (<tr key={inv.id} className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => setSelectedInvoice(inv)}><td className="px-4 py-3 font-mono text-xs font-bold text-primary">{inv.invoice_number}</td><td className="px-4 py-3 text-foreground font-medium">{inv.customer_name}</td><td className={`px-4 py-3 font-bold ${agingType === "receivable" ? "text-success" : "text-destructive"}`}>{fmtCur(inv.amount, inv.currency || "TZS")}</td><td className="px-4 py-3 text-muted-foreground text-xs">{inv.due_date}</td><td className={`px-4 py-3 font-bold text-sm ${bs.text}`}>{inv.daysOverdue <= 0 ? `${Math.abs(inv.daysOverdue)}d left` : `${inv.daysOverdue}d over`}</td><td className="px-4 py-3"><Badge color={bs.badge}>{inv.bucket}</Badge></td><td className="px-4 py-3"><Badge color={risk[0]}>{risk[1]}</Badge></td></tr>); })}
                     </tbody>
                   </table>
                 </div>
