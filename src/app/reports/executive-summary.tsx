@@ -266,7 +266,7 @@ export default function ExecutiveSummaryPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
           {/* Header */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div>
@@ -278,7 +278,7 @@ export default function ExecutiveSummaryPage() {
                 date={dateRange} 
                 onDateChange={setDateRange}
               />
-              <Button onClick={handleExport} variant="outline" className="gap-2">
+              <Button onClick={handleExport} variant="outline" className="gap-2 h-11">
                 <Download className="size-4" />
                 Export CSV
               </Button>
@@ -287,25 +287,25 @@ export default function ExecutiveSummaryPage() {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-                <div className="p-2 bg-emerald-100 rounded-full">
-                  <TrendingUp className="size-4 text-emerald-600" />
+                <div className="p-2 bg-success/10 rounded-full">
+                  <TrendingUp className="size-4 text-success" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(data?.totalRevenue || 0)}</div>
+                <div className="text-2xl font-bold text-foreground">{formatCurrency(data?.totalRevenue || 0)}</div>
                 <div className="flex items-center gap-1 text-xs">
                   {data?.revenueTrend && data.revenueTrend > 0 ? (
                     <>
-                      <ArrowUpRight className="size-3 text-emerald-600" />
-                      <span className="text-emerald-600">+{data.revenueTrend.toFixed(1)}%</span>
+                      <ArrowUpRight className="size-3 text-success" />
+                      <span className="text-success">+{data.revenueTrend.toFixed(1)}%</span>
                     </>
                   ) : (
                     <>
-                      <ArrowDownRight className="size-3 text-red-600" />
-                      <span className="text-red-600">{data?.revenueTrend?.toFixed(1)}%</span>
+                      <ArrowDownRight className="size-3 text-destructive" />
+                      <span className="text-destructive">{data?.revenueTrend?.toFixed(1)}%</span>
                     </>
                   )}
                   <span className="text-muted-foreground ml-1">vs last month</span>
@@ -313,25 +313,25 @@ export default function ExecutiveSummaryPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
-                <div className="p-2 bg-red-100 rounded-full">
-                  <TrendingDown className="size-4 text-red-600" />
+                <div className="p-2 bg-destructive/10 rounded-full">
+                  <TrendingDown className="size-4 text-destructive" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(data?.totalExpenses || 0)}</div>
+                <div className="text-2xl font-bold text-foreground">{formatCurrency(data?.totalExpenses || 0)}</div>
                 <div className="flex items-center gap-1 text-xs">
                   {data?.expenseTrend && data.expenseTrend > 0 ? (
                     <>
-                      <ArrowUpRight className="size-3 text-red-600" />
-                      <span className="text-red-600">+{data.expenseTrend.toFixed(1)}%</span>
+                      <ArrowUpRight className="size-3 text-destructive" />
+                      <span className="text-destructive">+{data.expenseTrend.toFixed(1)}%</span>
                     </>
                   ) : (
                     <>
-                      <ArrowDownRight className="size-3 text-emerald-600" />
-                      <span className="text-emerald-600">{data?.expenseTrend?.toFixed(1)}%</span>
+                      <ArrowDownRight className="size-3 text-success" />
+                      <span className="text-success">{data?.expenseTrend?.toFixed(1)}%</span>
                     </>
                   )}
                   <span className="text-muted-foreground ml-1">vs last month</span>
@@ -339,15 +339,15 @@ export default function ExecutiveSummaryPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Net Profit</CardTitle>
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <Wallet className="size-4 text-blue-600" />
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Wallet className="size-4 text-primary" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${(data?.netProfit || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <div className={`text-2xl font-bold text-foreground ${(data?.netProfit || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
                   {formatCurrency(data?.netProfit || 0)}
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -356,15 +356,15 @@ export default function ExecutiveSummaryPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle>
-                <div className="p-2 bg-orange-100 rounded-full">
-                  <Receipt className="size-4 text-orange-600" />
+                <div className="p-2 bg-warning/10 rounded-full">
+                  <Receipt className="size-4 text-warning" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{formatCurrency(data?.outstandingInvoices || 0)}</div>
+                <div className="text-2xl font-bold text-warning">{formatCurrency(data?.outstandingInvoices || 0)}</div>
                 <div className="text-xs text-muted-foreground">Pending invoices</div>
               </CardContent>
             </Card>
@@ -372,48 +372,48 @@ export default function ExecutiveSummaryPage() {
 
           {/* Secondary Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Trips</CardTitle>
                 <Truck className="size-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{data?.totalTrips || 0}</div>
+                <div className="text-xl font-bold text-foreground">{data?.totalTrips || 0}</div>
                 <div className="text-xs text-muted-foreground">Completed trips</div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Customers</CardTitle>
                 <Users className="size-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{data?.totalCustomers || 0}</div>
+                <div className="text-xl font-bold text-foreground">{data?.totalCustomers || 0}</div>
                 <div className="text-xs text-muted-foreground">Active clients</div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Fuel Costs</CardTitle>
                 <Fuel className="size-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{formatCurrency(data?.fuelCosts || 0)}</div>
+                <div className="text-xl font-bold text-foreground">{formatCurrency(data?.fuelCosts || 0)}</div>
                 <div className="text-xs text-muted-foreground">
                   {data?.totalExpenses > 0 ? ((data?.fuelCosts || 0) / data.totalExpenses * 100).toFixed(1) : 0}% of expenses
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance</CardTitle>
                 <FileText className="size-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{formatCurrency(data?.maintenanceCosts || 0)}</div>
+                <div className="text-xl font-bold text-foreground">{formatCurrency(data?.maintenanceCosts || 0)}</div>
                 <div className="text-xs text-muted-foreground">
                   {data?.totalExpenses > 0 ? ((data?.maintenanceCosts || 0) / data.totalExpenses * 100).toFixed(1) : 0}% of expenses
                 </div>
@@ -424,36 +424,36 @@ export default function ExecutiveSummaryPage() {
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Revenue vs Expenses Chart */}
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 border-border shadow-lg">
               <CardHeader>
-                <CardTitle>Revenue vs Expenses Trend</CardTitle>
+                <CardTitle className="text-foreground">Revenue vs Expenses Trend</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis 
                         dataKey="month" 
                         tick={{ fontSize: 12 }}
-                        stroke="#6b7280"
+                        stroke="hsl(var(--muted-foreground))"
                       />
                       <YAxis 
                         tick={{ fontSize: 12 }}
-                        stroke="#6b7280"
+                        stroke="hsl(var(--muted-foreground))"
                         tickFormatter={(value) => `TZS ${(value / 1000000).toFixed(1)}M`}
                       />
                       <Tooltip 
                         formatter={(value: number) => formatCurrency(value)}
-                        contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
                       />
                       <Legend />
                       <Area 
                         type="monotone" 
                         dataKey="revenue" 
                         name="Revenue" 
-                        stroke="#10b981" 
-                        fill="#10b981" 
+                        stroke="hsl(var(--success))" 
+                        fill="hsl(var(--success))" 
                         fillOpacity={0.2}
                         strokeWidth={2}
                       />
@@ -461,8 +461,8 @@ export default function ExecutiveSummaryPage() {
                         type="monotone" 
                         dataKey="expenses" 
                         name="Expenses" 
-                        stroke="#ef4444" 
-                        fill="#ef4444" 
+                        stroke="hsl(var(--destructive))" 
+                        fill="hsl(var(--destructive))" 
                         fillOpacity={0.2}
                         strokeWidth={2}
                       />
@@ -470,8 +470,8 @@ export default function ExecutiveSummaryPage() {
                         type="monotone" 
                         dataKey="profit" 
                         name="Profit" 
-                        stroke="#3b82f6" 
-                        fill="#3b82f6" 
+                        stroke="hsl(var(--primary))" 
+                        fill="hsl(var(--primary))" 
                         fillOpacity={0.1}
                         strokeWidth={2}
                       />
@@ -485,25 +485,25 @@ export default function ExecutiveSummaryPage() {
           {/* Data Tables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Customers */}
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader>
-                <CardTitle>Top Customers by Revenue</CardTitle>
+                <CardTitle className="text-foreground">Top Customers by Revenue</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Trips</TableHead>
+                      <TableHead className="text-foreground">Customer</TableHead>
+                      <TableHead className="text-right text-foreground">Revenue</TableHead>
+                      <TableHead className="text-right text-foreground">Trips</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {topCustomers.length > 0 ? (
                       topCustomers.map((customer, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{customer.name}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(customer.revenue)}</TableCell>
+                        <TableRow key={index} className="hover:bg-muted/50">
+                          <TableCell className="font-medium text-foreground">{customer.name}</TableCell>
+                          <TableCell className="text-right text-foreground">{formatCurrency(customer.revenue)}</TableCell>
                           <TableCell className="text-right">
                             <Badge variant="outline">{customer.trips}</Badge>
                           </TableCell>
@@ -522,25 +522,25 @@ export default function ExecutiveSummaryPage() {
             </Card>
 
             {/* Top Expenses */}
-            <Card>
+            <Card className="border-border shadow-lg">
               <CardHeader>
-                <CardTitle>Top Expense Categories</CardTitle>
+                <CardTitle className="text-foreground">Top Expense Categories</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="text-right">%</TableHead>
+                      <TableHead className="text-foreground">Category</TableHead>
+                      <TableHead className="text-right text-foreground">Amount</TableHead>
+                      <TableHead className="text-right text-foreground">%</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {topExpenses.length > 0 ? (
                       topExpenses.map((expense, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{expense.category}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
+                        <TableRow key={index} className="hover:bg-muted/50">
+                          <TableCell className="font-medium text-foreground">{expense.category}</TableCell>
+                          <TableCell className="text-right text-foreground">{formatCurrency(expense.amount)}</TableCell>
                           <TableCell className="text-right">
                             <Badge variant={index === 0 ? "destructive" : "outline"}>
                               {expense.percentage.toFixed(1)}%
