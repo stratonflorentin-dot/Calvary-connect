@@ -171,10 +171,31 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "finance",
   },
   {
+    path: "/finance/bank-statement",
+    label: "Bank Reconciliation",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/chart-of-accounts",
+    label: "Chart of Accounts",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
     path: "/expenses",
     label: "Expense Tracking",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "OPERATOR", "HR"],
     category: "finance",
+  },
+  {
+    path: "/accountant/expenses",
+    label: "Expense Approval",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
   },
   {
     path: "/income",
