@@ -86,7 +86,7 @@ export default function MeetingsPage() {
             <div className="space-y-4">
                 {meetingList.map((meeting) => (
                     <Link key={meeting.id} href={`/hr/meetings/${meeting.id}`}>
-                        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                        <Card className="hover:shadow-xl transition-shadow cursor-pointer border-border shadow-lg">
                             <CardContent className="pt-6">
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1">
@@ -121,7 +121,7 @@ export default function MeetingsPage() {
                                             )}
                                         </div>
                                     </div>
-                                    <Button variant="outline" size="sm" className="text-primary">
+                                    <Button variant="outline" size="sm" className="text-primary h-9">
                                         View →
                                     </Button>
                                 </div>
@@ -136,17 +136,17 @@ export default function MeetingsPage() {
     if (!isAdmin) return <div className="p-8 text-center text-muted-foreground">Access denied</div>;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                         <Calendar className="w-8 h-8 text-primary" />
                         Meetings
                     </h1>
                     <p className="text-muted-foreground mt-1">Schedule and manage team meetings</p>
                 </div>
                 <Link href="/hr/meetings/new">
-                    <Button className="gap-2">
+                    <Button className="gap-2 h-11 bg-primary text-background hover:bg-primary/90">
                         <Plus className="w-4 h-4" />
                         New Meeting
                     </Button>
@@ -157,14 +157,14 @@ export default function MeetingsPage() {
                 <div className="text-center py-8 text-muted-foreground">Loading meetings...</div>
             ) : (
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                    <TabsList className="grid w-full max-w-md grid-cols-2 bg-card border-border shadow-md">
                         <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
                         <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="upcoming" className="mt-6">
+                    <TabsContent value="upcoming" className="mt-8">
                         {renderMeetingsList(upcoming)}
                     </TabsContent>
-                    <TabsContent value="past" className="mt-6">
+                    <TabsContent value="past" className="mt-8">
                         {renderMeetingsList(past)}
                     </TabsContent>
                 </Tabs>

@@ -146,9 +146,9 @@ export default function InsuranceDashboard() {
   const criticalPolicies = insurance.filter((policy) => policy.status === 'expired' || daysUntil(policy.expiry_date) <= 7).length;
 
   return (
-    <div className="min-h-screen bg-muted">
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+    <div className="min-h-screen bg-background">
+      <div className="space-y-8 p-4 sm:p-6 lg:p-8">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-lg">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -164,22 +164,22 @@ export default function InsuranceDashboard() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className="gap-2" onClick={fetchData} disabled={loading}>
+              <Button variant="outline" className="gap-2 h-11" onClick={fetchData} disabled={loading}>
                 <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
                 Refresh
               </Button>
-              <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+              <Button variant="outline" className="gap-2 h-11" onClick={() => window.print()}>
                 <Download className="h-4 w-4" />
                 Export
               </Button>
               <Link href="/hr/insurance/bulk-import">
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2 h-11">
                   <FileUp className="h-4 w-4" />
                   Import
                 </Button>
               </Link>
               <Link href="/hr/insurance/add">
-                <Button className="gap-2 bg-foreground text-background hover:bg-foreground/90">
+                <Button className="gap-2 h-11 bg-primary text-background hover:bg-primary/90">
                   <Plus className="h-4 w-4" />
                   New Policy
                 </Button>
@@ -220,7 +220,7 @@ export default function InsuranceDashboard() {
         </section>
 
         <section className="grid gap-4 lg:grid-cols-3">
-          <Card className="border-border shadow-sm lg:col-span-2">
+          <Card className="border-border shadow-lg lg:col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -267,7 +267,7 @@ export default function InsuranceDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-border shadow-sm">
+          <Card className="border-border shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <AlertTriangle className="h-5 w-5 text-warning" />
@@ -284,32 +284,32 @@ export default function InsuranceDashboard() {
           </Card>
         </section>
 
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="border-border shadow-lg">
           <CardHeader className="space-y-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Truck className="h-5 w-5 text-slate-700" />
+                <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+                  <Truck className="h-5 w-5 text-primary" />
                   Policy Register
                 </CardTitle>
                 <CardDescription>Search, review, and act on policy coverage across the fleet.</CardDescription>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search policies"
-                    className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none ring-offset-white placeholder:text-slate-400 focus:border-slate-400 sm:w-72"
+                    className="h-11 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground sm:w-72 text-foreground"
                   />
                 </div>
                 <div className="relative">
-                  <Filter className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <select
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value as 'all' | InsuranceStatus)}
-                    className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-8 text-sm outline-none focus:border-slate-400 sm:w-44"
+                    className="h-11 w-full rounded-xl border border-border bg-card pl-9 pr-8 text-sm outline-none focus:ring-2 focus:ring-primary sm:w-44 text-foreground"
                   >
                     <option value="all">All statuses</option>
                     <option value="active">Active</option>
@@ -321,13 +321,13 @@ export default function InsuranceDashboard() {
             </div>
 
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabKey)}>
-              <TabsList className="grid w-full grid-cols-2 bg-muted sm:w-auto sm:grid-cols-4">
+              <TabsList className="grid w-full grid-cols-2 bg-card border-border shadow-md sm:w-auto sm:grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="expiring">Renewals</TabsTrigger>
                 <TabsTrigger value="cross_border">Cross-Border</TabsTrigger>
                 <TabsTrigger value="compliance">Compliance</TabsTrigger>
               </TabsList>
-              <TabsContent value={activeTab} className="mt-4">
+              <TabsContent value={activeTab} className="mt-6">
                 <PolicyTable policies={filteredPolicies} loading={loading} />
               </TabsContent>
             </Tabs>
@@ -359,7 +359,7 @@ function MetricCard({
   };
 
   return (
-    <Card className="border-border shadow-sm">
+    <Card className="border-border shadow-lg">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
@@ -401,21 +401,21 @@ function PolicyTable({ policies, loading }: { policies: TruckInsurance[]; loadin
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
+    <div className="overflow-hidden rounded-2xl border border-border">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[960px] text-sm">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold">Policy</th>
-              <th className="px-4 py-3 text-left font-semibold">Vehicle</th>
-              <th className="px-4 py-3 text-left font-semibold">Coverage</th>
-              <th className="px-4 py-3 text-left font-semibold">Expiry</th>
-              <th className="px-4 py-3 text-left font-semibold">Risk</th>
-              <th className="px-4 py-3 text-left font-semibold">Premium</th>
-              <th className="px-4 py-3 text-right font-semibold">Action</th>
+              <th className="px-4 py-3 text-left font-semibold text-foreground">Policy</th>
+              <th className="px-4 py-3 text-left font-semibold text-foreground">Vehicle</th>
+              <th className="px-4 py-3 text-left font-semibold text-foreground">Coverage</th>
+              <th className="px-4 py-3 text-left font-semibold text-foreground">Expiry</th>
+              <th className="px-4 py-3 text-left font-semibold text-foreground">Risk</th>
+              <th className="px-4 py-3 text-left font-semibold text-foreground">Premium</th>
+              <th className="px-4 py-3 text-right font-semibold text-foreground">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="divide-y divide-border bg-card">
             {policies.map((policy) => {
               const days = daysUntil(policy.expiry_date);
               const risk = getRisk(policy);
@@ -461,7 +461,7 @@ function PolicyTable({ policies, loading }: { policies: TruckInsurance[]; loadin
                       </Badge>
                     </div>
                   </td>
-                  <td className="px-4 py-4 font-medium text-slate-800">{formatMoney(policy.annual_premium)}</td>
+                  <td className="px-4 py-4 font-medium text-foreground">{formatMoney(policy.annual_premium)}</td>
                   <td className="px-4 py-4 text-right">
                     <Link href={`/hr/insurance/${policy.id}`}>
                       <Button variant="ghost" size="sm" className="gap-2">
