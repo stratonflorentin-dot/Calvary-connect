@@ -16,12 +16,12 @@ export default function AdminSettingsPage() {
             <div className="flex min-h-screen bg-background">
                 <Sidebar role={effectiveRole} />
                 <main className="flex-1 md:ml-60 p-8">
-                    <Card className="border-red-200 bg-red-50">
+                    <Card className="border-destructive/20 bg-destructive/10 shadow-lg">
                         <CardContent className="flex items-center gap-3 p-6">
-                            <IconFallback name="AlertCircle" className="size-6 text-red-600" />
+                            <IconFallback name="AlertCircle" className="size-6 text-destructive" />
                             <div>
-                                <h3 className="font-semibold text-red-900">Access Denied</h3>
-                                <p className="text-sm text-red-700">Only administrators can access this page.</p>
+                                <h3 className="font-semibold text-destructive">Access Denied</h3>
+                                <p className="text-sm text-destructive">Only administrators can access this page.</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -37,7 +37,7 @@ export default function AdminSettingsPage() {
                 <div className="max-w-7xl mx-auto space-y-8">
                     {/* Header */}
                     <div>
-                        <h1 className="text-3xl font-headline tracking-tighter">Admin Settings</h1>
+                        <h1 className="text-2xl font-headline tracking-tighter">Admin Settings</h1>
                         <p className="text-muted-foreground">Manage system configuration and pricing</p>
                     </div>
 
@@ -47,22 +47,22 @@ export default function AdminSettingsPage() {
                     </section>
 
                     {/* Additional Settings Sections */}
-                    <Card>
+                    <Card className="border-border shadow-lg">
                         <CardHeader>
-                            <CardTitle>System Information</CardTitle>
+                            <CardTitle className="text-foreground">System Information</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
                                 <p className="text-sm font-semibold text-muted-foreground">Database</p>
-                                <p className="text-sm">Supabase PostgreSQL</p>
+                                <p className="text-sm text-foreground">Supabase PostgreSQL</p>
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-muted-foreground">Current Role</p>
-                                <p className="text-sm capitalize">{effectiveRole}</p>
+                                <p className="text-sm capitalize text-foreground">{effectiveRole}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-muted-foreground">Last Updated</p>
-                                <p className="text-sm">{new Date().toLocaleString()}</p>
+                                <p className="text-sm text-foreground">{new Date().toLocaleString()}</p>
                             </div>
                         </CardContent>
                     </Card>
