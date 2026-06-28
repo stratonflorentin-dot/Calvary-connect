@@ -1046,9 +1046,13 @@ export default function FinancialOperations() {
                       <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
                         <SelectTrigger id="inv-type"><SelectValue placeholder="Select account" /></SelectTrigger>
                         <SelectContent>
-                          {data.chartOfAccounts.filter((acc) => acc.type === "Assets" || acc.type === "Liabilities").map((acc) => (
-                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
-                          ))}
+                          {data.chartOfAccounts.length === 0 ? (
+                            <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
+                          ) : (
+                            data.chartOfAccounts.filter((acc) => acc.type === "Assets" || acc.type === "Liabilities").map((acc) => (
+                              <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1127,9 +1131,13 @@ export default function FinancialOperations() {
                     <Select value={expenseForm.category} onValueChange={(value) => setExpenseForm({ ...expenseForm, category: value })}>
                       <SelectTrigger id="exp-category"><SelectValue placeholder="Select account" /></SelectTrigger>
                       <SelectContent>
-                        {data.chartOfAccounts.filter((acc) => acc.type === "Expenses").map((acc) => (
-                          <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
-                        ))}
+                        {data.chartOfAccounts.length === 0 ? (
+                          <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
+                        ) : (
+                          data.chartOfAccounts.filter((acc) => acc.type === "Expenses").map((acc) => (
+                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1664,9 +1672,13 @@ export default function FinancialOperations() {
                           <Select value={expenseForm.category} onValueChange={(value) => setExpenseForm({ ...expenseForm, category: value })}>
                             <SelectTrigger id="exp-category"><SelectValue placeholder="Select account" /></SelectTrigger>
                             <SelectContent>
-                              {data.chartOfAccounts.filter((acc) => acc.type === "Expenses").map((acc) => (
-                                <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
-                              ))}
+                              {data.chartOfAccounts.length === 0 ? (
+                                <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
+                              ) : (
+                                data.chartOfAccounts.filter((acc) => acc.type === "Expenses").map((acc) => (
+                                  <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1874,9 +1886,13 @@ export default function FinancialOperations() {
                       <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
                         <SelectTrigger id="inv-type"><SelectValue placeholder="Select account" /></SelectTrigger>
                         <SelectContent>
-                          {data.chartOfAccounts.filter((acc) => acc.type === "Assets" || acc.type === "Liabilities").map((acc) => (
-                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
-                          ))}
+                          {data.chartOfAccounts.length === 0 ? (
+                            <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
+                          ) : (
+                            data.chartOfAccounts.filter((acc) => acc.type === "Assets" || acc.type === "Liabilities").map((acc) => (
+                              <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
