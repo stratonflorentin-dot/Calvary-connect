@@ -41,6 +41,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -240,6 +242,10 @@ function formatCurrency(amount: number, currency = "TZS"): string {
   return fmtAmt(amount, currency);
 }
 
+function formatAmount(amount: number, currency = "TZS"): string {
+  return fmtAmt(amount, currency);
+}
+
 function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
@@ -249,6 +255,48 @@ function formatDate(value: string): string {
     year: "numeric",
   });
 }
+
+function getCurrencyCode(row: FinanceRow | any): string {
+  return text(row.currency, "TZS").toUpperCase();
+}
+
+function getRowDate(row: FinanceRow | any): string {
+  return text(row.date ?? row.expense_date ?? row.due_date ?? row.created_at ?? row.updated_at, new Date().toISOString());
+}
+
+function getRowStatus(row: FinanceRow | any): string {
+  return text(row.status, "draft").toLowerCase();
+}
+
+function safeText(value: unknown, fallback = "-"): string {
+  if (value === null || value === undefined || value === "") return fallback;
+  return String(value);
+}
+
+function getInvoiceAmount(inv: any): number {
+  return toNumber(inv.amount ?? inv.total ?? inv.total_amount);
+}
+
+function getIncomeAmount(inc: any): number {
+  return toNumber(inc.amount ?? inc.total);
+}
+
+function getTaxAmount(tax: any): number {
+  return toNumber(tax.amount);
+}
+
+function getAccountAmount(account: any): number {
+  return toNumber(account.balance);
+}
+
+
+const STATUS_STYLES: Record<string, string> = {
+  current: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  "1-30": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  "31-60": "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  "61-90": "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  "90+": "bg-red-700/10 text-red-700 dark:text-red-400 border-red-700/20",
+};
 
 function isReceivable(invoice: FinanceRow): boolean {
   const type = text(invoice.type ?? invoice.invoice_type, "receivable").toLowerCase();
@@ -504,6 +552,7 @@ export default function FinancialOperations() {
   const [revenueForm, setRevenueForm] = useState({ description: "", amount: "", currency: "TZS", date: "" });
   const [taxForm, setTaxForm] = useState({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" });
   const [bankAccountForm, setBankAccountForm] = useState({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
+  const [submitting, setSubmitting] = useState(false);
 
   const loadFinance = async () => {
     setLoading(true);
@@ -528,6 +577,7 @@ export default function FinancialOperations() {
   };
 
   const saveInvoice = async () => {
+    setSubmitting(true);
     try {
       const { error } = await supabase.from("invoices").insert({
         invoice_number: invoiceForm.invoice_number,
@@ -548,10 +598,13 @@ export default function FinancialOperations() {
     } catch (err) {
       console.error("Error saving invoice:", err);
       toast({ title: "Error", description: "Failed to create invoice", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const saveExpense = async () => {
+    setSubmitting(true);
     try {
       const { error } = await supabase.from("expenses").insert({
         description: expenseForm.description,
@@ -571,10 +624,13 @@ export default function FinancialOperations() {
     } catch (err) {
       console.error("Error saving expense:", err);
       toast({ title: "Error", description: "Failed to save expense", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const saveRevenue = async () => {
+    setSubmitting(true);
     try {
       const { error } = await supabase.from("income").insert({
         description: revenueForm.description,
@@ -592,10 +648,13 @@ export default function FinancialOperations() {
     } catch (err) {
       console.error("Error saving revenue:", err);
       toast({ title: "Error", description: "Failed to record revenue", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const saveTax = async () => {
+    setSubmitting(true);
     try {
       const { error } = await supabase.from("taxes").insert({
         tax_name: taxForm.tax_name,
@@ -614,10 +673,13 @@ export default function FinancialOperations() {
     } catch (err) {
       console.error("Error saving tax:", err);
       toast({ title: "Error", description: "Failed to record tax", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const saveBankAccount = async () => {
+    setSubmitting(true);
     try {
       const { error } = await supabase.from("bank_accounts").insert({
         account_name: bankAccountForm.account_name,
@@ -635,6 +697,8 @@ export default function FinancialOperations() {
     } catch (err) {
       console.error("Error saving bank account:", err);
       toast({ title: "Error", description: "Failed to add bank account", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -1686,119 +1750,83 @@ export default function FinancialOperations() {
                 <div className="flex gap-2 flex-wrap">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      className="pl-9 w-52"
-                      placeholder="Search…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
+                    <Input className="pl-9 w-52" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
                   </div>
-                  <Dialog open={modal === "revenue"} onOpenChange={(open) => setModal(open ? "revenue" : null)}>
-                    <DialogTrigger asChild>
-                      <Button className="gap-2" variant="default">
-                        <Plus className="size-4" />
-                        Record Revenue
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold">Record Revenue</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="rev-amount">Amount</Label>
-                            <Input id="rev-amount" type="number" placeholder="0.00" value={revenueForm.amount} onChange={(e) => setRevenueForm({ ...revenueForm, amount: e.target.value })} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="rev-currency">Currency</Label>
-                            <Select value={revenueForm.currency} onValueChange={(value) => setRevenueForm({ ...revenueForm, currency: value })}>
-                              <SelectTrigger id="rev-currency">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.values(CURRENCIES).map((c) => (
-                                  <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="rev-description">Description</Label>
-                          <Input id="rev-description" placeholder="Revenue source/description" value={revenueForm.description} onChange={(e) => setRevenueForm({ ...revenueForm, description: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="rev-date">Date</Label>
-                          <Input id="rev-date" type="date" value={revenueForm.date} onChange={(e) => setRevenueForm({ ...revenueForm, date: e.target.value })} />
-                        </div>
-                        <div className="flex gap-2 justify-end pt-2">
-                          <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                          <Button onClick={saveRevenue}>Save Revenue</Button>
-                        </div>
+                  <FormDialog open={modal === "revenue"} onOpenChange={(open) => setModal(open ? "revenue" : null)} title="Record Revenue" trigger={<Button className="gap-2"><Plus className="size-4" />Record Revenue</Button>}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="rev-amount">Amount</Label>
+                        <Input id="rev-amount" type="number" min="0" step="0.01" placeholder="0.00" value={revenueForm.amount} onChange={(e) => setRevenueForm({ ...revenueForm, amount: e.target.value })} />
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                      <div className="space-y-2">
+                        <Label htmlFor="rev-currency">Currency</Label>
+                        <Select value={revenueForm.currency} onValueChange={(value) => setRevenueForm({ ...revenueForm, currency: value })}>
+                          <SelectTrigger id="rev-currency"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rev-description">Description</Label>
+                      <Input id="rev-description" placeholder="Revenue source/description" value={revenueForm.description} onChange={(e) => setRevenueForm({ ...revenueForm, description: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rev-date">Date</Label>
+                      <Input id="rev-date" type="date" value={revenueForm.date} onChange={(e) => setRevenueForm({ ...revenueForm, date: e.target.value })} />
+                    </div>
+                    <div className="flex gap-2 justify-end pt-2">
+                      <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                      <Button onClick={saveRevenue} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Save Revenue</Button>
+                    </div>
+                  </FormDialog>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                 {Object.entries(revByCur).map(([cur, amt]) => {
-                  const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+                  const config = CURRENCIES[cur] || CURRENCIES.TZS;
                   return (
                     <div key={cur} className="bg-card border border-border rounded-xl p-3 text-center">
-                      <p className="text-xs text-muted-foreground mb-0.5">
-                        {c.flag} {cur}
-                      </p>
-                      <p className="text-sm font-bold text-success">{fmtAmt(amt, cur)}</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">{config.flag} {cur}</p>
+                      <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{formatAmount(amt, cur)}</p>
                     </div>
                   );
                 })}
               </div>
-              <Card className="app-surface border border-border">
+              <Card className="border border-border">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableHead className="font-semibold text-foreground">Date</TableHead>
-                          <TableHead className="font-semibold text-foreground">Source / Customer</TableHead>
-                          <TableHead className="font-semibold text-foreground">Description</TableHead>
-                          <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
-                          <TableHead className="font-semibold text-foreground">Currency</TableHead>
-                          <TableHead className="font-semibold text-foreground">Status</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Source / Customer</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>Currency</TableHead>
+                          <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {[...data.invoices.filter(isReceivable), ...data.income].length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={6} className="py-16 text-center">
-                              <Wallet className="mx-auto size-12 text-muted-foreground/30 mb-3" />
-                              <p className="text-muted-foreground font-medium">No revenue recorded</p>
-                              <p className="text-sm text-muted-foreground mt-1">Use the "Record Revenue" button above to add your first revenue entry</p>
+                              <EmptyState icon={Wallet} title="No revenue recorded" description='Use the "Record Revenue" button above to add your first revenue entry' />
                             </TableCell>
                           </TableRow>
                         ) : (
                           [...data.invoices.filter(isReceivable), ...data.income]
                             .filter((r) => filterCurrency === "ALL" || rowCurrency(r) === filterCurrency)
-                            .filter((r) =>
-                              [r.description, r.customer_name, r.client_name].some((s) =>
-                                String(s).toLowerCase().includes(search.toLowerCase())
-                              )
-                            )
+                            .filter((r) => [r.description, r.customer_name, r.client_name].some((s) => String(s).toLowerCase().includes(search.toLowerCase())))
                             .map((r) => (
-                              <TableRow key={text(r.id)} className="hover:bg-muted/50 transition-colors">
-                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(rowDate(r))}</TableCell>
-                                <TableCell className="text-foreground font-medium">{text(r.customer_name ?? r.client_name ?? "Direct Income")}</TableCell>
-                                <TableCell className="text-muted-foreground">{text(r.description)}</TableCell>
-                                <TableCell className="font-bold text-success text-right whitespace-nowrap">
-                                  {formatCurrency(rowAmount(r), rowCurrency(r))}
-                                </TableCell>
-                                <TableCell>
-                                  <CurrencyBadge currency={rowCurrency(r)} />
-                                </TableCell>
-                                <TableCell>
-                                  <StatusBadge status={rowStatus(r)} />
-                                </TableCell>
+                              <TableRow key={safeText(r.id)} className="hover:bg-muted/50 transition-colors">
+                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(getRowDate(r))}</TableCell>
+                                <TableCell className="text-foreground font-medium">{safeText(r.customer_name ?? r.client_name ?? "Direct Income")}</TableCell>
+                                <TableCell className="text-muted-foreground">{safeText(r.description)}</TableCell>
+                                <TableCell className="font-bold text-emerald-700 dark:text-emerald-400 text-right whitespace-nowrap">{formatAmount(("amount" in r ? toNumber(r.amount) : getIncomeAmount(r as any)), getCurrencyCode(r))}</TableCell>
+                                <TableCell><CurrencyBadge currency={getCurrencyCode(r)} /></TableCell>
+                                <TableCell><StatusBadge status={getRowStatus(r)} /></TableCell>
                               </TableRow>
                             ))
                         )}
@@ -1814,126 +1842,94 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">Client Invoices</h2>
-                <Dialog open={modal === "invoice"} onOpenChange={(open) => setModal(open ? "invoice" : null)}>
-                  <DialogTrigger asChild>
-                    <Button className="gap-2">
-                      <Plus className="size-4" />
-                      Create Invoice
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-semibold">Create New Invoice</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="inv-number">Invoice Number</Label>
-                          <Input id="inv-number" placeholder="INV-001" value={invoiceForm.invoice_number} onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="inv-type">Type</Label>
-                          <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
-                            <SelectTrigger id="inv-type">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="AR">Accounts Receivable (AR)</SelectItem>
-                              <SelectItem value="AP">Accounts Payable (AP)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="inv-customer">Customer / Vendor</Label>
-                        <Input id="inv-customer" placeholder="Company name" value={invoiceForm.customer_name} onChange={(e) => setInvoiceForm({ ...invoiceForm, customer_name: e.target.value })} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="inv-amount">Amount</Label>
-                          <Input id="inv-amount" type="number" placeholder="0.00" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="inv-currency">Currency</Label>
-                          <Select value={invoiceForm.currency} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, currency: value })}>
-                            <SelectTrigger id="inv-currency">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.values(CURRENCIES).map((c) => (
-                                <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="inv-due">Due Date</Label>
-                        <Input id="inv-due" type="date" value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="inv-description">Description</Label>
-                        <Input id="inv-description" placeholder="Invoice description" value={invoiceForm.description} onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })} />
-                      </div>
-                      <div className="flex gap-2 justify-end pt-2">
-                        <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                        <Button onClick={saveInvoice}>Create Invoice</Button>
-                      </div>
+                <FormDialog open={modal === "invoice"} onOpenChange={(open) => setModal(open ? "invoice" : null)} title="Create New Invoice" trigger={<Button className="gap-2"><Plus className="size-4" />Create Invoice</Button>}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-number">Invoice Number</Label>
+                      <Input id="inv-number" placeholder="INV-001" value={invoiceForm.invoice_number} onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })} />
                     </div>
-                  </DialogContent>
-                </Dialog>
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-type">Type</Label>
+                      <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
+                        <SelectTrigger id="inv-type"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AR">Accounts Receivable (AR)</SelectItem>
+                          <SelectItem value="AP">Accounts Payable (AP)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-customer">Customer / Vendor</Label>
+                    <Input id="inv-customer" placeholder="Company name" value={invoiceForm.customer_name} onChange={(e) => setInvoiceForm({ ...invoiceForm, customer_name: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-amount">Amount</Label>
+                      <Input id="inv-amount" type="number" min="0" step="0.01" placeholder="0.00" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-currency">Currency</Label>
+                      <Select value={invoiceForm.currency} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, currency: value })}>
+                        <SelectTrigger id="inv-currency"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-due">Due Date</Label>
+                    <Input id="inv-due" type="date" value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-description">Description</Label>
+                    <Input id="inv-description" placeholder="Invoice description" value={invoiceForm.description} onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={saveInvoice} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Create Invoice</Button>
+                  </div>
+                </FormDialog>
               </div>
-              <Card className="app-surface border border-border">
+              <Card className="border border-border">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableHead className="font-semibold text-foreground">Invoice #</TableHead>
-                          <TableHead className="font-semibold text-foreground">Customer / Vendor</TableHead>
-                          <TableHead className="font-semibold text-foreground">Type</TableHead>
-                          <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
-                          <TableHead className="font-semibold text-foreground">Currency</TableHead>
-                          <TableHead className="font-semibold text-foreground">Due Date</TableHead>
-                          <TableHead className="font-semibold text-foreground">Status</TableHead>
+                          <TableHead>Invoice #</TableHead>
+                          <TableHead>Customer / Vendor</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>Currency</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {data.invoices.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={7} className="py-16 text-center">
-                              <FileText className="mx-auto size-12 text-muted-foreground/30 mb-3" />
-                              <p className="text-muted-foreground font-medium">No invoices created</p>
-                              <p className="text-sm text-muted-foreground mt-1">Use the "Create Invoice" button above to generate your first invoice</p>
+                              <EmptyState icon={FileText} title="No invoices created" description='Use the "Create Invoice" button above to generate your first invoice' />
                             </TableCell>
                           </TableRow>
                         ) : (
                           data.invoices
                             .filter((i) => filterCurrency === "ALL" || rowCurrency(i) === filterCurrency)
                             .map((inv) => (
-                              <TableRow key={text(inv.id)} className="hover:bg-muted/50 transition-colors">
-                                <TableCell className="font-semibold text-foreground">{text(inv.invoice_number)}</TableCell>
-                                <TableCell className="text-foreground font-medium">{text(inv.customer_name)}</TableCell>
+                              <TableRow key={safeText(inv.id)} className="hover:bg-muted/50 transition-colors">
+                                <TableCell className="font-semibold text-foreground">{safeText(inv.invoice_number)}</TableCell>
+                                <TableCell className="text-foreground font-medium">{safeText(inv.customer_name)}</TableCell>
                                 <TableCell>
-                                  <Badge variant={isReceivable(inv) ? "default" : "secondary"} className="font-medium">
-                                    {isReceivable(inv) ? "AR" : "AP"}
-                                  </Badge>
+                                  <Badge variant={isReceivable(inv) ? "default" : "secondary"} className="font-medium">{isReceivable(inv) ? "AR" : "AP"}</Badge>
                                 </TableCell>
-                                <TableCell
-                                  className={cn(
-                                    "font-bold text-right whitespace-nowrap",
-                                    isReceivable(inv) ? "text-success" : "text-destructive"
-                                  )}
-                                >
-                                  {formatCurrency(rowAmount(inv), rowCurrency(inv))}
+                                <TableCell className={cn("font-bold text-right whitespace-nowrap", isReceivable(inv) ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400")}>
+                                  {formatAmount(getInvoiceAmount(inv), getCurrencyCode(inv))}
                                 </TableCell>
-                                <TableCell>
-                                  <CurrencyBadge currency={rowCurrency(inv)} />
-                                </TableCell>
-                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(rowDate(inv))}</TableCell>
-                                <TableCell>
-                                  <StatusBadge status={rowStatus(inv)} />
-                                </TableCell>
+                                <TableCell><CurrencyBadge currency={getCurrencyCode(inv)} /></TableCell>
+                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(getRowDate(inv))}</TableCell>
+                                <TableCell><StatusBadge status={getRowStatus(inv)} /></TableCell>
                               </TableRow>
                             ))
                         )}
@@ -1949,99 +1945,74 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">Tax Obligations</h2>
-                <Dialog open={modal === "tax"} onOpenChange={(open) => setModal(open ? "tax" : null)}>
-                  <DialogTrigger asChild>
-                    <Button className="gap-2">
-                      <Plus className="size-4" />
-                      Record Tax
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-semibold">Record Tax Obligation</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tax-name">Tax Name</Label>
-                        <Input id="tax-name" placeholder="VAT, Income Tax, etc." value={taxForm.tax_name} onChange={(e) => setTaxForm({ ...taxForm, tax_name: e.target.value })} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="tax-amount">Amount</Label>
-                          <Input id="tax-amount" type="number" placeholder="0.00" value={taxForm.amount} onChange={(e) => setTaxForm({ ...taxForm, amount: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tax-currency">Currency</Label>
-                          <Select value={taxForm.currency} onValueChange={(value) => setTaxForm({ ...taxForm, currency: value })}>
-                            <SelectTrigger id="tax-currency">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.values(CURRENCIES).map((c) => (
-                                <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="tax-type">Type</Label>
-                          <Input id="tax-type" placeholder="VAT, Withholding, etc." value={taxForm.type} onChange={(e) => setTaxForm({ ...taxForm, type: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tax-due">Due Date</Label>
-                          <Input id="tax-due" type="date" value={taxForm.due_date} onChange={(e) => setTaxForm({ ...taxForm, due_date: e.target.value })} />
-                        </div>
-                      </div>
-                      <div className="flex gap-2 justify-end pt-2">
-                        <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                        <Button onClick={saveTax}>Save Tax</Button>
-                      </div>
+                <FormDialog open={modal === "tax"} onOpenChange={(open) => setModal(open ? "tax" : null)} title="Record Tax Obligation" trigger={<Button className="gap-2"><Plus className="size-4" />Record Tax</Button>}>
+                  <div className="space-y-2">
+                    <Label htmlFor="tax-name">Tax Name</Label>
+                    <Input id="tax-name" placeholder="VAT, Income Tax, etc." value={taxForm.tax_name} onChange={(e) => setTaxForm({ ...taxForm, tax_name: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-amount">Amount *</Label>
+                      <Input id="tax-amount" type="number" min="0" step="0.01" placeholder="0.00" value={taxForm.amount} onChange={(e) => setTaxForm({ ...taxForm, amount: e.target.value })} />
                     </div>
-                  </DialogContent>
-                </Dialog>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-currency">Currency</Label>
+                      <Select value={taxForm.currency} onValueChange={(value) => setTaxForm({ ...taxForm, currency: value })}>
+                        <SelectTrigger id="tax-currency"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-type">Type</Label>
+                      <Input id="tax-type" placeholder="VAT, Withholding, etc." value={taxForm.type} onChange={(e) => setTaxForm({ ...taxForm, type: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-due">Due Date</Label>
+                      <Input id="tax-due" type="date" value={taxForm.due_date} onChange={(e) => setTaxForm({ ...taxForm, due_date: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={saveTax} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Save Tax</Button>
+                  </div>
+                </FormDialog>
               </div>
-              <Card className="app-surface border border-border">
+              <Card className="border border-border">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableHead className="font-semibold text-foreground">Tax Name</TableHead>
-                          <TableHead className="font-semibold text-foreground">Type</TableHead>
-                          <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
-                          <TableHead className="font-semibold text-foreground">Currency</TableHead>
-                          <TableHead className="font-semibold text-foreground">Due Date</TableHead>
-                          <TableHead className="font-semibold text-foreground">Status</TableHead>
+                          <TableHead>Tax Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>Currency</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {(!data.taxes || data.taxes.length === 0) ? (
                           <TableRow>
                             <TableCell colSpan={6} className="py-16 text-center">
-                              <Scale className="mx-auto size-12 text-muted-foreground/30 mb-3" />
-                              <p className="text-muted-foreground font-medium">No tax obligations recorded</p>
-                              <p className="text-sm text-muted-foreground mt-1">Use the "Record Tax" button above to add your first tax entry</p>
+                              <EmptyState icon={Scale} title="No tax obligations recorded" description='Use the "Record Tax" button above to add your first tax entry' />
                             </TableCell>
                           </TableRow>
                         ) : (
                           data.taxes
                             .filter((t) => filterCurrency === "ALL" || rowCurrency(t) === filterCurrency)
                             .map((tax) => (
-                              <TableRow key={text(tax.id)} className="hover:bg-muted/50 transition-colors">
-                                <TableCell className="text-foreground font-medium">{text(tax.tax_name)}</TableCell>
-                                <TableCell>
-                                  <Badge variant="secondary" className="font-medium">{text(tax.type)}</Badge>
-                                </TableCell>
-                                <TableCell className="font-bold text-foreground text-right whitespace-nowrap">{formatCurrency(rowAmount(tax), rowCurrency(tax))}</TableCell>
-                                <TableCell>
-                                  <CurrencyBadge currency={rowCurrency(tax)} />
-                                </TableCell>
-                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(rowDate(tax))}</TableCell>
-                                <TableCell>
-                                  <StatusBadge status={rowStatus(tax)} />
-                                </TableCell>
+                              <TableRow key={safeText(tax.id)} className="hover:bg-muted/50 transition-colors">
+                                <TableCell className="text-foreground font-medium">{safeText(tax.tax_name)}</TableCell>
+                                <TableCell><Badge variant="secondary" className="font-medium">{safeText(tax.type)}</Badge></TableCell>
+                                <TableCell className="font-bold text-foreground text-right whitespace-nowrap">{formatAmount(getTaxAmount(tax), getCurrencyCode(tax))}</TableCell>
+                                <TableCell><CurrencyBadge currency={getCurrencyCode(tax)} /></TableCell>
+                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(getRowDate(tax))}</TableCell>
+                                <TableCell><StatusBadge status={getRowStatus(tax)} /></TableCell>
                               </TableRow>
                             ))
                         )}
@@ -2056,7 +2027,7 @@ export default function FinancialOperations() {
           {activeTab === "logistics" && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-l-4 border-l-primary shadow-lg">
+                <Card className="border-l-4 border-l-blue-500 shadow-lg">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                       <Globe className="size-4" />
@@ -2066,15 +2037,15 @@ export default function FinancialOperations() {
                   <CardContent className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Expenses</span>
-                      <span className="text-destructive font-medium">{formatCurrency(metrics.crossBorderExpenses)}</span>
+                      <span className="text-red-700 dark:text-red-400 font-medium">{formatAmount(metrics.crossBorderExpenses)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Revenue</span>
-                      <span className="text-success font-medium">{formatCurrency(metrics.crossBorderRevenue)}</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-medium">{formatAmount(metrics.crossBorderRevenue)}</span>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-l-4 border-l-success shadow-lg">
+                <Card className="border-l-4 border-l-emerald-500 shadow-lg">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                       <Thermometer className="size-4" />
@@ -2085,7 +2056,7 @@ export default function FinancialOperations() {
                     <p className="text-sm text-muted-foreground">Reefer cargo tracking and temperature monitoring.</p>
                   </CardContent>
                 </Card>
-                <Card className="border-l-4 border-l-warning shadow-lg">
+                <Card className="border-l-4 border-l-amber-500 shadow-lg">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium flex items-center gap-2">
                       <Fuel className="size-4" />
@@ -2095,7 +2066,7 @@ export default function FinancialOperations() {
                   <CardContent>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Total Fuel</span>
-                      <span className="text-warning font-medium">{formatCurrency(metrics.fuelExpenses)}</span>
+                      <span className="text-amber-700 dark:text-amber-400 font-medium">{formatAmount(metrics.fuelExpenses)}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -2107,60 +2078,70 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">Bank Accounts</h2>
-                <Dialog open={modal === "bank-account"} onOpenChange={(open) => setModal(open ? "bank-account" : null)}>
-                  <DialogTrigger asChild>
-                    <Button className="gap-2">
-                      <Plus className="size-4" />
-                      Add Bank Account
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-semibold">Add Bank Account</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="bank-name">Account Name</Label>
-                        <Input id="bank-name" placeholder="Main Operating Account" value={bankAccountForm.account_name} onChange={(e) => setBankAccountForm({ ...bankAccountForm, account_name: e.target.value })} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="bank-bank">Bank Name</Label>
-                        <Input id="bank-bank" placeholder="Bank name" value={bankAccountForm.bank_name} onChange={(e) => setBankAccountForm({ ...bankAccountForm, bank_name: e.target.value })} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="bank-number">Account Number</Label>
-                        <Input id="bank-number" placeholder="Account number" value={bankAccountForm.account_number} onChange={(e) => setBankAccountForm({ ...bankAccountForm, account_number: e.target.value })} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="bank-currency">Currency</Label>
-                          <Select value={bankAccountForm.currency} onValueChange={(value) => setBankAccountForm({ ...bankAccountForm, currency: value })}>
-                            <SelectTrigger id="bank-currency">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.values(CURRENCIES).map((c) => (
-                                <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="bank-balance">Initial Balance</Label>
-                          <Input id="bank-balance" type="number" placeholder="0.00" value={bankAccountForm.balance} onChange={(e) => setBankAccountForm({ ...bankAccountForm, balance: e.target.value })} />
-                        </div>
-                      </div>
-                      <div className="flex gap-2 justify-end pt-2">
-                        <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                        <Button onClick={saveBankAccount}>Save Account</Button>
-                      </div>
+                <FormDialog open={modal === "bank-account"} onOpenChange={(open) => setModal(open ? "bank-account" : null)} title="Add Bank Account" trigger={<Button className="gap-2"><Plus className="size-4" />Add Bank Account</Button>}>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-name">Account Name *</Label>
+                    <Input id="bank-name" placeholder="Main Operating Account" value={bankAccountForm.account_name} onChange={(e) => setBankAccountForm({ ...bankAccountForm, account_name: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-bank">Bank Name *</Label>
+                    <Input id="bank-bank" placeholder="Bank name" value={bankAccountForm.bank_name} onChange={(e) => setBankAccountForm({ ...bankAccountForm, bank_name: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-number">Account Number</Label>
+                    <Input id="bank-number" placeholder="Account number" value={bankAccountForm.account_number} onChange={(e) => setBankAccountForm({ ...bankAccountForm, account_number: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-currency">Currency</Label>
+                      <Select value={bankAccountForm.currency} onValueChange={(value) => setBankAccountForm({ ...bankAccountForm, currency: value })}>
+                        <SelectTrigger id="bank-currency"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </DialogContent>
-                </Dialog>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-balance">Initial Balance *</Label>
+                      <Input id="bank-balance" type="number" min="0" step="0.01" placeholder="0.00" value={bankAccountForm.balance} onChange={(e) => setBankAccountForm({ ...bankAccountForm, balance: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={saveBankAccount} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Save Account</Button>
+                  </div>
+                </FormDialog>
               </div>
-              <Card className="app-surface">
+              <Card className="border border-border">
                 <CardContent className="p-5">
-                  <p className="text-muted-foreground">Bank account management - Configure in Supabase bank_accounts table</p>
+                  {data.bankAccounts.length === 0 ? (
+                    <EmptyState icon={Landmark} title="No bank accounts configured" description="Add your first bank account to track balances and reconcile statements" />
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Account Name</TableHead>
+                            <TableHead>Bank</TableHead>
+                            <TableHead>Account Number</TableHead>
+                            <TableHead>Currency</TableHead>
+                            <TableHead className="text-right">Balance</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {data.bankAccounts.map((account) => (
+                            <TableRow key={safeText(account.id)} className="hover:bg-muted/50">
+                              <TableCell className="font-medium text-foreground">{safeText(account.account_name)}</TableCell>
+                              <TableCell className="text-muted-foreground">{safeText(account.bank_name)}</TableCell>
+                              <TableCell className="font-mono text-sm">{safeText(account.account_number)}</TableCell>
+                              <TableCell><CurrencyBadge currency={getCurrencyCode(account)} /></TableCell>
+                              <TableCell className="font-bold text-right">{formatAmount(toNumber(account.balance), getCurrencyCode(account))}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -2168,10 +2149,10 @@ export default function FinancialOperations() {
 
           {activeTab === "bank" && (
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-foreground">Bank Statement</h2>
-              <Card className="app-surface">
+              <h2 className="text-xl font-bold text-foreground">Bank Statement Reconciliation</h2>
+              <Card className="border border-border">
                 <CardContent className="p-5">
-                  <p className="text-muted-foreground">Bank statement reconciliation - Configure in Supabase</p>
+                  <EmptyState icon={CreditCard} title="Bank Statement Reconciliation" description="Import bank statements and match transactions to your ledger records. This feature connects to your configured bank accounts." action={<Button asChild variant="outline"><Link href="/finance/accounts">View Bank Accounts</Link></Button>} />
                 </CardContent>
               </Card>
             </div>
@@ -2181,19 +2162,14 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">Chart of Accounts</h2>
-                <Button className="gap-2" variant="outline">
-                  <Plus className="size-4" />
-                  Add Account
-                </Button>
+                <Button className="gap-2" variant="outline"><Plus className="size-4" />Add Account</Button>
               </div>
               {coaGroups.length === 0 ? (
-                <Card className="app-surface">
+                <Card className="border border-border">
                   <CardContent className="py-16 text-center">
                     <BookOpen className="mx-auto size-12 text-muted-foreground/50 mb-4" />
                     <h3 className="text-lg font-semibold text-foreground mb-2">Chart of Accounts Not Configured</h3>
-                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                      Configure the chart_of_accounts table in Supabase to organize your financial accounts by type.
-                    </p>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">Configure the chart_of_accounts table in Supabase to organize your financial accounts by type.</p>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-2xl mx-auto">
                       {["Assets", "Liabilities", "Equity", "Revenue", "Expenses"].map((type) => (
                         <div key={type} className="rounded-lg border border-border bg-muted/30 p-3 text-center">
@@ -2205,7 +2181,7 @@ export default function FinancialOperations() {
                 </Card>
               ) : (
                 coaGroups.map((group) => (
-                  <Card key={group.type} className="app-surface">
+                  <Card key={group.type} className="border border-border">
                     <CardHeader className="flex flex-row items-center justify-between pb-3">
                       <CardTitle className="text-lg font-semibold">{group.type}</CardTitle>
                       <Badge variant="outline" className="text-xs">{group.rows.length} accounts</Badge>
@@ -2223,13 +2199,11 @@ export default function FinancialOperations() {
                           </TableHeader>
                           <TableBody>
                             {group.rows.map((account) => (
-                              <TableRow key={text(account.code)}>
-                                <TableCell className="font-medium">{text(account.code)}</TableCell>
-                                <TableCell>{text(account.name)}</TableCell>
-                                <TableCell>
-                                  <CurrencyBadge currency={text(account.currency)} />
-                                </TableCell>
-                                <TableCell className="font-semibold">{formatCurrency(rowAmount(account), rowCurrency(account))}</TableCell>
+                              <TableRow key={safeText(account.code)}>
+                                <TableCell className="font-medium">{safeText(account.code)}</TableCell>
+                                <TableCell>{safeText(account.name)}</TableCell>
+                                <TableCell><CurrencyBadge currency={safeText(account.currency)} /></TableCell>
+                                <TableCell className="font-semibold">{formatAmount(getAccountAmount(account), safeText(account.currency, "TZS"))}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -2246,22 +2220,22 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-foreground">Journal Entries</h2>
               {(!data.journalEntries || data.journalEntries.length === 0) ? (
-                <Card className="app-surface">
+                <Card className="border border-border">
                   <CardContent className="py-10 text-center text-muted-foreground">
                     No journal entries yet
                   </CardContent>
                 </Card>
               ) : (
                 data.journalEntries.map((je) => {
-                  const lines = (je.lines as FinanceRow[]) || [];
+                  const lines = (je.lines as any[]) || [];
                   return (
-                    <Card key={text(je.id)} className="app-surface">
+                    <Card key={safeText(je.id)} className="border border-border">
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-base font-semibold">
-                            {text(je.reference)} - {text(je.description)}
+                            {safeText(je.reference)} - {safeText(je.description)}
                           </CardTitle>
-                          <Badge variant="outline">{formatDate(rowDate(je))}</Badge>
+                          <Badge variant="outline">{formatDate(getRowDate(je))}</Badge>
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -2278,12 +2252,10 @@ export default function FinancialOperations() {
                             <TableBody>
                               {lines.map((line, idx) => (
                                 <TableRow key={idx}>
-                                  <TableCell>{text(line.account_name)}</TableCell>
-                                  <TableCell>
-                                    <CurrencyBadge currency={text(line.currency)} />
-                                  </TableCell>
-                                  <TableCell className="text-success">{formatCurrency(rowAmount(line), rowCurrency(line))}</TableCell>
-                                  <TableCell className="text-destructive">{formatCurrency(rowAmount(line), rowCurrency(line))}</TableCell>
+                                  <TableCell>{safeText(line.account_name)}</TableCell>
+                                  <TableCell><CurrencyBadge currency={safeText(line.currency)} /></TableCell>
+                                  <TableCell className="text-emerald-700 dark:text-emerald-400">{formatAmount(toNumber(line.debit), safeText(line.currency, "TZS"))}</TableCell>
+                                  <TableCell className="text-red-700 dark:text-red-400">{formatAmount(toNumber(line.credit), safeText(line.currency, "TZS"))}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -2318,18 +2290,18 @@ export default function FinancialOperations() {
               </div>
               <div className="grid gap-4 md:grid-cols-5">
                 {agingReport.totals.map((bucket) => (
-                  <Card key={bucket.bucket} className="app-surface">
+                  <Card key={bucket.bucket} className="border border-border">
                     <CardContent className="p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                        {bucket.bucket}
+                        {bucket.bucket === "current" ? "Current" : `${bucket.bucket} days`}
                       </p>
-                      <p className="text-lg font-bold text-foreground">{formatCurrency(bucket.total)}</p>
+                      <p className="text-lg font-bold text-foreground">{formatAmount(bucket.total)}</p>
                       <p className="text-xs text-muted-foreground">{bucket.count} items</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-              <Card className="app-surface">
+              <Card className="border border-border">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -2345,37 +2317,24 @@ export default function FinancialOperations() {
                     <TableBody>
                       {agingReport.items.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                            No outstanding items
-                          </TableCell>
+                          <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">No outstanding items</TableCell>
                         </TableRow>
                       ) : (
                         agingReport.items
                           .sort((a, b) => b.daysOverdue - a.daysOverdue)
                           .map((inv) => (
-                            <TableRow key={text(inv.id)} className="hover:bg-muted/50">
-                              <TableCell className="font-medium text-foreground">{text(inv.invoice_number)}</TableCell>
-                              <TableCell className="text-foreground">{text(inv.customer_name)}</TableCell>
-                              <TableCell className={`font-medium ${agingType === "receivable" ? "text-success" : "text-destructive"}`}>
-                                {formatCurrency(rowAmount(inv))}
+                            <TableRow key={safeText(inv.id)} className="hover:bg-muted/50">
+                              <TableCell className="font-medium text-foreground">{safeText(inv.invoice_number)}</TableCell>
+                              <TableCell className="text-foreground">{safeText(inv.customer_name)}</TableCell>
+                              <TableCell className={cn("font-medium", agingType === "receivable" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400")}>
+                                {formatAmount(getInvoiceAmount(inv))}
                               </TableCell>
-                              <TableCell className="text-muted-foreground">{formatDate(rowDate(inv))}</TableCell>
-                              <TableCell
-                                className={cn(
-                                  "font-medium",
-                                  inv.daysOverdue > 90
-                                    ? "text-destructive"
-                                    : inv.daysOverdue > 30
-                                    ? "text-warning"
-                                    : inv.daysOverdue > 0
-                                    ? "text-warning"
-                                    : "text-success"
-                                )}
-                              >
+                              <TableCell className="text-muted-foreground">{formatDate(getRowDate(inv))}</TableCell>
+                              <TableCell className={cn("font-medium", inv.daysOverdue > 90 ? "text-red-700 dark:text-red-400" : inv.daysOverdue > 30 ? "text-amber-700 dark:text-amber-400" : inv.daysOverdue > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400")}>
                                 {inv.daysOverdue <= 0 ? `${Math.abs(inv.daysOverdue)}d to go` : `${inv.daysOverdue}d overdue`}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className={cn(statusStyles[inv.bucket] || statusStyles.current)}>
+                                <Badge variant="outline" className={cn(STATUS_STYLES[inv.bucket] || STATUS_STYLES.current)}>
                                   {inv.bucket === "current" ? "Current" : `${inv.bucket} days`}
                                 </Badge>
                               </TableCell>
