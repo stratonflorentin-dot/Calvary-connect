@@ -412,16 +412,20 @@ export default function FinancialOperations() {
 
   const loadFinance = async () => {
     setLoading(true);
-    const [invoices, expenses, income, trips, vehicles, journalEntries, chartOfAccounts, taxes, bankAccounts] = await Promise.all([
+    const [invoices, expenses, income, trips, vehicles, journalEntries] = await Promise.all([
       safeTable("invoices"),
       safeTable("expenses"),
       safeTable("income"),
       safeTable("trips"),
       safeTable("vehicles"),
       safeTable("journal_entries"),
-      safeTable("chart_of_accounts"),
-      safeTable("taxes"),
-      safeTable("bank_accounts"),
+    ]);
+
+    // Optional tables - handle gracefully if they don't exist
+    const [chartOfAccounts, taxes, bankAccounts] = await Promise.all([
+      safeTable("chart_of_accounts").catch(() => []),
+      safeTable("taxes").catch(() => []),
+      safeTable("bank_accounts").catch(() => []),
     ]);
 
     setData({ invoices, expenses, income, trips, vehicles, journalEntries, chartOfAccounts, taxes, bankAccounts });
@@ -595,6 +599,9 @@ export default function FinancialOperations() {
 
   // Chart of Accounts grouping
   const coaGroups = useMemo(() => {
+    if (!data.chartOfAccounts || data.chartOfAccounts.length === 0) {
+      return [];
+    }
     const types = ["Asset", "Liability", "Equity", "Revenue", "Expense"];
     return types.map((type) => ({
       type,
@@ -1201,53 +1208,63 @@ export default function FinancialOperations() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-foreground">Chart of Accounts</h2>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {coaGroups.map((group) => (
-                    <Card key={group.type} className={cn("shadow-lg", accountTypeStyles[group.type])}>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-xs font-semibold uppercase mb-1">{group.type}s</p>
-                        <p className="font-bold text-sm">{formatCurrency(Math.abs(group.total))}</p>
-                        <p className="text-xs opacity-70">{group.rows.length} accounts</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                {coaGroups.map((group) => (
-                  <Card key={group.type} className="shadow-lg">
-                    <CardHeader className={cn("px-4 py-2.5 border-b border-border flex items-center justify-between", accountTypeStyles[group.type])}>
-                      <span className="font-semibold text-sm">{group.type}s</span>
-                      <span className="font-bold text-sm">{formatCurrency(Math.abs(group.total))}</span>
-                    </CardHeader>
-                    <div className="app-table-shell">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Code</TableHead>
-                            <TableHead>Account Name</TableHead>
-                            <TableHead>Normal Bal.</TableHead>
-                            <TableHead className="text-right">Balance (TZS)</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {group.rows.map((account) => (
-                            <TableRow key={text(account.id)} className="hover:bg-muted/50">
-                              <TableCell className="font-mono text-xs text-muted-foreground">{text(account.account_code)}</TableCell>
-                              <TableCell className="text-foreground">{text(account.account_name)}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={text(account.normal_balance) === "debit" ? "border-primary/20 bg-primary/10 text-primary" : "border-success/20 bg-success/10 text-success"}>
-                                  {text(account.normal_balance)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className={`text-right font-medium ${rowAmount(account) < 0 ? "text-destructive" : "text-foreground"}`}>
-                                {formatCurrency(rowAmount(account))}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                {coaGroups.length === 0 ? (
+                  <Card className="shadow-lg">
+                    <CardContent className="py-10 text-center text-muted-foreground">
+                      Chart of Accounts table not configured or empty
+                    </CardContent>
                   </Card>
-                ))}
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      {coaGroups.map((group) => (
+                        <Card key={group.type} className={cn("shadow-lg", accountTypeStyles[group.type])}>
+                          <CardContent className="p-4 text-center">
+                            <p className="text-xs font-semibold uppercase mb-1">{group.type}s</p>
+                            <p className="font-bold text-sm">{formatCurrency(Math.abs(group.total))}</p>
+                            <p className="text-xs opacity-70">{group.rows.length} accounts</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    {coaGroups.map((group) => (
+                      <Card key={group.type} className="shadow-lg">
+                        <CardHeader className={cn("px-4 py-2.5 border-b border-border flex items-center justify-between", accountTypeStyles[group.type])}>
+                          <span className="font-semibold text-sm">{group.type}s</span>
+                          <span className="font-bold text-sm">{formatCurrency(Math.abs(group.total))}</span>
+                        </CardHeader>
+                        <div className="app-table-shell">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Code</TableHead>
+                                <TableHead>Account Name</TableHead>
+                                <TableHead>Normal Bal.</TableHead>
+                                <TableHead className="text-right">Balance (TZS)</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {group.rows.map((account) => (
+                                <TableRow key={text(account.id)} className="hover:bg-muted/50">
+                                  <TableCell className="font-mono text-xs text-muted-foreground">{text(account.account_code)}</TableCell>
+                                  <TableCell className="text-foreground">{text(account.account_name)}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className={text(account.normal_balance) === "debit" ? "border-primary/20 bg-primary/10 text-primary" : "border-success/20 bg-success/10 text-success"}>
+                                      {text(account.normal_balance)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className={`text-right font-medium ${rowAmount(account) < 0 ? "text-destructive" : "text-foreground"}`}>
+                                    {formatCurrency(rowAmount(account))}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </Card>
+                    ))}
+                  </>
+                )}
               </div>
             </TabsContent>
 
