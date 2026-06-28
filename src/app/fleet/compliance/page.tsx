@@ -1,7 +1,7 @@
 import { FleetComplianceDashboard } from "@/components/fleet/vehicle-compliance-tracker";
 
 export const metadata = {
-  title: "Fleet Compliance — Calvary Connect",
+  title: "Fleet Compliance - Calvary Connect",
   description: "Track vehicle document expiry: insurance, road license, TRA certificates, COMESA yellow card, and TATOA compliance.",
 };
 

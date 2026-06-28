@@ -87,6 +87,71 @@ const statusStyles: Record<string, string> = {
   draft: "border-slate-200 bg-slate-100 text-slate-700",
 };
 
+const accountingAreas: Array<{
+  title: string;
+  description: string;
+  href: string;
+  icon: ElementType;
+  tone: string;
+}> = [
+  {
+    title: "Chart of Accounts",
+    description: "Maintain assets, liabilities, equity, revenue, and expense accounts.",
+    href: "/finance/chart-of-accounts",
+    icon: BookOpen,
+    tone: "bg-blue-50 text-blue-700 border-blue-100",
+  },
+  {
+    title: "Journal Entries",
+    description: "Review operational postings from trips, fuel, payroll, and maintenance.",
+    href: "/finance",
+    icon: Receipt,
+    tone: "bg-slate-100 text-slate-700 border-slate-200",
+  },
+  {
+    title: "Customer Invoices",
+    description: "Track receivables, outstanding balances, and collection pressure.",
+    href: "/finance",
+    icon: FileText,
+    tone: "bg-emerald-50 text-emerald-700 border-emerald-100",
+  },
+  {
+    title: "Expense Approval",
+    description: "Approve driver, vendor, fuel, maintenance, and payroll expenses.",
+    href: "/accountant/expenses",
+    icon: TrendingDown,
+    tone: "bg-red-50 text-red-700 border-red-100",
+  },
+  {
+    title: "Bank Reconciliation",
+    description: "Import statements and match deposits or withdrawals to ledger records.",
+    href: "/finance/bank-statement",
+    icon: Landmark,
+    tone: "bg-cyan-50 text-cyan-700 border-cyan-100",
+  },
+  {
+    title: "Statutory Reports",
+    description: "Prepare payroll and statutory finance reporting for compliance.",
+    href: "/admin/hr/payroll/statutory",
+    icon: Banknote,
+    tone: "bg-amber-50 text-amber-700 border-amber-100",
+  },
+  {
+    title: "Route Profitability",
+    description: "Connect trips, vehicle costs, fuel, and revenue by route.",
+    href: "/admin/reports/fleet/route-profitability",
+    icon: Truck,
+    tone: "bg-indigo-50 text-indigo-700 border-indigo-100",
+  },
+  {
+    title: "Financial Reports",
+    description: "Open board-ready reports for revenue, expenses, margins, and vehicles.",
+    href: "/reports",
+    icon: ClipboardList,
+    tone: "bg-teal-50 text-teal-700 border-teal-100",
+  },
+];
+
 function toNumber(value: unknown): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -222,6 +287,30 @@ function WorkflowStep({
           <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-primary">{status}</p>
         </div>
       </div>
+    </Link>
+  );
+}
+
+function AccountingAreaCard({
+  title,
+  description,
+  href,
+  icon: Icon,
+  tone,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  icon: ElementType;
+  tone: string;
+}) {
+  return (
+    <Link href={href} className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-primary/5">
+      <div className={cn("mb-4 flex size-10 items-center justify-center rounded-lg border", tone)}>
+        <Icon className="size-5" />
+      </div>
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
     </Link>
   );
 }
@@ -416,6 +505,25 @@ export default function FinancialOperations() {
               tone="amber"
               helper={`${overdueInvoices.length} invoices need collection`}
             />
+          </section>
+
+          <section className="app-surface p-5">
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Accounting Workbench</h2>
+                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                  Full accounting stays available here: accounts, journals, invoices, expenses, reconciliation, statutory reports, and fleet profitability.
+                </p>
+              </div>
+              <Badge variant="outline" className="w-fit border-primary/20 bg-primary/10 text-primary">
+                No dead accounting links
+              </Badge>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {accountingAreas.map((area) => (
+                <AccountingAreaCard key={area.title} {...area} />
+              ))}
+            </div>
           </section>
 
           <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">

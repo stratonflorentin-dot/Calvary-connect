@@ -50,7 +50,7 @@ function ExecutiveDashboardContent() {
             {/* PAGE HEADER */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-4xl font-bold text-foreground">Welcome back, {user?.user_metadata?.full_name || 'User'}!</h1>
+                    <h1 className="text-4xl font-bold text-foreground">Welcome back, {user?.name || user?.email || 'User'}!</h1>
                     <p className="text-base text-muted-foreground mt-2">
                         {new Date().toLocaleDateString('en-TZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
@@ -62,7 +62,7 @@ function ExecutiveDashboardContent() {
                         <span className="text-sm font-semibold text-warning">
                             {pendingCashRequestsCount} pending cash requests
                         </span>
-                        <Button size="sm" variant="ghost" className="ml-2 text-warning hover:text-warning-foreground">→</Button>
+                        <Button size="sm" variant="ghost" className="ml-2 text-warning hover:text-warning-foreground">Open</Button>
                     </div>
                 )}
             </div>
@@ -118,7 +118,7 @@ function ExecutiveDashboardContent() {
                     icon={<Zap className="w-4 h-4 text-warning" />}
                     iconBg="bg-muted"
                     valueColor="text-foreground"
-                    href="/shipments?status=active"
+                    href="/trips"
                 />
                 <StatMiniCard
                     title="Revenue MTD"
@@ -133,7 +133,7 @@ function ExecutiveDashboardContent() {
                     icon={<FileText className="w-4 h-4 text-warning" />}
                     iconBg="bg-muted"
                     valueColor="text-foreground"
-                    href="/accounting/invoices?status=sent"
+                    href="/finance"
                 />
                 <StatMiniCard
                     title="AR Balance"
@@ -141,7 +141,7 @@ function ExecutiveDashboardContent() {
                     icon={<Wallet className="w-4 h-4 text-info" />}
                     iconBg="bg-muted"
                     valueColor="text-foreground"
-                    href="/accounting/reports/ar-ledger"
+                    href="/finance"
                 />
                 <StatMiniCard
                     title="Expenses MTD"
@@ -149,7 +149,7 @@ function ExecutiveDashboardContent() {
                     icon={<TrendingDown className="w-4 h-4 text-destructive" />}
                     iconBg="bg-muted"
                     valueColor="text-foreground"
-                    href="/accounting/expenses"
+                    href="/expenses"
                 />
                 <StatMiniCard
                     title="Available Vehicles"
@@ -157,7 +157,7 @@ function ExecutiveDashboardContent() {
                     icon={<Grid className="w-4 h-4 text-accent" />}
                     iconBg="bg-muted"
                     valueColor="text-foreground"
-                    href="/fleet/vehicles"
+                    href="/fleet"
                 />
             </div>
 

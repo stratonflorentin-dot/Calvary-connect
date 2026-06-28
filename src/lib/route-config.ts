@@ -321,6 +321,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     showInNavigation: false,
   },
   {
+    path: "/proof",
+    label: "Proof of Delivery",
+    allowedRoles: ["DRIVER"],
+    showInNavigation: false,
+  },
+  {
     path: "/driver/fuel",
     label: "Fuel Log",
     allowedRoles: ["DRIVER"],

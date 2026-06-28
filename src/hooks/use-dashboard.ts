@@ -380,7 +380,7 @@ export function useDashboard(
                         title: 'Pending Cash Requests',
                         description: `${pendingCashRequestsCount} cash requests awaiting approval`,
                         count: pendingCashRequestsCount,
-                        action_url: '/accounting/cash-requests',
+                        action_url: '/accountant/expenses',
                     });
                 }
 

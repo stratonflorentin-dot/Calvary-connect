@@ -1,7 +1,7 @@
 import { FuelManagement } from "@/components/financial/fuel-management";
 
 export const metadata = {
-  title: "Fuel Management — Calvary Connect",
+  title: "Fuel Management - Calvary Connect",
   description: "Track fuel consumption, costs, and efficiency across the fleet.",
 };
 

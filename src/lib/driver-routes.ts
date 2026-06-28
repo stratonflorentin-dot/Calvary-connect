@@ -1,7 +1,7 @@
 import type { UserRole } from "@/types/roles";
 import type { RouteConfig } from "@/lib/route-config";
 
-/** Sidebar and access for DRIVER role only — no fleet-wide admin features. */
+/** Sidebar and access for DRIVER role only - no fleet-wide admin features. */
 export const DRIVER_ROUTE_CONFIG: RouteConfig[] = [
   { path: "/", label: "Dashboard", allowedRoles: ["DRIVER"] },
   { path: "/driver/trips", label: "My Trips", allowedRoles: ["DRIVER"] },

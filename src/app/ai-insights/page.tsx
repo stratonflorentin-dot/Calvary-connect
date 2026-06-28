@@ -16,7 +16,7 @@ export default function AiInsightsPage() {
       <main className="flex-1 md:ml-60 p-4 md:p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">AI Fleet Analyst</h1>
-          <p className="text-muted-foreground text-sm">AI-powered analysis with full database access • Ask anything about your fleet</p>
+          <p className="text-muted-foreground text-sm">AI-powered analysis with full database access - ask anything about your fleet</p>
         </header>
         <div className="max-w-7xl">
           <AIAnalysisDashboard />
@@ -25,7 +25,6 @@ export default function AiInsightsPage() {
     </div>
   );
 }
-
 
 
 
