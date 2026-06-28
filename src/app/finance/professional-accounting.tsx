@@ -40,6 +40,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -495,6 +496,12 @@ export default function FinancialOperations() {
   const [filterCurrency, setFilterCurrency] = useState("ALL");
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
 
+  // Form states
+  const [invoiceForm, setInvoiceForm] = useState({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" });
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" });
+  const [revenueForm, setRevenueForm] = useState({ description: "", amount: "", currency: "TZS", date: "" });
+  const [taxForm, setTaxForm] = useState({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" });
+
   const loadFinance = async () => {
     setLoading(true);
     const [invoices, expenses, income, trips, vehicles, journalEntries] = await Promise.all([
@@ -819,28 +826,8 @@ export default function FinancialOperations() {
             </div>
           </section>
 
-          {/* Currency Filter */}
-          <section className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-2.5">
-            <span className="text-xs font-semibold text-muted-foreground uppercase">Filter by currency:</span>
-            <div className="flex gap-2 flex-wrap">
-              {currencyOptions.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => setFilterCurrency(o.value)}
-                  className={cn(
-                    "text-xs px-3 py-1.5 rounded-lg font-medium transition-colors",
-                    filterCurrency === o.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  )}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {/* Multi-Currency Summary Cards */}
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MultiCurrencyCard
               title="Revenue"
               items={[...data.invoices.filter(isReceivable), ...data.income]}
@@ -865,6 +852,27 @@ export default function FinancialOperations() {
               icon={Building2}
               gradient="bg-gradient-to-br from-amber-600 to-orange-700"
             />
+          </section>
+
+          {/* Currency Filter */}
+          <section className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filter by currency:</span>
+            <div className="flex gap-2 flex-wrap">
+              {currencyOptions.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setFilterCurrency(o.value)}
+                  className={cn(
+                    "text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:scale-105",
+                    filterCurrency === o.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
           </section>
 
           <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
@@ -1061,31 +1069,32 @@ export default function FinancialOperations() {
           </section>
 
           {/* Multi-Currency Tabs */}
-          <div className="border-b border-border">
-            <div className="flex overflow-x-auto gap-1 bg-muted/50 p-1">
+          <div className="border-b border-border bg-card/50 backdrop-blur-sm">
+            <div className="flex overflow-x-auto gap-1 p-1">
               {[
-                { id: "overview", label: "Overview" },
-                { id: "expenses", label: "Expenses" },
-                { id: "revenue", label: "Revenue" },
-                { id: "invoices", label: "Invoices" },
-                { id: "taxes", label: "Taxes" },
-                { id: "logistics", label: "Logistics" },
-                { id: "accounts", label: "Accounts" },
-                { id: "bank", label: "Bank Statement" },
-                { id: "coa", label: "Chart of Accounts" },
-                { id: "journal", label: "Journal Entries" },
-                { id: "aging", label: "Aging Report" },
+                { id: "overview", label: "Overview", icon: TrendingUp },
+                { id: "expenses", label: "Expenses", icon: TrendingDown },
+                { id: "revenue", label: "Revenue", icon: Wallet },
+                { id: "invoices", label: "Invoices", icon: FileText },
+                { id: "taxes", label: "Taxes", icon: Scale },
+                { id: "logistics", label: "Logistics", icon: Truck },
+                { id: "accounts", label: "Accounts", icon: Landmark },
+                { id: "bank", label: "Bank Statement", icon: CreditCard },
+                { id: "coa", label: "Chart of Accounts", icon: BookOpen },
+                { id: "journal", label: "Journal Entries", icon: ClipboardList },
+                { id: "aging", label: "Aging Report", icon: AlertTriangle },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors",
+                    "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all",
                     activeTab === tab.id
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                   )}
                 >
+                  <tab.icon className="size-4" />
                   {tab.label}
                 </button>
               ))}
@@ -1096,8 +1105,8 @@ export default function FinancialOperations() {
           {activeTab === "overview" && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="app-surface">
-                  <CardHeader>
+                <Card className="app-surface border-l-4 border-l-success">
+                  <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold flex items-center gap-2">
                       <TrendingUp className="size-4 text-success" />
                       Revenue by Currency
@@ -1109,9 +1118,9 @@ export default function FinancialOperations() {
                       .map(([cur, amt]) => {
                         const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
                         return (
-                          <div key={cur} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-                            <span className="flex items-center gap-2 text-sm text-foreground">
-                              <span className="text-base">{c.flag}</span>
+                          <div key={cur} className="flex items-center justify-between p-3 bg-success/5 rounded-lg border border-success/10">
+                            <span className="flex items-center gap-2 text-sm text-foreground font-medium">
+                              <span className="text-lg">{c.flag}</span>
                               {cur} – {c.name}
                             </span>
                             <span className="font-bold text-success">{fmtAmt(amt, cur)}</span>
@@ -1121,8 +1130,8 @@ export default function FinancialOperations() {
                   </CardContent>
                 </Card>
 
-                <Card className="app-surface">
-                  <CardHeader>
+                <Card className="app-surface border-l-4 border-l-destructive">
+                  <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold flex items-center gap-2">
                       <TrendingDown className="size-4 text-destructive" />
                       Expenses by Currency
@@ -1134,10 +1143,10 @@ export default function FinancialOperations() {
                       .map(([cur, amt]) => {
                         const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
                         return (
-                          <div key={cur} className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg">
-                            <span className="flex items-center gap-2 text-sm text-foreground">
-                              <span className="text-base">{c.flag}</span>
-                              {cur}
+                          <div key={cur} className="flex items-center justify-between p-3 bg-destructive/5 rounded-lg border border-destructive/10">
+                            <span className="flex items-center gap-2 text-sm text-foreground font-medium">
+                              <span className="text-lg">{c.flag}</span>
+                              {cur} – {c.name}
                             </span>
                             <span className="font-bold text-destructive">{fmtAmt(amt, cur)}</span>
                           </div>
@@ -1148,28 +1157,28 @@ export default function FinancialOperations() {
               </div>
 
               <Card className="app-surface">
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold">Net Profit / Loss by Currency</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                     {Object.entries(profitByCur).map(([cur, net]) => {
                       const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
                       return (
                         <div
                           key={cur}
                           className={cn(
-                            "rounded-xl p-4 border",
-                            net >= 0 ? "bg-success/10 border-success/20" : "bg-destructive/10 border-destructive/20"
+                            "rounded-xl p-4 border-2 transition-all hover:scale-105",
+                            net >= 0 ? "bg-success/10 border-success/30 shadow-sm" : "bg-destructive/10 border-destructive/30 shadow-sm"
                           )}
                         >
-                          <p className="text-sm font-semibold text-muted-foreground mb-1">
+                          <p className="text-sm font-semibold text-muted-foreground mb-2">
                             {c.flag} {cur}
                           </p>
-                          <p className={cn("text-lg font-bold", net >= 0 ? "text-success" : "text-destructive")}>
+                          <p className={cn("text-xl font-bold", net >= 0 ? "text-success" : "text-destructive")}>
                             {fmtAmt(Math.abs(net), cur)}
                           </p>
-                          <p className={cn("text-xs mt-0.5", net >= 0 ? "text-success/70" : "text-destructive/70")}>
+                          <p className={cn("text-xs mt-1 font-medium", net >= 0 ? "text-success/70" : "text-destructive/70")}>
                             {net >= 0 ? "Profit" : "Loss"}
                           </p>
                         </div>
@@ -1179,8 +1188,8 @@ export default function FinancialOperations() {
                 </CardContent>
               </Card>
 
-              <Card className="app-surface">
-                <CardHeader>
+              <Card className="app-surface border-l-4 border-l-primary">
+                <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold flex items-center gap-2">
                     <Globe className="size-4 text-primary" />
                     Cross-Border Performance by Currency
@@ -1205,19 +1214,19 @@ export default function FinancialOperations() {
                           const net = rev - exp;
                           const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
                           return (
-                            <TableRow key={cur}>
+                            <TableRow key={cur} className="hover:bg-muted/50">
                               <TableCell>
                                 <span className="flex items-center gap-2 font-medium">
-                                  <span className="text-base">{c.flag}</span>
+                                  <span className="text-lg">{c.flag}</span>
                                   {cur} – {c.name}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-success font-medium">{fmtAmt(rev, cur)}</TableCell>
-                              <TableCell className="text-destructive font-medium">{fmtAmt(exp, cur)}</TableCell>
-                              <TableCell className={cn("font-bold", net >= 0 ? "text-success" : "text-destructive")}>
+                              <TableCell className="text-success font-semibold">{fmtAmt(rev, cur)}</TableCell>
+                              <TableCell className="text-destructive font-semibold">{fmtAmt(exp, cur)}</TableCell>
+                              <TableCell className={cn("font-bold text-base", net >= 0 ? "text-success" : "text-destructive")}>
                                 {fmtAmt(Math.abs(net), cur)}
                               </TableCell>
-                              <TableCell className="text-muted-foreground text-xs">
+                              <TableCell className="text-muted-foreground text-sm font-medium">
                                 ${toUSD(Math.abs(net), cur).toLocaleString("en-US", { maximumFractionDigits: 0 })}
                               </TableCell>
                             </TableRow>
@@ -1245,10 +1254,60 @@ export default function FinancialOperations() {
                       onChange={(e) => setSearch(e.target.value)}
                     />
                   </div>
-                  <Button className="gap-2">
-                    <Plus className="size-4" />
-                    Add Expense
-                  </Button>
+                  <Dialog open={modal === "expense"} onOpenChange={(open) => setModal(open ? "expense" : null)}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2">
+                        <Plus className="size-4" />
+                        Add Expense
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold">Add New Expense</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="exp-amount">Amount</Label>
+                            <Input id="exp-amount" type="number" placeholder="0.00" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="exp-currency">Currency</Label>
+                            <Select value={expenseForm.currency} onValueChange={(value) => setExpenseForm({ ...expenseForm, currency: value })}>
+                              <SelectTrigger id="exp-currency">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.values(CURRENCIES).map((c) => (
+                                  <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="exp-category">Category</Label>
+                          <Input id="exp-category" placeholder="Fuel, Maintenance, etc." value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="exp-vendor">Vendor</Label>
+                          <Input id="exp-vendor" placeholder="Vendor name" value={expenseForm.vendor} onChange={(e) => setExpenseForm({ ...expenseForm, vendor: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="exp-description">Description</Label>
+                          <Input id="exp-description" placeholder="Expense description" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="exp-date">Date</Label>
+                          <Input id="exp-date" type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
+                        </div>
+                        <div className="flex gap-2 justify-end pt-2">
+                          <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                          <Button onClick={() => { setModal(null); setExpenseForm({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" }); }}>Save Expense</Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -1332,10 +1391,52 @@ export default function FinancialOperations() {
                       onChange={(e) => setSearch(e.target.value)}
                     />
                   </div>
-                  <Button className="gap-2" variant="default">
-                    <Plus className="size-4" />
-                    Record Revenue
-                  </Button>
+                  <Dialog open={modal === "revenue"} onOpenChange={(open) => setModal(open ? "revenue" : null)}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2" variant="default">
+                        <Plus className="size-4" />
+                        Record Revenue
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold">Record Revenue</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="rev-amount">Amount</Label>
+                            <Input id="rev-amount" type="number" placeholder="0.00" value={revenueForm.amount} onChange={(e) => setRevenueForm({ ...revenueForm, amount: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="rev-currency">Currency</Label>
+                            <Select value={revenueForm.currency} onValueChange={(value) => setRevenueForm({ ...revenueForm, currency: value })}>
+                              <SelectTrigger id="rev-currency">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.values(CURRENCIES).map((c) => (
+                                  <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="rev-description">Description</Label>
+                          <Input id="rev-description" placeholder="Revenue source/description" value={revenueForm.description} onChange={(e) => setRevenueForm({ ...revenueForm, description: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="rev-date">Date</Label>
+                          <Input id="rev-date" type="date" value={revenueForm.date} onChange={(e) => setRevenueForm({ ...revenueForm, date: e.target.value })} />
+                        </div>
+                        <div className="flex gap-2 justify-end pt-2">
+                          <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                          <Button onClick={() => { setModal(null); setRevenueForm({ description: "", amount: "", currency: "TZS", date: "" }); }}>Save Revenue</Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -1407,10 +1508,74 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">Client Invoices</h2>
-                <Button className="gap-2">
-                  <Plus className="size-4" />
-                  Create Invoice
-                </Button>
+                <Dialog open={modal === "invoice"} onOpenChange={(open) => setModal(open ? "invoice" : null)}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Plus className="size-4" />
+                      Create Invoice
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-semibold">Create New Invoice</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="inv-number">Invoice Number</Label>
+                          <Input id="inv-number" placeholder="INV-001" value={invoiceForm.invoice_number} onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="inv-type">Type</Label>
+                          <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
+                            <SelectTrigger id="inv-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="AR">Accounts Receivable (AR)</SelectItem>
+                              <SelectItem value="AP">Accounts Payable (AP)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inv-customer">Customer / Vendor</Label>
+                        <Input id="inv-customer" placeholder="Company name" value={invoiceForm.customer_name} onChange={(e) => setInvoiceForm({ ...invoiceForm, customer_name: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="inv-amount">Amount</Label>
+                          <Input id="inv-amount" type="number" placeholder="0.00" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="inv-currency">Currency</Label>
+                          <Select value={invoiceForm.currency} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, currency: value })}>
+                            <SelectTrigger id="inv-currency">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.values(CURRENCIES).map((c) => (
+                                <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inv-due">Due Date</Label>
+                        <Input id="inv-due" type="date" value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inv-description">Description</Label>
+                        <Input id="inv-description" placeholder="Invoice description" value={invoiceForm.description} onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })} />
+                      </div>
+                      <div className="flex gap-2 justify-end pt-2">
+                        <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                        <Button onClick={() => { setModal(null); setInvoiceForm({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" }); }}>Create Invoice</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
               <Card className="app-surface">
                 <div className="overflow-x-auto">
@@ -1474,10 +1639,58 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">Tax Obligations</h2>
-                <Button className="gap-2">
-                  <Plus className="size-4" />
-                  Record Tax
-                </Button>
+                <Dialog open={modal === "tax"} onOpenChange={(open) => setModal(open ? "tax" : null)}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Plus className="size-4" />
+                      Record Tax
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-semibold">Record Tax Obligation</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tax-name">Tax Name</Label>
+                        <Input id="tax-name" placeholder="VAT, Income Tax, etc." value={taxForm.tax_name} onChange={(e) => setTaxForm({ ...taxForm, tax_name: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="tax-amount">Amount</Label>
+                          <Input id="tax-amount" type="number" placeholder="0.00" value={taxForm.amount} onChange={(e) => setTaxForm({ ...taxForm, amount: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tax-currency">Currency</Label>
+                          <Select value={taxForm.currency} onValueChange={(value) => setTaxForm({ ...taxForm, currency: value })}>
+                            <SelectTrigger id="tax-currency">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.values(CURRENCIES).map((c) => (
+                                <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="tax-type">Type</Label>
+                          <Input id="tax-type" placeholder="VAT, Withholding, etc." value={taxForm.type} onChange={(e) => setTaxForm({ ...taxForm, type: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tax-due">Due Date</Label>
+                          <Input id="tax-due" type="date" value={taxForm.due_date} onChange={(e) => setTaxForm({ ...taxForm, due_date: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end pt-2">
+                        <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                        <Button onClick={() => { setModal(null); setTaxForm({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" }); }}>Save Tax</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
               <Card className="app-surface">
                 <div className="overflow-x-auto">
@@ -1600,18 +1813,36 @@ export default function FinancialOperations() {
 
           {activeTab === "coa" && (
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-foreground">Chart of Accounts</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">Chart of Accounts</h2>
+                <Button className="gap-2" variant="outline">
+                  <Plus className="size-4" />
+                  Add Account
+                </Button>
+              </div>
               {coaGroups.length === 0 ? (
                 <Card className="app-surface">
-                  <CardContent className="py-10 text-center text-muted-foreground">
-                    Chart of Accounts table not configured or empty
+                  <CardContent className="py-16 text-center">
+                    <BookOpen className="mx-auto size-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Chart of Accounts Not Configured</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                      Configure the chart_of_accounts table in Supabase to organize your financial accounts by type.
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-2xl mx-auto">
+                      {["Assets", "Liabilities", "Equity", "Revenue", "Expenses"].map((type) => (
+                        <div key={type} className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+                          <p className="text-sm font-medium text-muted-foreground">{type}</p>
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               ) : (
                 coaGroups.map((group) => (
                   <Card key={group.type} className="app-surface">
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between pb-3">
                       <CardTitle className="text-lg font-semibold">{group.type}</CardTitle>
+                      <Badge variant="outline" className="text-xs">{group.rows.length} accounts</Badge>
                     </CardHeader>
                     <CardContent>
                       <div className="overflow-x-auto">
