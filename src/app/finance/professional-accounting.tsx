@@ -773,58 +773,240 @@ export default function FinancialOperations() {
       <Sidebar role={(role || "ACCOUNTANT") as any} />
       <main className="min-w-0 flex-1 md:ml-64">
         <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-4 backdrop-blur md:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                  Finance Command Center
-                </Badge>
-                <Badge variant="outline" className="border-success/20 bg-success/10 text-success">
-                  Integrated ledger
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-1 bg-primary rounded-full"></div>
+                  <h1 className="text-3xl font-bold tracking-tight text-foreground">Financial Dashboard</h1>
+                </div>
+                <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary font-medium">
+                  Live
                 </Badge>
               </div>
-              <h1 className="mt-3 text-2xl font-semibold tracking-normal md:text-3xl">Accounting and Finance</h1>
-              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                One finance workspace for trip revenue, invoices, expenses, payables, receivables, reconciliation, and audit-ready reporting.
+              <p className="text-base text-muted-foreground max-w-2xl">
+                Comprehensive financial management for multi-currency operations, invoicing, expenses, and reconciliation.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" className="gap-2" onClick={loadFinance} disabled={loading}>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" className="gap-2 h-10" onClick={loadFinance} disabled={loading}>
                 {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-                Refresh
+                Refresh Data
               </Button>
-              <Button asChild className="gap-2">
-                <Link href="/finance/bank-statement">
-                  <CreditCard className="size-4" />
-                  Reconcile Bank
-                </Link>
+              <Button className="gap-2 h-10 bg-primary hover:bg-primary/90">
+                <Download className="size-4" />
+                Export Report
               </Button>
             </div>
           </div>
         </header>
 
         <div className="space-y-6 p-4 md:p-6">
-          <section className="app-toolbar justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="border-muted bg-card text-muted-foreground">
-                Current period
-              </Badge>
-              <span className="text-sm font-semibold text-foreground">
-                {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
-              </span>
-              <span className="text-sm text-muted-foreground">Accounting basis: operational accrual view</span>
+          {/* Key Metrics Bar */}
+          <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Total Revenue</p>
+              <p className="text-xl font-bold text-success">{formatCurrency(metrics.revenue)}</p>
+              <p className="text-xs text-muted-foreground mt-1">All currencies</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                {metrics.tripCount} trips
-              </Badge>
-              <Badge variant="outline" className="border-success/20 bg-success/10 text-success">
-                {metrics.invoiceCount} invoices
-              </Badge>
-              <Badge variant="outline" className="border-muted bg-muted/50 text-muted-foreground">
-                {metrics.journalCount} journals
-              </Badge>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Total Expenses</p>
+              <p className="text-xl font-bold text-destructive">{formatCurrency(metrics.operatingExpense)}</p>
+              <p className="text-xs text-muted-foreground mt-1">All currencies</p>
             </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Net Profit</p>
+              <p className={cn("text-xl font-bold", metrics.net >= 0 ? "text-success" : "text-destructive")}>{formatCurrency(metrics.net)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{metrics.margin}% margin</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Receivables</p>
+              <p className="text-xl font-bold text-warning">{formatCurrency(metrics.receivables)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Outstanding</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Payables</p>
+              <p className="text-xl font-bold text-info">{formatCurrency(metrics.payables)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Outstanding</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Active Trips</p>
+              <p className="text-xl font-bold text-primary">{metrics.tripCount}</p>
+              <p className="text-xs text-muted-foreground mt-1">{metrics.vehicleCount} vehicles</p>
+            </div>
+          </section>
+
+          {/* Quick Actions */}
+          <section className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-muted-foreground">Quick Actions:</span>
+            <Dialog open={modal === "invoice"} onOpenChange={(open) => setModal(open ? "invoice" : null)}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <FileText className="size-4" />
+                  New Invoice
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">Create New Invoice</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-number">Invoice Number</Label>
+                      <Input id="inv-number" placeholder="INV-001" value={invoiceForm.invoice_number} onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-type">Type</Label>
+                      <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
+                        <SelectTrigger id="inv-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AR">Accounts Receivable (AR)</SelectItem>
+                          <SelectItem value="AP">Accounts Payable (AP)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-customer">Customer / Vendor</Label>
+                    <Input id="inv-customer" placeholder="Company name" value={invoiceForm.customer_name} onChange={(e) => setInvoiceForm({ ...invoiceForm, customer_name: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-amount">Amount</Label>
+                      <Input id="inv-amount" type="number" placeholder="0.00" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-currency">Currency</Label>
+                      <Select value={invoiceForm.currency} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, currency: value })}>
+                        <SelectTrigger id="inv-currency">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(CURRENCIES).map((c) => (
+                            <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-due">Due Date</Label>
+                    <Input id="inv-due" type="date" value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-description">Description</Label>
+                    <Input id="inv-description" placeholder="Invoice description" value={invoiceForm.description} onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                    <Button onClick={() => { setModal(null); setInvoiceForm({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" }); }}>Create Invoice</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={modal === "expense"} onOpenChange={(open) => setModal(open ? "expense" : null)}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Receipt className="size-4" />
+                  Add Expense
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">Add New Expense</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="exp-amount">Amount</Label>
+                      <Input id="exp-amount" type="number" placeholder="0.00" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="exp-currency">Currency</Label>
+                      <Select value={expenseForm.currency} onValueChange={(value) => setExpenseForm({ ...expenseForm, currency: value })}>
+                        <SelectTrigger id="exp-currency">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(CURRENCIES).map((c) => (
+                            <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="exp-category">Category</Label>
+                    <Input id="exp-category" placeholder="Fuel, Maintenance, etc." value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="exp-vendor">Vendor</Label>
+                    <Input id="exp-vendor" placeholder="Vendor name" value={expenseForm.vendor} onChange={(e) => setExpenseForm({ ...expenseForm, vendor: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="exp-description">Description</Label>
+                    <Input id="exp-description" placeholder="Expense description" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="exp-date">Date</Label>
+                    <Input id="exp-date" type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                    <Button onClick={() => { setModal(null); setExpenseForm({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" }); }}>Save Expense</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={modal === "revenue"} onOpenChange={(open) => setModal(open ? "revenue" : null)}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Wallet className="size-4" />
+                  Record Revenue
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">Record Revenue</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="rev-amount">Amount</Label>
+                      <Input id="rev-amount" type="number" placeholder="0.00" value={revenueForm.amount} onChange={(e) => setRevenueForm({ ...revenueForm, amount: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rev-currency">Currency</Label>
+                      <Select value={revenueForm.currency} onValueChange={(value) => setRevenueForm({ ...revenueForm, currency: value })}>
+                        <SelectTrigger id="rev-currency">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(CURRENCIES).map((c) => (
+                            <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rev-description">Description</Label>
+                    <Input id="rev-description" placeholder="Revenue source/description" value={revenueForm.description} onChange={(e) => setRevenueForm({ ...revenueForm, description: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rev-date">Date</Label>
+                    <Input id="rev-date" type="date" value={revenueForm.date} onChange={(e) => setRevenueForm({ ...revenueForm, date: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                    <Button onClick={() => { setModal(null); setRevenueForm({ description: "", amount: "", currency: "TZS", date: "" }); }}>Save Revenue</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </section>
 
           {/* Multi-Currency Summary Cards */}
@@ -1324,56 +1506,62 @@ export default function FinancialOperations() {
                   );
                 })}
               </div>
-              <Card className="app-surface">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Currency</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.expenses.length === 0 ? (
+              <Card className="app-surface border border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                            No expenses found
-                          </TableCell>
+                          <TableHead className="font-semibold text-foreground">Date</TableHead>
+                          <TableHead className="font-semibold text-foreground">Category</TableHead>
+                          <TableHead className="font-semibold text-foreground">Description</TableHead>
+                          <TableHead className="font-semibold text-foreground">Vendor</TableHead>
+                          <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
+                          <TableHead className="font-semibold text-foreground">Currency</TableHead>
+                          <TableHead className="font-semibold text-foreground">Status</TableHead>
                         </TableRow>
-                      ) : (
-                        data.expenses
-                          .filter((e) => filterCurrency === "ALL" || rowCurrency(e) === filterCurrency)
-                          .filter((e) =>
-                            [e.description, e.category, e.vendor].some((s) =>
-                              String(s).toLowerCase().includes(search.toLowerCase())
+                      </TableHeader>
+                      <TableBody>
+                        {data.expenses.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="py-16 text-center">
+                              <Receipt className="mx-auto size-12 text-muted-foreground/30 mb-3" />
+                              <p className="text-muted-foreground font-medium">No expenses recorded</p>
+                              <p className="text-sm text-muted-foreground mt-1">Use the "Add Expense" button above to record your first expense</p>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          data.expenses
+                            .filter((e) => filterCurrency === "ALL" || rowCurrency(e) === filterCurrency)
+                            .filter((e) =>
+                              [e.description, e.category, e.vendor].some((s) =>
+                                String(s).toLowerCase().includes(search.toLowerCase())
+                              )
                             )
-                          )
-                          .map((e) => (
-                            <TableRow key={text(e.id)}>
-                              <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(rowDate(e))}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{text(e.category)}</Badge>
-                              </TableCell>
-                              <TableCell className="text-foreground max-w-[200px] truncate">{text(e.description)}</TableCell>
-                              <TableCell className="font-bold text-destructive whitespace-nowrap">
-                                {formatCurrency(rowAmount(e), rowCurrency(e))}
-                              </TableCell>
-                              <TableCell>
-                                <CurrencyBadge currency={rowCurrency(e)} />
-                              </TableCell>
-                              <TableCell>
-                                <StatusBadge status={rowStatus(e)} />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                            .map((e) => (
+                              <TableRow key={text(e.id)} className="hover:bg-muted/50 transition-colors">
+                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(rowDate(e))}</TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className="font-medium">{text(e.category)}</Badge>
+                                </TableCell>
+                                <TableCell className="text-foreground">{text(e.description)}</TableCell>
+                                <TableCell className="text-muted-foreground">{text(e.vendor)}</TableCell>
+                                <TableCell className="font-bold text-destructive text-right whitespace-nowrap">
+                                  {formatCurrency(rowAmount(e), rowCurrency(e))}
+                                </TableCell>
+                                <TableCell>
+                                  <CurrencyBadge currency={rowCurrency(e)} />
+                                </TableCell>
+                                <TableCell>
+                                  <StatusBadge status={rowStatus(e)} />
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
               </Card>
             </div>
           )}
@@ -1453,54 +1641,58 @@ export default function FinancialOperations() {
                   );
                 })}
               </div>
-              <Card className="app-surface">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Currency</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {[...data.invoices.filter(isReceivable), ...data.income].length === 0 ? (
+              <Card className="app-surface border border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                            No revenue records
-                          </TableCell>
+                          <TableHead className="font-semibold text-foreground">Date</TableHead>
+                          <TableHead className="font-semibold text-foreground">Source / Customer</TableHead>
+                          <TableHead className="font-semibold text-foreground">Description</TableHead>
+                          <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
+                          <TableHead className="font-semibold text-foreground">Currency</TableHead>
+                          <TableHead className="font-semibold text-foreground">Status</TableHead>
                         </TableRow>
-                      ) : (
-                        [...data.invoices.filter(isReceivable), ...data.income]
-                          .filter((r) => filterCurrency === "ALL" || rowCurrency(r) === filterCurrency)
-                          .filter((r) =>
-                            [r.description, r.customer_name, r.client_name].some((s) =>
-                              String(s).toLowerCase().includes(search.toLowerCase())
+                      </TableHeader>
+                      <TableBody>
+                        {[...data.invoices.filter(isReceivable), ...data.income].length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="py-16 text-center">
+                              <Wallet className="mx-auto size-12 text-muted-foreground/30 mb-3" />
+                              <p className="text-muted-foreground font-medium">No revenue recorded</p>
+                              <p className="text-sm text-muted-foreground mt-1">Use the "Record Revenue" button above to add your first revenue entry</p>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          [...data.invoices.filter(isReceivable), ...data.income]
+                            .filter((r) => filterCurrency === "ALL" || rowCurrency(r) === filterCurrency)
+                            .filter((r) =>
+                              [r.description, r.customer_name, r.client_name].some((s) =>
+                                String(s).toLowerCase().includes(search.toLowerCase())
+                              )
                             )
-                          )
-                          .map((r) => (
-                            <TableRow key={text(r.id)}>
-                              <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(rowDate(r))}</TableCell>
-                              <TableCell className="text-foreground max-w-[200px] truncate">
-                                {text(r.description ?? r.customer_name ?? r.client_name)}
-                              </TableCell>
-                              <TableCell className="font-bold text-success whitespace-nowrap">
-                                {formatCurrency(rowAmount(r), rowCurrency(r))}
-                              </TableCell>
-                              <TableCell>
-                                <CurrencyBadge currency={rowCurrency(r)} />
-                              </TableCell>
-                              <TableCell>
-                                <StatusBadge status={rowStatus(r)} />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                            .map((r) => (
+                              <TableRow key={text(r.id)} className="hover:bg-muted/50 transition-colors">
+                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(rowDate(r))}</TableCell>
+                                <TableCell className="text-foreground font-medium">{text(r.customer_name ?? r.client_name ?? "Direct Income")}</TableCell>
+                                <TableCell className="text-muted-foreground">{text(r.description)}</TableCell>
+                                <TableCell className="font-bold text-success text-right whitespace-nowrap">
+                                  {formatCurrency(rowAmount(r), rowCurrency(r))}
+                                </TableCell>
+                                <TableCell>
+                                  <CurrencyBadge currency={rowCurrency(r)} />
+                                </TableCell>
+                                <TableCell>
+                                  <StatusBadge status={rowStatus(r)} />
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
               </Card>
             </div>
           )}
@@ -1578,60 +1770,64 @@ export default function FinancialOperations() {
                   </DialogContent>
                 </Dialog>
               </div>
-              <Card className="app-surface">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Invoice #</TableHead>
-                        <TableHead>Customer / Vendor</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Currency</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.invoices.length === 0 ? (
+              <Card className="app-surface border border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                            No invoices
-                          </TableCell>
+                          <TableHead className="font-semibold text-foreground">Invoice #</TableHead>
+                          <TableHead className="font-semibold text-foreground">Customer / Vendor</TableHead>
+                          <TableHead className="font-semibold text-foreground">Type</TableHead>
+                          <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
+                          <TableHead className="font-semibold text-foreground">Currency</TableHead>
+                          <TableHead className="font-semibold text-foreground">Due Date</TableHead>
+                          <TableHead className="font-semibold text-foreground">Status</TableHead>
                         </TableRow>
-                      ) : (
-                        data.invoices
-                          .filter((i) => filterCurrency === "ALL" || rowCurrency(i) === filterCurrency)
-                          .map((inv) => (
-                            <TableRow key={text(inv.id)}>
-                              <TableCell className="font-medium text-foreground">{text(inv.invoice_number)}</TableCell>
-                              <TableCell className="text-foreground">{text(inv.customer_name)}</TableCell>
-                              <TableCell>
-                                <Badge variant={isReceivable(inv) ? "default" : "secondary"}>
-                                  {isReceivable(inv) ? "AR" : "AP"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell
-                                className={cn(
-                                  "font-bold whitespace-nowrap",
-                                  isReceivable(inv) ? "text-success" : "text-destructive"
-                                )}
-                              >
-                                {formatCurrency(rowAmount(inv), rowCurrency(inv))}
-                              </TableCell>
-                              <TableCell>
-                                <CurrencyBadge currency={rowCurrency(inv)} />
-                              </TableCell>
-                              <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(rowDate(inv))}</TableCell>
-                              <TableCell>
-                                <StatusBadge status={rowStatus(inv)} />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {data.invoices.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="py-16 text-center">
+                              <FileText className="mx-auto size-12 text-muted-foreground/30 mb-3" />
+                              <p className="text-muted-foreground font-medium">No invoices created</p>
+                              <p className="text-sm text-muted-foreground mt-1">Use the "Create Invoice" button above to generate your first invoice</p>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          data.invoices
+                            .filter((i) => filterCurrency === "ALL" || rowCurrency(i) === filterCurrency)
+                            .map((inv) => (
+                              <TableRow key={text(inv.id)} className="hover:bg-muted/50 transition-colors">
+                                <TableCell className="font-semibold text-foreground">{text(inv.invoice_number)}</TableCell>
+                                <TableCell className="text-foreground font-medium">{text(inv.customer_name)}</TableCell>
+                                <TableCell>
+                                  <Badge variant={isReceivable(inv) ? "default" : "secondary"} className="font-medium">
+                                    {isReceivable(inv) ? "AR" : "AP"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell
+                                  className={cn(
+                                    "font-bold text-right whitespace-nowrap",
+                                    isReceivable(inv) ? "text-success" : "text-destructive"
+                                  )}
+                                >
+                                  {formatCurrency(rowAmount(inv), rowCurrency(inv))}
+                                </TableCell>
+                                <TableCell>
+                                  <CurrencyBadge currency={rowCurrency(inv)} />
+                                </TableCell>
+                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(rowDate(inv))}</TableCell>
+                                <TableCell>
+                                  <StatusBadge status={rowStatus(inv)} />
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
               </Card>
             </div>
           )}
@@ -1693,49 +1889,53 @@ export default function FinancialOperations() {
                   </DialogContent>
                 </Dialog>
               </div>
-              <Card className="app-surface">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tax Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Currency</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(!data.taxes || data.taxes.length === 0) ? (
+              <Card className="app-surface border border-border">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                            Tax table not configured or empty
-                          </TableCell>
+                          <TableHead className="font-semibold text-foreground">Tax Name</TableHead>
+                          <TableHead className="font-semibold text-foreground">Type</TableHead>
+                          <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
+                          <TableHead className="font-semibold text-foreground">Currency</TableHead>
+                          <TableHead className="font-semibold text-foreground">Due Date</TableHead>
+                          <TableHead className="font-semibold text-foreground">Status</TableHead>
                         </TableRow>
-                      ) : (
-                        data.taxes
-                          .filter((t) => filterCurrency === "ALL" || rowCurrency(t) === filterCurrency)
-                          .map((tax) => (
-                            <TableRow key={text(tax.id)}>
-                              <TableCell className="text-foreground">{text(tax.tax_name)}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{text(tax.type)}</Badge>
-                              </TableCell>
-                              <TableCell className="font-bold text-foreground">{formatCurrency(rowAmount(tax), rowCurrency(tax))}</TableCell>
-                              <TableCell>
-                                <CurrencyBadge currency={rowCurrency(tax)} />
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">{formatDate(rowDate(tax))}</TableCell>
-                              <TableCell>
-                                <StatusBadge status={rowStatus(tax)} />
-                              </TableCell>
-                            </TableRow>
-                          ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {(!data.taxes || data.taxes.length === 0) ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="py-16 text-center">
+                              <Scale className="mx-auto size-12 text-muted-foreground/30 mb-3" />
+                              <p className="text-muted-foreground font-medium">No tax obligations recorded</p>
+                              <p className="text-sm text-muted-foreground mt-1">Use the "Record Tax" button above to add your first tax entry</p>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          data.taxes
+                            .filter((t) => filterCurrency === "ALL" || rowCurrency(t) === filterCurrency)
+                            .map((tax) => (
+                              <TableRow key={text(tax.id)} className="hover:bg-muted/50 transition-colors">
+                                <TableCell className="text-foreground font-medium">{text(tax.tax_name)}</TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className="font-medium">{text(tax.type)}</Badge>
+                                </TableCell>
+                                <TableCell className="font-bold text-foreground text-right whitespace-nowrap">{formatCurrency(rowAmount(tax), rowCurrency(tax))}</TableCell>
+                                <TableCell>
+                                  <CurrencyBadge currency={rowCurrency(tax)} />
+                                </TableCell>
+                                <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(rowDate(tax))}</TableCell>
+                                <TableCell>
+                                  <StatusBadge status={rowStatus(tax)} />
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
               </Card>
             </div>
           )}
