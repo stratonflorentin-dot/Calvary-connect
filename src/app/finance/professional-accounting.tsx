@@ -580,11 +580,6 @@ export default function FinancialOperations() {
       safeTable("bank_accounts").catch(() => []),
     ]);
 
-    console.log("[Finance] Chart of Accounts loaded:", chartOfAccounts.length, "items");
-    if (chartOfAccounts.length > 0) {
-      console.log("[Finance] Sample COA item:", chartOfAccounts[0]);
-      console.log("[Finance] COA types:", [...new Set(chartOfAccounts.map((acc) => acc.type))]);
-    }
     setData({ invoices, expenses, income, trips, vehicles, journalEntries, chartOfAccounts, taxes, bankAccounts });
     setLoading(false);
   };
