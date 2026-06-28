@@ -315,6 +315,63 @@ function AccountingAreaCard({
   );
 }
 
+function AccountingControlItem({
+  title,
+  detail,
+  href,
+  icon: Icon,
+  complete,
+  signal,
+}: {
+  title: string;
+  detail: string;
+  href: string;
+  icon: ElementType;
+  complete: boolean;
+  signal: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-start gap-3 rounded-lg border border-border bg-background/60 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
+    >
+      <div
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-lg border",
+          complete ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700",
+        )}
+      >
+        {complete ? <CheckCircle2 className="size-4" /> : <Icon className="size-4" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold">{title}</p>
+          <span className="shrink-0 text-xs font-semibold text-muted-foreground">{signal}</span>
+        </div>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+      </div>
+    </Link>
+  );
+}
+
+function QualityTile({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/35 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{helper}</p>
+    </div>
+  );
+}
+
 export default function FinancialOperations() {
   const { role } = useRole();
   const [data, setData] = useState<FinanceState>(EMPTY_STATE);
@@ -370,6 +427,8 @@ export default function FinancialOperations() {
       invoiceCount: data.invoices.length,
       vehicleCount: data.vehicles.length,
       tripCount: data.trips.length,
+      journalCount: data.journalEntries.length,
+      approvedExpenseCount: data.expenses.filter((row) => ["approved", "paid"].includes(rowStatus(row))).length,
     };
   }, [data]);
 
@@ -440,6 +499,52 @@ export default function FinancialOperations() {
     return Number.isFinite(due) && due < Date.now();
   });
 
+  const closeReadinessScore = Math.min(
+    100,
+    Math.round(
+      ((reconciliationScore +
+        (metrics.pendingExpenseCount === 0 ? 100 : 60) +
+        (overdueInvoices.length === 0 ? 100 : 65) +
+        (metrics.journalCount > 0 ? 100 : 55)) /
+        4),
+    ),
+  );
+
+  const closeTasks = [
+    {
+      title: "Bank reconciliation",
+      detail: "Match bank statement lines to invoices, income, expenses, and journals.",
+      href: "/finance/bank-statement",
+      icon: Landmark,
+      complete: reconciliationScore >= 85,
+      signal: `${reconciliationScore}% reconciled`,
+    },
+    {
+      title: "Expense approvals",
+      detail: "Clear pending driver, fuel, maintenance, payroll, and vendor costs.",
+      href: "/accountant/expenses",
+      icon: Receipt,
+      complete: metrics.pendingExpenseCount === 0,
+      signal: `${metrics.pendingExpenseCount} pending`,
+    },
+    {
+      title: "Receivable follow-up",
+      detail: "Review unpaid invoices and overdue customer balances.",
+      href: "/finance",
+      icon: FileText,
+      complete: overdueInvoices.length === 0,
+      signal: `${overdueInvoices.length} overdue`,
+    },
+    {
+      title: "Ledger postings",
+      detail: "Confirm operational journals from trips, payroll, fuel, and maintenance.",
+      href: "/finance/chart-of-accounts",
+      icon: BookOpen,
+      complete: metrics.journalCount > 0,
+      signal: `${metrics.journalCount} entries`,
+    },
+  ];
+
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar role={(role || "ACCOUNTANT") as any} />
@@ -476,6 +581,29 @@ export default function FinancialOperations() {
         </header>
 
         <div className="space-y-6 p-4 md:p-6">
+          <section className="app-toolbar justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">
+                Current period
+              </Badge>
+              <span className="text-sm font-semibold text-foreground">
+                {new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+              </span>
+              <span className="text-sm text-muted-foreground">Accounting basis: operational accrual view</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+                {metrics.tripCount} trips
+              </Badge>
+              <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                {metrics.invoiceCount} invoices
+              </Badge>
+              <Badge variant="outline" className="border-slate-200 bg-slate-100 text-slate-700">
+                {metrics.journalCount} journals
+              </Badge>
+            </div>
+          </section>
+
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="Revenue"
@@ -505,6 +633,60 @@ export default function FinancialOperations() {
               tone="amber"
               helper={`${overdueInvoices.length} invoices need collection`}
             />
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+            <Card className="app-surface">
+              <CardContent className="space-y-5 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">Month-End Close</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      A practical close checklist for keeping the books audit-ready.
+                    </p>
+                  </div>
+                  <Badge variant="outline" className={cn(
+                    "shrink-0",
+                    closeReadinessScore >= 85
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-amber-200 bg-amber-50 text-amber-700",
+                  )}>
+                    {closeReadinessScore}% ready
+                  </Badge>
+                </div>
+                <Progress value={closeReadinessScore} />
+                <div className="space-y-2">
+                  {closeTasks.map((task) => (
+                    <AccountingControlItem key={task.title} {...task} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="app-surface">
+              <CardContent className="p-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">Ledger Quality</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Fast checks that show whether operational records are flowing into accounting.
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" className="gap-2">
+                    <Link href="/reports">
+                      <ClipboardList className="size-4" />
+                      Open Reports
+                    </Link>
+                  </Button>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <QualityTile label="Revenue sources" value={String(metrics.invoiceCount + data.income.length)} helper="Invoices plus income records" />
+                  <QualityTile label="Approved costs" value={String(metrics.approvedExpenseCount)} helper="Expenses cleared for reporting" />
+                  <QualityTile label="Fleet linkage" value={String(metrics.vehicleCount)} helper="Vehicles available for margin analysis" />
+                  <QualityTile label="Net margin" value={`${metrics.margin}%`} helper="Revenue less operating expenses" />
+                </div>
+              </CardContent>
+            </Card>
           </section>
 
           <section className="app-surface p-5">
