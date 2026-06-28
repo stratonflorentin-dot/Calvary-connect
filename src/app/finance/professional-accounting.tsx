@@ -501,6 +501,7 @@ export default function FinancialOperations() {
   const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" });
   const [revenueForm, setRevenueForm] = useState({ description: "", amount: "", currency: "TZS", date: "" });
   const [taxForm, setTaxForm] = useState({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" });
+  const [bankAccountForm, setBankAccountForm] = useState({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
 
   const loadFinance = async () => {
     setLoading(true);
@@ -1791,7 +1792,59 @@ export default function FinancialOperations() {
 
           {activeTab === "accounts" && (
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-foreground">Bank Accounts</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">Bank Accounts</h2>
+                <Dialog open={modal === "bank-account"} onOpenChange={(open) => setModal(open ? "bank-account" : null)}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Plus className="size-4" />
+                      Add Bank Account
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-semibold">Add Bank Account</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bank-name">Account Name</Label>
+                        <Input id="bank-name" placeholder="Main Operating Account" value={bankAccountForm.account_name} onChange={(e) => setBankAccountForm({ ...bankAccountForm, account_name: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bank-bank">Bank Name</Label>
+                        <Input id="bank-bank" placeholder="Bank name" value={bankAccountForm.bank_name} onChange={(e) => setBankAccountForm({ ...bankAccountForm, bank_name: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bank-number">Account Number</Label>
+                        <Input id="bank-number" placeholder="Account number" value={bankAccountForm.account_number} onChange={(e) => setBankAccountForm({ ...bankAccountForm, account_number: e.target.value })} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="bank-currency">Currency</Label>
+                          <Select value={bankAccountForm.currency} onValueChange={(value) => setBankAccountForm({ ...bankAccountForm, currency: value })}>
+                            <SelectTrigger id="bank-currency">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.values(CURRENCIES).map((c) => (
+                                <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="bank-balance">Initial Balance</Label>
+                          <Input id="bank-balance" type="number" placeholder="0.00" value={bankAccountForm.balance} onChange={(e) => setBankAccountForm({ ...bankAccountForm, balance: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-end pt-2">
+                        <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                        <Button onClick={() => { setModal(null); setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" }); }}>Save Account</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <Card className="app-surface">
                 <CardContent className="p-5">
                   <p className="text-muted-foreground">Bank account management - Configure in Supabase bank_accounts table</p>
