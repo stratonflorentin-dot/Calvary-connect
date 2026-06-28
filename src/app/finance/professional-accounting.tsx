@@ -77,14 +77,14 @@ const EMPTY_STATE: FinanceState = {
 };
 
 const statusStyles: Record<string, string> = {
-  paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  active: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  pending: "border-amber-200 bg-amber-50 text-amber-700",
-  submitted: "border-blue-200 bg-blue-50 text-blue-700",
-  overdue: "border-red-200 bg-red-50 text-red-700",
-  rejected: "border-red-200 bg-red-50 text-red-700",
-  draft: "border-slate-200 bg-slate-100 text-slate-700",
+  paid: "border-success/20 bg-success/10 text-success",
+  approved: "border-success/20 bg-success/10 text-success",
+  active: "border-success/20 bg-success/10 text-success",
+  pending: "border-warning/20 bg-warning/10 text-warning",
+  submitted: "border-primary/20 bg-primary/10 text-primary",
+  overdue: "border-destructive/20 bg-destructive/10 text-destructive",
+  rejected: "border-destructive/20 bg-destructive/10 text-destructive",
+  draft: "border-muted bg-muted/50 text-muted-foreground",
 };
 
 const accountingAreas: Array<{
@@ -99,56 +99,56 @@ const accountingAreas: Array<{
     description: "Maintain assets, liabilities, equity, revenue, and expense accounts.",
     href: "/finance/chart-of-accounts",
     icon: BookOpen,
-    tone: "bg-blue-50 text-blue-700 border-blue-100",
+    tone: "bg-primary/10 text-primary border-primary/20",
   },
   {
     title: "Journal Entries",
     description: "Review operational postings from trips, fuel, payroll, and maintenance.",
     href: "/finance",
     icon: Receipt,
-    tone: "bg-slate-100 text-slate-700 border-slate-200",
+    tone: "bg-muted/50 text-muted-foreground border-muted",
   },
   {
     title: "Customer Invoices",
     description: "Track receivables, outstanding balances, and collection pressure.",
     href: "/finance",
     icon: FileText,
-    tone: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    tone: "bg-success/10 text-success border-success/20",
   },
   {
     title: "Expense Approval",
     description: "Approve driver, vendor, fuel, maintenance, and payroll expenses.",
     href: "/accountant/expenses",
     icon: TrendingDown,
-    tone: "bg-red-50 text-red-700 border-red-100",
+    tone: "bg-destructive/10 text-destructive border-destructive/20",
   },
   {
     title: "Bank Reconciliation",
     description: "Import statements and match deposits or withdrawals to ledger records.",
     href: "/finance/bank-statement",
     icon: Landmark,
-    tone: "bg-cyan-50 text-cyan-700 border-cyan-100",
+    tone: "bg-info/10 text-info border-info/20",
   },
   {
     title: "Statutory Reports",
     description: "Prepare payroll and statutory finance reporting for compliance.",
     href: "/admin/hr/payroll/statutory",
     icon: Banknote,
-    tone: "bg-amber-50 text-amber-700 border-amber-100",
+    tone: "bg-warning/10 text-warning border-warning/20",
   },
   {
     title: "Route Profitability",
     description: "Connect trips, vehicle costs, fuel, and revenue by route.",
     href: "/admin/reports/fleet/route-profitability",
     icon: Truck,
-    tone: "bg-indigo-50 text-indigo-700 border-indigo-100",
+    tone: "bg-accent/10 text-accent border-accent/20",
   },
   {
     title: "Financial Reports",
     description: "Open board-ready reports for revenue, expenses, margins, and vehicles.",
     href: "/reports",
     icon: ClipboardList,
-    tone: "bg-teal-50 text-teal-700 border-teal-100",
+    tone: "bg-success/10 text-success border-success/20",
   },
 ];
 
@@ -236,11 +236,11 @@ function MetricCard({
   helper: string;
 }) {
   const tones = {
-    blue: "bg-blue-50 text-blue-700 border-blue-100",
-    green: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    amber: "bg-amber-50 text-amber-700 border-amber-100",
-    red: "bg-red-50 text-red-700 border-red-100",
-    slate: "bg-slate-100 text-slate-700 border-slate-200",
+    blue: "bg-primary/10 text-primary border-primary/20",
+    green: "bg-success/10 text-success border-success/20",
+    amber: "bg-warning/10 text-warning border-warning/20",
+    red: "bg-destructive/10 text-destructive border-destructive/20",
+    slate: "bg-muted/50 text-muted-foreground border-muted",
   };
 
   return (
@@ -273,14 +273,14 @@ function WorkflowStep({
   status: string;
 }) {
   return (
-    <Link href={href} className="app-section block transition-colors hover:border-primary/40 hover:bg-primary/5">
+    <Link href={href} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-md">
       <div className="flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Icon className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">{title}</h3>
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
             <ArrowRight className="size-4 text-muted-foreground" />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
@@ -305,11 +305,11 @@ function AccountingAreaCard({
   tone: string;
 }) {
   return (
-    <Link href={href} className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-primary/5">
-      <div className={cn("mb-4 flex size-10 items-center justify-center rounded-lg border", tone)}>
+    <Link href={href} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-md">
+      <div className={cn("mb-4 flex size-10 items-center justify-center rounded-xl border shadow-sm", tone)}>
         <Icon className="size-5" />
       </div>
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
     </Link>
   );
@@ -333,19 +333,19 @@ function AccountingControlItem({
   return (
     <Link
       href={href}
-      className="flex items-start gap-3 rounded-lg border border-border bg-background/60 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
+      className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
     >
       <div
         className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-lg border",
-          complete ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700",
+          "flex size-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+          complete ? "border-success/20 bg-success/10 text-success" : "border-warning/20 bg-warning/10 text-warning",
         )}
       >
         {complete ? <CheckCircle2 className="size-4" /> : <Icon className="size-4" />}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold">{title}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{title}</p>
           <span className="shrink-0 text-xs font-semibold text-muted-foreground">{signal}</span>
         </div>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
@@ -364,7 +364,7 @@ function QualityTile({
   helper: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/35 p-4">
+    <div className="rounded-xl border border-border bg-muted/50 p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-2 text-xl font-semibold text-foreground">{value}</p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{helper}</p>
@@ -556,7 +556,7 @@ export default function FinancialOperations() {
                 <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
                   Finance Command Center
                 </Badge>
-                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                <Badge variant="outline" className="border-success/20 bg-success/10 text-success">
                   Integrated ledger
                 </Badge>
               </div>
@@ -583,7 +583,7 @@ export default function FinancialOperations() {
         <div className="space-y-6 p-4 md:p-6">
           <section className="app-toolbar justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">
+              <Badge variant="outline" className="border-muted bg-card text-muted-foreground">
                 Current period
               </Badge>
               <span className="text-sm font-semibold text-foreground">
@@ -592,13 +592,13 @@ export default function FinancialOperations() {
               <span className="text-sm text-muted-foreground">Accounting basis: operational accrual view</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+              <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
                 {metrics.tripCount} trips
               </Badge>
-              <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+              <Badge variant="outline" className="border-success/20 bg-success/10 text-success">
                 {metrics.invoiceCount} invoices
               </Badge>
-              <Badge variant="outline" className="border-slate-200 bg-slate-100 text-slate-700">
+              <Badge variant="outline" className="border-muted bg-muted/50 text-muted-foreground">
                 {metrics.journalCount} journals
               </Badge>
             </div>
@@ -648,8 +648,8 @@ export default function FinancialOperations() {
                   <Badge variant="outline" className={cn(
                     "shrink-0",
                     closeReadinessScore >= 85
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-amber-200 bg-amber-50 text-amber-700",
+                      ? "border-success/20 bg-success/10 text-success"
+                      : "border-warning/20 bg-warning/10 text-warning",
                   )}>
                     {closeReadinessScore}% ready
                   </Badge>
@@ -697,7 +697,7 @@ export default function FinancialOperations() {
                   Full accounting stays available here: accounts, journals, invoices, expenses, reconciliation, statutory reports, and fleet profitability.
                 </p>
               </div>
-              <Badge variant="outline" className="w-fit border-primary/20 bg-primary/10 text-primary">
+              <Badge variant="outline" className="w-fit border-primary/20 bg-primary/10 text-primary shadow-sm">
                 No dead accounting links
               </Badge>
             </div>
@@ -791,32 +791,32 @@ export default function FinancialOperations() {
                     <Progress value={reconciliationScore} />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-border bg-muted/40 p-3">
+                    <div className="rounded-xl border border-border bg-muted/50 p-3 shadow-sm">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payables</p>
-                      <p className="mt-2 text-lg font-semibold">{formatCurrency(metrics.payables + metrics.pendingExpenseValue)}</p>
+                      <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(metrics.payables + metrics.pendingExpenseValue)}</p>
                     </div>
-                    <div className="rounded-lg border border-border bg-muted/40 p-3">
+                    <div className="rounded-xl border border-border bg-muted/50 p-3 shadow-sm">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Overdue</p>
-                      <p className="mt-2 text-lg font-semibold">{overdueInvoices.length}</p>
+                      <p className="mt-2 text-lg font-semibold text-foreground">{overdueInvoices.length}</p>
                     </div>
                   </div>
                   <div className="space-y-2">
                     {overdueInvoices.length > 0 ? (
-                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                      <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive shadow-sm">
                         <div className="flex items-start gap-2">
                           <AlertTriangle className="mt-0.5 size-4" />
                           <span>{overdueInvoices.length} unpaid invoice(s) are past due and should be followed up.</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                      <div className="rounded-xl border border-success/20 bg-success/10 p-3 text-sm text-success shadow-sm">
                         <div className="flex items-start gap-2">
                           <CheckCircle2 className="mt-0.5 size-4" />
                           <span>No overdue invoice pressure detected in the current sample.</span>
                         </div>
                       </div>
                     )}
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+                    <div className="rounded-xl border border-primary/20 bg-primary/10 p-3 text-sm text-primary shadow-sm">
                       <div className="flex items-start gap-2">
                         <ShieldCheck className="mt-0.5 size-4" />
                         <span>Expenses, bank matching, and reports now sit in one accounting workflow.</span>
@@ -990,13 +990,13 @@ function ReportLink({
   description: string;
 }) {
   return (
-    <Link href={href} className="app-section block transition-colors hover:border-primary/40 hover:bg-primary/5">
+    <Link href={href} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-md">
       <div className="flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent shadow-sm">
           <Icon className="size-5" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold">{title}</h3>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
