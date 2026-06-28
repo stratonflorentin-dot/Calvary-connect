@@ -5,32 +5,43 @@ import type { ElementType } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowDownLeft,
   ArrowRight,
   ArrowUpRight,
   Banknote,
   BookOpen,
+  Building2,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
   CreditCard,
   FileText,
+  Fuel,
+  Globe,
   Landmark,
   Loader2,
+  MapPin,
+  Plus,
   Receipt,
   RefreshCw,
   Scale,
   Search,
   ShieldCheck,
+  Thermometer,
   TrendingDown,
   TrendingUp,
   Truck,
   Wallet,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -54,6 +65,9 @@ type FinanceState = {
   trips: FinanceRow[];
   vehicles: FinanceRow[];
   journalEntries: FinanceRow[];
+  chartOfAccounts: FinanceRow[];
+  taxes: FinanceRow[];
+  bankAccounts: FinanceRow[];
 };
 
 type Activity = {
@@ -74,6 +88,9 @@ const EMPTY_STATE: FinanceState = {
   trips: [],
   vehicles: [],
   journalEntries: [],
+  chartOfAccounts: [],
+  taxes: [],
+  bankAccounts: [],
 };
 
 const statusStyles: Record<string, string> = {
@@ -85,6 +102,19 @@ const statusStyles: Record<string, string> = {
   overdue: "border-destructive/20 bg-destructive/10 text-destructive",
   rejected: "border-destructive/20 bg-destructive/10 text-destructive",
   draft: "border-muted bg-muted/50 text-muted-foreground",
+  "1-30": "border-warning/20 bg-warning/10 text-warning",
+  "31-60": "border-orange/20 bg-orange/10 text-orange",
+  "61-90": "border-destructive/20 bg-destructive/10 text-destructive",
+  "90+": "border-destructive/20 bg-destructive/10 text-destructive",
+  current: "border-success/20 bg-success/10 text-success",
+};
+
+const accountTypeStyles: Record<string, string> = {
+  Asset: "border-primary/20 bg-primary/10 text-primary",
+  Liability: "border-destructive/20 bg-destructive/10 text-destructive",
+  Equity: "border-accent/20 bg-accent/10 text-accent",
+  Revenue: "border-success/20 bg-success/10 text-success",
+  Expense: "border-warning/20 bg-warning/10 text-warning",
 };
 
 const accountingAreas: Array<{
@@ -377,19 +407,24 @@ export default function FinancialOperations() {
   const [data, setData] = useState<FinanceState>(EMPTY_STATE);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [expandedJournal, setExpandedJournal] = useState<string | null>(null);
+  const [agingType, setAgingType] = useState<"receivable" | "payable">("receivable");
 
   const loadFinance = async () => {
     setLoading(true);
-    const [invoices, expenses, income, trips, vehicles, journalEntries] = await Promise.all([
+    const [invoices, expenses, income, trips, vehicles, journalEntries, chartOfAccounts, taxes, bankAccounts] = await Promise.all([
       safeTable("invoices"),
       safeTable("expenses"),
       safeTable("income"),
       safeTable("trips"),
       safeTable("vehicles"),
       safeTable("journal_entries"),
+      safeTable("chart_of_accounts"),
+      safeTable("taxes"),
+      safeTable("bank_accounts"),
     ]);
 
-    setData({ invoices, expenses, income, trips, vehicles, journalEntries });
+    setData({ invoices, expenses, income, trips, vehicles, journalEntries, chartOfAccounts, taxes, bankAccounts });
     setLoading(false);
   };
 
@@ -413,6 +448,15 @@ export default function FinancialOperations() {
     const revenue = invoiceRevenue + directIncome;
     const net = revenue - operatingExpense;
     const margin = revenue > 0 ? Math.round((net / revenue) * 100) : 0;
+    
+    // Logistics metrics
+    const crossBorderExpenses = data.expenses.filter((row) => row.is_cross_border === true).reduce((sum, row) => sum + rowAmount(row), 0);
+    const crossBorderRevenue = data.invoices.filter((row) => row.is_cross_border === true && isReceivable(row)).reduce((sum, row) => sum + rowAmount(row), 0);
+    const fuelExpenses = data.expenses.filter((row) => (row.category as string)?.toLowerCase() === "fuel").reduce((sum, row) => sum + rowAmount(row), 0);
+    
+    // Tax metrics
+    const pendingTaxes = data.taxes.filter((row) => rowStatus(row) === "pending").reduce((sum, row) => sum + rowAmount(row), 0);
+    const paidTaxes = data.taxes.filter((row) => rowStatus(row) === "paid").reduce((sum, row) => sum + rowAmount(row), 0);
 
     return {
       revenue,
@@ -429,6 +473,11 @@ export default function FinancialOperations() {
       tripCount: data.trips.length,
       journalCount: data.journalEntries.length,
       approvedExpenseCount: data.expenses.filter((row) => ["approved", "paid"].includes(rowStatus(row))).length,
+      crossBorderExpenses,
+      crossBorderRevenue,
+      fuelExpenses,
+      pendingTaxes,
+      paidTaxes,
     };
   }, [data]);
 
@@ -509,6 +558,50 @@ export default function FinancialOperations() {
         4),
     ),
   );
+
+  // Aging report calculation
+  const agingReport = useMemo(() => {
+    const now = new Date();
+    const items = data.invoices
+      .filter((row) => {
+        const isReceivableInv = isReceivable(row);
+        const isPayableInv = !isReceivable(row);
+        const isUnpaidInv = isUnpaid(row);
+        return (agingType === "receivable" && isReceivableInv && isUnpaidInv) ||
+               (agingType === "payable" && isPayableInv && isUnpaidInv);
+      })
+      .map((inv) => {
+        const dueDate = new Date(rowDate(inv));
+        const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        let bucket: string;
+        if (daysOverdue <= 0) bucket = "current";
+        else if (daysOverdue <= 30) bucket = "1-30";
+        else if (daysOverdue <= 60) bucket = "31-60";
+        else if (daysOverdue <= 90) bucket = "61-90";
+        else bucket = "90+";
+        return { ...inv, daysOverdue, bucket };
+      });
+
+    const buckets = ["current", "1-30", "31-60", "61-90", "90+"];
+    const totals = buckets.map((bucket) => ({
+      bucket,
+      total: items.filter((i) => i.bucket === bucket).reduce((sum, i) => sum + rowAmount(i), 0),
+      count: items.filter((i) => i.bucket === bucket).length,
+    }));
+    const grandTotal = totals.reduce((sum, b) => sum + b.total, 0);
+
+    return { items, totals, grandTotal };
+  }, [data.invoices, agingType]);
+
+  // Chart of Accounts grouping
+  const coaGroups = useMemo(() => {
+    const types = ["Asset", "Liability", "Equity", "Revenue", "Expense"];
+    return types.map((type) => ({
+      type,
+      rows: data.chartOfAccounts.filter((a) => text(a.account_type) === type),
+      total: data.chartOfAccounts.filter((a) => text(a.account_type) === type).reduce((sum, a) => sum + rowAmount(a), 0),
+    }));
+  }, [data.chartOfAccounts]);
 
   const closeTasks = [
     {
@@ -829,11 +922,15 @@ export default function FinancialOperations() {
           </section>
 
           <Tabs defaultValue="activity" className="space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 bg-muted/70 p-1 md:grid-cols-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 bg-muted/70 p-1 md:grid-cols-6 lg:grid-cols-8">
               <TabsTrigger value="activity">Ledger Activity</TabsTrigger>
               <TabsTrigger value="receivables">Receivables</TabsTrigger>
               <TabsTrigger value="payables">Payables</TabsTrigger>
-              <TabsTrigger value="reports">Reports</TabsTrigger>
+              <TabsTrigger value="logistics">Logistics</TabsTrigger>
+              <TabsTrigger value="taxes">Taxes</TabsTrigger>
+              <TabsTrigger value="coa">Chart of Accounts</TabsTrigger>
+              <TabsTrigger value="journal">Journal Entries</TabsTrigger>
+              <TabsTrigger value="aging">Aging Report</TabsTrigger>
             </TabsList>
 
             <TabsContent value="activity">
@@ -913,6 +1010,436 @@ export default function FinancialOperations() {
                 <ReportLink href="/admin/reports/fleet/revenue-by-vehicle" icon={Truck} title="Vehicle Revenue" description="Revenue, expenses, and margin by truck." />
                 <ReportLink href="/admin/reports/fleet/route-profitability" icon={ArrowUpRight} title="Route Profitability" description="Gross margin by lane and destination." />
                 <ReportLink href="/admin/hr/payroll/statutory" icon={Banknote} title="Statutory Reports" description="Payroll and statutory finance reporting." />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="logistics">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="border-l-4 border-l-primary shadow-lg">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Globe className="size-4" />
+                        Cross-Border Operations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Expenses</span>
+                        <span className="text-destructive font-medium">{formatCurrency(metrics.crossBorderExpenses)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Revenue</span>
+                        <span className="text-success font-medium">{formatCurrency(metrics.crossBorderRevenue)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm pt-2 border-t border-border">
+                        <span className="text-muted-foreground">Net</span>
+                        <span className={`font-bold ${metrics.crossBorderRevenue - metrics.crossBorderExpenses >= 0 ? "text-success" : "text-destructive"}`}>
+                          {formatCurrency(metrics.crossBorderRevenue - metrics.crossBorderExpenses)}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-l-4 border-l-info shadow-lg">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Thermometer className="size-4" />
+                        Cold Chain Operations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Revenue</span>
+                        <span className="text-success font-medium">{formatCurrency(data.invoices.filter((i) => (i.cargo_type as string)?.toLowerCase() === "reefer").reduce((sum, i) => sum + rowAmount(i), 0))}</span>
+                      </div>
+                      <div className="flex justify-between text-sm pt-2 border-t border-border">
+                        <span className="text-muted-foreground">Net</span>
+                        <span className="text-success font-bold">
+                          {formatCurrency(data.invoices.filter((i) => (i.cargo_type as string)?.toLowerCase() === "reefer").reduce((sum, i) => sum + rowAmount(i), 0))}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-l-4 border-l-warning shadow-lg">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Fuel className="size-4" />
+                        Fuel Costs
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Total Fuel</span>
+                        <span className="text-warning font-medium">{formatCurrency(metrics.fuelExpenses)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">% of Expenses</span>
+                        <span className="text-warning font-medium">
+                          {metrics.operatingExpense > 0 ? ((metrics.fuelExpenses / metrics.operatingExpense) * 100).toFixed(1) : 0}%
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <MapPin className="size-5" />
+                      Border Route Cost Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {["Tunduma", "Kasumbalesa", "Sirari", "Rusumo", "Mutukula", "Kabanga"].map((route) => {
+                        const routeExpenses = data.expenses.filter((e) => 
+                          (e.border_point as string)?.toLowerCase().includes(route.toLowerCase()) ||
+                          (e.description as string)?.toLowerCase().includes(route.toLowerCase())
+                        ).reduce((sum, e) => sum + rowAmount(e), 0);
+                        const routeCount = data.expenses.filter((e) => 
+                          (e.border_point as string)?.toLowerCase().includes(route.toLowerCase()) ||
+                          (e.description as string)?.toLowerCase().includes(route.toLowerCase())
+                        ).length;
+                        return (
+                          <div key={route} className="rounded-xl border border-border bg-muted/50 p-3 text-center">
+                            <p className="text-xs font-semibold text-foreground mb-1">{route}</p>
+                            <p className="text-base font-bold text-primary">{formatCurrency(routeExpenses)}</p>
+                            <p className="text-xs text-muted-foreground">{routeCount} {routeCount === 1 ? "entry" : "entries"}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="taxes">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-foreground">Tax Obligations</h2>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="shadow-lg">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Total Pending</p>
+                      <p className="text-lg font-bold text-warning">{formatCurrency(metrics.pendingTaxes)}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="shadow-lg">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Total Paid</p>
+                      <p className="text-lg font-bold text-success">{formatCurrency(metrics.paidTaxes)}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="shadow-lg">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Overdue Items</p>
+                      <p className="text-lg font-bold text-destructive">
+                        {data.taxes.filter((t) => rowStatus(t) === "pending" && new Date(rowDate(t)) < new Date()).length} items
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <Card className="shadow-lg">
+                  <div className="app-table-shell">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tax Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.taxes.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                              No tax records yet
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          data.taxes.map((tax) => {
+                            const overdue = rowStatus(tax) === "pending" && new Date(rowDate(tax)) < new Date();
+                            return (
+                              <TableRow key={text(tax.id)} className="hover:bg-muted/50">
+                                <TableCell className="font-medium text-foreground">{text(tax.tax_name)}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+                                    {text(tax.tax_type)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium text-foreground">{formatCurrency(rowAmount(tax))}</TableCell>
+                                <TableCell className={overdue ? "text-destructive font-medium" : "text-muted-foreground"}>
+                                  {formatDate(rowDate(tax))}
+                                  {overdue && (
+                                    <Badge variant="outline" className="ml-2 border-destructive/20 bg-destructive/10 text-destructive">
+                                      Overdue
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <StatusBadge status={rowStatus(tax)} />
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="coa">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-foreground">Chart of Accounts</h2>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {coaGroups.map((group) => (
+                    <Card key={group.type} className={cn("shadow-lg", accountTypeStyles[group.type])}>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-xs font-semibold uppercase mb-1">{group.type}s</p>
+                        <p className="font-bold text-sm">{formatCurrency(Math.abs(group.total))}</p>
+                        <p className="text-xs opacity-70">{group.rows.length} accounts</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                {coaGroups.map((group) => (
+                  <Card key={group.type} className="shadow-lg">
+                    <CardHeader className={cn("px-4 py-2.5 border-b border-border flex items-center justify-between", accountTypeStyles[group.type])}>
+                      <span className="font-semibold text-sm">{group.type}s</span>
+                      <span className="font-bold text-sm">{formatCurrency(Math.abs(group.total))}</span>
+                    </CardHeader>
+                    <div className="app-table-shell">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Account Name</TableHead>
+                            <TableHead>Normal Bal.</TableHead>
+                            <TableHead className="text-right">Balance (TZS)</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {group.rows.map((account) => (
+                            <TableRow key={text(account.id)} className="hover:bg-muted/50">
+                              <TableCell className="font-mono text-xs text-muted-foreground">{text(account.account_code)}</TableCell>
+                              <TableCell className="text-foreground">{text(account.account_name)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={text(account.normal_balance) === "debit" ? "border-primary/20 bg-primary/10 text-primary" : "border-success/20 bg-success/10 text-success"}>
+                                  {text(account.normal_balance)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className={`text-right font-medium ${rowAmount(account) < 0 ? "text-destructive" : "text-foreground"}`}>
+                                {formatCurrency(rowAmount(account))}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="journal">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-foreground">Journal Entries</h2>
+                </div>
+                <div className="space-y-3">
+                  {data.journalEntries.length === 0 && (
+                    <Card className="shadow-lg">
+                      <CardContent className="py-10 text-center text-muted-foreground">
+                        No journal entries yet
+                      </CardContent>
+                    </Card>
+                  )}
+                  {data.journalEntries.map((je) => {
+                    const totalDebit = (je.lines as FinanceRow[]).reduce((sum: number, l: FinanceRow) => sum + rowAmount(l), 0);
+                    const isExpanded = expandedJournal === text(je.id);
+                    return (
+                      <Card key={text(je.id)} className="shadow-lg overflow-hidden">
+                        <button
+                          onClick={() => setExpandedJournal(isExpanded ? null : text(je.id))}
+                          className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground font-mono">{text(je.reference)}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(rowDate(je))}</p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">{text(je.description)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {(je.lines as FinanceRow[]).length} lines · {formatCurrency(totalDebit)} each side
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="border-success/20 bg-success/10 text-success">
+                              Balanced
+                            </Badge>
+                            <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-border">
+                            <div className="app-table-shell">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Code</TableHead>
+                                    <TableHead>Account</TableHead>
+                                    <TableHead className="text-right">Debit</TableHead>
+                                    <TableHead className="text-right">Credit</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {(je.lines as FinanceRow[]).map((line, idx) => (
+                                    <TableRow key={idx}>
+                                      <TableCell className="font-mono text-xs text-muted-foreground">{text(line.account_code)}</TableCell>
+                                      <TableCell className={rowAmount(line) > 0 ? "text-foreground" : "pl-8 text-foreground"}>
+                                        {text(line.account_name)}
+                                      </TableCell>
+                                      <TableCell className="text-right text-foreground">
+                                        {rowAmount(line) > 0 ? formatCurrency(rowAmount(line)) : "—"}
+                                      </TableCell>
+                                      <TableCell className="text-right text-foreground">
+                                        {rowAmount(line) < 0 ? formatCurrency(Math.abs(rowAmount(line))) : "—"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="aging">
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-foreground">Aging Report</h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={agingType === "receivable" ? "default" : "outline"}
+                      onClick={() => setAgingType("receivable")}
+                      className={agingType === "receivable" ? "" : "border-border text-muted-foreground"}
+                    >
+                      Accounts Receivable
+                    </Button>
+                    <Button
+                      variant={agingType === "payable" ? "default" : "outline"}
+                      onClick={() => setAgingType("payable")}
+                      className={agingType === "payable" ? "" : "border-border text-muted-foreground"}
+                    >
+                      Accounts Payable
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {agingReport.totals.map((bucket) => {
+                    const percentage = agingReport.grandTotal > 0 ? (bucket.total / agingReport.grandTotal) * 100 : 0;
+                    return (
+                      <Card key={bucket.bucket} className="shadow-lg">
+                        <CardContent className="p-4">
+                          <Badge variant="outline" className={cn("mb-2", statusStyles[bucket.bucket] || statusStyles.current)}>
+                            {bucket.bucket === "current" ? "Current" : `${bucket.bucket} days`}
+                          </Badge>
+                          <p className="text-xl font-bold text-foreground">{formatCurrency(bucket.total)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {bucket.count} invoices · {percentage.toFixed(1)}%
+                          </p>
+                          <div className="mt-2 w-full bg-muted rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full bg-primary" style={{ width: `${percentage}%` }} />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+                <Card className="shadow-lg border-warning/20 bg-warning/10">
+                  <CardContent className="px-4 py-3 flex items-center justify-between">
+                    <span className="text-sm font-medium text-warning">
+                      Total Outstanding {agingType === "receivable" ? "(AR)" : "(AP)"}
+                    </span>
+                    <span className="text-lg font-bold text-warning">{formatCurrency(agingReport.grandTotal)}</span>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-lg">
+                  <div className="app-table-shell">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Invoice #</TableHead>
+                          <TableHead>Customer / Vendor</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead>Days</TableHead>
+                          <TableHead>Aging Bucket</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {agingReport.items.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                              No outstanding items
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          agingReport.items
+                            .sort((a, b) => b.daysOverdue - a.daysOverdue)
+                            .map((inv) => (
+                              <TableRow key={text(inv.id)} className="hover:bg-muted/50">
+                                <TableCell className="font-medium text-foreground">{text(inv.invoice_number)}</TableCell>
+                                <TableCell className="text-foreground">{text(inv.customer_name)}</TableCell>
+                                <TableCell className={`font-medium ${agingType === "receivable" ? "text-success" : "text-destructive"}`}>
+                                  {formatCurrency(rowAmount(inv))}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">{formatDate(rowDate(inv))}</TableCell>
+                                <TableCell
+                                  className={cn(
+                                    "font-medium",
+                                    inv.daysOverdue > 90
+                                      ? "text-destructive"
+                                      : inv.daysOverdue > 30
+                                      ? "text-warning"
+                                      : inv.daysOverdue > 0
+                                      ? "text-warning"
+                                      : "text-success"
+                                  )}
+                                >
+                                  {inv.daysOverdue <= 0 ? `${Math.abs(inv.daysOverdue)}d to go` : `${inv.daysOverdue}d overdue`}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={cn(statusStyles[inv.bucket] || statusStyles.current)}>
+                                    {inv.bucket === "current" ? "Current" : `${inv.bucket} days`}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>
