@@ -298,9 +298,17 @@ const STATUS_STYLES: Record<string, string> = {
   "90+": "bg-red-700/10 text-red-700 dark:text-red-400 border-red-700/20",
 };
 
-function isReceivable(invoice: FinanceRow): boolean {
+function isReceivable(invoice: FinanceRow, coaData: FinanceRow[] = []): boolean {
   const type = text(invoice.type ?? invoice.invoice_type, "receivable").toLowerCase();
-  return type !== "payable";
+  // If it's a COA code, check if it's an Asset account (receivable) vs Liability (payable)
+  if (type.match(/^\d+$/)) {
+    const account = coaData.find((acc) => acc.code === type);
+    if (account) {
+      return account.type === "Assets";
+    }
+  }
+  // Fallback to old logic for backward compatibility
+  return type !== "payable" && type !== "ap";
 }
 
 function isUnpaid(row: FinanceRow): boolean {
@@ -708,15 +716,15 @@ export default function FinancialOperations() {
 
   const metrics = useMemo(() => {
     const invoiceRevenue = data.invoices
-      .filter((row) => isReceivable(row))
+      .filter((row) => isReceivable(row, data.chartOfAccounts))
       .reduce((sum, row) => sum + rowAmount(row), 0);
     const directIncome = data.income.reduce((sum, row) => sum + rowAmount(row), 0);
     const operatingExpense = data.expenses.reduce((sum, row) => sum + rowAmount(row), 0);
     const receivables = data.invoices
-      .filter((row) => isReceivable(row) && isUnpaid(row))
+      .filter((row) => isReceivable(row, data.chartOfAccounts) && isUnpaid(row))
       .reduce((sum, row) => sum + rowAmount(row), 0);
     const payables = data.invoices
-      .filter((row) => !isReceivable(row) && isUnpaid(row))
+      .filter((row) => !isReceivable(row, data.chartOfAccounts) && isUnpaid(row))
       .reduce((sum, row) => sum + rowAmount(row), 0);
     const pendingExpenses = data.expenses.filter((row) => rowStatus(row) === "pending");
     const revenue = invoiceRevenue + directIncome;
@@ -725,7 +733,7 @@ export default function FinancialOperations() {
     
     // Logistics metrics
     const crossBorderExpenses = data.expenses.filter((row) => row.is_cross_border === true).reduce((sum, row) => sum + rowAmount(row), 0);
-    const crossBorderRevenue = data.invoices.filter((row) => row.is_cross_border === true && isReceivable(row)).reduce((sum, row) => sum + rowAmount(row), 0);
+    const crossBorderRevenue = data.invoices.filter((row) => row.is_cross_border === true && isReceivable(row, data.chartOfAccounts)).reduce((sum, row) => sum + rowAmount(row), 0);
     const fuelExpenses = data.expenses.filter((row) => (row.category as string)?.toLowerCase() === "fuel").reduce((sum, row) => sum + rowAmount(row), 0);
     
     // Tax metrics
@@ -776,7 +784,7 @@ export default function FinancialOperations() {
     return out;
   }, [revByCur, expByCur]);
 
-  const xbRevByCur = useMemo(() => sumByCurrency(data.invoices.filter((r) => r.is_cross_border === true && isReceivable(r))), [data]);
+  const xbRevByCur = useMemo(() => sumByCurrency(data.invoices.filter((r) => r.is_cross_border === true && isReceivable(r, data.chartOfAccounts))), [data]);
   const xbExpByCur = useMemo(() => sumByCurrency(data.expenses.filter((e) => e.is_cross_border === true)), [data]);
 
   // Currency filter options
@@ -812,7 +820,7 @@ export default function FinancialOperations() {
       id: `invoice-${text(row.id, String(index))}`,
       type: "invoice" as const,
       title: text(row.invoice_number ?? row.reference, "Invoice"),
-      detail: text(row.customer_name ?? row.client_name ?? row.vendor, isReceivable(row) ? "Receivable" : "Payable"),
+      detail: text(row.customer_name ?? row.client_name ?? row.vendor, isReceivable(row, data.chartOfAccounts) ? "Receivable" : "Payable"),
       amount: rowAmount(row),
       currency: rowCurrency(row),
       status: rowStatus(row),
@@ -868,8 +876,8 @@ export default function FinancialOperations() {
     const now = new Date();
     const items = data.invoices
       .filter((row) => {
-        const isReceivableInv = isReceivable(row);
-        const isPayableInv = !isReceivable(row);
+        const isReceivableInv = isReceivable(row, data.chartOfAccounts);
+        const isPayableInv = !isReceivable(row, data.chartOfAccounts);
         const isUnpaidInv = isUnpaid(row);
         return (agingType === "receivable" && isReceivableInv && isUnpaidInv) ||
                (agingType === "payable" && isPayableInv && isUnpaidInv);
@@ -1034,14 +1042,13 @@ export default function FinancialOperations() {
                       <Input id="inv-number" placeholder="INV-001" value={invoiceForm.invoice_number} onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="inv-type">Type</Label>
+                      <Label htmlFor="inv-type">Type (Chart of Accounts)</Label>
                       <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
-                        <SelectTrigger id="inv-type">
-                          <SelectValue />
-                        </SelectTrigger>
+                        <SelectTrigger id="inv-type"><SelectValue placeholder="Select account" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="AR">Accounts Receivable (AR)</SelectItem>
-                          <SelectItem value="AP">Accounts Payable (AP)</SelectItem>
+                          {data.chartOfAccounts.filter((acc) => acc.type === "Assets" || acc.type === "Liabilities").map((acc) => (
+                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1209,13 +1216,13 @@ export default function FinancialOperations() {
             />
             <MultiCurrencyCard
               title="Cross-Border Revenue"
-              items={data.invoices.filter((r) => r.is_cross_border === true && isReceivable(r))}
+              items={data.invoices.filter((r) => r.is_cross_border === true && isReceivable(r, data.chartOfAccounts))}
               icon={Globe}
               gradient="bg-gradient-to-br from-purple-600 to-indigo-700"
             />
             <MultiCurrencyCard
               title="Pending AR"
-              items={data.invoices.filter((i) => isReceivable(i) && isUnpaid(i))}
+              items={data.invoices.filter((i) => isReceivable(i, data.chartOfAccounts) && isUnpaid(i))}
               icon={Building2}
               gradient="bg-gradient-to-br from-amber-600 to-orange-700"
             />
@@ -1863,12 +1870,13 @@ export default function FinancialOperations() {
                       <Input id="inv-number" placeholder="INV-001" value={invoiceForm.invoice_number} onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="inv-type">Type</Label>
+                      <Label htmlFor="inv-type">Type (Chart of Accounts)</Label>
                       <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
-                        <SelectTrigger id="inv-type"><SelectValue /></SelectTrigger>
+                        <SelectTrigger id="inv-type"><SelectValue placeholder="Select account" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="AR">Accounts Receivable (AR)</SelectItem>
-                          <SelectItem value="AP">Accounts Payable (AP)</SelectItem>
+                          {data.chartOfAccounts.filter((acc) => acc.type === "Assets" || acc.type === "Liabilities").map((acc) => (
+                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1936,9 +1944,9 @@ export default function FinancialOperations() {
                                 <TableCell className="font-semibold text-foreground">{safeText(inv.invoice_number)}</TableCell>
                                 <TableCell className="text-foreground font-medium">{safeText(inv.customer_name)}</TableCell>
                                 <TableCell>
-                                  <Badge variant={isReceivable(inv) ? "default" : "secondary"} className="font-medium">{isReceivable(inv) ? "AR" : "AP"}</Badge>
+                                  <Badge variant={isReceivable(inv, data.chartOfAccounts) ? "default" : "secondary"} className="font-medium">{isReceivable(inv, data.chartOfAccounts) ? "AR" : "AP"}</Badge>
                                 </TableCell>
-                                <TableCell className={cn("font-bold text-right whitespace-nowrap", isReceivable(inv) ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400")}>
+                                <TableCell className={cn("font-bold text-right whitespace-nowrap", isReceivable(inv, data.chartOfAccounts) ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400")}>
                                   {formatAmount(getInvoiceAmount(inv), getCurrencyCode(inv))}
                                 </TableCell>
                                 <TableCell><CurrencyBadge currency={getCurrencyCode(inv)} /></TableCell>
