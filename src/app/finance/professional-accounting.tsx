@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Table,
   TableBody,
@@ -484,12 +485,13 @@ function QualityTile({
 
 export default function FinancialOperations() {
   const { role } = useRole();
+  const { toast } = useToast();
   const [data, setData] = useState<FinanceState>(EMPTY_STATE);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedJournal, setExpandedJournal] = useState<string | null>(null);
   const [agingType, setAgingType] = useState<"receivable" | "payable">("receivable");
-  
+
   // Multi-currency state
   const [activeTab, setActiveTab] = useState("overview");
   const [modal, setModal] = useState<string | null>(null);
@@ -542,8 +544,10 @@ export default function FinancialOperations() {
       await loadFinance();
       setModal(null);
       setInvoiceForm({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" });
+      toast({ title: "Success", description: "Invoice created successfully" });
     } catch (err) {
       console.error("Error saving invoice:", err);
+      toast({ title: "Error", description: "Failed to create invoice", variant: "destructive" });
     }
   };
 
@@ -563,8 +567,10 @@ export default function FinancialOperations() {
       await loadFinance();
       setModal(null);
       setExpenseForm({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" });
+      toast({ title: "Success", description: "Expense saved successfully" });
     } catch (err) {
       console.error("Error saving expense:", err);
+      toast({ title: "Error", description: "Failed to save expense", variant: "destructive" });
     }
   };
 
@@ -582,8 +588,10 @@ export default function FinancialOperations() {
       await loadFinance();
       setModal(null);
       setRevenueForm({ description: "", amount: "", currency: "TZS", date: "" });
+      toast({ title: "Success", description: "Revenue recorded successfully" });
     } catch (err) {
       console.error("Error saving revenue:", err);
+      toast({ title: "Error", description: "Failed to record revenue", variant: "destructive" });
     }
   };
 
@@ -602,8 +610,10 @@ export default function FinancialOperations() {
       await loadFinance();
       setModal(null);
       setTaxForm({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" });
+      toast({ title: "Success", description: "Tax obligation recorded successfully" });
     } catch (err) {
       console.error("Error saving tax:", err);
+      toast({ title: "Error", description: "Failed to record tax", variant: "destructive" });
     }
   };
 
@@ -621,8 +631,10 @@ export default function FinancialOperations() {
       await loadFinance();
       setModal(null);
       setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
+      toast({ title: "Success", description: "Bank account added successfully" });
     } catch (err) {
       console.error("Error saving bank account:", err);
+      toast({ title: "Error", description: "Failed to add bank account", variant: "destructive" });
     }
   };
 
