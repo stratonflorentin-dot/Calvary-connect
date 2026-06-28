@@ -459,8 +459,8 @@ export default function FinancialOperations() {
     const fuelExpenses = data.expenses.filter((row) => (row.category as string)?.toLowerCase() === "fuel").reduce((sum, row) => sum + rowAmount(row), 0);
     
     // Tax metrics
-    const pendingTaxes = data.taxes.filter((row) => rowStatus(row) === "pending").reduce((sum, row) => sum + rowAmount(row), 0);
-    const paidTaxes = data.taxes.filter((row) => rowStatus(row) === "paid").reduce((sum, row) => sum + rowAmount(row), 0);
+    const pendingTaxes = (data.taxes || []).filter((row) => rowStatus(row) === "pending").reduce((sum, row) => sum + rowAmount(row), 0);
+    const paidTaxes = (data.taxes || []).filter((row) => rowStatus(row) === "paid").reduce((sum, row) => sum + rowAmount(row), 0);
 
     return {
       revenue,
@@ -1145,7 +1145,7 @@ export default function FinancialOperations() {
                     <CardContent className="p-4">
                       <p className="text-xs text-muted-foreground mb-1">Overdue Items</p>
                       <p className="text-lg font-bold text-destructive">
-                        {data.taxes.filter((t) => rowStatus(t) === "pending" && new Date(rowDate(t)) < new Date()).length} items
+                        {(data.taxes || []).filter((t) => rowStatus(t) === "pending" && new Date(rowDate(t)) < new Date()).length} items
                       </p>
                     </CardContent>
                   </Card>
@@ -1163,10 +1163,10 @@ export default function FinancialOperations() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {data.taxes.length === 0 ? (
+                        {(!data.taxes || data.taxes.length === 0) ? (
                           <TableRow>
                             <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                              No tax records yet
+                              Tax table not configured or empty
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -1274,15 +1274,16 @@ export default function FinancialOperations() {
                   <h2 className="text-xl font-semibold text-foreground">Journal Entries</h2>
                 </div>
                 <div className="space-y-3">
-                  {data.journalEntries.length === 0 && (
+                  {(!data.journalEntries || data.journalEntries.length === 0) && (
                     <Card className="shadow-lg">
                       <CardContent className="py-10 text-center text-muted-foreground">
                         No journal entries yet
                       </CardContent>
                     </Card>
                   )}
-                  {data.journalEntries.map((je) => {
-                    const totalDebit = (je.lines as FinanceRow[]).reduce((sum: number, l: FinanceRow) => sum + rowAmount(l), 0);
+                  {(data.journalEntries || []).map((je) => {
+                    const lines = (je.lines as FinanceRow[]) || [];
+                    const totalDebit = lines.reduce((sum: number, l: FinanceRow) => sum + rowAmount(l), 0);
                     const isExpanded = expandedJournal === text(je.id);
                     return (
                       <Card key={text(je.id)} className="shadow-lg overflow-hidden">
@@ -1298,7 +1299,7 @@ export default function FinancialOperations() {
                             <div>
                               <p className="font-medium text-foreground">{text(je.description)}</p>
                               <p className="text-xs text-muted-foreground">
-                                {(je.lines as FinanceRow[]).length} lines · {formatCurrency(totalDebit)} each side
+                                {lines.length} lines · {formatCurrency(totalDebit)} each side
                               </p>
                             </div>
                           </div>
@@ -1322,7 +1323,7 @@ export default function FinancialOperations() {
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {(je.lines as FinanceRow[]).map((line, idx) => (
+                                  {lines.map((line, idx) => (
                                     <TableRow key={idx}>
                                       <TableCell className="font-mono text-xs text-muted-foreground">{text(line.account_code)}</TableCell>
                                       <TableCell className={rowAmount(line) > 0 ? "text-foreground" : "pl-8 text-foreground"}>
