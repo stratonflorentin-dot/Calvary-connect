@@ -1116,8 +1116,15 @@ export default function FinancialOperations() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="exp-category">Category</Label>
-                    <Input id="exp-category" placeholder="Fuel, Maintenance, etc." value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} />
+                    <Label htmlFor="exp-category">Category (Chart of Accounts)</Label>
+                    <Select value={expenseForm.category} onValueChange={(value) => setExpenseForm({ ...expenseForm, category: value })}>
+                      <SelectTrigger id="exp-category"><SelectValue placeholder="Select account" /></SelectTrigger>
+                      <SelectContent>
+                        {data.chartOfAccounts.filter((acc) => acc.type === "Expenses").map((acc) => (
+                          <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="exp-vendor">Vendor</Label>
@@ -1646,8 +1653,15 @@ export default function FinancialOperations() {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="exp-category">Category</Label>
-                          <Input id="exp-category" placeholder="Fuel, Maintenance, etc." value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} />
+                          <Label htmlFor="exp-category">Category (Chart of Accounts)</Label>
+                          <Select value={expenseForm.category} onValueChange={(value) => setExpenseForm({ ...expenseForm, category: value })}>
+                            <SelectTrigger id="exp-category"><SelectValue placeholder="Select account" /></SelectTrigger>
+                            <SelectContent>
+                              {data.chartOfAccounts.filter((acc) => acc.type === "Expenses").map((acc) => (
+                                <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="exp-vendor">Vendor</Label>
