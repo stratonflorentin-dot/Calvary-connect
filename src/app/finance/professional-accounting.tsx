@@ -15,9 +15,11 @@ import {
   ChevronDown,
   ClipboardList,
   CreditCard,
+  Download,
   FileText,
   Fuel,
   Globe,
+  Layers,
   Landmark,
   Loader2,
   MapPin,
@@ -55,6 +57,30 @@ import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+
+// ── Multi-Currency Constants ─────────────────────────────────────────────────────
+const CURRENCIES = {
+  TZS: { code: "TZS", symbol: "TZS", name: "Tanzanian Shilling", flag: "🇹🇿", dec: 0 },
+  USD: { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸", dec: 2 },
+  ZMW: { code: "ZMW", symbol: "K", name: "Zambian Kwacha", flag: "🇿🇲", dec: 2 },
+  CDF: { code: "CDF", symbol: "FC", name: "Congolese Franc", flag: "🇨🇩", dec: 0 },
+  KES: { code: "KES", symbol: "KSh", name: "Kenyan Shilling", flag: "🇰🇪", dec: 0 },
+  UGX: { code: "UGX", symbol: "USh", name: "Ugandan Shilling", flag: "🇺🇬", dec: 0 },
+  EUR: { code: "EUR", symbol: "€", name: "Euro", flag: "🇪🇺", dec: 2 },
+};
+
+// Reference exchange rates → USD (display only; amounts stay in native currency)
+const TO_USD = { TZS: 1 / 2600, USD: 1, ZMW: 1 / 26.5, CDF: 1 / 2850, KES: 1 / 129, UGX: 1 / 3730, EUR: 1.08 };
+
+const fmtAmt = (amount: number, currency = "TZS") => {
+  const c = CURRENCIES[currency as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+  const n = Number(amount || 0);
+  return c.dec === 0
+    ? `${c.symbol} ${Math.round(n).toLocaleString()}`
+    : `${c.symbol}${n.toLocaleString("en-US", { minimumFractionDigits: c.dec, maximumFractionDigits: c.dec })}`;
+};
+
+const toUSD = (amount: number, currency: string) => Number(amount || 0) * (TO_USD[currency as keyof typeof TO_USD] || 1);
 
 type FinanceRow = Record<string, unknown>;
 
@@ -209,11 +235,7 @@ function rowStatus(row: FinanceRow): string {
 }
 
 function formatCurrency(amount: number, currency = "TZS"): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: currency === "TZS" ? 0 : 2,
-  }).format(amount);
+  return fmtAmt(amount, currency);
 }
 
 function formatDate(value: string): string {
@@ -249,6 +271,63 @@ function StatusBadge({ status }: { status: string }) {
     <Badge variant="outline" className={cn("capitalize", statusStyles[status] ?? statusStyles.draft)}>
       {status.replaceAll("_", " ")}
     </Badge>
+  );
+}
+
+function CurrencyBadge({ currency }: { currency: string }) {
+  const c = CURRENCIES[currency as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+  return (
+    <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
+      {c.flag} {currency}
+    </Badge>
+  );
+}
+
+function MultiCurrencyCard({
+  title,
+  items,
+  amountKey = "amount",
+  currencyKey = "currency",
+  icon: Icon,
+  gradient,
+}: {
+  title: string;
+  items: FinanceRow[];
+  amountKey?: string;
+  currencyKey?: string;
+  icon: ElementType;
+  gradient: string;
+}) {
+  const byCode: Record<string, number> = {};
+  items.forEach((i) => {
+    const cur = text(i[currencyKey], "TZS");
+    byCode[cur] = (byCode[cur] || 0) + toNumber(i[amountKey]);
+  });
+  const usdTotal = Object.entries(byCode).reduce((s, [cur, amt]) => s + toUSD(amt, cur), 0);
+  const topCur = Object.entries(byCode)
+    .sort((a, b) => toUSD(b[1], b[0]) - toUSD(a[1], a[0]))
+    .slice(0, 2);
+
+  return (
+    <div className={cn("rounded-2xl p-5 text-white", gradient)}>
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-sm text-white/70">{title}</p>
+        <Icon className="size-8 text-white/25" />
+      </div>
+      <p className="text-xs text-white/60 mb-2">≈ ${usdTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })} USD</p>
+      <div className="space-y-1">
+        {topCur.map(([cur, amt]) => {
+          const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+          return (
+            <div key={cur} className="flex items-center justify-between">
+              <span className="text-xs text-white/70">{c.flag} {cur}</span>
+              <span className="text-sm font-bold">{fmtAmt(amt, cur)}</span>
+            </div>
+          );
+        })}
+        {Object.keys(byCode).length > 2 && <p className="text-xs text-white/50">+{Object.keys(byCode).length - 2} more currencies</p>}
+      </div>
+    </div>
   );
 }
 
@@ -409,6 +488,12 @@ export default function FinancialOperations() {
   const [search, setSearch] = useState("");
   const [expandedJournal, setExpandedJournal] = useState<string | null>(null);
   const [agingType, setAgingType] = useState<"receivable" | "payable">("receivable");
+  
+  // Multi-currency state
+  const [activeTab, setActiveTab] = useState("overview");
+  const [modal, setModal] = useState<string | null>(null);
+  const [filterCurrency, setFilterCurrency] = useState("ALL");
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
 
   const loadFinance = async () => {
     setLoading(true);
@@ -484,6 +569,36 @@ export default function FinancialOperations() {
       paidTaxes,
     };
   }, [data]);
+
+  // Multi-currency derived aggregates
+  const sumByCurrency = (items: FinanceRow[], key = "amount", curKey = "currency") => {
+    const out: Record<string, number> = {};
+    items.forEach((i) => {
+      const cur = text(i[curKey], "TZS");
+      out[cur] = (out[cur] || 0) + toNumber(i[key]);
+    });
+    return out;
+  };
+
+  const revByCur = useMemo(() => sumByCurrency([...data.invoices.filter(isReceivable), ...data.income]), [data]);
+  const expByCur = useMemo(() => sumByCurrency(data.expenses), [data]);
+  const profitByCur = useMemo(() => {
+    const allCurs = [...new Set([...Object.keys(revByCur), ...Object.keys(expByCur)])];
+    const out: Record<string, number> = {};
+    allCurs.forEach((c) => {
+      out[c] = (revByCur[c] || 0) - (expByCur[c] || 0);
+    });
+    return out;
+  }, [revByCur, expByCur]);
+
+  const xbRevByCur = useMemo(() => sumByCurrency(data.invoices.filter((r) => r.is_cross_border === true && isReceivable(r))), [data]);
+  const xbExpByCur = useMemo(() => sumByCurrency(data.expenses.filter((e) => e.is_cross_border === true)), [data]);
+
+  // Currency filter options
+  const currencyOptions = useMemo(() => [
+    { value: "ALL", label: "All Currencies" },
+    ...Object.values(CURRENCIES).map((c) => ({ value: c.code, label: `${c.flag} ${c.code}` })),
+  ], []);
 
   const activities = useMemo<Activity[]>(() => {
     const revenueActivities = data.income.map((row, index) => ({
@@ -704,34 +819,51 @@ export default function FinancialOperations() {
             </div>
           </section>
 
+          {/* Currency Filter */}
+          <section className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-2.5">
+            <span className="text-xs font-semibold text-muted-foreground uppercase">Filter by currency:</span>
+            <div className="flex gap-2 flex-wrap">
+              {currencyOptions.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setFilterCurrency(o.value)}
+                  className={cn(
+                    "text-xs px-3 py-1.5 rounded-lg font-medium transition-colors",
+                    filterCurrency === o.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
+            <MultiCurrencyCard
               title="Revenue"
-              value={formatCurrency(metrics.revenue)}
+              items={[...data.invoices.filter(isReceivable), ...data.income]}
               icon={TrendingUp}
-              tone="green"
-              helper={`${metrics.invoiceCount} invoices plus direct income`}
+              gradient="bg-gradient-to-br from-emerald-600 to-green-700"
             />
-            <MetricCard
-              title="Operating Expense"
-              value={formatCurrency(metrics.operatingExpense)}
+            <MultiCurrencyCard
+              title="Expenses"
+              items={data.expenses}
               icon={TrendingDown}
-              tone="red"
-              helper={`${metrics.pendingExpenseCount} pending approvals`}
+              gradient="bg-gradient-to-br from-rose-600 to-red-700"
             />
-            <MetricCard
-              title="Net Position"
-              value={formatCurrency(metrics.net)}
-              icon={Scale}
-              tone={metrics.net >= 0 ? "blue" : "amber"}
-              helper={`${metrics.margin}% operating margin`}
+            <MultiCurrencyCard
+              title="Cross-Border Revenue"
+              items={data.invoices.filter((r) => r.is_cross_border === true && isReceivable(r))}
+              icon={Globe}
+              gradient="bg-gradient-to-br from-purple-600 to-indigo-700"
             />
-            <MetricCard
-              title="Receivables"
-              value={formatCurrency(metrics.receivables)}
-              icon={Wallet}
-              tone="amber"
-              helper={`${overdueInvoices.length} invoices need collection`}
+            <MultiCurrencyCard
+              title="Pending AR"
+              items={data.invoices.filter((i) => isReceivable(i) && isUnpaid(i))}
+              icon={Building2}
+              gradient="bg-gradient-to-br from-amber-600 to-orange-700"
             />
           </section>
 
@@ -928,539 +1060,737 @@ export default function FinancialOperations() {
             </Card>
           </section>
 
-          <Tabs defaultValue="activity" className="space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 bg-muted/70 p-1 md:grid-cols-6 lg:grid-cols-8">
-              <TabsTrigger value="activity">Ledger Activity</TabsTrigger>
-              <TabsTrigger value="receivables">Receivables</TabsTrigger>
-              <TabsTrigger value="payables">Payables</TabsTrigger>
-              <TabsTrigger value="logistics">Logistics</TabsTrigger>
-              <TabsTrigger value="taxes">Taxes</TabsTrigger>
-              <TabsTrigger value="coa">Chart of Accounts</TabsTrigger>
-              <TabsTrigger value="journal">Journal Entries</TabsTrigger>
-              <TabsTrigger value="aging">Aging Report</TabsTrigger>
-            </TabsList>
+          {/* Multi-Currency Tabs */}
+          <div className="border-b border-border">
+            <div className="flex overflow-x-auto gap-1 bg-muted/50 p-1">
+              {[
+                { id: "overview", label: "Overview" },
+                { id: "expenses", label: "Expenses" },
+                { id: "revenue", label: "Revenue" },
+                { id: "invoices", label: "Invoices" },
+                { id: "taxes", label: "Taxes" },
+                { id: "logistics", label: "Logistics" },
+                { id: "accounts", label: "Accounts" },
+                { id: "bank", label: "Bank Statement" },
+                { id: "coa", label: "Chart of Accounts" },
+                { id: "journal", label: "Journal Entries" },
+                { id: "aging", label: "Aging Report" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors",
+                    activeTab === tab.id
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            <TabsContent value="activity">
-              <div className="app-table-shell">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Record</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                          <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
-                          Loading finance records...
-                        </TableCell>
-                      </TableRow>
-                    ) : activities.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                          No matching finance activity found.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      activities.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div className="max-w-[320px]">
-                              <p className="truncate font-medium">{item.title}</p>
-                              <p className="truncate text-xs text-muted-foreground">{item.detail}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="capitalize">
-                              {item.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={item.status} />
-                          </TableCell>
-                          <TableCell>{formatDate(item.date)}</TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatCurrency(item.amount, item.currency)}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="receivables">
-              <FinanceList
-                rows={data.invoices.filter((row) => isReceivable(row))}
-                empty="No receivable invoices found."
-                kind="receivable"
-              />
-            </TabsContent>
-
-            <TabsContent value="payables">
-              <FinanceList
-                rows={[...data.invoices.filter((row) => !isReceivable(row)), ...data.expenses]}
-                empty="No payable or expense records found."
-                kind="payable"
-              />
-            </TabsContent>
-
-            <TabsContent value="reports">
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <ReportLink href="/reports" icon={FileText} title="Financial Reports" description="Company reports and exportable summaries." />
-                <ReportLink href="/admin/reports/fleet/revenue-by-vehicle" icon={Truck} title="Vehicle Revenue" description="Revenue, expenses, and margin by truck." />
-                <ReportLink href="/admin/reports/fleet/route-profitability" icon={ArrowUpRight} title="Route Profitability" description="Gross margin by lane and destination." />
-                <ReportLink href="/admin/hr/payroll/statutory" icon={Banknote} title="Statutory Reports" description="Payroll and statutory finance reporting." />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="logistics">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="border-l-4 border-l-primary shadow-lg">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Globe className="size-4" />
-                        Cross-Border Operations
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Expenses</span>
-                        <span className="text-destructive font-medium">{formatCurrency(metrics.crossBorderExpenses)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Revenue</span>
-                        <span className="text-success font-medium">{formatCurrency(metrics.crossBorderRevenue)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm pt-2 border-t border-border">
-                        <span className="text-muted-foreground">Net</span>
-                        <span className={`font-bold ${metrics.crossBorderRevenue - metrics.crossBorderExpenses >= 0 ? "text-success" : "text-destructive"}`}>
-                          {formatCurrency(metrics.crossBorderRevenue - metrics.crossBorderExpenses)}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-l-4 border-l-info shadow-lg">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Thermometer className="size-4" />
-                        Cold Chain Operations
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Revenue</span>
-                        <span className="text-success font-medium">{formatCurrency(data.invoices.filter((i) => (i.cargo_type as string)?.toLowerCase() === "reefer").reduce((sum, i) => sum + rowAmount(i), 0))}</span>
-                      </div>
-                      <div className="flex justify-between text-sm pt-2 border-t border-border">
-                        <span className="text-muted-foreground">Net</span>
-                        <span className="text-success font-bold">
-                          {formatCurrency(data.invoices.filter((i) => (i.cargo_type as string)?.toLowerCase() === "reefer").reduce((sum, i) => sum + rowAmount(i), 0))}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-l-4 border-l-warning shadow-lg">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <Fuel className="size-4" />
-                        Fuel Costs
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total Fuel</span>
-                        <span className="text-warning font-medium">{formatCurrency(metrics.fuelExpenses)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">% of Expenses</span>
-                        <span className="text-warning font-medium">
-                          {metrics.operatingExpense > 0 ? ((metrics.fuelExpenses / metrics.operatingExpense) * 100).toFixed(1) : 0}%
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <Card className="shadow-lg">
+          {/* Tab Content */}
+          {activeTab === "overview" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="app-surface">
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <MapPin className="size-5" />
-                      Border Route Cost Summary
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <TrendingUp className="size-4 text-success" />
+                      Revenue by Currency
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                      {["Tunduma", "Kasumbalesa", "Sirari", "Rusumo", "Mutukula", "Kabanga"].map((route) => {
-                        const routeExpenses = data.expenses.filter((e) => 
-                          (e.border_point as string)?.toLowerCase().includes(route.toLowerCase()) ||
-                          (e.description as string)?.toLowerCase().includes(route.toLowerCase())
-                        ).reduce((sum, e) => sum + rowAmount(e), 0);
-                        const routeCount = data.expenses.filter((e) => 
-                          (e.border_point as string)?.toLowerCase().includes(route.toLowerCase()) ||
-                          (e.description as string)?.toLowerCase().includes(route.toLowerCase())
-                        ).length;
+                  <CardContent className="space-y-2">
+                    {Object.entries(revByCur)
+                      .sort((a, b) => toUSD(b[1], b[0]) - toUSD(a[1], a[0]))
+                      .map(([cur, amt]) => {
+                        const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
                         return (
-                          <div key={route} className="rounded-xl border border-border bg-muted/50 p-3 text-center">
-                            <p className="text-xs font-semibold text-foreground mb-1">{route}</p>
-                            <p className="text-base font-bold text-primary">{formatCurrency(routeExpenses)}</p>
-                            <p className="text-xs text-muted-foreground">{routeCount} {routeCount === 1 ? "entry" : "entries"}</p>
+                          <div key={cur} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                            <span className="flex items-center gap-2 text-sm text-foreground">
+                              <span className="text-base">{c.flag}</span>
+                              {cur} – {c.name}
+                            </span>
+                            <span className="font-bold text-success">{fmtAmt(amt, cur)}</span>
                           </div>
                         );
                       })}
+                  </CardContent>
+                </Card>
+
+                <Card className="app-surface">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <TrendingDown className="size-4 text-destructive" />
+                      Expenses by Currency
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {Object.entries(expByCur)
+                      .sort((a, b) => toUSD(b[1], b[0]) - toUSD(a[1], a[0]))
+                      .map(([cur, amt]) => {
+                        const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+                        return (
+                          <div key={cur} className="flex items-center justify-between p-2 bg-destructive/10 rounded-lg">
+                            <span className="flex items-center gap-2 text-sm text-foreground">
+                              <span className="text-base">{c.flag}</span>
+                              {cur}
+                            </span>
+                            <span className="font-bold text-destructive">{fmtAmt(amt, cur)}</span>
+                          </div>
+                        );
+                      })}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card className="app-surface">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Net Profit / Loss by Currency</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {Object.entries(profitByCur).map(([cur, net]) => {
+                      const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+                      return (
+                        <div
+                          key={cur}
+                          className={cn(
+                            "rounded-xl p-4 border",
+                            net >= 0 ? "bg-success/10 border-success/20" : "bg-destructive/10 border-destructive/20"
+                          )}
+                        >
+                          <p className="text-sm font-semibold text-muted-foreground mb-1">
+                            {c.flag} {cur}
+                          </p>
+                          <p className={cn("text-lg font-bold", net >= 0 ? "text-success" : "text-destructive")}>
+                            {fmtAmt(Math.abs(net), cur)}
+                          </p>
+                          <p className={cn("text-xs mt-0.5", net >= 0 ? "text-success/70" : "text-destructive/70")}>
+                            {net >= 0 ? "Profit" : "Loss"}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="app-surface">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Globe className="size-4 text-primary" />
+                    Cross-Border Performance by Currency
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Currency</TableHead>
+                          <TableHead>XB Revenue</TableHead>
+                          <TableHead>XB Expenses</TableHead>
+                          <TableHead>XB Net</TableHead>
+                          <TableHead>≈ USD Net</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.keys({ ...xbRevByCur, ...xbExpByCur }).map((cur) => {
+                          const rev = xbRevByCur[cur] || 0;
+                          const exp = xbExpByCur[cur] || 0;
+                          const net = rev - exp;
+                          const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+                          return (
+                            <TableRow key={cur}>
+                              <TableCell>
+                                <span className="flex items-center gap-2 font-medium">
+                                  <span className="text-base">{c.flag}</span>
+                                  {cur} – {c.name}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-success font-medium">{fmtAmt(rev, cur)}</TableCell>
+                              <TableCell className="text-destructive font-medium">{fmtAmt(exp, cur)}</TableCell>
+                              <TableCell className={cn("font-bold", net >= 0 ? "text-success" : "text-destructive")}>
+                                {fmtAmt(Math.abs(net), cur)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs">
+                                ${toUSD(Math.abs(net), cur).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "expenses" && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h2 className="text-xl font-bold text-foreground">Expense Management</h2>
+                <div className="flex gap-2 flex-wrap">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      className="pl-9 w-52"
+                      placeholder="Search…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+                  <Button className="gap-2">
+                    <Plus className="size-4" />
+                    Add Expense
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                {Object.entries(expByCur).map(([cur, amt]) => {
+                  const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+                  return (
+                    <div key={cur} className="bg-card border border-border rounded-xl p-3 text-center">
+                      <p className="text-xs text-muted-foreground mb-0.5">
+                        {c.flag} {cur}
+                      </p>
+                      <p className="text-sm font-bold text-destructive">{fmtAmt(amt, cur)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <Card className="app-surface">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.expenses.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                            No expenses found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        data.expenses
+                          .filter((e) => filterCurrency === "ALL" || rowCurrency(e) === filterCurrency)
+                          .filter((e) =>
+                            [e.description, e.category, e.vendor].some((s) =>
+                              String(s).toLowerCase().includes(search.toLowerCase())
+                            )
+                          )
+                          .map((e) => (
+                            <TableRow key={text(e.id)}>
+                              <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(rowDate(e))}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{text(e.category)}</Badge>
+                              </TableCell>
+                              <TableCell className="text-foreground max-w-[200px] truncate">{text(e.description)}</TableCell>
+                              <TableCell className="font-bold text-destructive whitespace-nowrap">
+                                {formatCurrency(rowAmount(e), rowCurrency(e))}
+                              </TableCell>
+                              <TableCell>
+                                <CurrencyBadge currency={rowCurrency(e)} />
+                              </TableCell>
+                              <TableCell>
+                                <StatusBadge status={rowStatus(e)} />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "revenue" && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h2 className="text-xl font-bold text-foreground">Revenue Management</h2>
+                <div className="flex gap-2 flex-wrap">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      className="pl-9 w-52"
+                      placeholder="Search…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+                  <Button className="gap-2" variant="default">
+                    <Plus className="size-4" />
+                    Record Revenue
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                {Object.entries(revByCur).map(([cur, amt]) => {
+                  const c = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
+                  return (
+                    <div key={cur} className="bg-card border border-border rounded-xl p-3 text-center">
+                      <p className="text-xs text-muted-foreground mb-0.5">
+                        {c.flag} {cur}
+                      </p>
+                      <p className="text-sm font-bold text-success">{fmtAmt(amt, cur)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <Card className="app-surface">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...data.invoices.filter(isReceivable), ...data.income].length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                            No revenue records
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        [...data.invoices.filter(isReceivable), ...data.income]
+                          .filter((r) => filterCurrency === "ALL" || rowCurrency(r) === filterCurrency)
+                          .filter((r) =>
+                            [r.description, r.customer_name, r.client_name].some((s) =>
+                              String(s).toLowerCase().includes(search.toLowerCase())
+                            )
+                          )
+                          .map((r) => (
+                            <TableRow key={text(r.id)}>
+                              <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(rowDate(r))}</TableCell>
+                              <TableCell className="text-foreground max-w-[200px] truncate">
+                                {text(r.description ?? r.customer_name ?? r.client_name)}
+                              </TableCell>
+                              <TableCell className="font-bold text-success whitespace-nowrap">
+                                {formatCurrency(rowAmount(r), rowCurrency(r))}
+                              </TableCell>
+                              <TableCell>
+                                <CurrencyBadge currency={rowCurrency(r)} />
+                              </TableCell>
+                              <TableCell>
+                                <StatusBadge status={rowStatus(r)} />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "invoices" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">Client Invoices</h2>
+                <Button className="gap-2">
+                  <Plus className="size-4" />
+                  Create Invoice
+                </Button>
+              </div>
+              <Card className="app-surface">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Customer / Vendor</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.invoices.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                            No invoices
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        data.invoices
+                          .filter((i) => filterCurrency === "ALL" || rowCurrency(i) === filterCurrency)
+                          .map((inv) => (
+                            <TableRow key={text(inv.id)}>
+                              <TableCell className="font-medium text-foreground">{text(inv.invoice_number)}</TableCell>
+                              <TableCell className="text-foreground">{text(inv.customer_name)}</TableCell>
+                              <TableCell>
+                                <Badge variant={isReceivable(inv) ? "default" : "secondary"}>
+                                  {isReceivable(inv) ? "AR" : "AP"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell
+                                className={cn(
+                                  "font-bold whitespace-nowrap",
+                                  isReceivable(inv) ? "text-success" : "text-destructive"
+                                )}
+                              >
+                                {formatCurrency(rowAmount(inv), rowCurrency(inv))}
+                              </TableCell>
+                              <TableCell>
+                                <CurrencyBadge currency={rowCurrency(inv)} />
+                              </TableCell>
+                              <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(rowDate(inv))}</TableCell>
+                              <TableCell>
+                                <StatusBadge status={rowStatus(inv)} />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "taxes" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">Tax Obligations</h2>
+                <Button className="gap-2">
+                  <Plus className="size-4" />
+                  Record Tax
+                </Button>
+              </div>
+              <Card className="app-surface">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tax Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(!data.taxes || data.taxes.length === 0) ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                            Tax table not configured or empty
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        data.taxes
+                          .filter((t) => filterCurrency === "ALL" || rowCurrency(t) === filterCurrency)
+                          .map((tax) => (
+                            <TableRow key={text(tax.id)}>
+                              <TableCell className="text-foreground">{text(tax.tax_name)}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{text(tax.type)}</Badge>
+                              </TableCell>
+                              <TableCell className="font-bold text-foreground">{formatCurrency(rowAmount(tax), rowCurrency(tax))}</TableCell>
+                              <TableCell>
+                                <CurrencyBadge currency={rowCurrency(tax)} />
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{formatDate(rowDate(tax))}</TableCell>
+                              <TableCell>
+                                <StatusBadge status={rowStatus(tax)} />
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "logistics" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-l-4 border-l-primary shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Globe className="size-4" />
+                      Cross-Border Operations
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Expenses</span>
+                      <span className="text-destructive font-medium">{formatCurrency(metrics.crossBorderExpenses)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Revenue</span>
+                      <span className="text-success font-medium">{formatCurrency(metrics.crossBorderRevenue)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-success shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Thermometer className="size-4" />
+                      Cold Chain Operations
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">Reefer cargo tracking and temperature monitoring.</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-warning shadow-lg">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Fuel className="size-4" />
+                      Fuel Costs
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total Fuel</span>
+                      <span className="text-warning font-medium">{formatCurrency(metrics.fuelExpenses)}</span>
                     </div>
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
+            </div>
+          )}
 
-            <TabsContent value="taxes">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-foreground">Tax Obligations</h2>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <Card className="shadow-lg">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground mb-1">Total Pending</p>
-                      <p className="text-lg font-bold text-warning">{formatCurrency(metrics.pendingTaxes)}</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="shadow-lg">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground mb-1">Total Paid</p>
-                      <p className="text-lg font-bold text-success">{formatCurrency(metrics.paidTaxes)}</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="shadow-lg">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground mb-1">Overdue Items</p>
-                      <p className="text-lg font-bold text-destructive">
-                        {(data.taxes || []).filter((t) => rowStatus(t) === "pending" && new Date(rowDate(t)) < new Date()).length} items
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-                <Card className="shadow-lg">
-                  <div className="app-table-shell">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Tax Name</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Due Date</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(!data.taxes || data.taxes.length === 0) ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                              Tax table not configured or empty
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          data.taxes.map((tax) => {
-                            const overdue = rowStatus(tax) === "pending" && new Date(rowDate(tax)) < new Date();
-                            return (
-                              <TableRow key={text(tax.id)} className="hover:bg-muted/50">
-                                <TableCell className="font-medium text-foreground">{text(tax.tax_name)}</TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                                    {text(tax.tax_type)}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="font-medium text-foreground">{formatCurrency(rowAmount(tax))}</TableCell>
-                                <TableCell className={overdue ? "text-destructive font-medium" : "text-muted-foreground"}>
-                                  {formatDate(rowDate(tax))}
-                                  {overdue && (
-                                    <Badge variant="outline" className="ml-2 border-destructive/20 bg-destructive/10 text-destructive">
-                                      Overdue
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <StatusBadge status={rowStatus(tax)} />
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+          {activeTab === "accounts" && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground">Bank Accounts</h2>
+              <Card className="app-surface">
+                <CardContent className="p-5">
+                  <p className="text-muted-foreground">Bank account management - Configure in Supabase bank_accounts table</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "bank" && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground">Bank Statement</h2>
+              <Card className="app-surface">
+                <CardContent className="p-5">
+                  <p className="text-muted-foreground">Bank statement reconciliation - Configure in Supabase</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "coa" && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground">Chart of Accounts</h2>
+              {coaGroups.length === 0 ? (
+                <Card className="app-surface">
+                  <CardContent className="py-10 text-center text-muted-foreground">
+                    Chart of Accounts table not configured or empty
+                  </CardContent>
                 </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="coa">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-foreground">Chart of Accounts</h2>
-                </div>
-                {coaGroups.length === 0 ? (
-                  <Card className="shadow-lg">
-                    <CardContent className="py-10 text-center text-muted-foreground">
-                      Chart of Accounts table not configured or empty
+              ) : (
+                coaGroups.map((group) => (
+                  <Card key={group.type} className="app-surface">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-semibold">{group.type}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Code</TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Currency</TableHead>
+                              <TableHead>Balance</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {group.rows.map((account) => (
+                              <TableRow key={text(account.code)}>
+                                <TableCell className="font-medium">{text(account.code)}</TableCell>
+                                <TableCell>{text(account.name)}</TableCell>
+                                <TableCell>
+                                  <CurrencyBadge currency={text(account.currency)} />
+                                </TableCell>
+                                <TableCell className="font-semibold">{formatCurrency(rowAmount(account), rowCurrency(account))}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </CardContent>
                   </Card>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      {coaGroups.map((group) => (
-                        <Card key={group.type} className={cn("shadow-lg", accountTypeStyles[group.type])}>
-                          <CardContent className="p-4 text-center">
-                            <p className="text-xs font-semibold uppercase mb-1">{group.type}s</p>
-                            <p className="font-bold text-sm">{formatCurrency(Math.abs(group.total))}</p>
-                            <p className="text-xs opacity-70">{group.rows.length} accounts</p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                    {coaGroups.map((group) => (
-                      <Card key={group.type} className="shadow-lg">
-                        <CardHeader className={cn("px-4 py-2.5 border-b border-border flex items-center justify-between", accountTypeStyles[group.type])}>
-                          <span className="font-semibold text-sm">{group.type}s</span>
-                          <span className="font-bold text-sm">{formatCurrency(Math.abs(group.total))}</span>
-                        </CardHeader>
-                        <div className="app-table-shell">
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === "journal" && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground">Journal Entries</h2>
+              {(!data.journalEntries || data.journalEntries.length === 0) ? (
+                <Card className="app-surface">
+                  <CardContent className="py-10 text-center text-muted-foreground">
+                    No journal entries yet
+                  </CardContent>
+                </Card>
+              ) : (
+                data.journalEntries.map((je) => {
+                  const lines = (je.lines as FinanceRow[]) || [];
+                  return (
+                    <Card key={text(je.id)} className="app-surface">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base font-semibold">
+                            {text(je.reference)} - {text(je.description)}
+                          </CardTitle>
+                          <Badge variant="outline">{formatDate(rowDate(je))}</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="overflow-x-auto">
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Code</TableHead>
-                                <TableHead>Account Name</TableHead>
-                                <TableHead>Normal Bal.</TableHead>
-                                <TableHead className="text-right">Balance (TZS)</TableHead>
+                                <TableHead>Account</TableHead>
+                                <TableHead>Currency</TableHead>
+                                <TableHead>Debit</TableHead>
+                                <TableHead>Credit</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {group.rows.map((account) => (
-                                <TableRow key={text(account.id)} className="hover:bg-muted/50">
-                                  <TableCell className="font-mono text-xs text-muted-foreground">{text(account.account_code)}</TableCell>
-                                  <TableCell className="text-foreground">{text(account.account_name)}</TableCell>
+                              {lines.map((line, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell>{text(line.account_name)}</TableCell>
                                   <TableCell>
-                                    <Badge variant="outline" className={text(account.normal_balance) === "debit" ? "border-primary/20 bg-primary/10 text-primary" : "border-success/20 bg-success/10 text-success"}>
-                                      {text(account.normal_balance)}
-                                    </Badge>
+                                    <CurrencyBadge currency={text(line.currency)} />
                                   </TableCell>
-                                  <TableCell className={`text-right font-medium ${rowAmount(account) < 0 ? "text-destructive" : "text-foreground"}`}>
-                                    {formatCurrency(rowAmount(account))}
-                                  </TableCell>
+                                  <TableCell className="text-success">{formatCurrency(rowAmount(line), rowCurrency(line))}</TableCell>
+                                  <TableCell className="text-destructive">{formatCurrency(rowAmount(line), rowCurrency(line))}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
                           </Table>
                         </div>
-                      </Card>
-                    ))}
-                  </>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="journal">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-foreground">Journal Entries</h2>
-                </div>
-                <div className="space-y-3">
-                  {(!data.journalEntries || data.journalEntries.length === 0) && (
-                    <Card className="shadow-lg">
-                      <CardContent className="py-10 text-center text-muted-foreground">
-                        No journal entries yet
                       </CardContent>
                     </Card>
-                  )}
-                  {(data.journalEntries || []).map((je) => {
-                    const lines = (je.lines as FinanceRow[]) || [];
-                    const totalDebit = lines.reduce((sum: number, l: FinanceRow) => sum + rowAmount(l), 0);
-                    const isExpanded = expandedJournal === text(je.id);
-                    return (
-                      <Card key={text(je.id)} className="shadow-lg overflow-hidden">
-                        <button
-                          onClick={() => setExpandedJournal(isExpanded ? null : text(je.id))}
-                          className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/50 transition-colors text-left"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="text-center">
-                              <p className="text-xs text-muted-foreground font-mono">{text(je.reference)}</p>
-                              <p className="text-xs text-muted-foreground">{formatDate(rowDate(je))}</p>
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">{text(je.description)}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {lines.length} lines · {formatCurrency(totalDebit)} each side
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="border-success/20 bg-success/10 text-success">
-                              Balanced
-                            </Badge>
-                            <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", isExpanded && "rotate-180")} />
-                          </div>
-                        </button>
-                        {isExpanded && (
-                          <div className="border-t border-border">
-                            <div className="app-table-shell">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Code</TableHead>
-                                    <TableHead>Account</TableHead>
-                                    <TableHead className="text-right">Debit</TableHead>
-                                    <TableHead className="text-right">Credit</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {lines.map((line, idx) => (
-                                    <TableRow key={idx}>
-                                      <TableCell className="font-mono text-xs text-muted-foreground">{text(line.account_code)}</TableCell>
-                                      <TableCell className={rowAmount(line) > 0 ? "text-foreground" : "pl-8 text-foreground"}>
-                                        {text(line.account_name)}
-                                      </TableCell>
-                                      <TableCell className="text-right text-foreground">
-                                        {rowAmount(line) > 0 ? formatCurrency(rowAmount(line)) : "—"}
-                                      </TableCell>
-                                      <TableCell className="text-right text-foreground">
-                                        {rowAmount(line) < 0 ? formatCurrency(Math.abs(rowAmount(line))) : "—"}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
-                      </Card>
-                    );
-                  })}
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {activeTab === "aging" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">Aging Report</h2>
+                <div className="flex gap-2">
+                  <Button
+                    variant={agingType === "receivable" ? "default" : "outline"}
+                    onClick={() => setAgingType("receivable")}
+                  >
+                    Receivables
+                  </Button>
+                  <Button
+                    variant={agingType === "payable" ? "default" : "outline"}
+                    onClick={() => setAgingType("payable")}
+                  >
+                    Payables
+                  </Button>
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="aging">
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-foreground">Aging Report</h2>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={agingType === "receivable" ? "default" : "outline"}
-                      onClick={() => setAgingType("receivable")}
-                      className={agingType === "receivable" ? "" : "border-border text-muted-foreground"}
-                    >
-                      Accounts Receivable
-                    </Button>
-                    <Button
-                      variant={agingType === "payable" ? "default" : "outline"}
-                      onClick={() => setAgingType("payable")}
-                      className={agingType === "payable" ? "" : "border-border text-muted-foreground"}
-                    >
-                      Accounts Payable
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {agingReport.totals.map((bucket) => {
-                    const percentage = agingReport.grandTotal > 0 ? (bucket.total / agingReport.grandTotal) * 100 : 0;
-                    return (
-                      <Card key={bucket.bucket} className="shadow-lg">
-                        <CardContent className="p-4">
-                          <Badge variant="outline" className={cn("mb-2", statusStyles[bucket.bucket] || statusStyles.current)}>
-                            {bucket.bucket === "current" ? "Current" : `${bucket.bucket} days`}
-                          </Badge>
-                          <p className="text-xl font-bold text-foreground">{formatCurrency(bucket.total)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {bucket.count} invoices · {percentage.toFixed(1)}%
-                          </p>
-                          <div className="mt-2 w-full bg-muted rounded-full h-1.5">
-                            <div className="h-1.5 rounded-full bg-primary" style={{ width: `${percentage}%` }} />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-                <Card className="shadow-lg border-warning/20 bg-warning/10">
-                  <CardContent className="px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm font-medium text-warning">
-                      Total Outstanding {agingType === "receivable" ? "(AR)" : "(AP)"}
-                    </span>
-                    <span className="text-lg font-bold text-warning">{formatCurrency(agingReport.grandTotal)}</span>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg">
-                  <div className="app-table-shell">
-                    <Table>
-                      <TableHeader>
+              <div className="grid gap-4 md:grid-cols-5">
+                {agingReport.totals.map((bucket) => (
+                  <Card key={bucket.bucket} className="app-surface">
+                    <CardContent className="p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                        {bucket.bucket}
+                      </p>
+                      <p className="text-lg font-bold text-foreground">{formatCurrency(bucket.total)}</p>
+                      <p className="text-xs text-muted-foreground">{bucket.count} items</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Card className="app-surface">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Customer / Vendor</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Days</TableHead>
+                        <TableHead>Aging Bucket</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {agingReport.items.length === 0 ? (
                         <TableRow>
-                          <TableHead>Invoice #</TableHead>
-                          <TableHead>Customer / Vendor</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Due Date</TableHead>
-                          <TableHead>Days</TableHead>
-                          <TableHead>Aging Bucket</TableHead>
+                          <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                            No outstanding items
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {agingReport.items.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                              No outstanding items
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          agingReport.items
-                            .sort((a, b) => b.daysOverdue - a.daysOverdue)
-                            .map((inv) => (
-                              <TableRow key={text(inv.id)} className="hover:bg-muted/50">
-                                <TableCell className="font-medium text-foreground">{text(inv.invoice_number)}</TableCell>
-                                <TableCell className="text-foreground">{text(inv.customer_name)}</TableCell>
-                                <TableCell className={`font-medium ${agingType === "receivable" ? "text-success" : "text-destructive"}`}>
-                                  {formatCurrency(rowAmount(inv))}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">{formatDate(rowDate(inv))}</TableCell>
-                                <TableCell
-                                  className={cn(
-                                    "font-medium",
-                                    inv.daysOverdue > 90
-                                      ? "text-destructive"
-                                      : inv.daysOverdue > 30
-                                      ? "text-warning"
-                                      : inv.daysOverdue > 0
-                                      ? "text-warning"
-                                      : "text-success"
-                                  )}
-                                >
-                                  {inv.daysOverdue <= 0 ? `${Math.abs(inv.daysOverdue)}d to go` : `${inv.daysOverdue}d overdue`}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className={cn(statusStyles[inv.bucket] || statusStyles.current)}>
-                                    {inv.bucket === "current" ? "Current" : `${inv.bucket} days`}
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+                      ) : (
+                        agingReport.items
+                          .sort((a, b) => b.daysOverdue - a.daysOverdue)
+                          .map((inv) => (
+                            <TableRow key={text(inv.id)} className="hover:bg-muted/50">
+                              <TableCell className="font-medium text-foreground">{text(inv.invoice_number)}</TableCell>
+                              <TableCell className="text-foreground">{text(inv.customer_name)}</TableCell>
+                              <TableCell className={`font-medium ${agingType === "receivable" ? "text-success" : "text-destructive"}`}>
+                                {formatCurrency(rowAmount(inv))}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{formatDate(rowDate(inv))}</TableCell>
+                              <TableCell
+                                className={cn(
+                                  "font-medium",
+                                  inv.daysOverdue > 90
+                                    ? "text-destructive"
+                                    : inv.daysOverdue > 30
+                                    ? "text-warning"
+                                    : inv.daysOverdue > 0
+                                    ? "text-warning"
+                                    : "text-success"
+                                )}
+                              >
+                                {inv.daysOverdue <= 0 ? `${Math.abs(inv.daysOverdue)}d to go` : `${inv.daysOverdue}d overdue`}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={cn(statusStyles[inv.bucket] || statusStyles.current)}>
+                                  {inv.bucket === "current" ? "Current" : `${inv.bucket} days`}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
       </main>
     </div>
