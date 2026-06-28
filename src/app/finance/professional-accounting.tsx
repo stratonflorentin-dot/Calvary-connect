@@ -1054,8 +1054,8 @@ export default function FinancialOperations() {
                           {data.chartOfAccounts.length === 0 ? (
                             <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
                           ) : (
-                            data.chartOfAccounts.filter((acc) => acc.type === "Assets" || acc.type === "Liabilities").map((acc) => (
-                              <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                            data.chartOfAccounts.map((acc) => (
+                              <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
                             ))
                           )}
                         </SelectContent>
@@ -1139,8 +1139,8 @@ export default function FinancialOperations() {
                         {data.chartOfAccounts.length === 0 ? (
                           <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
                         ) : (
-                          data.chartOfAccounts.filter((acc) => acc.type === "Expenses").map((acc) => (
-                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                          data.chartOfAccounts.map((acc) => (
+                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
                           ))
                         )}
                       </SelectContent>
@@ -1680,8 +1680,8 @@ export default function FinancialOperations() {
                               {data.chartOfAccounts.length === 0 ? (
                                 <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
                               ) : (
-                                data.chartOfAccounts.filter((acc) => acc.type === "Expenses").map((acc) => (
-                                  <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                                data.chartOfAccounts.map((acc) => (
+                                  <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
                                 ))
                               )}
                             </SelectContent>
@@ -1894,8 +1894,8 @@ export default function FinancialOperations() {
                           {data.chartOfAccounts.length === 0 ? (
                             <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
                           ) : (
-                            data.chartOfAccounts.filter((acc) => acc.type === "Assets" || acc.type === "Liabilities").map((acc) => (
-                              <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                            data.chartOfAccounts.map((acc) => (
+                              <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
                             ))
                           )}
                         </SelectContent>
