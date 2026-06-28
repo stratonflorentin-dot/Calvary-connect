@@ -525,6 +525,107 @@ export default function FinancialOperations() {
     setLoading(false);
   };
 
+  const saveInvoice = async () => {
+    try {
+      const { error } = await supabase.from("invoices").insert({
+        invoice_number: invoiceForm.invoice_number,
+        customer_name: invoiceForm.customer_name,
+        amount: parseFloat(invoiceForm.amount),
+        currency: invoiceForm.currency,
+        type: invoiceForm.type,
+        due_date: invoiceForm.due_date,
+        description: invoiceForm.description,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setInvoiceForm({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" });
+    } catch (err) {
+      console.error("Error saving invoice:", err);
+    }
+  };
+
+  const saveExpense = async () => {
+    try {
+      const { error } = await supabase.from("expenses").insert({
+        description: expenseForm.description,
+        amount: parseFloat(expenseForm.amount),
+        currency: expenseForm.currency,
+        category: expenseForm.category,
+        vendor: expenseForm.vendor,
+        date: expenseForm.date,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setExpenseForm({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" });
+    } catch (err) {
+      console.error("Error saving expense:", err);
+    }
+  };
+
+  const saveRevenue = async () => {
+    try {
+      const { error } = await supabase.from("income").insert({
+        description: revenueForm.description,
+        amount: parseFloat(revenueForm.amount),
+        currency: revenueForm.currency,
+        date: revenueForm.date,
+        status: "received",
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setRevenueForm({ description: "", amount: "", currency: "TZS", date: "" });
+    } catch (err) {
+      console.error("Error saving revenue:", err);
+    }
+  };
+
+  const saveTax = async () => {
+    try {
+      const { error } = await supabase.from("taxes").insert({
+        tax_name: taxForm.tax_name,
+        amount: parseFloat(taxForm.amount),
+        currency: taxForm.currency,
+        type: taxForm.type,
+        due_date: taxForm.due_date,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setTaxForm({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" });
+    } catch (err) {
+      console.error("Error saving tax:", err);
+    }
+  };
+
+  const saveBankAccount = async () => {
+    try {
+      const { error } = await supabase.from("bank_accounts").insert({
+        account_name: bankAccountForm.account_name,
+        account_number: bankAccountForm.account_number,
+        bank_name: bankAccountForm.bank_name,
+        currency: bankAccountForm.currency,
+        balance: parseFloat(bankAccountForm.balance),
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
+    } catch (err) {
+      console.error("Error saving bank account:", err);
+    }
+  };
+
   useEffect(() => {
     loadFinance();
   }, []);
@@ -902,7 +1003,7 @@ export default function FinancialOperations() {
                   </div>
                   <div className="flex gap-2 justify-end pt-2">
                     <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                    <Button onClick={() => { setModal(null); setInvoiceForm({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" }); }}>Create Invoice</Button>
+                    <Button onClick={saveInvoice}>Create Invoice</Button>
                   </div>
                 </div>
               </DialogContent>
@@ -956,7 +1057,7 @@ export default function FinancialOperations() {
                   </div>
                   <div className="flex gap-2 justify-end pt-2">
                     <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                    <Button onClick={() => { setModal(null); setExpenseForm({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" }); }}>Save Expense</Button>
+                    <Button onClick={saveExpense}>Save Expense</Button>
                   </div>
                 </div>
               </DialogContent>
@@ -1002,7 +1103,7 @@ export default function FinancialOperations() {
                   </div>
                   <div className="flex gap-2 justify-end pt-2">
                     <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                    <Button onClick={() => { setModal(null); setRevenueForm({ description: "", amount: "", currency: "TZS", date: "" }); }}>Save Revenue</Button>
+                    <Button onClick={saveRevenue}>Save Revenue</Button>
                   </div>
                 </div>
               </DialogContent>
@@ -1486,7 +1587,7 @@ export default function FinancialOperations() {
                         </div>
                         <div className="flex gap-2 justify-end pt-2">
                           <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                          <Button onClick={() => { setModal(null); setExpenseForm({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" }); }}>Save Expense</Button>
+                          <Button onClick={saveExpense}>Save Expense</Button>
                         </div>
                       </div>
                     </DialogContent>
@@ -1621,7 +1722,7 @@ export default function FinancialOperations() {
                         </div>
                         <div className="flex gap-2 justify-end pt-2">
                           <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                          <Button onClick={() => { setModal(null); setRevenueForm({ description: "", amount: "", currency: "TZS", date: "" }); }}>Save Revenue</Button>
+                          <Button onClick={saveRevenue}>Save Revenue</Button>
                         </div>
                       </div>
                     </DialogContent>
@@ -1764,7 +1865,7 @@ export default function FinancialOperations() {
                       </div>
                       <div className="flex gap-2 justify-end pt-2">
                         <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                        <Button onClick={() => { setModal(null); setInvoiceForm({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" }); }}>Create Invoice</Button>
+                        <Button onClick={saveInvoice}>Create Invoice</Button>
                       </div>
                     </div>
                   </DialogContent>
@@ -1883,7 +1984,7 @@ export default function FinancialOperations() {
                       </div>
                       <div className="flex gap-2 justify-end pt-2">
                         <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                        <Button onClick={() => { setModal(null); setTaxForm({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" }); }}>Save Tax</Button>
+                        <Button onClick={saveTax}>Save Tax</Button>
                       </div>
                     </div>
                   </DialogContent>
@@ -2039,7 +2140,7 @@ export default function FinancialOperations() {
                       </div>
                       <div className="flex gap-2 justify-end pt-2">
                         <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
-                        <Button onClick={() => { setModal(null); setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" }); }}>Save Account</Button>
+                        <Button onClick={saveBankAccount}>Save Account</Button>
                       </div>
                     </div>
                   </DialogContent>
