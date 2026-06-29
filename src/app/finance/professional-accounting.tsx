@@ -16,6 +16,7 @@ import {
   ClipboardList,
   CreditCard,
   Download,
+  DollarSign,
   FileText,
   Fuel,
   Globe,
@@ -23,6 +24,7 @@ import {
   Landmark,
   Loader2,
   MapPin,
+  Pencil,
   Plus,
   Receipt,
   RefreshCw,
@@ -30,6 +32,7 @@ import {
   Search,
   ShieldCheck,
   Thermometer,
+  Trash2,
   TrendingDown,
   TrendingUp,
   Truck,
@@ -560,6 +563,7 @@ export default function FinancialOperations() {
   const [revenueForm, setRevenueForm] = useState({ description: "", amount: "", currency: "TZS", date: "" });
   const [taxForm, setTaxForm] = useState({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" });
   const [bankAccountForm, setBankAccountForm] = useState({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
+  const [paymentForm, setPaymentForm] = useState({ amount: "", currency: "TZS", payment_method: "", payment_date: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
 
   const loadFinance = async () => {
@@ -584,10 +588,49 @@ export default function FinancialOperations() {
     setLoading(false);
   };
 
+  const createJournalEntry = async (entries: Array<{ account_code: string; debit: number; credit: number; description: string }>, referenceType: string, referenceId: string) => {
+    try {
+      const journalEntry = {
+        date: new Date().toISOString(),
+        reference_type: referenceType,
+        reference_id: referenceId,
+        description: entries[0]?.description || "Auto-generated journal entry",
+        created_at: new Date().toISOString(),
+      };
+
+      const { data: entryData, error: entryError } = await supabase.from("journal_entries").insert(journalEntry).select().single();
+      if (entryError) throw entryError;
+
+      const journalLines = entries.map((entry) => ({
+        journal_entry_id: entryData.id,
+        account_code: entry.account_code,
+        debit: entry.debit,
+        credit: entry.credit,
+        description: entry.description,
+      }));
+
+      const { error: linesError } = await supabase.from("journal_entry_lines").insert(journalLines);
+      if (linesError) throw linesError;
+
+      return entryData;
+    } catch (err) {
+      console.error("Error creating journal entry:", err);
+      throw err;
+    }
+  };
+
   const saveInvoice = async () => {
+    if (!invoiceForm.invoice_number || !invoiceForm.customer_name || !invoiceForm.amount || !invoiceForm.due_date) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    if (parseFloat(invoiceForm.amount) <= 0) {
+      toast({ title: "Validation Error", description: "Amount must be greater than 0", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("invoices").insert({
+      const { data: invoiceData, error } = await supabase.from("invoices").insert({
         invoice_number: invoiceForm.invoice_number,
         customer_name: invoiceForm.customer_name,
         amount: parseFloat(invoiceForm.amount),
@@ -597,12 +640,32 @@ export default function FinancialOperations() {
         description: invoiceForm.description,
         status: "pending",
         created_at: new Date().toISOString(),
-      });
+      }).select().single();
       if (error) throw error;
+
+      // Create automatic journal entry for the invoice
+      const isReceivable = invoiceForm.type === "AR";
+      const amount = parseFloat(invoiceForm.amount);
+      const entries = [
+        {
+          account_code: isReceivable ? "1200" : "2000",
+          debit: isReceivable ? amount : 0,
+          credit: isReceivable ? 0 : amount,
+          description: `Invoice ${invoiceForm.invoice_number} - ${invoiceForm.customer_name}`,
+        },
+        {
+          account_code: isReceivable ? "4000" : "5000",
+          debit: isReceivable ? 0 : amount,
+          credit: isReceivable ? amount : 0,
+          description: `Invoice ${invoiceForm.invoice_number} - ${invoiceForm.customer_name}`,
+        },
+      ];
+      await createJournalEntry(entries, "invoice", invoiceData.id);
+
       await loadFinance();
       setModal(null);
       setInvoiceForm({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" });
-      toast({ title: "Success", description: "Invoice created successfully" });
+      toast({ title: "Success", description: "Invoice created successfully with journal entry" });
     } catch (err) {
       console.error("Error saving invoice:", err);
       toast({ title: "Error", description: "Failed to create invoice", variant: "destructive" });
@@ -611,10 +674,120 @@ export default function FinancialOperations() {
     }
   };
 
-  const saveExpense = async () => {
+  const recordPayment = async (invoiceId: string) => {
+    if (!paymentForm.amount || !paymentForm.payment_date) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    if (parseFloat(paymentForm.amount) <= 0) {
+      toast({ title: "Validation Error", description: "Amount must be greater than 0", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("expenses").insert({
+      const { data: paymentData, error } = await supabase.from("payments").insert({
+        invoice_id: invoiceId,
+        amount: parseFloat(paymentForm.amount),
+        currency: paymentForm.currency,
+        payment_method: paymentForm.payment_method,
+        payment_date: paymentForm.payment_date,
+        notes: paymentForm.notes,
+        created_at: new Date().toISOString(),
+      }).select().single();
+      if (error) throw error;
+
+      // Create journal entry for the payment
+      const amount = parseFloat(paymentForm.amount);
+      const entries = [
+        {
+          account_code: "1000",
+          debit: amount,
+          credit: 0,
+          description: `Payment received - Invoice ${invoiceId}`,
+        },
+        {
+          account_code: "1200",
+          debit: 0,
+          credit: amount,
+          description: `Payment received - Invoice ${invoiceId}`,
+        },
+      ];
+      await createJournalEntry(entries, "payment", paymentData.id);
+
+      // Update invoice status
+      const invoice = data.invoices.find((inv) => inv.id === invoiceId);
+      if (invoice) {
+        const totalPaid = (invoice.paid_amount || 0) + amount;
+        const totalAmount = getInvoiceAmount(invoice);
+        const newStatus = totalPaid >= totalAmount ? "paid" : "partial";
+        await supabase.from("invoices").update({
+          paid_amount: totalPaid,
+          status: newStatus,
+        }).eq("id", invoiceId);
+      }
+
+      await loadFinance();
+      setModal(null);
+      setPaymentForm({ amount: "", currency: "TZS", payment_method: "", payment_date: "", notes: "" });
+      toast({ title: "Success", description: "Payment recorded successfully" });
+    } catch (err) {
+      console.error("Error recording payment:", err);
+      toast({ title: "Error", description: "Failed to record payment", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const updateInvoice = async (id: string) => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("invoices").update({
+        invoice_number: invoiceForm.invoice_number,
+        customer_name: invoiceForm.customer_name,
+        amount: parseFloat(invoiceForm.amount),
+        currency: invoiceForm.currency,
+        type: invoiceForm.type,
+        due_date: invoiceForm.due_date,
+        description: invoiceForm.description,
+      }).eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setInvoiceForm({ invoice_number: "", customer_name: "", amount: "", currency: "TZS", type: "AR", due_date: "", description: "" });
+      toast({ title: "Success", description: "Invoice updated successfully" });
+    } catch (err) {
+      console.error("Error updating invoice:", err);
+      toast({ title: "Error", description: "Failed to update invoice", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteInvoice = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this invoice?")) return;
+    try {
+      const { error } = await supabase.from("invoices").delete().eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      toast({ title: "Success", description: "Invoice deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting invoice:", err);
+      toast({ title: "Error", description: "Failed to delete invoice", variant: "destructive" });
+    }
+  };
+
+  const saveExpense = async () => {
+    if (!expenseForm.description || !expenseForm.amount || !expenseForm.date) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    if (parseFloat(expenseForm.amount) <= 0) {
+      toast({ title: "Validation Error", description: "Amount must be greater than 0", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data: expenseData, error } = await supabase.from("expenses").insert({
         description: expenseForm.description,
         amount: parseFloat(expenseForm.amount),
         currency: expenseForm.currency,
@@ -623,12 +796,32 @@ export default function FinancialOperations() {
         date: expenseForm.date,
         status: "pending",
         created_at: new Date().toISOString(),
-      });
+      }).select().single();
       if (error) throw error;
+
+      // Create automatic journal entry for the expense
+      const amount = parseFloat(expenseForm.amount);
+      const accountCode = expenseForm.category || "6000";
+      const entries = [
+        {
+          account_code: accountCode,
+          debit: amount,
+          credit: 0,
+          description: `Expense - ${expenseForm.description}`,
+        },
+        {
+          account_code: "1000",
+          debit: 0,
+          credit: amount,
+          description: `Expense - ${expenseForm.description}`,
+        },
+      ];
+      await createJournalEntry(entries, "expense", expenseData.id);
+
       await loadFinance();
       setModal(null);
       setExpenseForm({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" });
-      toast({ title: "Success", description: "Expense saved successfully" });
+      toast({ title: "Success", description: "Expense saved successfully with journal entry" });
     } catch (err) {
       console.error("Error saving expense:", err);
       toast({ title: "Error", description: "Failed to save expense", variant: "destructive" });
@@ -637,22 +830,119 @@ export default function FinancialOperations() {
     }
   };
 
-  const saveRevenue = async () => {
+  const approveExpense = async (id: string) => {
+    try {
+      const { error } = await supabase.from("expenses").update({
+        status: "approved",
+        approved_at: new Date().toISOString(),
+      }).eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      toast({ title: "Success", description: "Expense approved successfully" });
+    } catch (err) {
+      console.error("Error approving expense:", err);
+      toast({ title: "Error", description: "Failed to approve expense", variant: "destructive" });
+    }
+  };
+
+  const rejectExpense = async (id: string) => {
+    const reason = prompt("Please provide a reason for rejection:");
+    if (!reason) return;
+    try {
+      const { error } = await supabase.from("expenses").update({
+        status: "rejected",
+        rejection_reason: reason,
+        rejected_at: new Date().toISOString(),
+      }).eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      toast({ title: "Success", description: "Expense rejected successfully" });
+    } catch (err) {
+      console.error("Error rejecting expense:", err);
+      toast({ title: "Error", description: "Failed to reject expense", variant: "destructive" });
+    }
+  };
+
+  const updateExpense = async (id: string) => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("income").insert({
+      const { error } = await supabase.from("expenses").update({
+        description: expenseForm.description,
+        amount: parseFloat(expenseForm.amount),
+        currency: expenseForm.currency,
+        category: expenseForm.category,
+        vendor: expenseForm.vendor,
+        date: expenseForm.date,
+      }).eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setExpenseForm({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" });
+      toast({ title: "Success", description: "Expense updated successfully" });
+    } catch (err) {
+      console.error("Error updating expense:", err);
+      toast({ title: "Error", description: "Failed to update expense", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteExpense = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this expense?")) return;
+    try {
+      const { error } = await supabase.from("expenses").delete().eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      toast({ title: "Success", description: "Expense deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting expense:", err);
+      toast({ title: "Error", description: "Failed to delete expense", variant: "destructive" });
+    }
+  };
+
+  const saveRevenue = async () => {
+    if (!revenueForm.description || !revenueForm.amount || !revenueForm.date) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    if (parseFloat(revenueForm.amount) <= 0) {
+      toast({ title: "Validation Error", description: "Amount must be greater than 0", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data: revenueData, error } = await supabase.from("income").insert({
         description: revenueForm.description,
         amount: parseFloat(revenueForm.amount),
         currency: revenueForm.currency,
         date: revenueForm.date,
         status: "received",
         created_at: new Date().toISOString(),
-      });
+      }).select().single();
       if (error) throw error;
+
+      // Create automatic journal entry for the revenue
+      const amount = parseFloat(revenueForm.amount);
+      const entries = [
+        {
+          account_code: "1000",
+          debit: amount,
+          credit: 0,
+          description: `Revenue - ${revenueForm.description}`,
+        },
+        {
+          account_code: "4000",
+          debit: 0,
+          credit: amount,
+          description: `Revenue - ${revenueForm.description}`,
+        },
+      ];
+      await createJournalEntry(entries, "revenue", revenueData.id);
+
       await loadFinance();
       setModal(null);
       setRevenueForm({ description: "", amount: "", currency: "TZS", date: "" });
-      toast({ title: "Success", description: "Revenue recorded successfully" });
+      toast({ title: "Success", description: "Revenue recorded successfully with journal entry" });
     } catch (err) {
       console.error("Error saving revenue:", err);
       toast({ title: "Error", description: "Failed to record revenue", variant: "destructive" });
@@ -661,7 +951,50 @@ export default function FinancialOperations() {
     }
   };
 
+  const updateRevenue = async (id: string) => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("income").update({
+        description: revenueForm.description,
+        amount: parseFloat(revenueForm.amount),
+        currency: revenueForm.currency,
+        date: revenueForm.date,
+      }).eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setRevenueForm({ description: "", amount: "", currency: "TZS", date: "" });
+      toast({ title: "Success", description: "Revenue updated successfully" });
+    } catch (err) {
+      console.error("Error updating revenue:", err);
+      toast({ title: "Error", description: "Failed to update revenue", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteRevenue = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this revenue record?")) return;
+    try {
+      const { error } = await supabase.from("income").delete().eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      toast({ title: "Success", description: "Revenue deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting revenue:", err);
+      toast({ title: "Error", description: "Failed to delete revenue", variant: "destructive" });
+    }
+  };
+
   const saveTax = async () => {
+    if (!taxForm.tax_name || !taxForm.amount || !taxForm.type || !taxForm.due_date) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    if (parseFloat(taxForm.amount) <= 0) {
+      toast({ title: "Validation Error", description: "Amount must be greater than 0", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await supabase.from("taxes").insert({
@@ -686,7 +1019,51 @@ export default function FinancialOperations() {
     }
   };
 
+  const updateTax = async (id: string) => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("taxes").update({
+        tax_name: taxForm.tax_name,
+        amount: parseFloat(taxForm.amount),
+        currency: taxForm.currency,
+        type: taxForm.type,
+        due_date: taxForm.due_date,
+      }).eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setTaxForm({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" });
+      toast({ title: "Success", description: "Tax updated successfully" });
+    } catch (err) {
+      console.error("Error updating tax:", err);
+      toast({ title: "Error", description: "Failed to update tax", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteTax = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this tax record?")) return;
+    try {
+      const { error } = await supabase.from("taxes").delete().eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      toast({ title: "Success", description: "Tax deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting tax:", err);
+      toast({ title: "Error", description: "Failed to delete tax", variant: "destructive" });
+    }
+  };
+
   const saveBankAccount = async () => {
+    if (!bankAccountForm.account_name || !bankAccountForm.account_number || !bankAccountForm.bank_name || !bankAccountForm.balance) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    if (parseFloat(bankAccountForm.balance) < 0) {
+      toast({ title: "Validation Error", description: "Balance cannot be negative", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await supabase.from("bank_accounts").insert({
@@ -708,6 +1085,72 @@ export default function FinancialOperations() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const updateBankAccount = async (id: string) => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("bank_accounts").update({
+        account_name: bankAccountForm.account_name,
+        account_number: bankAccountForm.account_number,
+        bank_name: bankAccountForm.bank_name,
+        currency: bankAccountForm.currency,
+        balance: parseFloat(bankAccountForm.balance),
+      }).eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      setModal(null);
+      setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
+      toast({ title: "Success", description: "Bank account updated successfully" });
+    } catch (err) {
+      console.error("Error updating bank account:", err);
+      toast({ title: "Error", description: "Failed to update bank account", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteBankAccount = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this bank account?")) return;
+    try {
+      const { error } = await supabase.from("bank_accounts").delete().eq("id", id);
+      if (error) throw error;
+      await loadFinance();
+      toast({ title: "Success", description: "Bank account deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting bank account:", err);
+      toast({ title: "Error", description: "Failed to delete bank account", variant: "destructive" });
+    }
+  };
+
+  const handleExportReport = () => {
+    const reportData = {
+      generatedAt: new Date().toISOString(),
+      metrics: {
+        revenue: metrics.revenue,
+        expenses: metrics.operatingExpense,
+        netProfit: metrics.net,
+        margin: metrics.margin,
+        receivables: metrics.receivables,
+        payables: metrics.payables,
+      },
+      revenueByCurrency: revByCur,
+      expensesByCurrency: expByCur,
+      invoices: data.invoices.length,
+      expenses: data.expenses.length,
+      income: data.income.length,
+    };
+    
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `finance-report-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Export Complete", description: "Finance report downloaded successfully" });
   };
 
   useEffect(() => {
@@ -978,7 +1421,7 @@ export default function FinancialOperations() {
                 {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                 Refresh Data
               </Button>
-              <Button className="gap-2 h-10 bg-primary hover:bg-primary/90">
+              <Button className="gap-2 h-10 bg-primary hover:bg-primary/90" onClick={handleExportReport}>
                 <Download className="size-4" />
                 Export Report
               </Button>
@@ -1701,6 +2144,61 @@ export default function FinancialOperations() {
                       </div>
                     </DialogContent>
                   </Dialog>
+                  <Dialog open={modal === "expense-edit"} onOpenChange={(open) => setModal(open ? "expense-edit" : null)}>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold">Edit Expense</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="exp-edit-amount">Amount</Label>
+                            <Input id="exp-edit-amount" type="number" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="exp-edit-currency">Currency</Label>
+                            <Select value={expenseForm.currency} onValueChange={(value) => setExpenseForm({ ...expenseForm, currency: value })}>
+                              <SelectTrigger id="exp-edit-currency">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.values(CURRENCIES).map((c) => (
+                                  <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="exp-edit-category">Category</Label>
+                          <Select value={expenseForm.category} onValueChange={(value) => setExpenseForm({ ...expenseForm, category: value })}>
+                            <SelectTrigger id="exp-edit-category"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {data.chartOfAccounts.map((acc) => (
+                                <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="exp-edit-vendor">Vendor</Label>
+                          <Input id="exp-edit-vendor" value={expenseForm.vendor} onChange={(e) => setExpenseForm({ ...expenseForm, vendor: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="exp-edit-description">Description</Label>
+                          <Input id="exp-edit-description" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="exp-edit-date">Date</Label>
+                          <Input id="exp-edit-date" type="date" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} />
+                        </div>
+                        <div className="flex gap-2 justify-end pt-2">
+                          <Button variant="outline" onClick={() => setModal(null)}>Cancel</Button>
+                          <Button onClick={() => updateExpense(expenseForm.description)}>Update Expense</Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -1729,12 +2227,13 @@ export default function FinancialOperations() {
                           <TableHead className="font-semibold text-foreground text-right">Amount</TableHead>
                           <TableHead className="font-semibold text-foreground">Currency</TableHead>
                           <TableHead className="font-semibold text-foreground">Status</TableHead>
+                          <TableHead className="font-semibold text-foreground">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {data.expenses.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="py-16 text-center">
+                            <TableCell colSpan={8} className="py-16 text-center">
                               <Receipt className="mx-auto size-12 text-muted-foreground/30 mb-3" />
                               <p className="text-muted-foreground font-medium">No expenses recorded</p>
                               <p className="text-sm text-muted-foreground mt-1">Use the "Add Expense" button above to record your first expense</p>
@@ -1764,6 +2263,36 @@ export default function FinancialOperations() {
                                 </TableCell>
                                 <TableCell>
                                   <StatusBadge status={rowStatus(e)} />
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    {rowStatus(e) === "pending" && (
+                                      <>
+                                        <Button variant="ghost" size="sm" onClick={() => approveExpense(text(e.id))}>
+                                          <CheckCircle2 className="size-4 text-emerald-600" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => rejectExpense(text(e.id))}>
+                                          <X className="size-4 text-red-600" />
+                                        </Button>
+                                      </>
+                                    )}
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setExpenseForm({
+                                        description: text(e.description),
+                                        amount: String(rowAmount(e)),
+                                        currency: rowCurrency(e),
+                                        category: text(e.category),
+                                        vendor: text(e.vendor),
+                                        date: rowDate(e),
+                                      });
+                                      setModal("expense-edit");
+                                    }}>
+                                      <Pencil className="size-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => deleteExpense(text(e.id))}>
+                                      <Trash2 className="size-4 text-destructive" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))
@@ -1814,6 +2343,35 @@ export default function FinancialOperations() {
                       <Button onClick={saveRevenue} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Save Revenue</Button>
                     </div>
                   </FormDialog>
+                  <FormDialog open={modal === "revenue-edit"} onOpenChange={(open) => setModal(open ? "revenue-edit" : null)} title="Edit Revenue" trigger={<></>}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="rev-edit-amount">Amount</Label>
+                        <Input id="rev-edit-amount" type="number" value={revenueForm.amount} onChange={(e) => setRevenueForm({ ...revenueForm, amount: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="rev-edit-currency">Currency</Label>
+                        <Select value={revenueForm.currency} onValueChange={(value) => setRevenueForm({ ...revenueForm, currency: value })}>
+                          <SelectTrigger id="rev-edit-currency"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rev-edit-description">Description</Label>
+                      <Input id="rev-edit-description" value={revenueForm.description} onChange={(e) => setRevenueForm({ ...revenueForm, description: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rev-edit-date">Date</Label>
+                      <Input id="rev-edit-date" type="date" value={revenueForm.date} onChange={(e) => setRevenueForm({ ...revenueForm, date: e.target.value })} />
+                    </div>
+                    <div className="flex gap-2 justify-end pt-2">
+                      <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                      <Button onClick={() => updateRevenue(revenueForm.description)} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Update Revenue</Button>
+                    </div>
+                  </FormDialog>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -1839,12 +2397,13 @@ export default function FinancialOperations() {
                           <TableHead className="text-right">Amount</TableHead>
                           <TableHead>Currency</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {[...data.invoices.filter(isReceivable), ...data.income].length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="py-16 text-center">
+                            <TableCell colSpan={7} className="py-16 text-center">
                               <EmptyState icon={Wallet} title="No revenue recorded" description='Use the "Record Revenue" button above to add your first revenue entry' />
                             </TableCell>
                           </TableRow>
@@ -1860,6 +2419,24 @@ export default function FinancialOperations() {
                                 <TableCell className="font-bold text-emerald-700 dark:text-emerald-400 text-right whitespace-nowrap">{formatAmount(("amount" in r ? toNumber(r.amount) : getIncomeAmount(r as any)), getCurrencyCode(r))}</TableCell>
                                 <TableCell><CurrencyBadge currency={getCurrencyCode(r)} /></TableCell>
                                 <TableCell><StatusBadge status={getRowStatus(r)} /></TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setRevenueForm({
+                                        description: safeText(r.description),
+                                        amount: String("amount" in r ? toNumber(r.amount) : getIncomeAmount(r as any)),
+                                        currency: getCurrencyCode(r),
+                                        date: getRowDate(r),
+                                      });
+                                      setModal("revenue-edit");
+                                    }}>
+                                      <Pencil className="size-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => deleteRevenue(safeText(r.id))}>
+                                      <Trash2 className="size-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             ))
                         )}
@@ -1929,6 +2506,106 @@ export default function FinancialOperations() {
                     <Button onClick={saveInvoice} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Create Invoice</Button>
                   </div>
                 </FormDialog>
+                <FormDialog open={modal === "invoice-edit"} onOpenChange={(open) => setModal(open ? "invoice-edit" : null)} title="Edit Invoice" trigger={<></>}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-edit-number">Invoice Number</Label>
+                      <Input id="inv-edit-number" value={invoiceForm.invoice_number} onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-edit-type">Type</Label>
+                      <Select value={invoiceForm.type} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, type: value })}>
+                        <SelectTrigger id="inv-edit-type"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {data.chartOfAccounts.map((acc) => (
+                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-edit-customer">Customer</Label>
+                    <Input id="inv-edit-customer" value={invoiceForm.customer_name} onChange={(e) => setInvoiceForm({ ...invoiceForm, customer_name: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-edit-amount">Amount</Label>
+                      <Input id="inv-edit-amount" type="number" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inv-edit-currency">Currency</Label>
+                      <Select value={invoiceForm.currency} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, currency: value })}>
+                        <SelectTrigger id="inv-edit-currency"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-edit-due">Due Date</Label>
+                    <Input id="inv-edit-due" type="date" value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inv-edit-description">Description</Label>
+                    <Input id="inv-edit-description" value={invoiceForm.description} onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={() => updateInvoice(invoiceForm.invoice_number)} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Update Invoice</Button>
+                  </div>
+                </FormDialog>
+                {data.invoices.map((inv) => (
+                  <Dialog key={`payment-${inv.id}`} open={modal === `payment-${inv.id}`} onOpenChange={(open) => setModal(open ? `payment-${inv.id}` : null)}>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold">Record Payment - Invoice {safeText(inv.invoice_number)}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="pay-amount">Amount</Label>
+                            <Input id="pay-amount" type="number" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="pay-currency">Currency</Label>
+                            <Select value={paymentForm.currency} onValueChange={(value) => setPaymentForm({ ...paymentForm, currency: value })}>
+                              <SelectTrigger id="pay-currency"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="pay-method">Payment Method</Label>
+                          <Select value={paymentForm.payment_method} onValueChange={(value) => setPaymentForm({ ...paymentForm, payment_method: value })}>
+                            <SelectTrigger id="pay-method"><SelectValue placeholder="Select method" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                              <SelectItem value="check">Check</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="pay-date">Payment Date</Label>
+                          <Input id="pay-date" type="date" value={paymentForm.payment_date} onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="pay-notes">Notes</Label>
+                          <Input id="pay-notes" placeholder="Payment reference or notes" value={paymentForm.notes} onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} />
+                        </div>
+                        <div className="flex gap-2 justify-end pt-2">
+                          <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                          <Button onClick={() => recordPayment(safeText(inv.id))} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Record Payment</Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ))}
               </div>
               <Card className="border border-border">
                 <CardContent className="p-0">
@@ -1943,12 +2620,13 @@ export default function FinancialOperations() {
                           <TableHead>Currency</TableHead>
                           <TableHead>Due Date</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {data.invoices.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="py-16 text-center">
+                            <TableCell colSpan={8} className="py-16 text-center">
                               <EmptyState icon={FileText} title="No invoices created" description='Use the "Create Invoice" button above to generate your first invoice' />
                             </TableCell>
                           </TableRow>
@@ -1968,6 +2646,33 @@ export default function FinancialOperations() {
                                 <TableCell><CurrencyBadge currency={getCurrencyCode(inv)} /></TableCell>
                                 <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(getRowDate(inv))}</TableCell>
                                 <TableCell><StatusBadge status={getRowStatus(inv)} /></TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setInvoiceForm({
+                                        invoice_number: safeText(inv.invoice_number),
+                                        customer_name: safeText(inv.customer_name),
+                                        amount: String(getInvoiceAmount(inv)),
+                                        currency: getCurrencyCode(inv),
+                                        type: safeText(inv.type),
+                                        due_date: getRowDate(inv),
+                                        description: safeText(inv.description),
+                                      });
+                                      setModal("invoice-edit");
+                                    }}>
+                                      <Pencil className="size-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setPaymentForm({ amount: "", currency: getCurrencyCode(inv), payment_method: "", payment_date: new Date().toISOString().split("T")[0], notes: "" });
+                                      setModal(`payment-${safeText(inv.id)}`);
+                                    }}>
+                                      <DollarSign className="size-4 text-emerald-600" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => deleteInvoice(safeText(inv.id))}>
+                                      <Trash2 className="size-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             ))
                         )}
@@ -2018,6 +2723,41 @@ export default function FinancialOperations() {
                     <Button onClick={saveTax} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Save Tax</Button>
                   </div>
                 </FormDialog>
+                <FormDialog open={modal === "tax-edit"} onOpenChange={(open) => setModal(open ? "tax-edit" : null)} title="Edit Tax" trigger={<></>}>
+                  <div className="space-y-2">
+                    <Label htmlFor="tax-edit-name">Tax Name</Label>
+                    <Input id="tax-edit-name" value={taxForm.tax_name} onChange={(e) => setTaxForm({ ...taxForm, tax_name: e.target.value })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-edit-amount">Amount</Label>
+                      <Input id="tax-edit-amount" type="number" value={taxForm.amount} onChange={(e) => setTaxForm({ ...taxForm, amount: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-edit-currency">Currency</Label>
+                      <Select value={taxForm.currency} onValueChange={(value) => setTaxForm({ ...taxForm, currency: value })}>
+                        <SelectTrigger id="tax-edit-currency"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-edit-type">Type</Label>
+                      <Input id="tax-edit-type" value={taxForm.type} onChange={(e) => setTaxForm({ ...taxForm, type: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-edit-due">Due Date</Label>
+                      <Input id="tax-edit-due" type="date" value={taxForm.due_date} onChange={(e) => setTaxForm({ ...taxForm, due_date: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={() => updateTax(taxForm.tax_name)} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Update Tax</Button>
+                  </div>
+                </FormDialog>
               </div>
               <Card className="border border-border">
                 <CardContent className="p-0">
@@ -2031,12 +2771,13 @@ export default function FinancialOperations() {
                           <TableHead>Currency</TableHead>
                           <TableHead>Due Date</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {(!data.taxes || data.taxes.length === 0) ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="py-16 text-center">
+                            <TableCell colSpan={7} className="py-16 text-center">
                               <EmptyState icon={Scale} title="No tax obligations recorded" description='Use the "Record Tax" button above to add your first tax entry' />
                             </TableCell>
                           </TableRow>
@@ -2051,6 +2792,25 @@ export default function FinancialOperations() {
                                 <TableCell><CurrencyBadge currency={getCurrencyCode(tax)} /></TableCell>
                                 <TableCell className="text-muted-foreground font-medium whitespace-nowrap">{formatDate(getRowDate(tax))}</TableCell>
                                 <TableCell><StatusBadge status={getRowStatus(tax)} /></TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setTaxForm({
+                                        tax_name: safeText(tax.tax_name),
+                                        amount: String(getTaxAmount(tax)),
+                                        currency: getCurrencyCode(tax),
+                                        type: safeText(tax.type),
+                                        due_date: getRowDate(tax),
+                                      });
+                                      setModal("tax-edit");
+                                    }}>
+                                      <Pencil className="size-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => deleteTax(safeText(tax.id))}>
+                                      <Trash2 className="size-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             ))
                         )}
@@ -2149,6 +2909,37 @@ export default function FinancialOperations() {
                     <Button onClick={saveBankAccount} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Save Account</Button>
                   </div>
                 </FormDialog>
+                <FormDialog open={modal === "bank-account-edit"} onOpenChange={(open) => setModal(open ? "bank-account-edit" : null)} title="Edit Bank Account" trigger={<></>}>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-edit-name">Account Name</Label>
+                    <Input id="bank-edit-name" value={bankAccountForm.account_name} onChange={(e) => setBankAccountForm({ ...bankAccountForm, account_name: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-edit-number">Account Number</Label>
+                    <Input id="bank-edit-number" value={bankAccountForm.account_number} onChange={(e) => setBankAccountForm({ ...bankAccountForm, account_number: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-edit-bank">Bank Name</Label>
+                    <Input id="bank-edit-bank" value={bankAccountForm.bank_name} onChange={(e) => setBankAccountForm({ ...bankAccountForm, bank_name: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-edit-currency">Currency</Label>
+                    <Select value={bankAccountForm.currency} onValueChange={(value) => setBankAccountForm({ ...bankAccountForm, currency: value })}>
+                      <SelectTrigger id="bank-edit-currency"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.values(CURRENCIES).map((c) => (<SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-edit-balance">Balance</Label>
+                    <Input id="bank-edit-balance" type="number" value={bankAccountForm.balance} onChange={(e) => setBankAccountForm({ ...bankAccountForm, balance: e.target.value })} />
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={() => updateBankAccount(bankAccountForm.account_number)} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Update Account</Button>
+                  </div>
+                </FormDialog>
               </div>
               <Card className="border border-border">
                 <CardContent className="p-5">
@@ -2164,6 +2955,7 @@ export default function FinancialOperations() {
                             <TableHead>Account Number</TableHead>
                             <TableHead>Currency</TableHead>
                             <TableHead className="text-right">Balance</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -2174,6 +2966,25 @@ export default function FinancialOperations() {
                               <TableCell className="font-mono text-sm">{safeText(account.account_number)}</TableCell>
                               <TableCell><CurrencyBadge currency={getCurrencyCode(account)} /></TableCell>
                               <TableCell className="font-bold text-right">{formatAmount(toNumber(account.balance), getCurrencyCode(account))}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button variant="ghost" size="sm" onClick={() => {
+                                    setBankAccountForm({
+                                      account_name: safeText(account.account_name),
+                                      account_number: safeText(account.account_number),
+                                      bank_name: safeText(account.bank_name),
+                                      currency: getCurrencyCode(account),
+                                      balance: String(toNumber(account.balance)),
+                                    });
+                                    setModal("bank-account-edit");
+                                  }}>
+                                    <Pencil className="size-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => deleteBankAccount(safeText(account.id))}>
+                                    <Trash2 className="size-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -2200,7 +3011,7 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">Chart of Accounts</h2>
-                <Button className="gap-2" variant="outline"><Plus className="size-4" />Add Account</Button>
+                <Button className="gap-2" variant="outline" asChild><Link href="/finance/chart-of-accounts"><Plus className="size-4" />Add Account</Link></Button>
               </div>
               {coaGroups.length === 0 ? (
                 <Card className="border border-border">
