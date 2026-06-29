@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { ArrowDown, ArrowUp, Calendar, Download, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
-
-const supabase = createClient();
 
 const CURRENCIES = {
   TZS: { code: "TZS", symbol: "TSh", flag: "🇹🇿" },
