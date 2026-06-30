@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useRole } from "@/hooks/use-role";
+import { Sidebar } from "@/components/navigation/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +17,7 @@ import {
   TrendingUp, TrendingDown, Wallet, FileText, Receipt, ClipboardList, 
   Landmark, RefreshCw, Download, Plus, DollarSign, CreditCard, 
   Building2, AlertTriangle, CheckCircle2, ArrowRight, Search, 
-  Calendar, Truck, Fuel, Wrench, MapPin, ArrowUpRight, ArrowDownLeft
+  Calendar, Truck, Fuel, Wrench, MapPin, ArrowUpRight, ArrowDownLeft, Activity
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -32,6 +34,7 @@ type FinanceRow = Record<string, unknown>;
 
 export default function FinanceDashboardPage() {
   const { toast } = useToast();
+  const { role, hasDepartmentAccess } = useRole();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<FinanceRow[]>([]);
   const [expenses, setExpenses] = useState<FinanceRow[]>([]);
@@ -281,49 +284,10 @@ export default function FinanceDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex">
-        {/* Sidebar placeholder - will use existing Sidebar component */}
-        <div className="w-64 border-r border-border bg-card p-4 hidden md:block">
-          <h2 className="text-lg font-bold mb-4">Finance</h2>
-          <nav className="space-y-2">
-            <Link href="/finance/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground">
-              <TrendingUp className="size-4" /> Dashboard
-            </Link>
-            <Link href="/finance/transactions/revenue" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <Wallet className="size-4" /> Revenue
-            </Link>
-            <Link href="/finance/transactions/expenses" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <Receipt className="size-4" /> Expenses
-            </Link>
-            <Link href="/finance/transactions/payments" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <DollarSign className="size-4" /> Payments
-            </Link>
-            <Link href="/finance/invoicing/customer-invoices" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <FileText className="size-4" /> Invoices
-            </Link>
-            <Link href="/finance/invoicing/vendor-bills" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <Building2 className="size-4" /> Vendor Bills
-            </Link>
-            <Link href="/finance/accounting/journal-entries" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <ClipboardList className="size-4" /> Journal Entries
-            </Link>
-            <Link href="/finance/accounting/chart-of-accounts" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <CreditCard className="size-4" /> Chart of Accounts
-            </Link>
-            <Link href="/finance/banking/bank-accounts" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <Landmark className="size-4" /> Bank Accounts
-            </Link>
-            <Link href="/finance/reports/profit-loss" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <TrendingUp className="size-4" /> Reports
-            </Link>
-            <Link href="/finance/fleet-finance/vehicle-profitability" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-              <Truck className="size-4" /> Fleet Finance
-            </Link>
-          </nav>
-        </div>
-
-        <main className="flex-1 p-6">
+    <div className="flex min-h-screen bg-background">
+      <Sidebar role={role || "CEO"} />
+      <main className="flex-1 md:ml-60 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
           <header className="mb-6">
             <div className="flex items-center justify-between">
               <div>
@@ -332,7 +296,7 @@ export default function FinanceDashboardPage() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={loadFinance} disabled={loading}>
-                  <RefreshCw className={cn("size-4", loading && "animate-spin")} /> Refresh
+                  <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
                 </Button>
                 <Button onClick={handleExportReport}>
                   <Download className="size-4 mr-2" /> Export
@@ -726,8 +690,8 @@ export default function FinanceDashboardPage() {
               </CardContent>
             </Card>
           </section>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
