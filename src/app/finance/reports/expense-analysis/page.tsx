@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingDown, ArrowLeft, RefreshCw, Download, PieChart, BarChart3, Calendar, Filter, FileText, Table as TableIcon } from "lucide-react";
+import { TrendingDown, ArrowLeft, RefreshCw, Download, PieChart, BarChart3, Calendar, Filter, FileText, Table as TableIcon, CheckCircle2, Clock } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
@@ -18,6 +18,7 @@ import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, C
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 
 type Expense = {
   id: string;
@@ -69,34 +70,82 @@ export default function ExpenseAnalysisPage() {
     ? expenses
     : expenses.filter((e) => e.category === selectedCategory);
 
+  // Group expenses by currency
+  const expensesByCurrency = useMemo(() => {
+    const currencyMap = new Map<string, {
+      totalExpenses: number;
+      pendingExpenses: number;
+      approvedExpenses: number;
+      expenses: Expense[];
+    }>();
+
+    AVAILABLE_CURRENCIES.forEach(curr => {
+      currencyMap.set(curr.code, {
+        totalExpenses: 0,
+        pendingExpenses: 0,
+        approvedExpenses: 0,
+        expenses: [],
+      });
+    });
+
+    filteredExpenses.forEach((expense) => {
+      const currency = expense.currency || "TZS";
+      const existing = currencyMap.get(currency) || {
+        totalExpenses: 0,
+        pendingExpenses: 0,
+        approvedExpenses: 0,
+        expenses: [],
+      };
+      existing.expenses.push(expense);
+      existing.totalExpenses += expense.amount;
+      if (expense.status === "pending") existing.pendingExpenses += expense.amount;
+      if (expense.status === "approved") existing.approvedExpenses += expense.amount;
+      currencyMap.set(currency, existing);
+    });
+
+    return currencyMap;
+  }, [filteredExpenses]);
+
   const categoryData = useMemo(() => {
-    const categoryMap = new Map<string, number>();
+    const categoryMap = new Map<string, { amount: number; currency: string }>();
     filteredExpenses.forEach((expense) => {
       const category = expense.category || "Uncategorized";
-      categoryMap.set(category, (categoryMap.get(category) || 0) + expense.amount);
+      const existing = categoryMap.get(category) || { amount: 0, currency: expense.currency };
+      categoryMap.set(category, { 
+        amount: existing.amount + expense.amount, 
+        currency: expense.currency 
+      });
     });
-    return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value }));
+    return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, ...value }));
   }, [filteredExpenses]);
 
   const vendorData = useMemo(() => {
-    const vendorMap = new Map<string, number>();
+    const vendorMap = new Map<string, { amount: number; currency: string }>();
     filteredExpenses.forEach((expense) => {
       const vendor = expense.vendor || "Unknown";
-      vendorMap.set(vendor, (vendorMap.get(vendor) || 0) + expense.amount);
+      const existing = vendorMap.get(vendor) || { amount: 0, currency: expense.currency };
+      vendorMap.set(vendor, { 
+        amount: existing.amount + expense.amount, 
+        currency: expense.currency 
+      });
     });
     return Array.from(vendorMap.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
+      .map(([name, value]) => ({ name, ...value }))
+      .sort((a, b) => b.amount - a.amount)
       .slice(0, 10);
   }, [filteredExpenses]);
 
   const monthlyData = useMemo(() => {
-    const monthlyMap = new Map<string, number>();
+    const monthlyMap = new Map<string, { amount: number; currency: string }>();
     filteredExpenses.forEach((expense) => {
       const month = new Date(expense.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      monthlyMap.set(month, (monthlyMap.get(month) || 0) + expense.amount);
+      const existing = monthlyMap.get(month) || { amount: 0, currency: expense.currency };
+      monthlyMap.set(month, { 
+        amount: existing.amount + expense.amount, 
+        currency: expense.currency 
+      });
     });
-    return Array.from(monthlyMap.entries()).map(([month, amount]) => ({ month, amount }));
+    return Array.from(monthlyMap.entries()).map(([month, value]) => ({ month, ...value }));
   }, [filteredExpenses]);
 
   const categories = useMemo(() => {
@@ -106,7 +155,7 @@ export default function ExpenseAnalysisPage() {
 
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
   const avgExpense = filteredExpenses.length > 0 ? totalExpenses / filteredExpenses.length : 0;
-  const topCategory = categoryData.length > 0 ? categoryData.reduce((max, item) => item.value > max.value ? item : max) : null;
+  const topCategory = categoryData.length > 0 ? categoryData.reduce((max, item) => item.amount > max.amount ? item : max) : null;
   const topVendor = vendorData.length > 0 ? vendorData[0] : null;
 
   const exportData = () => {
@@ -144,8 +193,8 @@ export default function ExpenseAnalysisPage() {
     // Category breakdown table
     const categoryTableData = categoryData.map((item) => [
       item.name,
-      formatAmount(item.value),
-      `${totalExpenses > 0 ? ((item.value / totalExpenses) * 100).toFixed(1) : 0}%`,
+      formatCurrency(item.amount, item.currency),
+      `${totalExpenses > 0 ? ((item.amount / totalExpenses) * 100).toFixed(1) : 0}%`,
     ]);
 
     const firstTable = autoTable(doc, {
@@ -185,8 +234,9 @@ export default function ExpenseAnalysisPage() {
     const categorySheet = XLSX.utils.json_to_sheet(
       categoryData.map((item) => ({
         Category: item.name,
-        Amount: item.value,
-        Percentage: totalExpenses > 0 ? ((item.value / totalExpenses) * 100).toFixed(1) + "%" : "0%",
+        Amount: item.amount,
+        Currency: item.currency,
+        Percentage: totalExpenses > 0 ? ((item.amount / totalExpenses) * 100).toFixed(1) + "%" : "0%",
       }))
     );
     XLSX.utils.book_append_sheet(workbook, categorySheet, "Category Breakdown");
@@ -263,46 +313,67 @@ export default function ExpenseAnalysisPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingDown className="size-4 text-destructive" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Total Expenses</p>
-            </div>
-            <p className="text-2xl font-bold text-destructive">{formatAmount(totalExpenses)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="size-4 text-primary" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Avg Expense</p>
-            </div>
-            <p className="text-2xl font-bold text-primary">{formatAmount(avgExpense)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <PieChart className="size-4 text-warning" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Top Category</p>
-            </div>
-            <p className="text-xl font-bold text-warning">{topCategory?.name || "-"}</p>
-            <p className="text-xs text-muted-foreground">{topCategory ? formatAmount(topCategory.value) : ""}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Filter className="size-4 text-info" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Top Vendor</p>
-            </div>
-            <p className="text-xl font-bold text-info">{topVendor?.name || "-"}</p>
-            <p className="text-xs text-muted-foreground">{topVendor ? formatAmount(topVendor.value) : ""}</p>
-          </CardContent>
-        </Card>
+      {/* Summary Cards by Currency */}
+      <section className="space-y-6 mb-6">
+        {AVAILABLE_CURRENCIES.map((currency) => {
+          const expenseData = expensesByCurrency.get(currency.code);
+          if (!expenseData || expenseData.totalExpenses === 0) return null;
+
+          return (
+            <Card key={currency.code}>
+              <CardHeader className="bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3">
+                    <span className="text-2xl">{currency.flag}</span>
+                    <span>{currency.name}</span>
+                    <CurrencyBadge currency={currency.code} />
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingDown className="size-4 text-destructive" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Total Expenses</p>
+                    </div>
+                    <p className="text-2xl font-bold text-destructive">{formatCurrency(expenseData.totalExpenses, currency.code)}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="size-4 text-warning" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Pending</p>
+                    </div>
+                    <p className="text-2xl font-bold text-warning">{formatCurrency(expenseData.pendingExpenses, currency.code)}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="size-4 text-success" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Approved</p>
+                    </div>
+                    <p className="text-2xl font-bold text-success">{formatCurrency(expenseData.approvedExpenses, currency.code)}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BarChart3 className="size-4 text-primary" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Avg Expense</p>
+                    </div>
+                    <p className="text-2xl font-bold text-primary">
+                      {expenseData.expenses.length > 0 ? formatCurrency(expenseData.totalExpenses / expenseData.expenses.length, currency.code) : formatCurrency(0, currency.code)}
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="size-4 text-info" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Total Records</p>
+                    </div>
+                    <p className="text-2xl font-bold text-info">{expenseData.expenses.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </section>
 
       {/* Charts */}
@@ -314,7 +385,7 @@ export default function ExpenseAnalysisPage() {
           <CardContent className="p-4">
             <ResponsiveContainer width="100%" height={200}>
               <RechartsPieChart>
-                <Pie data={categoryData} cx="50%" cy="50%" outerRadius={60} dataKey="value" label={(entry) => entry.name}>
+                <Pie data={categoryData} cx="50%" cy="50%" outerRadius={60} dataKey="amount" label={(entry) => entry.name}>
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -351,7 +422,7 @@ export default function ExpenseAnalysisPage() {
                 <XAxis dataKey="name" className="text-xs" angle={-45} textAnchor="end" height={60} />
                 <YAxis className="text-xs" />
                 <Tooltip />
-                <Bar dataKey="value" fill="#06b6d4" />
+                <Bar dataKey="amount" fill="#06b6d4" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -382,13 +453,13 @@ export default function ExpenseAnalysisPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  categoryData.sort((a, b) => b.value - a.value).map((item) => {
+                  categoryData.sort((a, b) => b.amount - a.amount).map((item) => {
                     const count = filteredExpenses.filter((e) => e.category === item.name).length;
-                    const percentage = totalExpenses > 0 ? (item.value / totalExpenses) * 100 : 0;
+                    const percentage = totalExpenses > 0 ? (item.amount / totalExpenses) * 100 : 0;
                     return (
                       <TableRow key={item.name}>
                         <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-destructive font-medium">{formatAmount(item.value)}</TableCell>
+                        <TableCell className="text-destructive font-medium">{formatCurrency(item.amount, item.currency)}</TableCell>
                         <TableCell>{percentage.toFixed(1)}%</TableCell>
                         <TableCell>{count}</TableCell>
                       </TableRow>
