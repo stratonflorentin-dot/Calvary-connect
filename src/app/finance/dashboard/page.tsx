@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const CURRENCIES = {
   TZS: { code: "TZS", symbol: "TSh", flag: "🇹🇿" },
@@ -101,6 +102,66 @@ export default function FinanceDashboardPage() {
   };
 
   const profitMargin = metrics.revenue > 0 ? (metrics.netProfit / metrics.revenue) * 100 : 0;
+
+  // Process data for charts
+  const revenueChartData = useMemo(() => {
+    const monthlyData: Record<string, number> = {};
+    income.forEach((item) => {
+      const month = new Date(text(item.date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      monthlyData[month] = (monthlyData[month] || 0) + toNumber(item.amount);
+    });
+    invoices.filter((i) => text(i.type) === "AR").forEach((item) => {
+      const month = new Date(text(item.due_date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      monthlyData[month] = (monthlyData[month] || 0) + toNumber(item.amount);
+    });
+    return Object.entries(monthlyData).map(([month, amount]) => ({ month, amount }));
+  }, [income, invoices]);
+
+  const expenseChartData = useMemo(() => {
+    const monthlyData: Record<string, number> = {};
+    expenses.forEach((item) => {
+      const month = new Date(text(item.date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      monthlyData[month] = (monthlyData[month] || 0) + toNumber(item.amount);
+    });
+    return Object.entries(monthlyData).map(([month, amount]) => ({ month, amount }));
+  }, [expenses]);
+
+  const cashFlowData = useMemo(() => {
+    const monthlyData: Record<string, { inflow: number; outflow: number }> = {};
+    income.forEach((item) => {
+      const month = new Date(text(item.date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      if (!monthlyData[month]) monthlyData[month] = { inflow: 0, outflow: 0 };
+      monthlyData[month].inflow += toNumber(item.amount);
+    });
+    invoices.filter((i) => text(i.status) === "paid").forEach((item) => {
+      const month = new Date(text(item.due_date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      if (!monthlyData[month]) monthlyData[month] = { inflow: 0, outflow: 0 };
+      monthlyData[month].inflow += toNumber(item.amount);
+    });
+    expenses.forEach((item) => {
+      const month = new Date(text(item.date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      if (!monthlyData[month]) monthlyData[month] = { inflow: 0, outflow: 0 };
+      monthlyData[month].outflow += toNumber(item.amount);
+    });
+    return Object.entries(monthlyData).map(([month, data]) => ({ month, ...data }));
+  }, [income, invoices, expenses]);
+
+  const profitTrendData = useMemo(() => {
+    const monthlyData: Record<string, number> = {};
+    income.forEach((item) => {
+      const month = new Date(text(item.date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      monthlyData[month] = (monthlyData[month] || 0) + toNumber(item.amount);
+    });
+    invoices.filter((i) => text(i.type) === "AR").forEach((item) => {
+      const month = new Date(text(item.due_date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      monthlyData[month] = (monthlyData[month] || 0) + toNumber(item.amount);
+    });
+    expenses.forEach((item) => {
+      const month = new Date(text(item.date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      monthlyData[month] = (monthlyData[month] || 0) - toNumber(item.amount);
+    });
+    return Object.entries(monthlyData).map(([month, profit]) => ({ month, profit }));
+  }, [income, invoices, expenses]);
 
   // Recent activity
   const recentExpenses = expenses.slice(0, 5);
@@ -334,16 +395,22 @@ export default function FinanceDashboardPage() {
             </Card>
           </section>
 
-          {/* Row 2: Charts (Placeholder for now - will be implemented with chart library) */}
+          {/* Row 2: Charts */}
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Revenue Trend</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="h-32 flex items-center justify-center bg-muted/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Chart coming soon</p>
-                </div>
+                <ResponsiveContainer width="100%" height={128}>
+                  <AreaChart data={revenueChartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="amount" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                  </AreaChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
             <Card>
@@ -351,9 +418,15 @@ export default function FinanceDashboardPage() {
                 <CardTitle className="text-sm">Expense Trend</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="h-32 flex items-center justify-center bg-muted/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Chart coming soon</p>
-                </div>
+                <ResponsiveContainer width="100%" height={128}>
+                  <AreaChart data={expenseChartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="amount" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
+                  </AreaChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
             <Card>
@@ -361,9 +434,16 @@ export default function FinanceDashboardPage() {
                 <CardTitle className="text-sm">Cash Flow</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="h-32 flex items-center justify-center bg-muted/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Chart coming soon</p>
-                </div>
+                <ResponsiveContainer width="100%" height={128}>
+                  <BarChart data={cashFlowData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip />
+                    <Bar dataKey="inflow" fill="#10b981" />
+                    <Bar dataKey="outflow" fill="#ef4444" />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
             <Card>
@@ -371,9 +451,15 @@ export default function FinanceDashboardPage() {
                 <CardTitle className="text-sm">Profit Trend</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="h-32 flex items-center justify-center bg-muted/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Chart coming soon</p>
-                </div>
+                <ResponsiveContainer width="100%" height={128}>
+                  <LineChart data={profitTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="profit" stroke="#3b82f6" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </section>
