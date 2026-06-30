@@ -562,7 +562,7 @@ export default function FinancialOperations() {
   const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", currency: "TZS", category: "", vendor: "", date: "" });
   const [revenueForm, setRevenueForm] = useState({ description: "", amount: "", currency: "TZS", date: "" });
   const [taxForm, setTaxForm] = useState({ tax_name: "", amount: "", currency: "TZS", type: "", due_date: "" });
-  const [bankAccountForm, setBankAccountForm] = useState({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
+  const [bankAccountForm, setBankAccountForm] = useState({ id: "", account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
   const [paymentForm, setPaymentForm] = useState({ amount: "", currency: "TZS", payment_method: "", payment_date: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
 
@@ -1077,7 +1077,7 @@ export default function FinancialOperations() {
       if (error) throw error;
       await loadFinance();
       setModal(null);
-      setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
+      setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "", id: "" });
       toast({ title: "Success", description: "Bank account added successfully" });
     } catch (err) {
       console.error("Error saving bank account:", err);
@@ -1100,7 +1100,7 @@ export default function FinancialOperations() {
       if (error) throw error;
       await loadFinance();
       setModal(null);
-      setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "" });
+      setBankAccountForm({ account_name: "", account_number: "", bank_name: "", currency: "TZS", balance: "", id: "" });
       toast({ title: "Success", description: "Bank account updated successfully" });
     } catch (err) {
       console.error("Error updating bank account:", err);
@@ -2937,7 +2937,7 @@ export default function FinancialOperations() {
                   </div>
                   <div className="flex gap-2 justify-end pt-2">
                     <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={() => updateBankAccount(bankAccountForm.account_number)} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Update Account</Button>
+                    <Button onClick={() => updateBankAccount(bankAccountForm.id)} disabled={submitting}>{submitting && <Loader2 className="size-4 animate-spin mr-2" />}Update Account</Button>
                   </div>
                 </FormDialog>
               </div>
@@ -2970,6 +2970,7 @@ export default function FinancialOperations() {
                                 <div className="flex gap-2">
                                   <Button variant="ghost" size="sm" onClick={() => {
                                     setBankAccountForm({
+                                      id: safeText(account.id),
                                       account_name: safeText(account.account_name),
                                       account_number: safeText(account.account_number),
                                       bank_name: safeText(account.bank_name),
