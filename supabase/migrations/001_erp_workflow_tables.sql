@@ -109,7 +109,10 @@ CREATE TABLE IF NOT EXISTS audit_trail (
 );
 
 -- 8. Notifications Table
-CREATE TABLE IF NOT EXISTS notifications (
+-- Drop existing table if it exists to ensure clean schema
+DROP TABLE IF EXISTS notifications CASCADE;
+
+CREATE TABLE notifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id),
   title TEXT NOT NULL,
