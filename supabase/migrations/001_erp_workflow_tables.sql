@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS leads (
 
 -- 2. Update Bookings Table to link to Sales
 ALTER TABLE bookings 
-ADD COLUMN IF NOT EXISTS quotation_id TEXT REFERENCES quotations(id),
-ADD COLUMN IF NOT EXISTS contract_id TEXT REFERENCES contracts(id),
+ADD COLUMN IF NOT EXISTS quotation_id UUID REFERENCES quotations(id),
+ADD COLUMN IF NOT EXISTS contract_id UUID REFERENCES contracts(id),
 ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id),
 ADD COLUMN IF NOT EXISTS booking_number TEXT UNIQUE,
 ADD COLUMN IF NOT EXISTS pickup_location TEXT,
@@ -78,8 +78,8 @@ CREATE TABLE IF NOT EXISTS proof_of_delivery (
 ALTER TABLE invoices
 ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id),
 ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES bookings(id),
-ADD COLUMN IF NOT EXISTS quotation_id TEXT REFERENCES quotations(id),
-ADD COLUMN IF NOT EXISTS contract_id TEXT REFERENCES contracts(id),
+ADD COLUMN IF NOT EXISTS quotation_id UUID REFERENCES quotations(id),
+ADD COLUMN IF NOT EXISTS contract_id UUID REFERENCES contracts(id),
 ADD COLUMN IF NOT EXISTS auto_generated BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS generated_after_pod BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS pod_id UUID REFERENCES proof_of_delivery(id);
@@ -90,8 +90,8 @@ ADD COLUMN IF NOT EXISTS invoice_id UUID REFERENCES invoices(id),
 ADD COLUMN IF NOT EXISTS payment_id UUID REFERENCES payments(id),
 ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id),
 ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES bookings(id),
-ADD COLUMN IF NOT EXISTS quotation_id TEXT REFERENCES quotations(id),
-ADD COLUMN IF NOT EXISTS contract_id TEXT REFERENCES contracts(id);
+ADD COLUMN IF NOT EXISTS quotation_id UUID REFERENCES quotations(id),
+ADD COLUMN IF NOT EXISTS contract_id UUID REFERENCES contracts(id);
 
 -- 7. Audit Trail Table
 CREATE TABLE IF NOT EXISTS audit_trail (
