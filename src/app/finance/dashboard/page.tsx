@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
+import { CurrencySelector } from "@/components/finance/currency-selector";
 
 type FinanceRow = Record<string, unknown>;
 
@@ -303,6 +304,10 @@ export default function FinanceDashboardPage() {
                 <p className="text-muted-foreground">Overview of financial operations and performance</p>
               </div>
               <div className="flex gap-2">
+                <CurrencySelector 
+                  selectedCurrency={selectedCurrency} 
+                  onCurrencyChange={setSelectedCurrency}
+                />
                 <Button variant="outline" onClick={loadFinance} disabled={loading}>
                   <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
                 </Button>
