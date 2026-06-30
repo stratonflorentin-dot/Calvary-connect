@@ -155,7 +155,7 @@ export default function PODPage() {
   };
 
   const verifyPOD = async (pod: POD) => {
-    if (!confirm(`Verify POD ${pod.pod_number}?`)) return;
+    if (!confirm(`Verify POD ${pod.pod_number}? This will generate an invoice.`)) return;
 
     try {
       const { error } = await supabase.from("proof_of_delivery").update({
@@ -167,6 +167,40 @@ export default function PODPage() {
 
       if (error) throw error;
 
+      // Get trip details for invoice generation
+      const { data: trip } = await supabase.from("trips").select("*").eq("id", pod.trip_id).single();
+      
+      if (trip && trip.salesAmount > 0) {
+        // Generate invoice automatically
+        const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+        const vatRate = trip.tripType === 'transit' ? 0 : 18;
+        const vatAmount = trip.salesAmount * (vatRate / 100);
+        const totalAmount = trip.salesAmount + vatAmount;
+
+        const { error: invoiceError } = await supabase.from("invoices").insert([{
+          invoice_number: invoiceNumber,
+          customer_id: trip.customer_id,
+          trip_id: trip.id,
+          pod_id: pod.id,
+          invoice_date: new Date().toISOString().split('T')[0],
+          due_date: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+          subtotal: trip.salesAmount,
+          vat_rate: vatRate,
+          vat_amount: vatAmount,
+          total_amount: totalAmount,
+          currency: 'TZS',
+          status: 'sent',
+          notes: `Auto-generated from verified POD ${pod.pod_number}`,
+        }]);
+
+        if (invoiceError) {
+          console.error("Error generating invoice:", invoiceError);
+          toast({ title: "Warning", description: "POD verified but invoice generation failed", variant: "destructive" });
+        } else {
+          toast({ title: "Success", description: `POD verified and invoice ${invoiceNumber} generated` });
+        }
+      }
+
       // Update trip status to completed
       await supabase.from("trips").update({
         status: "COMPLETED",
@@ -174,7 +208,6 @@ export default function PODPage() {
       }).eq("id", pod.trip_id);
 
       await loadPODs();
-      toast({ title: "Success", description: "POD verified" });
     } catch (err) {
       console.error("Error verifying POD:", err);
       toast({ title: "Error", description: "Failed to verify POD", variant: "destructive" });
@@ -444,7 +477,7 @@ export default function PODPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              {pod.status === "pending" && (role === "CEO" || role === "ADMIN" || role === "OPERATIONS") && (
+                              {pod.status === "pending" && (role === "CEO" || role === "ADMIN" || role === "OPERATOR") && (
                                 <>
                                   <Button variant="ghost" size="sm" onClick={() => verifyPOD(pod)} className="text-success">
                                     <CheckCircle className="size-4" />
