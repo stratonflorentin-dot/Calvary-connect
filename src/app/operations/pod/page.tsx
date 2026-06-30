@@ -197,6 +197,20 @@ export default function PODPage() {
           console.error("Error generating invoice:", invoiceError);
           toast({ title: "Warning", description: "POD verified but invoice generation failed", variant: "destructive" });
         } else {
+          // Create journal entry for the invoice
+          const journalNumber = `JE-${Date.now().toString().slice(-8)}`;
+          const { error: journalError } = await supabase.from("journal_entries").insert([{
+            entry_number: journalNumber,
+            entry_date: new Date().toISOString().split('T')[0],
+            description: `Invoice Revenue: ${invoiceNumber} - Trip ${(pod as any).trips?.trip_number}`,
+            reference: pod.id,
+            created_by: role,
+          }]);
+
+          if (journalError) {
+            console.error("Error creating journal entry:", journalError);
+          }
+
           toast({ title: "Success", description: `POD verified and invoice ${invoiceNumber} generated` });
         }
       }
