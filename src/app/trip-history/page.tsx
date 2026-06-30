@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-const STATUS_STYLES: Record<string, { bg: string; text: string; icon: any; label: string }> = {
+const STATUS_STYLES: Record<string, { bg: string; text: string; icon: React.ComponentType<{ className?: string }>; label: string }> = {
   COMPLETED: { bg: 'bg-emerald-500/10 border-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle2, label: 'Completed' },
   PENDING:   { bg: 'bg-amber-500/10 border-amber-500/20',   text: 'text-amber-600 dark:text-amber-400',   icon: Clock,         label: 'Pending'   },
   IN_TRANSIT: { bg: 'bg-blue-500/10 border-blue-500/20',    text: 'text-blue-600 dark:text-blue-400',    icon: Truck,         label: 'In Transit' },

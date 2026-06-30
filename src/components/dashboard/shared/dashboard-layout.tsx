@@ -206,7 +206,7 @@ export function DashboardLayout({
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
   bgColor: string;
   trend?: number;
@@ -382,7 +382,7 @@ interface ActivityItem {
   title: string;
   description: string;
   time: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
 }
 
