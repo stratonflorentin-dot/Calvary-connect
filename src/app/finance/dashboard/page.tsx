@@ -23,12 +23,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-
-const CURRENCIES = {
-  TZS: { code: "TZS", symbol: "TSh", flag: "🇹🇿" },
-  USD: { code: "USD", symbol: "$", flag: "🇺🇸" },
-  EUR: { code: "EUR", symbol: "€", flag: "🇪🇺" },
-};
+import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 
 type FinanceRow = Record<string, unknown>;
 
@@ -89,22 +84,35 @@ export default function FinanceDashboardPage() {
   const toNumber = (value: unknown): number => Number(value ?? 0) || 0;
   const text = (value: unknown, fallback = "-"): string => (value === null || value === undefined || value === "") ? fallback : String(value);
 
-  // Calculate metrics
-  const metrics = {
-    revenue: income.reduce((sum, i) => sum + toNumber(i.amount), 0) + 
-              invoices.filter((i) => text(i.type) === "AR").reduce((sum, i) => sum + toNumber(i.amount), 0),
-    expenses: expenses.reduce((sum, e) => sum + toNumber(e.amount), 0),
-    receivables: invoices.filter((i) => text(i.status) !== "paid" && text(i.type) === "AR").reduce((sum, i) => sum + toNumber(i.amount), 0),
-    payables: invoices.filter((i) => text(i.status) !== "paid" && text(i.type) === "AP").reduce((sum, i) => sum + toNumber(i.amount), 0),
-    taxDue: taxes.filter((t) => text(t.status) !== "paid").reduce((sum, t) => sum + toNumber(t.amount), 0),
-    bankBalance: bankAccounts.reduce((sum, b) => sum + toNumber(b.balance), 0),
-    netProfit: (income.reduce((sum, i) => sum + toNumber(i.amount), 0) + 
-               invoices.filter((i) => text(i.type) === "AR").reduce((sum, i) => sum + toNumber(i.amount), 0)) -
-               expenses.reduce((sum, e) => sum + toNumber(e.amount), 0),
-    pendingExpenses: expenses.filter((e) => text(e.status) === "pending").length,
-  };
-
-  const profitMargin = metrics.revenue > 0 ? (metrics.netProfit / metrics.revenue) * 100 : 0;
+  // Calculate metrics grouped by currency
+  const metricsByCurrency = useMemo(() => {
+    const currencies = AVAILABLE_CURRENCIES.map(c => c.code);
+    const metrics: Record<string, any> = {};
+    
+    currencies.forEach(currency => {
+      const currencyInvoices = invoices.filter(i => text(i.currency) === currency);
+      const currencyExpenses = expenses.filter(e => text(e.currency) === currency);
+      const currencyIncome = income.filter(i => text(i.currency) === currency);
+      const currencyTaxes = taxes.filter(t => text(t.currency) === currency);
+      const currencyBankAccounts = bankAccounts.filter(b => text(b.currency) === currency);
+      
+      metrics[currency] = {
+        revenue: currencyIncome.reduce((sum, i) => sum + toNumber(i.amount), 0) + 
+                  currencyInvoices.filter((i) => text(i.type) === "AR").reduce((sum, i) => sum + toNumber(i.amount), 0),
+        expenses: currencyExpenses.reduce((sum, e) => sum + toNumber(e.amount), 0),
+        receivables: currencyInvoices.filter((i) => text(i.status) !== "paid" && text(i.type) === "AR").reduce((sum, i) => sum + toNumber(i.amount), 0),
+        payables: currencyInvoices.filter((i) => text(i.status) !== "paid" && text(i.type) === "AP").reduce((sum, i) => sum + toNumber(i.amount), 0),
+        taxDue: currencyTaxes.filter((t) => text(t.status) !== "paid").reduce((sum, t) => sum + toNumber(t.amount), 0),
+        bankBalance: currencyBankAccounts.reduce((sum, b) => sum + toNumber(b.balance), 0),
+        netProfit: (currencyIncome.reduce((sum, i) => sum + toNumber(i.amount), 0) + 
+                   currencyInvoices.filter((i) => text(i.type) === "AR").reduce((sum, i) => sum + toNumber(i.amount), 0)) -
+                   currencyExpenses.reduce((sum, e) => sum + toNumber(e.amount), 0),
+        pendingExpenses: currencyExpenses.filter((e) => text(e.status) === "pending").length,
+      };
+    });
+    
+    return metrics;
+  }, [invoices, expenses, income, taxes, bankAccounts]);
 
   // Process data for charts
   const revenueChartData = useMemo(() => {
@@ -264,7 +272,7 @@ export default function FinanceDashboardPage() {
   const handleExportReport = () => {
     const reportData = {
       generatedAt: new Date().toISOString(),
-      metrics,
+      metricsByCurrency,
       recentActivity: {
         expenses: recentExpenses,
         revenue: recentRevenue,
@@ -305,58 +313,66 @@ export default function FinanceDashboardPage() {
             </div>
           </header>
 
-          {/* Row 1: Key Metrics */}
-          <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Revenue</p>
-                <p className="text-xl font-bold text-success">{formatAmount(metrics.revenue, selectedCurrency)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Expenses</p>
-                <p className="text-xl font-bold text-destructive">{formatAmount(metrics.expenses, selectedCurrency)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Net Profit</p>
-                <p className={cn("text-xl font-bold", metrics.netProfit >= 0 ? "text-success" : "text-destructive")}>
-                  {formatAmount(metrics.netProfit, selectedCurrency)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Cash</p>
-                <p className="text-xl font-bold text-primary">{formatAmount(metrics.bankBalance, selectedCurrency)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Receivables</p>
-                <p className="text-xl font-bold text-warning">{formatAmount(metrics.receivables, selectedCurrency)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Payables</p>
-                <p className="text-xl font-bold text-info">{formatAmount(metrics.payables, selectedCurrency)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Tax Due</p>
-                <p className="text-xl font-bold text-destructive">{formatAmount(metrics.taxDue, selectedCurrency)}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Bank Balance</p>
-                <p className="text-xl font-bold text-primary">{formatAmount(metrics.bankBalance, selectedCurrency)}</p>
-              </CardContent>
-            </Card>
+          {/* Row 1: Key Metrics by Currency */}
+          <section className="space-y-6 mb-6">
+            {AVAILABLE_CURRENCIES.map((currency) => {
+              const metrics = metricsByCurrency[currency.code];
+              const hasData = metrics.revenue > 0 || metrics.expenses > 0 || metrics.bankBalance > 0;
+              
+              if (!hasData) return null;
+              
+              return (
+                <Card key={currency.code}>
+                  <CardHeader className="bg-muted/50">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-3">
+                        <span className="text-2xl">{currency.flag}</span>
+                        <span>{currency.name}</span>
+                        <CurrencyBadge currency={currency.code} />
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Revenue</p>
+                        <p className="text-xl font-bold text-success">{formatCurrency(metrics.revenue, currency.code)}</p>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Expenses</p>
+                        <p className="text-xl font-bold text-destructive">{formatCurrency(metrics.expenses, currency.code)}</p>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Net Profit</p>
+                        <p className={cn("text-xl font-bold", metrics.netProfit >= 0 ? "text-success" : "text-destructive")}>
+                          {formatCurrency(metrics.netProfit, currency.code)}
+                        </p>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Bank Balance</p>
+                        <p className="text-xl font-bold text-primary">{formatCurrency(metrics.bankBalance, currency.code)}</p>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Receivables</p>
+                        <p className="text-xl font-bold text-warning">{formatCurrency(metrics.receivables, currency.code)}</p>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Payables</p>
+                        <p className="text-xl font-bold text-info">{formatCurrency(metrics.payables, currency.code)}</p>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Tax Due</p>
+                        <p className="text-xl font-bold text-destructive">{formatCurrency(metrics.taxDue, currency.code)}</p>
+                      </div>
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-xs font-medium text-muted-foreground uppercase">Pending Expenses</p>
+                        <p className="text-xl font-bold text-primary">{metrics.pendingExpenses}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </section>
 
           {/* Row 2: Charts */}
@@ -461,7 +477,7 @@ export default function FinanceDashboardPage() {
                         <Select value={invoiceForm.currency} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, currency: value })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {Object.values(CURRENCIES).map((c) => (
+                            {AVAILABLE_CURRENCIES.map((c) => (
                               <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
                             ))}
                           </SelectContent>
@@ -501,7 +517,7 @@ export default function FinanceDashboardPage() {
                         <Select value={expenseForm.currency} onValueChange={(value) => setExpenseForm({ ...expenseForm, currency: value })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {Object.values(CURRENCIES).map((c) => (
+                            {AVAILABLE_CURRENCIES.map((c) => (
                               <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
                             ))}
                           </SelectContent>
@@ -549,7 +565,7 @@ export default function FinanceDashboardPage() {
                         <Select value={revenueForm.currency} onValueChange={(value) => setRevenueForm({ ...revenueForm, currency: value })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {Object.values(CURRENCIES).map((c) => (
+                            {AVAILABLE_CURRENCIES.map((c) => (
                               <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
                             ))}
                           </SelectContent>
@@ -612,9 +628,12 @@ export default function FinanceDashboardPage() {
                 ) : (
                   <div className="space-y-2">
                     {recentExpenses.map((exp) => (
-                      <div key={text(exp.id)} className="flex justify-between text-sm">
+                      <div key={text(exp.id)} className="flex justify-between text-sm items-center">
                         <span className="truncate">{text(exp.description)}</span>
-                        <span className="font-medium">{formatAmount(toNumber(exp.amount), text(exp.currency))}</span>
+                        <div className="flex items-center gap-2">
+                          <CurrencyBadge currency={text(exp.currency)} size="sm" />
+                          <span className="font-medium">{formatCurrency(toNumber(exp.amount), text(exp.currency))}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -634,9 +653,12 @@ export default function FinanceDashboardPage() {
                 ) : (
                   <div className="space-y-2">
                     {recentRevenue.map((rev) => (
-                      <div key={text(rev.id)} className="flex justify-between text-sm">
+                      <div key={text(rev.id)} className="flex justify-between text-sm items-center">
                         <span className="truncate">{text(rev.description)}</span>
-                        <span className="font-medium text-success">{formatAmount(toNumber(rev.amount), text(rev.currency))}</span>
+                        <div className="flex items-center gap-2">
+                          <CurrencyBadge currency={text(rev.currency)} size="sm" />
+                          <span className="font-medium text-success">{formatCurrency(toNumber(rev.amount), text(rev.currency))}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -656,9 +678,12 @@ export default function FinanceDashboardPage() {
                 ) : (
                   <div className="space-y-2">
                     {recentPayments.map((inv) => (
-                      <div key={text(inv.id)} className="flex justify-between text-sm">
+                      <div key={text(inv.id)} className="flex justify-between text-sm items-center">
                         <span className="truncate">{text(inv.customer_name)}</span>
-                        <span className="font-medium text-success">{formatAmount(toNumber(inv.amount), text(inv.currency))}</span>
+                        <div className="flex items-center gap-2">
+                          <CurrencyBadge currency={text(inv.currency)} size="sm" />
+                          <span className="font-medium text-success">{formatCurrency(toNumber(inv.amount), text(inv.currency))}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
