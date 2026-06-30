@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ArrowDown, ArrowUp, Calendar, Download, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
-
-const CURRENCIES = {
-  TZS: { code: "TZS", symbol: "TSh", flag: "🇹🇿" },
-  USD: { code: "USD", symbol: "$", flag: "🇺🇸" },
-  EUR: { code: "EUR", symbol: "€", flag: "🇪🇺" },
-};
+import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 
 export default function ProfitLossPage() {
   const { toast } = useToast();
@@ -25,7 +20,6 @@ export default function ProfitLossPage() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
-  const [selectedCurrency, setSelectedCurrency] = useState("TZS");
 
   const loadFinancialData = async () => {
     setLoading(true);
@@ -60,34 +54,52 @@ export default function ProfitLossPage() {
     loadFinancialData();
   }, [startDate, endDate]);
 
-  const filteredIncome = income.filter((i) => i.currency === selectedCurrency);
-  const filteredExpenses = expenses.filter((e) => e.currency === selectedCurrency);
+  // Group P&L data by currency
+  const profitLossByCurrency = useMemo(() => {
+    const currencyMap = new Map<string, {
+      totalRevenue: number;
+      totalExpenses: number;
+      grossProfit: number;
+      profitMargin: number;
+      categoryExpenses: Record<string, number>;
+      income: any[];
+      expenses: any[];
+    }>();
 
-  const totalRevenue = filteredIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
-  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const grossProfit = totalRevenue - totalExpenses;
-  const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    AVAILABLE_CURRENCIES.forEach(curr => {
+      const currencyIncome = income.filter((i) => i.currency === curr.code);
+      const currencyExpenses = expenses.filter((e) => e.currency === curr.code);
 
-  const categoryExpenses = filteredExpenses.reduce((acc, exp) => {
-    const category = exp.category || "Uncategorized";
-    acc[category] = (acc[category] || 0) + (exp.amount || 0);
-    return acc;
-  }, {} as Record<string, number>);
+      const totalRevenue = currencyIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
+      const totalExpenses = currencyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const grossProfit = totalRevenue - totalExpenses;
+      const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+
+      const categoryExpenses = currencyExpenses.reduce((acc, exp) => {
+        const category = exp.category || "Uncategorized";
+        acc[category] = (acc[category] || 0) + (exp.amount || 0);
+        return acc;
+      }, {} as Record<string, number>);
+
+      currencyMap.set(curr.code, {
+        totalRevenue,
+        totalExpenses,
+        grossProfit,
+        profitMargin,
+        categoryExpenses,
+        income: currencyIncome,
+        expenses: currencyExpenses,
+      });
+    });
+
+    return currencyMap;
+  }, [income, expenses]);
 
   const exportReport = () => {
     const reportData = {
       reportType: "Profit & Loss",
       period: { startDate, endDate },
-      currency: selectedCurrency,
-      summary: {
-        totalRevenue,
-        totalExpenses,
-        grossProfit,
-        profitMargin,
-      },
-      income: filteredIncome,
-      expenses: filteredExpenses,
-      categoryBreakdown: categoryExpenses,
+      profitLossByCurrency: Object.fromEntries(profitLossByCurrency),
     };
 
     const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" });
@@ -125,16 +137,6 @@ export default function ProfitLossPage() {
                 <span className="text-muted-foreground">to</span>
                 <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-auto" />
               </div>
-              <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(CURRENCIES).map((c) => (
-                    <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <Button variant="outline" size="sm" onClick={loadFinancialData}>
               <RefreshCw className="size-4 mr-2" />
@@ -144,202 +146,220 @@ export default function ProfitLossPage() {
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                {formatAmount(totalRevenue, selectedCurrency)}
-              </p>
-              <ArrowUp className="size-5 text-emerald-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-2xl font-bold text-red-700 dark:text-red-400">
-                {formatAmount(totalExpenses, selectedCurrency)}
-              </p>
-              <ArrowDown className="size-5 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Gross Profit</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className={`text-2xl font-bold ${grossProfit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
-                {formatAmount(grossProfit, selectedCurrency)}
-              </p>
-              {grossProfit >= 0 ? (
-                <TrendingUp className="size-5 text-emerald-600" />
-              ) : (
-                <TrendingDown className="size-5 text-red-600" />
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Profit Margin</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className={`text-2xl font-bold ${profitMargin >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
-                {profitMargin.toFixed(1)}%
-              </p>
-              <Badge variant={profitMargin >= 0 ? "default" : "destructive"}>
-                {profitMargin >= 0 ? "Profitable" : "Loss"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+      {/* P&L Statements by Currency */}
+      <div className="space-y-6">
+        {AVAILABLE_CURRENCIES.map((currency) => {
+          const data = profitLossByCurrency.get(currency.code);
+          if (!data || data.totalRevenue === 0 && data.totalExpenses === 0) return null;
+
+          return (
+            <Card key={currency.code} className="border border-border">
+              <CardHeader className="bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-3">
+                    <TrendingUp className="size-5" />
+                    <span className="text-2xl">{currency.flag}</span>
+                    <span>{currency.name}</span>
+                    <CurrencyBadge currency={currency.code} />
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                          {formatCurrency(data.totalRevenue, currency.code)}
+                        </p>
+                        <ArrowUp className="size-5 text-emerald-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <p className="text-2xl font-bold text-red-700 dark:text-red-400">
+                          {formatCurrency(data.totalExpenses, currency.code)}
+                        </p>
+                        <ArrowDown className="size-5 text-red-600" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Gross Profit</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <p className={`text-2xl font-bold ${data.grossProfit >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
+                          {formatCurrency(data.grossProfit, currency.code)}
+                        </p>
+                        {data.grossProfit >= 0 ? (
+                          <TrendingUp className="size-5 text-emerald-600" />
+                        ) : (
+                          <TrendingDown className="size-5 text-red-600" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Profit Margin</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <p className={`text-2xl font-bold ${data.profitMargin >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
+                          {data.profitMargin.toFixed(1)}%
+                        </p>
+                        <Badge variant={data.profitMargin >= 0 ? "default" : "destructive"}>
+                          {data.profitMargin >= 0 ? "Profitable" : "Loss"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="border border-border">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Revenue Breakdown</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {loading ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                                Loading...
+                              </TableCell>
+                            </TableRow>
+                          ) : data.income.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                                No income records
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            data.income.map((item: any) => (
+                              <TableRow key={item.id}>
+                                <TableCell>{formatDate(item.date)}</TableCell>
+                                <TableCell>{item.description}</TableCell>
+                                <TableCell className="text-right font-medium text-emerald-700 dark:text-emerald-400">
+                                  {formatCurrency(item.amount, currency.code)}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border border-border">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Expense Breakdown</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {loading ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                                Loading...
+                              </TableCell>
+                            </TableRow>
+                          ) : data.expenses.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                                No expense records
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            data.expenses.map((item: any) => (
+                              <TableRow key={item.id}>
+                                <TableCell>{formatDate(item.date)}</TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">{item.category || "Uncategorized"}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-medium text-red-700 dark:text-red-400">
+                                  {formatCurrency(item.amount, currency.code)}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="border border-border mt-6">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Expense by Category</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Category</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="text-right">% of Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.keys(data.categoryExpenses).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                              No expense data
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          Object.entries(data.categoryExpenses)
+                            .sort(([, a], [, b]) => (b as number) - (a as number))
+                            .map(([category, amount]) => (
+                              <TableRow key={category}>
+                                <TableCell>
+                                  <Badge variant="outline">{category}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-semibold">
+                                  {formatCurrency(amount as number, currency.code)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {data.totalExpenses > 0 ? ((amount as number / data.totalExpenses) * 100).toFixed(1) : 0}%
+                                </TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border border-border">
-          <CardHeader>
-            <CardTitle className="text-lg">Revenue Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredIncome.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                      No revenue recorded for this period
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredIncome.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-muted-foreground">{formatDate(item.date)}</TableCell>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell className="text-right font-semibold text-emerald-700 dark:text-emerald-400">
-                        {formatAmount(item.amount, item.currency)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border">
-          <CardHeader>
-            <CardTitle className="text-lg">Expense Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredExpenses.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                      No expenses recorded for this period
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredExpenses.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-muted-foreground">{formatDate(item.date)}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{item.category || "Uncategorized"}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-red-700 dark:text-red-400">
-                        {formatAmount(item.amount, item.currency)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border border-border">
-        <CardHeader>
-          <CardTitle className="text-lg">Expense by Category</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-right">% of Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : Object.keys(categoryExpenses).length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                    No expense data available
-                  </TableCell>
-                </TableRow>
-              ) : (
-                Object.entries(categoryExpenses)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([category, amount]) => (
-                    <TableRow key={category}>
-                      <TableCell>
-                        <Badge variant="outline">{category}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatAmount(amount, selectedCurrency)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {totalExpenses > 0 ? ((amount / totalExpenses) * 100).toFixed(1) : 0}%
-                      </TableCell>
-                    </TableRow>
-                  ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 }
