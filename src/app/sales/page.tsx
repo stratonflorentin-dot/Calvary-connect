@@ -174,6 +174,7 @@ function SalesModuleContent() {
   const [contracts, setContracts] = useState<TransportContract[]>([]);
   const [rateSheets, setRateSheets] = useState<RateSheetEntry[]>([]);
   const [opportunities, setOpportunities] = useState<SalesOpportunity[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Dialog states
@@ -245,6 +246,7 @@ function SalesModuleContent() {
     fetchRateSheets();
     fetchJsonbRateSheets();
     fetchOpportunities();
+    fetchLeads();
   }, []);
 
   useEffect(() => {
@@ -328,6 +330,14 @@ function SalesModuleContent() {
     }
   }
 
+  async function fetchLeads() {
+    const { data, error } = await supabase
+      .from('leads')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error) setLeads(data || []);
+  }
+
   // Save functions
   async function saveCustomer() {
     if (!customerForm.company_name || !customerForm.contact_person || !customerForm.phone) {
@@ -360,7 +370,10 @@ function SalesModuleContent() {
     const vat = subtotal * (quotationForm.vat_rate / 100);
     const total = subtotal + vat;
 
+    const quotationNumber = `QT-${Date.now().toString().slice(-8)}`;
+
     const { error } = await supabase.from('route_quotations').insert([{
+      quotation_number: quotationNumber,
       customer_id: quotationForm.customer_id,
       service_type: quotationForm.service_type,
       origin: quotationForm.origin,
@@ -382,6 +395,7 @@ function SalesModuleContent() {
       validity_days: quotationForm.validity_days,
       expiry_date: format(addDays(new Date(), quotationForm.validity_days), 'yyyy-MM-dd'),
       notes: quotationForm.notes,
+      approval_status: 'draft',
       created_by: user?.id
     }]);
 
@@ -390,6 +404,77 @@ function SalesModuleContent() {
     } else {
       toast({ title: 'Success', description: 'Quotation created successfully' });
       setShowQuotationDialog(false);
+      fetchQuotations();
+    }
+  }
+
+  async function approveQuotation(quotationId: string) {
+    const { error } = await supabase.from('route_quotations').update({
+      approval_status: 'approved',
+      approved_by: user?.id,
+      approved_at: new Date().toISOString()
+    }).eq('id', quotationId);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to approve quotation', variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Quotation approved' });
+      fetchQuotations();
+    }
+  }
+
+  async function sendQuotationToCustomer(quotationId: string) {
+    const { error } = await supabase.from('route_quotations').update({
+      approval_status: 'sent',
+      sent_to_customer: true,
+      sent_at: new Date().toISOString()
+    }).eq('id', quotationId);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to send quotation', variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Quotation sent to customer' });
+      fetchQuotations();
+    }
+  }
+
+  async function convertQuotationToBooking(quotationId: string) {
+    const quotation = quotations.find(q => q.id === quotationId);
+    if (!quotation) return;
+
+    const bookingNumber = `BK-${Date.now().toString().slice(-8)}`;
+
+    const { data: booking, error: bookingError } = await supabase.from('bookings').insert([{
+      booking_number: bookingNumber,
+      customer_id: quotation.customer_id,
+      quotation_id: quotation.id,
+      pickup_location: quotation.origin,
+      delivery_location: quotation.destination,
+      cargo_description: quotation.cargo_type,
+      cargo_weight: quotation.cargo_weight_mt,
+      container_size: quotation.container_size,
+      vehicle_requirement: quotation.service_type,
+      amount: quotation.total_amount,
+      currency: quotation.currency || 'TZS',
+      pickup_date: new Date().toISOString().split('T')[0],
+      operations_review_status: 'pending',
+      status: 'pending'
+    }]).select().single();
+
+    if (bookingError) {
+      toast({ title: 'Error', description: 'Failed to create booking', variant: 'destructive' });
+      return;
+    }
+
+    const { error: updateError } = await supabase.from('route_quotations').update({
+      approval_status: 'converted',
+      converted_to_booking_id: booking.id
+    }).eq('id', quotationId);
+
+    if (updateError) {
+      toast({ title: 'Error', description: 'Failed to update quotation', variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: `Booking created: ${bookingNumber}` });
       fetchQuotations();
     }
   }
@@ -611,12 +696,92 @@ function SalesModuleContent() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 h-11 bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="leads" className="h-9 rounded-lg">Leads</TabsTrigger>
             <TabsTrigger value="customers" className="h-9 rounded-lg">Customers</TabsTrigger>
             <TabsTrigger value="quotations" className="h-9 rounded-lg">Quotations</TabsTrigger>
             <TabsTrigger value="contracts" className="h-9 rounded-lg">Contracts</TabsTrigger>
             <TabsTrigger value="rate-sheets" className="h-9 rounded-lg">Rate Sheets</TabsTrigger>
             <TabsTrigger value="opportunities" className="h-9 rounded-lg">Pipeline</TabsTrigger>
           </TabsList>
+
+          {/* Leads Tab */}
+          <TabsContent value="leads">
+            <Card className="shadow-lg border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Lead Management
+                </CardTitle>
+                <Button asChild>
+                  <Link href="/sales/leads">
+                    <Plus className="h-4 w-4 mr-2" /> Manage Leads
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Probability</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leads.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            No leads found. <Link href="/sales/leads" className="text-primary hover:underline">Create your first lead</Link>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        leads.slice(0, 5).map((lead) => (
+                          <TableRow key={lead.id}>
+                            <TableCell className="font-medium">{lead.company_name}</TableCell>
+                            <TableCell>{lead.contact_person}</TableCell>
+                            <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{lead.lead_source || "-"}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={
+                                lead.status === "new" ? "bg-blue-10 text-blue border-blue/20" :
+                                lead.status === "qualified" ? "bg-cyan-10 text-cyan border-cyan/20" :
+                                lead.status === "converted" ? "bg-success/10 text-success border-success/20" :
+                                lead.status === "lost" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                "bg-purple-10 text-purple border-purple/20"
+                              }>
+                                {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                                  <div className="h-full bg-primary" style={{ width: `${lead.probability}%` }} />
+                                </div>
+                                <span className="text-xs">{lead.probability}%</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                {leads.length > 5 && (
+                  <div className="mt-4 text-center">
+                    <Button variant="outline" asChild>
+                      <Link href="/sales/leads">View All Leads</Link>
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Customers Tab */}
           <TabsContent value="customers">
@@ -880,6 +1045,7 @@ function SalesModuleContent() {
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Expires</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -891,9 +1057,36 @@ function SalesModuleContent() {
                           <TableCell>{String(q.service_type || "").replace('_', ' ')}</TableCell>
                           <TableCell>TZS {(q.total_amount || 0).toLocaleString()}</TableCell>
                           <TableCell>
-                            <Badge className={getStatusColor(q.status)}>{q.status}</Badge>
+                            <Badge className={
+                              q.approval_status === 'draft' ? 'bg-gray-10 text-gray border-gray/20' :
+                              q.approval_status === 'sent' ? 'bg-blue-10 text-blue border-blue/20' :
+                              q.approval_status === 'approved' ? 'bg-success/10 text-success border-success/20' :
+                              q.approval_status === 'converted' ? 'bg-purple-10 text-purple border-purple/20' :
+                              'bg-warning/10 text-warning border-warning/20'
+                            }>
+                              {q.approval_status || q.status}
+                            </Badge>
                           </TableCell>
                           <TableCell>{format(new Date(q.expiry_date), 'MMM dd, yyyy')}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {q.approval_status === 'draft' && (
+                                <>
+                                  <Button variant="ghost" size="sm" onClick={() => approveQuotation(q.id)} className="text-success">
+                                    <CheckCircle className="size-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => sendQuotationToCustomer(q.id)}>
+                                    <Mail className="size-4" />
+                                  </Button>
+                                </>
+                              )}
+                              {q.approval_status === 'approved' && (
+                                <Button variant="ghost" size="sm" onClick={() => convertQuotationToBooking(q.id)} className="text-primary">
+                                  <ArrowRight className="size-4 mr-1" /> Book
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
