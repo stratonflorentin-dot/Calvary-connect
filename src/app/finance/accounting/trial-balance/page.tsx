@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Download, RefreshCw, Scale, CheckCircle, AlertTriangle } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
-
-const CURRENCIES = {
-  TZS: { code: "TZS", symbol: "TSh", flag: "🇹🇿" },
-  USD: { code: "USD", symbol: "$", flag: "🇺🇸" },
-  EUR: { code: "EUR", symbol: "€", flag: "🇪🇺" },
-};
+import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 
 export default function TrialBalancePage() {
   const { toast } = useToast();
@@ -25,7 +20,6 @@ export default function TrialBalancePage() {
   const [chartOfAccounts, setChartOfAccounts] = useState<any[]>([]);
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
-  const [selectedCurrency, setSelectedCurrency] = useState("TZS");
 
   const loadTrialBalanceData = async () => {
     setLoading(true);
@@ -82,30 +76,49 @@ export default function TrialBalancePage() {
 
   const allLines = flattenJournalLines();
 
-  // Calculate account balances for trial balance
-  const accountBalances = allLines.reduce((acc, line) => {
-    if (!acc[line.account_code]) {
-      acc[line.account_code] = { debit: 0, credit: 0 };
-    }
-    acc[line.account_code].debit += line.debit || 0;
-    acc[line.account_code].credit += line.credit || 0;
-    return acc;
-  }, {} as Record<string, { debit: number; credit: number }>);
+  // Group trial balance data by currency
+  const trialBalanceByCurrency = useMemo(() => {
+    const currencyMap = new Map<string, {
+      accountBalances: Record<string, { debit: number; credit: number }>;
+      totalDebits: number;
+      totalCredits: number;
+      isBalanced: boolean;
+      lines: any[];
+    }>();
 
-  // Calculate trial balance totals
-  const totalDebits = Object.values(accountBalances).reduce((sum, bal) => sum + bal.debit, 0);
-  const totalCredits = Object.values(accountBalances).reduce((sum, bal) => sum + bal.credit, 0);
-  const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01;
+    AVAILABLE_CURRENCIES.forEach(curr => {
+      const currencyLines = allLines.filter((line) => line.currency === curr.code);
+      
+      const accountBalances = currencyLines.reduce((acc, line) => {
+        if (!acc[line.account_code]) {
+          acc[line.account_code] = { debit: 0, credit: 0 };
+        }
+        acc[line.account_code].debit += line.debit || 0;
+        acc[line.account_code].credit += line.credit || 0;
+        return acc;
+      }, {} as Record<string, { debit: number; credit: number }>);
+
+      const totalDebits = Object.values(accountBalances).reduce((sum, bal) => sum + bal.debit, 0);
+      const totalCredits = Object.values(accountBalances).reduce((sum, bal) => sum + bal.credit, 0);
+      const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01;
+
+      currencyMap.set(curr.code, {
+        accountBalances,
+        totalDebits,
+        totalCredits,
+        isBalanced,
+        lines: currencyLines,
+      });
+    });
+
+    return currencyMap;
+  }, [allLines]);
 
   const exportReport = () => {
     const reportData = {
       reportType: "Trial Balance",
       period: { startDate, endDate },
-      currency: selectedCurrency,
-      accountBalances,
-      totalDebits,
-      totalCredits,
-      isBalanced,
+      trialBalanceByCurrency: Object.fromEntries(trialBalanceByCurrency),
     };
 
     const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" });
@@ -141,16 +154,6 @@ export default function TrialBalancePage() {
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-auto" />
               <span className="text-muted-foreground">to</span>
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-auto" />
-              <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(CURRENCIES).map((c) => (
-                    <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <Button variant="outline" size="sm" onClick={loadTrialBalanceData}>
               <RefreshCw className="size-4 mr-2" />
@@ -160,174 +163,198 @@ export default function TrialBalancePage() {
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Debits</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-              {formatAmount(totalDebits, selectedCurrency)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Total Credits</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-red-700 dark:text-red-400">
-              {formatAmount(totalCredits, selectedCurrency)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Balance Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {isBalanced ? (
-                <>
-                  <CheckCircle className="size-6 text-emerald-600" />
-                  <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">Balanced</p>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="size-6 text-red-600" />
-                  <p className="text-2xl font-bold text-red-700 dark:text-red-400">Imbalanced</p>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Trial Balance Statements by Currency */}
+      <div className="space-y-6">
+        {AVAILABLE_CURRENCIES.map((currency) => {
+          const data = trialBalanceByCurrency.get(currency.code);
+          if (!data || data.totalDebits === 0 && data.totalCredits === 0) return null;
 
-      <Card className="border border-border">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Scale className="size-5" />
-            Trial Balance Report
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Account Code</TableHead>
-                <TableHead>Account Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Debit Balance</TableHead>
-                <TableHead className="text-right">Credit Balance</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              ) : Object.keys(accountBalances).length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                    No journal entries found for this period
-                  </TableCell>
-                </TableRow>
-              ) : (
-                <>
-                  {Object.entries(accountBalances)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([code, balances]) => {
-                      const debitBalance = balances.debit - balances.credit;
-                      const creditBalance = balances.credit - balances.debit;
-                      return (
-                        <TableRow key={code}>
-                          <TableCell className="font-mono font-semibold">{code}</TableCell>
-                          <TableCell>{getAccountName(code)}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{getAccountType(code)}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-emerald-700 dark:text-emerald-400">
-                            {debitBalance > 0 ? formatAmount(debitBalance, selectedCurrency) : "-"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-red-700 dark:text-red-400">
-                            {creditBalance > 0 ? formatAmount(creditBalance, selectedCurrency) : "-"}
-                          </TableCell>
+          return (
+            <Card key={currency.code} className="border border-border">
+              <CardHeader className="bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-3">
+                    <Scale className="size-5" />
+                    <span className="text-2xl">{currency.flag}</span>
+                    <span>{currency.name}</span>
+                    <CurrencyBadge currency={currency.code} />
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Total Debits</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                        {formatCurrency(data.totalDebits, currency.code)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Total Credits</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold text-red-700 dark:text-red-400">
+                        {formatCurrency(data.totalCredits, currency.code)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium">Balance Status</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2">
+                        {data.isBalanced ? (
+                          <>
+                            <CheckCircle className="size-6 text-emerald-600" />
+                            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">Balanced</p>
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle className="size-6 text-red-600" />
+                            <p className="text-2xl font-bold text-red-700 dark:text-red-400">Imbalanced</p>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="border border-border mb-6">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Scale className="size-5" />
+                      Trial Balance Report
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Account Code</TableHead>
+                          <TableHead>Account Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Debit Balance</TableHead>
+                          <TableHead className="text-right">Credit Balance</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  <TableRow className="bg-muted/50 font-bold">
-                    <TableCell colSpan={3} className="text-right">
-                      Totals
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatAmount(totalDebits, selectedCurrency)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatAmount(totalCredits, selectedCurrency)}
-                    </TableCell>
-                  </TableRow>
-                </>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {loading ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                              Loading...
+                            </TableCell>
+                          </TableRow>
+                        ) : Object.keys(data.accountBalances).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                              No journal entries found for this period
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          <>
+                            {Object.entries(data.accountBalances)
+                              .sort(([a], [b]) => a.localeCompare(b))
+                              .map(([code, balances]) => {
+                                const debitBalance = balances.debit - balances.credit;
+                                const creditBalance = balances.credit - balances.debit;
+                                return (
+                                  <TableRow key={code}>
+                                    <TableCell className="font-mono font-semibold">{code}</TableCell>
+                                    <TableCell>{getAccountName(code)}</TableCell>
+                                    <TableCell>
+                                      <Badge variant="secondary">{getAccountType(code)}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                                      {debitBalance > 0 ? formatCurrency(debitBalance, currency.code) : "-"}
+                                    </TableCell>
+                                    <TableCell className="text-right font-semibold text-red-700 dark:text-red-400">
+                                      {creditBalance > 0 ? formatCurrency(creditBalance, currency.code) : "-"}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            <TableRow className="bg-muted/50 font-bold">
+                              <TableCell colSpan={3} className="text-right">
+                                Totals
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(data.totalDebits, currency.code)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(data.totalCredits, currency.code)}
+                              </TableCell>
+                            </TableRow>
+                          </>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
 
-      <Card className={`border ${isBalanced ? "border-emerald-500/50" : "border-red-500/50"}`}>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            {isBalanced ? (
-              <CheckCircle className="size-5 text-emerald-600" />
-            ) : (
-              <AlertTriangle className="size-5 text-red-600" />
-            )}
-            Balance Verification
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center gap-8">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-1">Total Debits</p>
-              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                {formatAmount(totalDebits, selectedCurrency)}
-              </p>
-            </div>
-            <div className="text-4xl text-muted-foreground">=</div>
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-1">Total Credits</p>
-              <p className="text-2xl font-bold text-red-700 dark:text-red-400">
-                {formatAmount(totalCredits, selectedCurrency)}
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 text-center">
-            {isBalanced ? (
-              <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-base px-4 py-2">
-                ✓ Trial Balance is Balanced - Debits equal Credits
-              </Badge>
-            ) : (
-              <Badge variant="destructive" className="text-base px-4 py-2">
-                ⚠ Trial Balance is Imbalanced - Difference: {formatAmount(Math.abs(totalDebits - totalCredits), selectedCurrency)}
-              </Badge>
-            )}
-          </div>
-          {!isBalanced && (
-            <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-              <p className="text-sm text-amber-700 dark:text-amber-400">
-                <strong>Action Required:</strong> Review your journal entries to identify and correct the imbalance. Common causes include:
-              </p>
-              <ul className="text-sm text-amber-700 dark:text-amber-400 mt-2 list-disc list-inside">
-                <li>Missing or duplicate journal entries</li>
-                <li>Incorrect debit/credit amounts</li>
-                <li>Entries not posted to the correct accounts</li>
-                <li>Timing differences in entry dates</li>
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <Card className={`border ${data.isBalanced ? "border-emerald-500/50" : "border-red-500/50"}`}>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      {data.isBalanced ? (
+                        <CheckCircle className="size-5 text-emerald-600" />
+                      ) : (
+                        <AlertTriangle className="size-5 text-red-600" />
+                      )}
+                      Balance Verification
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-center gap-8">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-1">Total Debits</p>
+                        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                          {formatCurrency(data.totalDebits, currency.code)}
+                        </p>
+                      </div>
+                      <div className="text-4xl text-muted-foreground">=</div>
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-1">Total Credits</p>
+                        <p className="text-2xl font-bold text-red-700 dark:text-red-400">
+                          {formatCurrency(data.totalCredits, currency.code)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-6 text-center">
+                      {data.isBalanced ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-base px-4 py-2">
+                          ✓ Trial Balance is Balanced - Debits equal Credits
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-base px-4 py-2">
+                          ⚠ Trial Balance is Imbalanced - Difference: {formatCurrency(Math.abs(data.totalDebits - data.totalCredits), currency.code)}
+                        </Badge>
+                      )}
+                    </div>
+                    {!data.isBalanced && (
+                      <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                          <strong>Action Required:</strong> Review your journal entries to identify and correct the imbalance. Common causes include:
+                        </p>
+                        <ul className="text-sm text-amber-700 dark:text-amber-400 mt-2 list-disc list-inside">
+                          <li>Missing or duplicate journal entries</li>
+                          <li>Incorrect debit/credit amounts</li>
+                          <li>Entries not posted to the correct accounts</li>
+                          <li>Timing differences in entry dates</li>
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
