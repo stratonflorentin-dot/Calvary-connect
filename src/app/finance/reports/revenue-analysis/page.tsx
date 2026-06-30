@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp, ArrowLeft, RefreshCw, Download, PieChart, BarChart3, Calendar, Filter, Users, FileText, Table as TableIcon } from "lucide-react";
+import { TrendingUp, ArrowLeft, RefreshCw, Download, PieChart, BarChart3, Calendar, Filter, Users, FileText, Table as TableIcon, CheckCircle2, Clock, Wallet } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
@@ -18,6 +18,7 @@ import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, C
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 
 type Invoice = {
   id: string;
@@ -86,36 +87,111 @@ export default function RevenueAnalysisPage() {
     ? invoices
     : invoices.filter((i) => i.status === selectedStatus);
 
+  // Group revenue by currency
+  const revenueByCurrency = useMemo(() => {
+    const currencyMap = new Map<string, {
+      totalRevenue: number;
+      invoiceRevenue: number;
+      otherIncome: number;
+      paidRevenue: number;
+      pendingRevenue: number;
+      invoices: Invoice[];
+      income: Income[];
+    }>();
+
+    AVAILABLE_CURRENCIES.forEach(curr => {
+      currencyMap.set(curr.code, {
+        totalRevenue: 0,
+        invoiceRevenue: 0,
+        otherIncome: 0,
+        paidRevenue: 0,
+        pendingRevenue: 0,
+        invoices: [],
+        income: [],
+      });
+    });
+
+    filteredInvoices.forEach((invoice) => {
+      const currency = invoice.currency || "TZS";
+      const existing = currencyMap.get(currency) || {
+        totalRevenue: 0,
+        invoiceRevenue: 0,
+        otherIncome: 0,
+        paidRevenue: 0,
+        pendingRevenue: 0,
+        invoices: [],
+        income: [],
+      };
+      existing.invoices.push(invoice);
+      existing.invoiceRevenue += invoice.amount;
+      existing.totalRevenue += invoice.amount;
+      if (invoice.status === "paid") existing.paidRevenue += invoice.amount;
+      if (invoice.status === "pending") existing.pendingRevenue += invoice.amount;
+      currencyMap.set(currency, existing);
+    });
+
+    income.forEach((inc) => {
+      const currency = inc.currency || "TZS";
+      const existing = currencyMap.get(currency) || {
+        totalRevenue: 0,
+        invoiceRevenue: 0,
+        otherIncome: 0,
+        paidRevenue: 0,
+        pendingRevenue: 0,
+        invoices: [],
+        income: [],
+      };
+      existing.income.push(inc);
+      existing.otherIncome += inc.amount;
+      existing.totalRevenue += inc.amount;
+      currencyMap.set(currency, existing);
+    });
+
+    return currencyMap;
+  }, [filteredInvoices, income]);
+
   const customerData = useMemo(() => {
-    const customerMap = new Map<string, number>();
+    const customerMap = new Map<string, { amount: number; currency: string }>();
     filteredInvoices.forEach((invoice) => {
       const customer = invoice.customer_name || "Unknown";
-      customerMap.set(customer, (customerMap.get(customer) || 0) + invoice.amount);
+      const existing = customerMap.get(customer) || { amount: 0, currency: invoice.currency };
+      customerMap.set(customer, { 
+        amount: existing.amount + invoice.amount, 
+        currency: invoice.currency 
+      });
     });
     return Array.from(customerMap.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
+      .map(([name, value]) => ({ name, ...value }))
+      .sort((a, b) => b.amount - a.amount)
       .slice(0, 10);
   }, [filteredInvoices]);
 
   const statusData = useMemo(() => {
-    const statusMap = new Map<string, number>();
+    const statusMap = new Map<string, { amount: number; currency: string }>();
     filteredInvoices.forEach((invoice) => {
       const status = invoice.status || "unknown";
-      statusMap.set(status, (statusMap.get(status) || 0) + invoice.amount);
+      const existing = statusMap.get(status) || { amount: 0, currency: invoice.currency };
+      statusMap.set(status, { 
+        amount: existing.amount + invoice.amount, 
+        currency: invoice.currency 
+      });
     });
-    return Array.from(statusMap.entries()).map(([name, value]) => ({ name, value }));
+    return Array.from(statusMap.entries()).map(([name, value]) => ({ name, ...value }));
   }, [filteredInvoices]);
 
   const monthlyData = useMemo(() => {
-    const monthlyMap = new Map<string, number>();
+    const monthlyMap = new Map<string, { amount: number; currency: string }>();
     [...filteredInvoices, ...income].forEach((item) => {
       const date = (item as Invoice).due_date || (item as Income).date;
       if (!date) return;
       const month = new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      monthlyMap.set(month, (monthlyMap.get(month) || 0) + item.amount);
+      const existing = monthlyMap.get(month) || { amount: 0, currency: item.currency };
+      monthlyMap.set(month, { 
+        amount: existing.amount + item.amount, 
+        currency: item.currency 
+      });
     });
-    return Array.from(monthlyMap.entries()).map(([month, amount]) => ({ month, amount }));
+    return Array.from(monthlyMap.entries()).map(([month, value]) => ({ month, ...value }));
   }, [filteredInvoices, income]);
 
   const statuses = useMemo(() => {
@@ -171,8 +247,8 @@ export default function RevenueAnalysisPage() {
     // Customer breakdown table
     const customerTableData = customerData.map((item) => [
       item.name,
-      formatAmount(item.value),
-      invoiceRevenue > 0 ? ((item.value / invoiceRevenue) * 100).toFixed(1) + "%" : "0%",
+      formatCurrency(item.amount, item.currency),
+      invoiceRevenue > 0 ? ((item.amount / invoiceRevenue) * 100).toFixed(1) + "%" : "0%",
       filteredInvoices.filter((i) => i.customer_name === item.name).length,
     ]);
 
@@ -213,8 +289,9 @@ export default function RevenueAnalysisPage() {
     const customerSheet = XLSX.utils.json_to_sheet(
       customerData.map((item) => ({
         Customer: item.name,
-        Revenue: item.value,
-        Percentage: invoiceRevenue > 0 ? ((item.value / invoiceRevenue) * 100).toFixed(1) + "%" : "0%",
+        Revenue: item.amount,
+        Currency: item.currency,
+        Percentage: invoiceRevenue > 0 ? ((item.amount / invoiceRevenue) * 100).toFixed(1) + "%" : "0%",
         InvoiceCount: filteredInvoices.filter((i) => i.customer_name === item.name).length,
       }))
     );
@@ -303,47 +380,88 @@ export default function RevenueAnalysisPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="size-4 text-success" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Total Revenue</p>
-            </div>
-            <p className="text-2xl font-bold text-success">{formatAmount(totalRevenue)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="size-4 text-primary" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Avg Invoice</p>
-            </div>
-            <p className="text-2xl font-bold text-primary">{formatAmount(avgInvoice)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="size-4 text-warning" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Top Customer</p>
-            </div>
-            <p className="text-xl font-bold text-warning">{topCustomer?.name || "-"}</p>
-            <p className="text-xs text-muted-foreground">{topCustomer ? formatAmount(topCustomer.value) : ""}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Filter className="size-4 text-info" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Paid vs Pending</p>
-            </div>
-            <p className="text-sm">
-              <span className="text-success">{formatAmount(paidRevenue)}</span> / <span className="text-warning">{formatAmount(pendingRevenue)}</span>
-            </p>
-          </CardContent>
-        </Card>
+      {/* Summary Cards by Currency */}
+      <section className="space-y-6 mb-6">
+        {AVAILABLE_CURRENCIES.map((currency) => {
+          const revenueData = revenueByCurrency.get(currency.code);
+          if (!revenueData || revenueData.totalRevenue === 0) return null;
+
+          return (
+            <Card key={currency.code}>
+              <CardHeader className="bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3">
+                    <span className="text-2xl">{currency.flag}</span>
+                    <span>{currency.name}</span>
+                    <CurrencyBadge currency={currency.code} />
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="size-4 text-success" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Total Revenue</p>
+                    </div>
+                    <p className="text-2xl font-bold text-success">{formatCurrency(revenueData.totalRevenue, currency.code)}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="size-4 text-primary" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Invoice Revenue</p>
+                    </div>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(revenueData.invoiceRevenue, currency.code)}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="size-4 text-info" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Other Income</p>
+                    </div>
+                    <p className="text-2xl font-bold text-info">{formatCurrency(revenueData.otherIncome, currency.code)}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BarChart3 className="size-4 text-warning" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Avg Invoice</p>
+                    </div>
+                    <p className="text-2xl font-bold text-warning">
+                      {revenueData.invoices.length > 0 ? formatCurrency(revenueData.invoiceRevenue / revenueData.invoices.length, currency.code) : formatCurrency(0, currency.code)}
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="size-4 text-success" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Paid Revenue</p>
+                    </div>
+                    <p className="text-2xl font-bold text-success">{formatCurrency(revenueData.paidRevenue, currency.code)}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="size-4 text-warning" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Pending Revenue</p>
+                    </div>
+                    <p className="text-2xl font-bold text-warning">{formatCurrency(revenueData.pendingRevenue, currency.code)}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="size-4 text-primary" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Total Invoices</p>
+                    </div>
+                    <p className="text-2xl font-bold text-primary">{revenueData.invoices.length}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Wallet className="size-4 text-info" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Income Records</p>
+                    </div>
+                    <p className="text-2xl font-bold text-info">{revenueData.income.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </section>
 
       {/* Charts */}
@@ -392,7 +510,7 @@ export default function RevenueAnalysisPage() {
                 <XAxis dataKey="name" className="text-xs" angle={-45} textAnchor="end" height={60} />
                 <YAxis className="text-xs" />
                 <Tooltip />
-                <Bar dataKey="value" fill="#10b981" />
+                <Bar dataKey="amount" fill="#10b981" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -425,11 +543,11 @@ export default function RevenueAnalysisPage() {
                 ) : (
                   customerData.map((item) => {
                     const count = filteredInvoices.filter((i) => i.customer_name === item.name).length;
-                    const percentage = invoiceRevenue > 0 ? (item.value / invoiceRevenue) * 100 : 0;
+                    const percentage = invoiceRevenue > 0 ? (item.amount / invoiceRevenue) * 100 : 0;
                     return (
                       <TableRow key={item.name}>
                         <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-success font-medium">{formatAmount(item.value)}</TableCell>
+                        <TableCell className="text-success font-medium">{formatCurrency(item.amount, item.currency)}</TableCell>
                         <TableCell>{percentage.toFixed(1)}%</TableCell>
                         <TableCell>{count}</TableCell>
                       </TableRow>
