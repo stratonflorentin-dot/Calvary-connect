@@ -87,7 +87,7 @@ ADD COLUMN IF NOT EXISTS pod_id UUID REFERENCES proof_of_delivery(id);
 -- 6. Update Journal Entries Table to link to documents
 ALTER TABLE journal_entries
 ADD COLUMN IF NOT EXISTS invoice_id UUID REFERENCES invoices(id),
-ADD COLUMN IF NOT EXISTS payment_id UUID REFERENCES payments(id),
+ADD COLUMN IF NOT EXISTS payment_id UUID,
 ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id),
 ADD COLUMN IF NOT EXISTS booking_id UUID REFERENCES bookings(id),
 ADD COLUMN IF NOT EXISTS quotation_id UUID REFERENCES quotations(id),
@@ -250,8 +250,4 @@ FOR EACH ROW EXECUTE FUNCTION audit_log();
 
 DROP TRIGGER IF EXISTS audit_invoices ON invoices;
 CREATE TRIGGER audit_invoices AFTER INSERT OR UPDATE OR DELETE ON invoices
-FOR EACH ROW EXECUTE FUNCTION audit_log();
-
-DROP TRIGGER IF EXISTS audit_payments ON payments;
-CREATE TRIGGER audit_payments AFTER INSERT OR UPDATE OR DELETE ON payments
 FOR EACH ROW EXECUTE FUNCTION audit_log();
