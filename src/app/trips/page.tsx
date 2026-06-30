@@ -44,6 +44,7 @@ export default function TripsPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [trailers, setTrailers] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [selectedVehicleType, setSelectedVehicleType] = useState<string>('');
   
   // Route map dialog state
@@ -76,6 +77,7 @@ export default function TripsPage() {
     tripCategory: 'town',
     salesAmount: '',
     payment_status: 'PENDING',
+    booking_id: '',
   });
 
   // Calculate driver allowance based on trip details
@@ -123,11 +125,13 @@ export default function TripsPage() {
           { data: tripsData }, 
           { data: vehiclesData }, 
           { data: trailersData }, 
+          { data: bookingsData },
           allUsers
         ] = await Promise.all([
           supabase.from('trips').select('*').order('created_at', { ascending: false }),
           supabase.from('vehicles').select('*'),
           supabase.from('vehicles').select('*').eq('type', 'TRAILER'),
+          supabase.from('bookings').select('*, customers(company_name)').eq('status', 'confirmed').order('created_at', { ascending: false }),
           getUsersAction()
         ]);
 
@@ -140,6 +144,7 @@ export default function TripsPage() {
         setVehicles(trucksData);
         setTrailers(trailersData || []);
         setDrivers(driversData);
+        setBookings(bookingsData || []);
       } catch (error) {
         console.error('[TripsPage] Error loading data:', error);
       } finally {
@@ -206,10 +211,21 @@ export default function TripsPage() {
         vatAmount: vatAmount,
         totalAmount: totalAmount,
         payment_status: tripForm.payment_status || 'PENDING',
+        // Link to booking
+        booking_id: tripForm.booking_id || null,
+        trip_number: `TR-${Date.now().toString().slice(-8)}`,
       };
 
       const { data: newTrip, error } = await supabase.from('trips').insert([tripData]).select().single();
       if (error) throw error;
+
+      // Update booking status if trip was created from a booking
+      if (tripForm.booking_id) {
+        await supabase.from('bookings').update({
+          status: 'in_progress',
+          updated_at: new Date().toISOString()
+        }).eq('id', tripForm.booking_id);
+      }
 
       // Create accounting journal entry for trip revenue
       if (newTrip && salesAmount > 0) {
@@ -297,6 +313,7 @@ export default function TripsPage() {
         tripCategory: 'town',
         salesAmount: '',
         payment_status: 'PENDING',
+        booking_id: '',
       });
 
       // Refresh trips
@@ -443,6 +460,40 @@ export default function TripsPage() {
                     <DialogTitle className="text-xl font-semibold">Create New Trip</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleAddTrip} className="space-y-6 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="booking">Select Booking (Optional)</Label>
+                      <Select 
+                        value={tripForm.booking_id}
+                        onValueChange={(value) => {
+                          const selectedBooking = bookings.find(b => b.id === value);
+                          if (selectedBooking) {
+                            setTripForm({ 
+                              ...tripForm, 
+                              booking_id: value,
+                              origin: selectedBooking.pickup_location || tripForm.origin,
+                              destination: selectedBooking.delivery_location || tripForm.destination,
+                              client: selectedBooking.customers?.company_name || tripForm.client,
+                              salesAmount: selectedBooking.amount?.toString() || tripForm.salesAmount
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a confirmed booking (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bookings.length === 0 ? (
+                            <SelectItem value="" disabled>No confirmed bookings available</SelectItem>
+                          ) : (
+                            bookings.map(booking => (
+                              <SelectItem key={booking.id} value={booking.id}>
+                                {booking.booking_number} - {booking.customers?.company_name} ({booking.pickup_location} → {booking.delivery_location})
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       {/* Origin City Dropdown */}
                       <div className="space-y-2 relative">
