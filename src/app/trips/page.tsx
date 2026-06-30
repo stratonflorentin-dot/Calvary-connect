@@ -1199,6 +1199,11 @@ export default function TripsPage() {
                           <p className="text-sm text-muted-foreground mt-1">
                             Status: {trip.status} | Cargo: {trip.cargo || 'N/A'}
                           </p>
+                          {trip.booking_id && (
+                            <p className="text-sm text-primary mt-1">
+                              📋 Booking: {trip.booking_number || 'Linked'}
+                            </p>
+                          )}
                           <div className="flex gap-2 mt-2 flex-wrap">
                             {trip.tripType && (
                               <Badge 

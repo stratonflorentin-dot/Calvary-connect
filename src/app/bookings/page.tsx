@@ -690,16 +690,14 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {booking.contractGenerated && (
+                            {booking.quotation_id && (
                               <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
-                                <FileText className="size-3 mr-1" />
-                                Gen
+                                Quote
                               </Badge>
                             )}
-                            {booking.contractStamped && (
-                              <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/20">
-                                <Stamp className="size-3 mr-1" />
-                                Stamp
+                            {booking.contract_id && (
+                              <Badge variant="outline" className="text-xs bg-accent/10 text-accent border-accent/20">
+                                Contract
                               </Badge>
                             )}
                           </div>
