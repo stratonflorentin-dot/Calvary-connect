@@ -41,7 +41,7 @@ interface LedgerTransaction {
   created_at: string;
 }
 
-const categoryColors: Record<string, { bg: string; text: string; border: string; icon: any }> = {
+const categoryColors: Record<string, { bg: string; text: string; border: string; icon: React.ComponentType<{ className?: string }> }> = {
   ASSETS: { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20', icon: Wallet },
   LIABILITIES: { bg: 'bg-destructive/10', text: 'text-destructive', border: 'border-destructive/20', icon: CreditCard },
   EQUITY: { bg: 'bg-accent/10', text: 'text-accent', border: 'border-accent/20', icon: Building2 },
