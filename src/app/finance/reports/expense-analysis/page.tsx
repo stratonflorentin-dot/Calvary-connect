@@ -10,11 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingDown, ArrowLeft, RefreshCw, Download, PieChart, BarChart3, Calendar, Filter } from "lucide-react";
+import { TrendingDown, ArrowLeft, RefreshCw, Download, PieChart, BarChart3, Calendar, Filter, FileText, Table as TableIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 type Expense = {
   id: string;
@@ -125,6 +128,87 @@ export default function ExpenseAnalysisPage() {
     toast({ title: "Success", description: "Expense data exported" });
   };
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Expense Analysis Report", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    if (dateRange.start || dateRange.end) {
+      doc.text(`Period: ${dateRange.start || "All"} to ${dateRange.end || "All"}`, 14, 38);
+    }
+    
+    doc.text(`Total Expenses: ${formatAmount(totalExpenses)}`, 14, 46);
+
+    // Category breakdown table
+    const categoryTableData = categoryData.map((item) => [
+      item.name,
+      formatAmount(item.value),
+      `${totalExpenses > 0 ? ((item.value / totalExpenses) * 100).toFixed(1) : 0}%`,
+    ]);
+
+    const firstTable = autoTable(doc, {
+      startY: 55,
+      head: [["Category", "Amount", "% of Total"]],
+      body: categoryTableData,
+      theme: "grid",
+      headStyles: { fillColor: [239, 68, 68] },
+    });
+
+    // Detailed expenses table
+    const expenseTableData = filteredExpenses.map((e) => [
+      formatDate(e.date),
+      e.description,
+      e.category,
+      e.vendor || "-",
+      e.status,
+      formatAmount(e.amount),
+    ]);
+
+    autoTable(doc, {
+      startY: (firstTable as any).finalY + 10,
+      head: [["Date", "Description", "Category", "Vendor", "Status", "Amount"]],
+      body: expenseTableData,
+      theme: "grid",
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    doc.save(`expense-analysis-${new Date().toISOString().split("T")[0]}.pdf`);
+    toast({ title: "Success", description: "PDF exported successfully" });
+  };
+
+  const exportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+
+    // Category breakdown sheet
+    const categorySheet = XLSX.utils.json_to_sheet(
+      categoryData.map((item) => ({
+        Category: item.name,
+        Amount: item.value,
+        Percentage: totalExpenses > 0 ? ((item.value / totalExpenses) * 100).toFixed(1) + "%" : "0%",
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, categorySheet, "Category Breakdown");
+
+    // Detailed expenses sheet
+    const expenseSheet = XLSX.utils.json_to_sheet(
+      filteredExpenses.map((e) => ({
+        Date: e.date,
+        Description: e.description,
+        Category: e.category,
+        Vendor: e.vendor || "-",
+        Status: e.status,
+        Amount: e.amount,
+        Currency: e.currency,
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, expenseSheet, "Expenses");
+
+    XLSX.writeFile(workbook, `expense-analysis-${new Date().toISOString().split("T")[0]}.xlsx`);
+    toast({ title: "Success", description: "Excel exported successfully" });
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -137,8 +221,14 @@ export default function ExpenseAnalysisPage() {
           <Button onClick={loadExpenses} disabled={loading}>
             <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
           </Button>
-          <Button onClick={exportData}>
-            <Download className="size-4 mr-2" /> Export
+          <Button onClick={exportPDF} variant="outline">
+            <FileText className="size-4 mr-2" /> Export PDF
+          </Button>
+          <Button onClick={exportExcel} variant="outline">
+            <TableIcon className="size-4 mr-2" /> Export Excel
+          </Button>
+          <Button onClick={exportData} variant="outline">
+            <Download className="size-4 mr-2" /> Export JSON
           </Button>
         </div>
       </div>

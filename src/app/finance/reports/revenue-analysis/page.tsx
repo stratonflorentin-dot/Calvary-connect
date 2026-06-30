@@ -10,11 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp, ArrowLeft, RefreshCw, Download, PieChart, BarChart3, Calendar, Filter, Users } from "lucide-react";
+import { TrendingUp, ArrowLeft, RefreshCw, Download, PieChart, BarChart3, Calendar, Filter, Users, FileText, Table as TableIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 type Invoice = {
   id: string;
@@ -107,7 +110,7 @@ export default function RevenueAnalysisPage() {
   const monthlyData = useMemo(() => {
     const monthlyMap = new Map<string, number>();
     [...filteredInvoices, ...income].forEach((item) => {
-      const date = item.due_date || item.date;
+      const date = (item as Invoice).due_date || (item as Income).date;
       if (!date) return;
       const month = new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       monthlyMap.set(month, (monthlyMap.get(month) || 0) + item.amount);
@@ -155,6 +158,97 @@ export default function RevenueAnalysisPage() {
     toast({ title: "Success", description: "Revenue data exported" });
   };
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Revenue Analysis Report", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Total Revenue: ${formatAmount(totalRevenue)}`, 14, 38);
+    doc.text(`Paid Revenue: ${formatAmount(paidRevenue)}`, 14, 46);
+    doc.text(`Pending Revenue: ${formatAmount(pendingRevenue)}`, 14, 54);
+
+    // Customer breakdown table
+    const customerTableData = customerData.map((item) => [
+      item.name,
+      formatAmount(item.value),
+      invoiceRevenue > 0 ? ((item.value / invoiceRevenue) * 100).toFixed(1) + "%" : "0%",
+      filteredInvoices.filter((i) => i.customer_name === item.name).length,
+    ]);
+
+    const firstTable = autoTable(doc, {
+      startY: 60,
+      head: [["Customer", "Revenue", "% of Total", "Invoices"]],
+      body: customerTableData,
+      theme: "grid",
+      headStyles: { fillColor: [16, 185, 129] },
+    });
+
+    // Detailed invoices table
+    const invoiceTableData = filteredInvoices.map((i) => [
+      i.invoice_number,
+      i.customer_name,
+      formatDate(i.due_date),
+      i.status,
+      i.type,
+      formatAmount(i.amount),
+    ]);
+
+    autoTable(doc, {
+      startY: (firstTable as any).finalY + 10,
+      head: [["Invoice #", "Customer", "Due Date", "Status", "Type", "Amount"]],
+      body: invoiceTableData,
+      theme: "grid",
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    doc.save(`revenue-analysis-${new Date().toISOString().split("T")[0]}.pdf`);
+    toast({ title: "Success", description: "PDF exported successfully" });
+  };
+
+  const exportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+
+    // Customer breakdown sheet
+    const customerSheet = XLSX.utils.json_to_sheet(
+      customerData.map((item) => ({
+        Customer: item.name,
+        Revenue: item.value,
+        Percentage: invoiceRevenue > 0 ? ((item.value / invoiceRevenue) * 100).toFixed(1) + "%" : "0%",
+        InvoiceCount: filteredInvoices.filter((i) => i.customer_name === item.name).length,
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, customerSheet, "Customer Breakdown");
+
+    // Detailed invoices sheet
+    const invoiceSheet = XLSX.utils.json_to_sheet(
+      filteredInvoices.map((i) => ({
+        InvoiceNumber: i.invoice_number,
+        Customer: i.customer_name,
+        DueDate: i.due_date,
+        Status: i.status,
+        Type: i.type,
+        Amount: i.amount,
+        Currency: i.currency,
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, invoiceSheet, "Invoices");
+
+    // Income sheet
+    const incomeSheet = XLSX.utils.json_to_sheet(
+      income.map((i) => ({
+        Description: i.description,
+        Amount: i.amount,
+        Currency: i.currency,
+        Date: i.date,
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, incomeSheet, "Income");
+
+    XLSX.writeFile(workbook, `revenue-analysis-${new Date().toISOString().split("T")[0]}.xlsx`);
+    toast({ title: "Success", description: "Excel exported successfully" });
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -167,8 +261,14 @@ export default function RevenueAnalysisPage() {
           <Button onClick={loadRevenue} disabled={loading}>
             <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
           </Button>
-          <Button onClick={exportData}>
-            <Download className="size-4 mr-2" /> Export
+          <Button onClick={exportPDF} variant="outline">
+            <FileText className="size-4 mr-2" /> Export PDF
+          </Button>
+          <Button onClick={exportExcel} variant="outline">
+            <TableIcon className="size-4 mr-2" /> Export Excel
+          </Button>
+          <Button onClick={exportData} variant="outline">
+            <Download className="size-4 mr-2" /> Export JSON
           </Button>
         </div>
       </div>

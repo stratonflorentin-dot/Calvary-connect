@@ -10,10 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Scale, ArrowLeft, RefreshCw, Download, Calendar, FileText, Calculator, AlertTriangle } from "lucide-react";
+import { Scale, ArrowLeft, RefreshCw, Download, Calendar, FileText, Calculator, AlertTriangle, Table as TableIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 type Tax = {
   id: string;
@@ -150,6 +153,75 @@ export default function TaxReportsPage() {
     toast({ title: "Success", description: "Tax report exported" });
   };
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Tax Reports", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Period: ${selectedPeriod}`, 14, 38);
+    
+    doc.text(`Total Tax Due: ${formatAmount(taxCalculations.totalTaxDue)}`, 14, 50);
+    doc.text(`VAT Collected: ${formatAmount(taxCalculations.vatCollected)}`, 14, 58);
+    doc.text(`VAT Paid (Deductible): ${formatAmount(taxCalculations.vatPaid)}`, 14, 66);
+    doc.text(`Net VAT Liability: ${formatAmount(taxCalculations.netVat)}`, 14, 74);
+    doc.text(`Corporate Tax (Est.): ${formatAmount(taxCalculations.corporateTax)}`, 14, 82);
+    doc.text(`Withholding Tax: ${formatAmount(taxCalculations.witholdingTax)}`, 14, 90);
+
+    // Tax records table
+    const taxTableData = filteredTaxes.map((t) => [
+      t.tax_type,
+      t.period,
+      formatDate(t.due_date),
+      t.description,
+      t.status,
+      formatAmount(t.amount),
+    ]);
+
+    autoTable(doc, {
+      startY: 100,
+      head: [["Tax Type", "Period", "Due Date", "Description", "Status", "Amount"]],
+      body: taxTableData,
+      theme: "grid",
+      headStyles: { fillColor: [139, 92, 246] },
+    });
+
+    doc.save(`tax-report-${new Date().toISOString().split("T")[0]}.pdf`);
+    toast({ title: "Success", description: "PDF exported successfully" });
+  };
+
+  const exportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+
+    // Tax calculations sheet
+    const calcSheet = XLSX.utils.json_to_sheet([
+      { Metric: "Total Tax Due", Value: taxCalculations.totalTaxDue },
+      { Metric: "VAT Collected", Value: taxCalculations.vatCollected },
+      { Metric: "VAT Paid (Deductible)", Value: taxCalculations.vatPaid },
+      { Metric: "Net VAT Liability", Value: taxCalculations.netVat },
+      { Metric: "Corporate Tax (Est.)", Value: taxCalculations.corporateTax },
+      { Metric: "Withholding Tax", Value: taxCalculations.witholdingTax },
+    ]);
+    XLSX.utils.book_append_sheet(workbook, calcSheet, "Calculations");
+
+    // Tax records sheet
+    const taxSheet = XLSX.utils.json_to_sheet(
+      filteredTaxes.map((t) => ({
+        TaxType: t.tax_type,
+        Period: t.period,
+        DueDate: t.due_date,
+        Description: t.description,
+        Status: t.status,
+        Amount: t.amount,
+        Currency: t.currency,
+      }))
+    );
+    XLSX.utils.book_append_sheet(workbook, taxSheet, "Tax Records");
+
+    XLSX.writeFile(workbook, `tax-report-${new Date().toISOString().split("T")[0]}.xlsx`);
+    toast({ title: "Success", description: "Excel exported successfully" });
+  };
+
   const getTaxStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
@@ -175,8 +247,14 @@ export default function TaxReportsPage() {
           <Button onClick={loadTaxData} disabled={loading}>
             <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
           </Button>
-          <Button onClick={exportTaxReport}>
-            <Download className="size-4 mr-2" /> Export Report
+          <Button onClick={exportPDF} variant="outline">
+            <FileText className="size-4 mr-2" /> Export PDF
+          </Button>
+          <Button onClick={exportExcel} variant="outline">
+            <TableIcon className="size-4 mr-2" /> Export Excel
+          </Button>
+          <Button onClick={exportTaxReport} variant="outline">
+            <Download className="size-4 mr-2" /> Export JSON
           </Button>
         </div>
       </div>
