@@ -367,7 +367,6 @@ export default function VendorBillsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
- Invoice description</Label>
                 <Input id="description" placeholder="Bill description" value={billForm.description} onChange={(e) => setBillForm({ ...billForm, description: e.target.value })} />
               </div>
               <div className="flex gap-2 justify-end pt-2">
