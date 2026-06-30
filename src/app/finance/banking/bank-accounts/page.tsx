@@ -65,9 +65,19 @@ export default function BankAccountsPage() {
     e.preventDefault();
 
     if (editingAccount) {
+      const updateData = {
+        account_name: formData.account_name,
+        account_number: formData.account_number,
+        bank_name: formData.bank_name,
+        balance: formData.balance,
+        currency: formData.currency,
+        account_type: formData.account_type,
+        is_active: formData.is_active,
+      };
+      
       const { error } = await supabase
         .from("bank_accounts")
-        .update(formData)
+        .update(updateData)
         .eq("id", editingAccount.id);
 
       if (error) {
@@ -76,7 +86,17 @@ export default function BankAccountsPage() {
       }
       toast({ title: "Account updated successfully" });
     } else {
-      const { error } = await supabase.from("bank_accounts").insert([formData]);
+      const insertData = {
+        account_name: formData.account_name,
+        account_number: formData.account_number,
+        bank_name: formData.bank_name,
+        balance: formData.balance,
+        currency: formData.currency,
+        account_type: formData.account_type,
+        is_active: formData.is_active,
+      };
+      
+      const { error } = await supabase.from("bank_accounts").insert([insertData]);
 
       if (error) {
         toast({ variant: "destructive", title: "Error creating account", description: error.message });
