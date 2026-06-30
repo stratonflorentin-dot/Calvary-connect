@@ -479,6 +479,41 @@ function SalesModuleContent() {
     }
   }
 
+  async function convertContractToBooking(contractId: string) {
+    const contract = contracts.find(c => c.id === contractId);
+    if (!contract) return;
+
+    const bookingNumber = `BK-${Date.now().toString().slice(-8)}`;
+
+    const { data: booking, error: bookingError } = await supabase.from('bookings').insert([{
+      booking_number: bookingNumber,
+      customer_id: contract.customer_id,
+      contract_id: contract.id,
+      vehicle_requirement: contract.contract_type,
+      amount: contract.contract_value,
+      currency: contract.currency || 'TZS',
+      pickup_date: new Date().toISOString().split('T')[0],
+      operations_review_status: 'pending',
+      status: 'pending'
+    }]).select().single();
+
+    if (bookingError) {
+      toast({ title: 'Error', description: 'Failed to create booking', variant: 'destructive' });
+      return;
+    }
+
+    const { error: updateError } = await supabase.from('transport_contracts').update({
+      converted_to_booking_ids: [...((contract as any).converted_to_booking_ids || []), booking.id]
+    }).eq('id', contractId);
+
+    if (updateError) {
+      toast({ title: 'Error', description: 'Failed to update contract', variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: `Booking created: ${bookingNumber}` });
+      fetchContracts();
+    }
+  }
+
   async function saveContract() {
     const { error } = await supabase.from('transport_contracts').insert([{
       customer_id: contractForm.customer_id,
@@ -1169,6 +1204,9 @@ function SalesModuleContent() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                  <Button variant="ghost" size="sm" onClick={() => convertContractToBooking(c.id)} title="Create Booking" className="hover:bg-primary/10 hover:text-primary text-primary">
+                                    <ArrowRight className="h-4 w-4 mr-1" /> Book
+                                  </Button>
                                   <Button variant="ghost" size="sm" onClick={() => setPreviewContract(c)} title="Preview" className="hover:bg-primary/10 hover:text-primary">
                                     <Eye className="h-4 w-4" />
                                   </Button>

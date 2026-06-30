@@ -35,7 +35,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Booking {
   id: string;
-  bookingNumber: string;
+  booking_number: string;
+  customer_id?: string;
+  quotation_id?: string;
+  contract_id?: string;
   clientName: string;
   clientEmail: string;
   clientPhone: string;
@@ -43,11 +46,20 @@ interface Booking {
   vehicleType?: string;
   origin?: string;
   destination?: string;
+  pickup_location?: string;
+  delivery_location?: string;
+  cargo_description?: string;
+  cargo_weight?: number;
+  container_size?: string;
+  vehicle_requirement?: string;
   startDate: string;
   endDate?: string;
+  pickup_date?: string;
+  delivery_date?: string;
   amount: number;
   currency: string;
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+  operations_review_status?: string;
   notes?: string;
   contractGenerated: boolean;
   contractStamped: boolean;
@@ -137,42 +149,51 @@ function BookingsContent() {
   const loadBookings = async () => {
     setIsLoading(true);
     try {
-      // Use trips table as bookings for now, or create dedicated bookings table
       const { data, error } = await supabase
-        .from('trips')
-        .select('*')
+        .from('bookings')
+        .select('*, customers(company_name)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Transform trips to bookings format
-      const transformedData: Booking[] = (data || []).map((trip: any) => ({
-        id: trip.id,
-        bookingNumber: `BK-${trip.id.slice(0, 8).toUpperCase()}`,
-        clientName: trip.client || 'Unknown Client',
-        clientEmail: trip.client_email || '',
-        clientPhone: trip.client_phone || '',
-        serviceType: 'transport',
-        vehicleType: trip.vehicle_id,
-        origin: trip.origin,
-        destination: trip.destination,
-        startDate: trip.start_date || trip.created_at,
-        endDate: trip.end_date,
-        amount: trip.salesAmount || trip.fare || 0,
-        currency: 'TZS',
-        status: trip.status === 'completed' ? 'completed' : 
-                trip.status === 'in_progress' ? 'in_progress' : 
-                trip.status === 'cancelled' ? 'cancelled' : 'pending',
-        notes: trip.notes,
-        contractGenerated: trip.contract_generated || false,
-        contractStamped: trip.contract_stamped || false,
-        created_at: trip.created_at,
-        updated_at: trip.updated_at
+      // Transform bookings data
+      const transformedData: Booking[] = (data || []).map((booking: any) => ({
+        id: booking.id,
+        booking_number: booking.booking_number,
+        customer_id: booking.customer_id,
+        quotation_id: booking.quotation_id,
+        contract_id: booking.contract_id,
+        clientName: booking.customers?.company_name || 'Unknown',
+        clientEmail: '',
+        clientPhone: '',
+        serviceType: booking.vehicle_requirement || 'transport',
+        vehicleType: booking.vehicle_requirement,
+        origin: booking.pickup_location,
+        destination: booking.delivery_location,
+        pickup_location: booking.pickup_location,
+        delivery_location: booking.delivery_location,
+        cargo_description: booking.cargo_description,
+        cargo_weight: booking.cargo_weight,
+        container_size: booking.container_size,
+        vehicle_requirement: booking.vehicle_requirement,
+        startDate: booking.pickup_date || booking.created_at,
+        endDate: booking.delivery_date,
+        pickup_date: booking.pickup_date,
+        delivery_date: booking.delivery_date,
+        amount: booking.amount || 0,
+        currency: booking.currency || 'TZS',
+        status: booking.status || 'pending',
+        operations_review_status: booking.operations_review_status,
+        notes: booking.notes,
+        contractGenerated: false,
+        contractStamped: false,
+        created_at: booking.created_at,
+        updated_at: booking.updated_at
       }));
 
       setBookings(transformedData);
-    } catch (error) {
-      console.error('Error loading bookings:', error);
+    } catch (err) {
+      console.error('Error loading bookings:', err);
       toast({ title: 'Error', description: 'Failed to load bookings', variant: 'destructive' });
     } finally {
       setIsLoading(false);
@@ -186,7 +207,7 @@ function BookingsContent() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(b => 
         b.clientName.toLowerCase().includes(query) ||
-        b.bookingNumber.toLowerCase().includes(query) ||
+        b.booking_number.toLowerCase().includes(query) ||
         b.origin?.toLowerCase().includes(query) ||
         b.destination?.toLowerCase().includes(query)
       );
@@ -202,28 +223,34 @@ function BookingsContent() {
   const handleAddBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const bookingNumber = `BK-${Date.now().toString().slice(-8)}`;
       
       const bookingData = {
-        client: formData.clientName,
-        client_email: formData.clientEmail,
-        client_phone: formData.clientPhone,
+        booking_number: bookingNumber,
+        clientName: formData.clientName,
+        clientEmail: formData.clientEmail,
+        clientPhone: formData.clientPhone,
+        serviceType: formData.serviceType,
+        vehicleType: formData.vehicleType,
         origin: formData.origin,
         destination: formData.destination,
-        vehicle_id: formData.vehicleType,
-        start_date: formData.startDate,
-        end_date: formData.endDate || null,
-        salesAmount: formData.amount,
-        fare: formData.amount,
-        status: formData.status === 'pending' ? 'pending' : 'scheduled',
+        startDate: formData.startDate,
+        endDate: formData.endDate || null,
+        amount: formData.amount,
+        currency: formData.currency,
+        status: formData.status,
         notes: formData.notes,
-        created_by: userData.data?.user?.id,
+        operations_review_status: 'pending',
+        pickup_location: formData.origin,
+        delivery_location: formData.destination,
+        pickup_date: formData.startDate,
+        delivery_date: formData.endDate,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
       const { data, error } = await supabase
-        .from('trips')
+        .from('bookings')
         .insert([bookingData])
         .select()
         .single();
@@ -257,7 +284,7 @@ function BookingsContent() {
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
       const { error } = await supabase
-        .from('trips')
+        .from('bookings')
         .update({ 
           status: newStatus,
           updated_at: new Date().toISOString()
@@ -279,7 +306,7 @@ function BookingsContent() {
     
     try {
       const { error } = await supabase
-        .from('trips')
+        .from('bookings')
         .delete()
         .eq('id', id);
 
@@ -304,7 +331,7 @@ function BookingsContent() {
       printWindow.document.write(`
         <html>
           <head>
-            <title>Contract - ${selectedBooking?.bookingNumber}</title>
+            <title>Contract - ${selectedBooking?.booking_number}</title>
             <style>
               body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
               .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
@@ -336,7 +363,7 @@ function BookingsContent() {
     const content = `
 TRANSPORT SERVICE CONTRACT
 
-Contract Number: ${selectedBooking.bookingNumber}
+Contract Number: ${selectedBooking.booking_number}
 Date: ${format(new Date(), 'MMMM dd, yyyy')}
 
 PARTIES:
@@ -377,7 +404,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Contract_${selectedBooking.bookingNumber}.txt`;
+    a.download = `Contract_${selectedBooking.booking_number}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -621,7 +648,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                   ) : (
                     filteredBookings.map((booking) => (
                       <TableRow key={booking.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium text-foreground">{booking.bookingNumber}</TableCell>
+                        <TableCell className="font-medium text-foreground">{booking.booking_number}</TableCell>
                         <TableCell>
                           <div>
                             <div className="font-medium text-foreground">{booking.clientName}</div>
@@ -711,7 +738,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
       <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Service Contract - {selectedBooking?.bookingNumber}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Service Contract - {selectedBooking?.booking_number}</DialogTitle>
           </DialogHeader>
           
           <div ref={contractRef} className="space-y-6 p-6 border border-border rounded-xl bg-card">
@@ -720,7 +747,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
               <h1 className="text-2xl font-bold text-foreground">CALVARY CONNECT LIMITED</h1>
               <p className="text-muted-foreground">Transport & Logistics Services</p>
               <h2 className="text-xl font-bold mt-4 text-foreground">TRANSPORT SERVICE CONTRACT</h2>
-              <p className="text-sm text-muted-foreground">Contract #: {selectedBooking?.bookingNumber}</p>
+              <p className="text-sm text-muted-foreground">Contract #: {selectedBooking?.booking_number}</p>
               <p className="text-sm text-muted-foreground">Date: {format(new Date(), 'MMMM dd, yyyy')}</p>
             </div>
 
