@@ -316,12 +316,11 @@ export default function ExpensesPage() {
                             </Select>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <Label htmlFor="vendor">Vendor (Optional)</Label>
                             <Input id="vendor" name="vendor" placeholder="Vendor name" />
                         </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
                             <Select name="vehicle_id" defaultValue="none">

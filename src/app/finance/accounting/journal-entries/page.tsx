@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,10 +17,11 @@ import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { 
-  Plus, Edit, Trash2, FileText, Calendar, ArrowLeft, Search
+  Plus, Edit, Trash2, FileText, Calendar, ArrowLeft, Search, Loader2, CheckCircle2, XCircle
 } from "lucide-react";
 import { formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 import { ChartOfAccountsService, COAAccount } from "@/services/chart-of-accounts-service";
+import { cn } from "@/lib/utils";
 
 interface JournalEntryLine {
   id?: string;
@@ -41,9 +43,13 @@ interface JournalEntry {
 export default function JournalEntriesPage() {
   const { role } = useRole();
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<JournalEntry | null>(null);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -145,6 +151,7 @@ export default function JournalEntriesPage() {
 
   const saveEntry = async () => {
     if (!validateEntry()) return;
+    setSaving(true);
 
     try {
       const entryData = {
@@ -180,7 +187,7 @@ export default function JournalEntriesPage() {
 
         if (insertError) throw insertError;
 
-        toast({ title: "Success", description: "Journal entry updated" });
+        toast({ title: "Success", description: "Journal entry updated successfully" });
       } else {
         // Create new entry
         const { data: newEntry, error: entryError } = await supabase
@@ -201,30 +208,49 @@ export default function JournalEntriesPage() {
 
         if (insertError) throw insertError;
 
-        toast({ title: "Success", description: "Journal entry created" });
+        toast({ title: "Success", description: "Journal entry created successfully" });
       }
 
       // Reset form and reload
       resetForm();
       setIsAddDialogOpen(false);
       await loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving entry:", err);
-      toast({ title: "Error", description: "Failed to save journal entry", variant: "destructive" });
+      toast({ 
+        title: "Error Saving Entry", 
+        description: err.message || "Failed to save journal entry", 
+        variant: "destructive" 
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
   const deleteEntry = async (entryId: string) => {
-    if (!confirm("Are you sure you want to delete this journal entry?")) return;
-
+    setDeleting(entryId);
     try {
-      await supabase.from("journal_entries").delete().eq("id", entryId);
-      toast({ title: "Success", description: "Journal entry deleted" });
+      const { error } = await supabase.from("journal_entries").delete().eq("id", entryId);
+      if (error) throw error;
+      toast({ title: "Success", description: "Journal entry deleted successfully" });
       await loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error deleting entry:", err);
-      toast({ title: "Error", description: "Failed to delete journal entry", variant: "destructive" });
+      toast({ 
+        title: "Error Deleting Entry", 
+        description: err.message || "Failed to delete journal entry", 
+        variant: "destructive" 
+      });
+    } finally {
+      setDeleting(null);
+      setIsDeleteDialogOpen(false);
+      setEntryToDelete(null);
     }
+  };
+
+  const confirmDelete = (entry: JournalEntry) => {
+    setEntryToDelete(entry);
+    setIsDeleteDialogOpen(true);
   };
 
   const resetForm = () => {
@@ -426,11 +452,18 @@ export default function JournalEntriesPage() {
                       <Button variant="outline" onClick={() => {
                         resetForm();
                         setIsAddDialogOpen(false);
-                      }}>
+                      }} disabled={saving}>
                         Cancel
                       </Button>
-                      <Button onClick={saveEntry} disabled={!isBalanced}>
-                        {editingEntry ? "Update Entry" : "Create Entry"}
+                      <Button onClick={saveEntry} disabled={!isBalanced || saving}>
+                        {saving ? (
+                          <>
+                            <Loader2 className="size-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          editingEntry ? "Update Entry" : "Create Entry"
+                        )}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -495,8 +528,12 @@ export default function JournalEntriesPage() {
                                 <Edit className="size-4 mr-1" />
                                 Edit
                               </Button>
-                              <Button variant="destructive" size="sm" onClick={() => deleteEntry(entry.id)}>
-                                <Trash2 className="size-4 mr-1" />
+                              <Button variant="destructive" size="sm" onClick={() => confirmDelete(entry)} disabled={deleting === entry.id}>
+                                {deleting === entry.id ? (
+                                  <Loader2 className="size-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Trash2 className="size-4 mr-1" />
+                                )}
                                 Delete
                               </Button>
                             </div>
@@ -508,13 +545,43 @@ export default function JournalEntriesPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Journal Entry?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this journal entry? This action cannot be undone.
+                    <br />
+                    <span className="font-semibold mt-2 block">Reference: {entryToDelete?.reference_number}</span>
+                    <span className="text-sm text-muted-foreground">{entryToDelete?.description}</span>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => {
+                    setIsDeleteDialogOpen(false);
+                    setEntryToDelete(null);
+                  }} disabled={!!deleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={() => entryToDelete && deleteEntry(entryToDelete.id)} 
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    disabled={!!deleting}
+                  >
+                    {deleting ? (
+                      <>
+                        <Loader2 className="size-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
           </div>
         </main>
       </div>
     </div>
   );
-}
-
-function cn(...classes: (string | undefined | null | false)[]) {
-  return classes.filter(Boolean).join(' ');
 }
