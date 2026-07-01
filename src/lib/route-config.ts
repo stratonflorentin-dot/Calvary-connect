@@ -163,27 +163,166 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "fleet",
   },
 
-  // --- Accounting ---
+  // --- ERP Accounting & Finance ---
   {
     path: "/finance",
-    label: "Accounting Ledger",
+    label: "Finance Overview",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
     category: "finance",
   },
+  // Accounting
   {
-    path: "/finance/bank-statement",
+    path: "/finance/accounting/chart-of-accounts",
+    label: "Chart of Accounts",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false, // Will be shown in finance submenu
+  },
+  {
+    path: "/finance/accounting/journal-entries",
+    label: "Journal Entries",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/accounting/general-ledger",
+    label: "General Ledger",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/accounting/trial-balance",
+    label: "Trial Balance",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  // Receivables
+  {
+    path: "/finance/receivables/customer-invoices",
+    label: "Customer Invoices",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/receivables/customer-payments",
+    label: "Customer Payments",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/receivables/aging-report",
+    label: "Aging Report",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  // Payables
+  {
+    path: "/finance/payables/vendor-bills",
+    label: "Vendor Bills",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/payables/vendor-payments",
+    label: "Vendor Payments",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/payables/supplier-aging",
+    label: "Supplier Aging",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  // Treasury & Banking
+  {
+    path: "/finance/banking/bank-accounts",
+    label: "Bank Accounts",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/banking/cash-accounts",
+    label: "Cash Accounts",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/banking/bank-statements",
+    label: "Bank Statements",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/banking/bank-reconciliation",
     label: "Bank Reconciliation",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
     category: "finance",
     showInNavigation: false,
   },
   {
-    path: "/finance/chart-of-accounts",
-    label: "Chart of Accounts",
+    path: "/finance/banking/internal-transfers",
+    label: "Internal Transfers",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
     category: "finance",
     showInNavigation: false,
   },
+  // Financial Reports
+  {
+    path: "/finance/reports/profit-loss",
+    label: "Profit & Loss",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/reports/balance-sheet",
+    label: "Balance Sheet",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/reports/cash-flow",
+    label: "Cash Flow",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/reports/revenue-analysis",
+    label: "Revenue Analysis",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/reports/expense-analysis",
+    label: "Expense Analysis",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/reports/fleet-profitability",
+    label: "Fleet Profitability",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  // Expenses & Income (existing)
   {
     path: "/expenses",
     label: "Expense Tracking",

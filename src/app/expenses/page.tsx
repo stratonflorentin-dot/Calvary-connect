@@ -2,7 +2,8 @@
 
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useCurrency, AVAILABLE_CURRENCIES } from '@/hooks/use-currency';
+import { useCurrency } from '@/hooks/use-currency';
+import { AVAILABLE_CURRENCIES } from '@/components/ui/currency-badge';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
