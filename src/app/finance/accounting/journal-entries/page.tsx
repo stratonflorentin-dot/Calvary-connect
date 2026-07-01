@@ -735,14 +735,14 @@ export default function JournalEntriesPage() {
                   <div className="space-y-1">
                     <Label htmlFor="account-filter" className="text-xs">Chart of Accounts</Label>
                     <Select
-                      value={filterAccountCode}
-                      onValueChange={setFilterAccountCode}
+                      value={filterAccountCode || "all"}
+                      onValueChange={(val) => setFilterAccountCode(val === "all" ? "" : val)}
                     >
                       <SelectTrigger id="account-filter">
                         <SelectValue placeholder="All Accounts" />
                       </SelectTrigger>
                       <SelectContent className="max-h-80">
-                        <SelectItem value="">All Accounts</SelectItem>
+                        <SelectItem value="all">All Accounts</SelectItem>
                         {coaAccounts.map(acc => (
                           <SelectItem key={acc.code} value={acc.code}>
                             {acc.code} - {acc.name}
