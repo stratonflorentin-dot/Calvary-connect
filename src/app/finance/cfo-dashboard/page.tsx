@@ -18,7 +18,7 @@ import {
   Building2, AlertTriangle, CheckCircle2, ArrowRight, Search, 
   Calendar, Bell, Settings, Printer, ArrowUpRight, ArrowDownLeft, Activity,
   PieChart, BarChart3, LineChart, Target, Shield, Zap,
-  Truck, Send, Banknote, FileSpreadsheet, HandCoins, FileEdit, Scale
+  Truck, Send, Banknote, FileSpreadsheet, HandCoins, FileEdit, Scale, Clock
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
