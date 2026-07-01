@@ -161,7 +161,7 @@ const DEFAULT_ACCOUNTS = [
   { code: '7105', name: 'Regulatory Compliance Fees', category: 'OTHER_EXPENSES', type: 'debit', currency: 'TZS', sub_category: 'Taxes & Compliance' },
 ];
 
-export function ChartOfAccountsPage() {
+export default function ChartOfAccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [filteredAccounts, setFilteredAccounts] = useState<Account[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
