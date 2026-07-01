@@ -288,13 +288,6 @@ function SalesModuleContent() {
   }
 
   async function fetchRateSheets() {
-    // First check if the created_by column exists, if not add it
-    try {
-      await supabase.rpc('add_created_by_column_if_not_exists');
-    } catch (e) {
-      console.log('Error checking/adding created_by column:', e);
-    }
-
     const { data, error } = await supabase
       .from('rate_sheets')
       .select('*')
@@ -315,27 +308,35 @@ function SalesModuleContent() {
   }
 
   async function fetchOpportunities() {
-    const { data, error } = await supabase
-      .from('sales_opportunities')
-      .select('*, customers(company_name)')
-      .order('created_at', { ascending: false });
-    if (!error) {
-      const processedData = data?.map(o => ({
-        ...o,
-        company_name: o.customers?.company_name || '',
-        service_type: o.service_type || 'unknown',
-        stage: o.stage || 'lead',
-      })) || [];
-      setOpportunities(processedData);
+    try {
+      const { data, error } = await supabase
+        .from('sales_opportunities')
+        .select('*, customers(company_name)')
+        .order('created_at', { ascending: false });
+      if (!error) {
+        const processedData = data?.map(o => ({
+          ...o,
+          company_name: o.customers?.company_name || '',
+          service_type: o.service_type || 'unknown',
+          stage: o.stage || 'lead',
+        })) || [];
+        setOpportunities(processedData);
+      }
+    } catch (e) {
+      console.log('Error fetching sales opportunities:', e);
     }
   }
 
   async function fetchLeads() {
-    const { data, error } = await supabase
-      .from('leads')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (!error) setLeads(data || []);
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error) setLeads(data || []);
+    } catch (e) {
+      console.log('Error fetching leads:', e);
+    }
   }
 
   // Save functions
