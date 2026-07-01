@@ -322,6 +322,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "finance",
     showInNavigation: false,
   },
+  {
+    path: "/finance/reports/reconciliation",
+    label: "COA Reconciliation",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
   // Expenses & Income (existing)
   {
     path: "/expenses",

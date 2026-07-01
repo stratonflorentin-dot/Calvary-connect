@@ -94,6 +94,7 @@ export const FINANCE_MENU_GROUPS: MenuGroup[] = [
       { path: "/finance/reports/revenue-analysis", label: "Revenue Analysis", icon: TrendingUp },
       { path: "/finance/reports/expense-analysis", label: "Expense Analysis", icon: TrendingDown },
       { path: "/finance/reports/fleet-profitability", label: "Fleet Profitability", icon: BarChart3 },
+      { path: "/finance/reports/reconciliation", label: "COA Reconciliation", icon: FileText },
     ],
   },
 ];

@@ -17,8 +17,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ChartOfAccountsService, COAAccount, EXPENSE_CATEGORY_COA_MAP } from '@/services/chart-of-accounts-service';
 
 interface Expense {
     id: string;
@@ -31,6 +32,7 @@ interface Expense {
     approvedBy?: string;
     clientReference?: string;
     employee_id?: string;
+    coa_account_code?: string;
 }
 
 export default function ExpensesPage() {
@@ -41,6 +43,7 @@ export default function ExpensesPage() {
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const [expenses, setExpenses] = useState<any[]>([]);
     const [vehicles, setVehicles] = useState<any[]>([]);
+    const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -59,14 +62,16 @@ export default function ExpensesPage() {
             
             try {
                 setLoading(true);
-                // Load expenses and vehicles in parallel
-                const [expensesRes, vehiclesRes] = await Promise.all([
+                // Load expenses, vehicles, and COA in parallel
+                const [expensesRes, vehiclesRes, accounts] = await Promise.all([
                     supabase.from('expenses').select('*, vehicle_id, vehicleId').order('created_at', { ascending: false }),
-                    supabase.from('vehicles').select('*')
+                    supabase.from('vehicles').select('*'),
+                    ChartOfAccountsService.getAccounts()
                 ]);
                 
                 setExpenses(expensesRes.data || []);
                 setVehicles(vehiclesRes.data || []);
+                setCoaAccounts(accounts);
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -86,16 +91,28 @@ export default function ExpensesPage() {
             const formData = new FormData(e.currentTarget);
             const vehicleId = formData.get('vehicle_id') as string;
             const expenseCurrency = formData.get('currency') as string || 'TZS';
+            const category = formData.get('category') as string;
+            const customCoaCode = formData.get('coa_account_code') as string;
+            
+            // Get or map COA account code
+            const coaAccountCode = customCoaCode || ChartOfAccountsService.mapExpenseToCOA(category);
+            
+            // Validate
+            if (!ChartOfAccountsService.validateAccountCode(coaAccountCode, coaAccounts)) {
+                toast({ title: 'Error', description: 'Invalid Chart of Accounts code', variant: 'destructive' });
+                return;
+            }
             
             const expenseData = {
                 description: formData.get('description') as string,
                 amount: parseFloat(formData.get('amount') as string),
-                category: formData.get('category') as string,
+                category: category,
                 date: formData.get('date') as string,
                 clientReference: formData.get('clientReference') as string,
                 vendor: formData.get('vendor') as string,
                 payment_method: formData.get('payment_method') as string,
                 currency: expenseCurrency,
+                coa_account_code: coaAccountCode,
                 driver_id: user.id,
                 vehicle_id: vehicleId === 'none' ? null : vehicleId,
                 status: 'pending',
@@ -114,7 +131,7 @@ export default function ExpensesPage() {
                 toast({ title: 'Error', description: `Failed to add expense: ${error.message}`, variant: 'destructive' });
             } else {
                 console.log('Expense added successfully:', data);
-                toast({ title: 'Success', description: 'Expense added successfully' });
+                toast({ title: 'Success', description: 'Expense added successfully with COA mapping' });
                 // Refresh expenses list
                 const { data: updatedExpenses } = await supabase
                     .from('expenses')
@@ -138,17 +155,30 @@ export default function ExpensesPage() {
         try {
             const formData = new FormData(e.currentTarget);
             const vehicleId = formData.get('vehicle_id') as string;
+            const category = formData.get('category') as string;
+            const customCoaCode = formData.get('coa_account_code') as string;
+            
+            // Get or map COA account code
+            const coaAccountCode = customCoaCode || ChartOfAccountsService.mapExpenseToCOA(category);
+            
+            // Validate
+            if (!ChartOfAccountsService.validateAccountCode(coaAccountCode, coaAccounts)) {
+                toast({ title: 'Error', description: 'Invalid Chart of Accounts code', variant: 'destructive' });
+                return;
+            }
+            
             const { data, error } = await supabase
                 .from('expenses')
                 .update({
                     description: formData.get('description') as string,
                     amount: parseFloat(formData.get('amount') as string),
-                    category: formData.get('category') as string,
+                    category: category,
                     date: formData.get('date') as string,
                     clientReference: formData.get('clientReference') as string,
                     vendor: formData.get('vendor') as string,
                     payment_method: formData.get('payment_method') as string,
                     currency: formData.get('currency') as string,
+                    coa_account_code: coaAccountCode,
                     vehicle_id: vehicleId === 'none' ? null : vehicleId,
                     updated_at: new Date().toISOString(),
                 })
@@ -162,7 +192,7 @@ export default function ExpensesPage() {
             } else {
                 setExpenses(prev => prev.map(e => e.id === editingExpense.id ? data : e));
                 setEditingExpense(null);
-                toast({ title: 'Success', description: 'Expense updated successfully' });
+                toast({ title: 'Success', description: 'Expense updated successfully with COA mapping' });
             }
         } catch (error) {
             console.error('Error updating expense:', error);
@@ -271,10 +301,26 @@ export default function ExpensesPage() {
                             </Select>
                         </div>
                         <div>
+                            <Label htmlFor="coa_account_code">Chart of Accounts (Optional)</Label>
+                            <Select name="coa_account_code" defaultValue="">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Auto-mapped" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {coaAccounts.map((account) => (
+                                        <SelectItem key={account.code} value={account.code}>
+                                            {account.code} - {account.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
                             <Label htmlFor="vendor">Vendor (Optional)</Label>
                             <Input id="vendor" name="vendor" placeholder="Vendor name" />
                         </div>
-                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
@@ -366,6 +412,7 @@ export default function ExpensesPage() {
                                         <TableHead>Reference</TableHead>
                                         <TableHead>Vehicle</TableHead>
                                         <TableHead>Category</TableHead>
+                                        <TableHead>COA</TableHead>
                                         <TableHead>Amount</TableHead>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Status</TableHead>
@@ -402,6 +449,11 @@ export default function ExpensesPage() {
                                             <TableCell>
                                                 <Badge variant="outline" className="capitalize">
                                                     {expense.category}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="font-mono">
+                                                    {expense.coa_account_code || EXPENSE_CATEGORY_COA_MAP[expense.category] || 'Unmapped'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
