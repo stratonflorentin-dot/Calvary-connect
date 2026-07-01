@@ -25,6 +25,7 @@ import {
   Thermometer, Weight, Ruler, CalendarDays, X, Eye, Save, Pencil, Trash2
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
+import Link from 'next/link';
 import { ContractGenerator } from './contract-generator';
 import { TransportAgreementGenerator } from './transport-agreement-generator';
 
