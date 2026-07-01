@@ -2,7 +2,7 @@
 
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
-import { useCurrency } from '@/hooks/use-currency';
+import { useCurrency, AVAILABLE_CURRENCIES } from '@/hooks/use-currency';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,6 +84,7 @@ export default function ExpensesPage() {
         try {
             const formData = new FormData(e.currentTarget);
             const vehicleId = formData.get('vehicle_id') as string;
+            const expenseCurrency = formData.get('currency') as string || 'TZS';
             
             const expenseData = {
                 description: formData.get('description') as string,
@@ -91,9 +92,11 @@ export default function ExpensesPage() {
                 category: formData.get('category') as string,
                 date: formData.get('date') as string,
                 clientReference: formData.get('clientReference') as string,
+                vendor: formData.get('vendor') as string,
+                payment_method: formData.get('payment_method') as string,
+                currency: expenseCurrency,
                 driver_id: user.id,
                 vehicle_id: vehicleId === 'none' ? null : vehicleId,
-                vehicleId: vehicleId === 'none' ? null : vehicleId, // Set both for consistency
                 status: 'pending',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -107,12 +110,14 @@ export default function ExpensesPage() {
 
             if (error) {
                 console.error('Error adding expense:', error);
+                toast({ title: 'Error', description: `Failed to add expense: ${error.message}`, variant: 'destructive' });
             } else {
                 console.log('Expense added successfully:', data);
+                toast({ title: 'Success', description: 'Expense added successfully' });
                 // Refresh expenses list
                 const { data: updatedExpenses } = await supabase
                     .from('expenses')
-                    .select('*')
+                    .select('*, vehicle_id')
                     .order('created_at', { ascending: false });
                 
                 setExpenses(updatedExpenses || []);
@@ -121,6 +126,7 @@ export default function ExpensesPage() {
             }
         } catch (error) {
             console.error('Error adding expense:', error);
+            toast({ title: 'Error', description: 'Failed to add expense', variant: 'destructive' });
         }
     };
 
@@ -130,6 +136,7 @@ export default function ExpensesPage() {
         
         try {
             const formData = new FormData(e.currentTarget);
+            const vehicleId = formData.get('vehicle_id') as string;
             const { data, error } = await supabase
                 .from('expenses')
                 .update({
@@ -138,6 +145,10 @@ export default function ExpensesPage() {
                     category: formData.get('category') as string,
                     date: formData.get('date') as string,
                     clientReference: formData.get('clientReference') as string,
+                    vendor: formData.get('vendor') as string,
+                    payment_method: formData.get('payment_method') as string,
+                    currency: formData.get('currency') as string,
+                    vehicle_id: vehicleId === 'none' ? null : vehicleId,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', editingExpense.id)
@@ -146,12 +157,15 @@ export default function ExpensesPage() {
 
             if (error) {
                 console.error('Error updating expense:', error);
+                toast({ title: 'Error', description: 'Failed to update expense', variant: 'destructive' });
             } else {
                 setExpenses(prev => prev.map(e => e.id === editingExpense.id ? data : e));
                 setEditingExpense(null);
+                toast({ title: 'Success', description: 'Expense updated successfully' });
             }
         } catch (error) {
             console.error('Error updating expense:', error);
+            toast({ title: 'Error', description: 'Failed to update expense', variant: 'destructive' });
         }
     };
 
@@ -167,13 +181,16 @@ export default function ExpensesPage() {
 
             if (error) {
                 console.error('Error changing expense status:', error);
+                toast({ title: 'Error', description: `Failed to ${newStatus} expense`, variant: 'destructive' });
             } else {
                 setExpenses(prev => 
                     prev.map(e => e.id === expenseId ? { ...e, status: newStatus } : e)
                 );
+                toast({ title: 'Success', description: `Expense ${newStatus} successfully` });
             }
         } catch (error) {
             console.error('Error changing expense status:', error);
+            toast({ title: 'Error', description: 'Failed to update expense status', variant: 'destructive' });
         }
     };
 
@@ -205,57 +222,98 @@ export default function ExpensesPage() {
                                     <DialogTitle>Add New Expense</DialogTitle>
                                 </DialogHeader>
                                 <form onSubmit={handleAddExpense} className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="description">Description</Label>
-                                        <Textarea id="description" name="description" required />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="clientReference">Client / Trip Reference (Optional)</Label>
-                                        <Input id="clientReference" name="clientReference" placeholder="e.g. TRP-123 or ABC Corp" />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="amount">Amount ({currency})</Label>
-                                        <Input id="amount" name="amount" type="number" step="0.01" required />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="category">Category</Label>
-                                        <Select name="category" required>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="fuel">Fuel</SelectItem>
-                                                <SelectItem value="maintenance">Maintenance</SelectItem>
-                                                <SelectItem value="parts">Parts</SelectItem>
-                                                <SelectItem value="insurance">Insurance</SelectItem>
-                                                <SelectItem value="salaries">Salaries</SelectItem>
-                                                <SelectItem value="utilities">Utilities</SelectItem>
-                                                <SelectItem value="other">Other</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
-                                        <Select name="vehicle_id">
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select vehicle" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="none">No vehicle</SelectItem>
-                                                {vehicles.map((v) => (
-                                                    <SelectItem key={v.id} value={v.id}>
-                                                        {v.plate_number || v.plateNumber}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="date">Date</Label>
-                                        <Input id="date" name="date" type="date" required />
-                                    </div>
-                                    <Button type="submit" className="w-full">Add Expense</Button>
-                                </form>
+                    <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea id="description" name="description" required placeholder="Describe the expense" />
+                    </div>
+                    <div>
+                        <Label htmlFor="clientReference">Client / Trip Reference (Optional)</Label>
+                        <Input id="clientReference" name="clientReference" placeholder="e.g. TRP-123 or ABC Corp" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="amount">Amount</Label>
+                            <Input id="amount" name="amount" type="number" step="0.01" required />
+                        </div>
+                        <div>
+                            <Label htmlFor="currency">Currency</Label>
+                            <Select name="currency" defaultValue={currency}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select currency" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {AVAILABLE_CURRENCIES.map((cur) => (
+                                        <SelectItem key={cur.code} value={cur.code}>
+                                            {cur.code} - {cur.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="category">Category</Label>
+                            <Select name="category" defaultValue="other" required>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="fuel">Fuel</SelectItem>
+                                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                                    <SelectItem value="parts">Parts</SelectItem>
+                                    <SelectItem value="insurance">Insurance</SelectItem>
+                                    <SelectItem value="salaries">Salaries</SelectItem>
+                                    <SelectItem value="utilities">Utilities</SelectItem>
+                                    <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="vendor">Vendor (Optional)</Label>
+                            <Input id="vendor" name="vendor" placeholder="Vendor name" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
+                            <Select name="vehicle_id" defaultValue="none">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select vehicle" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No vehicle</SelectItem>
+                                    {vehicles.map((v) => (
+                                        <SelectItem key={v.id} value={v.id}>
+                                            {v.plate_number || v.plateNumber}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="payment_method">Payment Method (Optional)</Label>
+                            <Select name="payment_method" defaultValue="cash">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select payment method" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="cash">Cash</SelectItem>
+                                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                                    <SelectItem value="credit_card">Credit Card</SelectItem>
+                                    <SelectItem value="cheque">Cheque</SelectItem>
+                                    <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div>
+                        <Label htmlFor="date">Date</Label>
+                        <Input id="date" name="date" type="date" required />
+                    </div>
+                    <Button type="submit" className="w-full">Add Expense</Button>
+                </form>
                             </DialogContent>
                         </Dialog>
                     </div>
@@ -345,7 +403,14 @@ export default function ExpensesPage() {
                                                     {expense.category}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell>{format(expense.amount)}</TableCell>
+                                            <TableCell>
+                                                {new Intl.NumberFormat('en-US', {
+                                                    style: 'currency',
+                                                    currency: expense.currency || 'TZS',
+                                                    maximumFractionDigits: 2,
+                                                    minimumFractionDigits: 2
+                                                }).format(expense.amount)}
+                                            </TableCell>
                                             <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
                                             <TableCell>
                                                 <Badge
@@ -382,6 +447,7 @@ export default function ExpensesPage() {
                                                                         name="description"
                                                                         defaultValue={editingExpense?.description}
                                                                         required
+                                                                        placeholder="Describe the expense"
                                                                     />
                                                                 </div>
                                                                 <div>
@@ -393,33 +459,95 @@ export default function ExpensesPage() {
                                                                         placeholder="e.g. TRP-123 or ABC Corp"
                                                                     />
                                                                 </div>
-                                                                <div>
-                                                                    <Label htmlFor="edit-amount">Amount ({currency})</Label>
-                                                                    <Input
-                                                                        id="edit-amount"
-                                                                        name="amount"
-                                                                        type="number"
-                                                                        step="0.01"
-                                                                        defaultValue={editingExpense?.amount}
-                                                                        required
-                                                                    />
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <Label htmlFor="edit-amount">Amount</Label>
+                                                                        <Input
+                                                                            id="edit-amount"
+                                                                            name="amount"
+                                                                            type="number"
+                                                                            step="0.01"
+                                                                            defaultValue={editingExpense?.amount}
+                                                                            required
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <Label htmlFor="edit-currency">Currency</Label>
+                                                                        <Select name="currency" defaultValue={editingExpense?.currency || currency}>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Select currency" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                {AVAILABLE_CURRENCIES.map((cur) => (
+                                                                                    <SelectItem key={cur.code} value={cur.code}>
+                                                                                        {cur.code} - {cur.name}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <Label htmlFor="edit-category">Category</Label>
-                                                                    <Select name="category" defaultValue={editingExpense?.category} required>
-                                                                        <SelectTrigger>
-                                                                            <SelectValue />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            <SelectItem value="fuel">Fuel</SelectItem>
-                                                                            <SelectItem value="maintenance">Maintenance</SelectItem>
-                                                                            <SelectItem value="parts">Parts</SelectItem>
-                                                                            <SelectItem value="insurance">Insurance</SelectItem>
-                                                                            <SelectItem value="salaries">Salaries</SelectItem>
-                                                                            <SelectItem value="utilities">Utilities</SelectItem>
-                                                                            <SelectItem value="other">Other</SelectItem>
-                                                                        </SelectContent>
-                                                                    </Select>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <Label htmlFor="edit-category">Category</Label>
+                                                                        <Select name="category" defaultValue={editingExpense?.category} required>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="fuel">Fuel</SelectItem>
+                                                                                <SelectItem value="maintenance">Maintenance</SelectItem>
+                                                                                <SelectItem value="parts">Parts</SelectItem>
+                                                                                <SelectItem value="insurance">Insurance</SelectItem>
+                                                                                <SelectItem value="salaries">Salaries</SelectItem>
+                                                                                <SelectItem value="utilities">Utilities</SelectItem>
+                                                                                <SelectItem value="other">Other</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                    <div>
+                                                                        <Label htmlFor="edit-vendor">Vendor (Optional)</Label>
+                                                                        <Input
+                                                                            id="edit-vendor"
+                                                                            name="vendor"
+                                                                            defaultValue={editingExpense?.vendor}
+                                                                            placeholder="Vendor name"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <Label htmlFor="edit-vehicle_id">Vehicle (Optional)</Label>
+                                                                        <Select name="vehicle_id" defaultValue={editingExpense?.vehicle_id || 'none'}>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Select vehicle" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="none">No vehicle</SelectItem>
+                                                                                {vehicles.map((v) => (
+                                                                                    <SelectItem key={v.id} value={v.id}>
+                                                                                        {v.plate_number || v.plateNumber}
+                                                                                    </SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                    <div>
+                                                                        <Label htmlFor="edit-payment_method">Payment Method (Optional)</Label>
+                                                                        <Select name="payment_method" defaultValue={editingExpense?.payment_method || 'cash'}>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Select payment method" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="cash">Cash</SelectItem>
+                                                                                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                                                                <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                                                                                <SelectItem value="credit_card">Credit Card</SelectItem>
+                                                                                <SelectItem value="cheque">Cheque</SelectItem>
+                                                                                <SelectItem value="other">Other</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
                                                                 </div>
                                                                 <div>
                                                                     <Label htmlFor="edit-date">Date</Label>

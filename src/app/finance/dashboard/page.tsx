@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/hooks/use-role";
 import { Sidebar } from "@/components/navigation/sidebar";
+import { useSidebar } from "@/hooks/use-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ type FinanceRow = Record<string, unknown>;
 export default function FinanceDashboardPage() {
   const { toast } = useToast();
   const { role, hasDepartmentAccess } = useRole();
+  const { isCollapsed } = useSidebar();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<FinanceRow[]>([]);
   const [expenses, setExpenses] = useState<FinanceRow[]>([]);
@@ -198,7 +200,10 @@ export default function FinanceDashboardPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role || "CEO"} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
+      <main className={cn(
+        "flex-1 min-h-screen p-4 md:p-8",
+        isCollapsed ? "md:ml-20" : "md:ml-64"
+      )}>
         <div className="max-w-7xl mx-auto">
           <header className="mb-6">
             <div className="flex items-center justify-between">
