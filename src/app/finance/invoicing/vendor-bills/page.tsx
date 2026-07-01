@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Sidebar } from "@/components/navigation/sidebar";
+import { FinanceSidebar } from "@/components/finance/finance-sidebar";
+import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, DollarSign, Filter, Plus, RefreshCw, Search, Trash2, FileText } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
@@ -27,6 +30,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default function VendorBillsPage() {
+  const { role } = useRole();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [bills, setBills] = useState<any[]>([]);
@@ -156,17 +160,22 @@ export default function VendorBillsPage() {
   }).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Vendor Bills</h1>
-          <p className="text-muted-foreground">Manage accounts payable and vendor invoices</p>
-        </div>
-        <Button className="gap-2" onClick={() => setModal("new")}>
-          <Plus className="size-4" />
-          Add Vendor Bill
-        </Button>
-      </div>
+    <div className="flex min-h-screen bg-background">
+      <Sidebar role={role} />
+      <div className="flex flex-1">
+        <FinanceSidebar />
+        <main className="flex-1 p-6 overflow-y-auto">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Vendor Bills</h1>
+                <p className="text-muted-foreground">Manage accounts payable and vendor invoices</p>
+              </div>
+              <Button className="gap-2" onClick={() => setModal("new")}>
+                <Plus className="size-4" />
+                Add Vendor Bill
+              </Button>
+            </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -379,6 +388,9 @@ export default function VendorBillsPage() {
           </Card>
         </div>
       )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
