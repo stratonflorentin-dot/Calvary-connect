@@ -45,7 +45,8 @@ export function NotificationBell() {
           table: "notifications",
         },
         (payload) => {
-          const newNotification = payload.new as Notification;
+          const newNotification = payload.new as any;
+          newNotification.is_read = newNotification.read;
           setNotifications((prev) => [newNotification, ...prev]);
           setUnreadCount((prev) => prev + 1);
         }
@@ -72,14 +73,14 @@ export function NotificationBell() {
       return;
     }
 
-    setNotifications(data || []);
-    setUnreadCount(data?.filter((n) => !n.is_read).length || 0);
+    setNotifications((data || []).map((n: any) => ({ ...n, is_read: n.read })));
+    setUnreadCount(data?.filter((n: any) => !n.read).length || 0);
   };
 
   const markAsRead = async (id: string) => {
     const { error } = await supabase
       .from("notifications")
-      .update({ is_read: true })
+      .update({ read: true, read_at: new Date().toISOString() })
       .eq("id", id);
 
     if (error) {
@@ -99,7 +100,7 @@ export function NotificationBell() {
 
     const { error } = await supabase
       .from("notifications")
-      .update({ is_read: true })
+      .update({ read: true, read_at: new Date().toISOString() })
       .in("id", unreadIds);
 
     if (error) {

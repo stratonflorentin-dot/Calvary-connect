@@ -1490,7 +1490,7 @@ export default function FinancialOperations() {
                         <SelectTrigger id="inv-type"><SelectValue placeholder="Select account" /></SelectTrigger>
                         <SelectContent>
                           {data.chartOfAccounts.length === 0 ? (
-                            <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
+                            <SelectItem value="none" disabled>No Chart of Accounts configured</SelectItem>
                           ) : (
                             data.chartOfAccounts.map((acc) => (
                               <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
@@ -1575,7 +1575,7 @@ export default function FinancialOperations() {
                       <SelectTrigger id="exp-category"><SelectValue placeholder="Select account" /></SelectTrigger>
                       <SelectContent>
                         {data.chartOfAccounts.length === 0 ? (
-                          <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
+                          <SelectItem value="none" disabled>No Chart of Accounts configured</SelectItem>
                         ) : (
                           data.chartOfAccounts.map((acc) => (
                             <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
@@ -2116,7 +2116,7 @@ export default function FinancialOperations() {
                             <SelectTrigger id="exp-category"><SelectValue placeholder="Select account" /></SelectTrigger>
                             <SelectContent>
                               {data.chartOfAccounts.length === 0 ? (
-                                <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
+                                <SelectItem value="none" disabled>No Chart of Accounts configured</SelectItem>
                               ) : (
                                 data.chartOfAccounts.map((acc) => (
                                   <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
@@ -2464,7 +2464,7 @@ export default function FinancialOperations() {
                         <SelectTrigger id="inv-type"><SelectValue placeholder="Select account" /></SelectTrigger>
                         <SelectContent>
                           {data.chartOfAccounts.length === 0 ? (
-                            <SelectItem value="" disabled>No Chart of Accounts configured</SelectItem>
+                            <SelectItem value="none" disabled>No Chart of Accounts configured</SelectItem>
                           ) : (
                             data.chartOfAccounts.map((acc) => (
                               <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>

@@ -4,10 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   Truck, Navigation, CheckCircle2, Clock, AlertTriangle, Plus,
-  Search, Filter, MoreVertical, MapPin, User, RefreshCw, Zap,
-  Package, ArrowRight, ChevronDown, Eye, Edit, X, Loader2
+  Search, MoreVertical, User, RefreshCw, Zap,
+  Package, ArrowRight, Eye, Edit, X, Loader2
 } from "lucide-react";
 import Link from "next/link";
+import { Sidebar } from "@/components/navigation/sidebar";
+import { useRole } from "@/hooks/use-role";
+import { useSidebar } from "@/hooks/use-sidebar";
+import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type TripStatus = "pending" | "loading" | "in_transit" | "delivered" | "cancelled";
@@ -238,9 +242,9 @@ export default function DispatchBoardPage() {
       .from("trips")
       .select(`
         id, trip_number, origin, destination, status,
-        cargo_type, client, created_at, estimated_arrival, revenue,
-        driver:users!trips_driver_id_fkey(full_name),
-        vehicle:fleet_vehicles!trips_vehicle_id_fkey(plate_number)
+        cargo, client, created_at, estimated_time, salesAmount,
+        driver:user_profiles(name),
+        vehicle:vehicles(plate_number)
       `)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -251,16 +255,18 @@ export default function DispatchBoardPage() {
         trip_number: r.trip_number,
         origin: r.origin,
         destination: r.destination,
-        status: r.status as TripStatus,
-        driver_name: r.driver?.full_name,
+        status: (r.status?.toLowerCase() ?? "pending") as TripStatus,
+        driver_name: r.driver?.name,
         vehicle_plate: r.vehicle?.plate_number,
-        cargo_type: r.cargo_type,
+        cargo_type: r.cargo,
         client: r.client,
         created_at: r.created_at,
-        estimated_arrival: r.estimated_arrival,
-        revenue: r.revenue,
+        estimated_arrival: r.estimated_time,
+        revenue: r.salesAmount,
       }));
       setTrips(mapped);
+    } else if (error) {
+      console.error("[Dispatch] load error:", error.message);
     }
     setLoading(false);
     setLastUpdated(new Date());
@@ -311,8 +317,13 @@ export default function DispatchBoardPage() {
     { label: "Delivered Today", value: trips.filter(t => t.status === "delivered").length, color: "text-green-600" },
   ];
 
+  const { role } = useRole();
+  const { isCollapsed } = useSidebar();
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex">
+      <Sidebar role={(role as any) ?? "ADMIN"} />
+      <div className={cn("flex-1 flex flex-col min-h-screen transition-all duration-300", isCollapsed ? "md:ml-20" : "md:ml-64")}>
       {/* ── Header ── */}
       <div className="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-30 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -398,6 +409,7 @@ export default function DispatchBoardPage() {
           Drag to a column to update status
         </div>
       )}
+      </div>
     </div>
   );
 }

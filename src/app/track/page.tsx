@@ -110,12 +110,12 @@ export default function TrackingPage() {
     const { data, error: dbErr } = await supabase
       .from("trips")
       .select(`
-        id, trip_number, origin, destination, status, cargo_type,
-        client, created_at, estimated_arrival, delivered_at, notes, revenue,
-        driver:users!trips_driver_id_fkey(full_name),
-        vehicle:fleet_vehicles!trips_vehicle_id_fkey(plate_number)
+        id, trip_number, origin, destination, status, cargo,
+        client, created_at, estimated_time, notes, salesAmount,
+        driver:user_profiles(name),
+        vehicle:vehicles(plate_number)
       `)
-      .or(`trip_number.ilike.%${q}%,id.eq.${q.toLowerCase()}`)
+      .or(`trip_number.ilike.%${q}%`)
       .limit(1)
       .single();
 
@@ -128,16 +128,16 @@ export default function TrackingPage() {
         trip_number: r.trip_number || `TRP-${r.id.slice(0, 8).toUpperCase()}`,
         origin: r.origin,
         destination: r.destination,
-        status: r.status as TripStatus,
-        cargo_type: r.cargo_type,
+        status: (r.status?.toLowerCase() ?? "pending") as TripStatus,
+        cargo_type: r.cargo,
         client: r.client,
-        driver_name: r.driver?.full_name,
+        driver_name: r.driver?.name,
         vehicle_plate: r.vehicle?.plate_number,
         created_at: r.created_at,
-        estimated_arrival: r.estimated_arrival,
+        estimated_arrival: r.estimated_time,
         delivered_at: r.delivered_at,
         notes: r.notes,
-        revenue: r.revenue,
+        revenue: r.salesAmount,
       });
     }
     setLoading(false);

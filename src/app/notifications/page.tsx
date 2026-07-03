@@ -63,14 +63,14 @@ export default function NotificationsPage() {
       // Update notification as read in database
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: true, read: true })
+        .update({ read: true })
         .eq('id', id);
         
       if (error) {
         console.error('Error marking notification as read:', error);
       } else {
         setNotifications(prev => 
-          prev.map(n => n.id === id ? { ...n, is_read: true, read: true } : n)
+          prev.map(n => n.id === id ? { ...n, read: true } : n)
         );
       }
     } catch (error) {
@@ -101,17 +101,17 @@ export default function NotificationsPage() {
             notifications.map((n) => (
               <Card
                 key={n.id}
-                className={cn(!(n.is_read || n.read) && 'border-primary/30 bg-primary/5')}
+                className={cn(!n.read && 'border-primary/30 bg-primary/5')}
               >
                 <CardHeader className="py-4 flex flex-row items-start gap-3">
                   {getIcon(n.severity || 'info')}
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-lg font-headline leading-tight">{n.title || 'Notification'}</CardTitle>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}
+                      {n.created_at ? new Date(n.created_at).toLocaleString() : ''}
                     </p>
                   </div>
-                  {!n.is_read && (
+                  {!n.read && (
                     <Button size="sm" variant="outline" className="shrink-0" onClick={() => markRead(n.id)}>
                       Mark read
                     </Button>

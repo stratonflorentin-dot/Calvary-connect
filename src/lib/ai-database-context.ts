@@ -162,9 +162,9 @@ export async function getFleetContext() {
     // Relationship selects can fail if FK relationship missing; try vehicles(plate_number) then fallback to '*'
     safeQuery(async () => {
       try {
-        let r = await supabase.from('fuel_logs').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200);
+        let r = await supabase.from('fuel_logs').select('*,vehicles(plate_number)').order('fuel_date', { ascending: false }).limit(200);
         if (r.error) {
-          r = await supabase.from('fuel_logs').select('*').order('date', { ascending: false }).limit(200);
+          r = await supabase.from('fuel_logs').select('*').order('fuel_date', { ascending: false }).limit(200);
         }
         return r;
       } catch (e) {
@@ -173,9 +173,9 @@ export async function getFleetContext() {
     }),
     safeQuery(async () => {
       try {
-        let r = await supabase.from('maintenance_records').select('*,vehicles(plate_number)').order('date', { ascending: false }).limit(200);
+        let r = await supabase.from('maintenance_records').select('*,vehicles(plate_number)').order('created_at', { ascending: false }).limit(200);
         if (r.error) {
-          r = await supabase.from('maintenance_records').select('*').order('date', { ascending: false }).limit(200);
+          r = await supabase.from('maintenance_records').select('*').order('created_at', { ascending: false }).limit(200);
         }
         return r;
       } catch (e) {

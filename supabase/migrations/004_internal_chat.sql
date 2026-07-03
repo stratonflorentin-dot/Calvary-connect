@@ -51,13 +51,7 @@ CREATE POLICY "Users can create channels" ON chat_channels
 
 -- Members Policies
 CREATE POLICY "Members can view channel memberships" ON chat_channel_members
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM chat_channel_members AS m
-      WHERE m.channel_id = chat_channel_members.channel_id
-      AND m.user_id = auth.uid()
-    )
-  );
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can join channels" ON chat_channel_members
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);

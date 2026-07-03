@@ -201,7 +201,7 @@ export default function TripsPage() {
         client: tripForm.client,
         distance: tripForm.distance ? parseInt(tripForm.distance, 10) : null,
         estimated_time: tripForm.estimated_time,
-        status: 'PENDING',
+        status: 'pending',
         created_at: new Date().toISOString(),
         // Trip type & VAT
         tripType: tripForm.tripType,
@@ -483,7 +483,7 @@ export default function TripsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {bookings.length === 0 ? (
-                            <SelectItem value="" disabled>No confirmed bookings available</SelectItem>
+                            <SelectItem value="none" disabled>No confirmed bookings available</SelectItem>
                           ) : (
                             bookings.map(booking => (
                               <SelectItem key={booking.id} value={booking.id}>

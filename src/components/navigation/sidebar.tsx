@@ -196,7 +196,7 @@ export function Sidebar({ role }: { role: UserRole }) {
               .from("notifications")
               .select("id", { count: "exact" })
               .eq("user_id", user.id)
-              .eq("is_read", false)
+              .eq("read", false)
           ),
           safeCount(
             supabase
