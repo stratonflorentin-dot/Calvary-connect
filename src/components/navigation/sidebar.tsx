@@ -25,6 +25,7 @@ import {
   Building2,
   CalendarDays,
   Globe,
+  Navigation,
   Menu,
   X,
   Zap,
@@ -33,6 +34,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpCircle,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
@@ -56,6 +58,10 @@ import { useSidebar } from "@/hooks/use-sidebar";
 const routeIconMap: Record<string, any> = {
   "/": LayoutDashboard,
   "/trips": Route,
+  "/dispatch": Navigation,
+  "/chat": MessageSquare,
+  "/route-optimizer": Route,
+  "/track": Globe,
   "/trip-history": ClipboardList,
   "/bookings": CalendarDays,
   "/map": MapPin,
@@ -262,7 +268,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       {/* Sidebar */}
       <aside className={cn(
         "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
-        "bg-card text-foreground border-r border-border shadow-xl",
+        "bg-slate-950 text-slate-300 border-r border-slate-800 shadow-xl",
         isCollapsed ? "w-20" : "w-64",
         // Mobile transition
         "md:translate-x-0",
@@ -272,24 +278,24 @@ export function Sidebar({ role }: { role: UserRole }) {
           {!isCollapsed ? (
             <>
               <div className="flex items-center gap-2">
-                <div className="bg-primary text-background p-1.5 rounded-xl">
+                <div className="bg-indigo-600 text-white p-1.5 rounded-xl shadow-[0_0_12px_rgba(79,70,229,0.5)]">
                   <Zap className="size-5" />
                 </div>
-                <h1 className="font-headline text-xl font-extrabold tracking-tighter text-primary uppercase">
+                <h1 className="font-headline text-xl font-extrabold tracking-tighter text-white uppercase">
                   Calvary
                 </h1>
               </div>
-              <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors">
+              <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
                 <ChevronLeft className="size-5" />
               </Button>
             </>
           ) : (
-            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-primary hover:bg-primary/10 transition-colors">
+            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-indigo-400 hover:bg-white/10 transition-colors">
               <ChevronRight className="size-5" />
             </Button>
           )}
         </div>
-        {!isCollapsed && <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold px-6 -mt-2 mb-2">Connect Panel</p>}
+        {!isCollapsed && <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold px-6 -mt-2 mb-4">Command Panel</p>}
 
         <nav className="flex-1 px-2 space-y-6 overflow-y-auto no-scrollbar pb-10">
           {NAVIGATION_CATEGORY_ORDER.map((key) => {
@@ -298,7 +304,7 @@ export function Sidebar({ role }: { role: UserRole }) {
             if (!items || items.length === 0) return null;
             return (
               <div key={key} className="space-y-2">
-                {!isCollapsed && <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold px-4">{label}</p>}
+                {!isCollapsed && <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-4">{label}</p>}
                 <div className="space-y-1">
                   {items.map(item => {
                     const Icon = routeIconMap[item.path] || LayoutDashboard;
@@ -314,30 +320,30 @@ export function Sidebar({ role }: { role: UserRole }) {
                         className={cn(
                           "flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-all group",
                           pathname === item.path 
-                            ? "bg-primary text-background shadow-md" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/50" 
+                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                         )}
                       >
                         <Icon className={cn(
                           "size-5 flex-shrink-0", 
                           pathname === item.path 
-                            ? "text-background" 
-                            : "text-muted-foreground group-hover:text-foreground"
+                            ? "text-white" 
+                            : "text-slate-500 group-hover:text-slate-300"
                         )} />
                         {!isCollapsed && <span className="truncate">{item.label}</span>}
                         {/* Badges only show when not collapsed */}
                         {!isCollapsed && item.path === "/notifications" && notificationCount > 0 && (
-                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                          <Badge className="ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-rose-500 text-white border-0">
                             {notificationCount}
                           </Badge>
                         )}
                         {!isCollapsed && item.path === "/maintenance" && maintenanceCount > 0 && (
-                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                          <Badge className="ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-amber-500 text-white border-0">
                             {maintenanceCount}
                           </Badge>
                         )}
                         {!isCollapsed && item.path === "/service-requests" && serviceRequestCount > 0 && (
-                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                          <Badge className="ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-amber-500 text-white border-0">
                             {serviceRequestCount}
                           </Badge>
                         )}
@@ -360,36 +366,36 @@ export function Sidebar({ role }: { role: UserRole }) {
           })}
         </nav>
 
-        <div className="p-3 border-t border-border bg-muted/50 backdrop-blur-md">
+        <div className="p-3 border-t border-slate-800 bg-slate-900/50 backdrop-blur-md">
           {/* Quick Return Button */}
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={scrollToTop} 
-            className="w-full mb-2 text-primary hover:bg-primary/10 transition-colors"
+            className="w-full mb-2 text-indigo-400 hover:bg-white/10 transition-colors"
           >
             <ArrowUpCircle className="size-4 mr-2" />
             {!isCollapsed && "Back to Top"}
           </Button>
           
           <div className={cn(
-            "px-3 py-3 flex items-center gap-3 bg-card rounded-2xl mb-2 group relative border border-border shadow-lg transition-colors",
+            "px-3 py-3 flex items-center gap-3 bg-slate-900 rounded-2xl mb-2 group relative border border-slate-800 shadow-lg transition-colors",
             isCollapsed && "justify-center px-0"
           )}>
-            <Avatar className="size-10 border border-border">
+            <Avatar className="size-10 border border-slate-700">
               <AvatarImage src={user?.avatar} />
-              <AvatarFallback className="bg-primary text-background text-sm">
+              <AvatarFallback className="bg-indigo-600 text-white text-sm">
                 {user?.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground truncate">{user?.name || "Super Admin"}</p>
-                <p className="text-[10px] text-primary font-bold uppercase tracking-wider">{effectiveRole}</p>
+                <p className="text-sm font-bold text-slate-200 truncate">{user?.name || "Super Admin"}</p>
+                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">{effectiveRole}</p>
               </div>
             )}
             {!isCollapsed && (
-              <label className="absolute -top-1 -right-1 size-6 bg-primary text-background rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-background">
+              <label className="absolute -top-1 -right-1 size-6 bg-indigo-600 text-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-slate-900">
                 <Camera className="size-3" />
                 <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading} />
               </label>

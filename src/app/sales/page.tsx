@@ -739,6 +739,7 @@ function SalesModuleContent() {
             <TabsTrigger value="contracts" className="h-9 rounded-lg">Contracts</TabsTrigger>
             <TabsTrigger value="rate-sheets" className="h-9 rounded-lg">Rate Sheets</TabsTrigger>
             <TabsTrigger value="opportunities" className="h-9 rounded-lg">Pipeline</TabsTrigger>
+            <TabsTrigger value="sales-orders" className="h-9 rounded-lg">Sales Orders</TabsTrigger>
           </TabsList>
 
           {/* Leads Tab */}
@@ -816,6 +817,104 @@ function SalesModuleContent() {
                     </Button>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Sales Orders Tab (Professional Logistics Feature) */}
+          <TabsContent value="sales-orders">
+            <Card className="shadow-lg border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
+                  <Container className="h-5 w-5" />
+                  Sales Orders & Freight Billing
+                </CardTitle>
+                <Button asChild>
+                  <Link href="/sales/orders/new">
+                    <Plus className="h-4 w-4 mr-2" /> New Sales Order
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50">
+                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Order #</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Customer</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Freight Details</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Logistics Cost</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Status</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Flags</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {/* Professional Mock Data for Sales Orders */}
+                      {[
+                        {
+                          id: 'SO-2023-1001',
+                          customer: 'Dangote Cement (Zambia)',
+                          freight: '2x 40ft Flatbed - 60MT Cement',
+                          base: 4500,
+                          onloading: 150,
+                          offloading: 150,
+                          status: 'Pending Collection',
+                          needsCorrection: false,
+                        },
+                        {
+                          id: 'SO-2023-1002',
+                          customer: 'Twiga Cement (Mbeya)',
+                          freight: '1x 20ft Box - 28MT Clinker',
+                          base: 1800,
+                          onloading: 100,
+                          offloading: 100,
+                          status: 'Pending Correction',
+                          needsCorrection: true,
+                          correctionNotes: 'Incorrect delivery address on waybill.'
+                        },
+                        {
+                          id: 'SO-2023-1003',
+                          customer: 'Simba Cement (Arusha)',
+                          freight: '3x Bulk Tanker - 90MT Bulk',
+                          base: 5200,
+                          onloading: 300,
+                          offloading: 250,
+                          status: 'Collected',
+                          needsCorrection: false,
+                        }
+                      ].map((order) => (
+                        <TableRow key={order.id} className="hover:bg-slate-50 transition-colors">
+                          <TableCell className="font-bold text-slate-800">{order.id}</TableCell>
+                          <TableCell className="font-semibold text-slate-700">{order.customer}</TableCell>
+                          <TableCell className="text-sm text-slate-600">{order.freight}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs font-bold text-slate-800">Total: ${(order.base + order.onloading + order.offloading).toLocaleString()}</span>
+                              <span className="text-[10px] text-slate-500 uppercase">Frt: ${order.base} | L: ${order.onloading} | D: ${order.offloading}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={
+                              order.status === 'Collected' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-0' :
+                              order.status === 'Pending Correction' ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 border-0' :
+                              'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-0'
+                            }>
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {order.needsCorrection && (
+                              <div className="flex items-center gap-1 text-rose-600" title={order.correctionNotes}>
+                                <AlertCircle className="w-4 h-4" />
+                                <span className="text-xs font-bold">Review</span>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

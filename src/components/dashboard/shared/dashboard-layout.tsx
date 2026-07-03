@@ -111,11 +111,11 @@ export function DashboardLayout({
   const [showNotifications, setShowNotifications] = useState(false);
 
   return (
-    <div className={cn("flex min-h-screen w-full overflow-hidden bg-background text-foreground", !hideSidebar && "h-screen")}>
+    <div className={cn("flex min-h-screen w-full overflow-hidden bg-slate-50 text-foreground", !hideSidebar && "h-screen")}>
       {!hideSidebar && <Sidebar role={role as any} />}
-      <main className={cn("flex-1 flex flex-col overflow-hidden", !hideSidebar && "md:ml-60")}>
+      <main className={cn("flex-1 flex flex-col overflow-hidden", !hideSidebar && "md:ml-64")}>
         {/* Top Header */}
-        <header className="sticky top-0 z-10 border-b border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur md:px-6">
+        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-2.5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] md:px-6">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -129,10 +129,10 @@ export function DashboardLayout({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
               <Input
-                placeholder="Search..."
-                className="h-9 w-full min-w-[180px] border-input bg-background pl-8 lg:w-[260px]"
+                placeholder="Search resources..."
+                className="h-8 w-full min-w-[180px] border-slate-200 bg-slate-50 pl-8 lg:w-[260px] text-xs focus-visible:ring-indigo-500 rounded-lg"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -179,17 +179,17 @@ export function DashboardLayout({
             >
               <Settings className="size-5" />
               </Button>
-              <div className="hidden items-center gap-2 rounded-lg border border-input bg-card px-3 py-2 lg:flex">
-                <div className="flex size-7 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
+              <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 lg:flex shadow-sm">
+                <div className="flex size-6 items-center justify-center rounded bg-indigo-600 text-[10px] font-bold text-white">
                   {(user?.name || user?.email || "U").charAt(0).toUpperCase()}
                 </div>
-                <div className="max-w-[150px]">
-                  <p className="truncate text-xs font-semibold text-card-foreground">{user?.name || "User"}</p>
-                  <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{user?.role || role}</p>
+                <div className="max-w-[150px] leading-tight">
+                  <p className="truncate text-xs font-bold text-slate-700">{user?.name || "User"}</p>
+                  <p className="truncate text-[9px] font-extrabold uppercase tracking-widest text-indigo-500">{user?.role || role}</p>
                 </div>
               </div>
-              <Button variant="outline" className="gap-2 border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={signOut}>
-                <LogOut className="size-4" />
+              <Button variant="outline" size="sm" className="h-8 gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-red-600 rounded-lg text-xs font-semibold" onClick={signOut}>
+                <LogOut className="size-3.5" />
                 <span className="hidden sm:inline">{t.logout || "Logout"}</span>
               </Button>
             </div>
@@ -223,20 +223,8 @@ export function StatCard({
   link,
 }: StatCardProps) {
   const content = (
-    <motion.div
-      initial={{ opacity: 0, y: 12, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      whileHover={{ 
-        y: -4, 
-        scale: 1.015,
-        boxShadow: "0 12px 20px -8px rgba(0,0,0,0.08)"
-      }}
-      transition={{ 
-        type: "spring",
-        stiffness: 260,
-        damping: 18
-      }}
-      className="app-surface p-4 cursor-pointer transition-colors flex flex-col justify-between h-full min-h-[120px]"
+    <div
+      className="bg-white border border-slate-200 rounded-xl p-4 transition-all hover:border-indigo-300 hover:shadow-md flex flex-col justify-between h-full min-h-[110px]"
     >
       <div className="flex items-center justify-between mb-2">
         <div className={cn("p-2 rounded-lg shrink-0", bgColor)}>
@@ -256,12 +244,12 @@ export function StatCard({
         )}
       </div>
       <div>
-        <p className="text-xl sm:text-2xl font-bold text-foreground truncate tracking-tight">{value}</p>
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-extrabold mt-1 truncate">
+        <p className="text-xl sm:text-2xl font-black text-slate-800 truncate tracking-tight">{value}</p>
+        <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-0.5 truncate">
           {title}
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 
   if (link) {
@@ -291,20 +279,21 @@ export function DataTable({
   onView,
 }: DataTableProps) {
   return (
-    <div className="app-table-shell">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50 border-b border-slate-200">
             {columns.map((col) => (
               <TableHead
                 key={col.key}
-                className="text-xs font-bold text-muted-foreground uppercase tracking-wider"
+                className="h-10 text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4"
               >
                 {col.label}
               </TableHead>
             ))}
             {(onDelete || onEdit || onView) && (
-              <TableHead className="text-right text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <TableHead className="h-10 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4">
                 Actions
               </TableHead>
             )}
@@ -312,14 +301,14 @@ export function DataTable({
         </TableHeader>
         <TableBody>
           {data.map((row, index) => (
-            <TableRow key={row.id || index} className="hover:bg-muted/50">
+            <TableRow key={row.id || index} className="hover:bg-slate-50/50 border-b border-slate-100 last:border-0 transition-colors">
               {columns.map((col) => (
-                <TableCell key={col.key}>
+                <TableCell key={col.key} className="py-2.5 px-4 text-sm text-slate-700">
                   {col.render ? col.render(row) : row[col.key]}
                 </TableCell>
               ))}
               {(onDelete || onEdit || onView) && (
-                <TableCell className="text-right">
+                <TableCell className="text-right py-2 px-4">
                   <div className="flex items-center justify-end gap-1">
                     {onView && (
                       <Button
@@ -358,6 +347,7 @@ export function DataTable({
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

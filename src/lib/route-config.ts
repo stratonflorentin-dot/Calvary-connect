@@ -94,6 +94,24 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "logistics",
   },
   {
+    path: "/dispatch",
+    label: "Dispatch Board",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR"],
+    category: "logistics",
+  },
+  {
+    path: "/chat",
+    label: "Internal Chat",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"],
+    category: "logistics",
+  },
+  {
+    path: "/route-optimizer",
+    label: "Route Optimizer",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR"],
+    category: "logistics",
+  },
+  {
     path: "/trip-history",
     label: "Trip History",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
@@ -110,6 +128,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     path: "/map",
     label: "Live Fleet Map",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "HR"],
+    category: "logistics",
+  },
+  {
+    path: "/track",
+    label: "Customer Tracking",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
     category: "logistics",
   },
   // --- Fleet & Assets ---
