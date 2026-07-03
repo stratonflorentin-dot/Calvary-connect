@@ -376,6 +376,244 @@ CREATE INDEX IF NOT EXISTS idx_opportunities_customer ON sales_opportunities(cus
 CREATE INDEX IF NOT EXISTS idx_opportunities_stage ON sales_opportunities(stage);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 
+-- ─── 16. FINANCE MODULE - BANK ACCOUNTS ──────────────────────────────
+CREATE TABLE IF NOT EXISTS bank_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_name VARCHAR(100) NOT NULL,
+  account_number VARCHAR(50) NOT NULL,
+  bank_name VARCHAR(100) NOT NULL,
+  branch VARCHAR(100),
+  swift_code VARCHAR(20),
+  account_type VARCHAR(50) DEFAULT 'current',
+  currency VARCHAR(10) DEFAULT 'TZS',
+  opening_balance DECIMAL(15,2) DEFAULT 0,
+  current_balance DECIMAL(15,2) DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Seed default bank accounts if table is empty
+INSERT INTO bank_accounts (account_name, account_number, bank_name, branch, account_type, currency, opening_balance, current_balance)
+SELECT * FROM (VALUES
+  ('Main Operating Account (TZS)', '1234567890', 'CRDB Bank', 'Dar es Salaam', 'current', 'TZS', 5000000, 5000000),
+  ('USD Foreign Account', '0987654321', 'CRDB Bank', 'Dar es Salaam', 'current', 'USD', 10000, 10000),
+  ('Petty Cash', 'PETTY001', 'Internal', 'Head Office', 'cash', 'TZS', 500000, 500000),
+  ('KES Transit Account', 'KES001', 'NMB Bank', 'Dar es Salaam', 'current', 'KES', 200000, 200000)
+) AS v(account_name, account_number, bank_name, branch, account_type, currency, opening_balance, current_balance)
+WHERE NOT EXISTS (SELECT 1 FROM bank_accounts LIMIT 1);
+
+ALTER TABLE bank_accounts DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE bank_accounts TO authenticated, anon, postgres;
+
+-- ─── 17. FINANCE MODULE - BANK STATEMENTS ────────────────────────────
+CREATE TABLE IF NOT EXISTS bank_statements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bank_account_id UUID REFERENCES bank_accounts(id) ON DELETE CASCADE,
+  transaction_date DATE NOT NULL,
+  description TEXT NOT NULL,
+  reference_number VARCHAR(100),
+  debit_amount DECIMAL(15,2) DEFAULT 0,
+  credit_amount DECIMAL(15,2) DEFAULT 0,
+  balance DECIMAL(15,2),
+  transaction_type VARCHAR(50),
+  reconciled BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE bank_statements DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE bank_statements TO authenticated, anon, postgres;
+CREATE INDEX IF NOT EXISTS idx_bank_statements_account ON bank_statements(bank_account_id);
+CREATE INDEX IF NOT EXISTS idx_bank_statements_date ON bank_statements(transaction_date);
+
+-- ─── 18. FINANCE MODULE - INVOICES (ENSURE PROPER SCHEMA) ────────────
+CREATE TABLE IF NOT EXISTS invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_number VARCHAR(50) UNIQUE NOT NULL,
+  client_name VARCHAR(100),
+  customer_name VARCHAR(100),
+  customer_id UUID,
+  trip_id UUID,
+  amount DECIMAL(15,2) DEFAULT 0,
+  vat_amount DECIMAL(15,2) DEFAULT 0,
+  total_amount DECIMAL(15,2) DEFAULT 0,
+  currency VARCHAR(10) DEFAULT 'TZS',
+  issue_date DATE,
+  due_date DATE,
+  paid_at TIMESTAMPTZ,
+  status VARCHAR(20) DEFAULT 'pending',
+  payment_terms VARCHAR(50) DEFAULT '30 days',
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Add any missing columns to existing invoices table
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_name VARCHAR(100);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_name VARCHAR(100);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_id UUID;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS amount DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS vat_amount DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total_amount DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'TZS';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS issue_date DATE;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_terms VARCHAR(50) DEFAULT '30 days';
+
+-- Sync total_amount for any rows where it is NULL
+UPDATE invoices SET total_amount = COALESCE(amount, 0) + COALESCE(vat_amount, 0)
+WHERE total_amount IS NULL OR total_amount = 0;
+
+ALTER TABLE invoices DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE invoices TO authenticated, anon, postgres;
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_name);
+CREATE INDEX IF NOT EXISTS idx_invoices_due ON invoices(due_date);
+
+-- ─── 19. FINANCE MODULE - EXPENSES (ENSURE PROPER SCHEMA) ────────────
+CREATE TABLE IF NOT EXISTS expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  expense_number VARCHAR(50),
+  category VARCHAR(50) DEFAULT 'Other',
+  description TEXT,
+  amount DECIMAL(15,2) DEFAULT 0,
+  currency VARCHAR(10) DEFAULT 'TZS',
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  vendor_name VARCHAR(100),
+  vehicle_id UUID,
+  trip_id UUID,
+  receipt_url TEXT,
+  payment_method VARCHAR(20) DEFAULT 'cash',
+  status VARCHAR(20) DEFAULT 'pending',
+  approved_by UUID,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Add any missing columns to existing expenses table
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS expense_number VARCHAR(50);
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'Other';
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'TZS';
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vendor_name VARCHAR(100);
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
+
+-- Auto-generate expense numbers for existing rows
+UPDATE expenses
+SET expense_number = 'EXP-' || EXTRACT(YEAR FROM created_at)::TEXT || '-' || SUBSTRING(id::TEXT, 1, 6)
+WHERE expense_number IS NULL;
+
+ALTER TABLE expenses DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE expenses TO authenticated, anon, postgres;
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status);
+
+-- ─── 20. FINANCE MODULE - ACCOUNTS (CHART OF ACCOUNTS) ───────────────
+CREATE TABLE IF NOT EXISTS accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code VARCHAR(20) UNIQUE NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  account_type VARCHAR(50) NOT NULL,
+  parent_id UUID REFERENCES accounts(id),
+  currency VARCHAR(10) DEFAULT 'TZS',
+  is_active BOOLEAN DEFAULT true,
+  balance DECIMAL(15,2) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Seed standard chart of accounts if empty
+-- Ensure account_type column exists with default and NOT NULL
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS account_type VARCHAR(50);
+ALTER TABLE accounts ALTER COLUMN account_type SET DEFAULT 'asset';
+UPDATE accounts SET account_type = 'asset' WHERE account_type IS NULL;
+ALTER TABLE accounts ALTER COLUMN account_type SET NOT NULL;
+
+-- Ensure category column exists with default and NOT NULL
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+ALTER TABLE accounts ALTER COLUMN category SET DEFAULT 'asset';
+UPDATE accounts SET category = 'asset' WHERE category IS NULL;
+ALTER TABLE accounts ALTER COLUMN category SET NOT NULL;
+
+-- Ensure type column exists with default and NOT NULL
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE accounts ALTER COLUMN type SET DEFAULT 'asset';
+UPDATE accounts SET type = 'asset' WHERE type IS NULL;
+ALTER TABLE accounts ALTER COLUMN type SET NOT NULL;
+-- Ensure date column exists with default and NOT NULL
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS date DATE NOT NULL DEFAULT CURRENT_DATE;
+
+
+INSERT INTO accounts (code, name, account_type) VALUES
+  ('1000', 'Assets', 'asset'),
+  ('1100', 'Cash & Bank', 'asset'),
+  ('1200', 'Accounts Receivable', 'asset'),
+  ('1300', 'Inventory', 'asset'),
+  ('1400', 'Prepaid Expenses', 'asset'),
+  ('1500', 'Fixed Assets', 'asset'),
+  ('2000', 'Liabilities', 'liability'),
+  ('2100', 'Accounts Payable', 'liability'),
+  ('2200', 'VAT Payable', 'liability'),
+  ('2300', 'Loans Payable', 'liability'),
+  ('3000', 'Equity', 'equity'),
+  ('3100', 'Owner Equity', 'equity'),
+  ('3200', 'Retained Earnings', 'equity'),
+  ('4000', 'Revenue', 'revenue'),
+  ('4100', 'Transport Revenue', 'revenue'),
+  ('4200', 'Cross-Border Revenue', 'revenue'),
+  ('4300', 'Other Income', 'revenue'),
+  ('5000', 'Expenses', 'expense'),
+  ('5100', 'Fuel & Lubricants', 'expense'),
+  ('5200', 'Driver Wages', 'expense'),
+  ('5300', 'Vehicle Maintenance', 'expense'),
+  ('5400', 'Insurance', 'expense'),
+  ('5500', 'Border Fees & Clearance', 'expense'),
+  ('5600', 'Office Expenses', 'expense'),
+  ('5700', 'Depreciation', 'expense'),
+  ('5800', 'Finance Charges', 'expense')
+ON CONFLICT (code) DO NOTHING;
+
+ALTER TABLE accounts DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE accounts TO authenticated, anon, postgres;
+
+-- ─── 21. FINANCE MODULE - JOURNAL ENTRIES ────────────────────────────
+CREATE TABLE IF NOT EXISTS journal_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reference VARCHAR(50) UNIQUE NOT NULL,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  description TEXT,
+  currency VARCHAR(10) DEFAULT 'TZS',
+  status VARCHAR(20) DEFAULT 'draft',
+  created_by UUID,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS journal_entry_lines (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  journal_entry_id UUID NOT NULL REFERENCES journal_entries(id) ON DELETE CASCADE,
+  account_id UUID REFERENCES accounts(id),
+  account_code VARCHAR(20),
+  account_name VARCHAR(100),
+  description TEXT,
+  debit DECIMAL(15,2) DEFAULT 0,
+  credit DECIMAL(15,2) DEFAULT 0,
+  currency VARCHAR(10) DEFAULT 'TZS',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE journal_entries DISABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entry_lines DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE journal_entries TO authenticated, anon, postgres;
+GRANT ALL ON TABLE journal_entry_lines TO authenticated, anon, postgres;
+-- Ensure date column exists (idempotent)
+ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS date DATE NOT NULL DEFAULT CURRENT_DATE;
+
+CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(date);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_status ON journal_entries(status);
+CREATE INDEX IF NOT EXISTS idx_je_lines_entry ON journal_entry_lines(journal_entry_id);
+
 -- ─── VERIFY SETUP ──────────────────────────────────────────────────────
 SELECT 'SUCCESS: Calvary Connect Database Fix Complete!' as status,
-       'All tables ensured, RLS disabled, grants applied' as details;
+       'All tables ensured, RLS disabled, grants applied' as details,
+       (SELECT COUNT(*) FROM bank_accounts) as bank_accounts_count,
+       (SELECT COUNT(*) FROM accounts) as chart_of_accounts_count;

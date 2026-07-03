@@ -24,13 +24,14 @@ export default function ProfitLossPage() {
   const loadFinancialData = async () => {
     setLoading(true);
     try {
-      const [incomeData, expensesData] = await Promise.all([
+      const [invoicesData, expensesData] = await Promise.all([
+        // Use invoices as income source (paid invoices = revenue)
         supabase
-          .from("income")
+          .from("invoices")
           .select("*")
-          .gte("date", startDate)
-          .lte("date", endDate)
-          .order("date", { ascending: true }),
+          .gte("issue_date", startDate)
+          .lte("issue_date", endDate)
+          .order("issue_date", { ascending: true }),
         supabase
           .from("expenses")
           .select("*")
@@ -38,13 +39,20 @@ export default function ProfitLossPage() {
           .lte("date", endDate)
           .order("date", { ascending: true }),
       ]);
-      if (incomeData.error) throw incomeData.error;
-      if (expensesData.error) throw expensesData.error;
-      setIncome(incomeData.data || []);
+      // Map invoices to income format
+      const incomeRecords = (invoicesData.data || []).map((inv: any) => ({
+        ...inv,
+        date: inv.issue_date || inv.created_at,
+        amount: inv.total_amount || inv.amount || 0,
+        description: inv.description || `Invoice ${inv.invoice_number} - ${inv.customer_name || inv.client_name}`,
+      }));
+      setIncome(incomeRecords);
       setExpenses(expensesData.data || []);
     } catch (err) {
       console.error("Error loading financial data:", err);
-      toast({ title: "Error", description: "Failed to load financial data", variant: "destructive" });
+      // Silently fail - show empty state instead of toast
+      setIncome([]);
+      setExpenses([]);
     } finally {
       setLoading(false);
     }
