@@ -19,10 +19,11 @@ interface BankAccount {
   account_name: string;
   account_number: string;
   bank_name: string;
-  balance: number;
+  current_balance: number;
   currency: string;
   account_type: string;
   is_active: boolean;
+  branch?: string;
 }
 
 export default function BankAccountsPage() {
@@ -36,7 +37,7 @@ export default function BankAccountsPage() {
     account_name: "",
     account_number: "",
     bank_name: "",
-    balance: 0,
+    current_balance: 0,
     currency: "TZS",
     account_type: "current",
     is_active: true,
@@ -69,7 +70,7 @@ export default function BankAccountsPage() {
         account_name: formData.account_name,
         account_number: formData.account_number,
         bank_name: formData.bank_name,
-        balance: formData.balance,
+        current_balance: formData.current_balance,
         currency: formData.currency,
         account_type: formData.account_type,
         is_active: formData.is_active,
@@ -90,7 +91,8 @@ export default function BankAccountsPage() {
         account_name: formData.account_name,
         account_number: formData.account_number,
         bank_name: formData.bank_name,
-        balance: formData.balance,
+        current_balance: formData.current_balance,
+        opening_balance: formData.current_balance,
         currency: formData.currency,
         account_type: formData.account_type,
         is_active: formData.is_active,
@@ -111,7 +113,7 @@ export default function BankAccountsPage() {
       account_name: "",
       account_number: "",
       bank_name: "",
-      balance: 0,
+      current_balance: 0,
       currency: "TZS",
       account_type: "current",
       is_active: true,
@@ -138,7 +140,7 @@ export default function BankAccountsPage() {
       account_name: account.account_name,
       account_number: account.account_number,
       bank_name: account.bank_name,
-      balance: account.balance,
+      current_balance: account.current_balance,
       currency: account.currency,
       account_type: account.account_type,
       is_active: account.is_active,
@@ -152,7 +154,7 @@ export default function BankAccountsPage() {
       account_name: "",
       account_number: "",
       bank_name: "",
-      balance: 0,
+      current_balance: 0,
       currency: "TZS",
       account_type: "current",
       is_active: true,
@@ -215,7 +217,7 @@ export default function BankAccountsPage() {
       ) : (
         <div className="space-y-6">
           {Object.entries(accountsByCurrency).map(([currency, currencyAccounts]) => {
-            const totalBalance = currencyAccounts.reduce((sum, acc) => sum + acc.balance, 0);
+            const totalBalance = currencyAccounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
             const currencyInfo = AVAILABLE_CURRENCIES.find(c => c.code === currency) || AVAILABLE_CURRENCIES[0];
 
             return (
@@ -255,7 +257,7 @@ export default function BankAccountsPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-semibold">{formatCurrency(account.balance, currency)}</p>
+                          <p className="text-lg font-semibold">{formatCurrency(account.current_balance || 0, currency)}</p>
                           <div className="flex gap-2 mt-2">
                             <Button
                               size="sm"
@@ -338,13 +340,13 @@ export default function BankAccountsPage() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="balance">Balance</Label>
+              <Label htmlFor="current_balance">Opening Balance</Label>
               <Input
-                id="balance"
+                id="current_balance"
                 type="number"
                 step="0.01"
-                value={formData.balance}
-                onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) || 0 })}
+                value={formData.current_balance}
+                onChange={(e) => setFormData({ ...formData, current_balance: parseFloat(e.target.value) || 0 })}
                 required
               />
             </div>

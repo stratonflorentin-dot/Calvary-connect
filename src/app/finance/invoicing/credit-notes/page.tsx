@@ -63,16 +63,52 @@ export default function CreditNotesPage() {
   const loadCreditNotes = async () => {
     setLoading(true);
     try {
-      const [notesData, invoicesData] = await Promise.all([
-        supabase.from("credit_notes").select("*").order("issue_date", { ascending: false }),
-        supabase.from("invoices").select("*").eq("status", "paid"),
-      ]);
+      // Try credit_notes table, fallback to invoices with CN- prefix
+      let notesData: any[] = [];
+      let invoicesData: any[] = [];
 
-      setCreditNotes(notesData.data || []);
-      setInvoices(invoicesData.data || []);
+      const cnResult = await supabase
+        .from("invoices")
+        .select("*")
+        .ilike("invoice_number", "CN-%")
+        .order("created_at", { ascending: false });
+
+      const invResult = await supabase
+        .from("invoices")
+        .select("id, invoice_number, customer_name, client_name, amount, currency, status")
+        .eq("status", "paid");
+
+      notesData = cnResult.data || [];
+      invoicesData = invResult.data || [];
+
+      // Map invoices data to match CreditNote type
+      const mappedNotes: CreditNote[] = notesData.map((n: any) => ({
+        id: n.id,
+        credit_note_number: n.invoice_number,
+        customer_name: n.customer_name || n.client_name,
+        original_invoice_id: n.original_invoice_id,
+        amount: Math.abs(n.amount || 0),
+        currency: n.currency || "TZS",
+        issue_date: n.issue_date || n.created_at,
+        reason: n.description || "Credit note",
+        status: (n.status as any) || "draft",
+        description: n.description || "",
+      }));
+
+      const mappedInvoices: Invoice[] = invoicesData.map((i: any) => ({
+        id: i.id,
+        invoice_number: i.invoice_number,
+        customer_name: i.customer_name || i.client_name,
+        amount: i.amount || 0,
+        currency: i.currency || "TZS",
+        status: i.status || "paid",
+      }));
+
+      setCreditNotes(mappedNotes);
+      setInvoices(mappedInvoices);
     } catch (err) {
       console.error("Error loading credit notes:", err);
-      toast({ title: "Error", description: "Failed to load credit notes", variant: "destructive" });
+      setCreditNotes([]);
     } finally {
       setLoading(false);
     }
@@ -83,30 +119,42 @@ export default function CreditNotesPage() {
   }, []);
 
   const saveCreditNote = async () => {
-    if (!creditNoteForm.credit_note_number || !creditNoteForm.customer_name || !creditNoteForm.amount) {
+    if (!creditNoteForm.customer_name || !creditNoteForm.amount) {
       toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
     try {
-      const noteData: CreditNote = {
-        credit_note_number: creditNoteForm.credit_note_number,
-        customer_name: creditNoteForm.customer_name,
-        original_invoice_id: creditNoteForm.original_invoice_id || undefined,
-        amount: parseFloat(creditNoteForm.amount),
-        currency: creditNoteForm.currency,
-        issue_date: creditNoteForm.issue_date,
-        reason: creditNoteForm.reason,
-        status: creditNoteForm.status,
-        description: creditNoteForm.description,
-      };
+      const cnNum = creditNoteForm.credit_note_number || `CN-${Date.now().toString().slice(-8)}`;
+      const amount = parseFloat(creditNoteForm.amount) || 0;
 
       let error;
       if (editingCreditNote?.id) {
-        error = (await supabase.from("credit_notes").update(noteData).eq("id", editingCreditNote.id)).error;
+        error = (await supabase.from("invoices").update({
+          customer_name: creditNoteForm.customer_name,
+          client_name: creditNoteForm.customer_name,
+          amount: -amount,
+          total_amount: -amount,
+          issue_date: creditNoteForm.issue_date || new Date().toISOString().split("T")[0],
+          description: creditNoteForm.reason || creditNoteForm.description,
+          status: creditNoteForm.status,
+        }).eq("id", editingCreditNote.id)).error;
       } else {
-        error = (await supabase.from("credit_notes").insert(noteData)).error;
+        error = (await supabase.from("invoices").insert({
+          invoice_number: cnNum,
+          customer_name: creditNoteForm.customer_name,
+          client_name: creditNoteForm.customer_name,
+          amount: -amount,
+          vat_amount: 0,
+          total_amount: -amount,
+          currency: creditNoteForm.currency,
+          issue_date: creditNoteForm.issue_date || new Date().toISOString().split("T")[0],
+          due_date: creditNoteForm.issue_date || new Date().toISOString().split("T")[0],
+          description: creditNoteForm.reason || creditNoteForm.description,
+          status: creditNoteForm.status || "issued",
+          payment_terms: "immediate",
+        })).error;
       }
 
       if (error) throw error;
@@ -114,21 +162,14 @@ export default function CreditNotesPage() {
       await loadCreditNotes();
       setModal(null);
       setCreditNoteForm({
-        credit_note_number: "",
-        customer_name: "",
-        original_invoice_id: "",
-        amount: "",
-        currency: "TZS",
-        issue_date: "",
-        reason: "",
-        status: "draft",
-        description: "",
+        credit_note_number: "", customer_name: "", original_invoice_id: "",
+        amount: "", currency: "TZS", issue_date: "", reason: "", status: "draft", description: "",
       });
       setEditingCreditNote(null);
       toast({ title: "Success", description: editingCreditNote ? "Credit note updated" : "Credit note created" });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving credit note:", err);
-      toast({ title: "Error", description: "Failed to save credit note", variant: "destructive" });
+      toast({ title: "Error", description: err?.message || "Failed to save credit note", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -136,15 +177,13 @@ export default function CreditNotesPage() {
 
   const deleteCreditNote = async (id: string) => {
     if (!confirm("Are you sure you want to delete this credit note?")) return;
-
     try {
-      const { error } = await supabase.from("credit_notes").delete().eq("id", id);
+      const { error } = await supabase.from("invoices").delete().eq("id", id);
       if (error) throw error;
       await loadCreditNotes();
       toast({ title: "Success", description: "Credit note deleted" });
-    } catch (err) {
-      console.error("Error deleting credit note:", err);
-      toast({ title: "Error", description: "Failed to delete credit note", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to delete", variant: "destructive" });
     }
   };
 

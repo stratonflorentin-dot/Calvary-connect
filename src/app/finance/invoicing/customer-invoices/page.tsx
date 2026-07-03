@@ -5,48 +5,37 @@ import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sidebar } from "@/components/navigation/sidebar";
-import { FinanceSidebar } from "@/components/finance/finance-sidebar";
-import { useRole } from "@/hooks/use-role";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, DollarSign, Filter, Plus, RefreshCw, Search, Trash2, FileText, CheckCircle2 } from "lucide-react";
-import { formatDate, formatAmount } from "@/lib/utils";
+import { CheckCircle2, DollarSign, FileText, Plus, RefreshCw, Search } from "lucide-react";
 
-const CURRENCIES = {
-  TZS: { code: "TZS", symbol: "TSh", flag: "🇹🇿" },
-  USD: { code: "USD", symbol: "$", flag: "🇺🇸" },
-  EUR: { code: "EUR", symbol: "€", flag: "🇪🇺" },
-};
+const CURRENCIES = ["TZS", "USD", "EUR", "KES"];
 
-const STATUS_STYLES: Record<string, string> = {
-  paid: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  pending: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  overdue: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+const fmt = (v: number, cur = "TZS") =>
+  new Intl.NumberFormat("en-TZ", { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(v);
+
+const STATUS_COLORS: Record<string, string> = {
+  paid: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+  pending: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  overdue: "bg-red-500/10 text-red-700 border-red-500/20",
+  draft: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 export default function CustomerInvoicesPage() {
-  const { role } = useRole();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [search, setSearch] = useState("");
-  const [filterCurrency, setFilterCurrency] = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
-  const [modal, setModal] = useState<string | null>(null);
+  const [modal, setModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [invoiceForm, setInvoiceForm] = useState({
-    customer_name: "",
-    invoice_number: "",
-    amount: "",
-    currency: "TZS",
-    due_date: "",
-    description: "",
-    category: "",
+  const [form, setForm] = useState({
+    customer_name: "", invoice_number: "", amount: "", vat_rate: "18",
+    currency: "TZS", due_date: "", description: "", payment_terms: "30 days",
   });
 
   const loadInvoices = async () => {
@@ -55,345 +44,254 @@ export default function CustomerInvoicesPage() {
       const { data, error } = await supabase
         .from("invoices")
         .select("*")
-        .eq("type", "receivable")
-        .order("due_date", { ascending: true });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       setInvoices(data || []);
-    } catch (err) {
-      console.error("Error loading customer invoices:", err);
-      toast({ title: "Error", description: "Failed to load customer invoices", variant: "destructive" });
+    } catch (err: any) {
+      console.error("Invoices load error:", err);
+      setInvoices([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadInvoices();
-  }, []);
+  useEffect(() => { loadInvoices(); }, []);
 
   const saveInvoice = async () => {
-    if (!invoiceForm.customer_name || !invoiceForm.invoice_number || !invoiceForm.amount || !invoiceForm.due_date) {
-      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
-      return;
-    }
-    if (parseFloat(invoiceForm.amount) <= 0) {
-      toast({ title: "Validation Error", description: "Amount must be greater than 0", variant: "destructive" });
+    if (!form.customer_name || !form.amount || !form.due_date) {
+      toast({ title: "Validation Error", description: "Customer name, amount and due date are required", variant: "destructive" });
       return;
     }
     setSubmitting(true);
     try {
+      const amount = parseFloat(form.amount) || 0;
+      const vatRate = parseFloat(form.vat_rate) || 0;
+      const vatAmount = amount * (vatRate / 100);
+      const totalAmount = amount + vatAmount;
+      const invoiceNum = form.invoice_number || `INV-${Date.now().toString().slice(-8)}`;
+
       const { error } = await supabase.from("invoices").insert({
-        customer_name: invoiceForm.customer_name,
-        invoice_number: invoiceForm.invoice_number,
-        amount: parseFloat(invoiceForm.amount),
-        currency: invoiceForm.currency,
-        due_date: invoiceForm.due_date,
-        description: invoiceForm.description,
-        category: invoiceForm.category,
+        customer_name: form.customer_name,
+        invoice_number: invoiceNum,
+        client_name: form.customer_name,
+        amount,
+        vat_amount: vatAmount,
+        total_amount: totalAmount,
+        currency: form.currency,
+        due_date: form.due_date,
+        issue_date: new Date().toISOString().split("T")[0],
+        description: form.description,
+        payment_terms: form.payment_terms,
         status: "pending",
-        type: "receivable",
-        created_at: new Date().toISOString(),
       });
       if (error) throw error;
       await loadInvoices();
-      setModal(null);
-      setInvoiceForm({
-        customer_name: "",
-        invoice_number: "",
-        amount: "",
-        currency: "TZS",
-        due_date: "",
-        description: "",
-        category: "",
-      });
-      toast({ title: "Success", description: "Customer invoice created successfully" });
-    } catch (err) {
-      console.error("Error saving customer invoice:", err);
-      toast({ title: "Error", description: "Failed to create customer invoice", variant: "destructive" });
+      setModal(false);
+      setForm({ customer_name: "", invoice_number: "", amount: "", vat_rate: "18", currency: "TZS", due_date: "", description: "", payment_terms: "30 days" });
+      toast({ title: "Invoice created successfully" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to create invoice", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const deleteInvoice = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this invoice?")) return;
-    try {
-      const { error } = await supabase.from("invoices").delete().eq("id", id);
-      if (error) throw error;
-      await loadInvoices();
-      toast({ title: "Success", description: "Customer invoice deleted successfully" });
-    } catch (err) {
-      console.error("Error deleting invoice:", err);
-      toast({ title: "Error", description: "Failed to delete invoice", variant: "destructive" });
-    }
-  };
-
   const markAsPaid = async (id: string) => {
-    try {
-      const { error } = await supabase.from("invoices").update({
-        status: "paid",
-        paid_at: new Date().toISOString(),
-      }).eq("id", id);
-      if (error) throw error;
-      await loadInvoices();
-      toast({ title: "Success", description: "Invoice marked as paid" });
-    } catch (err) {
-      console.error("Error marking invoice as paid:", err);
-      toast({ title: "Error", description: "Failed to mark invoice as paid", variant: "destructive" });
-    }
+    const { error } = await supabase.from("invoices").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", id);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Invoice marked as paid" });
+    loadInvoices();
   };
 
-  const filteredInvoices = invoices.filter((i) => {
-    const matchesSearch = !search || 
-      i.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-      i.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
-      i.description?.toLowerCase().includes(search.toLowerCase());
-    const matchesCurrency = filterCurrency === "ALL" || i.currency === filterCurrency;
-    const matchesStatus = filterStatus === "ALL" || i.status === filterStatus;
-    return matchesSearch && matchesCurrency && matchesStatus;
+  const filtered = invoices.filter(inv => {
+    const s = search.toLowerCase();
+    const matchSearch = !s || inv.customer_name?.toLowerCase().includes(s) || inv.invoice_number?.toLowerCase().includes(s) || inv.client_name?.toLowerCase().includes(s);
+    const isOverdue = inv.status === "pending" && inv.due_date && new Date(inv.due_date) < new Date();
+    const effectiveStatus = isOverdue ? "overdue" : inv.status;
+    const matchStatus = filterStatus === "ALL" || effectiveStatus === filterStatus;
+    return matchSearch && matchStatus;
   });
 
-  const totalInvoices = filteredInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);
-  const pendingInvoices = filteredInvoices.filter((i) => i.status === "pending").length;
-  const overdueInvoices = filteredInvoices.filter((i) => {
-    if (i.status !== "pending") return false;
-    const dueDate = new Date(i.due_date);
-    return dueDate < new Date();
-  }).length;
+  const totalReceivable = filtered.filter(i => i.status !== "paid").reduce((s, i) => s + (i.total_amount || i.amount || 0), 0);
+  const pendingCount = filtered.filter(i => i.status === "pending").length;
+  const paidCount = filtered.filter(i => i.status === "paid").length;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <div className="flex flex-1">
-        <FinanceSidebar />
-        <main className="flex-1 p-6 overflow-y-auto">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Customer Invoices</h1>
-                <p className="text-muted-foreground">Manage accounts receivable and customer invoices</p>
-              </div>
-              <Button className="gap-2" onClick={() => setModal("new")}>
-                <Plus className="size-4" />
-                Add Invoice
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <DollarSign className="size-4" />
-                    Total Receivable
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold">{formatAmount(totalInvoices, "TZS")}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <FileText className="size-4" />
-                    Pending Invoices
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold">{pendingInvoices}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-600">
-                    <Filter className="size-4" />
-                    Overdue Invoices
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold text-red-600">{overdueInvoices}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="border border-border">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex gap-2 flex-wrap">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input className="pl-9 w-64" placeholder="Search invoices..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                    </div>
-                    <Select value={filterCurrency} onValueChange={setFilterCurrency}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">All Currencies</SelectItem>
-                        {Object.values(CURRENCIES).map((c) => (
-                          <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="overdue">Overdue</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={loadInvoices}>
-                    <RefreshCw className="size-4 mr-2" />
-                    Refresh
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-muted/30">
-                      <TableRow>
-                        <TableHead>Invoice #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead>Currency</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loading ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="py-16 text-center">
-                            <RefreshCw className="mx-auto size-8 text-muted-foreground animate-spin mb-3" />
-                            <p className="text-muted-foreground">Loading invoices...</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredInvoices.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="py-16 text-center">
-                            <EmptyState icon={Building2} title="No customer invoices" description="Add your first invoice to get started" />
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredInvoices.map((invoice) => {
-                          const isOverdue = invoice.status === "pending" && new Date(invoice.due_date) < new Date();
-                          const status = isOverdue ? "overdue" : invoice.status;
-                          return (
-                            <TableRow key={invoice.id} className="hover:bg-muted/50 transition-colors">
-                              <TableCell className="font-semibold text-foreground">
-                                {invoice.invoice_number}
-                              </TableCell>
-                              <TableCell className="text-foreground font-medium">
-                                {invoice.customer_name}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="secondary">{invoice.category || "General"}</Badge>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground font-medium whitespace-nowrap">
-                                {formatDate(invoice.due_date)}
-                              </TableCell>
-                              <TableCell className="font-bold text-emerald-700 dark:text-emerald-400 text-right whitespace-nowrap">
-                                {formatAmount(invoice.amount, invoice.currency)}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="font-medium">
-                                  {CURRENCIES[invoice.currency as keyof typeof CURRENCIES]?.flag || ""} {invoice.currency}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={STATUS_STYLES[status] || STATUS_STYLES.pending} className="capitalize">
-                                  {status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex gap-2">
-                                  {invoice.status === "pending" && (
-                                    <Button variant="ghost" size="sm" onClick={() => markAsPaid(invoice.id)}>
-                                      <CheckCircle2 className="size-4 mr-1" />
-                                      Mark Paid
-                                    </Button>
-                                  )}
-                                  <Button variant="ghost" size="sm" onClick={() => deleteInvoice(invoice.id)}>
-                                    <Trash2 className="size-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {modal === "new" && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <Card className="w-full max-w-md mx-4">
-                  <CardHeader>
-                    <CardTitle>Add Customer Invoice</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="customer">Customer Name</Label>
-                      <Input id="customer" placeholder="Customer name" value={invoiceForm.customer_name} onChange={(e) => setInvoiceForm({ ...invoiceForm, customer_name: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="invoice-number">Invoice Number</Label>
-                      <Input id="invoice-number" placeholder="INV-001" value={invoiceForm.invoice_number} onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="amount">Amount</Label>
-                        <Input id="amount" type="number" value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="currency">Currency</Label>
-                        <Select value={invoiceForm.currency} onValueChange={(value) => setInvoiceForm({ ...invoiceForm, currency: value })}>
-                          <SelectTrigger id="currency">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(CURRENCIES).map((c) => (
-                              <SelectItem key={c.code} value={c.code}>{c.flag} {c.code}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Input id="category" placeholder="Transport, Services, etc." value={invoiceForm.category} onChange={(e) => setInvoiceForm({ ...invoiceForm, category: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="due-date">Due Date</Label>
-                      <Input id="due-date" type="date" value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Input id="description" placeholder="Invoice description" value={invoiceForm.description} onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })} />
-                    </div>
-                    <div className="flex gap-2 justify-end pt-2">
-                      <Button variant="outline" onClick={() => setModal(null)} disabled={submitting}>Cancel</Button>
-                      <Button onClick={saveInvoice} disabled={submitting}>
-                        {submitting ? "Saving..." : "Save Invoice"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
-        </main>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Customer Invoices</h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage accounts receivable and customer billing</p>
+        </div>
+        <Button className="gap-2" onClick={() => setModal(true)}>
+          <Plus className="size-4" /> New Invoice
+        </Button>
       </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground"><DollarSign className="size-4" /> Total Receivable</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold text-foreground">{fmt(totalReceivable)}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground"><FileText className="size-4" /> Pending</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold text-amber-600">{pendingCount}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="size-4" /> Paid</CardTitle></CardHeader>
+          <CardContent><p className="text-2xl font-bold text-emerald-600">{paidCount}</p></CardContent>
+        </Card>
+      </div>
+
+      {/* Filters + Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input className="pl-9" placeholder="Search invoices..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={loadInvoices}><RefreshCw className="size-4 mr-2" />Refresh</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead>Invoice #</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Issue Date</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">VAT</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={9} className="py-16 text-center text-muted-foreground">Loading invoices…</TableCell></TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow><TableCell colSpan={9} className="py-16 text-center">
+                    <FileText className="mx-auto size-8 text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground text-sm">No invoices found. Create your first invoice above.</p>
+                  </TableCell></TableRow>
+                ) : filtered.map(inv => {
+                  const isOverdue = inv.status === "pending" && inv.due_date && new Date(inv.due_date) < new Date();
+                  const effectiveStatus = isOverdue ? "overdue" : (inv.status || "pending");
+                  return (
+                    <TableRow key={inv.id} className="hover:bg-muted/50">
+                      <TableCell className="font-mono text-sm font-semibold">{inv.invoice_number}</TableCell>
+                      <TableCell className="font-medium">{inv.customer_name || inv.client_name}</TableCell>
+                      <TableCell className="text-muted-foreground">{inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : "—"}</TableCell>
+                      <TableCell className={`text-sm ${isOverdue ? "text-red-600 font-semibold" : "text-muted-foreground"}`}>
+                        {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{fmt(inv.amount || 0, inv.currency)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground text-sm">{fmt(inv.vat_amount || 0, inv.currency)}</TableCell>
+                      <TableCell className="text-right font-bold">{fmt(inv.total_amount || inv.amount || 0, inv.currency)}</TableCell>
+                      <TableCell>
+                        <Badge className={STATUS_COLORS[effectiveStatus] || STATUS_COLORS.pending}>{effectiveStatus}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {inv.status !== "paid" && (
+                          <Button variant="ghost" size="sm" onClick={() => markAsPaid(inv.id)}>
+                            <CheckCircle2 className="size-4 text-emerald-600 mr-1" /> Mark Paid
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* New Invoice Modal */}
+      {modal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <CardHeader><CardTitle>Create New Invoice</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1">
+                <Label>Customer Name *</Label>
+                <Input placeholder="e.g. Dangote Cement Tanzania" value={form.customer_name} onChange={e => setForm({ ...form, customer_name: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Invoice Number</Label>
+                <Input placeholder="INV-001 (auto-generated if blank)" value={form.invoice_number} onChange={e => setForm({ ...form, invoice_number: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>Amount (excl. VAT) *</Label>
+                  <Input type="number" placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
+                </div>
+                <div className="space-y-1">
+                  <Label>VAT Rate (%)</Label>
+                  <Input type="number" placeholder="18" value={form.vat_rate} onChange={e => setForm({ ...form, vat_rate: e.target.value })} />
+                </div>
+              </div>
+              {form.amount && (
+                <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span>{fmt(parseFloat(form.amount) || 0, form.currency)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">VAT ({form.vat_rate}%):</span><span>{fmt((parseFloat(form.amount) || 0) * (parseFloat(form.vat_rate) || 0) / 100, form.currency)}</span></div>
+                  <div className="flex justify-between font-bold border-t border-border mt-2 pt-2"><span>Total:</span><span>{fmt((parseFloat(form.amount) || 0) * (1 + (parseFloat(form.vat_rate) || 0) / 100), form.currency)}</span></div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>Currency</Label>
+                  <Select value={form.currency} onValueChange={v => setForm({ ...form, currency: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Payment Terms</Label>
+                  <Select value={form.payment_terms} onValueChange={v => setForm({ ...form, payment_terms: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="immediate">Immediate</SelectItem>
+                      <SelectItem value="15 days">Net 15</SelectItem>
+                      <SelectItem value="30 days">Net 30</SelectItem>
+                      <SelectItem value="60 days">Net 60</SelectItem>
+                      <SelectItem value="90 days">Net 90</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>Due Date *</Label>
+                <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Description / Notes</Label>
+                <Textarea placeholder="Invoice description, services rendered, etc." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} />
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="outline" onClick={() => setModal(false)} disabled={submitting}>Cancel</Button>
+                <Button onClick={saveInvoice} disabled={submitting}>{submitting ? "Creating..." : "Create Invoice"}</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -56,21 +56,20 @@ export const FINANCE_MENU_GROUPS: MenuGroup[] = [
     ],
   },
   {
-    label: "Receivables",
-    icon: TrendingUp,
+    label: "Invoices & Billing",
+    icon: FileText,
     items: [
-      { path: "/finance/receivables/customer-invoices", label: "Customer Invoices", icon: FileText },
-      { path: "/finance/receivables/customer-payments", label: "Customer Payments", icon: Receipt },
-      { path: "/finance/receivables/aging-report", label: "Aging Report", icon: BarChart3 },
+      { path: "/finance/invoicing/customer-invoices", label: "Customer Invoices", icon: FileText },
+      { path: "/finance/invoicing/vendor-bills", label: "Vendor Bills", icon: Building2 },
+      { path: "/finance/invoicing/credit-notes", label: "Credit Notes", icon: Receipt },
     ],
   },
   {
-    label: "Payables",
+    label: "Expenses",
     icon: TrendingDown,
     items: [
-      { path: "/finance/payables/vendor-bills", label: "Vendor Bills", icon: FileText },
-      { path: "/finance/payables/vendor-payments", label: "Vendor Payments", icon: CreditCard },
-      { path: "/finance/payables/supplier-aging", label: "Supplier Aging", icon: BarChart3 },
+      { path: "/expenses", label: "Expense Records", icon: Receipt },
+      { path: "/finance/transactions/expenses", label: "Expense Tracker", icon: CreditCard },
     ],
   },
   {
@@ -78,10 +77,8 @@ export const FINANCE_MENU_GROUPS: MenuGroup[] = [
     icon: Landmark,
     items: [
       { path: "/finance/banking/bank-accounts", label: "Bank Accounts", icon: Building2 },
-      { path: "/finance/banking/cash-accounts", label: "Cash Accounts", icon: Wallet },
       { path: "/finance/banking/bank-statements", label: "Bank Statements", icon: FileText },
       { path: "/finance/banking/bank-reconciliation", label: "Bank Reconciliation", icon: FileSpreadsheet },
-      { path: "/finance/banking/internal-transfers", label: "Internal Transfers", icon: TrendingUp },
     ],
   },
   {
@@ -93,8 +90,8 @@ export const FINANCE_MENU_GROUPS: MenuGroup[] = [
       { path: "/finance/reports/cash-flow", label: "Cash Flow", icon: Wallet },
       { path: "/finance/reports/revenue-analysis", label: "Revenue Analysis", icon: TrendingUp },
       { path: "/finance/reports/expense-analysis", label: "Expense Analysis", icon: TrendingDown },
-      { path: "/finance/reports/fleet-profitability", label: "Fleet Profitability", icon: BarChart3 },
-      { path: "/finance/reports/reconciliation", label: "COA Reconciliation", icon: FileText },
+      { path: "/finance/reports/aging-report", label: "Aging Report", icon: BarChart3 },
+      { path: "/finance/reports/tax-reports", label: "VAT / Tax Report", icon: FileText },
     ],
   },
 ];
