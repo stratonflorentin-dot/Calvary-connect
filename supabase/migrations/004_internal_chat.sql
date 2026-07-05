@@ -37,6 +37,7 @@ ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 -- 5. Row Level Security Policies
 
 -- Channels Policies
+DROP POLICY IF EXISTS "Users can view channels they are member of" ON chat_channels;
 CREATE POLICY "Users can view channels they are member of" ON chat_channels
   FOR SELECT USING (
     EXISTS (
@@ -46,17 +47,20 @@ CREATE POLICY "Users can view channels they are member of" ON chat_channels
     )
   );
 
+DROP POLICY IF EXISTS "Users can create channels" ON chat_channels;
 CREATE POLICY "Users can create channels" ON chat_channels
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Members Policies
-CREATE POLICY "Members can view channel memberships" ON chat_channel_members
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-
+DROP POLICY IF EXISTS "Members can view their own membership" ON chat_channel_members;
+CREATE POLICY "Members can view their own membership" ON chat_channel_members
+  FOR SELECT USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "Users can join channels" ON chat_channel_members;
 CREATE POLICY "Users can join channels" ON chat_channel_members
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Messages Policies
+DROP POLICY IF EXISTS "Users can view messages in their channels" ON chat_messages;
 CREATE POLICY "Users can view messages in their channels" ON chat_messages
   FOR SELECT USING (
     EXISTS (
@@ -66,6 +70,7 @@ CREATE POLICY "Users can view messages in their channels" ON chat_messages
     )
   );
 
+DROP POLICY IF EXISTS "Users can send messages to their channels" ON chat_messages;
 CREATE POLICY "Users can send messages to their channels" ON chat_messages
   FOR INSERT WITH CHECK (
     EXISTS (
