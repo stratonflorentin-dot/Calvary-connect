@@ -554,7 +554,7 @@ export function CalvaryFinancialManagement() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Category</Label>
-                        <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({...expenseForm, category: v})}>
+                        <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
                           <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="fuel">Fuel</SelectItem>
@@ -571,7 +571,7 @@ export function CalvaryFinancialManagement() {
                       </div>
                       <div className="space-y-2">
                         <Label>Vehicle (Optional)</Label>
-                        <Select value={expenseForm.vehicle_id} onValueChange={(v) => setExpenseForm({...expenseForm, vehicle_id: v})}>
+                        <Select value={expenseForm.vehicle_id} onValueChange={(v) => setExpenseForm({ ...expenseForm, vehicle_id: v })}>
                           <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                           <SelectContent>
                             {vehicles.map(v => (
@@ -585,18 +585,18 @@ export function CalvaryFinancialManagement() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Amount (TZS)</Label>
-                        <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} required />
+                        <Input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} required />
                       </div>
                       <div className="space-y-2">
                         <Label>Vendor/Source</Label>
-                        <Input value={expenseForm.vendor} onChange={(e) => setExpenseForm({...expenseForm, vendor: e.target.value})} placeholder="e.g., Oryx Fuel Station" />
+                        <Input value={expenseForm.vendor} onChange={(e) => setExpenseForm({ ...expenseForm, vendor: e.target.value })} placeholder="e.g., Oryx Fuel Station" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Payment Method</Label>
-                        <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({...expenseForm, payment_method: v})}>
+                        <Select value={expenseForm.payment_method} onValueChange={(v) => setExpenseForm({ ...expenseForm, payment_method: v })}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="cash">Cash</SelectItem>
@@ -608,13 +608,13 @@ export function CalvaryFinancialManagement() {
                       </div>
                       <div className="space-y-2">
                         <Label>Date</Label>
-                        <Input type="date" value={expenseForm.expense_date} onChange={(e) => setExpenseForm({...expenseForm, expense_date: e.target.value})} required />
+                        <Input type="date" value={expenseForm.expense_date} onChange={(e) => setExpenseForm({ ...expenseForm, expense_date: e.target.value })} required />
                       </div>
                     </div>
 
                     <div className="flex gap-4">
                       <label className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={expenseForm.is_cross_border} onChange={(e) => setExpenseForm({...expenseForm, is_cross_border: e.target.checked})} className="rounded" />
+                        <input type="checkbox" checked={expenseForm.is_cross_border} onChange={(e) => setExpenseForm({ ...expenseForm, is_cross_border: e.target.checked })} className="rounded" />
                         Cross-Border Expense
                       </label>
                     </div>
@@ -622,7 +622,7 @@ export function CalvaryFinancialManagement() {
                     {expenseForm.is_cross_border && (
                       <div className="space-y-2">
                         <Label>Border Point</Label>
-                        <Select value={expenseForm.border_point} onValueChange={(v) => setExpenseForm({...expenseForm, border_point: v})}>
+                        <Select value={expenseForm.border_point} onValueChange={(v) => setExpenseForm({ ...expenseForm, border_point: v })}>
                           <SelectTrigger><SelectValue placeholder="Select border" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Kasumbalesa">Kasumbalesa (DRC)</SelectItem>
@@ -637,7 +637,7 @@ export function CalvaryFinancialManagement() {
 
                     <div className="space-y-2">
                       <Label>Description</Label>
-                      <Textarea value={expenseForm.description} onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} placeholder="Expense details..." rows={2} />
+                      <Textarea value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} placeholder="Expense details..." rows={2} />
                     </div>
 
                     <Button type="submit" className="w-full">Record Expense</Button>
@@ -707,7 +707,7 @@ export function CalvaryFinancialManagement() {
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="gap-2 bg-green-600 hover:bg-green-700"><Plus className="size-4" /> Record Trip Revenue</Button>
- </DialogTrigger>
+              </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Record Trip Revenue</DialogTitle>
@@ -715,7 +715,7 @@ export function CalvaryFinancialManagement() {
                 <form onSubmit={handleAddRevenue} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Select Completed Trip</Label>
-                    <Select value={revenueForm.trip_id} onValueChange={(v) => setRevenueForm({...revenueForm, trip_id: v})}>
+                    <Select value={revenueForm.trip_id} onValueChange={(v) => setRevenueForm({ ...revenueForm, trip_id: v })}>
                       <SelectTrigger><SelectValue placeholder="Select trip" /></SelectTrigger>
                       <SelectContent>
                         {trips.filter(t => t.status !== 'completed').map(trip => (
@@ -728,15 +728,15 @@ export function CalvaryFinancialManagement() {
                   </div>
                   <div className="space-y-2">
                     <Label>Revenue Amount (TZS)</Label>
-                    <Input type="number" value={revenueForm.amount} onChange={(e) => setRevenueForm({...revenueForm, amount: e.target.value})} required />
+                    <Input type="number" value={revenueForm.amount} onChange={(e) => setRevenueForm({ ...revenueForm, amount: e.target.value })} required />
                   </div>
                   <div className="space-y-2">
                     <Label>Client</Label>
-                    <Input value={revenueForm.client} onChange={(e) => setRevenueForm({...revenueForm, client: e.target.value})} placeholder="Client name" />
+                    <Input value={revenueForm.client} onChange={(e) => setRevenueForm({ ...revenueForm, client: e.target.value })} placeholder="Client name" />
                   </div>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={revenueForm.is_cross_border} onChange={(e) => setRevenueForm({...revenueForm, is_cross_border: e.target.checked})} className="rounded" />
+                      <input type="checkbox" checked={revenueForm.is_cross_border} onChange={(e) => setRevenueForm({ ...revenueForm, is_cross_border: e.target.checked })} className="rounded" />
                       Cross-Border Trip
                     </label>
                   </div>
@@ -806,19 +806,19 @@ export function CalvaryFinancialManagement() {
                   </div>
                   <div className="space-y-2">
                     <Label>Customer/Client Name</Label>
-                    <Input value={invoiceForm.customer_name} onChange={e => setInvoiceForm({...invoiceForm, customer_name: e.target.value})} required />
+                    <Input value={invoiceForm.customer_name} onChange={e => setInvoiceForm({ ...invoiceForm, customer_name: e.target.value })} required />
                   </div>
                   <div className="space-y-2">
                     <Label>Amount (TZS)</Label>
-                    <Input type="number" value={invoiceForm.amount} onChange={e => setInvoiceForm({...invoiceForm, amount: e.target.value})} required />
+                    <Input type="number" value={invoiceForm.amount} onChange={e => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} required />
                   </div>
                   <div className="space-y-2">
                     <Label>Due Date</Label>
-                    <Input type="date" value={invoiceForm.due_date} onChange={e => setInvoiceForm({...invoiceForm, due_date: e.target.value})} required />
+                    <Input type="date" value={invoiceForm.due_date} onChange={e => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })} required />
                   </div>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={invoiceForm.is_cross_border} onChange={(e) => setInvoiceForm({...invoiceForm, is_cross_border: e.target.checked})} className="rounded" />
+                      <input type="checkbox" checked={invoiceForm.is_cross_border} onChange={(e) => setInvoiceForm({ ...invoiceForm, is_cross_border: e.target.checked })} className="rounded" />
                       Cross-Border Service
                     </label>
                   </div>
@@ -886,11 +886,11 @@ export function CalvaryFinancialManagement() {
                 <form onSubmit={handleAddTax} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Tax Name</Label>
-                    <Input value={taxForm.tax_name} onChange={e => setTaxForm({...taxForm, tax_name: e.target.value})} placeholder="e.g., Q2 VAT Payment" required />
+                    <Input value={taxForm.tax_name} onChange={e => setTaxForm({ ...taxForm, tax_name: e.target.value })} placeholder="e.g., Q2 VAT Payment" required />
                   </div>
                   <div className="space-y-2">
                     <Label>Type</Label>
-                    <Select value={taxForm.type} onValueChange={v => setTaxForm({...taxForm, type: v as TaxRecord['type']})}>
+                    <Select value={taxForm.type} onValueChange={v => setTaxForm({ ...taxForm, type: v as TaxRecord['type'] })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="VAT">VAT</SelectItem>
@@ -904,11 +904,11 @@ export function CalvaryFinancialManagement() {
                   </div>
                   <div className="space-y-2">
                     <Label>Amount (TZS)</Label>
-                    <Input type="number" value={taxForm.amount} onChange={e => setTaxForm({...taxForm, amount: e.target.value})} required />
+                    <Input type="number" value={taxForm.amount} onChange={e => setTaxForm({ ...taxForm, amount: e.target.value })} required />
                   </div>
                   <div className="space-y-2">
                     <Label>Due Date</Label>
-                    <Input type="date" value={taxForm.due_date} onChange={e => setTaxForm({...taxForm, due_date: e.target.value})} required />
+                    <Input type="date" value={taxForm.due_date} onChange={e => setTaxForm({ ...taxForm, due_date: e.target.value })} required />
                   </div>
                   <Button type="submit" className="w-full">Record Tax</Button>
                 </form>

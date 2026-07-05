@@ -1,13 +1,12 @@
 "use client";
 
+import { SummaryCards } from '@/components/finance/SummaryCards';
+
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { useSupabase } from "@/components/supabase-provider";
-import {
-  MessageSquare, Hash, Users, Search, Plus, Send,
-  MoreVertical, FileText, Phone, Video, Info,
-  AlertCircle, Loader2, Navigation, CheckCircle2
-} from "lucide-react";
+import { MessageSquare, Hash, Search, Plus, Loader2, Navigation, Info, AlertCircle, FileText, Phone, Video, CheckCircle2 } from "lucide-react";
+import { useSupabase } from '@/components/supabase-provider';
+
 
 // --- Types ---
 interface Channel {
@@ -160,7 +159,9 @@ export default function InternalChatPage() {
   const currentChannel = error ? MOCK_CHANNELS[0] : activeChannel;
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.16))] bg-white flex overflow-hidden border-t border-gray-100">
+    <div className="flex flex-col min-h-screen">
+      <SummaryCards />
+      <div className="h-[calc(100vh-theme(spacing.16))] bg-white flex overflow-hidden border-t border-gray-100">
       {/* ── Sidebar ── */}
       <div className="w-80 flex-shrink-0 border-r border-gray-100 flex flex-col bg-slate-50/50">
         <div className="p-4 border-b border-gray-100 bg-white">
@@ -351,6 +352,7 @@ export default function InternalChatPage() {
         </div>
       </div>
     </div>
+  </div>
   );
 }
 
