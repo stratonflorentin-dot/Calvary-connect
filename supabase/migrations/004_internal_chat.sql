@@ -13,11 +13,10 @@ CREATE TABLE IF NOT EXISTS chat_channels (
 
 -- 2. Create chat_channel_members table
 CREATE TABLE IF NOT EXISTS chat_channel_members (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  channel_id UUID NOT NULL REFERENCES chat_channels(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE (channel_id, user_id)
+  channel_id uuid REFERENCES chat_channels(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  joined_at timestamptz default now(),
+  primary key (channel_id, user_id)
 );
 
 -- 3. Create chat_messages table
