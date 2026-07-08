@@ -224,7 +224,7 @@ export default function AIAnalysisDashboard() {
   });
 
   const getSamplePredictiveMaintenancePayload = () => {
-    const vehicle = vehicles[0] || {} as any;
+    const vehicle = (vehicles[0] || {}) as any;
     const currentOdometerKm = Number(vehicle?.mileage || 120000);
     return {
       truckId: vehicle?.id || 'TRUCK-0001',
@@ -232,7 +232,7 @@ export default function AIAnalysisDashboard() {
       currentOdometerKm,
       lastServiceOdometerKm: Number(vehicle?.mileage ? Math.max(0, vehicle.mileage - 12000) : 108000),
       lastServiceDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      fuelType: vehicle?.fuel_type || 'Diesel',
+      fuelType: vehicle?.fuel_type || vehicle?.fuelType || 'Diesel',
       recentMaintenanceCount: 2,
       averageDailyKm: 400,
       currentCondition: 'Fair',
@@ -242,15 +242,15 @@ export default function AIAnalysisDashboard() {
   };
 
   const getSampleFuelPredictionPayload = () => {
-    const trip = trips[0] || {} as any;
-    const vehicle = vehicles.find((v: any) => v.id === trip.vehicle_id) || vehicles[0] || {} as any;
+    const trip = (trips[0] || {}) as any;
+    const vehicle = (vehicles.find((v: any) => v.id === trip.vehicle_id) || vehicles[0] || {}) as any;
     return {
       tripId: trip?.id,
       origin: trip?.origin || 'Nairobi',
       destination: trip?.destination || 'Mombasa',
-      distanceKm: Number(trip?.distance_km || 480),
+      distanceKm: Number(trip?.distance_km || trip?.distanceKm || 480),
       vehicleType: `${vehicle?.make || 'Heavy Truck'} ${vehicle?.model || ''}`.trim(),
-      vehicleFuelType: vehicle?.fuel_type || 'Diesel',
+      vehicleFuelType: vehicle?.fuel_type || vehicle?.fuelType || 'Diesel',
       avgFuelEfficiencyKmPerLiter: 4.5,
       loadWeightTons: 8,
       driverBehaviourScore: 82,

@@ -37,7 +37,7 @@ export async function register() {
 
       const exporter = new JaegerExporter({ endpoint: jaegerEndpoint });
 
-      const sdkConfig: ConstructorParameters<typeof NodeSDK>[0] = {
+      const sdkConfig: any = {
         resource: new Resource({
           [SEMRESATTRS_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'calvary-connect',
           [SEMRESATTRS_SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
