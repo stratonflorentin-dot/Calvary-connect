@@ -193,7 +193,7 @@ export default function DriverMaintenancePage() {
         <p className="text-sm text-muted-foreground">No requests yet.</p>
       ) : (
         <div className="space-y-3">
-          {requests.map((r) => (
+          {requests.map((r: any) => (
             <Card key={String(r.id)}>
               <CardContent className="py-4">
                 <div className="flex justify-between items-start gap-2">

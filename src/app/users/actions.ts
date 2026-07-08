@@ -37,7 +37,7 @@ export async function activateUserOnLoginAction(
     .ilike("email", normalizedEmail)
     .maybeSingle();
 
-  const profile = byId || byEmail;
+  const profile = (byId || byEmail) as Record<string, any> | null;
   if (!profile) return null;
 
   const updates: Record<string, string> = {
@@ -54,7 +54,7 @@ export async function activateUserOnLoginAction(
   const { data, error } = await supabaseAdmin
     .from("user_profiles")
     .update(updates)
-    .eq("email", profile.email)
+    .eq("email", profile?.email || normalizedEmail)
     .select()
     .single();
 
@@ -63,9 +63,7 @@ export async function activateUserOnLoginAction(
 }
 
 /** Align invited profiles with Supabase Auth (users who already signed in). */
-async function syncInvitedProfilesWithAuth(
-  supabaseAdmin: ReturnType<typeof createClient>,
-) {
+async function syncInvitedProfilesWithAuth(supabaseAdmin: any) {
   const { data: profiles, error } = await supabaseAdmin
     .from("user_profiles")
     .select("id, email, status, last_login_at")
@@ -78,17 +76,18 @@ async function syncInvitedProfilesWithAuth(
 
   if (authError || !authList?.users?.length) return;
 
-  const authByEmail = new Map(
-    authList.users
-      .filter((u) => u.email)
-      .map((u) => [u.email!.toLowerCase().trim(), u]),
+  const authUsers = Array.isArray((authList as any)?.users) ? (authList as any).users : [];
+  const authByEmail = new Map<string, Record<string, any>>(
+    authUsers
+      .filter((u: Record<string, any>) => u.email)
+      .map((u: Record<string, any>) => [String(u.email).toLowerCase().trim(), u]),
   );
 
   const now = new Date().toISOString();
 
-  for (const profile of profiles) {
-    const email = String(profile.email || "").toLowerCase().trim();
-    const authUser = authByEmail.get(email);
+  for (const profile of profiles || []) {
+    const email = String((profile as Record<string, any>).email || "").toLowerCase().trim();
+    const authUser = authByEmail.get(email) as Record<string, any> | undefined;
     if (!authUser) continue;
 
     const hasSignedIn =

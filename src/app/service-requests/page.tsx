@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Wrench, Clock, CheckCircle2, AlertTriangle, Truck } from 'lucide-react';
@@ -63,18 +64,18 @@ export default function ServiceRequestsPage() {
   useEffect(() => {
     const loadRequests = async () => {
       if (!user) return;
-      
+
       try {
         setLoading(true);
-        
+
         // Load real maintenance requests from Supabase
         const { data: maintenanceRequests, error } = await supabase
           .from('maintenance_requests')
           .select('*')
           .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
-        
+
         setRequests(maintenanceRequests || []);
       } catch (error) {
         console.error('Error loading service requests:', error);
@@ -91,9 +92,11 @@ export default function ServiceRequestsPage() {
     if (!driverId) return;
     await createNotification({
       userId: driverId,
+      module: 'maintenance',
       category: 'maintenance_update',
       title: 'Maintenance update',
       message,
+      type: 'info',
       severity: 'info',
     });
   };
@@ -182,49 +185,76 @@ export default function ServiceRequestsPage() {
             requests?.map((r) => {
               const status = reqStatus(r);
               const id = String(r.id);
+              const mechanicNotes = typeof r.mechanic_notes === 'string' ? r.mechanic_notes : '';
               return (
-              <Card key={id} className="rounded-2xl shadow-sm border-none overflow-hidden bg-white">
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
-                    <div className="space-y-3 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge className={cn(
-                          "text-[10px] font-bold",
-                          reqUrgency(r).includes('crit') || reqUrgency(r).includes('urgent') ? 'bg-rose-500' : 'bg-amber-500'
-                        )}>
-                          {reqUrgency(r).toUpperCase()}
-                        </Badge>
-                        <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                          Request #{id.slice(0, 8)}
-                        </Badge>
+                <Card key={id} className="rounded-2xl shadow-sm border-none overflow-hidden bg-white">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                      <div className="space-y-3 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge className={cn(
+                            "text-[10px] font-bold",
+                            reqUrgency(r).includes('crit') || reqUrgency(r).includes('urgent') ? 'bg-rose-500' : 'bg-amber-500'
+                          )}>
+                            {reqUrgency(r).toUpperCase()}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                            Request #{id.slice(0, 8)}
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-1">
+                          <h3 className="font-headline text-lg">{reqIssue(r)}</h3>
+                          <p className="text-xs text-muted-foreground flex items-center gap-2">
+                            <Truck className="size-3" /> Vehicle: {String(r.vehicle_id || '—')}
+                          </p>
+                          {mechanicNotes && (
+                            <p className="text-xs text-muted-foreground">Notes: {mechanicNotes}</p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-bold uppercase">
+                          <span className="flex items-center gap-1"><Clock className="size-3" /> Reported: {reqDate(r)}</span>
+                        </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <h3 className="font-headline text-lg">{reqIssue(r)}</h3>
-                        <p className="text-xs text-muted-foreground flex items-center gap-2">
-                          <Truck className="size-3" /> Vehicle: {String(r.vehicle_id || '—')}
-                        </p>
-                        {r.mechanic_notes && (
-                          <p className="text-xs text-muted-foreground">Notes: {String(r.mechanic_notes)}</p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-bold uppercase">
-                        <span className="flex items-center gap-1"><Clock className="size-3" /> Reported: {reqDate(r)}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col justify-center gap-2 md:w-52">
-                      {status === 'pending' && (
-                        <Button onClick={() => updateRequest(id, 'in_review', {}, r)} className="w-full rounded-xl gap-2">
-                          <Wrench className="size-4" /> Mark In Review
-                        </Button>
-                      )}
-                      {(status === 'in_review' || status === 'in_progress') && (
-                        <>
-                          <Button onClick={() => updateRequest(id, 'approved', {}, r)} className="w-full rounded-xl">
-                            Approve repair
+                      <div className="flex flex-col justify-center gap-2 md:w-52">
+                        {status === 'pending' && (
+                          <Button onClick={() => updateRequest(id, 'in_review', {}, r)} className="w-full rounded-xl gap-2">
+                            <Wrench className="size-4" /> Mark In Review
                           </Button>
+                        )}
+                        {(status === 'in_review' || status === 'in_progress') && (
+                          <>
+                            <Button onClick={() => updateRequest(id, 'approved', {}, r)} className="w-full rounded-xl">
+                              Approve repair
+                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button className="w-full rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700">
+                                  <CheckCircle2 className="size-4" /> Complete
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Mechanic notes</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={(e) => handleMechanicNotes(e, id, r, 'completed')} className="space-y-4 pt-4">
+                                  <div className="space-y-2">
+                                    <Label>Actual Cost (TZS)</Label>
+                                    <Input name="cost" type="number" placeholder="0" required />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Service Log / Notes</Label>
+                                    <Textarea name="notes" placeholder="Work performed, parts replaced…" required className="min-h-[120px]" />
+                                  </div>
+                                  <Button type="submit" className="w-full">Mark completed</Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                          </>
+                        )}
+                        {status === 'approved' && (
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button className="w-full rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700">
@@ -242,53 +272,28 @@ export default function ServiceRequestsPage() {
                                 </div>
                                 <div className="space-y-2">
                                   <Label>Service Log / Notes</Label>
-                                  <Textarea name="notes" placeholder="Work performed, parts replaced…" required className="min-h-[120px]" />
+                                  <Textarea name="notes" placeholder="Final service log…" required className="min-h-[120px]" />
                                 </div>
                                 <Button type="submit" className="w-full">Mark completed</Button>
                               </form>
                             </DialogContent>
                           </Dialog>
-                        </>
-                      )}
-                      {status === 'approved' && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button className="w-full rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700">
-                              <CheckCircle2 className="size-4" /> Complete
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-md">
-                            <DialogHeader>
-                              <DialogTitle>Mechanic notes</DialogTitle>
-                            </DialogHeader>
-                            <form onSubmit={(e) => handleMechanicNotes(e, id, r, 'completed')} className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                              <Label>Actual Cost (TZS)</Label>
-                              <Input name="cost" type="number" placeholder="0" required />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Service Log / Notes</Label>
-                              <Textarea name="notes" placeholder="Final service log…" required className="min-h-[120px]" />
-                            </div>
-                            <Button type="submit" className="w-full">Mark completed</Button>
-                          </form>
-                          </DialogContent>
-                        </Dialog>
-                      )}
+                        )}
 
-                      <Badge className={cn(
-                        "w-full justify-center py-1 mt-auto",
-                        status === 'completed' ? 'bg-emerald-500' :
-                          status === 'approved' ? 'bg-blue-500' :
-                          status === 'in_review' || status === 'in_progress' ? 'bg-amber-500' : 'bg-slate-400'
-                      )}>
-                        {statusLabel(status)}
-                      </Badge>
+                        <Badge className={cn(
+                          "w-full justify-center py-1 mt-auto",
+                          status === 'completed' ? 'bg-emerald-500' :
+                            status === 'approved' ? 'bg-blue-500' :
+                              status === 'in_review' || status === 'in_progress' ? 'bg-amber-500' : 'bg-slate-400'
+                        )}>
+                          {statusLabel(status)}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );})
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </div>
       </main>

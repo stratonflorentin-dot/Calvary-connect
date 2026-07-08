@@ -37,11 +37,14 @@ export async function GET(request: NextRequest) {
 
         const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        await page.setContent(html, { waitUntil: 'load' });
         const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 20, bottom: 20, left: 20, right: 20 } });
         await browser.close();
 
-        return new NextResponse(pdfBuffer, {
+        // Convert to Node Buffer for NextResponse compatibility
+        const nodeBuffer = Buffer.from(pdfBuffer as any);
+
+        return new NextResponse(nodeBuffer, {
             status: 200,
             headers: {
                 'Content-Type': 'application/pdf',

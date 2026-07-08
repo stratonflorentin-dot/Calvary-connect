@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { toast } from '@/hooks/use-toast';
-import * as JSZip from 'jszip';
+import JSZip from 'jszip';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar } from 'recharts';
 
 const agencies = [

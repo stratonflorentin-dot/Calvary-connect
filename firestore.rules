@@ -2,274 +2,320 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // =========================================================================
+    // CALVARY CONNECT — ENTERPRISE FIRESTORE SECURITY RULES
+    // Version: 2.0 — Custom Claims (Phase 1 Scalability)
+    //
+    // KEY CHANGE from v1.0:
+    //   All role checks now read from JWT custom claims (request.auth.token.role)
+    //   instead of doing a secondary Firestore read via getUserData().
+    //   This eliminates ~50% of Firestore reads and removes per-request latency.
+    //
+    // SETUP REQUIRED:
+    //   Set custom claims on user creation via Firebase Admin SDK:
+    //   admin.auth().setCustomUserClaims(uid, { role: 'CEO', tenantId: 'default' })
+    // =========================================================================
+
+    // ─── Auth helpers (zero extra Firestore reads) ──────────────────────────
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function userRole() {
+      return request.auth.token.role;
     }
 
     function hasRole(role) {
-      return isSignedIn() && getUserData().role == role;
+      return isSignedIn() && userRole() == role;
     }
 
     function isAnyRole(roles) {
-      return isSignedIn() && getUserData().role in roles;
+      return isSignedIn() && userRole() in roles;
     }
 
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Users & notifications ---
+    function isTenant(tenantId) {
+      return isSignedIn() && request.auth.token.tenantId == tenantId;
+    }
+
+    function isCEO() {
+      return hasRole('CEO');
+    }
+
+    // ─── Timestamp guard ────────────────────────────────────────────────────
+
+    function isValidTimestamp(field) {
+      return request.resource.data[field] is timestamp;
+    }
+
+    // =========================================================================
+    // COLLECTIONS
+    // =========================================================================
+
+    // ─── Users ───────────────────────────────────────────────────────────────
 
     match /users/{userId} {
       allow get: if isOwner(userId) || isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']);
       allow list: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']);
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if (isOwner(userId) && resource != null) || hasRole('CEO');
-      allow delete: if hasRole('CEO') && resource != null;
+      allow update: if (isOwner(userId) && resource != null) || isCEO();
+      allow delete: if isCEO() && resource != null;
 
       match /notifications/{notificationId} {
-        allow read, write, delete: if isOwner(userId) || hasRole('CEO');
+        allow read, write, delete: if isOwner(userId) || isCEO();
       }
     }
 
-    match /meetings/{meetingId} {
-      allow read: if isAnyRole(['CEO', 'HR']) || (isSignedIn() && resource.data.participants != null && request.auth.uid in resource.data.participants);
-      allow create, update: if isAnyRole(['CEO', 'HR']);
-      allow delete: if hasRole('CEO') && resource != null;
+    // ─── Events (for event-driven architecture fan-out) ──────────────────────
+
+    match /events/{eventId} {
+      allow create: if isSignedIn();
+      allow read: if isCEO();
+      allow update, delete: if false; // immutable — Cloud Functions process them
     }
+
+    // ─── Audit Logs (append-only, CEO reads) ─────────────────────────────────
+
+    match /audit_logs/{logId} {
+      allow create: if isSignedIn();
+      allow read: if isCEO();
+      allow update, delete: if false; // immutable — never editable
+    }
+
+    // ─── Customers ───────────────────────────────────────────────────────────
 
     match /customers/{customerId} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT']);
-      allow create, update, delete: if hasRole('CEO');
+      allow create, update: if isAnyRole(['CEO', 'OPERATOR']);
+      allow delete: if isCEO();
     }
 
-    // App uses snake_case collection names (see src/)
+    // ─── Fleet Vehicles ───────────────────────────────────────────────────────
 
     match /fleet_vehicles/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']);
       allow create, update: if isAnyRole(['CEO', 'OPERATOR']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
+
+    match /vehicles/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']);
+      allow create, update: if isAnyRole(['CEO', 'OPERATOR']);
+      allow delete: if isCEO();
+    }
+
+    // ─── Trips ────────────────────────────────────────────────────────────────
 
     match /trips/{tripId} {
-      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT']) || (resource.data.driverId == request.auth.uid);
-      allow create: if isAnyRole(['CEO', 'OPERATOR']);
-      allow update: if (isAnyRole(['CEO', 'OPERATOR']) && resource != null) || (resource != null && resource.data.driverId == request.auth.uid);
-      allow delete: if hasRole('CEO');
-    }
-
-    match /trips/{tripId}/delivery_proofs/{proofId} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT'])
-        || (exists(/databases/$(database)/documents/trips/$(tripId))
-            && get(/databases/$(database)/documents/trips/$(tripId)).data.driverId == request.auth.uid);
-      allow create: if isSignedIn()
-        && exists(/databases/$(database)/documents/trips/$(tripId))
-        && get(/databases/$(database)/documents/trips/$(tripId)).data.driverId == request.auth.uid;
-      allow update, delete: if hasRole('CEO');
+        || (resource != null && resource.data.driverId == request.auth.uid);
+      allow create: if isAnyRole(['CEO', 'OPERATOR']);
+      allow update: if (isAnyRole(['CEO', 'OPERATOR']) && resource != null)
+        || (resource != null && resource.data.driverId == request.auth.uid);
+      allow delete: if isCEO();
+
+      match /delivery_proofs/{proofId} {
+        allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT'])
+          || (resource != null && resource.data.driverId == request.auth.uid);
+        allow create: if isSignedIn()
+          && exists(/databases/$(database)/documents/trips/$(tripId))
+          && get(/databases/$(database)/documents/trips/$(tripId)).data.driverId == request.auth.uid;
+        allow update, delete: if isCEO();
+      }
     }
 
-    match /allowances/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']) || (resource.data.userId == request.auth.uid);
-      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
+    // ─── Finance ─────────────────────────────────────────────────────────────
+
+    match /expenses/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR'])
+        || (resource != null && resource.data.driverId == request.auth.uid);
+      allow create: if isAnyRole(['DRIVER', 'ACCOUNTANT', 'CEO', 'OPERATOR']);
+      allow update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if isCEO();
     }
+
+    match /income/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if isCEO();
+    }
+
+    match /sales/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if isCEO();
+    }
+
+    match /purchases/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if isCEO();
+    }
+
+    match /taxes/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if isCEO();
+    }
+
+    match /invoices/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if isCEO();
+    }
+
+    match /financial_reports/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
+      allow delete: if isCEO();
+    }
+
+    // ─── Fuel ────────────────────────────────────────────────────────────────
 
     match /fuel_requests/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']) || (resource.data.driverId == request.auth.uid);
-      allow create: if isAnyRole(['DRIVER', 'CEO', 'OPERATOR']) && request.resource.data.driverId == request.auth.uid;
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR'])
+        || (resource != null && resource.data.driverId == request.auth.uid);
+      allow create: if isAnyRole(['DRIVER', 'CEO', 'OPERATOR'])
+        && request.resource.data.driverId == request.auth.uid;
       allow update: if isAnyRole(['ACCOUNTANT', 'OPERATOR', 'CEO']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
+
+    // ─── Maintenance ─────────────────────────────────────────────────────────
 
     match /maintenance_requests/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']);
       allow create: if isAnyRole(['MECHANIC', 'DRIVER', 'OPERATOR', 'CEO']);
       allow update: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
+
+    // ─── Inventory ────────────────────────────────────────────────────────────
 
     match /inventory_items/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
       allow create, update: if isAnyRole(['OPERATOR', 'CEO', 'MECHANIC']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
 
     match /spare_parts_requests/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
       allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
       allow update: if isAnyRole(['OPERATOR', 'CEO']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
+
+    match /spare_parts/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow create, update: if isAnyRole(['OPERATOR', 'CEO', 'MECHANIC']);
+      allow delete: if isCEO();
+    }
+
+    match /parts_requests/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
+      allow update: if isAnyRole(['OPERATOR', 'CEO']);
+      allow delete: if isCEO();
+    }
+
+    // ─── HR / Allowances ─────────────────────────────────────────────────────
+
+    match /allowances/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT'])
+        || (resource != null && resource.data.userId == request.auth.uid);
+      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO', 'HR']);
+      allow delete: if isCEO();
+    }
+
+    match /meetings/{meetingId} {
+      allow read: if isAnyRole(['CEO', 'HR'])
+        || (isSignedIn() && resource.data.participants != null
+          && request.auth.uid in resource.data.participants);
+      allow create, update: if isAnyRole(['CEO', 'HR']);
+      allow delete: if isCEO() && resource != null;
+    }
+
+    // ─── Driver locations ─────────────────────────────────────────────────────
 
     match /driver_locations/{driverId} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR']);
-      allow create, update: if request.auth.uid == driverId || hasRole('CEO');
-      allow delete: if hasRole('CEO');
+      allow create, update: if request.auth.uid == driverId || isCEO();
+      allow delete: if isCEO();
     }
 
-    match /roles_driver/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR']);
-      allow write, delete: if hasRole('CEO');
-    }
-
-    match /roles_mechanic/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
-      allow write, delete: if hasRole('CEO');
-    }
-
-    // Finance ledgers (accountant + CEO; CEO deletes)
-
-    match /sales/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
-      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
-    }
-
-    match /purchases/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
-      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
-    }
-
-    match /expenses/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']);
-      allow create: if isAnyRole(['DRIVER', 'ACCOUNTANT', 'CEO']);
-      allow update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
-    }
-
-    match /taxes/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
-      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
-    }
-
-    match /invoices/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
-      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
-    }
-
-    match /financial_reports/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
-      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
-    }
-
-    match /income/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
-      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
-    }
-
-    // Legacy camelCase paths (keep if old data exists)
+    // ─── Legacy camelCase paths (kept for backward compat — deprecate Q4) ────
 
     match /fleetVehicles/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']);
       allow create: if isAnyRole(['CEO', 'OPERATOR']);
       allow update: if isAnyRole(['CEO', 'OPERATOR', 'MECHANIC']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
 
     match /incomeRecords/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']);
-      allow create, update: if hasRole('ACCOUNTANT');
-      allow delete: if hasRole('CEO');
+      allow create, update: if hasRole('ACCOUNTANT') || isCEO();
+      allow delete: if isCEO();
     }
 
     match /expenseRecords/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']);
       allow create: if isAnyRole(['ACCOUNTANT', 'OPERATOR', 'CEO']);
       allow update: if isAnyRole(['ACCOUNTANT', 'CEO']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
 
     match /fuelRequests/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']) || (resource.data.driverId == request.auth.uid);
-      allow create: if isAnyRole(['DRIVER', 'CEO', 'OPERATOR']) && request.resource.data.driverId == request.auth.uid;
+      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR'])
+        || (resource != null && resource.data.driverId == request.auth.uid);
+      allow create: if isAnyRole(['DRIVER', 'CEO', 'OPERATOR'])
+        && request.resource.data.driverId == request.auth.uid;
       allow update: if isAnyRole(['ACCOUNTANT', 'OPERATOR', 'CEO']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
 
     match /inventoryItems/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
       allow create: if isAnyRole(['OPERATOR', 'CEO']);
       allow update: if isAnyRole(['OPERATOR', 'MECHANIC', 'CEO']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
 
     match /inventoryUsageLogs/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
       allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
-      allow update, delete: if hasRole('CEO');
+      allow update, delete: if isCEO();
     }
 
     match /sparePartsRequests/{id} {
       allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
       allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']);
       allow update: if isAnyRole(['OPERATOR', 'CEO']);
-      allow delete: if hasRole('CEO');
+      allow delete: if isCEO();
     }
 
     match /deliveryProofs/{id} {
-      allow read, write: if hasRole('CEO');
+      allow read, write: if isCEO();
     }
 
-    // New Fleet Management Collections
-    
-    match /vehicles/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']) || isSignedIn();
-      allow create, update: if isAnyRole(['CEO', 'OPERATOR']) || isSignedIn();
-      allow delete: if hasRole('CEO');
-    }
-    
-    match /trips/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'ACCOUNTANT']) || (resource.data.driverId == request.auth.uid) || isSignedIn();
-      allow create: if isAnyRole(['CEO', 'OPERATOR']) || isSignedIn();
-      allow update: if (isAnyRole(['CEO', 'OPERATOR']) && resource != null) || (resource != null && resource.data.driverId == request.auth.uid) || isSignedIn();
-      allow delete: if hasRole('CEO');
-    }
-    
-    match /expenses/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT', 'OPERATOR']) || (resource.data.driverId == request.auth.uid) || isSignedIn();
-      allow create: if isAnyRole(['DRIVER', 'ACCOUNTANT', 'CEO']) || isSignedIn();
-      allow update: if isAnyRole(['ACCOUNTANT', 'CEO']) || isSignedIn();
-      allow delete: if hasRole('CEO');
-    }
-    
-    match /maintenance_requests/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC', 'DRIVER']) || isSignedIn();
-      allow create: if isAnyRole(['MECHANIC', 'DRIVER', 'OPERATOR', 'CEO']) || isSignedIn();
-      allow update: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']) || isSignedIn();
-      allow delete: if hasRole('CEO');
-    }
-    
-    match /spare_parts/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']) || isSignedIn();
-      allow create, update: if isAnyRole(['OPERATOR', 'CEO', 'MECHANIC']) || isSignedIn();
-      allow delete: if hasRole('CEO');
-    }
-    
-    match /parts_requests/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']) || isSignedIn();
-      allow create: if isAnyRole(['MECHANIC', 'OPERATOR', 'CEO']) || isSignedIn();
-      allow update: if isAnyRole(['OPERATOR', 'CEO']) || isSignedIn();
-      allow delete: if hasRole('CEO');
-    }
-    
-    match /allowances/{id} {
-      allow read: if isAnyRole(['CEO', 'HR', 'ACCOUNTANT']) || (resource.data.employeeId == request.auth.uid) || isSignedIn();
-      allow create, update: if isAnyRole(['ACCOUNTANT', 'CEO', 'HR']) || isSignedIn();
-      allow delete: if hasRole('CEO');
+    match /roles_driver/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR']);
+      allow write, delete: if isCEO();
     }
 
-    // CEO: full access to any path not matched above (covers new collections and admin tasks)
+    match /roles_mechanic/{id} {
+      allow read: if isAnyRole(['CEO', 'HR', 'OPERATOR', 'MECHANIC']);
+      allow write, delete: if isCEO();
+    }
+
+    // ─── CEO fallback: full access to any unlisted collection ─────────────────
+
     match /{document=**} {
-      allow read, write, delete: if hasRole('CEO');
+      allow read, write, delete: if isCEO();
     }
   }
 }

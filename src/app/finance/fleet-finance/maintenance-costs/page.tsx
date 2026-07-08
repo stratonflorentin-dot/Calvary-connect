@@ -53,7 +53,7 @@ export default function MaintenanceCostsPage() {
     currency: "TZS",
     date: "",
     description: "",
-    maintenance_type: "routine" as const,
+    maintenance_type: "routine" as MaintenanceCost['maintenance_type'],
     odometer_reading: "",
     vendor: "",
   });

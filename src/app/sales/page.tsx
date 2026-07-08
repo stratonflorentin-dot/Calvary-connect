@@ -51,6 +51,7 @@ interface RouteQuotation {
   customer_id: string;
   company_name?: string;
   service_type: string;
+  approval_status?: string;
   origin: string;
   destination: string;
   distance_km: number;
@@ -788,10 +789,10 @@ function SalesModuleContent() {
                             <TableCell>
                               <Badge className={
                                 lead.status === "new" ? "bg-blue-10 text-blue border-blue/20" :
-                                lead.status === "qualified" ? "bg-cyan-10 text-cyan border-cyan/20" :
-                                lead.status === "converted" ? "bg-success/10 text-success border-success/20" :
-                                lead.status === "lost" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                "bg-purple-10 text-purple border-purple/20"
+                                  lead.status === "qualified" ? "bg-cyan-10 text-cyan border-cyan/20" :
+                                    lead.status === "converted" ? "bg-success/10 text-success border-success/20" :
+                                      lead.status === "lost" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                        "bg-purple-10 text-purple border-purple/20"
                               }>
                                 {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                               </Badge>
@@ -896,8 +897,8 @@ function SalesModuleContent() {
                           <TableCell>
                             <Badge className={
                               order.status === 'Collected' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-0' :
-                              order.status === 'Pending Correction' ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 border-0' :
-                              'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-0'
+                                order.status === 'Pending Correction' ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 border-0' :
+                                  'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-0'
                             }>
                               {order.status}
                             </Badge>
@@ -1195,10 +1196,10 @@ function SalesModuleContent() {
                           <TableCell>
                             <Badge className={
                               q.approval_status === 'draft' ? 'bg-gray-10 text-gray border-gray/20' :
-                              q.approval_status === 'sent' ? 'bg-blue-10 text-blue border-blue/20' :
-                              q.approval_status === 'approved' ? 'bg-success/10 text-success border-success/20' :
-                              q.approval_status === 'converted' ? 'bg-purple-10 text-purple border-purple/20' :
-                              'bg-warning/10 text-warning border-warning/20'
+                                q.approval_status === 'sent' ? 'bg-blue-10 text-blue border-blue/20' :
+                                  q.approval_status === 'approved' ? 'bg-success/10 text-success border-success/20' :
+                                    q.approval_status === 'converted' ? 'bg-purple-10 text-purple border-purple/20' :
+                                      'bg-warning/10 text-warning border-warning/20'
                             }>
                               {q.approval_status || q.status}
                             </Badge>
@@ -1597,6 +1598,7 @@ function SalesModuleContent() {
                                         loose_rate_mt: r.loose_rate_mt || 0,
                                         transit_days: r.transit_days || 0,
                                         special_conditions: (r as any).special_conditions || '',
+                                        is_active: true,
                                       });
                                       setShowRateSheetDialog(true);
                                     }} className="hover:bg-primary/10 hover:text-primary">

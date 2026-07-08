@@ -40,6 +40,17 @@ type BankAccount = {
   currency: string;
 };
 
+type TransactionFormState = {
+  bank_account_id: string;
+  transaction_date: string;
+  description: string;
+  reference: string;
+  amount: string;
+  currency: string;
+  transaction_type: BankTransaction["transaction_type"];
+  to_account_id: string;
+};
+
 export default function BankTransactionsPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -49,14 +60,14 @@ export default function BankTransactionsPage() {
   const [modal, setModal] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [transactionForm, setTransactionForm] = useState({
+  const [transactionForm, setTransactionForm] = useState<TransactionFormState>({
     bank_account_id: "",
     transaction_date: "",
     description: "",
     reference: "",
     amount: "",
     currency: "TZS",
-    transaction_type: "deposit" as const,
+    transaction_type: "deposit",
     to_account_id: "",
   });
 
@@ -100,7 +111,7 @@ export default function BankTransactionsPage() {
     });
   };
 
-  const filteredTransactions = selectedAccountId 
+  const filteredTransactions = selectedAccountId
     ? calculateRunningBalance(selectedAccountId)
     : [];
 
@@ -281,8 +292,8 @@ export default function BankTransactionsPage() {
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label>Transaction Type</Label>
-                    <Select 
-                      value={transactionForm.transaction_type} 
+                    <Select
+                      value={transactionForm.transaction_type}
                       onValueChange={(value: any) => setTransactionForm({ ...transactionForm, transaction_type: value })}
                     >
                       <SelectTrigger>

@@ -12,10 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { 
-  TrendingUp, TrendingDown, Wallet, FileText, Receipt, ClipboardList, 
-  Landmark, RefreshCw, Download, Plus, DollarSign, CreditCard, 
-  Building2, AlertTriangle, CheckCircle2, ArrowRight, Search, 
+import {
+  TrendingUp, TrendingDown, Wallet, FileText, Receipt, ClipboardList,
+  Landmark, RefreshCw, Download, Plus, DollarSign, CreditCard,
+  Building2, AlertTriangle, CheckCircle2, ArrowRight, Search,
   Calendar, Bell, Settings, Printer, ArrowUpRight, ArrowDownLeft, Activity,
   PieChart, BarChart3, LineChart, Target, Shield, Zap,
   Truck, Send, Banknote, FileSpreadsheet, HandCoins, FileEdit, Scale, Clock
@@ -23,8 +23,8 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
-import { 
-  AreaChart, Area, BarChart, Bar, LineChart as RechartsLineChart, Line, 
+import {
+  AreaChart, Area, BarChart, Bar, LineChart as RechartsLineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell,
   Legend
 } from "recharts";
@@ -90,18 +90,18 @@ export default function EnterpriseFinanceDashboard() {
   const metricsByCurrency = useMemo(() => {
     const currencies = AVAILABLE_CURRENCIES.map(c => c.code);
     const metrics: Record<string, any> = {};
-    
+
     currencies.forEach(currency => {
       const currencyInvoices = invoices.filter(i => text(i.currency) === currency);
       const currencyExpenses = expenses.filter(e => text(e.currency) === currency);
       const currencyIncome = income.filter(i => text(i.currency) === currency);
       const currencyTaxes = taxes.filter(t => text(t.currency) === currency);
       const currencyBankAccounts = bankAccounts.filter(b => text(b.currency) === currency);
-      
-      const revenue = currencyIncome.reduce((sum, i) => sum + toNumber(i.amount), 0) + 
-                     currencyInvoices.filter((i) => text(i.type) === "AR").reduce((sum, i) => sum + toNumber(i.amount), 0);
+
+      const revenue = currencyIncome.reduce((sum, i) => sum + toNumber(i.amount), 0) +
+        currencyInvoices.filter((i) => text(i.type) === "AR").reduce((sum, i) => sum + toNumber(i.amount), 0);
       const expensesTotal = currencyExpenses.reduce((sum, e) => sum + toNumber(e.amount), 0);
-      
+
       metrics[currency] = {
         revenue,
         expenses: expensesTotal,
@@ -116,7 +116,7 @@ export default function EnterpriseFinanceDashboard() {
         overdueBills: currencyInvoices.filter((i) => text(i.status) === "overdue" && text(i.type) === "AP").length,
       };
     });
-    
+
     return metrics;
   }, [invoices, expenses, income, taxes, bankAccounts]);
 
@@ -124,19 +124,19 @@ export default function EnterpriseFinanceDashboard() {
   const receivablesAging = useMemo(() => {
     const aging = { current: 0, days30: 0, days60: 0, days90: 0, days120: 0 };
     const arInvoices = invoices.filter((i) => text(i.type) === "AR" && text(i.status) !== "paid");
-    
+
     arInvoices.forEach((invoice) => {
       const dueDate = new Date(text(invoice.due_date));
       const today = new Date();
       const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (daysOverdue <= 0) aging.current += toNumber(invoice.amount);
       else if (daysOverdue <= 30) aging.days30 += toNumber(invoice.amount);
       else if (daysOverdue <= 60) aging.days60 += toNumber(invoice.amount);
       else if (daysOverdue <= 90) aging.days90 += toNumber(invoice.amount);
       else aging.days120 += toNumber(invoice.amount);
     });
-    
+
     return aging;
   }, [invoices]);
 
@@ -144,31 +144,31 @@ export default function EnterpriseFinanceDashboard() {
   const payablesAging = useMemo(() => {
     const aging = { current: 0, days30: 0, days60: 0, days90: 0, days120: 0 };
     const apInvoices = invoices.filter((i) => text(i.type) === "AP" && text(i.status) !== "paid");
-    
+
     apInvoices.forEach((invoice) => {
       const dueDate = new Date(text(invoice.due_date));
       const today = new Date();
       const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (daysOverdue <= 0) aging.current += toNumber(invoice.amount);
       else if (daysOverdue <= 30) aging.days30 += toNumber(invoice.amount);
       else if (daysOverdue <= 60) aging.days60 += toNumber(invoice.amount);
       else if (daysOverdue <= 90) aging.days90 += toNumber(invoice.amount);
       else aging.days120 += toNumber(invoice.amount);
     });
-    
+
     return aging;
   }, [invoices]);
 
   // Alerts
   const alerts = useMemo(() => {
     const alertList: Array<{ type: string; message: string; severity: "high" | "medium" | "low" }> = [];
-    
+
     const overdueInvoices = invoices.filter((i) => {
       const dueDate = new Date(text(i.due_date));
       return text(i.status) !== "paid" && dueDate < new Date();
     });
-    
+
     if (overdueInvoices.length > 0) {
       alertList.push({
         type: "Overdue Invoices",
@@ -176,12 +176,12 @@ export default function EnterpriseFinanceDashboard() {
         severity: "high",
       });
     }
-    
+
     const lowCashCurrencies = AVAILABLE_CURRENCIES.filter(c => {
       const metrics = metricsByCurrency[c.code];
       return metrics && metrics.bankBalance < 1000000;
     });
-    
+
     if (lowCashCurrencies.length > 0) {
       alertList.push({
         type: "Low Cash Warning",
@@ -189,7 +189,7 @@ export default function EnterpriseFinanceDashboard() {
         severity: "high",
       });
     }
-    
+
     const pendingExpenses = expenses.filter((e) => text(e.status) === "pending");
     if (pendingExpenses.length > 10) {
       alertList.push({
@@ -207,7 +207,7 @@ export default function EnterpriseFinanceDashboard() {
         severity: "medium",
       });
     }
-    
+
     return alertList;
   }, [invoices, expenses, metricsByCurrency, bankAccounts]);
 
@@ -231,10 +231,10 @@ export default function EnterpriseFinanceDashboard() {
   }, [expenses]);
 
   const profitByMonth = useMemo(() => {
-    const revenueData = revenueByMonth.reduce((acc, item) => ({ ...acc, [item.month]: item.amount }), {});
-    const expensesData = expensesByMonth.reduce((acc, item) => ({ ...acc, [item.month]: item.amount }), {});
+    const revenueData = revenueByMonth.reduce((acc, item) => ({ ...acc, [item.month]: item.amount }), {} as Record<string, number>);
+    const expensesData = expensesByMonth.reduce((acc, item) => ({ ...acc, [item.month]: item.amount }), {} as Record<string, number>);
     const allMonths = [...new Set([...Object.keys(revenueData), ...Object.keys(expensesData)])];
-    
+
     return allMonths.map(month => ({
       month,
       profit: (revenueData[month] || 0) - (expensesData[month] || 0)
@@ -249,7 +249,7 @@ export default function EnterpriseFinanceDashboard() {
       monthlyData[month].inflow += toNumber(item.amount);
     });
     invoices.filter((i) => text(i.status) === "paid").forEach((item) => {
-      const month = new Date(text(i.due_date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const month = new Date(text(item.due_date)).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       if (!monthlyData[month]) monthlyData[month] = { inflow: 0, outflow: 0 };
       monthlyData[month].inflow += toNumber(item.amount);
     });
@@ -272,11 +272,11 @@ export default function EnterpriseFinanceDashboard() {
 
   // Recent transactions
   const recentTransactions = useMemo(() => {
-    const allTransactions = [
+    const allTransactions = ([
       ...income.map((item) => ({ ...item, type: "income" })),
       ...expenses.map((item) => ({ ...item, type: "expense" })),
       ...invoices.map((item) => ({ ...item, type: "invoice" })),
-    ].sort((a, b) => new Date(text(b.date || b.created_at)).getTime() - new Date(text(a.date || a.created_at)).getTime());
+    ] as any[]).sort((a: any, b: any) => new Date(text(b.date || b.created_at)).getTime() - new Date(text(a.date || a.created_at)).getTime());
 
     return allTransactions.filter(item => {
       if (transactionFilter === "all") return true;
@@ -284,7 +284,7 @@ export default function EnterpriseFinanceDashboard() {
     }).filter(item => {
       const searchTerm = search.toLowerCase();
       return text(item.description).toLowerCase().includes(searchTerm) ||
-             text(item.customer_name).toLowerCase().includes(searchTerm);
+        text(item.customer_name).toLowerCase().includes(searchTerm);
     }).slice(0, 50);
   }, [income, expenses, invoices, transactionFilter, search]);
 
@@ -292,7 +292,7 @@ export default function EnterpriseFinanceDashboard() {
   const fleetProfitability = useMemo(() => {
     // Group trips by vehicle and calculate profitability
     const vehicleProfit: Record<string, { revenue: number; expenses: number; profit: number }> = {};
-    
+
     trips.forEach(trip => {
       const vehicleId = text(trip.vehicle_id);
       if (!vehicleProfit[vehicleId]) {
@@ -368,8 +368,8 @@ export default function EnterpriseFinanceDashboard() {
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <CurrencySelector 
-                  selectedCurrency={selectedCurrency} 
+                <CurrencySelector
+                  selectedCurrency={selectedCurrency}
                   onCurrencyChange={setSelectedCurrency}
                 />
                 <div className="flex items-center gap-2">
@@ -557,8 +557,8 @@ export default function EnterpriseFinanceDashboard() {
                       <AreaChart data={revenueByMonth}>
                         <defs>
                           <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -607,9 +607,9 @@ export default function EnterpriseFinanceDashboard() {
                     {AVAILABLE_CURRENCIES.map((currency) => {
                       const currencyAccounts = bankAccounts.filter(b => text(b.currency) === currency.code);
                       const totalBalance = currencyAccounts.reduce((sum, b) => sum + toNumber(b.balance), 0);
-                      
+
                       if (currencyAccounts.length === 0) return null;
-                      
+
                       return (
                         <div key={currency.code} className="border rounded-lg p-4">
                           <div className="flex items-center justify-between mb-3">
@@ -724,10 +724,10 @@ export default function EnterpriseFinanceDashboard() {
                       Recent Transactions
                     </CardTitle>
                     <div className="flex flex-col sm:flex-row gap-2">
-                      <Input 
-                        placeholder="Search transactions..." 
-                        value={search} 
-                        onChange={(e) => setSearch(e.target.value)} 
+                      <Input
+                        placeholder="Search transactions..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                         className="w-full sm:w-64"
                       />
                       <Select value={transactionFilter} onValueChange={setTransactionFilter}>
@@ -766,7 +766,7 @@ export default function EnterpriseFinanceDashboard() {
                           <TableCell>
                             <Badge variant={
                               transaction.type === "income" ? "default" :
-                              transaction.type === "expense" ? "destructive" : "outline"
+                                transaction.type === "expense" ? "destructive" : "outline"
                             }>
                               {transaction.type}
                             </Badge>
@@ -884,14 +884,14 @@ export default function EnterpriseFinanceDashboard() {
                         <div key={index} className={cn(
                           "p-4 border rounded-lg flex items-start gap-3",
                           alert.severity === "high" ? "border-rose-500 bg-rose-50 dark:bg-rose-950 dark:border-rose-800" :
-                          alert.severity === "medium" ? "border-amber-500 bg-amber-50 dark:bg-amber-950 dark:border-amber-800" :
-                          "border-blue-500 bg-blue-50 dark:bg-blue-950 dark:border-blue-800"
+                            alert.severity === "medium" ? "border-amber-500 bg-amber-50 dark:bg-amber-950 dark:border-amber-800" :
+                              "border-blue-500 bg-blue-50 dark:bg-blue-950 dark:border-blue-800"
                         )}>
                           <AlertTriangle className={cn(
                             "size-5 mt-0.5",
                             alert.severity === "high" ? "text-rose-600 dark:text-rose-400" :
-                            alert.severity === "medium" ? "text-amber-600 dark:text-amber-400" :
-                            "text-blue-600 dark:text-blue-400"
+                              alert.severity === "medium" ? "text-amber-600 dark:text-amber-400" :
+                                "text-blue-600 dark:text-blue-400"
                           )} />
                           <div className="flex-1">
                             <p className="font-semibold text-sm">{alert.type}</p>

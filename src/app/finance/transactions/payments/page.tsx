@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, DollarSign, Filter, Plus, RefreshCw, Search } from "lucide-react";
-import { formatDate, formatAmount } from "@/lib/utils";
+import { formatDate, formatAmount, cn } from "@/lib/utils";
 
 const CURRENCIES = {
   TZS: { code: "TZS", symbol: "TSh", flag: "🇹🇿" },
@@ -128,7 +128,7 @@ export default function PaymentsPage() {
 
   const filteredPayments = payments.filter((p) => {
     const invoice = getInvoiceDetails(p.invoice_id);
-    const matchesSearch = !search || 
+    const matchesSearch = !search ||
       invoice?.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
       invoice?.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
       p.notes?.toLowerCase().includes(search.toLowerCase());
@@ -282,7 +282,7 @@ export default function PaymentsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={STATUS_STYLES[payment.status] || STATUS_STYLES.pending} className="capitalize">
+                          <Badge className={cn(STATUS_STYLES[payment.status] || STATUS_STYLES.pending, "capitalize")}>
                             {payment.status}
                           </Badge>
                         </TableCell>

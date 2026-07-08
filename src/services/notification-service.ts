@@ -38,22 +38,29 @@ export interface Notification {
   created_at?: string;
 }
 
-export async function createNotification(params: {
+export interface CreateNotificationParams {
   userId: string;
   title: string;
   message: string;
-  type: NotificationType;
-  module: string;
+  type?: NotificationType;
+  module?: string;
+  category?: string;
+  severity?: NotificationType;
   entityType?: string;
   entityId?: string;
   actionUrl?: string;
-}) {
+}
+
+export async function createNotification(params: CreateNotificationParams) {
+  const resolvedType = params.type ?? params.severity ?? "info";
+  const resolvedModule = params.module ?? params.category ?? "general";
+
   const payload: Notification = {
     user_id: params.userId,
     title: params.title,
     message: params.message,
-    type: params.type,
-    module: params.module,
+    type: resolvedType,
+    module: resolvedModule,
     entity_type: params.entityType,
     entity_id: params.entityId,
     action_url: params.actionUrl,
@@ -395,7 +402,7 @@ export async function notifyPaymentDispute(
   salesmanIds: string[],
 ) {
   const allIds = [...new Set([...accountantIds, ...salesmanIds])];
-  
+
   await Promise.all(
     allIds.map((id) =>
       createNotification({

@@ -92,7 +92,7 @@ const routeIconMap: Record<string, any> = {
   "https://logipro.milelepower.co.tz/": Globe
 };
 
-export function Sidebar({ role }: { role: UserRole }) {
+export function Sidebar({ role }: { role?: UserRole | null }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { signOut, user, uploadAvatar } = useSupabase();
@@ -103,10 +103,10 @@ export function Sidebar({ role }: { role: UserRole }) {
   const [serviceRequestCount, setServiceRequestCount] = useState(0);
   const [partsRequestCount, setPartsRequestCount] = useState(0);
   const [meetingCount, setMeetingCount] = useState(0);
-  
+
   // Use our new sidebar hook for state management
   const { isOpen, isCollapsed, toggle, open, close, toggleCollapse } = useSidebar();
-  
+
   // Ref for quick return scroll behavior
   const lastScrollY = useRef(0);
   const canUseRolePreview = user?.role === "ADMIN" || user?.role === "CEO" || isPrimaryOwnerEmail(user?.email);
@@ -255,16 +255,16 @@ export function Sidebar({ role }: { role: UserRole }) {
   return (
     <>
       {/* Mobile toggle button */}
-      <button 
-        onClick={toggle} 
+      <button
+        onClick={toggle}
         className="md:hidden fixed top-4 left-4 z-[60] p-2.5 rounded-xl bg-primary text-background shadow-lg hover:bg-primary/90 transition-all duration-200"
       >
         {isOpen ? <X className="size-5" /> : <Menu className="size-5" />}
       </button>
-      
+
       {/* Mobile overlay */}
       {isOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={close} />}
-      
+
       {/* Sidebar */}
       <aside className={cn(
         "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
@@ -309,25 +309,25 @@ export function Sidebar({ role }: { role: UserRole }) {
                   {items.map(item => {
                     const Icon = routeIconMap[item.path] || LayoutDashboard;
                     return (
-                      <Link 
-                        key={item.path} 
-                        href={item.path} 
-                        target={item.path.startsWith('http') ? '_blank' : undefined} 
+                      <Link
+                        key={item.path}
+                        href={item.path}
+                        target={item.path.startsWith('http') ? '_blank' : undefined}
                         rel={item.path.startsWith('http') ? 'noopener noreferrer' : undefined}
                         onClick={() => {
                           if (window.innerWidth < 768) close();
                         }}
                         className={cn(
                           "flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-all group",
-                          pathname === item.path 
-                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/50" 
+                          pathname === item.path
+                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/50"
                             : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                         )}
                       >
                         <Icon className={cn(
-                          "size-5 flex-shrink-0", 
-                          pathname === item.path 
-                            ? "text-white" 
+                          "size-5 flex-shrink-0",
+                          pathname === item.path
+                            ? "text-white"
                             : "text-slate-500 group-hover:text-slate-300"
                         )} />
                         {!isCollapsed && <span className="truncate">{item.label}</span>}
@@ -368,16 +368,16 @@ export function Sidebar({ role }: { role: UserRole }) {
 
         <div className="p-3 border-t border-slate-800 bg-slate-900/50 backdrop-blur-md">
           {/* Quick Return Button */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={scrollToTop} 
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={scrollToTop}
             className="w-full mb-2 text-indigo-400 hover:bg-white/10 transition-colors"
           >
             <ArrowUpCircle className="size-4 mr-2" />
             {!isCollapsed && "Back to Top"}
           </Button>
-          
+
           <div className={cn(
             "px-3 py-3 flex items-center gap-3 bg-slate-900 rounded-2xl mb-2 group relative border border-slate-800 shadow-lg transition-colors",
             isCollapsed && "justify-center px-0"
@@ -401,7 +401,7 @@ export function Sidebar({ role }: { role: UserRole }) {
               </label>
             )}
           </div>
-          <button 
+          <button
             className={cn(
               "flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-sm font-bold transition-all group",
               "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",

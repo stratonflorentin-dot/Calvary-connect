@@ -114,6 +114,11 @@ type Activity = {
   date: string;
 };
 
+type AgingItem = FinanceRow & {
+  daysOverdue: number;
+  bucket: string;
+};
+
 const EMPTY_STATE: FinanceState = {
   invoices: [],
   expenses: [],
@@ -157,63 +162,63 @@ const accountingAreas: Array<{
   icon: ElementType;
   tone: string;
 }> = [
-  {
-    title: "Chart of Accounts",
-    description: "Maintain assets, liabilities, equity, revenue, and expense accounts.",
-    href: "/finance/chart-of-accounts",
-    icon: BookOpen,
-    tone: "bg-primary/10 text-primary border-primary/20",
-  },
-  {
-    title: "Journal Entries",
-    description: "Review operational postings from trips, fuel, payroll, and maintenance.",
-    href: "/finance",
-    icon: Receipt,
-    tone: "bg-muted/50 text-muted-foreground border-muted",
-  },
-  {
-    title: "Customer Invoices",
-    description: "Track receivables, outstanding balances, and collection pressure.",
-    href: "/finance",
-    icon: FileText,
-    tone: "bg-success/10 text-success border-success/20",
-  },
-  {
-    title: "Expense Approval",
-    description: "Approve driver, vendor, fuel, maintenance, and payroll expenses.",
-    href: "/accountant/expenses",
-    icon: TrendingDown,
-    tone: "bg-destructive/10 text-destructive border-destructive/20",
-  },
-  {
-    title: "Bank Reconciliation",
-    description: "Import statements and match deposits or withdrawals to ledger records.",
-    href: "/finance/bank-statement",
-    icon: Landmark,
-    tone: "bg-info/10 text-info border-info/20",
-  },
-  {
-    title: "Statutory Reports",
-    description: "Prepare payroll and statutory finance reporting for compliance.",
-    href: "/admin/hr/payroll/statutory",
-    icon: Banknote,
-    tone: "bg-warning/10 text-warning border-warning/20",
-  },
-  {
-    title: "Route Profitability",
-    description: "Connect trips, vehicle costs, fuel, and revenue by route.",
-    href: "/admin/reports/fleet/route-profitability",
-    icon: Truck,
-    tone: "bg-accent/10 text-accent border-accent/20",
-  },
-  {
-    title: "Financial Reports",
-    description: "Open board-ready reports for revenue, expenses, margins, and vehicles.",
-    href: "/reports",
-    icon: ClipboardList,
-    tone: "bg-success/10 text-success border-success/20",
-  },
-];
+    {
+      title: "Chart of Accounts",
+      description: "Maintain assets, liabilities, equity, revenue, and expense accounts.",
+      href: "/finance/chart-of-accounts",
+      icon: BookOpen,
+      tone: "bg-primary/10 text-primary border-primary/20",
+    },
+    {
+      title: "Journal Entries",
+      description: "Review operational postings from trips, fuel, payroll, and maintenance.",
+      href: "/finance",
+      icon: Receipt,
+      tone: "bg-muted/50 text-muted-foreground border-muted",
+    },
+    {
+      title: "Customer Invoices",
+      description: "Track receivables, outstanding balances, and collection pressure.",
+      href: "/finance",
+      icon: FileText,
+      tone: "bg-success/10 text-success border-success/20",
+    },
+    {
+      title: "Expense Approval",
+      description: "Approve driver, vendor, fuel, maintenance, and payroll expenses.",
+      href: "/accountant/expenses",
+      icon: TrendingDown,
+      tone: "bg-destructive/10 text-destructive border-destructive/20",
+    },
+    {
+      title: "Bank Reconciliation",
+      description: "Import statements and match deposits or withdrawals to ledger records.",
+      href: "/finance/bank-statement",
+      icon: Landmark,
+      tone: "bg-info/10 text-info border-info/20",
+    },
+    {
+      title: "Statutory Reports",
+      description: "Prepare payroll and statutory finance reporting for compliance.",
+      href: "/admin/hr/payroll/statutory",
+      icon: Banknote,
+      tone: "bg-warning/10 text-warning border-warning/20",
+    },
+    {
+      title: "Route Profitability",
+      description: "Connect trips, vehicle costs, fuel, and revenue by route.",
+      href: "/admin/reports/fleet/route-profitability",
+      icon: Truck,
+      tone: "bg-accent/10 text-accent border-accent/20",
+    },
+    {
+      title: "Financial Reports",
+      description: "Open board-ready reports for revenue, expenses, margins, and vehicles.",
+      href: "/reports",
+      icon: ClipboardList,
+      tone: "bg-success/10 text-success border-success/20",
+    },
+  ];
 
 function toNumber(value: unknown): number {
   const parsed = Number(value ?? 0);
@@ -717,7 +722,7 @@ export default function FinancialOperations() {
       // Update invoice status
       const invoice = data.invoices.find((inv) => inv.id === invoiceId);
       if (invoice) {
-        const totalPaid = (invoice.paid_amount || 0) + amount;
+        const totalPaid = toNumber(invoice.paid_amount) + amount;
         const totalAmount = getInvoiceAmount(invoice);
         const newStatus = totalPaid >= totalAmount ? "paid" : "partial";
         await supabase.from("invoices").update({
@@ -1140,7 +1145,7 @@ export default function FinancialOperations() {
       expenses: data.expenses.length,
       income: data.income.length,
     };
-    
+
     const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1173,12 +1178,12 @@ export default function FinancialOperations() {
     const revenue = invoiceRevenue + directIncome;
     const net = revenue - operatingExpense;
     const margin = revenue > 0 ? Math.round((net / revenue) * 100) : 0;
-    
+
     // Logistics metrics
     const crossBorderExpenses = data.expenses.filter((row) => row.is_cross_border === true).reduce((sum, row) => sum + rowAmount(row), 0);
     const crossBorderRevenue = data.invoices.filter((row) => row.is_cross_border === true && isReceivable(row, data.chartOfAccounts)).reduce((sum, row) => sum + rowAmount(row), 0);
     const fuelExpenses = data.expenses.filter((row) => (row.category as string)?.toLowerCase() === "fuel").reduce((sum, row) => sum + rowAmount(row), 0);
-    
+
     // Tax metrics
     const pendingTaxes = (data.taxes || []).filter((row) => rowStatus(row) === "pending").reduce((sum, row) => sum + rowAmount(row), 0);
     const paidTaxes = (data.taxes || []).filter((row) => rowStatus(row) === "paid").reduce((sum, row) => sum + rowAmount(row), 0);
@@ -1216,7 +1221,7 @@ export default function FinancialOperations() {
     return out;
   };
 
-  const revByCur = useMemo(() => sumByCurrency([...data.invoices.filter(isReceivable), ...data.income]), [data]);
+  const revByCur = useMemo(() => sumByCurrency([...data.invoices.filter((invoice) => isReceivable(invoice, data.chartOfAccounts)), ...data.income]), [data]);
   const expByCur = useMemo(() => sumByCurrency(data.expenses), [data]);
   const profitByCur = useMemo(() => {
     const allCurs = [...new Set([...Object.keys(revByCur), ...Object.keys(expByCur)])];
@@ -1293,7 +1298,7 @@ export default function FinancialOperations() {
       ((data.invoices.filter((row) => rowStatus(row) === "paid").length +
         data.expenses.filter((row) => ["approved", "paid"].includes(rowStatus(row))).length) /
         Math.max(data.invoices.length + data.expenses.length, 1)) *
-        100,
+      100,
     ),
   );
 
@@ -1317,13 +1322,13 @@ export default function FinancialOperations() {
   // Aging report calculation
   const agingReport = useMemo(() => {
     const now = new Date();
-    const items = data.invoices
+    const items: AgingItem[] = data.invoices
       .filter((row) => {
         const isReceivableInv = isReceivable(row, data.chartOfAccounts);
         const isPayableInv = !isReceivable(row, data.chartOfAccounts);
         const isUnpaidInv = isUnpaid(row);
         return (agingType === "receivable" && isReceivableInv && isUnpaidInv) ||
-               (agingType === "payable" && isPayableInv && isUnpaidInv);
+          (agingType === "payable" && isPayableInv && isUnpaidInv);
       })
       .map((inv) => {
         const dueDate = new Date(rowDate(inv));
@@ -1334,7 +1339,7 @@ export default function FinancialOperations() {
         else if (daysOverdue <= 60) bucket = "31-60";
         else if (daysOverdue <= 90) bucket = "61-90";
         else bucket = "90+";
-        return { ...inv, daysOverdue, bucket };
+        return { ...inv, daysOverdue, bucket } as AgingItem;
       });
 
     const buckets = ["current", "1-30", "31-60", "61-90", "90+"];
@@ -1492,8 +1497,8 @@ export default function FinancialOperations() {
                           {data.chartOfAccounts.length === 0 ? (
                             <SelectItem value="none" disabled>No Chart of Accounts configured</SelectItem>
                           ) : (
-                            data.chartOfAccounts.map((acc) => (
-                              <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
+                            data.chartOfAccounts.map((acc: any) => (
+                              <SelectItem key={String(acc.code)} value={String(acc.code)}>{String(acc.code)} - {String(acc.name)} ({String(acc.type)})</SelectItem>
                             ))
                           )}
                         </SelectContent>
@@ -1578,7 +1583,7 @@ export default function FinancialOperations() {
                           <SelectItem value="none" disabled>No Chart of Accounts configured</SelectItem>
                         ) : (
                           data.chartOfAccounts.map((acc) => (
-                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
+                            <SelectItem key={safeText(acc.code)} value={safeText(acc.code)}>{safeText(acc.code)} - {safeText(acc.name)} ({safeText(acc.type)})</SelectItem>
                           ))
                         )}
                       </SelectContent>
@@ -1655,7 +1660,7 @@ export default function FinancialOperations() {
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MultiCurrencyCard
               title="Revenue"
-              items={[...data.invoices.filter(isReceivable), ...data.income]}
+              items={[...data.invoices.filter((invoice) => isReceivable(invoice, data.chartOfAccounts)), ...data.income]}
               icon={TrendingUp}
               gradient="bg-gradient-to-br from-emerald-600 to-green-700"
             />
@@ -2119,7 +2124,7 @@ export default function FinancialOperations() {
                                 <SelectItem value="none" disabled>No Chart of Accounts configured</SelectItem>
                               ) : (
                                 data.chartOfAccounts.map((acc) => (
-                                  <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
+                                  <SelectItem key={safeText(acc.code)} value={safeText(acc.code)}>{safeText(acc.code)} - {safeText(acc.name)} ({safeText(acc.type)})</SelectItem>
                                 ))
                               )}
                             </SelectContent>
@@ -2175,7 +2180,7 @@ export default function FinancialOperations() {
                             <SelectTrigger id="exp-edit-category"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {data.chartOfAccounts.map((acc) => (
-                                <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                                <SelectItem key={safeText(acc.code)} value={safeText(acc.code)}>{safeText(acc.code)} - {safeText(acc.name)}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -2376,7 +2381,7 @@ export default function FinancialOperations() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
                 {Object.entries(revByCur).map(([cur, amt]) => {
-                  const config = CURRENCIES[cur] || CURRENCIES.TZS;
+                  const config = CURRENCIES[cur as keyof typeof CURRENCIES] || CURRENCIES.TZS;
                   return (
                     <div key={cur} className="bg-card border border-border rounded-xl p-3 text-center">
                       <p className="text-xs text-muted-foreground mb-0.5">{config.flag} {cur}</p>
@@ -2401,14 +2406,14 @@ export default function FinancialOperations() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {[...data.invoices.filter(isReceivable), ...data.income].length === 0 ? (
+                        {[...data.invoices.filter((invoice) => isReceivable(invoice, data.chartOfAccounts)), ...data.income].length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={7} className="py-16 text-center">
                               <EmptyState icon={Wallet} title="No revenue recorded" description='Use the "Record Revenue" button above to add your first revenue entry' />
                             </TableCell>
                           </TableRow>
                         ) : (
-                          [...data.invoices.filter(isReceivable), ...data.income]
+                          [...data.invoices.filter((invoice) => isReceivable(invoice, data.chartOfAccounts)), ...data.income]
                             .filter((r) => filterCurrency === "ALL" || rowCurrency(r) === filterCurrency)
                             .filter((r) => [r.description, r.customer_name, r.client_name].some((s) => String(s).toLowerCase().includes(search.toLowerCase())))
                             .map((r) => (
@@ -2466,8 +2471,8 @@ export default function FinancialOperations() {
                           {data.chartOfAccounts.length === 0 ? (
                             <SelectItem value="none" disabled>No Chart of Accounts configured</SelectItem>
                           ) : (
-                            data.chartOfAccounts.map((acc) => (
-                              <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name} ({acc.type})</SelectItem>
+                            data.chartOfAccounts.map((acc: any) => (
+                              <SelectItem key={String(acc.code)} value={String(acc.code)}>{String(acc.code)} - {String(acc.name)} ({String(acc.type)})</SelectItem>
                             ))
                           )}
                         </SelectContent>
@@ -2518,7 +2523,7 @@ export default function FinancialOperations() {
                         <SelectTrigger id="inv-edit-type"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {data.chartOfAccounts.map((acc) => (
-                            <SelectItem key={acc.code} value={acc.code}>{acc.code} - {acc.name}</SelectItem>
+                            <SelectItem key={safeText(acc.code)} value={safeText(acc.code)}>{safeText(acc.code)} - {safeText(acc.name)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

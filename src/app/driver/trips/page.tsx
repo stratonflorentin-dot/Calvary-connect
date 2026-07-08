@@ -72,7 +72,7 @@ export default function DriverTripsPage() {
           ) : filtered.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No trips in this category.</p>
           ) : (
-            filtered.map((trip) => (
+            filtered.map((trip: any) => (
               <Card key={String(trip.id)} className="overflow-hidden">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">

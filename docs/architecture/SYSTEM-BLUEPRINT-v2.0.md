@@ -101,7 +101,393 @@ Calvary Logistics OS delivers **20-35% operational cost reduction** through inte
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3. Data Flow Architecture
+### 3. Enterprise Readiness & Platform Expansion
+
+To position Calvary Logistics OS as a platform suitable for enterprise operators such as DHL, Maersk, Uber Freight, or DP World, the architecture is being upgraded with a stronger operating model around resilience, governance, observability, and long-term scalability.
+
+#### Enterprise Maturity Scorecard
+
+| Area | Current | Target | Status |
+|------|---------|--------|--------|
+| Architecture | 9.5/10 | 10/10 | Strong |
+| Scalability | 9/10 | 10/10 | Strong |
+| Database Design | 9/10 | 10/10 | Strong |
+| Security | 8.5/10 | 10/10 | Improving |
+| Enterprise Readiness | 7.5/10 | 10/10 | Planned |
+| DevOps | 7/10 | 10/10 | Planned |
+| Documentation | 8.5/10 | 10/10 | Strong |
+
+**Target Overall Rating:** 9.8/10 to 10/10
+
+#### 3.1 Disaster Recovery
+
+```text
+Daily Automatic Backups
+  ↓
+Firestore Export Every 24 Hours
+  ↓
+Supabase PITR (Point-In-Time Recovery)
+  ↓
+Cross-Region Backup
+  ↓
+RTO: 30 Minutes
+RPO: 5 Minutes
+```
+
+#### 3.2 High Availability
+
+```text
+Global Load Balancer
+  ↓
+Next.js Frontend
+  ↓
+Cloud Run (3 Replicas)
+  ↓
+Firestore
+  ↓
+Supabase
+```
+
+Key controls:
+- Auto scaling for traffic spikes
+- Health checks and failover logic
+- Multi-region deployment readiness
+- Active-passive or active-active failover paths
+
+#### 3.3 Event-Driven Architecture
+
+```text
+Trip Created
+  ↓
+Event Bus
+  ↓
+Inventory Service
+  ↓
+Finance Service
+  ↓
+Notification Service
+  ↓
+Analytics Service
+  ↓
+AI Service
+```
+
+This allows each domain to operate independently and scale without coupling the whole platform to a single workflow.
+
+#### 3.4 Microservices Roadmap
+
+```text
+Fleet Service
+Finance Service
+Inventory Service
+HR Service
+Workshop Service
+AI Service
+Notification Service
+Customer Portal
+Driver Portal
+Reporting Service
+```
+
+Each service will own:
+- Its own database
+- Its own API layer
+- Its own deployment pipeline
+- Its own logs and monitoring
+
+#### 3.5 API Gateway
+
+```text
+Users
+  ↓
+API Gateway
+  ↓
+Authentication
+  ↓
+Rate Limiting
+  ↓
+Logging
+  ↓
+Services
+```
+
+Recommended gateways:
+- Cloudflare
+- Google API Gateway
+- Kong
+- Traefik
+
+#### 3.6 CI/CD Pipeline
+
+```text
+Developer
+  ↓
+GitHub
+  ↓
+GitHub Actions
+  ↓
+Unit Tests
+  ↓
+Integration Tests
+  ↓
+Security Scan
+  ↓
+Docker Build
+  ↓
+Deploy Staging
+  ↓
+Manual Approval
+  ↓
+Production
+```
+
+#### 3.7 Monitoring & Observability
+
+```text
+Grafana
+Prometheus
+OpenTelemetry
+Cloud Monitoring
+Cloud Logging
+Alert Manager
+```
+
+Core metrics:
+- CPU and memory utilization
+- API latency and database latency
+- Network health and error rates
+- Driver online status
+- Trips completed
+- Fuel cost and revenue trend
+
+#### 3.8 Audit Logging
+
+Every enterprise action will be captured with:
+- Actor identity
+- Timestamp
+- IP address
+- Action type
+- Before and after values
+- Related record identifier
+
+Example audit events:
+- Vehicle created or updated
+- Trip edited or cancelled
+- Expense deleted
+- Payment approved
+
+#### 3.9 Permission Matrix
+
+| Module | CEO | Finance | HR | Driver | Operator |
+|--------|-----|---------|----|--------|----------|
+| Trips | Full | View | No | View | Full |
+| Finance | Full | Full | No | No | View |
+| Inventory | Full | View | No | No | Full |
+| Reports | Full | Full | View | No | Full |
+| HR Records | Full | No | Full | No | No |
+
+#### 3.10 Domain-Driven Design
+
+The platform will be organized into clearly bounded domains:
+- Fleet Domain
+- Finance Domain
+- Operations Domain
+- Inventory Domain
+- Human Resource Domain
+- Compliance Domain
+- Customer Domain
+- Analytics Domain
+
+Each domain owns its data and business rules.
+
+#### 3.11 Security Controls
+
+```text
+AES-256 Encryption
+TLS 1.3
+Secrets Manager
+OAuth2
+JWT
+2FA
+Device Verification
+Session Expiration
+Brute Force Protection
+DDoS Protection
+WAF
+IP Whitelisting
+CAPTCHA
+```
+
+#### 3.12 Logical Database Diagram
+
+```text
+Users
+  ↓
+Drivers
+  ↓
+Vehicles
+  ↓
+Trips
+  ↓
+Expenses
+  ↓
+Invoices
+  ↓
+Payments
+  ↓
+Inventory
+  ↓
+Maintenance
+  ↓
+Fuel Requests
+  ↓
+Notifications
+```
+
+#### 3.13 UML Diagram Set
+
+The documentation suite will include:
+- Sequence diagrams
+- Component diagrams
+- Deployment diagrams
+- Class diagrams
+- Use case diagrams
+- Activity diagrams
+- State diagrams
+
+#### 3.14 Performance Targets
+
+| Capability | Target |
+|-----------|--------|
+| API Response | <150ms |
+| Database Query | <40ms |
+| Authentication | <200ms |
+| Dashboard Load | <2s |
+| Image Upload | <3s |
+| Availability | 99.99% |
+| Maximum Users | 100,000 |
+| Concurrent Users | 20,000 |
+| Drivers | 50,000 |
+| Vehicles | 100,000 |
+
+#### 3.15 Cost Optimization Strategy
+
+```text
+Cold Storage
+CDN
+Compression
+Lazy Loading
+Image Optimization
+Redis Cache
+Query Cache
+Connection Pooling
+Batch Writes
+Pagination
+Read Replicas
+```
+
+#### 3.16 Business Continuity & Offline Support
+
+```text
+Offline Driver App
+  ↓
+Automatic Sync
+  ↓
+Network Retry
+  ↓
+Conflict Resolution
+  ↓
+GPS Buffer
+  ↓
+Local SQLite Cache
+  ↓
+Background Sync
+```
+
+This ensures drivers can continue operating in low-connectivity or no-connectivity environments.
+
+#### 3.17 Documentation Suite
+
+The enterprise documentation set will include:
+- Architecture Decision Records (ADR)
+- OpenAPI API documentation
+- Database documentation
+- Infrastructure documentation
+- User manual
+- Admin manual
+- Deployment guide
+- Incident response guide
+
+#### 3.18 AI Layer Expansion
+
+```text
+AI Engine
+  ↓
+Predictive Maintenance
+Demand Forecasting
+Fuel Consumption Prediction
+Route Optimization
+Driver Behavior Analysis
+Fraud Detection
+Financial Forecasting
+Inventory Prediction
+Chat Assistant
+Document OCR
+Invoice Extraction
+```
+
+#### 3.19 Infrastructure Diagram
+
+```text
+Internet
+  ↓
+Cloudflare
+  ↓
+Load Balancer
+  ↓
+Next.js
+  ↓
+API Gateway
+  ↓
+Cloud Run
+  ↓
+Cloud Functions
+  ↓
+Pub/Sub
+  ↓
+Redis
+  ↓
+Firestore
+  ↓
+Supabase
+  ↓
+Cloud Storage
+  ↓
+Monitoring
+  ↓
+Backup
+```
+
+#### 3.20 Kubernetes Migration Plan
+
+```text
+Current State
+Firebase App Hosting
+  ↓
+Cloud Run
+  ↓
+Docker
+  ↓
+Google Kubernetes Engine
+  ↓
+Multi-Region Kubernetes Cluster
+```
+
+This roadmap demonstrates a clear path from the current architecture toward a globally scalable, containerized platform.
+
+---
+
+### 4. Data Flow Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐

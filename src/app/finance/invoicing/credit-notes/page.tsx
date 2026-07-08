@@ -54,7 +54,7 @@ export default function CreditNotesPage() {
     currency: "TZS",
     issue_date: "",
     reason: "",
-    status: "draft" as const,
+    status: "draft" as CreditNote['status'],
     description: "",
   });
 

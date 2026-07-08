@@ -10,27 +10,28 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { isAllowedNotification } from '@/lib/notification-categories';
+import type { Notification as NotificationRecord } from '@/services/notification-service';
 
 export default function NotificationsPage() {
   const { role, isAdmin } = useRole();
   const { user } = useSupabase();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadNotifications = async () => {
       if (!user) return;
-      
+
       try {
         setLoading(true);
-        
+
         // Load real notifications from database
         const { data: realNotifications, error } = await supabase
           .from('notifications')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
-        
+
         if (error) {
           console.log('Notifications error - skipping:', error);
           setNotifications([]);
@@ -65,11 +66,11 @@ export default function NotificationsPage() {
         .from('notifications')
         .update({ read: true })
         .eq('id', id);
-        
+
       if (error) {
         console.error('Error marking notification as read:', error);
       } else {
-        setNotifications(prev => 
+        setNotifications(prev =>
           prev.map(n => n.id === id ? { ...n, read: true } : n)
         );
       }
@@ -104,7 +105,7 @@ export default function NotificationsPage() {
                 className={cn(!n.read && 'border-primary/30 bg-primary/5')}
               >
                 <CardHeader className="py-4 flex flex-row items-start gap-3">
-                  {getIcon(n.severity || 'info')}
+                  {getIcon(n.type || 'info')}
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-lg font-headline leading-tight">{n.title || 'Notification'}</CardTitle>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -112,7 +113,7 @@ export default function NotificationsPage() {
                     </p>
                   </div>
                   {!n.read && (
-                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => markRead(n.id)}>
+                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => markRead(n.id || '')}>
                       Mark read
                     </Button>
                   )}

@@ -33,6 +33,10 @@ interface Expense {
     clientReference?: string;
     employee_id?: string;
     coa_account_code?: string;
+    currency?: string;
+    vendor?: string;
+    vehicle_id?: string | null;
+    payment_method?: string;
 }
 
 export default function ExpensesPage() {
@@ -59,7 +63,7 @@ export default function ExpensesPage() {
         const loadData = async () => {
             if (!user) return;
             if (role === 'DRIVER') return;
-            
+
             try {
                 setLoading(true);
                 // Load expenses, vehicles, and COA in parallel
@@ -68,7 +72,7 @@ export default function ExpensesPage() {
                     supabase.from('vehicles').select('*'),
                     ChartOfAccountsService.getAccounts()
                 ]);
-                
+
                 setExpenses(expensesRes.data || []);
                 setVehicles(vehiclesRes.data || []);
                 setCoaAccounts(accounts);
@@ -84,7 +88,7 @@ export default function ExpensesPage() {
 
     const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        
+
         if (!user) return;
 
         try {
@@ -93,16 +97,16 @@ export default function ExpensesPage() {
             const expenseCurrency = formData.get('currency') as string || 'TZS';
             const category = formData.get('category') as string;
             const customCoaCode = formData.get('coa_account_code') as string;
-            
+
             // Get or map COA account code
             const coaAccountCode = customCoaCode || ChartOfAccountsService.mapExpenseToCOA(category);
-            
+
             // Validate
             if (!ChartOfAccountsService.validateAccountCode(coaAccountCode, coaAccounts)) {
                 toast({ title: 'Error', description: 'Invalid Chart of Accounts code', variant: 'destructive' });
                 return;
             }
-            
+
             const expenseData = {
                 description: formData.get('description') as string,
                 amount: parseFloat(formData.get('amount') as string),
@@ -137,7 +141,7 @@ export default function ExpensesPage() {
                     .from('expenses')
                     .select('*, vehicle_id')
                     .order('created_at', { ascending: false });
-                
+
                 setExpenses(updatedExpenses || []);
                 setIsAddDialogOpen(false);
                 e.currentTarget.reset();
@@ -151,22 +155,22 @@ export default function ExpensesPage() {
     const handleUpdateExpense = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!editingExpense) return;
-        
+
         try {
             const formData = new FormData(e.currentTarget);
             const vehicleId = formData.get('vehicle_id') as string;
             const category = formData.get('category') as string;
             const customCoaCode = formData.get('coa_account_code') as string;
-            
+
             // Get or map COA account code
             const coaAccountCode = customCoaCode || ChartOfAccountsService.mapExpenseToCOA(category);
-            
+
             // Validate
             if (!ChartOfAccountsService.validateAccountCode(coaAccountCode, coaAccounts)) {
                 toast({ title: 'Error', description: 'Invalid Chart of Accounts code', variant: 'destructive' });
                 return;
             }
-            
+
             const { data, error } = await supabase
                 .from('expenses')
                 .update({
@@ -204,7 +208,7 @@ export default function ExpensesPage() {
         try {
             const { error } = await supabase
                 .from('expenses')
-                .update({ 
+                .update({
                     status: newStatus,
                     updated_at: new Date().toISOString(),
                 })
@@ -214,7 +218,7 @@ export default function ExpensesPage() {
                 console.error('Error changing expense status:', error);
                 toast({ title: 'Error', description: `Failed to ${newStatus} expense`, variant: 'destructive' });
             } else {
-                setExpenses(prev => 
+                setExpenses(prev =>
                     prev.map(e => e.id === expenseId ? { ...e, status: newStatus } : e)
                 );
                 toast({ title: 'Success', description: `Expense ${newStatus} successfully` });
@@ -253,113 +257,113 @@ export default function ExpensesPage() {
                                     <DialogTitle>Add New Expense</DialogTitle>
                                 </DialogHeader>
                                 <form onSubmit={handleAddExpense} className="space-y-4">
-                    <div>
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea id="description" name="description" required placeholder="Describe the expense" />
-                    </div>
-                    <div>
-                        <Label htmlFor="clientReference">Client / Trip Reference (Optional)</Label>
-                        <Input id="clientReference" name="clientReference" placeholder="e.g. TRP-123 or ABC Corp" />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <Label htmlFor="amount">Amount</Label>
-                            <Input id="amount" name="amount" type="number" step="0.01" required />
-                        </div>
-                        <div>
-                            <Label htmlFor="currency">Currency</Label>
-                            <Select name="currency" defaultValue={currency}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select currency" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {AVAILABLE_CURRENCIES.map((cur) => (
-                                        <SelectItem key={cur.code} value={cur.code}>
-                                            {cur.code} - {cur.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <Label htmlFor="category">Category</Label>
-                            <Select name="category" defaultValue="other" required>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="fuel">Fuel</SelectItem>
-                                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                                    <SelectItem value="parts">Parts</SelectItem>
-                                    <SelectItem value="insurance">Insurance</SelectItem>
-                                    <SelectItem value="salaries">Salaries</SelectItem>
-                                    <SelectItem value="utilities">Utilities</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <Label htmlFor="coa_account_code">Chart of Accounts (Optional)</Label>
-                            <Select name="coa_account_code" defaultValue="">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Auto-mapped" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {coaAccounts.map((account) => (
-                                        <SelectItem key={account.code} value={account.code}>
-                                            {account.code} - {account.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <Label htmlFor="vendor">Vendor (Optional)</Label>
-                            <Input id="vendor" name="vendor" placeholder="Vendor name" />
-                        </div>
-                        <div>
-                            <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
-                            <Select name="vehicle_id" defaultValue="none">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select vehicle" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">No vehicle</SelectItem>
-                                    {vehicles.map((v) => (
-                                        <SelectItem key={v.id} value={v.id}>
-                                            {v.plate_number || v.plateNumber}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <Label htmlFor="payment_method">Payment Method (Optional)</Label>
-                            <Select name="payment_method" defaultValue="cash">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select payment method" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="cash">Cash</SelectItem>
-                                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                                    <SelectItem value="credit_card">Credit Card</SelectItem>
-                                    <SelectItem value="cheque">Cheque</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div>
-                        <Label htmlFor="date">Date</Label>
-                        <Input id="date" name="date" type="date" required />
-                    </div>
-                    <Button type="submit" className="w-full">Add Expense</Button>
-                </form>
+                                    <div>
+                                        <Label htmlFor="description">Description</Label>
+                                        <Textarea id="description" name="description" required placeholder="Describe the expense" />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="clientReference">Client / Trip Reference (Optional)</Label>
+                                        <Input id="clientReference" name="clientReference" placeholder="e.g. TRP-123 or ABC Corp" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="amount">Amount</Label>
+                                            <Input id="amount" name="amount" type="number" step="0.01" required />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="currency">Currency</Label>
+                                            <Select name="currency" defaultValue={currency}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select currency" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {AVAILABLE_CURRENCIES.map((cur) => (
+                                                        <SelectItem key={cur.code} value={cur.code}>
+                                                            {cur.code} - {cur.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="category">Category</Label>
+                                            <Select name="category" defaultValue="other" required>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="fuel">Fuel</SelectItem>
+                                                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                                                    <SelectItem value="parts">Parts</SelectItem>
+                                                    <SelectItem value="insurance">Insurance</SelectItem>
+                                                    <SelectItem value="salaries">Salaries</SelectItem>
+                                                    <SelectItem value="utilities">Utilities</SelectItem>
+                                                    <SelectItem value="other">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="coa_account_code">Chart of Accounts (Optional)</Label>
+                                            <Select name="coa_account_code" defaultValue="">
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Auto-mapped" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {coaAccounts.map((account) => (
+                                                        <SelectItem key={account.code} value={account.code}>
+                                                            {account.code} - {account.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <Label htmlFor="vendor">Vendor (Optional)</Label>
+                                            <Input id="vendor" name="vendor" placeholder="Vendor name" />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
+                                            <Select name="vehicle_id" defaultValue="none">
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select vehicle" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">No vehicle</SelectItem>
+                                                    {vehicles.map((v) => (
+                                                        <SelectItem key={v.id} value={v.id}>
+                                                            {v.plate_number || v.plateNumber}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="payment_method">Payment Method (Optional)</Label>
+                                            <Select name="payment_method" defaultValue="cash">
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select payment method" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="cash">Cash</SelectItem>
+                                                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                                                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                                                    <SelectItem value="credit_card">Credit Card</SelectItem>
+                                                    <SelectItem value="cheque">Cheque</SelectItem>
+                                                    <SelectItem value="other">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="date">Date</Label>
+                                        <Input id="date" name="date" type="date" required />
+                                    </div>
+                                    <Button type="submit" className="w-full">Add Expense</Button>
+                                </form>
                             </DialogContent>
                         </Dialog>
                     </div>

@@ -17,6 +17,14 @@ import { Package, Plus, AlertCircle } from 'lucide-react';
 
 export default function InventoryPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
+  type InventoryItem = {
+    id?: string;
+    item_name?: string;
+    category?: string;
+    quantity_available?: number;
+    unit?: string;
+    min_stock_level?: number;
+  };
 
   if (roleLoading) {
     return (
@@ -26,22 +34,22 @@ export default function InventoryPage() {
     );
   }
   const { user } = useSupabase();
-  const [inventory, setInventory] = useState([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadInventory = async () => {
       if (!user) return;
-      
+
       try {
         setIsLoading(true);
-        
+
         const { data, error } = await supabase
           .from('inventory')
           .select('*')
           .eq('status', 'active')
           .order('created_at', { ascending: false });
-          
+
         if (error) {
           console.error('Error loading inventory:', error);
         } else {
@@ -59,7 +67,7 @@ export default function InventoryPage() {
 
   const handleAddItem = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     try {
       const formData = new FormData(e.currentTarget);
       const itemData = {
@@ -70,32 +78,32 @@ export default function InventoryPage() {
         min_stock_level: 10, // Default minimum stock
         created_by: user?.id
       };
-      
+
       const { error } = await supabase
         .from('inventory')
         .insert(itemData);
-        
+
       if (error) {
         console.log('Add item error - skipping:', error);
         return;
       }
-      
+
       // Refresh inventory
       const { data: refreshedData, error: refreshError } = await supabase
         .from('inventory')
         .select('*')
         .eq('status', 'active')
         .order('created_at', { ascending: false });
-        
+
       if (!refreshError && refreshedData) {
         setInventory(refreshedData);
       }
-      
+
       e.currentTarget.reset();
       console.log('Inventory item added successfully');
     } catch (error) {
-        console.log('Refresh inventory error - skipping:', error);
-      }
+      console.log('Refresh inventory error - skipping:', error);
+    }
   };
 
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) {
@@ -183,15 +191,15 @@ export default function InventoryPage() {
                   </td>
                   <td>{item.category || 'Uncategorized'}</td>
                   <td>
-                    <span className="font-bold">{item.quantity_available}</span> {item.unit}
+                    <span className="font-bold">{item.quantity_available ?? 0}</span> {item.unit}
                   </td>
                   <td>
-                    <Badge className={item.quantity_available <= item.min_stock_level ? 'bg-rose-500' : 'bg-emerald-500'}>
-                      {item.quantity_available <= item.min_stock_level ? 'Low Stock' : 'In Stock'}
+                    <Badge className={(item.quantity_available ?? 0) <= (item.min_stock_level ?? 0) ? 'bg-rose-500' : 'bg-emerald-500'}>
+                      {(item.quantity_available ?? 0) <= (item.min_stock_level ?? 0) ? 'Low Stock' : 'In Stock'}
                     </Badge>
                   </td>
                   <td className="text-right px-6">
-                    {item.quantity_available <= item.min_stock_level && <AlertCircle className="size-4 text-rose-500 inline" />}
+                    {(item.quantity_available ?? 0) <= (item.min_stock_level ?? 0) && <AlertCircle className="size-4 text-rose-500 inline" />}
                   </td>
                 </TableRow>
               ))}

@@ -136,7 +136,7 @@ export default function MaintenancePage() {
                             }}
                             className="md:col-span-2"
                         />
-                        <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+                        <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val as typeof statusFilter); setCurrentPage(1); }}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
@@ -150,7 +150,7 @@ export default function MaintenancePage() {
                                 <SelectItem value="cancelled">Cancelled</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val); setCurrentPage(1); }}>
+                        <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val as typeof typeFilter); setCurrentPage(1); }}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Type" />
                             </SelectTrigger>
@@ -163,7 +163,7 @@ export default function MaintenancePage() {
                                 <SelectItem value="inspection">Inspection</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Select value={priorityFilter} onValueChange={(val) => { setPriorityFilter(val); setCurrentPage(1); }}>
+                        <Select value={priorityFilter} onValueChange={(val) => { setPriorityFilter(val as typeof priorityFilter); setCurrentPage(1); }}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Priority" />
                             </SelectTrigger>

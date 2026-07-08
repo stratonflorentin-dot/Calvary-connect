@@ -23,7 +23,7 @@ export function OperatorView() {
         reason: '',
         details: '',
     });
-    
+
     const [expenseForm, setExpenseForm] = useState({
         amount: '',
         category: 'Maintenance',
@@ -93,7 +93,7 @@ export function OperatorView() {
         <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t.operator_dashboard || 'Operator Dashboard'}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{(t as Record<string, string>).operator_dashboard || 'Operator Dashboard'}</h1>
                     <p className="text-muted-foreground text-sm sm:text-base">Manage daily operations and fleet assignments</p>
                 </div>
             </div>
@@ -110,17 +110,17 @@ export function OperatorView() {
                         <form className="space-y-4" onSubmit={handleExpenseSubmit}>
                             <div>
                                 <Label htmlFor="expAmount">Amount ($)</Label>
-                                <Input 
-                                    id="expAmount" 
-                                    type="number" 
-                                    value={expenseForm.amount} 
-                                    onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} 
-                                    required 
+                                <Input
+                                    id="expAmount"
+                                    type="number"
+                                    value={expenseForm.amount}
+                                    onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                                    required
                                 />
                             </div>
                             <div>
                                 <Label htmlFor="expCategory">Category</Label>
-                                <Select value={expenseForm.category} onValueChange={v => setExpenseForm({...expenseForm, category: v})}>
+                                <Select value={expenseForm.category} onValueChange={v => setExpenseForm({ ...expenseForm, category: v })}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
@@ -134,20 +134,20 @@ export function OperatorView() {
                             </div>
                             <div>
                                 <Label htmlFor="expDate">Date</Label>
-                                <Input 
-                                    id="expDate" 
-                                    type="date" 
-                                    value={expenseForm.date} 
-                                    onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} 
-                                    required 
+                                <Input
+                                    id="expDate"
+                                    type="date"
+                                    value={expenseForm.date}
+                                    onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })}
+                                    required
                                 />
                             </div>
                             <div>
                                 <Label htmlFor="expDesc">Description</Label>
-                                <Textarea 
-                                    id="expDesc" 
-                                    value={expenseForm.description} 
-                                    onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} 
+                                <Textarea
+                                    id="expDesc"
+                                    value={expenseForm.description}
+                                    onChange={e => setExpenseForm({ ...expenseForm, description: e.target.value })}
                                     placeholder="What was this expense for?"
                                     rows={2}
                                 />

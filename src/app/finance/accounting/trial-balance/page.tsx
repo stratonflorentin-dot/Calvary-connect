@@ -88,7 +88,7 @@ export default function TrialBalancePage() {
 
     AVAILABLE_CURRENCIES.forEach(curr => {
       const currencyLines = allLines.filter((line) => line.currency === curr.code);
-      
+
       const accountBalances = currencyLines.reduce((acc, line) => {
         if (!acc[line.account_code]) {
           acc[line.account_code] = { debit: 0, credit: 0 };
@@ -98,8 +98,9 @@ export default function TrialBalancePage() {
         return acc;
       }, {} as Record<string, { debit: number; credit: number }>);
 
-      const totalDebits = Object.values(accountBalances).reduce((sum, bal) => sum + bal.debit, 0);
-      const totalCredits = Object.values(accountBalances).reduce((sum, bal) => sum + bal.credit, 0);
+      const balancesArray = Object.values(accountBalances) as { debit: number; credit: number }[];
+      const totalDebits = balancesArray.reduce((sum, bal) => sum + (bal.debit || 0), 0);
+      const totalCredits = balancesArray.reduce((sum, bal) => sum + (bal.credit || 0), 0);
       const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01;
 
       currencyMap.set(curr.code, {

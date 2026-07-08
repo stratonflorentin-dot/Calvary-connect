@@ -88,7 +88,7 @@ export default function GeneralLedgerPage() {
   const allLines = flattenJournalLines();
 
   const filteredLines = allLines.filter((line) => {
-    const matchesSearch = !search || 
+    const matchesSearch = !search ||
       line.description?.toLowerCase().includes(search.toLowerCase()) ||
       line.account_code?.toLowerCase().includes(search.toLowerCase()) ||
       line.entry_description?.toLowerCase().includes(search.toLowerCase());
@@ -97,14 +97,15 @@ export default function GeneralLedgerPage() {
   });
 
   // Calculate account balances
-  const accountBalances = filteredLines.reduce((acc, line) => {
-    if (!acc[line.account_code]) {
-      acc[line.account_code] = { debit: 0, credit: 0 };
+  const accountBalances = filteredLines.reduce<Record<string, { debit: number; credit: number }>>((acc, line) => {
+    const accountCode = String(line.account_code || "");
+    if (!acc[accountCode]) {
+      acc[accountCode] = { debit: 0, credit: 0 };
     }
-    acc[line.account_code].debit += line.debit || 0;
-    acc[line.account_code].credit += line.credit || 0;
+    acc[accountCode].debit += Number(line.debit || 0);
+    acc[accountCode].credit += Number(line.credit || 0);
     return acc;
-  }, {} as Record<string, { debit: number; credit: number }>);
+  }, {});
 
   const totalDebits = Object.values(accountBalances).reduce((sum, bal) => sum + bal.debit, 0);
   const totalCredits = Object.values(accountBalances).reduce((sum, bal) => sum + bal.credit, 0);

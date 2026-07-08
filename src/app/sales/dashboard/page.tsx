@@ -8,8 +8,8 @@ import { Sidebar } from "@/components/navigation/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  TrendingUp, Users, FileText, DollarSign, Target, 
+import {
+  TrendingUp, Users, FileText, DollarSign, Target,
   Activity, ArrowUpRight, Calendar, CheckCircle, Clock, AlertCircle
 } from "lucide-react";
 import Link from "next/link";
@@ -60,31 +60,37 @@ export default function SalesDashboard() {
       ]);
 
       const allQuotations = await supabase.from("quotations").select("*");
+      const leads = leadsData.data ?? [];
+      const customers = customersData.data ?? [];
+      const allQuotationRows = allQuotations.data ?? [];
+      const contractRows = contractsData.data ?? [];
+      const bookingRows = bookingsData.data ?? [];
+      const pendingQuotationRows = quotationsData.data ?? [];
 
       setStats({
-        totalLeads: leadsData.data?.length || 0,
-        newLeads: leadsData.data?.filter((l: any) => l.status === "new").length || 0,
-        qualifiedLeads: leadsData.data?.filter((l: any) => l.status === "qualified").length || 0,
-        convertedLeads: leadsData.data?.filter((l: any) => l.status === "converted").length || 0,
-        totalCustomers: customersData.data?.length || 0,
-        totalQuotations: allQuotations.data?.length || 0,
-        draftQuotations: allQuotations.data?.filter((q: any) => q.status === "draft").length || 0,
-        approvedQuotations: allQuotations.data?.filter((q: any) => q.status === "approved").length || 0,
-        sentQuotations: allQuotations.data?.filter((q: any) => q.status === "sent").length || 0,
-        convertedQuotations: allQuotations.data?.filter((q: any) => q.status === "converted").length || 0,
-        totalContracts: contractsData.data?.length || 0,
-        totalBookings: bookingsData.data?.length || 0,
-        pendingBookings: bookingsData.data?.filter((b: any) => b.status === "pending").length || 0,
-        confirmedBookings: bookingsData.data?.filter((b: any) => b.status === "confirmed").length || 0,
-        totalPipelineValue: allQuotations.data?.reduce((sum: number, q: any) => sum + (q.total_amount || 0), 0) || 0,
-        monthlyRevenue: bookingsData.data?.reduce((sum: number, b: any) => sum + (b.amount || 0), 0) || 0,
-        conversionRate: leadsData.data?.length > 0 
-          ? Math.round((leadsData.data.filter((l: any) => l.status === "converted").length / leadsData.data.length) * 100) 
+        totalLeads: leads.length,
+        newLeads: leads.filter((l: any) => l.status === "new").length,
+        qualifiedLeads: leads.filter((l: any) => l.status === "qualified").length,
+        convertedLeads: leads.filter((l: any) => l.status === "converted").length,
+        totalCustomers: customers.length,
+        totalQuotations: allQuotationRows.length,
+        draftQuotations: allQuotationRows.filter((q: any) => q.status === "draft").length,
+        approvedQuotations: allQuotationRows.filter((q: any) => q.status === "approved").length,
+        sentQuotations: allQuotationRows.filter((q: any) => q.status === "sent").length,
+        convertedQuotations: allQuotationRows.filter((q: any) => q.status === "converted").length,
+        totalContracts: contractRows.length,
+        totalBookings: bookingRows.length,
+        pendingBookings: bookingRows.filter((b: any) => b.status === "pending").length,
+        confirmedBookings: bookingRows.filter((b: any) => b.status === "confirmed").length,
+        totalPipelineValue: allQuotationRows.reduce((sum: number, q: any) => sum + (q.total_amount || 0), 0),
+        monthlyRevenue: bookingRows.reduce((sum: number, b: any) => sum + (b.amount || 0), 0),
+        conversionRate: leads.length > 0
+          ? Math.round((leads.filter((l: any) => l.status === "converted").length / leads.length) * 100)
           : 0,
       });
 
-      setRecentLeads(leadsData.data || []);
-      setPendingQuotations(quotationsData.data || []);
+      setRecentLeads(leads);
+      setPendingQuotations(pendingQuotationRows);
     } catch (err) {
       console.error("Error loading dashboard data:", err);
       toast({ title: "Error", description: "Failed to load dashboard data", variant: "destructive" });
@@ -280,12 +286,12 @@ export default function SalesDashboard() {
                           <p className="font-medium">{lead.company_name}</p>
                           <p className="text-xs text-muted-foreground">{lead.contact_person}</p>
                         </div>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={
                             lead.status === "new" ? "bg-primary/10 text-primary border-primary/20" :
-                            lead.status === "qualified" ? "bg-success/10 text-success border-success/20" :
-                            "bg-muted/50 text-muted-foreground border-border"
+                              lead.status === "qualified" ? "bg-success/10 text-success border-success/20" :
+                                "bg-muted/50 text-muted-foreground border-border"
                           }
                         >
                           {lead.status}

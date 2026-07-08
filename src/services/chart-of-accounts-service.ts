@@ -147,7 +147,7 @@ export class ChartOfAccountsService {
           accountsSummary[summaryIndex].totalAmount += (parseFloat(inv.amount) || 0);
         }
       } else {
-        unmappedItems.push({ type: 'invoice', id: inv.id, type: inv.type, amount: inv.amount, date: inv.issue_date });
+        unmappedItems.push({ type: 'invoice', id: inv.id, invoice_type: inv.type, amount: inv.amount, date: inv.issue_date });
       }
     });
 

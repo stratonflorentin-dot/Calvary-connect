@@ -40,9 +40,11 @@ export class WorkflowService {
     const accountants = await fetchAccountantUserIds();
     await Promise.all(accountants.map(id => createNotification({
       userId: id,
+      module: "finance",
       category: "delivery_update",
       title: "New Revenue Generated",
       message: `Trip #${updatedTrip.tripNumber || updatedTrip.id} completed. Invoice generated for ${updatedTrip.client}.`,
+      type: "success",
       severity: "success"
     })));
 
@@ -89,9 +91,11 @@ export class WorkflowService {
     // 4. Notify Driver
     await createNotification({
       userId: request.driverId,
+      module: "operations",
       category: "fuel_approval",
       title: "Fuel Request Approved",
       message: `Your fuel request for ${request.amount} has been approved.`,
+      type: "success",
       severity: "success"
     });
 
@@ -170,9 +174,11 @@ export class WorkflowService {
     // 4. Notify Employee
     await createNotification({
       userId: allowance.employee_id,
+      module: "hr",
       category: "general",
       title: "Allowance Approved",
       message: `Your allowance for ${allowance.amount} has been approved and sent for payment.`,
+      type: "success",
       severity: "success"
     });
 

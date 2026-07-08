@@ -9,14 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { format } from 'date-fns';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -26,12 +26,12 @@ import {
   Area,
   AreaChart
 } from 'recharts';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  CreditCard, 
-  Users, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  CreditCard,
+  Users,
   Truck,
   FileText,
   Download,
@@ -177,12 +177,12 @@ export default function ExecutiveSummaryPage() {
         monthDate.setMonth(monthDate.getMonth() - i);
         const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
         const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-        
+
         const monthInvoices = invoices?.filter(inv => {
           const invDate = new Date(inv.created_at);
           return invDate >= monthStart && invDate <= monthEnd;
         }) || [];
-        
+
         const monthExpenses = expenses?.filter(exp => {
           const expDate = new Date(exp.date);
           return expDate >= monthStart && expDate <= monthEnd;
@@ -211,7 +211,7 @@ export default function ExecutiveSummaryPage() {
           customerRevenue[trip.client].trips += 1;
         }
       });
-      
+
       const sortedCustomers = Object.values(customerRevenue)
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5);
@@ -223,7 +223,7 @@ export default function ExecutiveSummaryPage() {
         const category = exp.category || 'Other';
         categoryExpenses[category] = (categoryExpenses[category] || 0) + (exp.amount || 0);
       });
-      
+
       const totalExp = Object.values(categoryExpenses).reduce((a, b) => a + b, 0);
       const sortedExpenses = Object.entries(categoryExpenses)
         .map(([category, amount]) => ({
@@ -267,299 +267,299 @@ export default function ExecutiveSummaryPage() {
 
   return (
     <div className="space-y-8">
-          {/* Header */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">Executive Summary</h1>
-              <p className="text-muted-foreground">Financial overview and key performance indicators</p>
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">Executive Summary</h1>
+          <p className="text-muted-foreground">Financial overview and key performance indicators</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <DatePickerWithRange
+            date={dateRange}
+            onDateChange={setDateRange}
+          />
+          <Button onClick={handleExport} variant="outline" className="gap-2 h-11">
+            <Download className="size-4" />
+            Export CSV
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            <div className="p-2 bg-success/10 rounded-full">
+              <TrendingUp className="size-4 text-success" />
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <DatePickerWithRange 
-                date={dateRange} 
-                onDateChange={setDateRange}
-              />
-              <Button onClick={handleExport} variant="outline" className="gap-2 h-11">
-                <Download className="size-4" />
-                Export CSV
-              </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(data?.totalRevenue || 0)}</div>
+            <div className="flex items-center gap-1 text-xs">
+              {data?.revenueTrend && data.revenueTrend > 0 ? (
+                <>
+                  <ArrowUpRight className="size-3 text-success" />
+                  <span className="text-success">+{data.revenueTrend.toFixed(1)}%</span>
+                </>
+              ) : (
+                <>
+                  <ArrowDownRight className="size-3 text-destructive" />
+                  <span className="text-destructive">{data?.revenueTrend?.toFixed(1)}%</span>
+                </>
+              )}
+              <span className="text-muted-foreground ml-1">vs last month</span>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-border shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-                <div className="p-2 bg-success/10 rounded-full">
-                  <TrendingUp className="size-4 text-success" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">{formatCurrency(data?.totalRevenue || 0)}</div>
-                <div className="flex items-center gap-1 text-xs">
-                  {data?.revenueTrend && data.revenueTrend > 0 ? (
-                    <>
-                      <ArrowUpRight className="size-3 text-success" />
-                      <span className="text-success">+{data.revenueTrend.toFixed(1)}%</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDownRight className="size-3 text-destructive" />
-                      <span className="text-destructive">{data?.revenueTrend?.toFixed(1)}%</span>
-                    </>
-                  )}
-                  <span className="text-muted-foreground ml-1">vs last month</span>
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="border-border shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
+            <div className="p-2 bg-destructive/10 rounded-full">
+              <TrendingDown className="size-4 text-destructive" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(data?.totalExpenses || 0)}</div>
+            <div className="flex items-center gap-1 text-xs">
+              {data?.expenseTrend && data.expenseTrend > 0 ? (
+                <>
+                  <ArrowUpRight className="size-3 text-destructive" />
+                  <span className="text-destructive">+{data.expenseTrend.toFixed(1)}%</span>
+                </>
+              ) : (
+                <>
+                  <ArrowDownRight className="size-3 text-success" />
+                  <span className="text-success">{data?.expenseTrend?.toFixed(1)}%</span>
+                </>
+              )}
+              <span className="text-muted-foreground ml-1">vs last month</span>
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card className="border-border shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
-                <div className="p-2 bg-destructive/10 rounded-full">
-                  <TrendingDown className="size-4 text-destructive" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">{formatCurrency(data?.totalExpenses || 0)}</div>
-                <div className="flex items-center gap-1 text-xs">
-                  {data?.expenseTrend && data.expenseTrend > 0 ? (
-                    <>
-                      <ArrowUpRight className="size-3 text-destructive" />
-                      <span className="text-destructive">+{data.expenseTrend.toFixed(1)}%</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDownRight className="size-3 text-success" />
-                      <span className="text-success">{data?.expenseTrend?.toFixed(1)}%</span>
-                    </>
-                  )}
-                  <span className="text-muted-foreground ml-1">vs last month</span>
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="border-border shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Net Profit</CardTitle>
+            <div className="p-2 bg-primary/10 rounded-full">
+              <Wallet className="size-4 text-primary" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold text-foreground ${(data?.netProfit || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {formatCurrency(data?.netProfit || 0)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {(data?.totalRevenue ?? 0) > 0 ? ((data?.netProfit || 0) / (data?.totalRevenue ?? 1) * 100).toFixed(1) : 0}% margin
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card className="border-border shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Net Profit</CardTitle>
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Wallet className="size-4 text-primary" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold text-foreground ${(data?.netProfit || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {formatCurrency(data?.netProfit || 0)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {data?.totalRevenue > 0 ? ((data?.netProfit || 0) / data.totalRevenue * 100).toFixed(1) : 0}% margin
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="border-border shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle>
+            <div className="p-2 bg-warning/10 rounded-full">
+              <Receipt className="size-4 text-warning" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-warning">{formatCurrency(data?.outstandingInvoices || 0)}</div>
+            <div className="text-xs text-muted-foreground">Pending invoices</div>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Card className="border-border shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle>
-                <div className="p-2 bg-warning/10 rounded-full">
-                  <Receipt className="size-4 text-warning" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-warning">{formatCurrency(data?.outstandingInvoices || 0)}</div>
-                <div className="text-xs text-muted-foreground">Pending invoices</div>
-              </CardContent>
-            </Card>
-          </div>
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Trips</CardTitle>
+            <Truck className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold text-foreground">{data?.totalTrips || 0}</div>
+            <div className="text-xs text-muted-foreground">Completed trips</div>
+          </CardContent>
+        </Card>
 
-          {/* Secondary Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-border shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Total Trips</CardTitle>
-                <Truck className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-foreground">{data?.totalTrips || 0}</div>
-                <div className="text-xs text-muted-foreground">Completed trips</div>
-              </CardContent>
-            </Card>
+        <Card className="border-border shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Customers</CardTitle>
+            <Users className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold text-foreground">{data?.totalCustomers || 0}</div>
+            <div className="text-xs text-muted-foreground">Active clients</div>
+          </CardContent>
+        </Card>
 
-            <Card className="border-border shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Customers</CardTitle>
-                <Users className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-foreground">{data?.totalCustomers || 0}</div>
-                <div className="text-xs text-muted-foreground">Active clients</div>
-              </CardContent>
-            </Card>
+        <Card className="border-border shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Fuel Costs</CardTitle>
+            <Fuel className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold text-foreground">{formatCurrency(data?.fuelCosts || 0)}</div>
+            <div className="text-xs text-muted-foreground">
+              {(data?.totalExpenses ?? 0) > 0 ? ((data?.fuelCosts || 0) / (data?.totalExpenses ?? 1) * 100).toFixed(1) : 0}% of expenses
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card className="border-border shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Fuel Costs</CardTitle>
-                <Fuel className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-foreground">{formatCurrency(data?.fuelCosts || 0)}</div>
-                <div className="text-xs text-muted-foreground">
-                  {data?.totalExpenses > 0 ? ((data?.fuelCosts || 0) / data.totalExpenses * 100).toFixed(1) : 0}% of expenses
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="border-border shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance</CardTitle>
+            <FileText className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold text-foreground">{formatCurrency(data?.maintenanceCosts || 0)}</div>
+            <div className="text-xs text-muted-foreground">
+              {(data?.totalExpenses ?? 0) > 0 ? ((data?.maintenanceCosts || 0) / (data?.totalExpenses ?? 1) * 100).toFixed(1) : 0}% of expenses
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Card className="border-border shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance</CardTitle>
-                <FileText className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-foreground">{formatCurrency(data?.maintenanceCosts || 0)}</div>
-                <div className="text-xs text-muted-foreground">
-                  {data?.totalExpenses > 0 ? ((data?.maintenanceCosts || 0) / data.totalExpenses * 100).toFixed(1) : 0}% of expenses
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue vs Expenses Chart */}
+        <Card className="lg:col-span-2 border-border shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-foreground">Revenue vs Expenses Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 12 }}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="hsl(var(--muted-foreground))"
+                    tickFormatter={(value) => `TZS ${(value / 1000000).toFixed(1)}M`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                  />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    name="Revenue"
+                    stroke="hsl(var(--success))"
+                    fill="hsl(var(--success))"
+                    fillOpacity={0.2}
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="expenses"
+                    name="Expenses"
+                    stroke="hsl(var(--destructive))"
+                    fill="hsl(var(--destructive))"
+                    fillOpacity={0.2}
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="profit"
+                    name="Profit"
+                    stroke="hsl(var(--primary))"
+                    fill="hsl(var(--primary))"
+                    fillOpacity={0.1}
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue vs Expenses Chart */}
-            <Card className="lg:col-span-2 border-border shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-foreground">Revenue vs Expenses Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis 
-                        dataKey="month" 
-                        tick={{ fontSize: 12 }}
-                        stroke="hsl(var(--muted-foreground))"
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        tickFormatter={(value) => `TZS ${(value / 1000000).toFixed(1)}M`}
-                      />
-                      <Tooltip 
-                        formatter={(value: number) => formatCurrency(value)}
-                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
-                      />
-                      <Legend />
-                      <Area 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        name="Revenue" 
-                        stroke="hsl(var(--success))" 
-                        fill="hsl(var(--success))" 
-                        fillOpacity={0.2}
-                        strokeWidth={2}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="expenses" 
-                        name="Expenses" 
-                        stroke="hsl(var(--destructive))" 
-                        fill="hsl(var(--destructive))" 
-                        fillOpacity={0.2}
-                        strokeWidth={2}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="profit" 
-                        name="Profit" 
-                        stroke="hsl(var(--primary))" 
-                        fill="hsl(var(--primary))" 
-                        fillOpacity={0.1}
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Data Tables */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Customers */}
-            <Card className="border-border shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-foreground">Top Customers by Revenue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-foreground">Customer</TableHead>
-                      <TableHead className="text-right text-foreground">Revenue</TableHead>
-                      <TableHead className="text-right text-foreground">Trips</TableHead>
+      {/* Data Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Customers */}
+        <Card className="border-border shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-foreground">Top Customers by Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-foreground">Customer</TableHead>
+                  <TableHead className="text-right text-foreground">Revenue</TableHead>
+                  <TableHead className="text-right text-foreground">Trips</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topCustomers.length > 0 ? (
+                  topCustomers.map((customer, index) => (
+                    <TableRow key={index} className="hover:bg-muted/50">
+                      <TableCell className="font-medium text-foreground">{customer.name}</TableCell>
+                      <TableCell className="text-right text-foreground">{formatCurrency(customer.revenue)}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="outline">{customer.trips}</Badge>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topCustomers.length > 0 ? (
-                      topCustomers.map((customer, index) => (
-                        <TableRow key={index} className="hover:bg-muted/50">
-                          <TableCell className="font-medium text-foreground">{customer.name}</TableCell>
-                          <TableCell className="text-right text-foreground">{formatCurrency(customer.revenue)}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="outline">{customer.trips}</Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                          No customer data available for this period
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      No customer data available for this period
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-            {/* Top Expenses */}
-            <Card className="border-border shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-foreground">Top Expense Categories</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-foreground">Category</TableHead>
-                      <TableHead className="text-right text-foreground">Amount</TableHead>
-                      <TableHead className="text-right text-foreground">%</TableHead>
+        {/* Top Expenses */}
+        <Card className="border-border shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-foreground">Top Expense Categories</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-foreground">Category</TableHead>
+                  <TableHead className="text-right text-foreground">Amount</TableHead>
+                  <TableHead className="text-right text-foreground">%</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topExpenses.length > 0 ? (
+                  topExpenses.map((expense, index) => (
+                    <TableRow key={index} className="hover:bg-muted/50">
+                      <TableCell className="font-medium text-foreground">{expense.category}</TableCell>
+                      <TableCell className="text-right text-foreground">{formatCurrency(expense.amount)}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={index === 0 ? "destructive" : "outline"}>
+                          {expense.percentage.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topExpenses.length > 0 ? (
-                      topExpenses.map((expense, index) => (
-                        <TableRow key={index} className="hover:bg-muted/50">
-                          <TableCell className="font-medium text-foreground">{expense.category}</TableCell>
-                          <TableCell className="text-right text-foreground">{formatCurrency(expense.amount)}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={index === 0 ? "destructive" : "outline"}>
-                              {expense.percentage.toFixed(1)}%
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
-                          No expense data available for this period
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      No expense data available for this period
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
