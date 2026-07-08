@@ -1,4 +1,3 @@
-'use server';
 /**
  * Calvary Connect — Fuel Consumption Prediction AI Flow
  *
@@ -11,13 +10,11 @@
  */
 
 import { createGenkit } from '@/ai/genkit';
-import { z } from 'genkit';
-
-const ai = await createGenkit();
+import { z } from 'zod';
 
 // ─── Input ────────────────────────────────────────────────────────────────────
 
-const FuelPredictionInputSchema = z.object({
+export const FuelPredictionInputSchema = z.object({
   tripId: z.string().optional().describe('Trip ID if predicting for a specific trip.'),
   origin: z.string().describe('Trip starting location.'),
   destination: z.string().describe('Trip destination.'),
@@ -52,27 +49,30 @@ export type FuelPredictionOutput = z.infer<typeof FuelPredictionOutputSchema>;
 
 // ─── Flow ─────────────────────────────────────────────────────────────────────
 
-const fuelPredictionFlow = ai.defineFlow(
-  {
-    name: 'fuelPredictionFlow',
-    inputSchema: FuelPredictionInputSchema,
-    outputSchema: FuelPredictionOutputSchema,
-  },
-  async (input) => {
-    // Load adjustment factor (heavier load = worse efficiency)
-    const loadFactor = 1 + input.loadWeightTons * 0.02; // 2% per ton
-    const terrainFactors = { flat: 1.0, hilly: 1.15, mountainous: 1.30, mixed: 1.10 };
-    const weatherFactors = { clear: 1.0, rainy: 1.05, strong_wind: 1.12, extreme_heat: 1.08 };
-    const driverFactor = 1 + (100 - input.driverBehaviourScore) / 100 * 0.3; // up to 30% penalty
+async function createFuelPredictionFlow() {
+  const ai = await createGenkit();
 
-    const adjustedEfficiency =
-      input.avgFuelEfficiencyKmPerLiter /
-      (loadFactor * terrainFactors[input.terrainType] * weatherFactors[input.weatherCondition] * driverFactor);
+  return ai.defineFlow(
+    {
+      name: 'fuelPredictionFlow',
+      inputSchema: FuelPredictionInputSchema,
+      outputSchema: FuelPredictionOutputSchema,
+    },
+    async (input: FuelPredictionInput) => {
+      // Load adjustment factor (heavier load = worse efficiency)
+      const loadFactor = 1 + input.loadWeightTons * 0.02; // 2% per ton
+      const terrainFactors = { flat: 1.0, hilly: 1.15, mountainous: 1.30, mixed: 1.10 };
+      const weatherFactors = { clear: 1.0, rainy: 1.05, strong_wind: 1.12, extreme_heat: 1.08 };
+      const driverFactor = 1 + (100 - input.driverBehaviourScore) / 100 * 0.3; // up to 30% penalty
 
-    const estimatedLiters = input.distanceKm / adjustedEfficiency;
+      const adjustedEfficiency =
+        input.avgFuelEfficiencyKmPerLiter /
+        (loadFactor * terrainFactors[input.terrainType] * weatherFactors[input.weatherCondition] * driverFactor);
 
-    const { output } = await ai.generate({
-      prompt: `You are a fuel efficiency analyst for a large fleet company.
+      const estimatedLiters = input.distanceKm / adjustedEfficiency;
+
+      const { output } = await ai.generate({
+        prompt: `You are a fuel efficiency analyst for a large fleet company.
 
 Predict fuel consumption for this trip:
 Route: ${input.origin} → ${input.destination} (${input.distanceKm} km)
@@ -88,14 +88,16 @@ Pre-calculated estimate: ~${estimatedLiters.toFixed(1)} L
 Validate and refine the estimate. Provide actionable optimisation tips.
 For CO2, use: Diesel = 2.68 kg/L, Petrol = 2.31 kg/L.
 Output valid JSON matching the schema.`,
-      output: { schema: FuelPredictionOutputSchema },
-    });
+        output: { schema: FuelPredictionOutputSchema },
+      });
 
-    if (!output) throw new Error('Fuel prediction AI failed to generate output.');
-    return output;
-  }
-);
+      if (!output) throw new Error('Fuel prediction AI failed to generate output.');
+      return output;
+    }
+  );
+}
 
 export async function getFuelPrediction(input: FuelPredictionInput): Promise<FuelPredictionOutput> {
+  const fuelPredictionFlow = await createFuelPredictionFlow();
   return fuelPredictionFlow(input);
 }

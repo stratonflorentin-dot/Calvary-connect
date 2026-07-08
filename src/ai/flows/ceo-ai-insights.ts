@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview An AI agent for the CEO dashboard providing insights into fleet operations.
  *
@@ -8,11 +7,9 @@
  */
 
 import { createGenkit } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
-const ai = await createGenkit();
-
-const CeoAiInsightsInputSchema = z.object({
+export const CeoAiInsightsInputSchema = z.object({
   activeTripsCount: z.number().describe('Current number of active trips.'),
   fleetBreakdown: z.object({
     available: z.number().describe('Number of available fleet vehicles.'),
@@ -37,15 +34,14 @@ const CeoAiInsightsOutputSchema = z.object({
 }).describe('AI-generated insights for the CEO dashboard, categorized into highlights, concerns, and recommendations.');
 export type CeoAiInsightsOutput = z.infer<typeof CeoAiInsightsOutputSchema>;
 
-export async function getCeoAiInsights(input: CeoAiInsightsInput): Promise<CeoAiInsightsOutput> {
-  return ceoAiInsightsFlow(input);
-}
+async function createCeoAiInsightsFlow() {
+  const ai = await createGenkit();
 
-const ceoAiInsightsPrompt = ai.definePrompt({
-  name: 'ceoAiInsightsPrompt',
-  input: { schema: CeoAiInsightsInputSchema },
-  output: { schema: CeoAiInsightsOutputSchema },
-  prompt: `You are a senior logistics operations analyst.
+  const ceoAiInsightsPrompt = ai.definePrompt({
+    name: 'ceoAiInsightsPrompt',
+    input: { schema: CeoAiInsightsInputSchema },
+    output: { schema: CeoAiInsightsOutputSchema },
+    prompt: `You are a senior logistics operations analyst.
 
 Analyze this FleetCommand data, presented as a JSON object:
 
@@ -59,19 +55,25 @@ Provide:
 3. ACTIONABLE RECOMMENDATIONS (2-3 specific actions for today)
 
 Use real numbers from the data. The total response should be under 250 words total. The output should be a JSON object conforming to the CeoAiInsightsOutputSchema.`,
-});
+  });
 
-const ceoAiInsightsFlow = ai.defineFlow(
-  {
-    name: 'ceoAiInsightsFlow',
-    inputSchema: CeoAiInsightsInputSchema,
-    outputSchema: CeoAiInsightsOutputSchema,
-  },
-  async (input) => {
-    const { output } = await ceoAiInsightsPrompt(input);
-    if (!output) {
-      throw new Error('Failed to generate AI insights.');
+  return ai.defineFlow(
+    {
+      name: 'ceoAiInsightsFlow',
+      inputSchema: CeoAiInsightsInputSchema,
+      outputSchema: CeoAiInsightsOutputSchema,
+    },
+    async (input: CeoAiInsightsInput) => {
+      const { output } = await ceoAiInsightsPrompt(input);
+      if (!output) {
+        throw new Error('Failed to generate AI insights.');
+      }
+      return output;
     }
-    return output;
-  }
-);
+  );
+}
+
+export async function getCeoAiInsights(input: CeoAiInsightsInput): Promise<CeoAiInsightsOutput> {
+  const ceoAiInsightsFlow = await createCeoAiInsightsFlow();
+  return ceoAiInsightsFlow(input);
+}

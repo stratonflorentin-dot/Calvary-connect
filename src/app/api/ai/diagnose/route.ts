@@ -7,8 +7,9 @@ export async function GET() {
   }
 
   try {
-    // Small test generation to validate genkit is callable
     const ai = await createGenkit();
+
+    // Small test generation to validate genkit is callable
     const response = await ai.generate({
       system: 'Diagnostic: return short OK',
       messages: [{ role: 'user', content: [{ text: 'ping' }] }],

@@ -12,21 +12,25 @@
  *   OTEL_ENVIRONMENT=production
  */
 
+const dynamicImport = new Function('specifier', 'return import(specifier)') as (
+  specifier: string,
+) => Promise<any>;
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     try {
-      const { NodeSDK } = await import('@opentelemetry/sdk-node');
-      const { Resource } = await import('@opentelemetry/resources');
+      const { NodeSDK } = await dynamicImport('@opentelemetry/sdk-node');
+      const { Resource } = await dynamicImport('@opentelemetry/resources');
       const {
         SEMRESATTRS_SERVICE_NAME,
         SEMRESATTRS_SERVICE_VERSION,
         SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
-      } = await import('@opentelemetry/semantic-conventions');
-      const { SimpleSpanProcessor } = await import('@opentelemetry/sdk-trace-base');
-      const { JaegerExporter } = await import('@opentelemetry/exporter-jaeger');
+      } = await dynamicImport('@opentelemetry/semantic-conventions');
+      const { SimpleSpanProcessor } = await dynamicImport('@opentelemetry/sdk-trace-base');
+      const { JaegerExporter } = await dynamicImport('@opentelemetry/exporter-jaeger');
       const {
         HttpInstrumentation,
-      } = await import('@opentelemetry/instrumentation-http').catch(() => ({ HttpInstrumentation: null }));
+      } = await dynamicImport('@opentelemetry/instrumentation-http').catch(() => ({ HttpInstrumentation: null }));
 
       const jaegerEndpoint =
         process.env.OTEL_EXPORTER_JAEGER_ENDPOINT || 'http://localhost:14268/api/traces';

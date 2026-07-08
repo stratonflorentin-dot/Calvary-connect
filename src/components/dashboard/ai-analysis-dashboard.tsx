@@ -214,6 +214,121 @@ export default function AIAnalysisDashboard() {
     await handleChip(userMsg);
   };
 
+  const [predictiveMaintenanceResult, setPredictiveMaintenanceResult] = useState<any | null>(null);
+  const [fuelPredictionResult, setFuelPredictionResult] = useState<any | null>(null);
+  const [ceoInsightsResult, setCeoInsightsResult] = useState<any | null>(null);
+  const [apiLoading, setApiLoading] = useState({
+    predictiveMaintenance: false,
+    fuelPrediction: false,
+    ceoInsights: false,
+  });
+
+  const getSamplePredictiveMaintenancePayload = () => {
+    const vehicle = vehicles[0] || {} as any;
+    const currentOdometerKm = Number(vehicle?.mileage || 120000);
+    return {
+      truckId: vehicle?.id || 'TRUCK-0001',
+      truckName: vehicle?.plate_number || vehicle?.model || 'Fleet Truck',
+      currentOdometerKm,
+      lastServiceOdometerKm: Number(vehicle?.mileage ? Math.max(0, vehicle.mileage - 12000) : 108000),
+      lastServiceDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      fuelType: vehicle?.fuel_type || 'Diesel',
+      recentMaintenanceCount: 2,
+      averageDailyKm: 400,
+      currentCondition: 'Fair',
+      openIssuesCount: 1,
+      daysAhead: 30,
+    };
+  };
+
+  const getSampleFuelPredictionPayload = () => {
+    const trip = trips[0] || {} as any;
+    const vehicle = vehicles.find((v: any) => v.id === trip.vehicle_id) || vehicles[0] || {} as any;
+    return {
+      tripId: trip?.id,
+      origin: trip?.origin || 'Nairobi',
+      destination: trip?.destination || 'Mombasa',
+      distanceKm: Number(trip?.distance_km || 480),
+      vehicleType: `${vehicle?.make || 'Heavy Truck'} ${vehicle?.model || ''}`.trim(),
+      vehicleFuelType: vehicle?.fuel_type || 'Diesel',
+      avgFuelEfficiencyKmPerLiter: 4.5,
+      loadWeightTons: 8,
+      driverBehaviourScore: 82,
+      currentFuelPricePerLiter: 1.25,
+      terrainType: 'mixed',
+      weatherCondition: 'clear',
+    };
+  };
+
+  const getSampleCeoInsightsPayload = () => {
+    const available = vehicles.filter((v) => v.status === 'available').length;
+    const inUse = vehicles.filter((v) => v.status === 'in_use').length;
+    const maintenance = vehicles.filter((v) => v.status === 'maintenance').length;
+    const pendingMaintenanceCount = (dbContext?.maintenance || []).filter((m: any) => m.status === 'pending').length;
+    const completedDeliveriesThisMonth = (dbContext?.trips || []).filter((t: any) => {
+      const d = new Date(t.created_at);
+      const now = new Date();
+      return (
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear() &&
+        t.status === 'completed'
+      );
+    }).length;
+
+    return {
+      activeTripsCount: activeTrips.length,
+      fleetBreakdown: { available, inUse, maintenance },
+      revenueThisMonth: totalRevenue,
+      expensesThisMonth: totalExpenses,
+      netProfit,
+      fuelConsumptionLiters: Number(businessMetrics?.totalFuelCost || 0),
+      pendingMaintenanceCount,
+      lowStockCount: 12,
+      onlineDriverCount: dbContext?.users?.length || 0,
+      completedDeliveriesThisMonth,
+    };
+  };
+
+  const callAiRoute = async (
+    endpoint: string,
+    payload: any,
+    setResult: (value: any) => void,
+    loadingKey: 'predictiveMaintenance' | 'fuelPrediction' | 'ceoInsights',
+  ) => {
+    setApiLoading((prev) => ({ ...prev, [loadingKey]: true }));
+    try {
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || 'AI request failed');
+      }
+      setResult(data.result || data);
+    } catch (error: any) {
+      setResult({ error: error?.message || 'Request failed' });
+    } finally {
+      setApiLoading((prev) => ({ ...prev, [loadingKey]: false }));
+    }
+  };
+
+  const runPredictiveMaintenance = async () => {
+    const payload = getSamplePredictiveMaintenancePayload();
+    await callAiRoute('/api/ai/predictive-maintenance', payload, setPredictiveMaintenanceResult, 'predictiveMaintenance');
+  };
+
+  const runFuelPrediction = async () => {
+    const payload = getSampleFuelPredictionPayload();
+    await callAiRoute('/api/ai/fuel-prediction', payload, setFuelPredictionResult, 'fuelPrediction');
+  };
+
+  const runCeoInsights = async () => {
+    const payload = getSampleCeoInsightsPayload();
+    await callAiRoute('/api/ai/ceo-insights', payload, setCeoInsightsResult, 'ceoInsights');
+  };
+
   // Load DB context and compute metrics on mount
   useEffect(() => {
     let mounted = true;
@@ -478,6 +593,67 @@ export default function AIAnalysisDashboard() {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI Route Diagnostics */}
+          <Card className="bg-card shadow-sm border-border">
+            <CardHeader className="bg-muted/30 border-b pb-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Activity className="size-5 text-slate-500" />
+                AI Route Diagnostics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Test the new server-side AI endpoints and inspect the returned data.
+                </p>
+
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Button
+                    onClick={runPredictiveMaintenance}
+                    disabled={apiLoading.predictiveMaintenance || vehicles.length === 0}
+                  >
+                    {apiLoading.predictiveMaintenance ? 'Running...' : 'Predictive Maintenance'}
+                  </Button>
+                  <Button
+                    onClick={runFuelPrediction}
+                    disabled={apiLoading.fuelPrediction || trips.length === 0}
+                  >
+                    {apiLoading.fuelPrediction ? 'Running...' : 'Fuel Prediction'}
+                  </Button>
+                  <Button
+                    onClick={runCeoInsights}
+                    disabled={apiLoading.ceoInsights || vehicles.length === 0}
+                  >
+                    {apiLoading.ceoInsights ? 'Running...' : 'CEO Insights'}
+                  </Button>
+                </div>
+
+                <div className="grid gap-4">
+                  {predictiveMaintenanceResult && (
+                    <div className="rounded-xl border p-4 bg-white">
+                      <p className="text-sm font-semibold mb-2">Predictive Maintenance Result</p>
+                      <pre className="text-xs text-slate-700 overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(predictiveMaintenanceResult, null, 2)}</pre>
+                    </div>
+                  )}
+
+                  {fuelPredictionResult && (
+                    <div className="rounded-xl border p-4 bg-white">
+                      <p className="text-sm font-semibold mb-2">Fuel Prediction Result</p>
+                      <pre className="text-xs text-slate-700 overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(fuelPredictionResult, null, 2)}</pre>
+                    </div>
+                  )}
+
+                  {ceoInsightsResult && (
+                    <div className="rounded-xl border p-4 bg-white">
+                      <p className="text-sm font-semibold mb-2">CEO Insights Result</p>
+                      <pre className="text-xs text-slate-700 overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(ceoInsightsResult, null, 2)}</pre>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

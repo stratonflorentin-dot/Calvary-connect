@@ -116,18 +116,18 @@ export async function fullLogisticsAnalysis(
   historicalData?: ShipmentData[],
 ): Promise<AnalysisResult> {
   const rawData = await fetchShipmentStatuses(trackingNumbers);
-  const prompt = `Perform a full professional analysis for Calvary Logistics in Tanzania on these shipments: ${JSON.stringify(rawData)}.`;
 
-  const ai = await createGenkit();
+  const prompt = `Perform a full professional analysis for Calvary Logistics in Tanzania on these shipments: ${JSON.stringify(rawData)}.
   Include:
-  - Current status summary and real - time insights(e.g., location, delays).
-  - Predictions: Potential risks like harsh braking, geo - fencing violations, or breakdowns(inspired by Fleettracktz).
-  - Forecasts: Fuel consumption over next 7 days, route optimizations to reduce costs(inspired by Voria / EMASUITE), maintenance needs.
-  - Full Analysis: Compliance checks, efficiency recommendations, and data - driven decisions.
-    ${ historicalData ? `Use historical trends: ${JSON.stringify(historicalData)} for accurate forecasting.` : "Base on general Tanzania logistics knowledge." }
+  - Current status summary and real-time insights (e.g., location, delays).
+  - Predictions: Potential risks like harsh braking, geo-fencing violations, or breakdowns (inspired by Fleettracktz).
+  - Forecasts: Fuel consumption over next 7 days, route optimizations to reduce costs (inspired by Voria/EMASUITE), maintenance needs.
+  - Full Analysis: Compliance checks, efficiency recommendations, and data-driven decisions.
+  ${historicalData ? `Use historical trends: ${JSON.stringify(historicalData)} for accurate forecasting.` : "Base on general Tanzania logistics knowledge."}
   Output in structured Markdown for professionalism.`;
 
   try {
+    const ai = await createGenkit();
     const result = await ai.generate({
       model: "groq/llama-3.3-70b-versatile",
       prompt,
