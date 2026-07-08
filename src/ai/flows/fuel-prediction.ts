@@ -10,8 +10,10 @@
  * - Current fuel price
  */
 
-import { ai } from '@/ai/genkit';
+import { createGenkit } from '@/ai/genkit';
 import { z } from 'genkit';
+
+const ai = await createGenkit();
 
 // ─── Input ────────────────────────────────────────────────────────────────────
 

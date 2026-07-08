@@ -11,8 +11,10 @@
  * Called asynchronously (returns jobId immediately, polls for result).
  */
 
-import { ai } from '@/ai/genkit';
+import { createGenkit } from '@/ai/genkit';
 import { z } from 'genkit';
+
+const ai = await createGenkit();
 
 // ─── Input Schema ─────────────────────────────────────────────────────────────
 

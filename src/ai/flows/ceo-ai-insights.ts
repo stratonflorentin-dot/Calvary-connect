@@ -7,8 +7,10 @@
  * - CeoAiInsightsOutput - The return type for the getCeoAiInsights function.
  */
 
-import { ai } from '@/ai/genkit';
+import { createGenkit } from '@/ai/genkit';
 import { z } from 'genkit';
+
+const ai = await createGenkit();
 
 const CeoAiInsightsInputSchema = z.object({
   activeTripsCount: z.number().describe('Current number of active trips.'),

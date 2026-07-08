@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ai } from '@/ai/genkit';
+import { createGenkit } from '@/ai/genkit';
 
 export async function GET() {
   if (process.env.NODE_ENV === 'production') {
@@ -8,6 +8,7 @@ export async function GET() {
 
   try {
     // Small test generation to validate genkit is callable
+    const ai = await createGenkit();
     const response = await ai.generate({
       system: 'Diagnostic: return short OK',
       messages: [{ role: 'user', content: [{ text: 'ping' }] }],

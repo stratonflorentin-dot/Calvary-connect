@@ -8,6 +8,6 @@ export async function createGenkit() {
   });
 }
 
-// Export a server-only `ai` instance for server modules that import `ai` directly.
-// This uses top-level await so it will only initialize when required on the server.
-export const ai = await createGenkit();
+// Note: do NOT export a top-level `ai` instance. Consumers should call
+// `createGenkit()` and initialize the client in server-only contexts. This
+// prevents bundling node-only telemetry and native modules into client builds.

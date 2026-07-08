@@ -1,4 +1,4 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -38,6 +38,19 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     scrollRestoration: true,
+  },
+  webpack: (config) => {
+    try {
+      if (config.module) config.module.exprContextCritical = false;
+      config.ignoreWarnings = config.ignoreWarnings || [];
+      config.ignoreWarnings.push((warning) => {
+        const msg = String(warning.message || '');
+        return /@protobufjs\/inquire/.test(msg) || /the request of a dependency is an expression/.test(msg);
+      });
+    } catch (e) {
+      // swallow webpack config modification errors
+    }
+    return config;
   },
   async headers() {
     return [
