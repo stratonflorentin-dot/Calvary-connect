@@ -1,408 +1,115 @@
 "use client";
 
-import {
-  DashboardLayout,
-  StatCard,
-  DataTable,
-  ActivityFeed,
-  AlertPanel,
-} from "@/components/dashboard/shared/dashboard-layout";
-import { useUsers } from "@/hooks/data/use-users";
-import { useFleetVehicles } from "@/hooks/data/use-fleet-vehicles";
-import { useTrips } from "@/hooks/data/use-trips";
-import { useRole } from "@/hooks/use-role";
-import { useLanguage } from "@/hooks/use-language";
-import { useCurrency } from "@/hooks/use-currency";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Users,
-  Truck,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Plus,
-  Trash2,
-  Edit,
-  Eye,
-  FileText,
-  Calendar,
-  Briefcase,
-  Phone,
-  Mail,
-  MapPin,
-  Shield,
-  AlertCircle,
-  TrendingUp,
-  BarChart2,
-  Settings,
-  Bell,
-  Sparkles,
-  ArrowRight,
-  Navigation,
-  Package,
-  DollarSign,
-  Wrench,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { DriverLocationMap } from "@/components/driver-location-map";
-import { StatCards } from "./stat-cards";
-import { AuditService } from "@/services/audit-service";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { RoleDashboard } from "./shared/role-dashboard";
+import { EmptyState } from "@/components/shell";
+import { useCurrency } from "@/hooks/use-currency";
+import {
+  BadgeCheck,
+  CalendarDays,
+  ClipboardList,
+  Coins,
+  UserCheck,
+  UserPlus,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
-export default function HRDashboard() {
-  const { t } = useLanguage();
+export function HRView() {
   const { format } = useCurrency();
-  const { role } = useRole();
+  const [staff, setStaff] = useState<any[]>([]);
+  const [allowances, setAllowances] = useState<any[]>([]);
 
-  // Data hooks
-  const { users: employees, loading: employeesLoading } = useUsers();
-  const { users: drivers, loading: driversLoading } = useUsers({
-    role: "DRIVER",
-  });
-  const { vehicles, loading: vehiclesLoading } = useFleetVehicles();
-  const { trips, loading: tripsLoading } = useTrips();
+  const load = async () => {
+    const [u, a] = await Promise.all([
+      supabase.from("user_profiles").select("*"),
+      supabase.from("allowances").select("*").order("created_at", { ascending: false }).limit(30),
+    ]);
+    setStaff(u.data ?? []);
+    setAllowances(a.data ?? []);
+  };
 
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [extraLoading, setExtraLoading] = useState(true);
+  useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    const loadExtra = async () => {
-      try {
-        setExtraLoading(true);
-        // Real activities from Audit Trail (HR relevant)
-        const logs = await AuditService.getLogs({ limit: 5 });
-        const mappedActivities = logs.filter(l => ['user_profiles', 'allowances'].includes(l.table_name)).map(log => ({
-          id: log.id,
-          title: log.change_summary || "HR Activity",
-          description: `${log.user_name} updated ${log.table_name}`,
-          time: new Date(log.created_at).toLocaleTimeString(),
-          icon: Users,
-          color: "bg-blue-500",
-        }));
-        setActivities(mappedActivities.length > 0 ? mappedActivities : [
-          { id: '1', title: 'No recent HR activity', description: 'System is up to date', time: 'Now', icon: Users, color: 'bg-slate-400' }
-        ]);
+  const stats = useMemo(() => {
+    const active = staff.filter((u) => u.status === "active").length;
+    const drivers = staff.filter((u) => u.role === "DRIVER").length;
+    const pendingAllowance = allowances.filter((a) => a.status === "pending").length;
+    const payMonth = allowances
+      .filter((a) => (a.status === "approved" || a.status === "paid") && new Date(a.created_at).getTime() >= new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime())
+      .reduce((s, a) => s + Number(a.amount || 0), 0);
+    return { total: staff.length, active, drivers, pendingAllowance, payMonth };
+  }, [staff, allowances]);
 
-        // Real license expiry alerts
-        const licenseAlerts = drivers.filter((d) => {
-          if (!d.license_expiry) return false;
-          const expiry = new Date(d.license_expiry);
-          const days = Math.floor((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-          return days <= 30 && days >= 0;
-        }).map(d => ({
-          id: `lic-${d.id}`,
-          title: "License Expiry",
-          description: `Driver ${d.full_name}'s license expires soon.`,
-          severity: "warning" as const,
-          time: "Action required"
-        }));
-        
-        setAlerts(licenseAlerts);
-      } catch (err) {
-        console.error("Error loading HR extra data:", err);
-      } finally {
-        setExtraLoading(false);
-      }
-    };
-    loadExtra();
-  }, [drivers]);
-
-  const loading =
-    employeesLoading || driversLoading || vehiclesLoading || tripsLoading || extraLoading;
-
-  // Real data metrics
-  const activeEmployees = employees.filter(e => e.status === 'active').length;
-  const totalDrivers = drivers.length;
-  const activeTrips = trips.filter(t => t.status === 'in_transit' || t.status === 'loading');
-  const licenseExpiryAlerts = drivers.filter((d) => {
-    if (!d.license_expiry) return false;
-    const expiry = new Date(d.license_expiry);
-    const days = Math.floor((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return days <= 30 && days >= 0;
-  });
-
-  // Employee distribution by role
-  const roleDistribution = employees.reduce(
-    (acc: Record<string, number>, emp) => {
-      const r = emp.role || "Unknown";
-      acc[r] = (acc[r] || 0) + 1;
-      return acc;
-    },
-    {},
-  );
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading HR data...</p>
-        </div>
-      </div>
-    );
-  }
+  const pendingList = useMemo(() => allowances.filter((a) => a.status === "pending").slice(0, 6), [allowances]);
 
   return (
-    <DashboardLayout
-      title="HR Dashboard"
-      description="Employee management and workforce analytics"
-      role={role || "HR"}
-      hideSidebar={true}
-    >
-      {/* Alert Panel */}
-      <AlertPanel alerts={alerts} />
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
-        <StatCard
-          title="Total Employees"
-          value={employees.length}
-          icon={Users}
-          color="text-blue-600"
-          bgColor="bg-blue-50"
-        />
-        <StatCard
-          title="Active Employees"
-          value={activeEmployees}
-          icon={CheckCircle2}
-          color="text-green-600"
-          bgColor="bg-green-50"
-        />
-        <StatCard
-          title="Total Drivers"
-          value={totalDrivers}
-          icon={Truck}
-          color="text-indigo-600"
-          bgColor="bg-indigo-50"
-        />
-        <StatCard
-          title="Active Trips"
-          value={activeTrips.length}
-          icon={Navigation}
-          color="text-cyan-600"
-          bgColor="bg-cyan-50"
-        />
-        <StatCard
-          title="License Alerts"
-          value={licenseExpiryAlerts.length}
-          icon={AlertTriangle}
-          color="text-amber-600"
-          bgColor="bg-amber-50"
-        />
-        <StatCard
-          title="Vehicles"
-          value={vehicles.length}
-          icon={Package}
-          color="text-purple-600"
-          bgColor="bg-purple-50"
-        />
-        <StatCard
-          title="Fleet Utilization"
-          value={`${vehicles.length > 0 ? ((activeTrips.length / vehicles.length) * 100).toFixed(1) : 0}%`}
-          icon={TrendingUp}
-          color="text-emerald-600"
-          bgColor="bg-emerald-50"
-        />
-        <StatCard
-          title="Departments"
-          value={Object.keys(roleDistribution).length}
-          icon={Briefcase}
-          color="text-orange-600"
-          bgColor="bg-orange-50"
-        />
-      </div>
-
-      {/* Employee & Fleet Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Employee Directory */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="size-5" />
-              Employee Directory
-            </CardTitle>
-            <Badge variant="secondary">{employees.length} employees</Badge>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="all">
-              <TabsList>
-                <TabsTrigger value="all">All ({employees.length})</TabsTrigger>
-                <TabsTrigger value="active">
-                  Active ({activeEmployees})
-                </TabsTrigger>
-                <TabsTrigger value="drivers">
-                  Drivers ({totalDrivers})
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="all">
-                <DataTable
-                  columns={[
-                    { key: "name", label: "Name" },
-                    { key: "email", label: "Email" },
-                    { key: "phone", label: "Phone" },
-                    { key: "role", label: "Role" },
-                    {
-                      key: "status",
-                      label: "Status",
-                      render: (row) => (
-                        <Badge
-                          variant={
-                            row.status === "active" ? "default" : "secondary"
-                          }
-                        >
-                          {row.status}
-                        </Badge>
-                      ),
-                    },
-                  ]}
-                  data={employees.slice(0, 15)}
-                />
-              </TabsContent>
-              <TabsContent value="active">
-                <DataTable
-                  columns={[
-                    { key: "name", label: "Name" },
-                    { key: "email", label: "Email" },
-                    { key: "phone", label: "Phone" },
-                    { key: "role", label: "Role" },
-                  ]}
-                  data={employees
-                    .filter((e) => e.status === "active")
-                    .slice(0, 15)}
-                />
-              </TabsContent>
-              <TabsContent value="drivers">
-                <DataTable
-                  columns={[
-                    { key: "name", label: "Name" },
-                    { key: "email", label: "Email" },
-                    { key: "phone", label: "Phone" },
-                    { key: "license_number", label: "License #" },
-                    {
-                      key: "license_expiry",
-                      label: "License Expiry",
-                      render: (row) => (
-                        <span
-                          className={`text-sm ${new Date(row.license_expiry) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? "text-amber-600 font-medium" : ""}`}
-                        >
-                          {new Date(row.license_expiry).toLocaleDateString()}
-                        </span>
-                      ),
-                    },
-                  ]}
-                  data={drivers.slice(0, 15)}
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        {/* Workforce Analytics & Role Distribution */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart2 className="size-5" />
-                Role Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Object.entries(roleDistribution).map(([role, count]) => (
-                  <div key={role} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{role}</span>
-                      <span className="font-medium">{count} employees</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all duration-500"
-                        style={{
-                          width: `${(count / employees.length) * 100}%`,
-                        }}
-                      />
-                    </div>
+    <RoleDashboard
+      eyebrow="HR Console"
+      title="Welcome"
+      subtitle={`${stats.active} active team members · ${stats.pendingAllowance} allowances waiting · ${format(stats.payMonth)} paid this month`}
+      onRefresh={load}
+      storageKey="hr-dash"
+      kpis={[
+        { label: "Team size", value: stats.total, icon: Users, accent: "bg-primary/10 text-primary", href: "/users" },
+        { label: "Active", value: stats.active, icon: UserCheck, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" },
+        { label: "Drivers", value: stats.drivers, icon: BadgeCheck, accent: "bg-sky-100 text-sky-700", href: "/drivers" },
+        { label: "Pending allowances", value: stats.pendingAllowance, icon: Coins, accent: "bg-amber-100 text-amber-700", href: "/allowances" },
+      ]}
+      sections={[
+        {
+          title: "Pending allowance approvals",
+          subtitle: "Route through the Approvals inbox",
+          href: "/allowances",
+          padded: false,
+          colSpan: 2,
+          content: pendingList.length === 0 ? (
+            <EmptyState icon={UserCheck} title="Nothing to approve" />
+          ) : (
+            <ul className="divide-y divide-border">
+              {pendingList.map((a) => (
+                <li key={a.id} className="px-5 py-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Wallet className="w-4 h-4" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="size-5" />
-                License Expiry Alerts
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {licenseExpiryAlerts.length === 0 ? (
-                <div className="text-center py-4">
-                  <CheckCircle2 className="size-8 text-green-500 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    No license expiry alerts
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {licenseExpiryAlerts.map((driver, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-3 bg-amber-50 rounded-lg"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{driver.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          License: {driver.license_number}
-                        </p>
-                      </div>
-                      <Badge variant="destructive">
-                        Expires:{" "}
-                        {new Date(driver.license_expiry).toLocaleDateString()}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="size-5" />
-                Recent Activities
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ActivityFeed activities={activities} />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <DriverLocationMap />
-      </div>
-
-      {/* Add Employee Button */}
-      <div className="flex justify-end mb-6">
-        <Button
-          onClick={() => {
-            /* Add employee logic */
-          }}
-        >
-          <Plus className="size-4 mr-2" /> Add Employee
-        </Button>
-      </div>
-    </DashboardLayout>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-foreground truncate">{a.workerName ?? a.employee_id ?? "Employee"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{a.reason ?? "Allowance"} · {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</p>
+                  </div>
+                  <span className="text-sm font-black text-foreground">{format(Number(a.amount || 0))}</span>
+                </li>
+              ))}
+            </ul>
+          ),
+        },
+        {
+          title: "Team breakdown",
+          subtitle: "By role",
+          content: (
+            <div className="space-y-2">
+              {["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR", "SALESMAN", "WAREHOUSE_STAFF"].map((role) => {
+                const count = staff.filter((u) => u.role === role).length;
+                return (
+                  <div key={role} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{role.replace(/_/g, " ")}</span>
+                    <span className="font-black">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ),
+        },
+      ]}
+      quickActions={[
+        { href: "/users", label: "Users", icon: Users },
+        { href: "/drivers", label: "Drivers", icon: BadgeCheck, tone: "bg-sky-100 text-sky-700" },
+        { href: "/allowances", label: "Allowances", icon: Coins, tone: "bg-amber-100 text-amber-700" },
+        { href: "/hr", label: "HR module", icon: CalendarDays, tone: "bg-primary/10 text-primary" },
+        { href: "/approvals", label: "Approvals", icon: ClipboardList, tone: "bg-fuchsia-100 text-fuchsia-700" },
+        { href: "/audit", label: "Audit trail", icon: UserPlus, tone: "bg-emerald-100 text-emerald-700" },
+      ]}
+    />
   );
 }
-
-export { HRDashboard as HRView };

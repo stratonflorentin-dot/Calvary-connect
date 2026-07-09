@@ -12,12 +12,13 @@
  *   OTEL_ENVIRONMENT=production
  */
 
-const dynamicImport = new Function('specifier', 'return import(specifier)') as (
-  specifier: string,
-) => Promise<any>;
-
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    if (process.env.DISABLE_OTEL === '1') {
+      console.log('[OpenTelemetry] Disabled via DISABLE_OTEL');
+      return;
+    }
+    const dynamicImport = (specifier: string) => import(specifier) as Promise<any>;
     try {
       const { NodeSDK } = await dynamicImport('@opentelemetry/sdk-node');
       const { Resource } = await dynamicImport('@opentelemetry/resources');

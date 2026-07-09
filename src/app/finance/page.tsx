@@ -1,170 +1,347 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  TrendingUp, TrendingDown, Wallet, FileText, DollarSign,
-  CreditCard, Plus, Receipt, Building2, BookOpen, AlertTriangle,
-  ArrowUpRight, ArrowDownRight, CheckCircle2, Clock, XCircle,
-  BarChart2, RefreshCw, ChevronRight, Landmark, Activity,
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart2,
+  BookOpen,
+  Building2,
+  Calculator,
+  ChevronRight,
+  CircleDollarSign,
+  ClipboardList,
+  CreditCard,
+  DollarSign,
+  Download,
+  Eye,
+  FileText,
+  Fuel,
+  Landmark,
+  Plus,
+  Receipt,
+  RefreshCw,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import Link from "next/link";
-
-function cn(...c: (string | undefined | null | false)[]) { return c.filter(Boolean).join(" "); }
+import {
+  AGING_BUCKETS,
+  daysOverdue,
+  formatCurrencyShort,
+  summarize,
+  summarizeByCurrency,
+  topOverdue,
+} from "@/lib/finance/aging";
+import { normalizeCurrency, REPORTING_CURRENCY, sortCurrencyKeys } from "@/lib/finance/multi-currency";
 
 const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+interface CashByCurrency {
+  [currency: string]: number;
+}
 
-function KPICard({ label, value, currency = "TZS", icon: Icon, trend, trendValue, href }: {
-  label: string; value: number; currency?: string;
-  icon: React.ElementType; trend: "up" | "down" | "neutral"; trendValue: number; href?: string;
+interface RangeStat {
+  mtd: number;
+  ytd: number;
+  prevMtd: number;
+}
+
+function pctDelta(current: number, previous: number): number {
+  if (previous === 0) return current === 0 ? 0 : 100;
+  return ((current - previous) / previous) * 100;
+}
+
+function KPICard({
+  label,
+  value,
+  currency = "TZS",
+  icon: Icon,
+  delta,
+  href,
+  accent,
+}: {
+  label: string;
+  value: number;
+  currency?: string;
+  icon: React.ElementType;
+  delta?: number;
+  href?: string;
+  accent: string;
 }) {
-  const trendUp = trend === "up";
-  const isPositive = trendValue >= 0;
+  const positive = (delta ?? 0) >= 0;
   const inner = (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-md transition-all group">
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5 transition-all group h-full">
       <div className="flex items-start justify-between mb-4">
-        <div className="p-2.5 bg-slate-100 rounded-lg group-hover:bg-indigo-50 transition-colors">
-          <Icon className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 transition-colors" />
+        <div className={cn("p-2.5 rounded-xl", accent)}>
+          <Icon className="w-5 h-5" />
         </div>
-        <span className={cn(
-          "flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full",
-          isPositive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
-        )}>
-          {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-          {Math.abs(trendValue)}%
-        </span>
+        {delta != null && (
+          <span
+            className={cn(
+              "flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full",
+              positive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+            )}
+          >
+            {positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            {Math.abs(delta).toFixed(1)}%
+          </span>
+        )}
       </div>
-      <p className="text-2xl font-black text-slate-800 tracking-tight">{fmt(value, currency)}</p>
-      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">{label}</p>
+      <p className="text-2xl font-black text-slate-900 tracking-tight">{fmt(value, currency)}</p>
+      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{label}</p>
     </div>
   );
   return href ? <Link href={href}>{inner}</Link> : inner;
 }
 
-function SectionHeader({ title, sub, href }: { title: string; sub?: string; href?: string }) {
+function SectionHeader({ title, sub, href, actions }: { title: string; sub?: string; href?: string; actions?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div>
+    <div className="flex items-center justify-between mb-4 gap-3">
+      <div className="min-w-0">
         <h2 className="text-sm font-black text-slate-800">{title}</h2>
-        {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-slate-500 mt-0.5 truncate">{sub}</p>}
       </div>
-      {href && (
-        <Link href={href} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-          View all <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      )}
+      <div className="flex items-center gap-2 shrink-0">
+        {actions}
+        {href && (
+          <Link href={href} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+            View all <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
 
-function AlertBadge({ severity, label }: { severity: "critical" | "warning" | "info"; label: string }) {
-  return (
-    <span className={cn(
-      "text-[10px] font-black px-2 py-0.5 rounded-full uppercase",
-      severity === "critical" ? "bg-rose-100 text-rose-700" :
-      severity === "warning" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
-    )}>{label}</span>
-  );
-}
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
 export default function FinanceOverviewPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [cashByCurrency, setCashByCurrency] = useState<Record<string, number>>({});
-  const [pendingApprovals, setPendingApprovals] = useState({ expenses: 0, invoices: 0 });
-  const [overdueItems, setOverdueItems] = useState({ invoices: 0, bills: 0 });
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [bills, setBills] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [cashByCurrency, setCashByCurrency] = useState<CashByCurrency>({});
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
-
-  // KPI state
-  const [revenue, setRevenue] = useState(0);
-  const [expenses, setExpenses] = useState(0);
-  const [receivables, setReceivables] = useState(0);
-  const [payables, setPayables] = useState(0);
-
-  useEffect(() => { load(); }, []);
+  const [unbilledTrips, setUnbilledTrips] = useState<any[]>([]);
 
   const load = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      const [banks, inv, exp, je, trips] = await Promise.all([
+        supabase.from("bank_accounts").select("*"),
+        supabase.from("invoices").select("*"),
+        supabase.from("expenses").select("*"),
+        supabase.from("journal_entries")
+          .select("*, journal_entry_lines(*)")
+          .order("created_at", { ascending: false })
+          .limit(6),
+        supabase.from("trips").select("id, trip_number, client, salesAmount, totalAmount, status, created_at").eq("status", "delivered").limit(20),
+      ]);
 
-      // Bank accounts → cash position
-      const { data: accounts } = await supabase.from("bank_accounts").select("*");
-      const cashMap: Record<string, number> = {};
-      (accounts || []).forEach(a => {
+      const cash: CashByCurrency = {};
+      (banks.data ?? []).forEach((a: any) => {
         const c = a.currency || "TZS";
-        cashMap[c] = (cashMap[c] || 0) + parseFloat(a.current_balance || 0);
+        cash[c] = (cash[c] || 0) + parseFloat(a.current_balance || 0);
       });
-      setCashByCurrency(cashMap);
+      setCashByCurrency(cash);
 
-      // Expenses
-      const { data: expData } = await supabase.from("expenses").select("*");
-      const totalExp = (expData || []).reduce((s, e) => s + parseFloat(e.amount || 0), 0);
-      const pending = (expData || []).filter(e => e.status === "pending").length;
-      setExpenses(totalExp);
-      setPendingApprovals(prev => ({ ...prev, expenses: pending }));
+      const allInvoices = inv.data ?? [];
+      setInvoices(allInvoices.filter((i: any) => (i.type ?? "receivable") === "receivable"));
+      setBills(allInvoices.filter((i: any) => i.type === "payable"));
+      setExpenses(exp.data ?? []);
+      setRecentEntries(je.data ?? []);
 
-      // Invoices
-      const { data: invData } = await supabase.from("invoices").select("*");
-      const totalRev = (invData || []).filter(i => i.status === "paid").reduce((s, i) => s + parseFloat(i.total_amount || 0), 0);
-      const pendingInv = (invData || []).filter(i => i.status === "pending").length;
-      const overdueInv = (invData || []).filter(i => i.due_date && new Date(i.due_date) < new Date() && i.status !== "paid").length;
-      const totalRec = (invData || []).filter(i => i.status !== "paid").reduce((s, i) => s + parseFloat(i.total_amount || 0), 0);
-      setRevenue(totalRev);
-      setReceivables(totalRec);
-      setPendingApprovals(prev => ({ ...prev, invoices: pendingInv }));
-      setOverdueItems(prev => ({ ...prev, invoices: overdueInv }));
-
-      // Journal entries
-      const { data: je } = await supabase.from("journal_entries").select("*, journal_entry_lines(*)").order("created_at", { ascending: false }).limit(6);
-      setRecentEntries(je || mockEntries);
-
-    } catch {
-      setRecentEntries(mockEntries);
-      setCashByCurrency({ TZS: 45230000, USD: 18500, KES: 0 });
-      setRevenue(145230000); setExpenses(78500000); setReceivables(28900000); setPayables(12400000);
-      toast({ title: "Demo mode", description: "Showing sample finance data" });
+      // A "delivered" trip with no matching invoice_number pattern is unbilled.
+      const invoiceRefs = new Set(allInvoices.map((i: any) => i.invoice_number ?? ""));
+      const unbilled = (trips.data ?? []).filter((t: any) => {
+        const ref = `INV-${t.trip_number ?? t.id}`;
+        return !invoiceRefs.has(ref);
+      });
+      setUnbilledTrips(unbilled);
+    } catch (err: any) {
+      console.warn("[finance] dashboard load", err?.message ?? err);
+      toast({ title: "Load error", description: err?.message ?? "Unable to load finance data", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const netProfit = revenue - expenses;
-  const cashTotal = Object.values(cashByCurrency).reduce((s, v) => s + v, 0);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const arInputs = useMemo(
+    () =>
+      invoices.map((i) => ({
+        amount: i.total_amount ?? i.amount,
+        due_date: i.due_date,
+        status: i.status,
+        customer_name: i.customer_name ?? i.client_name,
+        invoice_number: i.invoice_number,
+        id: i.id,
+        currency: normalizeCurrency(i.currency),
+      })),
+    [invoices],
+  );
+
+  const apInputs = useMemo(
+    () =>
+      bills.map((b) => ({
+        amount: b.total_amount ?? b.amount,
+        due_date: b.due_date,
+        status: b.status,
+        vendor: b.customer_name ?? b.vendor,
+        invoice_number: b.invoice_number,
+        id: b.id,
+        currency: normalizeCurrency(b.currency),
+      })),
+    [bills],
+  );
+
+  const arByCcy = useMemo(() => summarizeByCurrency(arInputs), [arInputs]);
+  const apByCcy = useMemo(() => summarizeByCurrency(apInputs), [apInputs]);
+  const arCurrencies = useMemo(() => sortCurrencyKeys(Object.keys(arByCcy)), [arByCcy]);
+  const apCurrencies = useMemo(() => sortCurrencyKeys(Object.keys(apByCcy)), [apByCcy]);
+
+  // Reporting-currency-only totals for KPI cards. These intentionally do NOT
+  // aggregate other currencies — see memory: multi-currency.
+  const arSummary = useMemo(() => arByCcy[REPORTING_CURRENCY] ?? summarize([]), [arByCcy]);
+  const apSummary = useMemo(() => apByCcy[REPORTING_CURRENCY] ?? summarize([]), [apByCcy]);
+
+  const topDebtors = useMemo(() => topOverdue(invoices.map((i) => ({
+    id: i.id,
+    amount: i.total_amount ?? i.amount,
+    due_date: i.due_date,
+    status: i.status,
+    customer_name: i.customer_name ?? i.client_name,
+    invoice_number: i.invoice_number,
+    currency: i.currency,
+  })), 5), [invoices]);
+
+  // Revenue / expense KPIs are shown in the reporting currency only.
+  // Non-reporting-currency amounts are counted in the per-currency reports.
+  const revenue = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+    const prevMonthEnd = monthStart;
+
+    let mtd = 0, ytd = 0, prevMtd = 0;
+    for (const i of invoices) {
+      if (normalizeCurrency(i.currency) !== REPORTING_CURRENCY) continue;
+      const paidAt = i.paid_at ? new Date(i.paid_at).getTime() : null;
+      if (i.status !== "paid" || !paidAt) continue;
+      const amt = Number(i.total_amount ?? i.amount) || 0;
+      if (paidAt >= monthStart) mtd += amt;
+      if (paidAt >= yearStart) ytd += amt;
+      if (paidAt >= prevMonthStart && paidAt < prevMonthEnd) prevMtd += amt;
+    }
+    return { mtd, ytd, prevMtd } as RangeStat;
+  }, [invoices]);
+
+  const expenseStats = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+    const prevMonthEnd = monthStart;
+
+    let mtd = 0, ytd = 0, prevMtd = 0, pending = 0;
+    for (const e of expenses) {
+      const inReporting = normalizeCurrency(e.currency) === REPORTING_CURRENCY;
+      if (e.status === "pending") pending += 1;
+      if (!inReporting) continue;
+      if (e.status !== "approved" && e.status !== "paid") continue;
+      const date = e.date ? new Date(e.date).getTime() : new Date(e.created_at ?? Date.now()).getTime();
+      const amt = Number(e.amount) || 0;
+      if (date >= monthStart) mtd += amt;
+      if (date >= yearStart) ytd += amt;
+      if (date >= prevMonthStart && date < prevMonthEnd) prevMtd += amt;
+    }
+    return { mtd, ytd, prevMtd, pending };
+  }, [expenses]);
+
+  // Cash "total" is deliberately per-currency; this variable holds the
+  // reporting-currency slice only, since summing across currencies is wrong.
+  const cashTotal = useMemo(() => cashByCurrency[REPORTING_CURRENCY] ?? 0, [cashByCurrency]);
+  const netProfitMtd = revenue.mtd - expenseStats.mtd;
+  const netProfitYtd = revenue.ytd - expenseStats.ytd;
 
   const KPIS = [
-    { label: "Total Revenue", value: revenue || 145230000, icon: TrendingUp, trend: "up" as const, trendValue: 12.5, href: "/finance/reports/revenue-analysis" },
-    { label: "Total Expenses", value: expenses || 78500000, icon: TrendingDown, trend: "down" as const, trendValue: -3.2, href: "/finance/reports/expense-analysis" },
-    { label: "Net Profit", value: netProfit || 66730000, icon: DollarSign, trend: "up" as const, trendValue: 8.7, href: "/finance/reports/profit-loss" },
-    { label: "Receivables", value: receivables || 28900000, icon: CreditCard, trend: "down" as const, trendValue: -2.4, href: "/finance/reports/aging-report" },
-    { label: "Cash Position", value: cashTotal || 45230000, icon: Wallet, trend: "up" as const, trendValue: 5.1, href: "/finance/banking" },
+    {
+      label: `Cash (${REPORTING_CURRENCY})`,
+      value: cashTotal,
+      icon: Wallet,
+      accent: "bg-emerald-50 text-emerald-600",
+      href: "/finance/banking",
+    },
+    {
+      label: `Revenue MTD (${REPORTING_CURRENCY})`,
+      value: revenue.mtd,
+      delta: pctDelta(revenue.mtd, revenue.prevMtd),
+      icon: TrendingUp,
+      accent: "bg-indigo-50 text-indigo-600",
+      href: "/finance/reports/revenue-analysis",
+    },
+    {
+      label: `Expenses MTD (${REPORTING_CURRENCY})`,
+      value: expenseStats.mtd,
+      delta: pctDelta(expenseStats.mtd, expenseStats.prevMtd),
+      icon: TrendingDown,
+      accent: "bg-rose-50 text-rose-600",
+      href: "/finance/reports/expense-analysis",
+    },
+    {
+      label: `Net Profit MTD (${REPORTING_CURRENCY})`,
+      value: netProfitMtd,
+      icon: DollarSign,
+      accent: netProfitMtd >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600",
+      href: "/finance/reports/profit-loss",
+    },
+    {
+      label: `Receivables (${REPORTING_CURRENCY})`,
+      value: arSummary.totalOutstanding,
+      icon: CreditCard,
+      accent: "bg-amber-50 text-amber-600",
+      href: "/finance/invoicing/customer-invoices",
+    },
+    {
+      label: `Payables (${REPORTING_CURRENCY})`,
+      value: apSummary.totalOutstanding,
+      icon: Building2,
+      accent: "bg-orange-50 text-orange-600",
+      href: "/finance/invoicing/vendor-bills",
+    },
   ];
 
   const QUICK_LINKS = [
+    { href: "/finance/invoicing/customer-invoices", icon: FileText, label: "New Invoice", color: "text-indigo-600 bg-indigo-50" },
+    { href: "/finance/invoicing/vendor-bills", icon: Building2, label: "Vendor Bills", color: "text-orange-600 bg-orange-50" },
     { href: "/expenses", icon: Receipt, label: "Record Expense", color: "text-rose-600 bg-rose-50" },
     { href: "/income", icon: TrendingUp, label: "Record Revenue", color: "text-emerald-600 bg-emerald-50" },
-    { href: "/finance/invoicing", icon: FileText, label: "Create Invoice", color: "text-indigo-600 bg-indigo-50" },
-    { href: "/finance/vendor-bills", icon: Building2, label: "Vendor Bills", color: "text-amber-600 bg-amber-50" },
     { href: "/finance/accounting/journal-entries", icon: BookOpen, label: "Journal Entry", color: "text-violet-600 bg-violet-50" },
-    { href: "/finance/reports/profit-loss", icon: BarChart2, label: "P&L Report", color: "text-blue-600 bg-blue-50" },
-    { href: "/finance/accounting/chart-of-accounts", icon: Landmark, label: "Chart of Accounts", color: "text-slate-600 bg-slate-100" },
-    { href: "/finance/bank-statement", icon: Activity, label: "Bank Reconciliation", color: "text-teal-600 bg-teal-50" },
+    { href: "/finance/bank-statement", icon: Landmark, label: "Bank Reconciliation", color: "text-teal-600 bg-teal-50" },
+    { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-fuchsia-600 bg-fuchsia-50" },
+    { href: "/finance/reports/trial-balance", icon: Calculator, label: "Trial Balance", color: "text-slate-600 bg-slate-100" },
   ];
 
   const REPORT_LINKS = [
     { label: "Profit & Loss", sub: "Income vs expenditure", href: "/finance/reports/profit-loss", color: "border-l-indigo-500" },
     { label: "Balance Sheet", sub: "Assets, liabilities & equity", href: "/finance/reports/balance-sheet", color: "border-l-emerald-500" },
     { label: "Cash Flow", sub: "Operating, investing, financing", href: "/finance/reports/cash-flow", color: "border-l-sky-500" },
-    { label: "Aging Report", sub: "Overdue receivables by age", href: "/finance/reports/aging-report", color: "border-l-amber-500" },
-    { label: "VAT Report", sub: "Tax obligations summary", href: "/finance/reports/tax-reports", color: "border-l-rose-500" },
-    { label: "Trial Balance", sub: "Debit & credit totals", href: "/finance/accounting/trial-balance", color: "border-l-violet-500" },
+    { label: "Aging Report", sub: "AR & AP aging buckets", href: "/finance/reports/aging-report", color: "border-l-amber-500" },
+    { label: "Trial Balance", sub: "GL debit / credit totals", href: "/finance/reports/trial-balance", color: "border-l-violet-500" },
+    { label: "VAT / Tax Report", sub: "Statutory obligations", href: "/finance/reports/tax-reports", color: "border-l-rose-500" },
   ];
 
   if (loading) return (
@@ -178,120 +355,246 @@ export default function FinanceOverviewPage() {
 
   return (
     <div className="space-y-6 pb-8">
-
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 rounded-full">Finance & Accounting</span>
-            <span className="text-[10px] text-slate-400 font-bold">Live</span>
+            <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+            </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900">Financial Control Center</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Multi-currency P&L · Receivables · Payables · Audit Trail</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {REPORTING_CURRENCY} YTD Revenue {formatCurrencyShort(revenue.ytd, REPORTING_CURRENCY)} · YTD Net {formatCurrencyShort(netProfitYtd, REPORTING_CURRENCY)} · Cash {formatCurrencyShort(cashTotal, REPORTING_CURRENCY)}
+            {Object.keys(cashByCurrency).filter((c) => c !== REPORTING_CURRENCY).length > 0 && (
+              <>
+                {" · other currencies: "}
+                {Object.entries(cashByCurrency)
+                  .filter(([c]) => c !== REPORTING_CURRENCY)
+                  .map(([c, v]) => `${c} ${formatCurrencyShort(v, c)}`)
+                  .join(", ")}
+              </>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={load} className="h-9 gap-2 border-slate-200 text-slate-600 rounded-lg text-xs">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </Button>
           <Button size="sm" asChild className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold shadow-sm">
-            <Link href="/finance/accounting/journal-entries">
-              <Plus className="w-3.5 h-3.5" /> New Journal Entry
-            </Link>
-          </Button>
-          <Button size="sm" variant="outline" asChild className="h-9 gap-2 border-slate-200 rounded-lg text-xs">
-            <Link href="/finance/reports/profit-loss">
-              <FileText className="w-3.5 h-3.5" /> View Reports
+            <Link href="/finance/invoicing/customer-invoices">
+              <Plus className="w-3.5 h-3.5" /> New Invoice
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* ── Alert Banner ── */}
-      {(pendingApprovals.expenses > 0 || overdueItems.invoices > 0) && (
-        <div className="flex flex-wrap gap-3">
-          {pendingApprovals.expenses > 0 && (
-            <Link href="/expenses" className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors flex-1 min-w-[240px]">
+      {/* Alerts */}
+      {(expenseStats.pending > 0 || arSummary.totalOverdue > 0 || unbilledTrips.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {expenseStats.pending > 0 && (
+            <Link href="/approvals" className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors">
               <div className="p-2 bg-amber-100 rounded-lg"><Receipt className="w-4 h-4 text-amber-700" /></div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-amber-900">{pendingApprovals.expenses} Expense{pendingApprovals.expenses > 1 ? "s" : ""} Awaiting Approval</p>
-                <p className="text-xs text-amber-700">Review and approve pending expense claims</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-amber-900">{expenseStats.pending} expense{expenseStats.pending > 1 ? "s" : ""} pending</p>
+                <p className="text-xs text-amber-700">Route through approvals inbox</p>
               </div>
-              <AlertBadge severity="warning" label="Pending" />
             </Link>
           )}
-          {overdueItems.invoices > 0 && (
-            <Link href="/finance/reports/aging-report" className="flex items-center gap-3 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors flex-1 min-w-[240px]">
-              <div className="p-2 bg-rose-100 rounded-lg"><FileText className="w-4 h-4 text-rose-700" /></div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-rose-900">{overdueItems.invoices} Overdue Invoice{overdueItems.invoices > 1 ? "s" : ""}</p>
-                <p className="text-xs text-rose-700">Immediate follow-up required</p>
+          {arCurrencies.some((c) => arByCcy[c].totalOverdue > 0) && (
+            <Link href="/finance/reports/aging-report" className="flex items-center gap-3 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors">
+              <div className="p-2 bg-rose-100 rounded-lg"><AlertTriangle className="w-4 h-4 text-rose-700" /></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-rose-900">
+                  Overdue AR: {arCurrencies.filter((c) => arByCcy[c].totalOverdue > 0).map((c) => `${c} ${fmt(arByCcy[c].totalOverdue, c)}`).join(" · ")}
+                </p>
+                <p className="text-xs text-rose-700">
+                  {Math.max(...arCurrencies.map((c) => arByCcy[c].worstDays), 0)} days worst-case
+                </p>
               </div>
-              <AlertBadge severity="critical" label="Overdue" />
+            </Link>
+          )}
+          {unbilledTrips.length > 0 && (
+            <Link href="/trips" className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors">
+              <div className="p-2 bg-indigo-100 rounded-lg"><Sparkles className="w-4 h-4 text-indigo-700" /></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-indigo-900">{unbilledTrips.length} unbilled deliveries</p>
+                <p className="text-xs text-indigo-700">Revenue waiting to be invoiced</p>
+              </div>
             </Link>
           )}
         </div>
       )}
 
-      {/* ── KPI Grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {KPIS.map(k => <KPICard key={k.label} {...k} />)}
+      {/* KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {KPIS.map((k) => <KPICard key={k.label} {...k} />)}
       </div>
 
-      {/* ── Main Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Cash by Currency */}
-        <div className="lg:col-span-2">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100">
-              <SectionHeader title="Cash Position by Currency" sub="Real-time bank account balances" href="/finance/banking" />
-            </div>
-            <div className="p-5">
-              <div className="grid grid-cols-3 gap-3">
-                {Object.entries(
-                  Object.keys(cashByCurrency).length > 0
-                    ? cashByCurrency
-                    : { TZS: 45230000, USD: 18500, KES: 240000 }
-                ).map(([cur, bal]) => (
-                  <div key={cur} className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center hover:border-indigo-300 transition-colors">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{cur}</p>
-                    <p className="text-lg font-black text-slate-800">{fmt(bal, cur)}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Available</p>
+      {/* AR / AP aging strips — per currency */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <SectionHeader
+              title="Accounts Receivable Aging"
+              sub={arCurrencies.length === 0
+                ? "Nothing outstanding"
+                : arCurrencies.map((c) => `${c} ${fmt(arByCcy[c].totalOutstanding, c)}`).join(" · ")}
+              href="/finance/reports/aging-report"
+            />
+          </div>
+          <div className="p-5 space-y-5">
+            {arCurrencies.length === 0 ? (
+              <p className="text-sm text-slate-400 italic">No receivables.</p>
+            ) : arCurrencies.map((cur) => {
+              const s = arByCcy[cur];
+              return (
+                <div key={`ar-${cur}`} className="space-y-2">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">{cur}</span>
+                    <span className="text-xs font-black text-slate-700">
+                      {fmt(s.totalOutstanding, cur)} · {fmt(s.totalOverdue, cur)} overdue
+                    </span>
                   </div>
-                ))}
-              </div>
-
-              {/* P&L mini bar */}
-              <div className="mt-5 pt-4 border-t border-slate-100">
-                <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3">Revenue vs Expenses (YTD)</p>
-                <div className="space-y-2">
-                  {[
-                    { label: "Revenue", value: revenue || 145230000, max: revenue || 145230000, color: "bg-emerald-500" },
-                    { label: "Expenses", value: expenses || 78500000, max: revenue || 145230000, color: "bg-rose-500" },
-                    { label: "Net Profit", value: netProfit || 66730000, max: revenue || 145230000, color: "bg-indigo-500" },
-                  ].map(bar => (
-                    <div key={bar.label} className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-slate-600 w-20 shrink-0">{bar.label}</span>
-                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className={`h-full ${bar.color} rounded-full`} style={{ width: `${Math.min(100, (bar.value / bar.max) * 100)}%` }} />
+                  {AGING_BUCKETS.map((b) => {
+                    const amt = s.totals[b.key];
+                    const pct = s.totalOutstanding > 0 ? (amt / s.totalOutstanding) * 100 : 0;
+                    return (
+                      <div key={b.key} className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-slate-600 w-24 shrink-0">{b.label}</span>
+                        <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className={cn("h-full", b.color)} style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className="text-right w-32 shrink-0">
+                          <p className="text-xs font-black text-slate-700">{fmt(amt, cur)}</p>
+                          <p className="text-[10px] text-slate-400">{s.counts[b.key]} inv</p>
+                        </div>
                       </div>
-                      <span className="text-xs font-black text-slate-700 w-28 text-right">{fmt(bar.value)}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <SectionHeader
+              title="Accounts Payable Aging"
+              sub={apCurrencies.length === 0
+                ? "Nothing outstanding"
+                : apCurrencies.map((c) => `${c} ${fmt(apByCcy[c].totalOutstanding, c)}`).join(" · ")}
+              href="/finance/invoicing/vendor-bills"
+            />
+          </div>
+          <div className="p-5 space-y-5">
+            {apCurrencies.length === 0 ? (
+              <p className="text-sm text-slate-400 italic">No payables.</p>
+            ) : apCurrencies.map((cur) => {
+              const s = apByCcy[cur];
+              return (
+                <div key={`ap-${cur}`} className="space-y-2">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">{cur}</span>
+                    <span className="text-xs font-black text-slate-700">
+                      {fmt(s.totalOutstanding, cur)} · {fmt(s.totalOverdue, cur)} overdue
+                    </span>
+                  </div>
+                  {AGING_BUCKETS.map((b) => {
+                    const amt = s.totals[b.key];
+                    const pct = s.totalOutstanding > 0 ? (amt / s.totalOutstanding) * 100 : 0;
+                    return (
+                      <div key={b.key} className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-slate-600 w-24 shrink-0">{b.label}</span>
+                        <div className="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className={cn("h-full", b.color)} style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className="text-right w-32 shrink-0">
+                          <p className="text-xs font-black text-slate-700">{fmt(amt, cur)}</p>
+                          <p className="text-[10px] text-slate-400">{s.counts[b.key]} bills</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Top debtors + Cash */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <SectionHeader title="Top Overdue Customers" sub="Follow-up recommended" href="/finance/invoicing/customer-invoices" />
+          </div>
+          {topDebtors.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-400 italic">All caught up — no overdue receivables.</div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {topDebtors.map((d: any) => {
+                const days = daysOverdue(d.due_date);
+                return (
+                  <div key={d.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-black text-xs">
+                        {(d.customer_name ?? "?").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">{d.customer_name ?? "Unknown"}</p>
+                        <p className="text-xs text-slate-500 truncate font-mono">{d.invoice_number}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-black text-rose-600">{fmt(Number(d.amount) || 0, d.currency ?? "TZS")}</p>
+                      <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">{days} days overdue</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <SectionHeader title="Cash by Currency" sub="Consolidated bank balance" href="/finance/banking" />
+          </div>
+          <div className="p-5 space-y-2">
+            {Object.keys(cashByCurrency).length === 0 ? (
+              <p className="text-sm text-slate-400 italic">No bank accounts registered.</p>
+            ) : (
+              Object.entries(cashByCurrency).map(([cur, bal]) => (
+                <div key={cur} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                      <CircleDollarSign className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-500">{cur}</p>
+                      <p className="text-xs text-slate-400">Available</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-black text-slate-800">{fmt(bal, cur)}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick actions + reports */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100">
             <SectionHeader title="Quick Actions" sub="Common finance operations" />
           </div>
-          <div className="p-4 grid grid-cols-2 gap-2">
-            {QUICK_LINKS.map(l => (
-              <Link key={l.href} href={l.href} className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group text-center">
+          <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {QUICK_LINKS.map((l) => (
+              <Link key={l.href} href={l.href} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-center">
                 <div className={cn("p-2 rounded-lg", l.color.split(" ")[1])}>
                   <l.icon className={cn("w-4 h-4", l.color.split(" ")[0])} />
                 </div>
@@ -300,44 +603,13 @@ export default function FinanceOverviewPage() {
             ))}
           </div>
         </div>
-      </div>
 
-      {/* ── Bottom Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Recent Journal Entries */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100">
-            <SectionHeader title="Recent Journal Entries" sub="Latest double-entry postings" href="/finance/accounting/journal-entries" />
-          </div>
-          <div className="divide-y divide-slate-100">
-            {recentEntries.slice(0, 6).map((e, i) => (
-              <div key={e.id || i} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-2 h-2 rounded-full shrink-0", e.status === "posted" ? "bg-emerald-500" : "bg-amber-500")} />
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">{e.reference}</p>
-                    <p className="text-xs text-slate-500">{e.description}</p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0 ml-4">
-                  <p className={cn("text-sm font-black", e.debit > 0 ? "text-indigo-600" : "text-emerald-600")}>
-                    {e.debit > 0 ? `Dr ${fmt(e.debit, e.currency)}` : `Cr ${fmt(e.credit, e.currency)}`}
-                  </p>
-                  <p className="text-[10px] text-slate-400">{e.date}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Financial Reports */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <SectionHeader title="Financial Reports" sub="Taurus-grade reporting suite" />
+            <SectionHeader title="Financial Reports" sub="Statutory-grade reporting suite" />
           </div>
           <div className="p-4 space-y-2">
-            {REPORT_LINKS.map(r => (
+            {REPORT_LINKS.map((r) => (
               <Link key={r.href} href={r.href} className={cn("flex items-center justify-between p-3 border-l-4 bg-slate-50 hover:bg-slate-100 rounded-r-xl transition-colors", r.color)}>
                 <div>
                   <p className="text-sm font-bold text-slate-800">{r.label}</p>
@@ -347,30 +619,36 @@ export default function FinanceOverviewPage() {
               </Link>
             ))}
           </div>
+        </div>
+      </div>
 
-          {/* Status legend */}
-          <div className="px-5 py-4 border-t border-slate-100 flex flex-wrap gap-3">
-            {[
-              { icon: CheckCircle2, label: "Posted", color: "text-emerald-600" },
-              { icon: Clock, label: "Pending", color: "text-amber-600" },
-              { icon: XCircle, label: "Overdue", color: "text-rose-600" },
-            ].map(s => (
-              <span key={s.label} className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
-                <s.icon className={cn("w-3.5 h-3.5", s.color)} />{s.label}
-              </span>
-            ))}
-          </div>
+      {/* Recent journal entries */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <SectionHeader title="Recent Journal Entries" sub="Latest double-entry postings" href="/finance/accounting/journal-entries" />
+        </div>
+        <div className="divide-y divide-slate-100">
+          {recentEntries.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-400 italic">No journal entries yet.</div>
+          ) : (
+            recentEntries.map((e: any, i: number) => (
+              <div key={e.id || i} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={cn("w-2 h-2 rounded-full shrink-0", e.status === "posted" ? "bg-emerald-500" : "bg-amber-500")} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">{e.reference ?? `JE-${e.id?.slice(0, 6)}`}</p>
+                    <p className="text-xs text-slate-500 truncate">{e.description}</p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-4">
+                  <p className="text-sm font-black text-slate-700">{fmt(Number(e.total_amount ?? e.debit ?? 0), e.currency ?? "TZS")}</p>
+                  <p className="text-[10px] text-slate-400">{e.entry_date ?? e.created_at?.slice(0, 10)}</p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-const mockEntries = [
-  { id: "1", reference: "JE-2026-001", date: "2026-07-03", description: "Revenue – Trip TRP-045 (Lusaka)", debit: 0, credit: 4500000, currency: "TZS", status: "posted" },
-  { id: "2", reference: "JE-2026-002", date: "2026-07-03", description: "Fuel expense – TZ-123-AB", debit: 650000, credit: 0, currency: "TZS", status: "posted" },
-  { id: "3", reference: "JE-2026-003", date: "2026-07-02", description: "Customer payment – Dangote Cement", debit: 12000000, credit: 0, currency: "TZS", status: "posted" },
-  { id: "4", reference: "JE-2026-004", date: "2026-07-02", description: "VAT payable – June 2026", debit: 0, credit: 1350000, currency: "TZS", status: "pending" },
-  { id: "5", reference: "JE-2026-005", date: "2026-07-01", description: "Driver allowances – July payroll", debit: 3200000, credit: 0, currency: "TZS", status: "posted" },
-  { id: "6", reference: "JE-2026-006", date: "2026-07-01", description: "Insurance premium – Fleet Q3", debit: 2100000, credit: 0, currency: "TZS", status: "posted" },
-];

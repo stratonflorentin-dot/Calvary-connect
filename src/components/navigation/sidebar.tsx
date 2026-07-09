@@ -48,6 +48,7 @@ import {
 } from "@/lib/route-config";
 import { resolveUserRole } from "@/lib/user-role-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -268,7 +269,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
       {/* Sidebar */}
       <aside className={cn(
         "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
-        "bg-slate-950 text-slate-300 border-r border-slate-800 shadow-xl",
+        "bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-r border-[hsl(var(--sidebar-border))] shadow-xl",
         isCollapsed ? "w-20" : "w-64",
         // Mobile transition
         "md:translate-x-0",
@@ -278,16 +279,21 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
           {!isCollapsed ? (
             <>
               <div className="flex items-center gap-2">
-                <div className="bg-indigo-600 text-white p-1.5 rounded-xl shadow-[0_0_12px_rgba(79,70,229,0.5)]">
+                <div className="bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] p-1.5 rounded-xl shadow-[0_0_12px_hsl(var(--sidebar-primary)/0.5)]">
                   <Zap className="size-5" />
                 </div>
                 <h1 className="font-headline text-xl font-extrabold tracking-tighter text-white uppercase">
                   Calvary
                 </h1>
               </div>
-              <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
-                <ChevronLeft className="size-5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <div className="text-[hsl(var(--sidebar-foreground))] hover:text-white [&_button]:hover:bg-white/10 [&_svg]:size-4">
+                  <NotificationBell />
+                </div>
+                <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[hsl(var(--sidebar-muted))] hover:text-white hover:bg-white/10 transition-colors">
+                  <ChevronLeft className="size-5" />
+                </Button>
+              </div>
             </>
           ) : (
             <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-indigo-400 hover:bg-white/10 transition-colors">
@@ -295,7 +301,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
             </Button>
           )}
         </div>
-        {!isCollapsed && <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold px-6 -mt-2 mb-4">Command Panel</p>}
+        {!isCollapsed && <p className="text-[10px] uppercase tracking-[0.2em] text-[hsl(var(--sidebar-muted))] font-bold px-6 -mt-2 mb-4">Command Panel</p>}
 
         <nav className="flex-1 px-2 space-y-6 overflow-y-auto no-scrollbar pb-10">
           {NAVIGATION_CATEGORY_ORDER.map((key) => {
@@ -304,7 +310,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
             if (!items || items.length === 0) return null;
             return (
               <div key={key} className="space-y-2">
-                {!isCollapsed && <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-4">{label}</p>}
+                {!isCollapsed && <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--sidebar-muted))] font-bold px-4">{label}</p>}
                 <div className="space-y-1">
                   {items.map(item => {
                     const Icon = routeIconMap[item.path] || LayoutDashboard;
@@ -320,15 +326,15 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                         className={cn(
                           "flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-all group",
                           pathname === item.path
-                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/50"
-                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                            ? "bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] shadow-md shadow-black/40"
+                            : "text-[hsl(var(--sidebar-foreground))] hover:text-white hover:bg-[hsl(var(--sidebar-accent))]"
                         )}
                       >
                         <Icon className={cn(
                           "size-5 flex-shrink-0",
                           pathname === item.path
                             ? "text-white"
-                            : "text-slate-500 group-hover:text-slate-300"
+                            : "text-[hsl(var(--sidebar-muted))] group-hover:text-white"
                         )} />
                         {!isCollapsed && <span className="truncate">{item.label}</span>}
                         {/* Badges only show when not collapsed */}
@@ -366,7 +372,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
           })}
         </nav>
 
-        <div className="p-3 border-t border-slate-800 bg-slate-900/50 backdrop-blur-md">
+        <div className="p-3 border-t border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-accent))]/40 backdrop-blur-md">
           {/* Quick Return Button */}
           <Button
             variant="ghost"
@@ -379,23 +385,23 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
           </Button>
 
           <div className={cn(
-            "px-3 py-3 flex items-center gap-3 bg-slate-900 rounded-2xl mb-2 group relative border border-slate-800 shadow-lg transition-colors",
+            "px-3 py-3 flex items-center gap-3 bg-[hsl(var(--sidebar-accent))] rounded-2xl mb-2 group relative border border-[hsl(var(--sidebar-border))] shadow-lg transition-colors",
             isCollapsed && "justify-center px-0"
           )}>
             <Avatar className="size-10 border border-slate-700">
               <AvatarImage src={user?.avatar} />
-              <AvatarFallback className="bg-indigo-600 text-white text-sm">
+              <AvatarFallback className="bg-[hsl(var(--sidebar-primary))] text-white text-sm">
                 {user?.name?.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-200 truncate">{user?.name || "Super Admin"}</p>
+                <p className="text-sm font-bold text-[hsl(var(--sidebar-primary-foreground))] truncate">{user?.name || "Super Admin"}</p>
                 <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">{effectiveRole}</p>
               </div>
             )}
             {!isCollapsed && (
-              <label className="absolute -top-1 -right-1 size-6 bg-indigo-600 text-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-slate-900">
+              <label className="absolute -top-1 -right-1 size-6 bg-[hsl(var(--sidebar-primary))] text-white rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all shadow-md border-2 border-[hsl(var(--sidebar-background))]">
                 <Camera className="size-3" />
                 <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isUploading} />
               </label>

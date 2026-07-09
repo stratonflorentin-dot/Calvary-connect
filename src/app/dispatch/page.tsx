@@ -10,8 +10,12 @@ import {
 import Link from "next/link";
 import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
-import { useSidebar } from "@/hooks/use-sidebar";
+import { useSupabase } from "@/components/supabase-provider";
 import { cn } from "@/lib/utils";
+import { applyTransition } from "@/lib/workflow/engine";
+import { hoursSince, isOverdue, slaHours } from "@/lib/workflow/approvals";
+import { toast } from "@/hooks/use-toast";
+import { PageShell, PageHeader, RefreshControl } from "@/components/shell";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type TripStatus = "pending" | "loading" | "in_transit" | "delivered" | "cancelled";
@@ -62,6 +66,11 @@ function TripCard({
   onDragStart: (e: React.DragEvent, trip: DispatchTrip) => void;
   onQuickStatus: (trip: DispatchTrip, next: TripStatus) => void;
 }) {
+  const overdue =
+    trip.status !== "delivered" && trip.status !== "cancelled" && trip.created_at
+      ? isOverdue("trip", trip.created_at)
+      : false;
+  const ageH = trip.created_at ? hoursSince(trip.created_at) : 0;
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -147,6 +156,13 @@ function TripCard({
           )}
         </div>
 
+        {/* SLA warning */}
+        {overdue && (
+          <div className="flex items-center gap-1 mt-2 px-2 py-1 rounded-md bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider">
+            <AlertTriangle className="w-3 h-3" /> Overdue by {(ageH - slaHours.trip).toFixed(1)}h
+          </div>
+        )}
+
         {/* Client + quick action */}
         {(trip.client || next) && (
           <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-gray-50">
@@ -229,6 +245,8 @@ function KanbanColumn({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function DispatchBoardPage() {
+  const { role } = useRole();
+  const { user } = useSupabase();
   const [trips, setTrips] = useState<DispatchTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -291,11 +309,27 @@ export default function DispatchBoardPage() {
     // Optimistic update
     setTrips((prev) => prev.map((t) => t.id === trip.id ? { ...t, status: newStatus } : t));
     setSaving(true);
-    const { error } = await supabase.from("trips").update({ status: newStatus }).eq("id", trip.id);
-    if (error) {
-      // Revert on error
+    const result = await applyTransition({
+      kind: "trip",
+      entityId: trip.id,
+      toState: newStatus,
+      actorId: user?.id ?? "system",
+      actorRole: (role as any) ?? undefined,
+      payload: { entity: trip },
+    });
+    if (!result.ok) {
+      // Revert and surface the reason
       setTrips((prev) => prev.map((t) => t.id === trip.id ? { ...t, status: trip.status } : t));
-      alert("Failed to update status: " + error.message);
+      toast({
+        title: "Status change blocked",
+        description: result.message,
+        variant: "destructive",
+      });
+    } else if (result.sideEffects.length > 0) {
+      toast({
+        title: "Status updated",
+        description: result.sideEffects.map((s) => s.replace(/_/g, " ")).join(", "),
+      });
     }
     setSaving(false);
   };
@@ -311,79 +345,55 @@ export default function DispatchBoardPage() {
 
   // Stats
   const stats = [
-    { label: "Total", value: trips.length, color: "text-slate-700" },
+    { label: "Total", value: trips.length, color: "text-foreground" },
     { label: "Pending", value: trips.filter(t => t.status === "pending").length, color: "text-amber-600" },
     { label: "In Transit", value: trips.filter(t => t.status === "in_transit").length, color: "text-sky-600" },
-    { label: "Delivered Today", value: trips.filter(t => t.status === "delivered").length, color: "text-green-600" },
+    { label: "Delivered", value: trips.filter(t => t.status === "delivered").length, color: "text-[hsl(var(--success))]" },
   ];
 
-  const { role } = useRole();
-  const { isCollapsed } = useSidebar();
-
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <Sidebar role={(role as any) ?? "ADMIN"} />
-      <div className={cn("flex-1 flex flex-col min-h-screen transition-all duration-300", isCollapsed ? "md:ml-20" : "md:ml-64")}>
-      {/* ── Header ── */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-30 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-md shadow-sky-200">
-              <Navigation className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-black text-slate-800 leading-tight">Dispatch Board</h1>
-              <p className="text-xs text-slate-400">
-                Updated {lastUpdated.toLocaleTimeString()}
-                {saving && <span className="ml-2 text-sky-500 animate-pulse">• Saving…</span>}
-              </p>
-            </div>
-          </div>
-
-          {/* Stats pills */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {stats.map((s) => (
-              <div key={s.label} className="flex items-center gap-1.5 bg-slate-50 rounded-full px-3 py-1 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-medium">{s.label}</span>
-                <span className={`text-sm font-black ${s.color}`}>{s.value}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+    <PageShell width="full">
+      <PageHeader
+        eyebrow="Operations"
+        title="Dispatch Board"
+        subtitle={`${trips.length} trips · ${trips.filter(t => t.status === "in_transit").length} in transit${saving ? " · saving…" : ""}`}
+        icon={Navigation}
+        iconAccent="bg-gradient-to-br from-sky-500 to-primary text-white"
+        actions={
+          <>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search trips…"
-                className="pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white w-44"
+                className="pl-9 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-card w-48"
               />
             </div>
-            <button
-              onClick={loadTrips}
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors"
-              title="Refresh"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            </button>
-            <Link
-              href="/trips"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-sky-500 to-indigo-600 text-white rounded-lg hover:from-sky-600 hover:to-indigo-700 transition-all shadow-md shadow-sky-200"
-            >
+            <RefreshControl onRefresh={loadTrips} autoSeconds={30} storageKey="dispatch" />
+            <Link href="/trips" className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cv-elev-sm">
               <Plus className="w-3.5 h-3.5" /> New Trip
             </Link>
+          </>
+        }
+      />
+
+      {/* Stat strip */}
+      <div className="flex items-center gap-3 flex-wrap mb-5">
+        {stats.map((s) => (
+          <div key={s.label} className="flex items-center gap-1.5 bg-card rounded-full px-3 py-1 border border-border">
+            <span className="text-[10px] text-muted-foreground font-medium">{s.label}</span>
+            <span className={`text-sm font-black ${s.color}`}>{s.value}</span>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* ── Board ── */}
-      <div className="flex-1 overflow-x-auto px-6 py-5">
+      {/* Board */}
+      <div className="overflow-x-auto -mx-6 px-6 pb-4">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="flex flex-col items-center gap-3 text-slate-400">
-              <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <p className="text-sm font-medium">Loading dispatch board…</p>
             </div>
           </div>
@@ -405,11 +415,10 @@ export default function DispatchBoardPage() {
 
       {/* Drag ghost label */}
       {dragging && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl backdrop-blur-sm pointer-events-none z-50">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-foreground/90 text-background text-xs font-bold px-4 py-2 rounded-full shadow-xl backdrop-blur-sm pointer-events-none z-50">
           Drag to a column to update status
         </div>
       )}
-      </div>
-    </div>
+    </PageShell>
   );
 }

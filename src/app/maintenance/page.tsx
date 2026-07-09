@@ -28,8 +28,11 @@ import {
     Eye,
     Edit,
     Filter,
+    Sparkles,
+    Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 export default function MaintenancePage() {
     const { role, isAdmin } = useRole();
@@ -41,6 +44,26 @@ export default function MaintenancePage() {
     const [typeFilter, setTypeFilter] = useState<'all' | 'scheduled' | 'preventive' | 'repair' | 'breakdown' | 'inspection'>('all');
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
+    const [scanning, setScanning] = useState(false);
+
+    const runPreventiveScan = async () => {
+        setScanning(true);
+        try {
+            const res = await fetch('/api/maintenance/preventive', { method: 'POST' });
+            const json = await res.json();
+            if (!json.ok) throw new Error(json.error ?? 'Scan failed');
+            toast({
+                title: 'Preventive scan complete',
+                description: `${json.scanned} vehicles scanned · ${json.created} tickets opened · ${json.skipped} skipped`,
+            });
+            // Force reload
+            window.location.reload();
+        } catch (err: any) {
+            toast({ title: 'Scan failed', description: err?.message ?? 'Unknown error', variant: 'destructive' });
+        } finally {
+            setScanning(false);
+        }
+    };
 
     const { records, loading, stats } = useMaintenance({
         status: statusFilter === 'all' ? undefined : statusFilter,
@@ -90,12 +113,23 @@ export default function MaintenancePage() {
                     </h1>
                     <p className="text-muted-foreground mt-1">Fleet servicing, repairs and inspections</p>
                 </div>
-                <Link href="/maintenance/new">
-                    <Button className="bg-primary hover:bg-primary/90 text-background gap-2">
-                        <Plus className="w-4 h-4" />
-                        New Record
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={runPreventiveScan}
+                        disabled={scanning}
+                        className="gap-2"
+                    >
+                        {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                        Preventive Scan
                     </Button>
-                </Link>
+                    <Link href="/maintenance/new">
+                        <Button className="bg-primary hover:bg-primary/90 text-background gap-2">
+                            <Plus className="w-4 h-4" />
+                            New Record
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             {/* Stat Cards */}

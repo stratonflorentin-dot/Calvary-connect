@@ -8,10 +8,11 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Fuel, Clock, CheckCircle2, XCircle, User, Truck } from 'lucide-react';
+import { Fuel, Clock, CheckCircle2, XCircle, User, Truck, AlertTriangle, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { WorkflowService } from '@/services/workflow-service';
+import { applyTransition } from '@/lib/workflow/engine';
+import { hoursSince, isOverdue, resolveApprovalLevel, slaHours } from '@/lib/workflow/approvals';
 
 export default function FuelApprovalsPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
@@ -39,29 +40,40 @@ export default function FuelApprovalsPage() {
     if (user) loadRequests();
   }, [user]);
 
-  const handleApprove = async (requestId: string) => {
-    try {
-      await WorkflowService.approveFuelRequest(requestId, user?.id || 'system');
-      toast({ title: 'Approved', description: 'Fuel request approved and expense recorded.' });
-      loadRequests();
-    } catch (error) {
-      console.error('Approval error:', error);
-      toast({ title: 'Error', description: 'Failed to approve request', variant: 'destructive' });
+  const handleApprove = async (r: any) => {
+    const result = await applyTransition({
+      kind: 'fuel_request',
+      entityId: r.id,
+      toState: 'approved',
+      actorId: user?.id || 'system',
+      actorRole: (role as any) ?? undefined,
+      payload: { amount: Number(r.amount) || 0 },
+    });
+    if (!result.ok) {
+      toast({ title: 'Blocked', description: result.message, variant: 'destructive' });
+      return;
     }
+    toast({ title: 'Approved', description: 'Expense recorded, payable created, driver notified.' });
+    loadRequests();
   };
 
-  const handleReject = async (requestId: string) => {
-    try {
-      const { error } = await supabase
-        .from('fuel_requests')
-        .update({ status: 'rejected', updated_at: new Date().toISOString() })
-        .eq('id', requestId);
-      if (error) throw error;
-      toast({ title: 'Rejected', description: 'Fuel request rejected.' });
-      loadRequests();
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to reject request', variant: 'destructive' });
+  const handleReject = async (r: any) => {
+    const reason = window.prompt('Reason for rejection?');
+    if (!reason) return;
+    const result = await applyTransition({
+      kind: 'fuel_request',
+      entityId: r.id,
+      toState: 'rejected',
+      actorId: user?.id || 'system',
+      actorRole: (role as any) ?? undefined,
+      payload: { reason, amount: Number(r.amount) || 0 },
+    });
+    if (!result.ok) {
+      toast({ title: 'Blocked', description: result.message, variant: 'destructive' });
+      return;
     }
+    toast({ title: 'Rejected', description: 'Fuel request rejected.' });
+    loadRequests();
   };
 
   if (roleLoading) return null;
@@ -84,22 +96,42 @@ export default function FuelApprovalsPage() {
               <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No pending fuel requests</p>
             </div>
           ) : (
-            requests.map((r) => (
+            requests.map((r) => {
+              const amount = Number(r.amount) || 0;
+              const overdue = r.status === 'pending' && isOverdue('fuel_request', r.created_at);
+              const age = hoursSince(r.created_at);
+              const tier = resolveApprovalLevel('fuel_request', amount);
+              return (
               <Card key={r.id} className="rounded-2xl border-none shadow-sm overflow-hidden bg-white hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-4 flex-1">
                       <div className={cn(
                         "size-12 rounded-xl flex items-center justify-center",
-                        r.status === 'pending' ? 'bg-amber-50 text-amber-600' : 
+                        r.status === 'pending' ? 'bg-amber-50 text-amber-600' :
                         r.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
                       )}>
                         <Fuel className="size-6" />
                       </div>
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-slate-900">TZS {Number(r.amount).toLocaleString()}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-slate-900">TZS {amount.toLocaleString()}</h3>
                           <Badge variant="outline" className="text-[10px] uppercase font-mono">{r.id.slice(0, 8)}</Badge>
+                          {tier && r.status === 'pending' && (
+                            <Badge className="rounded-full px-2 py-0.5 text-[10px] uppercase bg-slate-100 text-slate-600 hover:bg-slate-100">
+                              {tier.label} tier
+                            </Badge>
+                          )}
+                          {overdue && (
+                            <Badge className="rounded-full px-2 py-0.5 text-[10px] uppercase bg-red-50 text-red-600 hover:bg-red-50 flex items-center gap-1">
+                              <Flame className="size-3" /> Overdue by {(age - slaHours.fuel_request).toFixed(1)}h
+                            </Badge>
+                          )}
+                          {!overdue && r.status === 'pending' && age > slaHours.fuel_request * 0.75 && (
+                            <Badge className="rounded-full px-2 py-0.5 text-[10px] uppercase bg-amber-50 text-amber-600 hover:bg-amber-50 flex items-center gap-1">
+                              <AlertTriangle className="size-3" /> Nearing SLA
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
                           <span className="flex items-center gap-1"><Truck className="size-3" /> {r.vehicle_id}</span>
@@ -112,18 +144,18 @@ export default function FuelApprovalsPage() {
                     <div className="flex items-center gap-2">
                       {r.status === 'pending' ? (
                         <>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="rounded-xl border-red-100 text-red-600 hover:bg-red-50"
-                            onClick={() => handleReject(r.id)}
+                            onClick={() => handleReject(r)}
                           >
                             <XCircle className="size-4 mr-2" /> Reject
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
-                            onClick={() => handleApprove(r.id)}
+                            onClick={() => handleApprove(r)}
                           >
                             <CheckCircle2 className="size-4 mr-2" /> Approve
                           </Button>
@@ -140,7 +172,8 @@ export default function FuelApprovalsPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))
+              );
+            })
           )}
         </div>
       </main>

@@ -1,202 +1,131 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatCards } from './stat-cards';
-import { useLanguage } from '@/hooks/use-language';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { DriverLocationMap } from '@/components/driver-location-map';
-import { Receipt, Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import { RoleDashboard } from "./shared/role-dashboard";
+import { EmptyState } from "@/components/shell";
+import { isOverdue } from "@/lib/workflow/approvals";
+import {
+  ClipboardList,
+  Flame,
+  Fuel,
+  MapPin,
+  Navigation,
+  Package,
+  Route as RouteIcon,
+  Truck,
+  Wrench,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function OperatorView() {
-    const { t } = useLanguage();
-    const [form, setForm] = useState({
-        partName: '',
-        quantity: '',
-        urgency: '',
-        reason: '',
-        details: '',
-    });
+  const [trips, setTrips] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [fuel, setFuel] = useState<any[]>([]);
 
-    const [expenseForm, setExpenseForm] = useState({
-        amount: '',
-        category: 'Maintenance',
-        description: '',
-        date: new Date().toISOString().split('T')[0]
-    });
+  const load = async () => {
+    const [t, v, f] = await Promise.all([
+      supabase.from("trips").select("*, vehicle:vehicles(plate_number)").order("created_at", { ascending: false }).limit(100),
+      supabase.from("vehicles").select("*"),
+      supabase.from("fuel_requests").select("*").eq("status", "pending"),
+    ]);
+    setTrips(t.data ?? []);
+    setVehicles(v.data ?? []);
+    setFuel(f.data ?? []);
+  };
 
-    const [loading, setLoading] = useState(false);
-    const [expenseLoading, setExpenseLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
-    const [error, setError] = useState('');
+  useEffect(() => { load(); }, []);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
+  const stats = useMemo(() => {
+    const pending = trips.filter((t) => String(t.status).toLowerCase() === "pending").length;
+    const loading = trips.filter((t) => String(t.status).toLowerCase() === "loading").length;
+    const inTransit = trips.filter((t) => String(t.status).toLowerCase() === "in_transit").length;
+    const overdue = trips.filter((t) => !["delivered", "cancelled"].includes(String(t.status).toLowerCase()) && t.created_at && isOverdue("trip", t.created_at)).length;
+    const available = vehicles.filter((v) => v.status === "available").length;
+    return { pending, loading, inTransit, overdue, available, fuel: fuel.length };
+  }, [trips, vehicles, fuel]);
 
-    const handleExpenseSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setExpenseLoading(true);
-        try {
-            const { error } = await supabase.from('expenses').insert([{
-                amount: parseFloat(expenseForm.amount),
-                category: expenseForm.category,
-                description: expenseForm.description,
-                created_at: new Date(expenseForm.date).toISOString(),
-                status: 'pending'
-            }]);
+  const unassigned = useMemo(() => trips.filter((t) => String(t.status).toLowerCase() === "pending" && !t.driverId).slice(0, 5), [trips]);
+  const activeTrips = useMemo(() => trips.filter((t) => ["loading", "in_transit"].includes(String(t.status).toLowerCase())).slice(0, 6), [trips]);
 
-            if (error) throw error;
-
-            toast({ title: "Expense Recorded", description: "Your expense report has been submitted." });
-            setExpenseForm({ amount: '', category: 'Maintenance', description: '', date: new Date().toISOString().split('T')[0] });
-        } catch (err) {
-            console.error(err);
-            toast({ title: "Error", description: "Failed to record expense", variant: "destructive" });
-        } finally {
-            setExpenseLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        setSuccess(false);
-        const { partName, quantity, urgency, reason, details } = form;
-        const { error } = await supabase.from('parts_requests').insert([
-            {
-                part_name: partName,
-                quantity,
-                urgency,
-                reason,
-                details,
-                created_at: new Date().toISOString(),
-            },
-        ]);
-        setLoading(false);
-        if (error) {
-            setError('Failed to submit request.');
-        } else {
-            setSuccess(true);
-            setForm({ partName: '', quantity: '', urgency: '', reason: '', details: '' });
-        }
-    };
-
-    return (
-        <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{(t as Record<string, string>).operator_dashboard || 'Operator Dashboard'}</h1>
-                    <p className="text-muted-foreground text-sm sm:text-base">Manage daily operations and fleet assignments</p>
-                </div>
-            </div>
-            <StatCards />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Receipt className="size-5 text-primary" />
-                            Record Expense
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <form className="space-y-4" onSubmit={handleExpenseSubmit}>
-                            <div>
-                                <Label htmlFor="expAmount">Amount ($)</Label>
-                                <Input
-                                    id="expAmount"
-                                    type="number"
-                                    value={expenseForm.amount}
-                                    onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="expCategory">Category</Label>
-                                <Select value={expenseForm.category} onValueChange={v => setExpenseForm({ ...expenseForm, category: v })}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Maintenance">Maintenance</SelectItem>
-                                        <SelectItem value="Fuel">Fuel</SelectItem>
-                                        <SelectItem value="Tolls">Tolls</SelectItem>
-                                        <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label htmlFor="expDate">Date</Label>
-                                <Input
-                                    id="expDate"
-                                    type="date"
-                                    value={expenseForm.date}
-                                    onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="expDesc">Description</Label>
-                                <Textarea
-                                    id="expDesc"
-                                    value={expenseForm.description}
-                                    onChange={e => setExpenseForm({ ...expenseForm, description: e.target.value })}
-                                    placeholder="What was this expense for?"
-                                    rows={2}
-                                />
-                            </div>
-                            <Button type="submit" disabled={expenseLoading} className="w-full">
-                                {expenseLoading ? 'Saving...' : 'Record Expense'}
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-
-                <Card className="lg:col-span-2">
-                    <CardHeader>
-                        <CardTitle>Request Spare Parts / Service</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <form className="space-y-4" onSubmit={handleSubmit}>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="partName">Part Name / Service</Label>
-                                    <Input id="partName" name="partName" value={form.partName} onChange={handleChange} required />
-                                </div>
-                                <div>
-                                    <Label htmlFor="quantity">Quantity</Label>
-                                    <Input id="quantity" name="quantity" value={form.quantity} onChange={handleChange} required />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="urgency">Urgency</Label>
-                                    <Input id="urgency" name="urgency" value={form.urgency} onChange={handleChange} required />
-                                </div>
-                                <div>
-                                    <Label htmlFor="reason">Reason for Request</Label>
-                                    <Input id="reason" name="reason" value={form.reason} onChange={handleChange} required />
-                                </div>
-                            </div>
-                            <div>
-                                <Label htmlFor="details">Additional Details</Label>
-                                <Textarea id="details" name="details" value={form.details} onChange={handleChange} rows={3} />
-                            </div>
-                            <Button type="submit" disabled={loading} className="w-full sm:w-auto">{loading ? 'Submitting...' : 'Submit Request'}</Button>
-                            {success && <p className="text-green-600 mt-2">Request submitted successfully!</p>}
-                            {error && <p className="text-red-600 mt-2">{error}</p>}
-                        </form>
-                    </CardContent>
-                </Card>
-            </div>
-            <DriverLocationMap />
-        </div>
-    );
+  return (
+    <RoleDashboard
+      eyebrow="Operations Console"
+      title="Welcome"
+      subtitle={`${stats.inTransit} in transit · ${stats.pending} pending · ${stats.overdue} overdue · ${stats.available} vehicles available`}
+      onRefresh={load}
+      storageKey="operator-dash"
+      kpis={[
+        { label: "Pending", value: stats.pending, icon: ClipboardList, accent: "bg-amber-100 text-amber-700", href: "/dispatch" },
+        { label: "Loading", value: stats.loading, icon: Package, accent: "bg-sky-100 text-sky-700", href: "/dispatch" },
+        { label: "In transit", value: stats.inTransit, icon: Navigation, accent: "bg-primary/10 text-primary", href: "/tracking" },
+        { label: "Overdue", value: stats.overdue, icon: Flame, accent: "bg-red-100 text-red-700", href: "/dispatch" },
+        { label: "Available vehicles", value: stats.available, icon: Truck, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/fleet" },
+        { label: "Fuel approvals", value: stats.fuel, icon: Fuel, accent: "bg-orange-100 text-orange-700", href: "/fuel-approvals" },
+      ]}
+      sections={[
+        {
+          title: "Unassigned pending trips",
+          subtitle: "Need a driver assigned",
+          href: "/dispatch",
+          padded: false,
+          colSpan: 2,
+          content: unassigned.length === 0 ? (
+            <EmptyState icon={ClipboardList} title="All trips assigned" description="No pending trips need a driver." />
+          ) : (
+            <ul className="divide-y divide-border">
+              {unassigned.map((t) => (
+                <li key={t.id} className="px-5 py-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <Navigation className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-foreground truncate">{t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}</p>
+                    <p className="text-xs text-muted-foreground truncate flex items-center gap-1"><MapPin className="w-3 h-3 text-emerald-500" /> {t.origin} → {t.destination}</p>
+                  </div>
+                  <Link href="/dispatch" className="text-primary text-xs font-bold hover:underline">Assign →</Link>
+                </li>
+              ))}
+            </ul>
+          ),
+        },
+        {
+          title: "Active trips",
+          subtitle: "In progress",
+          href: "/tracking",
+          padded: false,
+          content: activeTrips.length === 0 ? (
+            <EmptyState icon={Navigation} title="No active trips" />
+          ) : (
+            <ul className="divide-y divide-border">
+              {activeTrips.map((t) => (
+                <li key={t.id} className="px-5 py-3 flex items-center gap-3">
+                  <div className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                    String(t.status).toLowerCase() === "in_transit" ? "bg-primary/10 text-primary" : "bg-sky-100 text-sky-700",
+                  )}>
+                    <Navigation className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-foreground truncate">{t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}</p>
+                    <p className="text-xs text-muted-foreground truncate">{t.origin} → {t.destination}</p>
+                  </div>
+                  <span className="cv-chip cv-chip-info">{String(t.status).replace("_", " ")}</span>
+                </li>
+              ))}
+            </ul>
+          ),
+        },
+      ]}
+      quickActions={[
+        { href: "/dispatch", label: "Dispatch board", icon: Navigation, tone: "bg-primary/10 text-primary" },
+        { href: "/trips", label: "Trips", icon: RouteIcon, tone: "bg-sky-100 text-sky-700" },
+        { href: "/bookings", label: "Bookings", icon: ClipboardList, tone: "bg-emerald-100 text-emerald-700" },
+        { href: "/fuel-approvals", label: "Fuel", icon: Fuel, tone: "bg-orange-100 text-orange-700" },
+        { href: "/tracking", label: "Live map", icon: MapPin, tone: "bg-violet-100 text-violet-700" },
+        { href: "/maintenance", label: "Maintenance", icon: Wrench, tone: "bg-amber-100 text-amber-700" },
+      ]}
+    />
+  );
 }

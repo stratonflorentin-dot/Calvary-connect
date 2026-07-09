@@ -1,11 +1,9 @@
 // Server-only dynamic Genkit factory to avoid bundling node-only libs into client.
 // Import the runtime implementation directly to skip the wrapper that initializes
 // node telemetry (which pulls in @opentelemetry/sdk-node and its protobuf dependency).
-const dynamicImport = new Function('specifier', 'return import(specifier)') as (
-  specifier: string,
-) => Promise<any>;
-
 export async function createGenkit() {
+  const dynamicImport = (specifier: string) => import(specifier) as Promise<any>;
+
   const tracingModule = await dynamicImport('@genkit-ai/core/tracing').catch(() => null);
   if (tracingModule?.disableGenkitOTelInitialization) {
     tracingModule.disableGenkitOTelInitialization();

@@ -1,228 +1,203 @@
 "use client";
 
-import type { ComponentType } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useDriverData } from "@/hooks/use-driver-data";
+import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/components/supabase-provider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/use-currency";
+import { StatCard, SectionCard, EmptyState, RefreshControl } from "@/components/shell";
+import { TransitionButtons } from "@/components/workflow/transition-buttons";
+import { useRole } from "@/hooks/use-role";
 import {
-  Truck,
-  Package,
+  Camera,
   CheckCircle2,
   Clock,
   Fuel,
-  Wrench,
-  Route,
+  MapPin,
+  Navigation,
+  Package,
   Receipt,
-  User,
-  Camera,
-  ChevronRight,
+  Route as RouteIcon,
+  Truck,
+  Wallet,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-const statusColors: Record<string, string> = {
-  Active: "bg-emerald-100 text-emerald-800",
-  "On Trip": "bg-blue-100 text-blue-800",
-  Maintenance: "bg-amber-100 text-amber-800",
-  Offline: "bg-slate-100 text-slate-600",
-};
-
-function StatTile({
-  label,
-  value,
-  icon: Icon,
-  className,
-}: {
-  label: string;
-  value: string | number;
-  icon: ComponentType<{ className?: string }>;
-  className?: string;
-}) {
-  return (
-    <Card className={cn("border shadow-sm", className)}>
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
-          <Icon className="size-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-2xl font-bold leading-none">{value}</p>
-          <p className="text-xs text-muted-foreground mt-1 truncate">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function QuickLink({
-  href,
-  label,
-  icon: Icon,
-}: {
-  href: string;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors active:scale-[0.98]"
-    >
-      <span className="flex items-center gap-3 font-medium text-sm">
-        <Icon className="size-5 text-primary" />
-        {label}
-      </span>
-      <ChevronRight className="size-4 text-muted-foreground" />
-    </Link>
-  );
-}
-
-export default function DriverDashboard() {
+/**
+ * Driver dashboard.
+ *
+ * Mobile-first, focused on the single thing a driver needs right now:
+ * their current trip. Everything else is one tap away.
+ */
+export function DriverView() {
   const { user } = useSupabase();
-  const { stats, assignedVehicle, trips, loading, refresh } = useDriverData();
+  const { role } = useRole();
+  const { format } = useCurrency();
+  const [loading, setLoading] = useState(true);
+  const [trips, setTrips] = useState<any[]>([]);
+  const [fuelRequests, setFuelRequests] = useState<any[]>([]);
+  const [allowances, setAllowances] = useState<any[]>([]);
 
-  const plate =
-    (assignedVehicle?.plate_number as string) ||
-    (assignedVehicle?.plateNumber as string) ||
-    "—";
-  const vehicleType =
-    (assignedVehicle?.type as string)?.replace(/_/g, " ") || "Truck";
-  const fuelLevel =
-    assignedVehicle?.current_fuel_level != null
-      ? `${assignedVehicle.current_fuel_level}%`
-      : assignedVehicle?.currentFuelLevel != null
-        ? `${assignedVehicle.currentFuelLevel}%`
-        : "—";
-  const lastService =
-    (assignedVehicle?.last_maintenance_date as string)?.slice(0, 10) ||
-    (assignedVehicle?.lastMaintenanceDate as string)?.slice(0, 10) ||
-    "—";
+  const load = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    const [t, f, a] = await Promise.all([
+      supabase
+        .from("trips")
+        .select("*, vehicle:vehicles(plate_number, make, model)")
+        .eq("driverId", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase.from("fuel_requests").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(10),
+      supabase.from("allowances").select("*").eq("employee_id", user.id).order("created_at", { ascending: false }).limit(10),
+    ]);
+    setTrips(t.data ?? []);
+    setFuelRequests(f.data ?? []);
+    setAllowances(a.data ?? []);
+    setLoading(false);
+  };
 
-  const activeTrip = trips.find((t) =>
-    ["in_transit", "loading", "in_progress"].includes(
-      String(t.status || "").toLowerCase(),
-    ),
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const currentTrip = useMemo(
+    () => trips.find((t) => ["pending", "loading", "in_transit"].includes(String(t.status).toLowerCase())),
+    [trips],
   );
-  const assignedRoute = activeTrip
-    ? `${activeTrip.origin || "—"} → ${activeTrip.destination || "—"}`
-    : trips[0]
-      ? `${trips[0].origin || "—"} → ${trips[0].destination || "—"}`
-      : "No route assigned";
+  const upcomingTrips = useMemo(
+    () => trips.filter((t) => String(t.status).toLowerCase() === "pending" && t.id !== currentTrip?.id).slice(0, 3),
+    [trips, currentTrip],
+  );
+  const completedThisMonth = useMemo(() => {
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    return trips.filter((t) => String(t.status).toLowerCase() === "delivered" && new Date(t.updated_at ?? t.created_at).getTime() >= monthStart).length;
+  }, [trips]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  const pendingFuel = fuelRequests.filter((r) => r.status === "pending").length;
+  const approvedAllowance = allowances
+    .filter((a) => a.status === "approved" || a.status === "paid")
+    .reduce((s, a) => s + Number(a.amount || 0), 0);
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h2 className="text-xl font-headline tracking-tight">
-          Hello, {user?.name?.split(" ")[0] || "Driver"}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Your trips, vehicle, fuel, and expenses in one place.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <StatTile label="Trips Assigned" value={stats.tripsAssigned} icon={Route} />
-        <StatTile
-          label="Pending Deliveries"
-          value={stats.pendingDeliveries}
-          icon={Clock}
-        />
-        <StatTile
-          label="Completed"
-          value={stats.completedDeliveries}
-          icon={CheckCircle2}
-        />
-        <StatTile
-          label="Truck Status"
-          value={stats.truckStatus}
-          icon={Truck}
-          className="col-span-2"
-        />
-        <StatTile
-          label="Fuel Pending"
-          value={stats.fuelRequestsPending}
-          icon={Fuel}
-        />
-        <StatTile
-          label="Maintenance"
-          value={stats.maintenanceRequests}
-          icon={Wrench}
-        />
-      </div>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Truck className="size-5 text-primary" />
-            My Assigned Vehicle
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {assignedVehicle ? (
-            <>
-              <div className="aspect-video rounded-xl bg-gradient-to-br from-slate-800 to-slate-600 flex items-center justify-center">
-                <Truck className="size-16 text-white/80" />
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Registration</p>
-                  <p className="font-semibold">{plate}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Type</p>
-                  <p className="font-semibold capitalize">{vehicleType}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-muted-foreground text-xs">Assigned route</p>
-                  <p className="font-medium">{assignedRoute}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Fuel level</p>
-                  <p className="font-semibold">{fuelLevel}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Last service</p>
-                  <p className="font-semibold">{lastService}</p>
-                </div>
-              </div>
-              <Badge className={statusColors[stats.truckStatus] || statusColors.Active}>
-                {stats.truckStatus}
-              </Badge>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No vehicle assigned yet. Check back when a trip is assigned to you.
+    <div className="space-y-6">
+      <div className="cv-panel bg-gradient-to-br from-primary/95 via-primary to-[hsl(235_84%_65%)] text-primary-foreground border-primary">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Driver Console</p>
+            <h1 className="text-2xl font-black tracking-tight">Good day, {user?.name?.split(" ")[0] ?? "Driver"}</h1>
+            <p className="text-sm opacity-90 mt-1">
+              {currentTrip ? `On trip ${currentTrip.trip_number ?? currentTrip.id.slice(0, 6)}` : "No active trip — you're free"}
             </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
-          Quick actions
-        </p>
-        <QuickLink href="/driver/trips" label="My Trips" icon={Route} />
-        <QuickLink href="/proof" label="Proof of Delivery" icon={Camera} />
-        <QuickLink href="/driver/fuel" label="Fuel requests" icon={Fuel} />
-        <QuickLink href="/driver/expenses" label="Submit expense" icon={Receipt} />
-        <QuickLink href="/driver/maintenance" label="Report maintenance" icon={Wrench} />
-        <QuickLink href="/driver/profile" label="Driver profile" icon={User} />
+          </div>
+          <RefreshControl onRefresh={load} storageKey="driver-dash" compact />
+        </div>
       </div>
 
-      <Button variant="outline" size="sm" onClick={() => refresh()} className="w-full">
-        Refresh dashboard
-      </Button>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard label="Completed this month" value={completedThisMonth} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
+        <StatCard label="Pending fuel" value={pendingFuel} icon={Fuel} accent="bg-amber-100 text-amber-700" href="/fuel" />
+        <StatCard label="Approved allowances" value={format(approvedAllowance)} icon={Wallet} accent="bg-primary/10 text-primary" href="/allowances" />
+        <StatCard label="Upcoming trips" value={upcomingTrips.length} icon={RouteIcon} accent="bg-sky-100 text-sky-700" href="/trips" />
+      </div>
+
+      <SectionCard title="Current trip" subtitle={currentTrip ? "Live workflow — advance the status as you go" : "Nothing to do right now"}>
+        {!currentTrip ? (
+          <EmptyState icon={Navigation} title="No active trip" description="Once you're assigned a trip, it'll appear here with quick controls." />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <div className="rounded-2xl border border-border bg-muted/40 p-5">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Trip</p>
+                    <p className="text-xl font-black font-mono text-foreground">{currentTrip.trip_number ?? `TRP-${currentTrip.id.slice(0, 6)}`}</p>
+                  </div>
+                  <span className="cv-chip cv-chip-info">{String(currentTrip.status).replace("_", " ")}</span>
+                </div>
+
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="flex flex-col items-center gap-1 pt-1 shrink-0">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <div className="w-px h-8 bg-border" />
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                  </div>
+                  <div className="space-y-2 min-w-0">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">From</p>
+                      <p className="text-sm font-bold text-foreground truncate">{currentTrip.origin}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">To</p>
+                      <p className="text-sm font-bold text-foreground truncate">{currentTrip.destination}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {currentTrip.vehicle && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Truck className="w-3.5 h-3.5" /> {currentTrip.vehicle.plate_number}
+                    </div>
+                  )}
+                  {currentTrip.cargo && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Package className="w-3.5 h-3.5" /> {currentTrip.cargo}
+                    </div>
+                  )}
+                  {currentTrip.client && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                      <MapPin className="w-3.5 h-3.5" /> {currentTrip.client}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Advance workflow</p>
+              <TransitionButtons
+                kind="trip"
+                entity={currentTrip}
+                actorId={user?.id ?? "system"}
+                actorRole={role ?? undefined}
+                layout="stack"
+                onDone={load}
+              />
+              <Link href="/proof" className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold text-foreground hover:bg-muted/50 transition-colors">
+                <Camera className="w-4 h-4" /> Upload POD
+              </Link>
+              <Link href="/fuel" className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold text-foreground hover:bg-muted/50 transition-colors">
+                <Fuel className="w-4 h-4" /> Request fuel
+              </Link>
+              <Link href="/driver/expenses" className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold text-foreground hover:bg-muted/50 transition-colors">
+                <Receipt className="w-4 h-4" /> Log expense
+              </Link>
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Upcoming assignments" subtitle="Trips assigned to you but not yet started" href="/trips" padded={false}>
+        {upcomingTrips.length === 0 ? (
+          <EmptyState icon={Clock} title="No pending trips" description="You'll be notified when a new trip is assigned." />
+        ) : (
+          <ul className="divide-y divide-border">
+            {upcomingTrips.map((t) => (
+              <li key={t.id} className="px-5 py-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Navigation className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-foreground truncate">{t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}</p>
+                  <p className="text-xs text-muted-foreground truncate">{t.origin} → {t.destination}</p>
+                </div>
+                <span className="cv-chip cv-chip-neutral">{String(t.status).replace("_", " ")}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </SectionCard>
     </div>
   );
 }
-
-export { DriverDashboard as DriverView };

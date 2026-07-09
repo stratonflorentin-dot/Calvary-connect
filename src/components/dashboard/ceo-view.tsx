@@ -1,864 +1,279 @@
 "use client";
 
-import {
-  DashboardLayout,
-  StatCard,
-  DataTable,
-  ActivityFeed,
-  AlertPanel,
-} from "@/components/dashboard/shared/dashboard-layout";
-import { useFleetVehicles } from "@/hooks/data/use-fleet-vehicles";
-import { useTrips } from "@/hooks/data/use-trips";
-import { useExpenses } from "@/hooks/data/use-expenses";
-import { useInvoices } from "@/hooks/data/use-invoices";
-import { useMonthlyReports } from "@/hooks/data/use-monthly-reports";
-import { useMaintenanceRequests } from "@/hooks/data/use-maintenance-requests";
-import { useUsers } from "@/hooks/data/use-users";
-import { useRole } from "@/hooks/use-role";
-import { useLanguage } from "@/hooks/use-language";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 import { useCurrency } from "@/hooks/use-currency";
-import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StatCard, SectionCard, EmptyState, RefreshControl } from "@/components/shell";
 import {
   AlertTriangle,
-  Truck,
-  Navigation,
-  DollarSign,
-  Users,
-  Package,
-  MapPin,
-  Plus,
-  Trash2,
-  Edit,
-  Eye,
-  BarChart2,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  History,
-  Settings,
-  Bell,
-  Sparkles,
-  FileText,
-  Upload,
-  Download,
-  RefreshCw,
-  Shield,
-  Briefcase,
-  Building2,
-  CalendarDays,
-  Globe,
-  Thermometer,
-  Anchor,
-  Route,
-  Container,
-  LayoutDashboard,
-  Wrench,
-  Calculator,
-  LogOut,
-  Camera,
-  User as UserIcon,
-  ChevronRight,
-  MoreVertical,
   ArrowRight,
+  BarChart2,
+  Building2,
+  CheckCircle2,
+  ClipboardList,
+  CreditCard,
+  DollarSign,
+  Flame,
+  Navigation,
+  Package,
+  Receipt,
+  Shield,
+  Sparkles,
+  TrendingUp,
+  Truck,
+  Users,
+  Wallet,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DriverLocationMap } from "@/components/driver-location-map";
-import Link from "next/link";
-import { StatCards } from "./stat-cards";
-import { AuditService } from "@/services/audit-service";
-import { AIAnalysisDashboard } from "./ai-analysis-dashboard";
-import { useEffect, useState } from "react";
+import { REPORTING_CURRENCY, normalizeCurrency } from "@/lib/finance/multi-currency";
+import { isOverdue } from "@/lib/workflow/approvals";
 
-export default function CeoDashboard() {
-  const stats = { warehouseUtilization: 0 };
-  const { t } = useLanguage();
+/**
+ * Executive dashboard.
+ *
+ * A single scroll for the CEO / Admin: cash position, revenue trajectory,
+ * fleet utilization, overdue receivables, active shipments, and the
+ * approvals queue. Every number links through to its owning module.
+ */
+export function CeoView() {
   const { format } = useCurrency();
-  const { role } = useRole();
+  const [loading, setLoading] = useState(true);
+  const [banks, setBanks] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [trips, setTrips] = useState<any[]>([]);
+  const [maintenance, setMaintenance] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [fuel, setFuel] = useState<any[]>([]);
 
-  // Data hooks
-  const { vehicles, loading: vehiclesLoading } = useFleetVehicles();
-  const { trips, loading: tripsLoading } = useTrips();
-  const { expenses, loading: expensesLoading } = useExpenses();
-  const { invoices, loading: invoicesLoading } = useInvoices();
-  const { reports = [], loading: reportsLoading } = useMonthlyReports();
-  const { requests: maintenanceRequests, loading: maintenanceLoading } =
-    useMaintenanceRequests();
-  const { users: drivers, loading: driversLoading } = useUsers({
-    role: "DRIVER",
-  });
+  const load = async () => {
+    setLoading(true);
+    const [b, i, e, t, m, v, f] = await Promise.all([
+      supabase.from("bank_accounts").select("*"),
+      supabase.from("invoices").select("*"),
+      supabase.from("expenses").select("*"),
+      supabase.from("trips").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("maintenance_records").select("*").in("status", ["requested", "scheduled", "in_progress"]),
+      supabase.from("vehicles").select("*"),
+      supabase.from("fuel_requests").select("*").eq("status", "pending"),
+    ]);
+    setBanks(b.data ?? []);
+    setInvoices(i.data ?? []);
+    setExpenses(e.data ?? []);
+    setTrips(t.data ?? []);
+    setMaintenance(m.data ?? []);
+    setVehicles(v.data ?? []);
+    setFuel(f.data ?? []);
+    setLoading(false);
+  };
 
-  const recentReports = reports?.slice(0, 6) ?? [];
-  const currentReport = recentReports[0];
-  const currentMonth = currentReport ? new Date(currentReport.month).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "";
+  useEffect(() => { load(); }, []);
 
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [extraLoading, setExtraLoading] = useState(true);
+  const stats = useMemo(() => {
+    // Reporting-currency-only totals to avoid mixing currencies
+    const cash = banks
+      .filter((a) => normalizeCurrency(a.currency) === REPORTING_CURRENCY)
+      .reduce((s, a) => s + Number(a.current_balance || 0), 0);
 
-  useEffect(() => {
-    const loadExtra = async () => {
-      try {
-        setExtraLoading(true);
-        // Load real activities from Audit Trail
-        const logs = await AuditService.getLogs({ limit: 5 });
-        const mappedActivities = logs.map(log => ({
-          id: log.id,
-          title: log.change_summary || "Activity recorded",
-          description: `${log.user_name} updated ${log.table_name}`,
-          time: new Date(log.created_at).toLocaleTimeString(),
-          icon: log.action === 'CREATE' ? Plus : log.action === 'DELETE' ? Trash2 : Edit,
-          color: log.action === 'CREATE' ? "bg-green-500" : log.action === 'DELETE' ? "bg-red-500" : "bg-blue-500",
-        }));
-        setActivities(mappedActivities);
+    const ar = invoices
+      .filter((i) => (i.type ?? "receivable") === "receivable" && i.status !== "paid" && normalizeCurrency(i.currency) === REPORTING_CURRENCY)
+      .reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0), 0);
 
-        // Load real alerts from maintenance and invoices
-        const { data: maintAlerts } = await supabase.from('maintenance_requests').select('*').eq('status', 'pending').limit(2);
-        const { data: overdueInvoices } = await supabase.from('invoices').select('*').eq('status', 'pending').lt('due_date', new Date().toISOString()).limit(2);
+    const ap = invoices
+      .filter((i) => i.type === "payable" && i.status !== "paid" && normalizeCurrency(i.currency) === REPORTING_CURRENCY)
+      .reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0), 0);
 
-        const combinedAlerts = [
-          ...(maintAlerts?.map(m => ({
-            id: m.id,
-            title: "Maintenance Due",
-            description: `Vehicle ${m.vehicle_id} needs attention: ${m.description || m.issue_type}`,
-            severity: "warning" as const,
-            time: "Recent"
-          })) || []),
-          ...(overdueInvoices?.map(i => ({
-            id: i.id,
-            title: "Overdue Payment",
-            description: `Invoice ${i.invoice_number} is past due from ${i.customer_name}`,
-            severity: "critical" as const,
-            time: "Now"
-          })) || [])
-        ];
-        setAlerts(combinedAlerts);
-      } catch (err) {
-        console.error("Error loading CEO extra data:", err);
-      } finally {
-        setExtraLoading(false);
-      }
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const revenueMtd = invoices
+      .filter((i) => (i.type ?? "receivable") === "receivable" && i.status === "paid" && i.paid_at && new Date(i.paid_at).getTime() >= monthStart && normalizeCurrency(i.currency) === REPORTING_CURRENCY)
+      .reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0), 0);
+    const expensesMtd = expenses
+      .filter((e) => normalizeCurrency(e.currency) === REPORTING_CURRENCY)
+      .filter((e) => e.status === "approved" || e.status === "paid")
+      .filter((e) => new Date(e.date ?? e.created_at ?? 0).getTime() >= monthStart)
+      .reduce((s, e) => s + Number(e.amount || 0), 0);
+
+    const activeTrips = trips.filter((t) => ["pending", "loading", "in_transit"].includes(String(t.status).toLowerCase())).length;
+    const overdueTrips = trips.filter((t) => !["delivered", "cancelled"].includes(String(t.status).toLowerCase()) && t.created_at && isOverdue("trip", t.created_at)).length;
+    const inUseVehicles = vehicles.filter((v) => v.status === "in_use").length;
+
+    return {
+      cash,
+      ar,
+      ap,
+      revenueMtd,
+      expensesMtd,
+      netMtd: revenueMtd - expensesMtd,
+      activeTrips,
+      overdueTrips,
+      utilization: vehicles.length > 0 ? (inUseVehicles / vehicles.length) * 100 : 0,
+      pendingFuel: fuel.length,
+      pendingExpenses: expenses.filter((e) => e.status === "pending").length,
+      pendingMaintenance: maintenance.filter((m) => m.status === "requested").length,
     };
-    loadExtra();
-  }, []);
+  }, [banks, invoices, expenses, trips, vehicles, fuel, maintenance]);
 
-  const loading =
-    vehiclesLoading ||
-    tripsLoading ||
-    expensesLoading ||
-    invoicesLoading ||
-    reportsLoading ||
-    maintenanceLoading ||
-    driversLoading ||
-    extraLoading;
+  const alerts = useMemo(() => {
+    const list: { id: string; icon: any; title: string; description: string; href: string; tone: string }[] = [];
+    if (stats.overdueTrips > 0) list.push({ id: "trips", icon: Flame, title: `${stats.overdueTrips} overdue trips`, description: "Dispatch operations are behind SLA", href: "/dispatch", tone: "bg-red-50 border-red-200 text-red-800" });
+    if (stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance > 0) list.push({ id: "appr", icon: ClipboardList, title: `${stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} items waiting for approval`, description: "Route through the Approvals inbox", href: "/approvals", tone: "bg-amber-50 border-amber-200 text-amber-800" });
+    const arOverdue = invoices.filter((i) => (i.type ?? "receivable") === "receivable" && i.status !== "paid" && i.due_date && new Date(i.due_date) < new Date());
+    if (arOverdue.length > 0) list.push({ id: "ar", icon: AlertTriangle, title: `${arOverdue.length} overdue receivables`, description: "Collections need attention", href: "/finance/reports/aging-report", tone: "bg-red-50 border-red-200 text-red-800" });
+    return list;
+  }, [stats, invoices]);
 
-  // Calculate metrics
-  const activeTrips = trips.filter((t) =>
-    ["in_transit", "loading", "pending"].includes(t.status),
+  const recentTrips = useMemo(
+    () => trips.slice(0, 6),
+    [trips],
   );
-  const completedTrips = trips.filter((t) => t.status === "completed");
-  const totalRevenue = completedTrips.reduce(
-    (sum, t) => sum + (Number(t.revenue || t.price) || 0),
-    0,
+
+  const topDebtors = useMemo(
+    () =>
+      invoices
+        .filter((i) => (i.type ?? "receivable") === "receivable" && i.status !== "paid" && i.due_date && new Date(i.due_date) < new Date())
+        .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+        .slice(0, 5),
+    [invoices],
   );
-  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const netProfit = totalRevenue - totalExpenses;
-  const unpaidInvoices = invoices.filter((i) => {
-    const s = (i.status || "").toLowerCase();
-    return s && !["paid", "settled", "closed"].includes(s);
-  });
-
-  // Fleet status counts
-  const availableVehicles = vehicles.filter(
-    (v) => v.status === "available",
-  ).length;
-  const inUseVehicles = vehicles.filter((v) => v.status === "in_use").length;
-  const maintenanceVehicles = vehicles.filter(
-    (v) => v.status === "maintenance",
-  ).length;
-
-  // Cross-border trips
-  const crossBorderTrips = activeTrips.filter((trip) => {
-    const dest = (trip.destination || "").toLowerCase();
-    return (
-      dest.includes("border") ||
-      dest.includes("dr congo") ||
-      dest.includes("kenya") ||
-      dest.includes("zambia") ||
-      dest.includes("burundi") ||
-      dest.includes("rwanda") ||
-      dest.includes("uganda")
-    );
-  }).length;
-
-  // Cold chain trips
-  const coldChainTrips = activeTrips.filter(
-    (t) =>
-      (t as any).has_reefer ||
-      t.cargo_type === "REEFER" ||
-      t.cargo_type === "cold_chain",
-  ).length;
-
-  // Heavy cargo trips
-  const heavyCargoTrips = activeTrips.filter((t) =>
-    ["LOWBED", "heavy_equipment", "machinery"].includes(
-      t.cargo_type?.toUpperCase() || "",
-    ),
-  ).length;
-
-  // Vehicle utilization
-  const utilizationRate =
-    vehicles.length > 0 ? (inUseVehicles / vehicles.length) * 100 : 0;
-
-  // Cost per trip
-  const costPerTrip =
-    completedTrips.length > 0 ? totalExpenses / completedTrips.length : 0;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading dashboard data...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <DashboardLayout
-      title="CEO Dashboard"
-      description="Fleet overview and strategic insights"
-      role={role || "CEO"}
-      hideSidebar={true}
-    >
-      {/* Alert Panel */}
-      <AlertPanel alerts={alerts} />
-
-      {/* Enhanced Stat Cards - Unified Component */}
-      <StatCards />
-
-      {/* Action Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Shipments Needing Action */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-bold text-slate-800">Shipments Needing Action</CardTitle>
-            <Button variant="ghost" size="sm" className="text-[#0369A1] hover:bg-sky-50">View all</Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 mt-4">
-              {activeTrips.slice(0, 3).map((trip, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:shadow-sm transition-all bg-white">
-                  <div className="flex items-center gap-4">
-                    <Badge variant="secondary" className={
-                      trip.status === 'DELIVERED' ? 'bg-purple-100 text-purple-700 hover:bg-purple-100' :
-                        trip.status === 'IN_TRANSIT' ? 'bg-sky-100 text-sky-700 hover:bg-sky-100' :
-                          'bg-orange-100 text-orange-700 hover:bg-orange-100'
-                    }>
-                      {trip.status || 'PENDING'}
-                    </Badge>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">SH-{new Date().getFullYear()}-{1000 + idx}</p>
-                      <p className="text-xs text-slate-500">{trip.client || 'General Client'}</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/trips/${trip.id}`} className="text-slate-600 hover:text-[#0369A1]">
-                      View &rarr;
-                    </Link>
-                  </Button>
-                </div>
-              ))}
-              {activeTrips.length === 0 && (
-                <div className="text-center py-4 text-slate-500 text-sm">No shipments currently need action.</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* My Cash Requests */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-bold text-slate-800">My Cash Requests</CardTitle>
-            <Button variant="ghost" size="sm" className="text-[#0369A1] hover:bg-sky-50">+ New</Button>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
-                <p className="text-2xl font-bold text-slate-700">
-                  {expenses.filter(e => (e.status as any) === 'draft').length || 0}
-                </p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Draft</p>
-              </div>
-              <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-100">
-                <p className="text-2xl font-bold text-amber-600">
-                  {expenses.filter(e => (e.status as any) === 'pending').length || 0}
-                </p>
-                <p className="text-[10px] text-amber-600 uppercase tracking-widest font-semibold mt-1">Pending</p>
-              </div>
-              <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-100">
-                <p className="text-2xl font-bold text-purple-600">
-                  {expenses.filter(e => (e.status as any) === 'approved').length || 0}
-                </p>
-                <p className="text-[10px] text-purple-600 uppercase tracking-widest font-semibold mt-1">To Retire</p>
-              </div>
-              <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100">
-                <p className="text-2xl font-bold text-red-600">0</p>
-                <p className="text-[10px] text-red-600 uppercase tracking-widest font-semibold mt-1">Overdue</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Revenue & Profit Chart Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Revenue Overview */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart2 className="size-5" />
-              Revenue & Profit Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-green-500 hover:shadow-md transition-all">
-                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Revenue</p>
-                <p className="text-2xl font-bold text-slate-800 mt-2">
-                  {format(totalRevenue)}
-                </p>
-              </div>
-              <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-red-500 hover:shadow-md transition-all">
-                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Expenses</p>
-                <p className="text-2xl font-bold text-slate-800 mt-2">
-                  {format(totalExpenses)}
-                </p>
-              </div>
-              <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-[#0369A1] hover:shadow-md transition-all">
-                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Net Profit</p>
-                <p
-                  className={`text-2xl font-bold mt-2 ${netProfit >= 0 ? "text-[#0369A1]" : "text-red-600"}`}
-                >
-                  {format(netProfit)}
-                </p>
-              </div>
-              <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-purple-500 hover:shadow-md transition-all">
-                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Completed Trips</p>
-                <p className="text-2xl font-bold text-slate-800 mt-2">
-                  {completedTrips.length}
-                </p>
-              </div>
-            </div>
-            {/* Simple bar chart using divs */}
-            <div className="mt-6 space-y-2">
-              <h4 className="text-sm font-medium">Monthly Revenue Trend</h4>
-              <div className="flex items-end gap-2 h-32">
-                {recentReports.map((report, i) => {
-                  const height = Math.max(
-                    20,
-                    (Number(report.total_revenue || 0) /
-                      Math.max(
-                        ...recentReports.map((r) =>
-                          Number(r.total_revenue || 0),
-                        ),
-                        1,
-                      )) *
-                    100,
-                  );
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 bg-primary rounded-t-sm flex flex-col items-center justify-end h-full"
-                      style={{ height: `${height}%` }}
-                    >
-                      <span className="text-[8px] text-muted-foreground mb-1">
-                        {new Date(report.month).toLocaleDateString("en-US", {
-                          month: "short",
-                        })}
-                      </span>
-                      <span className="text-[8px] font-bold text-primary-foreground">
-                        {format(Number(report.total_revenue || 0))}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="size-5" />
-              Key Metrics
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <span className="text-sm text-muted-foreground">
-                Fleet Utilization
-              </span>
-              <Badge
-                variant={
-                  utilizationRate > 70
-                    ? "default"
-                    : utilizationRate > 40
-                      ? "secondary"
-                      : "destructive"
-                }
-              >
-                {utilizationRate.toFixed(1)}%
-              </Badge>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <span className="text-sm text-muted-foreground">
-                Cost Per Trip
-              </span>
-              <span className="text-sm font-bold">{format(costPerTrip)}</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <span className="text-sm text-muted-foreground">
-                Profit Margin
-              </span>
-              <span
-                className={`text-sm font-bold ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}
-              >
-                {totalRevenue > 0
-                  ? ((netProfit / totalRevenue) * 100).toFixed(1)
-                  : 0}
-                %
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <span className="text-sm text-muted-foreground">
-                Avg Revenue/Trip
-              </span>
-              <span className="text-sm font-bold">
-                {completedTrips.length > 0
-                  ? format(totalRevenue / completedTrips.length)
-                  : format(0)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <span className="text-sm text-muted-foreground">
-                Active Drivers
-              </span>
-              <span className="text-sm font-bold">
-                {drivers.filter((d) => d.status === "active").length}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <span className="text-sm text-muted-foreground">
-                Vehicles Available
-              </span>
-              <span className="text-sm font-bold">{availableVehicles}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Fleet Status & Recent Activities */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Vehicle Fleet */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Truck className="size-5" />
-              Fleet Status
-            </CardTitle>
-            <Badge variant="secondary">{vehicles.length} vehicles</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-3 text-center hover:border-green-400 transition-all cursor-pointer group">
-                <p className="text-2xl font-bold text-slate-800 group-hover:text-green-600">
-                  {availableVehicles}
-                </p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Available</p>
-              </div>
-              <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-3 text-center hover:border-[#0369A1] transition-all cursor-pointer group">
-                <p className="text-2xl font-bold text-slate-800 group-hover:text-[#0369A1]">
-                  {inUseVehicles}
-                </p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">In Transit</p>
-              </div>
-              <div className="bg-white border border-gray-200 shadow-sm rounded-lg p-3 text-center hover:border-amber-400 transition-all cursor-pointer group">
-                <p className="text-2xl font-bold text-slate-800 group-hover:text-amber-600">
-                  {maintenanceVehicles}
-                </p>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold mt-1">Maintenance</p>
-              </div>
-            </div>
-            <DataTable
-              columns={[
-                { key: "plate_number", label: "Plate" },
-                { key: "make", label: "Make" },
-                { key: "model", label: "Model" },
-                {
-                  key: "status",
-                  label: "Status",
-                  render: (row) => (
-                    <Badge
-                      variant={
-                        row.status === "available"
-                          ? "secondary"
-                          : row.status === "in_use"
-                            ? "default"
-                            : "destructive"
-                      }
-                    >
-                      {row.status}
-                    </Badge>
-                  ),
-                },
-              ]}
-              data={vehicles}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Recent Activities & Active Trips */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="size-5" />
-                Recent Activities
-              </CardTitle>
-              <Badge variant="secondary">{activities.length} new</Badge>
-            </CardHeader>
-            <CardContent>
-              <ActivityFeed activities={activities} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Navigation className="size-5" />
-                Active Trips
-              </CardTitle>
-              <Badge variant="secondary">{activeTrips.length} active</Badge>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                columns={[
-                  { key: "tripNumber", label: "Trip #" },
-                  { key: "origin", label: "Origin" },
-                  { key: "destination", label: "Destination" },
-                  {
-                    key: "status",
-                    label: "Status",
-                    render: (row) => (
-                      <Badge
-                        variant={
-                          row.status === "in_transit"
-                            ? "default"
-                            : row.status === "loading"
-                              ? "secondary"
-                              : "destructive"
-                        }
-                      >
-                        {row.status?.replace("_", " ")}
-                      </Badge>
-                    ),
-                  },
-                  {
-                    key: "actions",
-                    label: "",
-                    render: (row) => (
-                      <Link href={`/trips/${row.id}`} className="text-[#0369A1] hover:text-[#0284c7] font-semibold text-sm flex items-center gap-1 group">
-                        View <ChevronRight className="size-4 group-hover:translate-x-1 transition-transform" />
-                      </Link>
-                    ),
-                  },
-                ]}
-                data={activeTrips.slice(0, 5)}
-              />
-            </CardContent>
-          </Card>
+    <div className="space-y-6">
+      {/* Command header */}
+      <div className="cv-panel bg-gradient-to-br from-primary/95 via-primary to-[hsl(235_84%_65%)] text-primary-foreground border-primary">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Executive Command</p>
+            <h1 className="text-2xl font-black tracking-tight">Everything at a glance</h1>
+            <p className="text-sm opacity-90 mt-1">
+              {stats.activeTrips} active shipments · {stats.utilization.toFixed(0)}% fleet utilization · {alerts.length} attention item{alerts.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <RefreshControl onRefresh={load} storageKey="ceo-dashboard" autoSeconds={60} compact />
+          </div>
         </div>
       </div>
 
-      {/* Warehouse Operations Overview */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Container className="size-5" />
-            Warehouse Operations
-          </CardTitle>
-          <Badge variant="secondary">Warehouse</Badge>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-pink-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-pink-600">
-                {stats.warehouseUtilization || 0}
-              </p>
-              <p className="text-[10px] text-muted-foreground">Items Stored</p>
-            </div>
-            <div className="bg-cyan-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-cyan-600">--</p>
-              <p className="text-[10px] text-muted-foreground">Capacity</p>
-            </div>
-            <div className="bg-amber-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-amber-600">--</p>
-              <p className="text-[10px] text-muted-foreground">
-                Pending Clearance
-              </p>
-            </div>
-            <div className="bg-green-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-green-600">--</p>
-              <p className="text-[10px] text-muted-foreground">
-                Ready for Dispatch
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-sm font-medium">Recent Warehouse Activity</h4>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/inventory">View Full Dashboard</Link>
-            </Button>
-          </div>
-          <DataTable
-            columns={[
-              { key: "shipment_ref", label: "Shipment Ref" },
-              { key: "origin", label: "Origin" },
-              { key: "location_bin", label: "Location" },
-              {
-                key: "status",
-                label: "Status",
-                render: (row) => (
-                  <Badge
-                    variant={
-                      row.status === "STORED"
-                        ? "secondary"
-                        : row.status === "CLEARED"
-                          ? "default"
-                          : "destructive"
-                    }
-                  >
-                    {row.status}
-                  </Badge>
-                ),
-              },
-            ]}
-            data={[]}
-          />
-        </CardContent>
-      </Card>
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {alerts.map((a) => {
+            const Icon = a.icon;
+            return (
+              <Link key={a.id} href={a.href} className={cn("flex items-center gap-3 px-4 py-3 rounded-2xl border", a.tone, "hover:brightness-95 transition")}>
+                <div className="w-8 h-8 rounded-lg bg-white/60 flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate">{a.title}</p>
+                  <p className="text-xs opacity-90 truncate">{a.description}</p>
+                </div>
+                <ArrowRight className="w-4 h-4 shrink-0 opacity-70" />
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Financial Summary */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="size-5" />
-            Financial Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="expenses">Expenses</TabsTrigger>
-              <TabsTrigger value="invoices">Invoices</TabsTrigger>
-              <TabsTrigger value="reports">Monthly Reports</TabsTrigger>
-            </TabsList>
-            <TabsContent value="overview">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-green-500">
-                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Revenue</p>
-                  <p className="text-2xl font-bold text-slate-800 mt-2">
-                    {format(totalRevenue)}
-                  </p>
-                </div>
-                <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-red-500">
-                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                    Total Expenses
-                  </p>
-                  <p className="text-2xl font-bold text-slate-800 mt-2">
-                    {format(totalExpenses)}
-                  </p>
-                </div>
-                <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-4 border-l-4 border-l-[#0369A1]">
-                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Net Profit</p>
-                  <p
-                    className={`text-2xl font-bold mt-2 ${netProfit >= 0 ? "text-[#0369A1]" : "text-red-600"}`}
-                  >
-                    {format(netProfit)}
-                  </p>
-                </div>
-              </div>
-              {currentReport && (
-                <div className="mt-4 p-4 bg-muted rounded-lg">
-                  <h4 className="text-sm font-bold mb-2">
-                    Current Month Report ({currentMonth})
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Revenue
-                      </p>
-                      <p className="text-sm font-semibold text-green-600">
-                        {format(Number(currentReport.total_revenue || 0))}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Expenses
-                      </p>
-                      <p className="text-sm font-semibold text-red-600">
-                        {format(Number(currentReport.total_expenses || 0))}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Allowances
-                      </p>
-                      <p className="text-sm font-semibold text-blue-600">
-                        {format(Number(currentReport.total_allowances || 0))}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground">
-                        Net Profit
-                      </p>
-                      <p
-                        className={`text-sm font-semibold ${Number(currentReport.net_profit || 0) >= 0 ? "text-green-600" : "text-red-600"}`}
-                      >
-                        {format(Number(currentReport.net_profit || 0))}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="mt-6 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold">Driver locations</h4>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href="/map">Open Fleet Map</Link>
-                  </Button>
-                </div>
-                <DriverLocationMap />
-              </div>
-            </TabsContent>
-            <TabsContent value="expenses">
-              <DataTable
-                columns={[
-                  { key: "category", label: "Category" },
-                  {
-                    key: "amount",
-                    label: "Amount",
-                    render: (row) => (
-                      <span className="text-rose-600 font-medium">
-                        -{format(row.amount)}
-                      </span>
-                    ),
-                  },
-                  { key: "description", label: "Description" },
-                  {
-                    key: "status",
-                    label: "Status",
-                    render: (row) => (
-                      <Badge
-                        variant={
-                          row.status === "approved" ? "default" : "secondary"
-                        }
-                      >
-                        {row.status}
-                      </Badge>
-                    ),
-                  },
-                ]}
-                data={expenses.slice(0, 10)}
-              />
-            </TabsContent>
-            <TabsContent value="invoices">
-              <DataTable
-                columns={[
-                  { key: "invoice_number", label: "Invoice #" },
-                  { key: "client", label: "Client" },
-                  { key: "amount", label: "Amount" },
-                  {
-                    key: "status",
-                    label: "Status",
-                    render: (row) => (
-                      <Badge
-                        variant={
-                          row.status === "paid" ? "default" : "destructive"
-                        }
-                      >
-                        {row.status}
-                      </Badge>
-                    ),
-                  },
-                ]}
-                data={invoices.slice(0, 10)}
-              />
-            </TabsContent>
-            <TabsContent value="reports">
-              <DataTable
-                columns={[
-                  {
-                    key: "month",
-                    label: "Month",
-                    render: (row) =>
-                      new Date(row.month).toLocaleDateString("en-US", {
-                        month: "long",
-                        year: "numeric",
-                      }),
-                  },
-                  {
-                    key: "total_revenue",
-                    label: "Revenue",
-                    render: (row) => (
-                      <span className="text-green-600">
-                        {format(Number(row.total_revenue || 0))}
-                      </span>
-                    ),
-                  },
-                  {
-                    key: "total_expenses",
-                    label: "Expenses",
-                    render: (row) => (
-                      <span className="text-red-600">
-                        {format(Number(row.total_expenses || 0))}
-                      </span>
-                    ),
-                  },
-                  {
-                    key: "net_profit",
-                    label: "Net Profit",
-                    render: (row) => (
-                      <span
-                        className={`font-semibold ${Number(row.net_profit || 0) >= 0 ? "text-green-600" : "text-red-600"}`}
-                      >
-                        {format(Number(row.net_profit || 0))}
-                      </span>
-                    ),
-                  },
-                ]}
-                data={recentReports}
-              />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* AI Strategy & Insights */}
-      <div className="mt-8">
-        <AIAnalysisDashboard />
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <StatCard label={`Cash (${REPORTING_CURRENCY})`} value={format(stats.cash)} icon={Wallet} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" href="/finance/banking" />
+        <StatCard label={`Revenue MTD`} value={format(stats.revenueMtd)} icon={TrendingUp} accent="bg-primary/10 text-primary" href="/finance/reports/profit-loss" />
+        <StatCard label={`Expenses MTD`} value={format(stats.expensesMtd)} icon={Receipt} accent="bg-red-100 text-red-700" href="/finance/reports/expense-analysis" />
+        <StatCard label={`Net MTD`} value={format(stats.netMtd)} icon={DollarSign} accent={stats.netMtd >= 0 ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" : "bg-red-100 text-red-700"} href="/finance/reports/profit-loss" />
+        <StatCard label="AR outstanding" value={format(stats.ar)} icon={CreditCard} accent="bg-amber-100 text-amber-700" href="/finance/invoicing/customer-invoices" />
+        <StatCard label="AP outstanding" value={format(stats.ap)} icon={Building2} accent="bg-orange-100 text-orange-700" href="/finance/invoicing/vendor-bills" />
       </div>
-    </DashboardLayout>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Active trips" value={stats.activeTrips} icon={Navigation} accent="bg-sky-100 text-sky-700" href="/dispatch" sub={`${stats.overdueTrips} overdue`} />
+        <StatCard label="Fleet utilization" value={`${stats.utilization.toFixed(0)}%`} icon={Truck} accent="bg-primary/10 text-primary" href="/fleet" />
+        <StatCard label="Pending approvals" value={stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} icon={ClipboardList} accent="bg-amber-100 text-amber-700" href="/approvals" />
+        <StatCard label="Maintenance open" value={maintenance.length} icon={Wrench} accent="bg-red-100 text-red-700" href="/maintenance" />
+      </div>
+
+      {/* Recent trips + top debtors */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <SectionCard title="Recent shipments" subtitle="Latest 6 trips across the fleet" href="/trips" padded={false} className="lg:col-span-2">
+          {recentTrips.length === 0 ? (
+            <EmptyState icon={Package} title="No trips yet" />
+          ) : (
+            <ul className="divide-y divide-border">
+              {recentTrips.map((t) => {
+                const status = String(t.status ?? "pending").toLowerCase();
+                const chip =
+                  status === "delivered" || status === "completed" ? "cv-chip-success" :
+                  status === "in_transit" ? "cv-chip-info" :
+                  status === "loading" ? "cv-chip-warning" :
+                  status === "cancelled" ? "cv-chip-danger" :
+                  "cv-chip-neutral";
+                return (
+                  <li key={t.id} className="px-5 py-3 flex items-center gap-4 hover:bg-muted/40 transition-colors">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <Navigation className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-foreground truncate">{t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}</p>
+                      <p className="text-xs text-muted-foreground truncate">{t.origin} → {t.destination}</p>
+                    </div>
+                    <span className={cn("cv-chip", chip)}>{status.replace("_", " ")}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Top overdue" subtitle="Customers owing money past due" href="/finance/reports/aging-report" padded={false}>
+          {topDebtors.length === 0 ? (
+            <EmptyState icon={CheckCircle2} title="All caught up" description="No overdue receivables." />
+          ) : (
+            <ul className="divide-y divide-border">
+              {topDebtors.map((d: any) => (
+                <li key={d.id} className="px-5 py-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0">
+                    {(d.customer_name ?? "?").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-foreground truncate">{d.customer_name ?? d.client_name}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono truncate">{d.invoice_number}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-black text-red-600">{format(Number(d.total_amount ?? d.amount ?? 0))}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
+      </div>
+
+      {/* Quick launcher */}
+      <SectionCard title="Quick actions" subtitle="Jump to the modules you use most">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+          {[
+            { href: "/dispatch", label: "Dispatch", icon: Navigation, tone: "bg-primary/10 text-primary" },
+            { href: "/trips", label: "Trips", icon: ClipboardList, tone: "bg-sky-100 text-sky-700" },
+            { href: "/fleet", label: "Fleet", icon: Truck, tone: "bg-emerald-100 text-emerald-700" },
+            { href: "/maintenance", label: "Maintenance", icon: Wrench, tone: "bg-amber-100 text-amber-700" },
+            { href: "/approvals", label: "Approvals", icon: ClipboardList, tone: "bg-fuchsia-100 text-fuchsia-700" },
+            { href: "/finance", label: "Finance", icon: BarChart2, tone: "bg-indigo-100 text-indigo-700" },
+          ].map((l) => {
+            const Icon = l.icon;
+            return (
+              <Link key={l.href} href={l.href} className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/30 transition-colors">
+                <div className={cn("p-2 rounded-lg", l.tone)}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold text-foreground">{l.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </SectionCard>
+    </div>
   );
 }
-
-export { CeoDashboard as CeoView };

@@ -186,6 +186,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
     category: "fleet",
   },
+  {
+    path: "/approvals",
+    label: "Approvals Inbox",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "MECHANIC"],
+    category: "dashboard",
+  },
 
   // --- ERP Accounting & Finance ---
   {
@@ -222,6 +228,30 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
     category: "finance",
     showInNavigation: false,
+  },
+  {
+    path: "/finance/reports/trial-balance",
+    label: "Trial Balance",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "reports",
+  },
+  {
+    path: "/finance/reports/aging-report",
+    label: "Aging Report",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "reports",
+  },
+  {
+    path: "/finance/accounting/fx-rates",
+    label: "FX Rates",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+  },
+  {
+    path: "/settings",
+    label: "System Settings",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "system",
   },
   // Receivables
   {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRole } from "@/hooks/use-role";
+import { useSupabase } from "@/components/supabase-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -22,27 +22,25 @@ interface Notification {
 }
 
 export function NotificationBell() {
-  const { role } = useRole();
+  const { user } = useSupabase();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch notifications - must be before conditional return
   useEffect(() => {
-    // Only fetch if CEO or Admin
-    if (role !== "CEO" && role !== "ADMIN") return;
-    
+    if (!user?.id) return;
+
     fetchNotifications();
 
-    // Subscribe to real-time notifications
     const subscription = supabase
-      .channel("notifications")
+      .channel(`notifications:${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "notifications",
+          filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
           const newNotification = payload.new as any;
@@ -56,15 +54,15 @@ export function NotificationBell() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [role]);
+  }, [user?.id]);
 
-  // Only show for CEO and Admin
-  if (role !== "CEO" && role !== "ADMIN") return null;
+  if (!user?.id) return null;
 
   const fetchNotifications = async () => {
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
 

@@ -17,9 +17,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, BookOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, BookOpen, CheckCircle2, XCircle, Flame, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChartOfAccountsService, COAAccount, EXPENSE_CATEGORY_COA_MAP } from '@/services/chart-of-accounts-service';
+import { applyTransition } from '@/lib/workflow/engine';
+import { hoursSince, isOverdue, resolveApprovalLevel, slaHours } from '@/lib/workflow/approvals';
 
 interface Expense {
     id: string;
@@ -204,29 +206,33 @@ export default function ExpensesPage() {
         }
     };
 
-    const handleStatusChange = async (expenseId: string, newStatus: 'approved' | 'rejected') => {
-        try {
-            const { error } = await supabase
-                .from('expenses')
-                .update({
-                    status: newStatus,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', expenseId);
-
-            if (error) {
-                console.error('Error changing expense status:', error);
-                toast({ title: 'Error', description: `Failed to ${newStatus} expense`, variant: 'destructive' });
-            } else {
-                setExpenses(prev =>
-                    prev.map(e => e.id === expenseId ? { ...e, status: newStatus } : e)
-                );
-                toast({ title: 'Success', description: `Expense ${newStatus} successfully` });
-            }
-        } catch (error) {
-            console.error('Error changing expense status:', error);
-            toast({ title: 'Error', description: 'Failed to update expense status', variant: 'destructive' });
+    const handleStatusChange = async (expense: any, newStatus: 'approved' | 'rejected') => {
+        let reason: string | undefined;
+        if (newStatus === 'rejected') {
+            const answer = window.prompt('Reason for rejection?');
+            if (!answer) return;
+            reason = answer;
         }
+        const result = await applyTransition({
+            kind: 'expense',
+            entityId: expense.id,
+            toState: newStatus,
+            actorId: user?.id ?? 'system',
+            actorRole: (role as any) ?? undefined,
+            payload: { amount: Number(expense.amount) || 0, reason },
+        });
+        if (!result.ok) {
+            toast({ title: 'Blocked', description: result.message, variant: 'destructive' });
+            return;
+        }
+        setExpenses(prev => prev.map(e => e.id === expense.id ? { ...e, status: newStatus } : e));
+        toast({
+            title: newStatus === 'approved' ? 'Approved' : 'Rejected',
+            description:
+                result.sideEffects.length > 0
+                    ? result.sideEffects.map(s => s.replace(/_/g, ' ')).join(', ')
+                    : `Expense ${newStatus}.`,
+        });
     };
 
     const totalExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
@@ -469,18 +475,66 @@ export default function ExpensesPage() {
                                             </TableCell>
                                             <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
                                             <TableCell>
-                                                <Badge
-                                                    className={cn(
-                                                        expense.status === 'approved' && 'bg-green-500',
-                                                        expense.status === 'rejected' && 'bg-red-500',
-                                                        expense.status === 'pending' && 'bg-yellow-500'
-                                                    )}
-                                                >
-                                                    {expense.status}
-                                                </Badge>
+                                                <div className="flex flex-col gap-1">
+                                                    <Badge
+                                                        className={cn(
+                                                            expense.status === 'approved' && 'bg-green-500',
+                                                            expense.status === 'rejected' && 'bg-red-500',
+                                                            expense.status === 'paid' && 'bg-emerald-600',
+                                                            expense.status === 'pending' && 'bg-yellow-500'
+                                                        )}
+                                                    >
+                                                        {expense.status}
+                                                    </Badge>
+                                                    {expense.status === 'pending' && (() => {
+                                                        const tier = resolveApprovalLevel('expense', Number(expense.amount) || 0);
+                                                        const overdue = isOverdue('expense', expense.created_at ?? expense.createdAt ?? expense.date);
+                                                        const age = hoursSince(expense.created_at ?? expense.createdAt ?? expense.date);
+                                                        return (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {tier && (
+                                                                    <Badge variant="outline" className="text-[9px] uppercase tracking-wider">
+                                                                        {tier.label}
+                                                                    </Badge>
+                                                                )}
+                                                                {overdue && (
+                                                                    <Badge className="text-[9px] uppercase tracking-wider bg-red-50 text-red-600 hover:bg-red-50 flex items-center gap-1">
+                                                                        <Flame className="size-2.5" /> {(age - slaHours.expense).toFixed(0)}h late
+                                                                    </Badge>
+                                                                )}
+                                                                {!overdue && age > slaHours.expense * 0.75 && (
+                                                                    <Badge className="text-[9px] uppercase tracking-wider bg-amber-50 text-amber-600 hover:bg-amber-50 flex items-center gap-1">
+                                                                        <AlertTriangle className="size-2.5" /> Near SLA
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex gap-2">
+                                                    {expense.status === 'pending' && (
+                                                        <>
+                                                            <Button
+                                                                size="sm"
+                                                                className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                                onClick={() => handleStatusChange(expense, 'approved')}
+                                                                title="Approve"
+                                                            >
+                                                                <CheckCircle2 className="size-4" />
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-8 rounded-lg border-red-200 text-red-600 hover:bg-red-50"
+                                                                onClick={() => handleStatusChange(expense, 'rejected')}
+                                                                title="Reject"
+                                                            >
+                                                                <XCircle className="size-4" />
+                                                            </Button>
+                                                        </>
+                                                    )}
                                                     <Dialog>
                                                         <DialogTrigger asChild>
                                                             <Button

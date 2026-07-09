@@ -1,828 +1,616 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Sidebar } from "@/components/navigation/sidebar";
-import { FinanceSidebar } from "@/components/finance/finance-sidebar";
-import { useRole } from "@/hooks/use-role";
-import { supabase } from "@/lib/supabase";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useSupabase } from "@/components/supabase-provider";
+import { AuditTrailService } from "@/services/audit-trail-service";
+import { ChartOfAccountsService, type COAAccount } from "@/services/chart-of-accounts-service";
+import { formatCurrency } from "@/components/ui/currency-badge";
 import {
-  Plus,
-  Edit,
-  Trash2,
-  FileText,
-  Calendar,
   ArrowLeft,
-  Search,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  Filter,
   BookOpen,
   ChevronRight,
-  ChevronLeft,
-  Clock,
-  History,
-  Layout,
+  CheckCircle2,
+  Copy,
+  Filter,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
 } from "lucide-react";
-import { formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
-import { ChartOfAccountsService, COAAccount } from "@/services/chart-of-accounts-service";
 import { cn } from "@/lib/utils";
 
-interface JournalEntryLine {
+const CURRENCIES = ["TZS", "USD", "EUR", "KES"] as const;
+const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
+
+interface Line {
   id?: string;
   account_code: string;
   account_name: string;
   debit_amount: number;
   credit_amount: number;
+  memo?: string;
 }
 
-interface JournalEntry {
+interface Entry {
   id: string;
   entry_date: string;
-  description: string;
-  reference_number: string;
+  reference: string | null;
+  description: string | null;
+  currency: string | null;
+  status: "posted" | "draft" | string;
   created_at: string;
-  lines?: JournalEntryLine[];
+  journal_entry_lines?: any[];
+}
+
+const emptyLine = (): Line => ({ account_code: "", account_name: "", debit_amount: 0, credit_amount: 0, memo: "" });
+
+function AccountPicker({
+  value,
+  onChange,
+  accounts,
+  placeholder = "Account…",
+}: {
+  value: { code: string; name: string };
+  onChange: (a: { code: string; name: string }) => void;
+  accounts: COAAccount[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    return accounts
+      .filter((a) => a.is_active !== false)
+      .filter((a) => !t || `${a.code} ${a.name}`.toLowerCase().includes(t))
+      .slice(0, 40);
+  }, [accounts, q]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "w-full text-left px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm hover:border-indigo-300",
+          !value.code && "text-slate-400",
+        )}
+      >
+        {value.code ? (
+          <span className="flex items-center gap-2">
+            <span className="font-mono text-xs font-black text-slate-500">{value.code}</span>
+            <span className="text-slate-800">{value.name}</span>
+          </span>
+        ) : (
+          placeholder
+        )}
+      </button>
+      {open && (
+        <div className="absolute z-30 left-0 right-0 top-full mt-1 rounded-xl border border-slate-200 bg-white shadow-xl max-h-72 overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-slate-100">
+            <Input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search code or name…"
+              className="h-8"
+            />
+          </div>
+          <div className="overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="p-3 text-xs text-slate-400 italic text-center">No matching accounts.</div>
+            ) : (
+              filtered.map((a) => (
+                <button
+                  key={a.code}
+                  type="button"
+                  onClick={() => {
+                    onChange({ code: a.code, name: a.name });
+                    setOpen(false);
+                    setQ("");
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-indigo-50 flex items-baseline justify-between gap-3 border-b border-slate-50 last:border-0"
+                >
+                  <span className="flex items-baseline gap-2 min-w-0">
+                    <span className="font-mono text-xs font-black text-slate-500 shrink-0">{a.code}</span>
+                    <span className="text-sm text-slate-800 truncate">{a.name}</span>
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">
+                    {a.category}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function JournalEntriesPage() {
-  const { role } = useRole();
+  const { toast } = useToast();
+  const { user } = useSupabase();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [entryToDelete, setEntryToDelete] = useState<JournalEntry | null>(null);
-  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [accounts, setAccounts] = useState<COAAccount[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [detail, setDetail] = useState<Entry | null>(null);
+  const [posting, setPosting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "posted" | "draft">("all");
 
-  // Sidebar states
-  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
-  const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false);
+  const [form, setForm] = useState({
+    entry_date: new Date().toISOString().slice(0, 10),
+    reference: "",
+    description: "",
+    currency: "TZS",
+  });
+  const [lines, setLines] = useState<Line[]>([emptyLine(), emptyLine()]);
 
-  // Filter states
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
-  const [filterAccountCode, setFilterAccountCode] = useState("");
-  const [filterStatus, setFilterStatus] = useState("ALL");
-
-  // New entry form state
-  const [entryDate, setEntryDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [entryDescription, setEntryDescription] = useState<string>("");
-  const [referenceNumber, setReferenceNumber] = useState<string>("");
-  const [entryLines, setEntryLines] = useState<JournalEntryLine[]>([
-    { account_code: "", account_name: "", debit_amount: 0, credit_amount: 0 }
-  ]);
-
-  // COA dropdown search states
-  const [coaSearchTerm, setCoaSearchTerm] = useState("");
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const load = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [accountsRes, entriesRes] = await Promise.all([
-        ChartOfAccountsService.getAccounts(),
+      const [e, a] = await Promise.all([
         supabase
           .from("journal_entries")
           .select("*, journal_entry_lines(*)")
           .order("entry_date", { ascending: false })
-          .order("created_at", { ascending: false })
+          .limit(200),
+        ChartOfAccountsService.getAccounts(),
       ]);
-
-      setCoaAccounts(accountsRes);
-      setEntries((entriesRes.data || []) as JournalEntry[]);
-    } catch (err) {
-      console.error("Error loading data:", err);
-      toast({ title: "Error", description: "Failed to load data", variant: "destructive" });
+      setEntries((e.data ?? []) as Entry[]);
+      setAccounts(a);
+    } catch (err: any) {
+      toast({ title: "Load error", description: err?.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const addLine = () => {
-    setEntryLines([
-      ...entryLines,
-      { account_code: "", account_name: "", debit_amount: 0, credit_amount: 0 }
-    ]);
-  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const removeLine = (index: number) => {
-    if (entryLines.length > 1) {
-      setEntryLines(entryLines.filter((_, i) => i !== index));
-    }
-  };
+  const totals = useMemo(() => {
+    const d = lines.reduce((s, l) => s + (Number(l.debit_amount) || 0), 0);
+    const c = lines.reduce((s, l) => s + (Number(l.credit_amount) || 0), 0);
+    return { debit: d, credit: c, diff: d - c, balanced: d > 0 && d === c };
+  }, [lines]);
 
-  const updateLine = (index: number, updates: Partial<JournalEntryLine>) => {
-    const newLines = [...entryLines];
-    if (updates.account_code) {
-      const account = coaAccounts.find(a => a.code === updates.account_code);
-      if (account) {
-        updates.account_name = account.name;
-      }
-    }
-    newLines[index] = { ...newLines[index], ...updates };
-    setEntryLines(newLines);
-  };
-
-  const validateEntry = () => {
-    if (!entryDescription.trim()) {
-      toast({ title: "Error", description: "Description is required", variant: "destructive" });
-      return false;
-    }
-
-    if (entryLines.length < 2) {
-      toast({ title: "Error", description: "At least two lines are required (debit and credit)", variant: "destructive" });
-      return false;
-    }
-
-    const totalDebits = entryLines.reduce((sum, line) => sum + (line.debit_amount || 0), 0);
-    const totalCredits = entryLines.reduce((sum, line) => sum + (line.credit_amount || 0), 0);
-
-    if (Math.abs(totalDebits - totalCredits) > 0.01) {
-      toast({
-        title: "Error",
-        description: `Debits (${formatCurrency(totalDebits, 'TZS')}) must equal credits (${formatCurrency(totalCredits, 'TZS')})`,
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    for (const line of entryLines) {
-      if (!line.account_code) {
-        toast({ title: "Error", description: "All lines must have an account selected", variant: "destructive" });
-        return false;
-      }
-      if ((line.debit_amount || 0) === 0 && (line.credit_amount || 0) === 0) {
-        toast({ title: "Error", description: "All lines must have a debit or credit amount", variant: "destructive" });
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  const saveEntry = async () => {
-    if (!validateEntry()) return;
-    setSaving(true);
-
-    try {
-      const entryData = {
-        entry_date: entryDate,
-        description: entryDescription,
-        reference_number: referenceNumber || `JE-${Date.now()}`
-      };
-
-      if (editingEntry) {
-        const { error: entryError } = await supabase
-          .from("journal_entries")
-          .update(entryData)
-          .eq("id", editingEntry.id);
-
-        if (entryError) throw entryError;
-
-        const { error: deleteError } = await supabase
-          .from("journal_entry_lines")
-          .delete()
-          .eq("journal_entry_id", editingEntry.id);
-
-        if (deleteError) throw deleteError;
-
-        const { error: insertError } = await supabase
-          .from("journal_entry_lines")
-          .insert(entryLines.map(line => ({
-            ...line,
-            journal_entry_id: editingEntry.id
-          })));
-
-        if (insertError) throw insertError;
-
-        toast({ title: "Success", description: "Journal entry updated successfully" });
-      } else {
-        const { data: newEntry, error: entryError } = await supabase
-          .from("journal_entries")
-          .insert(entryData)
-          .select()
-          .single();
-
-        if (entryError) throw entryError;
-
-        const { error: insertError } = await supabase
-          .from("journal_entry_lines")
-          .insert(entryLines.map(line => ({
-            ...line,
-            journal_entry_id: newEntry.id
-          })));
-
-        if (insertError) throw insertError;
-
-        toast({ title: "Success", description: "Journal entry created successfully" });
-      }
-
-      resetForm();
-      setIsAddDialogOpen(false);
-      await loadData();
-    } catch (err: any) {
-      console.error("Error saving entry:", err);
-      toast({
-        title: "Error Saving Entry",
-        description: err.message || "Failed to save journal entry",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const deleteEntry = async (entryId: string) => {
-    setDeleting(entryId);
-    try {
-      const { error } = await supabase.from("journal_entries").delete().eq("id", entryId);
-      if (error) throw error;
-      toast({ title: "Success", description: "Journal entry deleted successfully" });
-      await loadData();
-    } catch (err: any) {
-      console.error("Error deleting entry:", err);
-      toast({
-        title: "Error Deleting Entry",
-        description: err.message || "Failed to delete journal entry",
-        variant: "destructive"
-      });
-    } finally {
-      setDeleting(null);
-      setIsDeleteDialogOpen(false);
-      setEntryToDelete(null);
-    }
-  };
-
-  const confirmDelete = (entry: JournalEntry) => {
-    setEntryToDelete(entry);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const resetForm = () => {
-    setEditingEntry(null);
-    setEntryDate(new Date().toISOString().split('T')[0]);
-    setEntryDescription("");
-    setReferenceNumber("");
-    setEntryLines([
-      { account_code: "", account_name: "", debit_amount: 0, credit_amount: 0 }
-    ]);
-    setCoaSearchTerm("");
-  };
-
-  const startEdit = (entry: JournalEntry) => {
-    setEditingEntry(entry);
-    setEntryDate(entry.entry_date);
-    setEntryDescription(entry.description);
-    setReferenceNumber(entry.reference_number);
-    setEntryLines((entry.lines || []).map(line => ({ ...line })));
-    setIsAddDialogOpen(true);
-  };
-
-  const totalDebits = entryLines.reduce((sum, line) => sum + (line.debit_amount || 0), 0);
-  const totalCredits = entryLines.reduce((sum, line) => sum + (line.credit_amount || 0), 0);
-  const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01;
-
-  // Filtered COA accounts based on search term
-  const filteredCoaAccounts = useMemo(() => {
-    if (!coaSearchTerm) return coaAccounts;
-    const searchLower = coaSearchTerm.toLowerCase();
-    return coaAccounts.filter(acc =>
-      acc.code.toLowerCase().includes(searchLower) ||
-      acc.name.toLowerCase().includes(searchLower)
-    );
-  }, [coaAccounts, coaSearchTerm]);
-
-  // Filtered journal entries based on search and filters
   const filteredEntries = useMemo(() => {
-    return entries.filter(entry => {
-      let matches = true;
-
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        matches = matches && (
-          entry.description.toLowerCase().includes(searchLower) ||
-          entry.reference_number.toLowerCase().includes(searchLower)
-        );
+    const q = search.trim().toLowerCase();
+    return entries.filter((e) => {
+      if (statusFilter !== "all" && (e.status ?? "posted") !== statusFilter) return false;
+      if (q) {
+        const hay = [e.reference, e.description, e.entry_date].filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
       }
-
-      if (filterDateFrom) {
-        matches = matches && new Date(entry.entry_date) >= new Date(filterDateFrom);
-      }
-
-      if (filterDateTo) {
-        matches = matches && new Date(entry.entry_date) <= new Date(filterDateTo);
-      }
-
-      if (filterAccountCode) {
-        matches = matches && (entry.lines || []).some(line => line.account_code === filterAccountCode);
-      }
-
-      return matches;
+      return true;
     });
-  }, [entries, searchTerm, filterDateFrom, filterDateTo, filterAccountCode]);
+  }, [entries, search, statusFilter]);
+
+  const openNew = () => {
+    setForm({
+      entry_date: new Date().toISOString().slice(0, 10),
+      reference: `JE-${new Date().getFullYear()}-${String(entries.length + 1).padStart(4, "0")}`,
+      description: "",
+      currency: "TZS",
+    });
+    setLines([emptyLine(), emptyLine()]);
+    setCreating(true);
+  };
+
+  const reverse = (e: Entry) => {
+    setForm({
+      entry_date: new Date().toISOString().slice(0, 10),
+      reference: `${e.reference ?? "JE"}-REV`,
+      description: `Reversal of ${e.reference ?? e.id}`,
+      currency: e.currency ?? "TZS",
+    });
+    const src = (e.journal_entry_lines ?? []) as any[];
+    setLines(
+      src.map((l) => ({
+        account_code: l.account_code,
+        account_name: l.account_name,
+        debit_amount: Number(l.credit_amount) || 0,
+        credit_amount: Number(l.debit_amount) || 0,
+        memo: l.memo ?? undefined,
+      })),
+    );
+    setCreating(true);
+    setDetail(null);
+  };
+
+  const post = async (asDraft = false) => {
+    if (!form.description.trim()) {
+      toast({ title: "Description required", variant: "destructive" });
+      return;
+    }
+    const usable = lines.filter((l) => l.account_code && (l.debit_amount > 0 || l.credit_amount > 0));
+    if (usable.length < 2) {
+      toast({ title: "Need at least 2 lines", variant: "destructive" });
+      return;
+    }
+    if (!asDraft && !totals.balanced) {
+      toast({
+        title: "Not balanced",
+        description: `Debits ${fmt(totals.debit, form.currency)} · Credits ${fmt(totals.credit, form.currency)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setPosting(true);
+    try {
+      const { data: header, error: hErr } = await supabase
+        .from("journal_entries")
+        .insert({
+          entry_date: form.entry_date,
+          reference: form.reference,
+          description: form.description,
+          currency: form.currency,
+          status: asDraft ? "draft" : "posted",
+          total_amount: totals.debit,
+          created_by: user?.id ?? null,
+        })
+        .select()
+        .maybeSingle();
+      if (hErr) throw hErr;
+
+      const linePayload = usable.map((l) => ({
+        journal_entry_id: header!.id,
+        account_code: l.account_code,
+        account_name: l.account_name,
+        debit_amount: Number(l.debit_amount) || 0,
+        credit_amount: Number(l.credit_amount) || 0,
+        memo: l.memo ?? null,
+      }));
+      const { error: lErr } = await supabase.from("journal_entry_lines").insert(linePayload);
+      if (lErr) throw lErr;
+
+      await AuditTrailService.log({
+        user_id: user?.id,
+        module: "finance",
+        action: "create",
+        entity_type: "journal_entry",
+        entity_id: header!.id,
+        new_value: { ...header, lines: linePayload },
+        description: `${asDraft ? "Draft" : "Posted"} ${form.reference}: ${form.description}`,
+      });
+
+      toast({ title: asDraft ? "Draft saved" : "Journal posted", description: form.reference });
+      setCreating(false);
+      load();
+    } catch (err: any) {
+      toast({ title: "Post failed", description: err?.message, variant: "destructive" });
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const addLine = () => setLines((prev) => [...prev, emptyLine()]);
+  const removeLine = (idx: number) => setLines((prev) => prev.filter((_, i) => i !== idx));
+  const updateLine = (idx: number, patch: Partial<Line>) =>
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Left: Main Sidebar */}
-      <Sidebar role={role} />
-
-      <div className="flex flex-1">
-        {/* Left: Finance Sidebar (Collapsible) */}
-        <div className="relative">
-          {!isLeftSidebarCollapsed ? (
-            <div className="flex">
-              <FinanceSidebar />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-4 z-10 bg-background border border-l-0 border-border rounded-l-none rounded-r-lg"
-                onClick={() => setIsLeftSidebarCollapsed(true)}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="border border-border bg-background"
-              onClick={() => setIsLeftSidebarCollapsed(false)}
-            >
-              <Layout className="size-4" />
-            </Button>
-          )}
-
-          {/* Main Content */}
-          <main className="flex-1 p-6 overflow-y-auto w-full">
-            <div className="max-w-5xl mx-auto space-y-6">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold flex items-center gap-2">
-                    <FileText className="size-6" />
-                    Journal Entries
-                  </h1>
-                  <p className="text-muted-foreground">Record and manage your accounting journal entries</p>
-                </div>
-                <div className="flex gap-3 items-center">
-                  <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-                    if (!open) resetForm();
-                    setIsAddDialogOpen(open);
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button className="gap-2">
-                        <Plus className="size-4" />
-                        New Entry
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>{editingEntry ? "Edit Journal Entry" : "New Journal Entry"}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="entry-date">Date</Label>
-                            <Input
-                              id="entry-date"
-                              type="date"
-                              value={entryDate}
-                              onChange={(e) => setEntryDate(e.target.value)}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="reference">Reference #</Label>
-                            <Input
-                              id="reference"
-                              value={referenceNumber}
-                              onChange={(e) => setReferenceNumber(e.target.value)}
-                              placeholder="e.g., JE-001"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea
-                            id="description"
-                            value={entryDescription}
-                            onChange={(e) => setEntryDescription(e.target.value)}
-                            placeholder="Description of this journal entry"
-                            required
-                          />
-                        </div>
-
-                        {/* Lines */}
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-medium">Entry Lines</h3>
-                            <Button type="button" variant="outline" onClick={addLine}>
-                              <Plus className="size-4 mr-2" />
-                              Add Line
-                            </Button>
-                          </div>
-
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-1/2">Account</TableHead>
-                                <TableHead className="text-right">Debit</TableHead>
-                                <TableHead className="text-right">Credit</TableHead>
-                                <TableHead className="w-10"></TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {entryLines.map((line, index) => (
-                                <TableRow key={index}>
-                                  <TableCell className="w-1/2">
-                                    <div className="space-y-2">
-                                      <Input
-                                        placeholder="Search accounts..."
-                                        value={coaSearchTerm}
-                                        onChange={(e) => setCoaSearchTerm(e.target.value)}
-                                        className="mb-2"
-                                      />
-                                      <Select
-                                        value={line.account_code}
-                                        onValueChange={(val) => updateLine(index, { account_code: val })}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select account" />
-                                        </SelectTrigger>
-                                        <SelectContent className="max-h-80">
-                                          {filteredCoaAccounts.map(acc => (
-                                            <SelectItem key={acc.code} value={acc.code}>
-                                              {acc.code} - {acc.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      value={line.debit_amount || ""}
-                                      onChange={(e) => updateLine(index, { debit_amount: parseFloat(e.target.value) || 0 })}
-                                      placeholder="0.00"
-                                    />
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      value={line.credit_amount || ""}
-                                      onChange={(e) => updateLine(index, { credit_amount: parseFloat(e.target.value) || 0 })}
-                                      placeholder="0.00"
-                                    />
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {entryLines.length > 1 && (
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => removeLine(index)}
-                                      >
-                                        <Trash2 className="size-4" />
-                                      </Button>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-
-                          {/* Totals */}
-                          <div className="flex justify-end gap-8 pt-4 border-t">
-                            <div className="text-right">
-                              <div className="text-sm text-muted-foreground">Total Debits</div>
-                              <div className="text-xl font-bold">{formatCurrency(totalDebits, "TZS")}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm text-muted-foreground">Total Credits</div>
-                              <div className="text-xl font-bold">{formatCurrency(totalCredits, "TZS")}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm text-muted-foreground">Balance</div>
-                              <div className={cn("text-xl font-bold", isBalanced ? "text-green-600" : "text-red-600")}>
-                                {isBalanced ? "Balanced" : `Unbalanced: ${formatCurrency(Math.abs(totalDebits - totalCredits), "TZS")}`}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <DialogFooter className="pt-6">
-                        <Button variant="outline" onClick={() => {
-                          resetForm();
-                          setIsAddDialogOpen(false);
-                        }} disabled={saving}>
-                          Cancel
-                        </Button>
-                        <Button onClick={saveEntry} disabled={!isBalanced || saving}>
-                          {saving ? (
-                            <>
-                              <Loader2 className="size-4 mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            editingEntry ? "Update Entry" : "Create Entry"
-                          )}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-
-              {/* Entries Table */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Journal Entries</CardTitle>
-                      <CardDescription>
-                        Showing {filteredEntries.length} entry{filteredEntries.length !== 1 ? "ies" : ""}
-                      </CardDescription>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => setIsRightSidebarCollapsed(!isRightSidebarCollapsed)}>
-                      <Filter className="size-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="text-center py-12 text-muted-foreground flex flex-col items-center">
-                      <Loader2 className="size-8 animate-spin mb-4" />
-                      Loading entries...
-                    </div>
-                  ) : filteredEntries.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <FileText className="size-12 mx-auto mb-4 opacity-50" />
-                      <p className="mb-4">No journal entries yet</p>
-                      <Button onClick={() => setIsAddDialogOpen(true)}>
-                        <Plus className="size-4 mr-2" />
-                        Create your first entry
-                      </Button>
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Reference #</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Lines</TableHead>
-                          <TableHead>Created</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredEntries.map((entry) => (
-                          <TableRow key={entry.id}>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="size-4 text-muted-foreground" />
-                                {new Date(entry.entry_date).toLocaleDateString()}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{entry.reference_number}</Badge>
-                            </TableCell>
-                            <TableCell>{entry.description}</TableCell>
-                            <TableCell className="text-right">
-                              <Badge>{(entry.lines || []).length} lines</Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {new Date(entry.created_at).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => startEdit(entry)}>
-                                  <Edit className="size-4 mr-1" />
-                                  Edit
-                                </Button>
-                                <Button variant="destructive" size="sm" onClick={() => confirmDelete(entry)} disabled={deleting === entry.id}>
-                                  {deleting === entry.id ? (
-                                    <Loader2 className="size-4 mr-1 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="size-4 mr-1" />
-                                  )}
-                                  Delete
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Delete Confirmation Dialog */}
-              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Journal Entry?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete this journal entry? This action cannot be undone.
-                      <br />
-                      <span className="font-semibold mt-2 block">Reference: {entryToDelete?.reference_number}</span>
-                      <span className="text-sm text-muted-foreground">{entryToDelete?.description}</span>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => {
-                      setIsDeleteDialogOpen(false);
-                      setEntryToDelete(null);
-                    }} disabled={!!deleting}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => entryToDelete && deleteEntry(entryToDelete.id)}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                      disabled={!!deleting}
-                    >
-                      {deleting ? (
-                        <>
-                          <Loader2 className="size-4 mr-2 animate-spin" />
-                          Deleting...
-                        </>
-                      ) : "Delete"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-            </div>
-          </main>
+    <div className="space-y-6 pb-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <Link href="/finance" className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5 mb-1">
+            <ArrowLeft className="w-3 h-3" /> Back to Finance
+          </Link>
+          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-violet-600" /> Journal Entries
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {entries.length} entries · {entries.filter((e) => (e.status ?? "posted") === "posted").length} posted
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={load} className="h-9 gap-2">
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </Button>
+          <Button size="sm" onClick={openNew} className="h-9 gap-2 bg-violet-600 hover:bg-violet-700">
+            <Plus className="w-3.5 h-3.5" /> New Entry
+          </Button>
+        </div>
+      </div>
 
-        {/* Right Sidebar (Filters & History) */}
-        {!isRightSidebarCollapsed && (
-          <aside className="w-80 bg-card border-l border-border flex flex-col h-[calc(100vh-64px)] sticky top-16 overflow-hidden">
-            <div className="p-4 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="size-4 text-primary" />
-                <h3 className="font-semibold text-foreground">Filters & History</h3>
+      {/* Filter row */}
+      <div className="flex flex-wrap items-center gap-2">
+        {(["all", "posted", "draft"] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            className={cn(
+              "px-3 py-1.5 text-xs font-bold rounded-full border transition-colors",
+              statusFilter === s
+                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+            )}
+          >
+            {s === "all" ? "All statuses" : s === "posted" ? "Posted only" : "Drafts only"}
+          </button>
+        ))}
+        <div className="ml-auto relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search reference or description…" className="pl-9 h-9" />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Reference</th>
+                <th className="px-4 py-3">Description</th>
+                <th className="px-4 py-3">Lines</th>
+                <th className="px-4 py-3 text-right">Amount</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 w-8"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={7} className="text-center py-16 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…</td></tr>
+              ) : filteredEntries.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-16 text-slate-400"><BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" /> No entries.</td></tr>
+              ) : filteredEntries.map((e) => {
+                const lineCount = e.journal_entry_lines?.length ?? 0;
+                const total = (e.journal_entry_lines ?? []).reduce((s: number, l: any) => s + (Number(l.debit_amount) || 0), 0);
+                return (
+                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => setDetail(e)}>
+                    <td className="px-4 py-3 text-slate-700 text-xs">{new Date(e.entry_date).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 font-mono text-xs font-black text-slate-800">{e.reference ?? `JE-${e.id.slice(0, 6)}`}</td>
+                    <td className="px-4 py-3 text-slate-700">{e.description}</td>
+                    <td className="px-4 py-3 text-slate-500 text-xs">{lineCount}</td>
+                    <td className="px-4 py-3 text-right font-black text-slate-800">{fmt(total, e.currency ?? "TZS")}</td>
+                    <td className="px-4 py-3">
+                      <Badge className={cn(
+                        "text-[10px] uppercase font-black tracking-wider border",
+                        (e.status ?? "posted") === "posted"
+                          ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                          : "bg-amber-100 text-amber-700 border-amber-200",
+                      )}>
+                        {e.status ?? "posted"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Create modal */}
+      {creating && (
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl my-8">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-black text-slate-800">New Journal Entry</h3>
+                <p className="text-xs text-slate-500">Double-entry — debits must equal credits</p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsRightSidebarCollapsed(true)}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setCreating(false)}><X className="w-4 h-4" /></Button>
             </div>
+            <div className="p-5 space-y-4">
+              {/* Header fields */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Date</Label>
+                  <Input type="date" value={form.entry_date} onChange={(e) => setForm({ ...form, entry_date: e.target.value })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Reference</Label>
+                  <Input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Currency</Label>
+                  <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 md:col-span-1">
+                  <Label className="text-xs">Description</Label>
+                  <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. June rent payment" />
+                </div>
+              </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {/* Search and Filter Section */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Search & Filter</h4>
-
-                <div className="space-y-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search journal entries..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+              {/* Lines */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  <div>Account</div>
+                  <div className="text-right">Debit</div>
+                  <div className="text-right">Credit</div>
+                  <div>Memo</div>
+                  <div />
+                </div>
+                {lines.map((l, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 border-b border-slate-50 last:border-0 items-center">
+                    <AccountPicker
+                      value={{ code: l.account_code, name: l.account_name }}
+                      accounts={accounts}
+                      onChange={(a) => updateLine(i, { account_code: a.code, account_name: a.name })}
                     />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label htmlFor="date-from" className="text-xs">From Date</Label>
-                      <Input
-                        id="date-from"
-                        type="date"
-                        value={filterDateFrom}
-                        onChange={(e) => setFilterDateFrom(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="date-to" className="text-xs">To Date</Label>
-                      <Input
-                        id="date-to"
-                        type="date"
-                        value={filterDateTo}
-                        onChange={(e) => setFilterDateTo(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor="account-filter" className="text-xs">Chart of Accounts</Label>
-                    <Select
-                      value={filterAccountCode || "all"}
-                      onValueChange={(val) => setFilterAccountCode(val === "all" ? "" : val)}
-                    >
-                      <SelectTrigger id="account-filter">
-                        <SelectValue placeholder="All Accounts" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-80">
-                        <SelectItem value="all">All Accounts</SelectItem>
-                        {coaAccounts.map(acc => (
-                          <SelectItem key={acc.code} value={acc.code}>
-                            {acc.code} - {acc.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setSearchTerm("");
-                        setFilterDateFrom("");
-                        setFilterDateTo("");
-                        setFilterAccountCode("");
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={l.debit_amount || ""}
+                      onChange={(e) => {
+                        const v = Number(e.target.value) || 0;
+                        updateLine(i, { debit_amount: v, credit_amount: v ? 0 : l.credit_amount });
                       }}
-                    >
-                      Reset Filters
+                      className="text-right h-9"
+                      placeholder="0.00"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={l.credit_amount || ""}
+                      onChange={(e) => {
+                        const v = Number(e.target.value) || 0;
+                        updateLine(i, { credit_amount: v, debit_amount: v ? 0 : l.debit_amount });
+                      }}
+                      className="text-right h-9"
+                      placeholder="0.00"
+                    />
+                    <Input
+                      value={l.memo ?? ""}
+                      onChange={(e) => updateLine(i, { memo: e.target.value })}
+                      className="h-9"
+                      placeholder="Optional line note"
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => removeLine(i)} disabled={lines.length <= 2}>
+                      <Trash2 className="w-4 h-4 text-slate-400" />
                     </Button>
                   </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Chart of Accounts Quick Reference */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <BookOpen className="size-4" />
-                  Chart of Accounts
-                </h4>
-                <div className="space-y-1 max-h-48 overflow-y-auto bg-muted/30 rounded-lg p-2">
-                  {coaAccounts.slice(0, 20).map(acc => (
-                    <div key={acc.code} className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded cursor-pointer transition-colors" onClick={() => setFilterAccountCode(acc.code)}>
-                      <div className="flex justify-between">
-                        <span className="font-medium">{acc.code}</span>
-                        <span>{acc.name}</span>
-                      </div>
+                ))}
+                <div className="px-3 py-2 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <Button variant="outline" size="sm" onClick={addLine} className="h-8 gap-1">
+                    <Plus className="w-3.5 h-3.5" /> Add line
+                  </Button>
+                  <div className="flex items-center gap-6 text-xs">
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Debits</p>
+                      <p className="font-black text-slate-800 text-sm">{fmt(totals.debit, form.currency)}</p>
                     </div>
-                  ))}
-                  {coaAccounts.length > 20 && (
-                    <div className="px-2 py-1 text-xs text-muted-foreground italic text-center">
-                      ...and {coaAccounts.length - 20} more
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Credits</p>
+                      <p className="font-black text-slate-800 text-sm">{fmt(totals.credit, form.currency)}</p>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Recent Entries History */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <History className="size-4" />
-                  Recent Entries
-                </h4>
-                <div className="space-y-2">
-                  {entries.slice(0, 5).map(entry => (
-                    <div key={entry.id} className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => startEdit(entry)}>
-                      <div className="flex items-start justify-between mb-1">
-                        <div className="font-medium text-foreground text-sm">{entry.reference_number}</div>
-                        <Badge variant="outline" className="text-[10px]">{(entry.lines || []).length} lines</Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground line-clamp-2">{entry.description}</div>
-                      <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
-                        <Clock className="size-3" />
-                        {new Date(entry.created_at).toLocaleDateString()}
-                      </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Diff</p>
+                      <p className={cn("font-black text-sm", totals.balanced ? "text-emerald-700" : "text-rose-700")}>
+                        {totals.balanced ? "Balanced" : fmt(Math.abs(totals.diff), form.currency)}
+                      </p>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </aside>
-        )}
-      </div>
+            <div className="flex justify-between items-center gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50">
+              <div className={cn("text-xs font-bold", totals.balanced ? "text-emerald-700" : "text-rose-700")}>
+                {totals.balanced
+                  ? "Ready to post"
+                  : totals.debit === 0 && totals.credit === 0
+                  ? "Enter debit and credit amounts"
+                  : `Off by ${fmt(Math.abs(totals.diff), form.currency)}`}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setCreating(false)} disabled={posting}>Cancel</Button>
+                <Button variant="outline" onClick={() => post(true)} disabled={posting}>Save as Draft</Button>
+                <Button onClick={() => post(false)} disabled={posting || !totals.balanced} className="bg-violet-600 hover:bg-violet-700 gap-2">
+                  {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Post Entry
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail drawer */}
+      {detail && (
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl mt-16">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div>
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Journal Entry</p>
+                <h3 className="text-lg font-black text-slate-800 font-mono">{detail.reference ?? `JE-${detail.id.slice(0, 6)}`}</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => reverse(detail)} className="gap-1 h-8">
+                  <Copy className="w-3.5 h-3.5" /> Reverse
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setDetail(null)}><X className="w-4 h-4" /></Button>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Date</p>
+                  <p className="font-bold text-slate-800">{new Date(detail.entry_date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Currency</p>
+                  <p className="font-bold text-slate-800">{detail.currency ?? "TZS"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</p>
+                  <Badge className={cn(
+                    "text-[10px] uppercase font-black tracking-wider border",
+                    (detail.status ?? "posted") === "posted"
+                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                      : "bg-amber-100 text-amber-700 border-amber-200",
+                  )}>
+                    {detail.status ?? "posted"}
+                  </Badge>
+                </div>
+                <div className="col-span-3">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Description</p>
+                  <p className="text-slate-700">{detail.description}</p>
+                </div>
+              </div>
+              <table className="w-full text-sm border border-slate-100 rounded-xl overflow-hidden">
+                <thead className="bg-slate-50">
+                  <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <th className="px-3 py-2">Account</th>
+                    <th className="px-3 py-2 text-right">Debit</th>
+                    <th className="px-3 py-2 text-right">Credit</th>
+                    <th className="px-3 py-2">Memo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(detail.journal_entry_lines ?? []).map((l: any) => (
+                    <tr key={l.id} className="border-t border-slate-100">
+                      <td className="px-3 py-2">
+                        <span className="font-mono text-xs font-black text-slate-500 mr-2">{l.account_code}</span>
+                        <span className="text-slate-800">{l.account_name}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right">{Number(l.debit_amount) > 0 ? fmt(Number(l.debit_amount), detail.currency ?? "TZS") : "—"}</td>
+                      <td className="px-3 py-2 text-right">{Number(l.credit_amount) > 0 ? fmt(Number(l.credit_amount), detail.currency ?? "TZS") : "—"}</td>
+                      <td className="px-3 py-2 text-slate-500 text-xs">{l.memo ?? ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50">
+              <Button variant="outline" onClick={() => setDetail(null)}>Close</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

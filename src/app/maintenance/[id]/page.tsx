@@ -18,9 +18,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Edit, Trash2, Wrench } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Clock, Edit, Trash2, Wrench, History } from 'lucide-react';
 import Link from 'next/link';
 import { useCurrency } from '@/hooks/use-currency';
+import { useRole } from '@/hooks/use-role';
+import { useSupabase } from '@/components/supabase-provider';
+import { applyTransition } from '@/lib/workflow/engine';
+import { toast } from '@/hooks/use-toast';
+import { ActivityFeed } from '@/components/workflow/activity-feed';
+import { TransitionButtons } from '@/components/workflow/transition-buttons';
 
 interface MaintenanceRecord {
     id: string;
@@ -53,6 +59,8 @@ export default function MaintenanceDetailPage() {
     const params = useParams();
     const router = useRouter();
     const { format } = useCurrency();
+    const { role } = useRole();
+    const { user } = useSupabase();
     const [record, setRecord] = useState<MaintenanceRecord | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -87,31 +95,40 @@ export default function MaintenanceDetailPage() {
         if (params.id) fetchRecord();
     }, [params.id, supabase]);
 
-    const handleStatusChange = async (newStatus: string) => {
+    const handleStatusChange = async (newStatus: string, payload?: Record<string, any>) => {
         if (!record) return;
 
-        try {
-            const updateData: any = { status: newStatus };
+        const result = await applyTransition({
+            kind: 'maintenance_request',
+            entityId: record.id,
+            toState: newStatus,
+            actorId: user?.id ?? 'system',
+            actorRole: (role as any) ?? undefined,
+            payload,
+        });
 
-            if (newStatus === 'completed' && showCompleteModal) {
-                updateData.actual_cost = completionData.actual_cost ? parseFloat(completionData.actual_cost) : null;
-                updateData.completed_date = completionData.completed_date;
-                updateData.notes = completionData.notes || null;
-                setShowCompleteModal(false);
-            }
-
-            const { error: updateError } = await supabase
-                .from('maintenance_records')
-                .update(updateData)
-                .eq('id', record.id);
-
-            if (updateError) throw updateError;
-
-            setRecord({ ...record, ...updateData });
-            (window as any).toast?.success('Status updated', 'Success', 5000);
-        } catch (err) {
-            (window as any).toast?.error(err instanceof Error ? err.message : 'Failed to update', 'Error', 5000);
+        if (!result.ok) {
+            toast({ title: 'Blocked', description: result.message, variant: 'destructive' });
+            return;
         }
+
+        setRecord({ ...record, ...(result.entity ?? {}), status: newStatus, ...(payload ?? {}) });
+        toast({
+            title: 'Status updated',
+            description:
+                result.sideEffects.length > 0
+                    ? result.sideEffects.map((s) => s.replace(/_/g, ' ')).join(', ')
+                    : `Moved to ${newStatus.replace('_', ' ')}.`,
+        });
+    };
+
+    const completeFromModal = () => {
+        setShowCompleteModal(false);
+        handleStatusChange('completed', {
+            actual_cost: completionData.actual_cost ? parseFloat(completionData.actual_cost) : null,
+            completed_date: completionData.completed_date,
+            notes: completionData.notes || null,
+        });
     };
 
     if (loading) return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
@@ -261,51 +278,23 @@ export default function MaintenanceDetailPage() {
                         </div>
 
                         <div className="space-y-2">
-                            {record.status === 'requested' && (
-                                <>
-                                    <Button
-                                        onClick={() => handleStatusChange('scheduled')}
-                                        className="w-full bg-blue-600 hover:bg-blue-700"
-                                    >
-                                        Schedule
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleStatusChange('cancelled')}
-                                        className="w-full"
-                                    >
-                                        Reject
-                                    </Button>
-                                </>
-                            )}
-
-                            {record.status === 'scheduled' && (
+                            {record.status === 'in_progress' && (
                                 <Button
-                                    onClick={() => handleStatusChange('in_progress')}
-                                    className="w-full bg-amber-600 hover:bg-amber-700"
+                                    onClick={() => setShowCompleteModal(true)}
+                                    className="w-full bg-green-600 hover:bg-green-700"
                                 >
-                                    Start Work
+                                    Mark Complete
                                 </Button>
                             )}
-
-                            {record.status === 'in_progress' && (
-                                <>
-                                    <Button
-                                        onClick={() => setShowCompleteModal(true)}
-                                        className="w-full bg-green-600 hover:bg-green-700"
-                                    >
-                                        Mark Complete
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => handleStatusChange('postponed')}
-                                        className="w-full"
-                                    >
-                                        Postpone
-                                    </Button>
-                                </>
-                            )}
-
+                            <TransitionButtons
+                                kind="maintenance_request"
+                                entity={record}
+                                actorId={user?.id ?? 'system'}
+                                actorRole={role ?? undefined}
+                                layout="stack"
+                                exclude={record.status === 'in_progress' ? ['completed'] : undefined}
+                                onDone={(next) => setRecord({ ...record, ...next })}
+                            />
                             {record.status === 'completed' && (
                                 <Badge className="w-full text-center py-2 bg-green-100 text-green-800 dark:bg-green-900/30 justify-center gap-2">
                                     <CheckCircle2 className="w-4 h-4" />
@@ -323,6 +312,18 @@ export default function MaintenanceDetailPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Activity timeline */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                        <History className="w-4 h-4" /> Activity
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ActivityFeed entityType="maintenance_request" entityId={record.id} />
+                </CardContent>
+            </Card>
 
             {/* Complete Modal */}
             <AlertDialog open={showCompleteModal} onOpenChange={setShowCompleteModal}>
@@ -372,7 +373,7 @@ export default function MaintenanceDetailPage() {
                     <div className="flex gap-2">
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={() => handleStatusChange('completed')}
+                            onClick={completeFromModal}
                             className="bg-green-600 hover:bg-green-700"
                         >
                             Complete
