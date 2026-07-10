@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PageShell, PageHeader } from "@/components/shell";
+import { PageHeader } from "@/components/shell";
 import {
   ArrowLeftRight,
   BarChart3,
@@ -83,7 +83,7 @@ const REPORTS = [
 
 export default function FinanceReportsHubPage() {
   return (
-    <PageShell>
+    <div>
       <PageHeader
         eyebrow="Finance"
         title="Financial reports"
@@ -110,6 +110,6 @@ export default function FinanceReportsHubPage() {
           </Link>
         ))}
       </div>
-    </PageShell>
+    </div>
   );
 }

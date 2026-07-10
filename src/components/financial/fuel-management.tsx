@@ -68,7 +68,7 @@ export function FuelManagement() {
         .order("fuel_date", { ascending: false })
         .limit(200),
       supabase.from("vehicles").select("id, plate_number, make, model").order("plate_number"),
-      supabase.from("trips").select("id, trip_number, tripNumber, origin, destination").eq("status", "in_transit").limit(50),
+      supabase.from("trips").select("id, trip_number, origin, destination").eq("status", "in_transit").limit(50),
     ]);
     setLogs(logsData || []);
     setVehicles(vehiclesData || []);

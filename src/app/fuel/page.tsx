@@ -1,4 +1,5 @@
 import { FuelManagement } from "@/components/financial/fuel-management";
+import { PageShell } from "@/components/shell";
 
 export const metadata = {
   title: "Fuel Management - Calvary Connect",
@@ -7,8 +8,8 @@ export const metadata = {
 
 export default function FuelManagementPage() {
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <PageShell>
       <FuelManagement />
-    </div>
+    </PageShell>
   );
 }

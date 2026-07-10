@@ -111,10 +111,10 @@ export default function VehicleRevenuePage() {
 
   if (!role) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-muted">
         <div className="flex items-center gap-3">
-          <RefreshCw className="size-6 animate-spin text-sky-700" />
-          <span className="text-sm font-medium text-gray-600">Loading user role...</span>
+          <RefreshCw className="size-6 animate-spin text-primary" />
+          <span className="text-sm font-medium text-muted-foreground">Loading user role...</span>
         </div>
       </div>
     );
@@ -127,14 +127,14 @@ export default function VehicleRevenuePage() {
   const topVehicle = vehicles.length > 0 ? vehicles[0] : null;
 
   return (
-    <div id="report-root" className="flex min-h-screen bg-[#F0F1F5]" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
+    <div id="report-root" className="flex min-h-screen bg-background" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
       <Sidebar role={role} />
       
       <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-6">
           
           <div className="flex items-center gap-2">
-            <Link href="/reports" className="flex items-center gap-1.5 text-xs font-bold text-sky-700 hover:text-sky-800 transition-colors uppercase tracking-wider">
+            <Link href="/reports" className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary transition-colors uppercase tracking-wider">
               <ArrowLeft className="size-3.5" />
               Back to Reports
             </Link>
@@ -142,44 +142,44 @@ export default function VehicleRevenuePage() {
 
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 font-headline tracking-tighter">Vehicle Revenue Report</h1>
-              <p className="text-sm text-gray-600 mt-1">Financial performance audit for fleet vehicles, displaying gross margins, operational expenses, and net profit per truck.</p>
+              <h1 className="text-2xl font-bold text-foreground font-headline tracking-tighter">Vehicle Revenue Report</h1>
+              <p className="text-sm text-muted-foreground mt-1">Financial performance audit for fleet vehicles, displaying gross margins, operational expenses, and net profit per truck.</p>
             </div>
           </div>
 
           {/* Filter Bar */}
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+          <div className="bg-card border border-border rounded-xl shadow-sm p-4">
             <div className="flex flex-col md:flex-row items-end gap-4">
               <div className="grid grid-cols-2 gap-4 flex-1">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">From Date</label>
+                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">From Date</label>
                   <div className="relative">
                     <input 
                       type="date" 
                       value={fromDateInput}
                       onChange={(e) => setFromDateInput(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-sky-700" 
+                      className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-ring" 
                     />
-                    <Calendar className="absolute left-3 top-2.5 size-4 text-gray-400" />
+                    <Calendar className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">To Date</label>
+                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">To Date</label>
                   <div className="relative">
                     <input 
                       type="date" 
                       value={toDateInput}
                       onChange={(e) => setToDateInput(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-sky-700" 
+                      className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-ring" 
                     />
-                    <Calendar className="absolute left-3 top-2.5 size-4 text-gray-400" />
+                    <Calendar className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
                   </div>
                 </div>
               </div>
               <button 
                 onClick={handleApplyFilters}
                 disabled={loading}
-                className="w-full md:w-auto px-5 py-2 bg-sky-700 text-white rounded-lg text-sm font-medium hover:bg-sky-800 transition-colors flex items-center justify-center gap-2"
+                className="w-full md:w-auto px-5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
               >
                 {loading && <RefreshCw className="size-4 animate-spin" />}
                 Apply Filters
@@ -192,10 +192,10 @@ export default function VehicleRevenuePage() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 h-24 animate-pulse" />
+                  <div key={i} className="bg-card border border-border rounded-xl p-4 h-24 animate-pulse" />
                 ))}
               </div>
-              <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 h-96 animate-pulse" />
+              <div className="bg-card border border-border rounded-xl shadow-sm p-6 h-96 animate-pulse" />
             </div>
           )}
 
@@ -225,9 +225,9 @@ export default function VehicleRevenuePage() {
                 {/* Active Vehicles */}
                 <div className="bg-sky-50 border border-sky-100 rounded-xl p-4 text-center">
                   <div className="mx-auto bg-sky-200/50 p-2 rounded-full w-fit mb-2">
-                    <Truck className="size-5 text-sky-800" />
+                    <Truck className="size-5 text-primary" />
                   </div>
-                  <p className="text-xs font-bold text-sky-800/80 uppercase tracking-wider">Active Vehicles</p>
+                  <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Active Vehicles</p>
                   <p className="text-2xl font-black text-sky-900 mt-1">{summary.totalVehiclesActive}</p>
                 </div>
 
@@ -264,49 +264,49 @@ export default function VehicleRevenuePage() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* Table */}
-                <div className="lg:col-span-3 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                  <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <Truck className="size-5 text-sky-700" />
+                <div className="lg:col-span-3 bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+                  <div className="p-4 border-b border-border flex items-center justify-between">
+                    <h3 className="font-bold text-foreground flex items-center gap-2">
+                      <Truck className="size-5 text-primary" />
                       Vehicle Financial Ledger Overview
                     </h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-gray-50 border-b border-gray-100">
-                          <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider">Vehicle Plate</th>
-                          <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider">Make & Model</th>
-                          <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">Trips Count</th>
-                          <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider text-right">Revenue</th>
-                          <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider text-right">Expenses</th>
-                          <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider text-right">Net Profit</th>
-                          <th className="px-6 py-3.5 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">Profit Margin</th>
+                        <tr className="bg-muted border-b border-border">
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Vehicle Plate</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Make & Model</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Trips Count</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Revenue</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Expenses</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Net Profit</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Profit Margin</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-border">
                         {vehicles.map((vehicle) => {
                           const isTop = topVehicle && vehicle.id === topVehicle.id;
                           return (
                             <tr 
                               key={vehicle.id}
-                              className={`transition-colors hover:bg-gray-50/50 ${
+                              className={`transition-colors hover:bg-muted/50 ${
                                 isTop ? 'bg-sky-50 border-l-2 border-sky-700' : ''
                               }`}
                             >
                               <td className="px-6 py-4">
-                                <span className="font-bold text-gray-900 block">{vehicle.plateNumber}</span>
+                                <span className="font-bold text-foreground block">{vehicle.plateNumber}</span>
                               </td>
-                              <td className="px-6 py-4 font-semibold text-gray-700">
+                              <td className="px-6 py-4 font-semibold text-foreground">
                                 {vehicle.makeModel}
                               </td>
-                              <td className="px-6 py-4 text-center font-semibold text-gray-900">
+                              <td className="px-6 py-4 text-center font-semibold text-foreground">
                                 {vehicle.tripsCount}
                               </td>
-                              <td className="px-6 py-4 text-right text-sky-800 font-bold font-mono">
+                              <td className="px-6 py-4 text-right text-primary font-bold font-mono">
                                 {formatTZS(vehicle.totalRevenueTZS)}
                               </td>
-                              <td className="px-6 py-4 text-right text-gray-700 font-mono">
+                              <td className="px-6 py-4 text-right text-foreground font-mono">
                                 {formatTZS(vehicle.totalExpensesTZS)}
                               </td>
                               <td className={`px-6 py-4 text-right font-bold font-mono ${vehicle.netProfitTZS >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>
@@ -332,9 +332,9 @@ export default function VehicleRevenuePage() {
                 </div>
 
                 {/* Chart */}
-                <div className="lg:col-span-3 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
-                  <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <TrendingUp className="size-5 text-sky-700" />
+                <div className="lg:col-span-3 bg-card border border-border rounded-xl shadow-sm p-4">
+                  <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+                    <TrendingUp className="size-5 text-primary" />
                     Revenue, Expenses & Profit Comparison by Vehicle
                   </h3>
                   <div className="h-80 w-full">

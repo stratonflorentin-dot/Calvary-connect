@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Sidebar } from '@/components/navigation/sidebar';
-import { FinanceSidebar } from '@/components/finance/finance-sidebar';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -82,12 +80,7 @@ export default function ReconciliationReport() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <div className="flex flex-1">
-        <FinanceSidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
@@ -301,9 +294,6 @@ export default function ReconciliationReport() {
                 </CardContent>
               </Card>
             )}
-          </div>
-        </main>
-      </div>
     </div>
   );
 }

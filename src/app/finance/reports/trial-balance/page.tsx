@@ -64,7 +64,7 @@ const TYPE_ACCENT: Record<AccountType, string> = {
   equity: "border-l-violet-500 bg-violet-50/40",
   revenue: "border-l-indigo-500 bg-indigo-50/40",
   expense: "border-l-rose-500 bg-rose-50/40",
-  unknown: "border-l-slate-400 bg-slate-50/40",
+  unknown: "border-l-slate-400 bg-muted/40",
 };
 
 function classifyType(raw?: string | null): AccountType {
@@ -215,13 +215,13 @@ export default function TrialBalancePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-muted-foreground flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
-          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
             <Calculator className="w-6 h-6 text-violet-600" /> Trial Balance
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {currencies.length} currenc{currencies.length === 1 ? "y" : "ies"}
             {currencies.map((cur) => {
               const t = totalsByCurrency[cur];
@@ -230,10 +230,10 @@ export default function TrialBalancePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 py-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">From</span>
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-card px-2 py-1">
+            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">From</span>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 border-0 focus-visible:ring-0 px-1" />
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">To</span>
+            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">To</span>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 border-0 focus-visible:ring-0 px-1" />
           </div>
           <Button variant="outline" size="sm" onClick={load} className="h-9 gap-2">
@@ -249,18 +249,18 @@ export default function TrialBalancePage() {
       {/* Filter row */}
       <div className="flex items-center justify-end">
         <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input placeholder="Filter accounts…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 bg-white" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Filter accounts…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 bg-card" />
         </div>
       </div>
 
       {/* Per-currency TB */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-400">
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       ) : currencies.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-slate-400 italic">
+        <div className="bg-card border border-border rounded-2xl p-8 text-center text-sm text-muted-foreground italic">
           No posted journal entries in this period.
         </div>
       ) : (
@@ -275,7 +275,7 @@ export default function TrialBalancePage() {
               )}>
                 <div className="text-sm">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700">{cur}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-card border border-border text-foreground">{cur}</span>
                     <p className={cn("font-black", t.diff === 0 ? "text-emerald-800" : "text-rose-800")}>
                       {t.diff === 0 ? "Balanced" : "Out of balance"}
                     </p>
@@ -295,30 +295,30 @@ export default function TrialBalancePage() {
                   const credit = list.reduce((s, r) => s + r.credit, 0);
                   const balance = list.reduce((s, r) => s + r.balance, 0);
                   return (
-                    <div key={type} className={cn("bg-white rounded-2xl border border-slate-200 border-l-4 overflow-hidden", TYPE_ACCENT[type])}>
-                      <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <div key={type} className={cn("bg-card rounded-2xl border border-border border-l-4 overflow-hidden", TYPE_ACCENT[type])}>
+                      <div className="px-5 py-3 border-b border-border flex items-center justify-between">
                         <div>
-                          <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">{TYPE_LABEL[type]}</h3>
-                          <p className="text-[10px] text-slate-500">{list.length} account{list.length === 1 ? "" : "s"}</p>
+                          <h3 className="text-sm font-black text-foreground uppercase tracking-wide">{TYPE_LABEL[type]}</h3>
+                          <p className="text-[10px] text-muted-foreground">{list.length} account{list.length === 1 ? "" : "s"}</p>
                         </div>
                         <div className="flex items-center gap-6 text-right">
                           <div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Debit</p>
-                            <p className="text-sm font-bold text-slate-800">{fmt(debit, cur)}</p>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Debit</p>
+                            <p className="text-sm font-bold text-foreground">{fmt(debit, cur)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Credit</p>
-                            <p className="text-sm font-bold text-slate-800">{fmt(credit, cur)}</p>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Credit</p>
+                            <p className="text-sm font-bold text-foreground">{fmt(credit, cur)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Balance</p>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Balance</p>
                             <p className={cn("text-sm font-black", balance >= 0 ? "text-emerald-700" : "text-rose-700")}>{fmt(Math.abs(balance), cur)}</p>
                           </div>
                         </div>
                       </div>
                       <table className="w-full text-sm">
-                        <thead className="bg-slate-50/70">
-                          <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <thead className="bg-muted/70">
+                          <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                             <th className="px-5 py-2 w-24">Code</th>
                             <th className="px-4 py-2">Account</th>
                             <th className="px-4 py-2 text-right">Debit ({cur})</th>
@@ -328,11 +328,11 @@ export default function TrialBalancePage() {
                         </thead>
                         <tbody>
                           {list.map((r) => (
-                            <tr key={r.code} className="border-t border-slate-100 hover:bg-slate-50">
-                              <td className="px-5 py-2 font-mono text-xs font-black text-slate-800">{r.code}</td>
-                              <td className="px-4 py-2 text-slate-700">{r.name}</td>
-                              <td className="px-4 py-2 text-right text-slate-700">{r.debit > 0 ? fmt(r.debit, cur) : "—"}</td>
-                              <td className="px-4 py-2 text-right text-slate-700">{r.credit > 0 ? fmt(r.credit, cur) : "—"}</td>
+                            <tr key={r.code} className="border-t border-border hover:bg-muted/60">
+                              <td className="px-5 py-2 font-mono text-xs font-black text-foreground">{r.code}</td>
+                              <td className="px-4 py-2 text-foreground">{r.name}</td>
+                              <td className="px-4 py-2 text-right text-foreground">{r.debit > 0 ? fmt(r.debit, cur) : "—"}</td>
+                              <td className="px-4 py-2 text-right text-foreground">{r.credit > 0 ? fmt(r.credit, cur) : "—"}</td>
                               <td className={cn("px-5 py-2 text-right font-bold", r.balance >= 0 ? "text-emerald-700" : "text-rose-700")}>
                                 {fmt(Math.abs(r.balance), cur)}
                               </td>

@@ -5,7 +5,7 @@ import { useRole } from "@/hooks/use-role";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
 
-export default function FinanceLayout({
+export default function MaintenanceLayout({
   children,
 }: {
   children: React.ReactNode;
