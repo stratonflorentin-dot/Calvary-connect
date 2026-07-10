@@ -106,7 +106,7 @@ function AccountPicker({
         )}
       </button>
       {open && (
-        <div className="absolute z-30 left-0 right-0 top-full mt-1 rounded-xl border border-border bg-card shadow-xl max-h-72 overflow-hidden flex flex-col">
+        <div className="absolute z-50 left-0 top-full mt-1 w-full min-w-[380px] max-w-[480px] rounded-xl border border-border bg-card shadow-xl max-h-72 overflow-hidden flex flex-col">
           <div className="p-2 border-b border-border">
             <Input
               autoFocus

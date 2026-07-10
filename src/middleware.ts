@@ -93,7 +93,10 @@ export function middleware(request: NextRequest) {
     "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://*.basemaps.cartocdn.com",
     // wss://*.supabase.co is required for realtime (chat, live dashboards);
     // nominatim/osrm serve geocoding and road routing
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live",
+    // fonts.gstatic.com: the service worker fetches fonts via fetch(), which
+    // is governed by connect-src, not font-src. exchangerate-api powers the
+    // live currency hook.
+    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
