@@ -8,6 +8,7 @@ import { useCurrency } from "@/hooks/use-currency";
 import { StatCard, SectionCard, EmptyState, RefreshControl } from "@/components/shell";
 import { TransitionButtons } from "@/components/workflow/transition-buttons";
 import { useRole } from "@/hooks/use-role";
+import { hydrateTrips } from "@/lib/trips/hydrate";
 import {
   Camera,
   CheckCircle2,
@@ -40,17 +41,23 @@ export function DriverView() {
   const load = async () => {
     if (!user?.id) return;
     setLoading(true);
-    const [t, f, a] = await Promise.all([
-      supabase
-        .from("trips")
-        .select("*, vehicle:vehicles(plate_number, make, model)")
-        .eq("driverId", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20),
+    // Drivers may be stored on the trip under `driverId` (camel) OR
+    // `driver_id` (snake) depending on when the row was written. Try both.
+    const [byCamel, byUnderscore, f, a] = await Promise.all([
+      supabase.from("trips").select("*").eq("driverId", user.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("trips").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(20),
       supabase.from("fuel_requests").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(10),
       supabase.from("allowances").select("*").eq("employee_id", user.id).order("created_at", { ascending: false }).limit(10),
     ]);
-    setTrips(t.data ?? []);
+    const raw = [...(byCamel.data ?? []), ...(byUnderscore.data ?? [])];
+    const seen = new Set<string>();
+    const dedup = raw.filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)));
+    const hydrated = await hydrateTrips(dedup);
+    // Reshape vehicle info into the nested `vehicle` object the JSX expects.
+    setTrips(hydrated.map((h: any) => ({
+      ...h,
+      vehicle: h.vehicle_plate ? { plate_number: h.vehicle_plate, make: h.vehicle_make, model: h.vehicle_model } : null,
+    })));
     setFuelRequests(f.data ?? []);
     setAllowances(a.data ?? []);
     setLoading(false);

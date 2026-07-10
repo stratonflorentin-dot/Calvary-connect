@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { hoursSince, isOverdue, slaHours } from "@/lib/workflow/approvals";
+import { hydrateTrips } from "@/lib/trips/hydrate";
+import { TripFormDialog } from "@/components/trip/trip-form-dialog";
 import {
   CheckCircle2,
   ClipboardList,
@@ -48,31 +50,23 @@ export default function TripsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
 
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("trips")
-      .select(`
-        id, trip_number, origin, destination, status, cargo, cargo_type, client,
-        created_at, estimated_time, salesAmount, totalAmount, currency,
-        driver:user_profiles(id, name),
-        vehicle:vehicles(id, plate_number)
-      `)
+      .select("*")
       .order("created_at", { ascending: false })
       .limit(500);
-    if (!error && data) {
-      setTrips(
-        data.map((t: any) => ({
-          ...t,
-          driver_name: t.driver?.name,
-          vehicle_plate: t.vehicle?.plate_number,
-          status: (t.status ?? "pending").toLowerCase(),
-        })),
-      );
-    } else if (error) {
+    if (error) {
       toast({ title: "Load error", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
     }
+    const hydrated = await hydrateTrips(data ?? []);
+    setTrips(hydrated.map((t) => ({ ...t, status: String(t.status ?? "pending").toLowerCase() })));
     setLoading(false);
   };
 
@@ -129,11 +123,22 @@ export default function TripsPage() {
                 <Navigation className="w-3.5 h-3.5" /> Dispatch Board
               </Button>
             </Link>
-            <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button
+              size="sm"
+              onClick={() => { setEditing(null); setFormOpen(true); }}
+              className="h-9 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
               <Plus className="w-3.5 h-3.5" /> New Trip
             </Button>
           </>
         }
+      />
+
+      <TripFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        trip={editing}
+        onSaved={load}
       />
 
       {loading ? (
@@ -177,8 +182,15 @@ export default function TripsPage() {
             {filtered.length === 0 ? (
               <EmptyState
                 icon={RouteIcon}
-                title="No trips match this view"
-                description="Try clearing the search or switching filters. New trips will appear here automatically."
+                title={trips.length === 0 ? "No trips yet" : "No trips match this view"}
+                description={trips.length === 0 ? "Create your first trip to start dispatching." : "Try clearing the search or switching filters."}
+                action={
+                  trips.length === 0 ? (
+                    <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+                      <Plus className="w-4 h-4" /> New Trip
+                    </Button>
+                  ) : null
+                }
               />
             ) : (
               <div className="overflow-x-auto">
@@ -202,8 +214,14 @@ export default function TripsPage() {
                       const age = t.created_at ? hoursSince(t.created_at) : 0;
                       return (
                         <tr key={t.id} className="border-b border-border/60 hover:bg-muted/40 transition-colors">
-                          <td className="px-4 py-3 font-mono text-xs font-black text-foreground">
-                            {t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => { setEditing(t); setFormOpen(true); }}
+                              className="font-mono text-xs font-black text-foreground hover:text-primary underline-offset-4 hover:underline"
+                            >
+                              {t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}
+                            </button>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5 text-sm text-foreground">

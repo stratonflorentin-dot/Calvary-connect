@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { REPORTING_CURRENCY, normalizeCurrency } from "@/lib/finance/multi-currency";
 import { isOverdue } from "@/lib/workflow/approvals";
+import { hydrateTrips } from "@/lib/trips/hydrate";
 
 /**
  * Executive dashboard.
@@ -62,7 +63,7 @@ export function CeoView() {
     setBanks(b.data ?? []);
     setInvoices(i.data ?? []);
     setExpenses(e.data ?? []);
-    setTrips(t.data ?? []);
+    setTrips(await hydrateTrips(t.data ?? []));
     setMaintenance(m.data ?? []);
     setVehicles(v.data ?? []);
     setFuel(f.data ?? []);
@@ -99,6 +100,16 @@ export function CeoView() {
     const activeTrips = trips.filter((t) => ["pending", "loading", "in_transit"].includes(String(t.status).toLowerCase())).length;
     const overdueTrips = trips.filter((t) => !["delivered", "cancelled"].includes(String(t.status).toLowerCase()) && t.created_at && isOverdue("trip", t.created_at)).length;
     const inUseVehicles = vehicles.filter((v) => v.status === "in_use").length;
+    const availableVehicles = vehicles.filter((v) => v.status === "available").length;
+    const maintenanceVehicles = vehicles.filter((v) => v.status === "maintenance").length;
+    const outOfServiceVehicles = vehicles.filter((v) => v.status === "out_of_service").length;
+
+    // Breakdown by fleet type
+    const byType: Record<string, number> = {};
+    for (const v of vehicles) {
+      const t = String(v.type ?? "other").toUpperCase();
+      byType[t] = (byType[t] ?? 0) + 1;
+    }
 
     return {
       cash,
@@ -109,7 +120,13 @@ export function CeoView() {
       netMtd: revenueMtd - expensesMtd,
       activeTrips,
       overdueTrips,
+      totalVehicles: vehicles.length,
+      inUseVehicles,
+      availableVehicles,
+      maintenanceVehicles,
+      outOfServiceVehicles,
       utilization: vehicles.length > 0 ? (inUseVehicles / vehicles.length) * 100 : 0,
+      byType,
       pendingFuel: fuel.length,
       pendingExpenses: expenses.filter((e) => e.status === "pending").length,
       pendingMaintenance: maintenance.filter((m) => m.status === "requested").length,
@@ -188,11 +205,48 @@ export function CeoView() {
         <StatCard label="AP outstanding" value={format(stats.ap)} icon={Building2} accent="bg-orange-100 text-orange-700" href="/finance/invoicing/vendor-bills" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Active trips" value={stats.activeTrips} icon={Navigation} accent="bg-sky-100 text-sky-700" href="/dispatch" sub={`${stats.overdueTrips} overdue`} />
-        <StatCard label="Fleet utilization" value={`${stats.utilization.toFixed(0)}%`} icon={Truck} accent="bg-primary/10 text-primary" href="/fleet" />
-        <StatCard label="Pending approvals" value={stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} icon={ClipboardList} accent="bg-amber-100 text-amber-700" href="/approvals" />
-        <StatCard label="Maintenance open" value={maintenance.length} icon={Wrench} accent="bg-red-100 text-red-700" href="/maintenance" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <StatCard label="Total vehicles" value={stats.totalVehicles} icon={Truck} accent="bg-primary/10 text-primary" href="/fleet" />
+        <StatCard label="In use" value={stats.inUseVehicles} sub={`${stats.utilization.toFixed(0)}% utilization`} icon={Navigation} accent="bg-sky-100 text-sky-700" href="/fleet" />
+        <StatCard label="Available" value={stats.availableVehicles} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" href="/fleet" />
+        <StatCard label="In maintenance" value={stats.maintenanceVehicles} icon={Wrench} accent="bg-amber-100 text-amber-700" href="/maintenance" />
+        <StatCard label="Out of service" value={stats.outOfServiceVehicles} icon={AlertTriangle} accent="bg-red-100 text-red-700" href="/fleet" />
+        <StatCard label="Active trips" value={stats.activeTrips} sub={`${stats.overdueTrips} overdue`} icon={Package} accent="bg-primary/10 text-primary" href="/dispatch" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SectionCard title="Fleet composition" subtitle="Vehicles by type" href="/fleet">
+          {stats.totalVehicles === 0 ? (
+            <EmptyState icon={Truck} title="No vehicles yet" description="Add your first vehicle to see the composition." />
+          ) : (
+            <div className="space-y-2">
+              {Object.entries(stats.byType)
+                .sort((a, b) => b[1] - a[1])
+                .map(([type, count]) => {
+                  const pct = (count / stats.totalVehicles) * 100;
+                  const label = type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
+                  return (
+                    <div key={type}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-bold text-foreground">{label}</span>
+                        <span className="text-muted-foreground">{count} · {pct.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Approvals & maintenance" className="md:col-span-2">
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Pending approvals" value={stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} icon={ClipboardList} accent="bg-amber-100 text-amber-700" href="/approvals" />
+            <StatCard label="Maintenance open" value={maintenance.length} icon={Wrench} accent="bg-red-100 text-red-700" href="/maintenance" />
+          </div>
+        </SectionCard>
       </div>
 
       {/* Recent trips + top debtors */}

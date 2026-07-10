@@ -1,9 +1,11 @@
 "use client";
 
-import { Sidebar } from "@/components/navigation/sidebar";
+import dynamic from "next/dynamic";
+import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { useFleetMapLocations } from "@/hooks/use-fleet-map-locations";
-import dynamic from "next/dynamic";
+import { Loader2, Shield } from "lucide-react";
+import { EmptyState } from "@/components/shell";
 
 const FleetMapView = dynamic(
   () => import("@/components/fleet-map/fleet-map-view"),
@@ -11,43 +13,39 @@ const FleetMapView = dynamic(
 );
 
 const MANAGER_ROLES = ["CEO", "ADMIN", "OPERATOR", "HR"];
+const defaultCenter: [number, number] = [-3.3869, 36.683]; // Central Tanzania
 
 export default function LiveMapPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
-  const { locations, driversWithoutGps, loadError, isLoading, refresh } =
-    useFleetMapLocations();
+  const { locations, driversWithoutGps, loadError, isLoading, refresh } = useFleetMapLocations();
 
   if (roleLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
-      </div>
+      <PageShell width="full">
+        <div className="flex items-center justify-center h-[70vh] text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </PageShell>
     );
   }
 
-  const canView =
-    isAdmin || MANAGER_ROLES.includes(String(role || "").toUpperCase());
+  const canView = isAdmin || MANAGER_ROLES.includes(String(role || "").toUpperCase());
 
   if (!canView) {
     return (
-      <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-900">
-        <Sidebar role={role!} />
-        <main className="flex-1 relative h-[100dvh] min-h-0 w-full md:ml-60 flex items-center justify-center p-8">
-          <div className="text-center bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-sm max-w-md w-full">
-            <h1 className="text-2xl font-bold text-red-500 mb-2">Access Denied</h1>
-            <p className="text-slate-400 text-sm">You do not have permission to view the live fleet map.</p>
-          </div>
-        </main>
-      </div>
+      <PageShell>
+        <EmptyState
+          icon={Shield}
+          title="Access denied"
+          description="You don't have permission to view the live fleet map."
+        />
+      </PageShell>
     );
   }
 
-  const defaultCenter: [number, number] = [-3.3869, 36.683];
-
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-900">
-      <Sidebar role={role!} />
-      <main className="flex-1 relative h-[100dvh] min-h-0 w-full md:ml-60">
+    <PageShell width="full" className="p-0">
+      <div className="relative w-full h-[calc(100vh-0px)] md:h-[calc(100vh-0px)]">
         <FleetMapView
           locations={locations}
           defaultCenter={defaultCenter}
@@ -57,7 +55,7 @@ export default function LiveMapPage() {
           showEmptyOverlay={!isLoading && locations.length === 0}
           onRefresh={refresh}
         />
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }

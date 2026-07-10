@@ -7,13 +7,14 @@ import { useRole } from "@/hooks/use-role";
 import { PageShell, PageHeader, StatCard, SectionCard, EmptyState, PageSkeleton, RefreshControl } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { VehicleFormDialog } from "@/components/fleet/vehicle-form-dialog";
 import {
   AlertTriangle,
-  ArrowRight,
   CheckCircle2,
   ClipboardList,
   Fuel,
   Gauge,
+  Pencil,
   Plus,
   Search,
   Shield,
@@ -60,6 +61,8 @@ export default function FleetPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "available" | "in_use" | "maintenance" | "attention">("all");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Vehicle | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -152,18 +155,27 @@ export default function FleetPage() {
         actions={
           <>
             <RefreshControl onRefresh={load} storageKey="fleet" />
-            <Link href="/fleet/vehicles">
-              <Button variant="outline" size="sm" className="h-9 gap-2">
-                <ClipboardList className="w-3.5 h-3.5" /> All vehicles
-              </Button>
-            </Link>
             <Link href="/maintenance">
-              <Button size="sm" className="h-9 gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button variant="outline" size="sm" className="h-9 gap-2">
                 <Wrench className="w-3.5 h-3.5" /> Maintenance
               </Button>
             </Link>
+            <Button
+              size="sm"
+              onClick={() => { setEditing(null); setFormOpen(true); }}
+              className="h-9 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add vehicle
+            </Button>
           </>
         }
+      />
+
+      <VehicleFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        vehicle={editing}
+        onSaved={load}
       />
 
       {loading ? (
@@ -203,7 +215,18 @@ export default function FleetPage() {
 
               <SectionCard title={`Vehicles (${filtered.length})`} padded={false}>
                 {filtered.length === 0 ? (
-                  <EmptyState icon={Truck} title="No vehicles in this view" />
+                  <EmptyState
+                    icon={Truck}
+                    title={vehicles.length === 0 ? "No vehicles yet" : "No vehicles in this view"}
+                    description={vehicles.length === 0 ? "Add your first vehicle to start managing the fleet." : "Try clearing the search or picking a different filter."}
+                    action={
+                      vehicles.length === 0 ? (
+                        <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+                          <Plus className="w-4 h-4" /> Add vehicle
+                        </Button>
+                      ) : null
+                    }
+                  />
                 ) : (
                   <ul className="divide-y divide-border">
                     {filtered.map((v) => {
@@ -251,9 +274,13 @@ export default function FleetPage() {
                                 </div>
                               )}
                               <span className={cn("cv-chip", meta.chip)}>{meta.label}</span>
-                              <Link href={`/fleet/vehicles`} className="text-muted-foreground hover:text-primary">
-                                <ArrowRight className="w-4 h-4" />
-                              </Link>
+                              <button
+                                onClick={() => { setEditing(v); setFormOpen(true); }}
+                                className="w-8 h-8 rounded-lg border border-border text-muted-foreground hover:border-primary hover:text-primary flex items-center justify-center transition-colors"
+                                title="Edit vehicle"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
                         </li>

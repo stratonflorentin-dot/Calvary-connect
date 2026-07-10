@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useCurrency } from "@/hooks/use-currency";
 import { PageShell, PageHeader, StatCard, SectionCard, EmptyState, PageSkeleton, RefreshControl } from "@/components/shell";
+import { hydrateTrips } from "@/lib/trips/hydrate";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format as formatDate } from "date-fns";
@@ -34,20 +35,14 @@ export default function TripHistoryPage() {
     setLoading(true);
     const { data } = await supabase
       .from("trips")
-      .select(`
-        id, trip_number, origin, destination, status, cargo, client,
-        created_at, updated_at, endTime, salesAmount, totalAmount, fuelExpense, otherExpenses,
-        driver:user_profiles(name),
-        vehicle:vehicles(plate_number)
-      `)
+      .select("*")
       .in("status", ["delivered", "completed", "DELIVERED", "COMPLETED"])
       .order("created_at", { ascending: false })
       .limit(500);
+    const hydrated = await hydrateTrips(data ?? []);
     setRows(
-      (data ?? []).map((t: any) => ({
+      hydrated.map((t) => ({
         ...t,
-        driver_name: t.driver?.name,
-        vehicle_plate: t.vehicle?.plate_number,
         completed_at: t.endTime ?? t.updated_at ?? t.created_at,
         revenue: Number(t.totalAmount ?? t.salesAmount ?? 0),
         cost: Number(t.fuelExpense ?? 0) + Number(t.otherExpenses ?? 0),

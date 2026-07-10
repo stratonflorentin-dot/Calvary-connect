@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { RoleDashboard } from "./shared/role-dashboard";
 import { EmptyState } from "@/components/shell";
 import { isOverdue } from "@/lib/workflow/approvals";
+import { hydrateTrips } from "@/lib/trips/hydrate";
 import {
   ClipboardList,
   Flame,
@@ -26,11 +27,12 @@ export function OperatorView() {
 
   const load = async () => {
     const [t, v, f] = await Promise.all([
-      supabase.from("trips").select("*, vehicle:vehicles(plate_number)").order("created_at", { ascending: false }).limit(100),
+      supabase.from("trips").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("vehicles").select("*"),
       supabase.from("fuel_requests").select("*").eq("status", "pending"),
     ]);
-    setTrips(t.data ?? []);
+    const hydrated = await hydrateTrips(t.data ?? []);
+    setTrips(hydrated);
     setVehicles(v.data ?? []);
     setFuel(f.data ?? []);
   };

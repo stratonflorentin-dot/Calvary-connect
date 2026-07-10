@@ -16,6 +16,7 @@ import { applyTransition } from "@/lib/workflow/engine";
 import { hoursSince, isOverdue, slaHours } from "@/lib/workflow/approvals";
 import { toast } from "@/hooks/use-toast";
 import { PageShell, PageHeader, RefreshControl } from "@/components/shell";
+import { hydrateTrips } from "@/lib/trips/hydrate";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type TripStatus = "pending" | "loading" | "in_transit" | "delivered" | "cancelled";
@@ -258,24 +259,20 @@ export default function DispatchBoardPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("trips")
-      .select(`
-        id, trip_number, origin, destination, status,
-        cargo, client, created_at, estimated_time, salesAmount,
-        driver:user_profiles(name),
-        vehicle:vehicles(plate_number)
-      `)
+      .select("*")
       .order("created_at", { ascending: false })
       .limit(200);
 
     if (!error && data) {
-      const mapped: DispatchTrip[] = data.map((r: any) => ({
+      const hydrated = await hydrateTrips(data);
+      const mapped: DispatchTrip[] = hydrated.map((r: any) => ({
         id: r.id,
         trip_number: r.trip_number,
         origin: r.origin,
         destination: r.destination,
-        status: (r.status?.toLowerCase() ?? "pending") as TripStatus,
-        driver_name: r.driver?.name,
-        vehicle_plate: r.vehicle?.plate_number,
+        status: (String(r.status ?? "pending").toLowerCase()) as TripStatus,
+        driver_name: r.driver_name ?? undefined,
+        vehicle_plate: r.vehicle_plate ?? undefined,
         cargo_type: r.cargo,
         client: r.client,
         created_at: r.created_at,

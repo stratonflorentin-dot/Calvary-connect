@@ -1,19 +1,30 @@
 "use client";
 
-import { SummaryCards } from '@/components/finance/SummaryCards';
-
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { MessageSquare, Hash, Search, Plus, Loader2, Navigation, Info, AlertCircle, FileText, Phone, Video, CheckCircle2, Send } from "lucide-react";
-import { useSupabase } from '@/components/supabase-provider';
+import { useSupabase } from "@/components/supabase-provider";
+import { PageShell, PageHeader, EmptyState } from "@/components/shell";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Hash,
+  Info,
+  Loader2,
+  MessageSquare,
+  Navigation,
+  Plus,
+  Search,
+  Send,
+  Users,
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
-
-// --- Types ---
 interface Channel {
   id: string;
   name: string;
   type: "group" | "trip" | "direct";
-  trip_id?: string;
+  trip_id?: string | null;
   created_at: string;
 }
 
@@ -23,13 +34,15 @@ interface Message {
   sender_id: string;
   content: string;
   created_at: string;
-  sender?: {
-    full_name: string;
-    avatar?: string;
-  };
+  sender_name?: string | null;
 }
 
-// --- Components ---
+const MOCK_CHANNELS: Channel[] = [
+  { id: "c1", name: "General Dispatch",     type: "group", created_at: new Date().toISOString() },
+  { id: "c2", name: "Driver Announcements", type: "group", created_at: new Date().toISOString() },
+  { id: "c3", name: "TRP-2024-001",         type: "trip",  created_at: new Date().toISOString() },
+];
+
 export default function InternalChatPage() {
   const { user } = useSupabase();
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -38,43 +51,32 @@ export default function InternalChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initial load
+  useEffect(() => { loadChannels(); }, []);
+
   useEffect(() => {
-    loadChannels();
-  }, []);
-
-  // Fetch messages when channel changes
-  useEffect(() => {
-    if (activeChannel) {
-      loadMessages(activeChannel.id);
-
-      // Subscribe to real-time messages
-      const channel = supabase
-        .channel(`chat_${activeChannel.id}`)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "chat_messages", filter: `channel_id=eq.${activeChannel.id}` },
-          (payload) => {
-            const newMsg = payload.new as Message;
-            // Fetch sender info for real-time msg (simplification: assume we just append)
-            setMessages((prev) => [...prev, newMsg]);
-            scrollToBottom();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
+    if (!activeChannel) return;
+    loadMessages(activeChannel.id);
+    const ch = supabase
+      .channel(`chat_${activeChannel.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages", filter: `channel_id=eq.${activeChannel.id}` },
+        (payload) => {
+          const m = payload.new as Message;
+          setMessages((prev) => [...prev, m]);
+          scrollToBottom();
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, [activeChannel]);
 
   const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   };
 
   const loadChannels = async () => {
@@ -84,284 +86,263 @@ export default function InternalChatPage() {
         .from("chat_channels")
         .select("*")
         .order("created_at", { ascending: false });
-
       if (dbErr) {
-        // Handle case where table doesn't exist
         if (dbErr.code === "42P01") {
-          setError("Chat tables not found. Please run the 004_internal_chat.sql migration in Supabase.");
+          setError("Chat tables not found — run the internal_chat migration in Supabase to enable messaging.");
         } else {
           setError(dbErr.message);
         }
+        setChannels(MOCK_CHANNELS);
+        setActiveChannel(MOCK_CHANNELS[0]);
         return;
       }
-
-      setChannels(data || []);
-      if (data && data.length > 0) {
-        setActiveChannel(data[0]);
-      }
+      setChannels(data ?? []);
+      if (data && data.length > 0) setActiveChannel(data[0]);
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message ?? "Failed to load channels");
     } finally {
       setLoading(false);
     }
   };
 
   const loadMessages = async (channelId: string) => {
-    try {
-      const { data, error: dbErr } = await supabase
-        .from("chat_messages")
-        .select(`
-          id, channel_id, sender_id, content, created_at,
-          sender:users!chat_messages_sender_id_fkey(full_name, avatar)
-        `)
-        .eq("channel_id", channelId)
-        .order("created_at", { ascending: true });
-
-      if (!dbErr && data) {
-        // Need to cast because of the join
-        const formatted = data.map(msg => ({
-          ...msg,
-          sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender
-        })) as unknown as Message[];
-        setMessages(formatted);
-        scrollToBottom();
-      }
-    } catch (err) {
-      console.error("Error loading messages:", err);
+    // Fetch messages then hydrate sender names separately to avoid schema-cache FK issues.
+    const { data: rows, error: dbErr } = await supabase
+      .from("chat_messages")
+      .select("id, channel_id, sender_id, content, created_at")
+      .eq("channel_id", channelId)
+      .order("created_at", { ascending: true });
+    if (dbErr) return;
+    const ids = Array.from(new Set((rows ?? []).map((r) => r.sender_id).filter(Boolean)));
+    let nameMap = new Map<string, string>();
+    if (ids.length > 0) {
+      const { data: u } = await supabase.from("user_profiles").select("id, uid, name").in("id", ids);
+      for (const p of u ?? []) nameMap.set(p.id ?? p.uid, p.name);
     }
+    setMessages((rows ?? []).map((r) => ({ ...r, sender_name: nameMap.get(r.sender_id) ?? null })));
+    scrollToBottom();
   };
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !activeChannel || !user) return;
-
+  const sendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim() || !activeChannel || !user || sending) return;
+    setSending(true);
     const content = input.trim();
     setInput("");
+    // Optimistic append
+    const optimistic: Message = {
+      id: `tmp-${Date.now()}`,
+      channel_id: activeChannel.id,
+      sender_id: user.id,
+      content,
+      created_at: new Date().toISOString(),
+      sender_name: user.name ?? "You",
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    scrollToBottom();
 
-    // Optimistic UI update could go here
-    const { error: dbErr } = await supabase
-      .from("chat_messages")
-      .insert({
-        channel_id: activeChannel.id,
-        sender_id: user.id,
-        content: content
-      });
-
+    const { error: dbErr } = await supabase.from("chat_messages").insert({
+      channel_id: activeChannel.id,
+      sender_id: user.id,
+      content,
+    });
     if (dbErr) {
-      console.error("Failed to send message:", dbErr);
+      // Roll back optimistic message
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       setError("Failed to send message.");
     }
+    setSending(false);
   };
 
-  // Mock channels for display if error (to show UI without migration)
-  const displayChannels = error ? MOCK_CHANNELS : channels;
-  const displayMessages = error ? MOCK_MESSAGES : messages;
-  const currentChannel = error ? MOCK_CHANNELS[0] : activeChannel;
+  const filteredChannels = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (channels.length ? channels : []).filter((c) => !q || c.name.toLowerCase().includes(q));
+  }, [channels, search]);
+
+  const groupChannels = filteredChannels.filter((c) => c.type === "group");
+  const tripChannels = filteredChannels.filter((c) => c.type === "trip");
+  const directChannels = filteredChannels.filter((c) => c.type === "direct");
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <SummaryCards />
-      <div className="h-[calc(100vh-theme(spacing.16))] bg-white flex overflow-hidden border-t border-gray-100">
-        {/* ── Sidebar ── */}
-        <div className="w-80 flex-shrink-0 border-r border-gray-100 flex flex-col bg-slate-50/50">
-          <div className="p-4 border-b border-gray-100 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-indigo-500" /> Messages
-              </h2>
-              <button className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors">
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                className="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
-              />
-            </div>
-          </div>
+    <PageShell width="wide">
+      <PageHeader
+        eyebrow="Team"
+        title="Internal chat"
+        subtitle={
+          error
+            ? "Preview mode — chat tables not migrated"
+            : `${channels.length} channel${channels.length === 1 ? "" : "s"} · ${activeChannel ? `#${activeChannel.name}` : "no channel selected"}`
+        }
+        icon={MessageSquare}
+        iconAccent="bg-primary text-primary-foreground"
+      />
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-6">
-            {loading && !error ? (
-              <div className="flex justify-center p-8">
-                <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+      <div className="cv-surface overflow-hidden" style={{ height: "calc(100vh - 220px)" }}>
+        <div className="flex h-full">
+          {/* Left rail */}
+          <aside className="w-80 shrink-0 border-r border-border flex flex-col bg-muted/30">
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Conversations</p>
+                <button className="w-7 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center" title="New conversation">
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
               </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" className="pl-9 h-9 bg-card" />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-4">
+              {loading && filteredChannels.length === 0 ? (
+                <div className="py-8 flex items-center justify-center text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+              ) : filteredChannels.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic px-2">No conversations yet.</p>
+              ) : (
+                <>
+                  {groupChannels.length > 0 && (
+                    <Section label="Channels" items={groupChannels} icon={Hash} active={activeChannel} onPick={setActiveChannel} />
+                  )}
+                  {tripChannels.length > 0 && (
+                    <Section label="Trips" items={tripChannels} icon={Navigation} active={activeChannel} onPick={setActiveChannel} />
+                  )}
+                  {directChannels.length > 0 && (
+                    <Section label="Direct" items={directChannels} icon={Users} active={activeChannel} onPick={setActiveChannel} />
+                  )}
+                </>
+              )}
+            </div>
+          </aside>
+
+          {/* Main pane */}
+          <section className="flex-1 flex flex-col min-w-0">
+            {!activeChannel ? (
+              <EmptyState icon={MessageSquare} title="Pick a channel" description="Select a conversation on the left to start chatting." />
             ) : (
               <>
-                {/* Channels */}
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Channels</p>
-                  <div className="space-y-1">
-                    {displayChannels.filter(c => c.type === "group").map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => !error && setActiveChannel(c)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${currentChannel?.id === c.id ? "bg-indigo-500 text-white shadow-md shadow-indigo-200" : "text-slate-600 hover:bg-slate-200/50"
-                          }`}
-                      >
-                        <Hash className={`w-4 h-4 ${currentChannel?.id === c.id ? "text-indigo-200" : "text-slate-400"}`} />
-                        {c.name}
-                      </button>
-                    ))}
+                <header className="px-5 py-3 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Hash className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <h2 className="text-sm font-black text-foreground truncate">{activeChannel.name}</h2>
                   </div>
+                  <button className="w-8 h-8 rounded-lg text-muted-foreground hover:bg-muted flex items-center justify-center" title="Channel info">
+                    <Info className="w-4 h-4" />
+                  </button>
+                </header>
+
+                {error && (
+                  <div className="bg-amber-50 text-amber-800 border-b border-amber-200 px-5 py-2 text-xs">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-muted/20">
+                  {messages.length === 0 ? (
+                    <div className="text-center text-sm text-muted-foreground italic mt-10">
+                      No messages yet. Say hi 👋
+                    </div>
+                  ) : (
+                    messages.map((m) => {
+                      const mine = m.sender_id === user?.id;
+                      return (
+                        <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
+                          <div className={cn("max-w-lg", mine && "text-right")}>
+                            {!mine && (
+                              <p className="text-[10px] font-bold text-muted-foreground mb-0.5">
+                                {m.sender_name ?? "Team member"}
+                              </p>
+                            )}
+                            <div className={cn(
+                              "rounded-2xl px-4 py-2 text-sm inline-block",
+                              mine
+                                ? "bg-primary text-primary-foreground rounded-br-sm"
+                                : "bg-card border border-border text-foreground rounded-bl-sm",
+                            )}>
+                              {m.content}
+                            </div>
+                            <p className={cn("text-[10px] text-muted-foreground mt-0.5", mine && "text-right")}>
+                              {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
 
-                {/* Active Trips */}
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Trip Comm</p>
-                  <div className="space-y-1">
-                    {displayChannels.filter(c => c.type === "trip").map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => !error && setActiveChannel(c)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${currentChannel?.id === c.id ? "bg-indigo-500 text-white shadow-md shadow-indigo-200" : "text-slate-600 hover:bg-slate-200/50"
-                          }`}
-                      >
-                        <Navigation className={`w-4 h-4 ${currentChannel?.id === c.id ? "text-indigo-200" : "text-emerald-500"}`} />
-                        {c.name}
-                      </button>
-                    ))}
+                <form onSubmit={sendMessage} className="p-4 border-t border-border bg-card">
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={`Message #${activeChannel.name}`}
+                      className="flex-1 min-h-[44px] max-h-32 resize-none rounded-2xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      rows={1}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          sendMessage();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="submit"
+                      disabled={!input.trim() || sending || Boolean(error)}
+                      className="h-11 w-11 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground p-0 shrink-0"
+                    >
+                      {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
                   </div>
-                </div>
+                </form>
               </>
             )}
-          </div>
+          </section>
         </div>
+      </div>
+    </PageShell>
+  );
+}
 
-        {/* ── Main Chat Area ── */}
-        <div className="flex-1 flex flex-col bg-white relative">
-          {/* Error overlay (if migration missing) */}
-          {error && (
-            <div className="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex items-center justify-center p-6">
-              <div className="max-w-md bg-white p-6 rounded-2xl shadow-2xl border border-red-100 text-center">
-                <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-black text-slate-800 mb-2">Database Setup Required</h3>
-                <p className="text-sm text-slate-600 mb-4">{error}</p>
-                <div className="p-4 bg-slate-50 rounded-xl text-xs font-mono text-left text-slate-700 border border-slate-200">
-                  Please execute the migration script located at:<br />
-                  <span className="font-bold text-indigo-600">supabase/migrations/004_internal_chat.sql</span>
-                </div>
-                <p className="text-xs text-slate-400 mt-4">Showing a preview of the UI in the background.</p>
-              </div>
-            </div>
-          )}
-
-          {/* Chat Header */}
-          <div className="h-16 px-6 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl ${currentChannel?.type === 'trip' ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                {currentChannel?.type === 'trip' ? <Navigation className="w-5 h-5" /> : <Hash className="w-5 h-5" />}
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-800">{currentChannel?.name || "Select a channel"}</h3>
-                <p className="text-xs text-slate-400">
-                  {currentChannel?.type === 'trip' ? 'Active Dispatch Channel' : 'Company Wide Channel'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Phone className="w-4 h-4" /></button>
-              <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Video className="w-4 h-4" /></button>
-              <div className="w-px h-6 bg-gray-200 mx-1"></div>
-              <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Info className="w-4 h-4" /></button>
-            </div>
-          </div>
-
-          {/* Messages feed */}
-          <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
-            <div className="space-y-6 max-w-4xl mx-auto">
-              {displayMessages.map((msg, i) => {
-                const isMe = msg.sender_id === user?.id || (error && msg.sender_id === "me");
-                return (
-                  <div key={msg.id} className={`flex gap-3 ${isMe ? "justify-end" : ""}`}>
-                    {!isMe && (
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-700 font-bold text-xs mt-1">
-                        {msg.sender?.full_name?.charAt(0) || "U"}
-                      </div>
-                    )}
-                    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} max-w-[70%]`}>
-                      {!isMe && (
-                        <div className="flex items-center gap-2 mb-1 px-1">
-                          <span className="text-xs font-bold text-slate-700">{msg.sender?.full_name || "User"}</span>
-                          <span className="text-[10px] text-slate-400">
-                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      )}
-                      <div className={`px-4 py-2.5 rounded-2xl text-sm ${isMe
-                          ? "bg-indigo-600 text-white rounded-br-sm shadow-md shadow-indigo-200"
-                          : "bg-white text-slate-700 border border-gray-100 rounded-bl-sm shadow-sm"
-                        }`}>
-                        {msg.content}
-                      </div>
-                      {isMe && (
-                        <div className="flex items-center gap-1 mt-1 pr-1">
-                          <span className="text-[10px] text-slate-400">
-                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <CheckCircle2 className="w-3 h-3 text-indigo-400" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-          </div>
-
-          {/* Message Input */}
-          <div className="p-4 bg-white border-t border-gray-100">
-            <form onSubmit={sendMessage} className="max-w-4xl mx-auto relative flex items-end gap-2">
-              <div className="flex-1 bg-slate-100 rounded-2xl p-2 flex items-center gap-2 border border-transparent focus-within:border-indigo-300 focus-within:bg-white transition-all">
-                <button type="button" className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl transition-colors shrink-0">
-                  <Plus className="w-5 h-5" />
-                </button>
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1 bg-transparent border-none outline-none resize-none max-h-32 min-h-[40px] text-sm py-2.5"
-                  rows={1}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage(e);
-                    }
-                  }}
-                />
-                <button type="button" className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl transition-colors shrink-0">
-                  <FileText className="w-5 h-5" />
-                </button>
-              </div>
-              <button
-                type="submit"
-                disabled={!input.trim() || loading}
-                className="w-12 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200 transition-all disabled:opacity-50 disabled:shadow-none"
-              >
-                <Send className="w-5 h-5 ml-1" />
-              </button>
-            </form>
-          </div>
-        </div>
+function Section({
+  label,
+  items,
+  icon: Icon,
+  active,
+  onPick,
+}: {
+  label: string;
+  items: Channel[];
+  icon: any;
+  active: Channel | null;
+  onPick: (c: Channel) => void;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2 mb-1">{label}</p>
+      <div className="space-y-0.5">
+        {items.map((c) => {
+          const isActive = active?.id === c.id;
+          return (
+            <button
+              key={c.id}
+              onClick={() => onPick(c)}
+              className={cn(
+                "w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-left transition-colors",
+                isActive
+                  ? "bg-primary text-primary-foreground font-bold"
+                  : "text-foreground hover:bg-muted",
+              )}
+            >
+              <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+              <span className="truncate">{c.name}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
-
-// --- Mock Data for Preview ---
-const MOCK_CHANNELS: Channel[] = [
-  { id: "c1", name: "General Dispatch", type: "group", created_at: new Date().toISOString() },
-  { id: "c2", name: "Driver Announcements", type: "group", created_at: new Date().toISOString() },
-  { id: "c3", name: "TRP-2024-001 (Mombasa)", type: "trip", created_at: new Date().toISOString() },
-];
-
-const MOCK_MESSAGES: Message[] = [
-  { id: "m1", channel_id: "c1", sender_id: "other", content: "Morning team! We have 4 new shipments to assign.", created_at: new Date(Date.now() - 3600000).toISOString(), sender: { full_name: "Sarah (Ops)" } },
-  { id: "m2", channel_id: "c1", sender_id: "me", content: "I'll take the Mombasa route. Truck KCC 123J is ready.", created_at: new Date(Date.now() - 1800000).toISOString() },
-  { id: "m3", channel_id: "c1", sender_id: "other", content: "Great. Please ensure PODs are uploaded immediately upon delivery.", created_at: new Date(Date.now() - 900000).toISOString(), sender: { full_name: "Sarah (Ops)" } },
-];
