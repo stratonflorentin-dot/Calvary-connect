@@ -146,13 +146,13 @@ export default function FxRatesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-muted-foreground flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
-          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
             <ArrowRightLeft className="w-6 h-6 text-fuchsia-600" /> FX Rates
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             Historical exchange rates. Reports use the most recent rate on or before the report date.
           </p>
         </div>
@@ -170,10 +170,10 @@ export default function FxRatesPage() {
       </div>
 
       {/* Latest per pair */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-black text-slate-800">Latest per Pair</h2>
-          <p className="text-xs text-slate-500">Effective right now — the rate reports will pick up today</p>
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-black text-foreground">Latest per Pair</h2>
+          <p className="text-xs text-muted-foreground">Effective right now — the rate reports will pick up today</p>
         </div>
         {loading ? (
           <div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
@@ -184,14 +184,14 @@ export default function FxRatesPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-5">
             {latestPerPair.map((r) => (
-              <div key={r.id} className="rounded-xl border border-slate-200 p-4">
+              <div key={r.id} className="rounded-xl border border-border p-4">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-500">
+                  <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                     {r.from_ccy} → {r.to_ccy}
                   </span>
                   <span className="text-[10px] text-muted-foreground">{r.effective_date}</span>
                 </div>
-                <p className="text-xl font-black text-slate-900 mt-1">{Number(r.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
+                <p className="text-xl font-black text-foreground mt-1">{Number(r.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
                 {r.source && <p className="text-[10px] text-muted-foreground mt-0.5">Source: {r.source}</p>}
               </div>
             ))}
@@ -200,15 +200,15 @@ export default function FxRatesPage() {
       </div>
 
       {/* Full history */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-black text-slate-800">History</h2>
-          <p className="text-xs text-slate-500">All recorded rates, newest first</p>
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-black text-foreground">History</h2>
+          <p className="text-xs text-muted-foreground">All recorded rates, newest first</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <thead className="bg-muted border-b border-border">
+              <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 <th className="px-5 py-2">Effective</th>
                 <th className="px-4 py-2">From</th>
                 <th className="px-4 py-2">To</th>
@@ -219,15 +219,15 @@ export default function FxRatesPage() {
             </thead>
             <tbody>
               {rates.map((r) => (
-                <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
-                  <td className="px-5 py-2 text-slate-700 text-xs">{r.effective_date}</td>
-                  <td className="px-4 py-2 font-mono text-xs font-black text-slate-800">{r.from_ccy}</td>
-                  <td className="px-4 py-2 font-mono text-xs font-black text-slate-800">{r.to_ccy}</td>
-                  <td className="px-4 py-2 text-right font-bold text-slate-800">
+                <tr key={r.id} className="border-t border-border hover:bg-muted/60">
+                  <td className="px-5 py-2 text-foreground text-xs">{r.effective_date}</td>
+                  <td className="px-4 py-2 font-mono text-xs font-black text-foreground">{r.from_ccy}</td>
+                  <td className="px-4 py-2 font-mono text-xs font-black text-foreground">{r.to_ccy}</td>
+                  <td className="px-4 py-2 text-right font-bold text-foreground">
                     {Number(r.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}
                   </td>
-                  <td className="px-4 py-2 text-slate-500 text-xs">{r.source ?? "—"}</td>
-                  <td className="px-5 py-2 text-slate-500 text-xs">{r.note ?? ""}</td>
+                  <td className="px-4 py-2 text-muted-foreground text-xs">{r.source ?? "—"}</td>
+                  <td className="px-5 py-2 text-muted-foreground text-xs">{r.note ?? ""}</td>
                 </tr>
               ))}
             </tbody>
@@ -238,11 +238,11 @@ export default function FxRatesPage() {
       {/* Add modal */}
       {adding && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
-                <h3 className="text-base font-black text-slate-800">Record FX Rate</h3>
-                <p className="text-xs text-slate-500">1 unit of “from” equals rate units of “to” on the effective date</p>
+                <h3 className="text-base font-black text-foreground">Record FX Rate</h3>
+                <p className="text-xs text-muted-foreground">1 unit of “from” equals rate units of “to” on the effective date</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setAdding(false)}><X className="w-4 h-4" /></Button>
             </div>
@@ -288,7 +288,7 @@ export default function FxRatesPage() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50">
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border bg-muted">
               <Button variant="outline" onClick={() => setAdding(false)} disabled={submitting}>Cancel</Button>
               <Button onClick={save} disabled={submitting} className="bg-fuchsia-600 hover:bg-fuchsia-700 gap-2">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Save Rate

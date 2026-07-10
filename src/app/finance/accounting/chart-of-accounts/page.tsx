@@ -680,7 +680,7 @@ export default function ChartOfAccountsPage() {
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-4">
           {categories.map((cat) => {
-            const colors = categoryColors[cat] || { icon: Calculator, text: 'text-slate-600' };
+            const colors = categoryColors[cat] || { icon: Calculator, text: 'text-muted-foreground' };
             const Icon = colors.icon || Calculator;
             return (
               <Button
@@ -753,7 +753,7 @@ export default function ChartOfAccountsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={account.currency === 'USD' ? 'text-blue-600' : 'text-gray-600'}>
+                        <Badge variant="outline" className={account.currency === 'USD' ? 'text-blue-600' : 'text-muted-foreground'}>
                           {account.currency || 'TZS'}
                         </Badge>
                       </TableCell>
@@ -840,13 +840,13 @@ export default function ChartOfAccountsPage() {
                       </div>
                       <div>
                         <Label className="text-muted-foreground">Currency</Label>
-                        <p><Badge variant="outline" className={selectedAccount.currency === 'USD' ? 'text-blue-600' : 'text-gray-600'}>
+                        <p><Badge variant="outline" className={selectedAccount.currency === 'USD' ? 'text-blue-600' : 'text-muted-foreground'}>
                           {selectedAccount.currency || 'TZS'}
                         </Badge></p>
                       </div>
                       <div>
                         <Label className="text-muted-foreground">Status</Label>
-                        <p><Badge variant="outline" className={selectedAccount.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                        <p><Badge variant="outline" className={selectedAccount.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-gray-700'}>
                           {selectedAccount.is_active ? 'Active' : 'Inactive'}
                         </Badge></p>
                       </div>
@@ -968,7 +968,7 @@ export default function ChartOfAccountsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="bg-white/10 p-2 rounded-lg">
+                    <div className="bg-card/10 p-2 rounded-lg">
                       <BookOpen className="h-5 w-5" />
                     </div>
                     <div>
@@ -1140,12 +1140,12 @@ export default function ChartOfAccountsPage() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="text-white hover:bg-white/20"
+                    className="text-white hover:bg-card/20"
                     onClick={() => setShowAddEntryDialog(false)}
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" /> Back to Chart of Accounts
                   </Button>
-                  <div className="h-6 w-px bg-white/30"></div>
+                  <div className="h-6 w-px bg-card/30"></div>
                   <div>
                     <DialogTitle className="text-xl text-white">Journal Entry</DialogTitle>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -1156,7 +1156,7 @@ export default function ChartOfAccountsPage() {
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  className="text-white hover:bg-white/20"
+                  className="text-white hover:bg-card/20"
                   onClick={() => setShowAddEntryDialog(false)}
                 >
                   <span className="text-2xl">&times;</span>
@@ -1202,7 +1202,7 @@ export default function ChartOfAccountsPage() {
               {/* Journal Entry Lines Table */}
               <div className="border rounded-lg overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-slate-100">
+                  <TableHeader className="bg-muted">
                     <TableRow>
                       <TableHead className="w-32">Date</TableHead>
                       <TableHead className="w-24">Account</TableHead>

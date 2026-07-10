@@ -92,22 +92,22 @@ function AccountPicker({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "w-full text-left px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm hover:border-indigo-300",
+          "w-full text-left px-3 py-2 rounded-lg border border-border bg-card text-sm hover:border-indigo-300",
           !value.code && "text-muted-foreground",
         )}
       >
         {value.code ? (
           <span className="flex items-center gap-2">
-            <span className="font-mono text-xs font-black text-slate-500">{value.code}</span>
-            <span className="text-slate-800">{value.name}</span>
+            <span className="font-mono text-xs font-black text-muted-foreground">{value.code}</span>
+            <span className="text-foreground">{value.name}</span>
           </span>
         ) : (
           placeholder
         )}
       </button>
       {open && (
-        <div className="absolute z-30 left-0 right-0 top-full mt-1 rounded-xl border border-slate-200 bg-white shadow-xl max-h-72 overflow-hidden flex flex-col">
-          <div className="p-2 border-b border-slate-100">
+        <div className="absolute z-30 left-0 right-0 top-full mt-1 rounded-xl border border-border bg-card shadow-xl max-h-72 overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-border">
             <Input
               autoFocus
               value={q}
@@ -132,8 +132,8 @@ function AccountPicker({
                   className="w-full text-left px-3 py-2 hover:bg-indigo-50 flex items-baseline justify-between gap-3 border-b border-slate-50 last:border-0"
                 >
                   <span className="flex items-baseline gap-2 min-w-0">
-                    <span className="font-mono text-xs font-black text-slate-500 shrink-0">{a.code}</span>
-                    <span className="text-sm text-slate-800 truncate">{a.name}</span>
+                    <span className="font-mono text-xs font-black text-muted-foreground shrink-0">{a.code}</span>
+                    <span className="text-sm text-foreground truncate">{a.name}</span>
                   </span>
                   <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground shrink-0">
                     {a.category}
@@ -337,13 +337,13 @@ export default function JournalEntriesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-muted-foreground flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
-          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-violet-600" /> Journal Entries
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {entries.length} entries · {entries.filter((e) => (e.status ?? "posted") === "posted").length} posted
           </p>
         </div>
@@ -367,7 +367,7 @@ export default function JournalEntriesPage() {
               "px-3 py-1.5 text-xs font-bold rounded-full border transition-colors",
               statusFilter === s
                 ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                : "border-border bg-card text-foreground hover:bg-muted/60",
             )}
           >
             {s === "all" ? "All statuses" : s === "posted" ? "Posted only" : "Drafts only"}
@@ -380,11 +380,11 @@ export default function JournalEntriesPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <thead className="bg-muted border-b border-border">
+              <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Reference</th>
                 <th className="px-4 py-3">Description</th>
@@ -403,12 +403,12 @@ export default function JournalEntriesPage() {
                 const lineCount = e.journal_entry_lines?.length ?? 0;
                 const total = (e.journal_entry_lines ?? []).reduce((s: number, l: any) => s + (Number(l.debit_amount) || 0), 0);
                 return (
-                  <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => setDetail(e)}>
-                    <td className="px-4 py-3 text-slate-700 text-xs">{new Date(e.entry_date).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 font-mono text-xs font-black text-slate-800">{e.reference ?? `JE-${e.id.slice(0, 6)}`}</td>
-                    <td className="px-4 py-3 text-slate-700">{e.description}</td>
-                    <td className="px-4 py-3 text-slate-500 text-xs">{lineCount}</td>
-                    <td className="px-4 py-3 text-right font-black text-slate-800">{fmt(total, e.currency ?? "TZS")}</td>
+                  <tr key={e.id} className="border-b border-border hover:bg-muted/60 cursor-pointer" onClick={() => setDetail(e)}>
+                    <td className="px-4 py-3 text-foreground text-xs">{new Date(e.entry_date).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 font-mono text-xs font-black text-foreground">{e.reference ?? `JE-${e.id.slice(0, 6)}`}</td>
+                    <td className="px-4 py-3 text-foreground">{e.description}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{lineCount}</td>
+                    <td className="px-4 py-3 text-right font-black text-foreground">{fmt(total, e.currency ?? "TZS")}</td>
                     <td className="px-4 py-3">
                       <Badge className={cn(
                         "text-[10px] uppercase font-black tracking-wider border",
@@ -433,11 +433,11 @@ export default function JournalEntriesPage() {
       {/* Create modal */}
       {creating && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl my-8">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="w-full max-w-4xl bg-card rounded-2xl shadow-2xl my-8">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
-                <h3 className="text-base font-black text-slate-800">New Journal Entry</h3>
-                <p className="text-xs text-slate-500">Double-entry — debits must equal credits</p>
+                <h3 className="text-base font-black text-foreground">New Journal Entry</h3>
+                <p className="text-xs text-muted-foreground">Double-entry — debits must equal credits</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setCreating(false)}><X className="w-4 h-4" /></Button>
             </div>
@@ -466,8 +466,8 @@ export default function JournalEntriesPage() {
               </div>
 
               {/* Lines */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <div className="border border-border rounded-xl overflow-hidden">
+                <div className="grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 bg-muted border-b border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   <div>Account</div>
                   <div className="text-right">Debit</div>
                   <div className="text-right">Credit</div>
@@ -514,18 +514,18 @@ export default function JournalEntriesPage() {
                     </Button>
                   </div>
                 ))}
-                <div className="px-3 py-2 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="px-3 py-2 border-t border-border flex items-center justify-between bg-muted/50">
                   <Button variant="outline" size="sm" onClick={addLine} className="h-8 gap-1">
                     <Plus className="w-3.5 h-3.5" /> Add line
                   </Button>
                   <div className="flex items-center gap-6 text-xs">
                     <div>
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-right">Debits</p>
-                      <p className="font-black text-slate-800 text-sm">{fmt(totals.debit, form.currency)}</p>
+                      <p className="font-black text-foreground text-sm">{fmt(totals.debit, form.currency)}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-right">Credits</p>
-                      <p className="font-black text-slate-800 text-sm">{fmt(totals.credit, form.currency)}</p>
+                      <p className="font-black text-foreground text-sm">{fmt(totals.credit, form.currency)}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-right">Diff</p>
@@ -537,7 +537,7 @@ export default function JournalEntriesPage() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-between items-center gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50">
+            <div className="flex justify-between items-center gap-2 px-5 py-4 border-t border-border bg-muted">
               <div className={cn("text-xs font-bold", totals.balanced ? "text-emerald-700" : "text-rose-700")}>
                 {totals.balanced
                   ? "Ready to post"
@@ -560,11 +560,11 @@ export default function JournalEntriesPage() {
       {/* Detail drawer */}
       {detail && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl mt-16">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="w-full max-w-3xl bg-card rounded-2xl shadow-2xl mt-16">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Journal Entry</p>
-                <h3 className="text-lg font-black text-slate-800 font-mono">{detail.reference ?? `JE-${detail.id.slice(0, 6)}`}</h3>
+                <h3 className="text-lg font-black text-foreground font-mono">{detail.reference ?? `JE-${detail.id.slice(0, 6)}`}</h3>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => reverse(detail)} className="gap-1 h-8">
@@ -577,11 +577,11 @@ export default function JournalEntriesPage() {
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Date</p>
-                  <p className="font-bold text-slate-800">{new Date(detail.entry_date).toLocaleDateString()}</p>
+                  <p className="font-bold text-foreground">{new Date(detail.entry_date).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Currency</p>
-                  <p className="font-bold text-slate-800">{detail.currency ?? "TZS"}</p>
+                  <p className="font-bold text-foreground">{detail.currency ?? "TZS"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</p>
@@ -596,12 +596,12 @@ export default function JournalEntriesPage() {
                 </div>
                 <div className="col-span-3">
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Description</p>
-                  <p className="text-slate-700">{detail.description}</p>
+                  <p className="text-foreground">{detail.description}</p>
                 </div>
               </div>
-              <table className="w-full text-sm border border-slate-100 rounded-xl overflow-hidden">
-                <thead className="bg-slate-50">
-                  <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <table className="w-full text-sm border border-border rounded-xl overflow-hidden">
+                <thead className="bg-muted">
+                  <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                     <th className="px-3 py-2">Account</th>
                     <th className="px-3 py-2 text-right">Debit</th>
                     <th className="px-3 py-2 text-right">Credit</th>
@@ -610,20 +610,20 @@ export default function JournalEntriesPage() {
                 </thead>
                 <tbody>
                   {(detail.journal_entry_lines ?? []).map((l: any) => (
-                    <tr key={l.id} className="border-t border-slate-100">
+                    <tr key={l.id} className="border-t border-border">
                       <td className="px-3 py-2">
-                        <span className="font-mono text-xs font-black text-slate-500 mr-2">{l.account_code}</span>
-                        <span className="text-slate-800">{l.account_name}</span>
+                        <span className="font-mono text-xs font-black text-muted-foreground mr-2">{l.account_code}</span>
+                        <span className="text-foreground">{l.account_name}</span>
                       </td>
                       <td className="px-3 py-2 text-right">{Number(l.debit_amount) > 0 ? fmt(Number(l.debit_amount), detail.currency ?? "TZS") : "—"}</td>
                       <td className="px-3 py-2 text-right">{Number(l.credit_amount) > 0 ? fmt(Number(l.credit_amount), detail.currency ?? "TZS") : "—"}</td>
-                      <td className="px-3 py-2 text-slate-500 text-xs">{l.memo ?? l.description ?? ""}</td>
+                      <td className="px-3 py-2 text-muted-foreground text-xs">{l.memo ?? l.description ?? ""}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50">
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border bg-muted">
               <Button variant="outline" onClick={() => setDetail(null)}>Close</Button>
             </div>
           </div>
