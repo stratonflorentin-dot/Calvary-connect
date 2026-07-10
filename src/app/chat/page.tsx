@@ -6,6 +6,8 @@ import { useSupabase } from "@/components/supabase-provider";
 import { PageShell, PageHeader, EmptyState } from "@/components/shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Hash,
   Info,
@@ -37,12 +39,6 @@ interface Message {
   sender_name?: string | null;
 }
 
-const MOCK_CHANNELS: Channel[] = [
-  { id: "c1", name: "General Dispatch",     type: "group", created_at: new Date().toISOString() },
-  { id: "c2", name: "Driver Announcements", type: "group", created_at: new Date().toISOString() },
-  { id: "c3", name: "TRP-2024-001",         type: "trip",  created_at: new Date().toISOString() },
-];
-
 export default function InternalChatPage() {
   const { user } = useSupabase();
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -53,6 +49,9 @@ export default function InternalChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadChannels(); }, []);
@@ -87,13 +86,9 @@ export default function InternalChatPage() {
         .select("*")
         .order("created_at", { ascending: false });
       if (dbErr) {
-        if (dbErr.code === "42P01") {
-          setError("Chat tables not found — run the internal_chat migration in Supabase to enable messaging.");
-        } else {
-          setError(dbErr.message);
-        }
-        setChannels(MOCK_CHANNELS);
-        setActiveChannel(MOCK_CHANNELS[0]);
+        setError(dbErr.code === "42P01"
+          ? "Chat tables not found — run the internal_chat migration in Supabase to enable messaging."
+          : dbErr.message);
         return;
       }
       setChannels(data ?? []);
@@ -154,6 +149,28 @@ export default function InternalChatPage() {
     setSending(false);
   };
 
+  const createChannel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newName.trim();
+    if (!name || creating) return;
+    setCreating(true);
+    const { data, error: dbErr } = await supabase
+      .from("chat_channels")
+      .insert({ name, type: "group", created_by: user?.id ?? null })
+      .select()
+      .single();
+    setCreating(false);
+    if (dbErr) {
+      setError(dbErr.message);
+      return;
+    }
+    setNewName("");
+    setCreateOpen(false);
+    setChannels((prev) => [data as Channel, ...prev]);
+    setActiveChannel(data as Channel);
+    setMessages([]);
+  };
+
   const filteredChannels = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (channels.length ? channels : []).filter((c) => !q || c.name.toLowerCase().includes(q));
@@ -184,7 +201,11 @@ export default function InternalChatPage() {
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Conversations</p>
-                <button className="w-7 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center" title="New conversation">
+                <button
+                  onClick={() => setCreateOpen(true)}
+                  className="w-7 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center"
+                  title="New channel"
+                >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -200,7 +221,12 @@ export default function InternalChatPage() {
                   <Loader2 className="w-5 h-5 animate-spin" />
                 </div>
               ) : filteredChannels.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-2">No conversations yet.</p>
+                <div className="px-2 space-y-2">
+                  <p className="text-xs text-muted-foreground italic">No conversations yet.</p>
+                  <Button size="sm" variant="outline" className="w-full gap-1.5 h-8" onClick={() => setCreateOpen(true)}>
+                    <Plus className="w-3.5 h-3.5" /> Create first channel
+                  </Button>
+                </div>
               ) : (
                 <>
                   {groupChannels.length > 0 && (
@@ -303,6 +329,32 @@ export default function InternalChatPage() {
           </section>
         </div>
       </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>New channel</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={createChannel} className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-xs">Channel name</Label>
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g. General dispatch"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
+              <Button type="submit" disabled={creating || !newName.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5">
+                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Create
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }
