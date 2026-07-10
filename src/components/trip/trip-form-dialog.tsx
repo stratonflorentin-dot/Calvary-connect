@@ -12,6 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Route as RouteIcon, Save } from "lucide-react";
+import dynamic from "next/dynamic";
+
+const RoutePreviewMap = dynamic(
+  () => import("@/components/trip/route-preview-map").then((m) => m.RoutePreviewMap),
+  { ssr: false },
+);
 
 /**
  * Add / edit a trip.
@@ -228,6 +234,17 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
                 <Input value={form.destination} onChange={(e) => patch({ destination: e.target.value })} placeholder="Lusaka" required />
               </div>
             </div>
+            <RoutePreviewMap
+              origin={form.origin}
+              destination={form.destination}
+              onRoute={({ distanceKm, durationHrs }) =>
+                setForm((prev) => ({
+                  ...prev,
+                  estimatedDistance: Math.round(distanceKm),
+                  estimatedDuration: Math.round(durationHrs * 10) / 10,
+                }))
+              }
+            />
             <div className="space-y-1">
               <Label className="text-xs">Cargo / description</Label>
               <Input value={form.cargo} onChange={(e) => patch({ cargo: e.target.value })} placeholder="e.g. Cement 40 tons" />
