@@ -61,13 +61,13 @@ function daysUntil(date: string) {
 
 function getRisk(policy: TruckInsurance) {
   const days = daysUntil(policy.expiry_date);
-  if (policy.status === 'expired' || days < 0) return { label: 'Critical', className: 'bg-destructive text-background' };
-  if (days <= 7) return { label: 'Urgent', className: 'bg-warning text-background' };
-  if (days <= 30) return { label: 'Watch', className: 'bg-warning text-background' };
+  if (policy.status === 'expired' || days < 0) return { label: 'Critical', className: 'bg-destructive text-destructive-foreground' };
+  if (days <= 7) return { label: 'Urgent', className: 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))]' };
+  if (days <= 30) return { label: 'Watch', className: 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))]' };
   if (policy.is_cross_border && !policy.has_comesa_yellow_card) {
-    return { label: 'COMESA Gap', className: 'bg-info text-background' };
+    return { label: 'COMESA Gap', className: 'bg-[hsl(var(--info))] text-[hsl(var(--info-foreground))]' };
   }
-  return { label: 'Covered', className: 'bg-success text-background' };
+  return { label: 'Covered', className: 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]' };
 }
 
 function ProgressBar({ value, tone = 'success' }: { value: number; tone?: 'success' | 'info' | 'warning' }) {
@@ -179,7 +179,7 @@ export default function InsuranceDashboard() {
                 </Button>
               </Link>
               <Link href="/hr/insurance/add">
-                <Button className="gap-2 h-11 bg-primary text-background hover:bg-primary/90">
+                <Button className="gap-2 h-11 bg-primary text-primary-foreground hover:bg-primary/90">
                   <Plus className="h-4 w-4" />
                   New Policy
                 </Button>

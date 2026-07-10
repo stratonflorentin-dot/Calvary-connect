@@ -26,7 +26,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const data = await InsuranceService.createInsurance(body);
+        const accessToken = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+        const data = await InsuranceService.createInsurance(body, accessToken);
         return NextResponse.json({ data }, { status: 201 });
     } catch (error: any) {
         console.error('POST /api/insurance error:', error);

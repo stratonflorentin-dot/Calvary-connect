@@ -30,7 +30,8 @@ export async function POST(req: Request) {
       notes: record.notes,
     } as Partial<TruckInsurance>));
 
-    const result = await InsuranceService.bulkImportInsurance(validRecords);
+    const accessToken = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    const result = await InsuranceService.bulkImportInsurance(validRecords, accessToken);
 
     return NextResponse.json({
       message: 'Bulk import completed',

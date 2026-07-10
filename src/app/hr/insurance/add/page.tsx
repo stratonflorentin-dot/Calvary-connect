@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useFleetVehicles } from '@/hooks/data/use-fleet-vehicles';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 const insurers = [
@@ -172,9 +173,13 @@ export default function AddInsurancePage() {
     };
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/insurance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 

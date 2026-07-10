@@ -1,14 +1,18 @@
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { TruckInsurance, InsuranceClaim, InsuranceSummary, InsuranceStatus } from '@/types/roles';
 import { AuditService } from './audit-service';
 import { addDays, differenceInDays, parseISO } from 'date-fns';
 
-// Get current user for audit logging
-async function getCurrentUser() {
-  const { data: { user } } = await supabase.auth.getUser();
+// Get current user for audit logging. API routes have no cookie session, so
+// callers pass the browser's access token and we validate it server-side.
+async function getCurrentUser(accessToken?: string) {
+  const { data: { user } } = accessToken
+    ? await supabaseAdmin().auth.getUser(accessToken)
+    : await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseAdmin()
     .from('user_profiles')
     .select('name, role')
     .eq('id', user.id)
@@ -24,8 +28,9 @@ async function getCurrentUser() {
 export class InsuranceService {
   // ==================== CRUD Operations ====================
   
-  static async createInsurance(insurance: Omit<TruckInsurance, 'id' | 'created_at' | 'updated_at'>) {
-    const user = await getCurrentUser();
+  static async createInsurance(insurance: Omit<TruckInsurance, 'id' | 'created_at' | 'updated_at'>, accessToken?: string) {
+    const user = await getCurrentUser(accessToken);
+    if (!user) throw new Error('You must be signed in to add an insurance policy.');
     
     // Validate TIRA compliance for Tanzania
     const status = this.calculateInsuranceStatus(insurance.expiry_date);
@@ -35,10 +40,10 @@ export class InsuranceService {
       status,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      created_by: user?.id || 'system',
+      created_by: user.id,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('truck_insurance')
       .insert(insuranceData)
       .select()
@@ -63,7 +68,7 @@ export class InsuranceService {
 
   static async updateInsurance(id: string, updates: Partial<TruckInsurance>) {
     const user = await getCurrentUser();
-    const { data: oldData } = await supabase
+    const { data: oldData } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
       .eq('id', id)
@@ -74,7 +79,7 @@ export class InsuranceService {
       ? this.calculateInsuranceStatus(updates.expiry_date)
       : oldData?.status;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('truck_insurance')
       .update({
         ...updates,
@@ -104,13 +109,13 @@ export class InsuranceService {
 
   static async deleteInsurance(id: string) {
     const user = await getCurrentUser();
-    const { data: oldData } = await supabase
+    const { data: oldData } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
       .eq('id', id)
       .single();
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin()
       .from('truck_insurance')
       .delete()
       .eq('id', id);
@@ -131,7 +136,7 @@ export class InsuranceService {
   }
 
   static async getInsurance(id: string) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
       .eq('id', id)
@@ -142,7 +147,7 @@ export class InsuranceService {
   }
 
   static async getInsuranceByVehicle(vehicleId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
       .eq('vehicle_id', vehicleId)
@@ -157,7 +162,7 @@ export class InsuranceService {
     insurer?: string;
     policy_type?: string;
   }) {
-    let query = supabase.from('truck_insurance').select('*');
+    let query = supabaseAdmin().from('truck_insurance').select('*');
     
     if (filters?.status) query = query.eq('status', filters.status);
     if (filters?.insurer) query = query.ilike('insurer_name', `%${filters.insurer}%`);
@@ -182,7 +187,7 @@ export class InsuranceService {
   }
 
   static async getExpiringPolicies(daysThreshold: number = 30) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
       .in('status', ['expiring_soon', 'expired'])
@@ -201,7 +206,7 @@ export class InsuranceService {
 
   // TIRA Tanzania Compliance: Every truck must have at minimum Third Party coverage
   static async validateTIRACompliance() {
-    const { data: vehicles, error: vehicleError } = await supabase
+    const { data: vehicles, error: vehicleError } = await supabaseAdmin()
       .from('vehicles')
       .select('id, plate_number');
     
@@ -209,7 +214,7 @@ export class InsuranceService {
 
     const complianceReport = await Promise.all(
       (vehicles || []).map(async (vehicle) => {
-        const { data: insurance } = await supabase
+        const { data: insurance } = await supabaseAdmin()
           .from('truck_insurance')
           .select('*')
           .eq('vehicle_id', vehicle.id)
@@ -233,7 +238,7 @@ export class InsuranceService {
 
   // Flag cross-border trucks requiring COMESA Yellow Card
   static async checkCrossBorderCoverage() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
       .eq('is_cross_border', true);
@@ -248,8 +253,9 @@ export class InsuranceService {
 
   // ==================== Bulk Operations ====================
 
-  static async bulkImportInsurance(records: Array<Partial<TruckInsurance>>) {
-    const user = await getCurrentUser();
+  static async bulkImportInsurance(records: Array<Partial<TruckInsurance>>, accessToken?: string) {
+    const user = await getCurrentUser(accessToken);
+    if (!user) throw new Error('You must be signed in to import insurance policies.');
     const results = { success: 0, failed: 0, errors: [] as string[] };
 
     for (const record of records) {
@@ -260,10 +266,10 @@ export class InsuranceService {
           status,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          created_by: user?.id || 'system',
+          created_by: user.id,
         };
 
-        const { error } = await supabase
+        const { error } = await supabaseAdmin()
           .from('truck_insurance')
           .insert(insuranceData);
 
@@ -297,11 +303,11 @@ export class InsuranceService {
   // ==================== Reporting ====================
 
   static async getInsuranceSummary(): Promise<InsuranceSummary> {
-    const { data: vehicles } = await supabase
+    const { data: vehicles } = await supabaseAdmin()
       .from('vehicles')
       .select('id');
 
-    const { data: insurance } = await supabase
+    const { data: insurance } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*');
 
@@ -353,7 +359,7 @@ export class InsuranceService {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('insurance_claims')
       .insert(claimData)
       .select()
@@ -377,7 +383,7 @@ export class InsuranceService {
   }
 
   static async getClaimsByInsurance(insuranceId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('insurance_claims')
       .select('*')
       .eq('truck_insurance_id', insuranceId)
@@ -388,7 +394,7 @@ export class InsuranceService {
   }
 
   static async getClaimsByVehicle(vehicleId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('insurance_claims')
       .select('*')
       .eq('vehicle_id', vehicleId)
@@ -400,13 +406,13 @@ export class InsuranceService {
 
   static async updateClaim(id: string, updates: Partial<InsuranceClaim>) {
     const user = await getCurrentUser();
-    const { data: oldData } = await supabase
+    const { data: oldData } = await supabaseAdmin()
       .from('insurance_claims')
       .select('*')
       .eq('id', id)
       .single();
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin()
       .from('insurance_claims')
       .update({
         ...updates,

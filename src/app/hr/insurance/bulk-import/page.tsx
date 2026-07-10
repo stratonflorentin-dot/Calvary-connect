@@ -8,6 +8,7 @@ import { ArrowLeft, CheckCircle2, Download, FileSpreadsheet, Loader2, Upload } f
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/lib/supabase';
 
 interface BulkImportResult {
   success: number;
@@ -83,9 +84,13 @@ export default function BulkImportPage() {
       const isJson = file.name.toLowerCase().endsWith('.json');
       const records = isJson ? JSON.parse(text) : parseCsv(text);
 
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/insurance/bulk-import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           records,
           format: isJson ? 'json' : 'csv',
