@@ -1,64 +1,67 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Sidebar } from '@/components/navigation/sidebar';
-import { BottomTabs } from '@/components/navigation/bottom-tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { RefreshCw, Download, FileText, FileSpreadsheet, ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
-import { useRole } from '@/hooks/use-role';
-import { useSupabase } from '@/components/supabase-provider';
-import { toast } from '@/hooks/use-toast';
-import JSZip from 'jszip';
-import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar } from 'recharts';
+import Link from "next/link";
+import { PageShell, PageHeader, SectionCard, EmptyState, PageSkeleton } from "@/components/shell";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSupabase } from "@/components/supabase-provider";
+import { useRole } from "@/hooks/use-role";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import JSZip from "jszip";
+import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar } from "recharts";
+import { Download, FileSpreadsheet, FileText, RefreshCw, ShieldAlert, Wallet } from "lucide-react";
 
 const agencies = [
-    { key: 'paye', label: 'TRA / PAYE' },
-    { key: 'nssf', label: 'NSSF' },
-    { key: 'nhif', label: 'NHIF' },
-    { key: 'sdl', label: 'SDL' },
-    { key: 'wcf', label: 'WCF' },
+  { key: "paye", label: "TRA / PAYE" },
+  { key: "nssf", label: "NSSF" },
+  { key: "nhif", label: "NHIF" },
+  { key: "sdl", label: "SDL" },
+  { key: "wcf", label: "WCF" },
 ];
 
 const humanLabels: Record<string, string> = {
-    paye: 'PAYE',
-    nssf: 'NSSF',
-    nhif: 'NHIF',
-    sdl: 'SDL',
-    wcf: 'WCF',
+  paye: "PAYE",
+  nssf: "NSSF",
+  nhif: "NHIF",
+  sdl: "SDL",
+  wcf: "WCF",
 };
 
-const formatAmount = (value: number) => `TZS ${value.toLocaleString('en-TZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatAmount = (value: number) =>
+  `TZS ${value.toLocaleString("en-TZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const escapeCsvValue = (value: string | number | undefined) => {
-    const text = String(value ?? '');
-    if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-        return `"${text.replace(/"/g, '""')}"`;
-    }
-    return text;
+  const text = String(value ?? "");
+  if (text.includes(",") || text.includes('"') || text.includes("\n")) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
 };
 
 const buildCsv = (rows: any[]) => {
-    const header = ['Employee Name', 'ID / NIDA', 'Gross Pay', 'Deduction', 'Employer Contribution'];
-    const lines = [header.join(',')];
-    rows.forEach((row) => {
-        lines.push([
-            escapeCsvValue(row.employee_name),
-            escapeCsvValue(row.employee_id_no),
-            escapeCsvValue(formatAmount(row.gross_pay)),
-            escapeCsvValue(formatAmount(row.deduction)),
-            escapeCsvValue(formatAmount(row.employer_contribution)),
-        ].join(','));
-    });
-    return lines.join('\n');
+  const header = ["Employee Name", "ID / NIDA", "Gross Pay", "Deduction", "Employer Contribution"];
+  const lines = [header.join(",")];
+  rows.forEach((row) => {
+    lines.push(
+      [
+        escapeCsvValue(row.employee_name),
+        escapeCsvValue(row.employee_id_no),
+        escapeCsvValue(formatAmount(row.gross_pay)),
+        escapeCsvValue(formatAmount(row.deduction)),
+        escapeCsvValue(formatAmount(row.employer_contribution)),
+      ].join(","),
+    );
+  });
+  return lines.join("\n");
 };
 
 const buildExcelHtml = (rows: any[], period: string, agencyLabel: string) => {
-    const rowsHtml = rows.map((row) => `
+  const rowsHtml = rows
+    .map(
+      (row) => `
     <tr>
       <td>${row.employee_name}</td>
       <td>${row.employee_id_no}</td>
@@ -66,9 +69,11 @@ const buildExcelHtml = (rows: any[], period: string, agencyLabel: string) => {
       <td>${formatAmount(row.deduction)}</td>
       <td>${formatAmount(row.employer_contribution)}</td>
     </tr>
-  `).join('');
+  `,
+    )
+    .join("");
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8" />
@@ -96,289 +101,272 @@ const buildExcelHtml = (rows: any[], period: string, agencyLabel: string) => {
 };
 
 const downloadBlob = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 };
 
 export default function StatutoryReportsPage() {
-    const { user } = useSupabase();
-    const { role } = useRole();
-    const [payrollRuns, setPayrollRuns] = useState<string[]>([]);
-    const [selectedPeriod, setSelectedPeriod] = useState<string>('');
-    const [summaries, setSummaries] = useState<Record<string, { total: number; status: string }>>({});
-    const [details, setDetails] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [exportBusy, setExportBusy] = useState(false);
+  const { user } = useSupabase();
+  const { role } = useRole();
+  const [payrollRuns, setPayrollRuns] = useState<string[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
+  const [summaries, setSummaries] = useState<Record<string, { total: number; status: string }>>({});
+  const [details, setDetails] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
 
-    useEffect(() => {
-        if (!user || !role) return;
-        loadData('');
-    }, [user, role]);
+  useEffect(() => {
+    if (!user || !role) return;
+    loadData("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, role]);
 
-    const loadData = async (period: string) => {
-        setLoading(true);
-        try {
-            const url = new URL('/api/admin/hr/payroll/statutory', window.location.origin);
-            if (period) url.searchParams.set('period', period);
-            const response = await fetch(url.toString());
-            if (!response.ok) throw new Error('Failed to load statutory payroll data');
-            const json = await response.json();
-            const nextPeriod = json.selectedPeriod || json.payrollRuns?.[0] || '';
-            setPayrollRuns(json.payrollRuns || []);
-            setSelectedPeriod(nextPeriod);
-            setSummaries(json.summaries || {});
-            setDetails(json.details || []);
-        } catch (error: any) {
-            console.error(error);
-            toast({ title: 'Load Failed', description: error.message || 'Unable to fetch statutory payroll data.', variant: 'destructive' });
-        } finally {
-            setLoading(false);
+  const loadData = async (period: string) => {
+    setLoading(true);
+    try {
+      const url = new URL("/api/admin/hr/payroll/statutory", window.location.origin);
+      if (period) url.searchParams.set("period", period);
+      const response = await fetch(url.toString());
+      if (!response.ok) throw new Error("Failed to load statutory payroll data");
+      const json = await response.json();
+      const nextPeriod = json.selectedPeriod || json.payrollRuns?.[0] || "";
+      setPayrollRuns(json.payrollRuns || []);
+      setSelectedPeriod(nextPeriod);
+      setSummaries(json.summaries || {});
+      setDetails(json.details || []);
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: "Load Failed", description: error.message || "Unable to fetch statutory payroll data.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePeriodChange = async (value: string) => {
+    setSelectedPeriod(value);
+    await loadData(value);
+  };
+
+  const downloadCsv = (agencyKey: string) => {
+    if (!selectedPeriod) return;
+    const csv = buildCsv(details);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    downloadBlob(blob, `statutory_${agencyKey}_${selectedPeriod}.csv`);
+  };
+
+  const downloadExcel = (agencyKey: string) => {
+    if (!selectedPeriod) return;
+    const html = buildExcelHtml(details, selectedPeriod, humanLabels[agencyKey] || agencyKey.toUpperCase());
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    downloadBlob(blob, `statutory_${agencyKey}_${selectedPeriod}.xls`);
+  };
+
+  const downloadPdf = async (agencyKey: string) => {
+    if (!selectedPeriod) return;
+    setExportBusy(true);
+    try {
+      const url = new URL("/api/admin/hr/payroll/statutory/export/pdf", window.location.origin);
+      url.searchParams.set("period", selectedPeriod);
+      url.searchParams.set("agency", agencyKey);
+      window.open(url.toString(), "_blank");
+    } catch (error: any) {
+      toast({ title: "Export Failed", description: error.message || "Could not export PDF.", variant: "destructive" });
+    } finally {
+      setExportBusy(false);
+    }
+  };
+
+  const generateReturns = async () => {
+    if (!selectedPeriod) return;
+    setIsGenerating(true);
+    try {
+      const zip = new JSZip();
+      agencies.forEach((agency) => {
+        const csv = buildCsv(details);
+        zip.file(`${agency.key}_${selectedPeriod}.csv`, csv);
+      });
+      const content = await zip.generateAsync({ type: "blob" });
+      downloadBlob(content, `statutory_returns_${selectedPeriod}.zip`);
+      toast({ title: "Returns Generated", description: "All statutory returns are compiled into a ZIP file." });
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: "Generation Failed", description: error.message || "Could not generate returns.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const chartData = useMemo(
+    () =>
+      agencies.map((agency) => ({
+        name: humanLabels[agency.key] || agency.label,
+        amount: summaries[agency.key]?.total || 0,
+      })),
+    [summaries],
+  );
+
+  const statusChip = (status?: string) =>
+    status === "Filed" ? "cv-chip-success" : status === "Submitted" ? "cv-chip-info" : "cv-chip-warning";
+
+  return (
+    <PageShell>
+      <PageHeader
+        eyebrow="Human Resources"
+        title="Workers payroll & statutory"
+        subtitle="PAYE, NSSF, NHIF, SDL and WCF returns per approved payroll run"
+        icon={Wallet}
+        crumbs={[{ label: "HR", href: "/hr" }, { label: "Payroll & statutory" }]}
+        actions={
+          <>
+            <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
+              <SelectTrigger className="w-56 h-9">
+                <SelectValue placeholder={loading ? "Loading runs…" : "Select payroll run"} />
+              </SelectTrigger>
+              <SelectContent>
+                {payrollRuns.length > 0 ? (
+                  payrollRuns.map((period) => (
+                    <SelectItem value={period} key={period}>
+                      {period}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-payroll" disabled>
+                    No approved payroll runs
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              onClick={generateReturns}
+              disabled={!selectedPeriod || isGenerating || !details.length}
+              className="h-9 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", isGenerating && "animate-spin")} />
+              {isGenerating ? "Compiling…" : "Generate returns"}
+            </Button>
+          </>
         }
-    };
+      />
 
-    const handlePeriodChange = async (value: string) => {
-        setSelectedPeriod(value);
-        await loadData(value);
-    };
-
-    const buildRows = (agencyKey: string) => {
-        return details.map((row) => ({
-            ...row,
-            deduction: row.deduction,
-            employer_contribution: row.employer_contribution,
-        }));
-    };
-
-    const downloadCsv = (agencyKey: string) => {
-        if (!selectedPeriod) return;
-        const rows = buildRows(agencyKey);
-        const csv = buildCsv(rows);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        downloadBlob(blob, `statutory_${agencyKey}_${selectedPeriod}.csv`);
-    };
-
-    const downloadExcel = (agencyKey: string) => {
-        if (!selectedPeriod) return;
-        const rows = buildRows(agencyKey);
-        const html = buildExcelHtml(rows, selectedPeriod, humanLabels[agencyKey] || agencyKey.toUpperCase());
-        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-        downloadBlob(blob, `statutory_${agencyKey}_${selectedPeriod}.xls`);
-    };
-
-    const downloadPdf = async (agencyKey: string) => {
-        if (!selectedPeriod) return;
-        setExportBusy(true);
-        try {
-            const url = new URL('/api/admin/hr/payroll/statutory/export/pdf', window.location.origin);
-            url.searchParams.set('period', selectedPeriod);
-            url.searchParams.set('agency', agencyKey);
-            window.open(url.toString(), '_blank');
-        } catch (error: any) {
-            toast({ title: 'Export Failed', description: error.message || 'Could not export PDF.', variant: 'destructive' });
-        } finally {
-            setExportBusy(false);
-        }
-    };
-
-    const generateReturns = async () => {
-        if (!selectedPeriod) return;
-        setIsGenerating(true);
-        try {
-            const zip = new JSZip();
-            agencies.forEach((agency) => {
-                const rows = buildRows(agency.key);
-                const csv = buildCsv(rows);
-                zip.file(`${agency.key}_${selectedPeriod}.csv`, csv);
-            });
-            const content = await zip.generateAsync({ type: 'blob' });
-            downloadBlob(content, `statutory_returns_${selectedPeriod}.zip`);
-            toast({ title: 'Returns Generated', description: 'All statutory returns are compiled into a ZIP file.' });
-        } catch (error: any) {
-            console.error(error);
-            toast({ title: 'Generation Failed', description: error.message || 'Could not generate returns.', variant: 'destructive' });
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    const chartData = useMemo(() => {
-        return agencies.map((agency) => ({
-            name: humanLabels[agency.key] || agency.label,
-            amount: summaries[agency.key]?.total || 0,
-        }));
-    }, [summaries]);
-
-    return (
-        <div className="flex min-h-screen bg-background text-foreground font-sans">
-            <Sidebar role={role || 'DRIVER'} />
-            <main className="flex-1 md:ml-60 p-6 md:p-8 overflow-auto">
-                <div className="max-w-7xl mx-auto space-y-6">
-                    <div className="space-y-3">
-                        <h1 className="text-2xl font-bold text-gray-900">HR Statutory Reports</h1>
-                        <p className="text-sm text-gray-500">Generate payroll returns for TRA/PAYE, NSSF, NHIF, SDL and WCF for your approved payroll periods.</p>
-                    </div>
-
-                    <Card className="border border-slate-200 shadow-sm">
-                        <CardContent className="space-y-4">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                                <div className="space-y-2">
-                                    <p className="text-sm font-medium text-gray-600">Payroll run</p>
-                                    <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
-                                        <SelectTrigger className="w-full md:w-72">
-                                            <SelectValue placeholder={loading ? 'Loading payroll runs...' : 'Select approved payroll run'} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {payrollRuns.length > 0 ? payrollRuns.map((period) => (
-                                                <SelectItem value={period} key={period}>{period}</SelectItem>
-                                            )) : (
-                                                <SelectItem value="no-payroll" disabled>No approved payroll runs</SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="flex flex-wrap gap-3">
-                                    <Button onClick={generateReturns} disabled={!selectedPeriod || isGenerating || !details.length} className="bg-sky-700 text-white hover:bg-sky-800">
-                                        <RefreshCw className="w-4 h-4 mr-2" />
-                                        {isGenerating ? 'Compiling...' : 'Generate Returns'}
-                                    </Button>
-                                    <Button onClick={() => downloadCsv('paye')} disabled={!selectedPeriod || exportBusy || !details.length} className="bg-slate-100 text-slate-700 hover:bg-slate-200">
-                                        <FileText className="w-4 h-4 mr-2" />Export CSV
-                                    </Button>
-                                    <Button onClick={() => downloadExcel('paye')} disabled={!selectedPeriod || exportBusy || !details.length} className="bg-slate-100 text-slate-700 hover:bg-slate-200">
-                                        <FileSpreadsheet className="w-4 h-4 mr-2" />Export Excel
-                                    </Button>
-                                    <Button onClick={() => downloadPdf('paye')} disabled={!selectedPeriod || exportBusy || !details.length} className="bg-slate-100 text-slate-700 hover:bg-slate-200">
-                                        <Download className="w-4 h-4 mr-2" />Export PDF
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {agencies.map((agency) => (
-                                    <Card key={agency.key} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                                        <CardHeader className="space-y-2 px-4 py-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-600">{agency.label}</p>
-                                                    <p className="text-2xl font-semibold text-gray-900 mt-2">{formatAmount(summaries[agency.key]?.total || 0)}</p>
-                                                </div>
-                                                <Badge variant="secondary" className="rounded-full px-2.5 py-1 text-xs font-semibold uppercase">
-                                                    {summaries[agency.key]?.status || 'Pending'}
-                                                </Badge>
-                                            </div>
-                                            <p className="text-xs text-gray-500">Total amount due for {agency.label}</p>
-                                        </CardHeader>
-                                    </Card>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {payrollRuns.length === 0 ? (
-                        <Card className="border border-yellow-200 bg-yellow-50 text-yellow-900 shadow-sm">
-                            <CardContent className="flex flex-col gap-3">
-                                <div className="flex items-start gap-3">
-                                    <ShieldAlert className="w-6 h-6 text-yellow-600" />
-                                    <div>
-                                        <CardTitle className="text-lg text-yellow-900">No approved payroll runs found</CardTitle>
-                                        <CardDescription className="text-sm text-yellow-800">Please approve payroll entries in the Payroll page first, then return here to generate statutory returns.</CardDescription>
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap gap-3">
-                                    <Button asChild>
-                                        <Link href="/allowances" className="bg-sky-700 text-white hover:bg-sky-800">Open Payroll Management</Link>
-                                    </Button>
-                                    <Button variant="outline" asChild>
-                                        <Link href="/admin/hr/payroll/statutory" className="text-slate-700 hover:bg-slate-100">Refresh</Link>
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-6">
-                            <Card className="border border-slate-200 bg-white shadow-sm">
-                                <CardHeader className="px-4 py-4">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div>
-                                            <CardTitle className="text-lg">Employee Breakdown</CardTitle>
-                                            <CardDescription>Gross pay, statutory deductions, and employer contributions by employee.</CardDescription>
-                                        </div>
-                                        <Badge className="text-xs uppercase">{details.length} records</Badge>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="px-0 py-0 overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Employee</TableHead>
-                                                <TableHead>ID / NIDA</TableHead>
-                                                <TableHead>Gross Pay</TableHead>
-                                                <TableHead>Deduction</TableHead>
-                                                <TableHead>Employer Contribution</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {details.length > 0 ? details.map((row) => (
-                                                <TableRow key={`${row.employee_id}-${row.employee_name}`}>
-                                                    <TableCell>{row.employee_name}</TableCell>
-                                                    <TableCell>{row.employee_id_no || 'N/A'}</TableCell>
-                                                    <TableCell>{formatAmount(row.gross_pay)}</TableCell>
-                                                    <TableCell>{formatAmount(row.deduction)}</TableCell>
-                                                    <TableCell>{formatAmount(row.employer_contribution)}</TableCell>
-                                                </TableRow>
-                                            )) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={5} className="text-center py-8 text-sm text-gray-500">No payroll data available for the selected period.</TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border border-slate-200 bg-white shadow-sm">
-                                <CardHeader className="px-4 py-4">
-                                    <CardTitle className="text-lg">Payroll Summary</CardTitle>
-                                    <CardDescription>Visual totals across statutory agencies.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-4">
-                                    <div className="h-72">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                                                <YAxis tickFormatter={(value) => value >= 1000 ? `${Math.round(value / 1000)}k` : value} />
-                                                <Tooltip formatter={(value: number) => formatAmount(value)} />
-                                                <Bar dataKey="amount" fill="#0ea5e9" radius={[6, 6, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div className="mt-5 space-y-3">
-                                        {agencies.map((agency) => (
-                                            <div key={agency.key} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-700">{agency.label}</p>
-                                                    <p className="text-xs text-gray-500">{summaries[agency.key]?.status || 'Pending status'}</p>
-                                                </div>
-                                                <p className="text-sm font-semibold text-gray-900">{formatAmount(summaries[agency.key]?.total || 0)}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    )}
+      {loading ? (
+        <PageSkeleton kpiCount={5} />
+      ) : payrollRuns.length === 0 ? (
+        <SectionCard title="No payroll runs yet">
+          <EmptyState
+            icon={ShieldAlert}
+            title="No approved payroll runs found"
+            description="Approve payroll entries in Payroll Management first, then return here to generate statutory returns."
+            action={
+              <Link href="/allowances">
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">Open Payroll Management</Button>
+              </Link>
+            }
+          />
+        </SectionCard>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {agencies.map((agency) => (
+              <div key={agency.key} className="cv-kpi">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="cv-kpi-label">{agency.label}</span>
+                  <span className={cn("cv-chip", statusChip(summaries[agency.key]?.status))}>
+                    {summaries[agency.key]?.status || "Pending"}
+                  </span>
                 </div>
-            </main>
-            <BottomTabs role={role || 'DRIVER'} />
+                <p className="cv-kpi-value mt-2 text-lg">{formatAmount(summaries[agency.key]?.total || 0)}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-6 items-start">
+            <SectionCard
+              title={`Employee breakdown (${details.length})`}
+              subtitle="Gross pay, statutory deductions and employer contributions"
+              padded={false}
+              actions={
+                <div className="flex items-center gap-1.5">
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => downloadCsv("paye")} disabled={!details.length || exportBusy}>
+                    <FileText className="w-3.5 h-3.5" /> CSV
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => downloadExcel("paye")} disabled={!details.length || exportBusy}>
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => downloadPdf("paye")} disabled={!details.length || exportBusy}>
+                    <Download className="w-3.5 h-3.5" /> PDF
+                  </Button>
+                </div>
+              }
+            >
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>ID / NIDA</TableHead>
+                      <TableHead>Gross Pay</TableHead>
+                      <TableHead>Deduction</TableHead>
+                      <TableHead>Employer Contribution</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {details.length > 0 ? (
+                      details.map((row) => (
+                        <TableRow key={`${row.employee_id}-${row.employee_name}`}>
+                          <TableCell className="font-medium">{row.employee_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{row.employee_id_no || "N/A"}</TableCell>
+                          <TableCell className="font-mono text-xs">{formatAmount(row.gross_pay)}</TableCell>
+                          <TableCell className="font-mono text-xs">{formatAmount(row.deduction)}</TableCell>
+                          <TableCell className="font-mono text-xs">{formatAmount(row.employer_contribution)}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
+                          No payroll data available for the selected period.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Payroll summary" subtitle="Totals across statutory agencies">
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tickFormatter={(value) => (value >= 1000 ? `${Math.round(value / 1000)}k` : value)} />
+                    <Tooltip formatter={(value: number) => formatAmount(value)} />
+                    <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 space-y-2">
+                {agencies.map((agency) => (
+                  <div key={agency.key} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-2.5">
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{agency.label}</p>
+                      <p className="text-xs text-muted-foreground">{summaries[agency.key]?.status || "Pending"}</p>
+                    </div>
+                    <p className="text-sm font-black text-foreground font-mono">{formatAmount(summaries[agency.key]?.total || 0)}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
         </div>
-    );
+      )}
+    </PageShell>
+  );
 }
