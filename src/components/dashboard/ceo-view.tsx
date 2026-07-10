@@ -78,6 +78,14 @@ export function CeoView() {
       .filter((a) => normalizeCurrency(a.currency) === REPORTING_CURRENCY)
       .reduce((s, a) => s + Number(a.current_balance || 0), 0);
 
+    // Company also holds USD — surface it alongside TZS, never summed together
+    const cashUsd = banks
+      .filter((a) => normalizeCurrency(a.currency) === "USD")
+      .reduce((s, a) => s + Number(a.current_balance || 0), 0);
+    const revenueMtdUsd = invoices
+      .filter((i) => (i.type ?? "receivable") === "receivable" && i.status === "paid" && i.paid_at && new Date(i.paid_at).getTime() >= new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() && normalizeCurrency(i.currency) === "USD")
+      .reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0), 0);
+
     const ar = invoices
       .filter((i) => (i.type ?? "receivable") === "receivable" && i.status !== "paid" && normalizeCurrency(i.currency) === REPORTING_CURRENCY)
       .reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0), 0);
@@ -113,6 +121,8 @@ export function CeoView() {
 
     return {
       cash,
+      cashUsd,
+      revenueMtdUsd,
       ar,
       ap,
       revenueMtd,
@@ -197,8 +207,20 @@ export function CeoView() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard label={`Cash (${REPORTING_CURRENCY})`} value={format(stats.cash)} icon={Wallet} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" href="/finance/banking/bank-accounts" />
-        <StatCard label={`Revenue MTD`} value={format(stats.revenueMtd)} icon={TrendingUp} accent="bg-primary/10 text-primary" href="/finance/reports/profit-loss" />
+        <StatCard
+          label={`Cash (${REPORTING_CURRENCY}${stats.cashUsd > 0 ? " · USD" : ""})`}
+          value={stats.cashUsd > 0 ? `${format(stats.cash)} · $${stats.cashUsd.toLocaleString()}` : format(stats.cash)}
+          icon={Wallet}
+          accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]"
+          href="/finance/banking/bank-accounts"
+        />
+        <StatCard
+          label={`Revenue MTD${stats.revenueMtdUsd > 0 ? " (TZS · USD)" : ""}`}
+          value={stats.revenueMtdUsd > 0 ? `${format(stats.revenueMtd)} · $${stats.revenueMtdUsd.toLocaleString()}` : format(stats.revenueMtd)}
+          icon={TrendingUp}
+          accent="bg-primary/10 text-primary"
+          href="/finance/reports/profit-loss"
+        />
         <StatCard label={`Expenses MTD`} value={format(stats.expensesMtd)} icon={Receipt} accent="bg-red-100 text-red-700" href="/finance/reports/expense-analysis" />
         <StatCard label={`Net MTD`} value={format(stats.netMtd)} icon={DollarSign} accent={stats.netMtd >= 0 ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" : "bg-red-100 text-red-700"} href="/finance/reports/profit-loss" />
         <StatCard label="AR outstanding" value={format(stats.ar)} icon={CreditCard} accent="bg-amber-100 text-amber-700" href="/finance/invoicing/customer-invoices" />

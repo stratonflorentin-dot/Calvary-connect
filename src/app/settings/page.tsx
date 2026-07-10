@@ -60,6 +60,7 @@ export default function SettingsPage() {
   const { user } = useSupabase();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [tab, setTab] = useState<TabId>("company");
 
   const [company, setCompany] = useState<CompanySettings>({
@@ -68,19 +69,22 @@ export default function SettingsPage() {
     timezone: "Africa/Dar_es_Salaam",
   });
 
+  const [rowId, setRowId] = useState<string | null>(null);
+
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("company_settings").select("*").maybeSingle();
+    const { data } = await supabase.from("company_settings").select("*").limit(1).maybeSingle();
     if (data) {
+      setRowId(data.id);
       setCompany({
-        name: data.name ?? "",
+        name: data.company_name ?? "",
         legal_name: data.legal_name ?? "",
         address: data.address ?? "",
         phone: data.phone ?? "",
         email: data.email ?? "",
-        tin: data.tin ?? "",
+        tin: data.tax_id ?? "",
         vat_registration: data.vat_registration ?? "",
-        reporting_currency: data.reporting_currency ?? REPORTING_CURRENCY,
+        reporting_currency: data.base_currency ?? REPORTING_CURRENCY,
         timezone: data.timezone ?? "Africa/Dar_es_Salaam",
         logo_url: data.logo_url ?? "",
       });
@@ -93,12 +97,37 @@ export default function SettingsPage() {
   const saveCompany = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase.from("company_settings").upsert({
-        id: "singleton",
-        ...company,
+      // Map UI model onto the real company_settings columns
+      const payload: Record<string, any> = {
+        company_name: company.name || null,
+        legal_name: company.legal_name || null,
+        address: company.address || null,
+        phone: company.phone || null,
+        email: company.email || null,
+        tax_id: company.tin || null,
+        vat_registration: company.vat_registration || null,
+        base_currency: company.reporting_currency,
+        timezone: company.timezone,
+        logo_url: company.logo_url || null,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "id" });
-      if (error) throw error;
+      };
+      let error;
+      if (rowId) {
+        ({ error } = await supabase.from("company_settings").update(payload).eq("id", rowId));
+      } else {
+        const res = await supabase.from("company_settings").insert(payload).select("id").single();
+        error = res.error;
+        if (res.data?.id) setRowId(res.data.id);
+      }
+      if (error) {
+        // Pre-010 fallback: only base columns exist
+        const base = { company_name: payload.company_name, tax_id: payload.tax_id, address: payload.address, base_currency: payload.base_currency };
+        const retry = rowId
+          ? await supabase.from("company_settings").update(base).eq("id", rowId)
+          : await supabase.from("company_settings").insert(base).select("id").single();
+        if (retry.error) throw retry.error;
+        if (!rowId && (retry as any).data?.id) setRowId((retry as any).data.id);
+      }
       await AuditTrailService.log({
         user_id: user?.id,
         module: "management",
@@ -168,6 +197,52 @@ export default function SettingsPage() {
               }
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2 flex items-center gap-4 rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="w-16 h-16 rounded-xl border border-border bg-card flex items-center justify-center overflow-hidden shrink-0">
+                    {company.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={company.logo_url} alt="Company logo" className="w-full h-full object-contain" />
+                    ) : (
+                      <Building2 className="w-7 h-7 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-foreground">Company logo</p>
+                    <p className="text-xs text-muted-foreground">PNG or JPG, shown on the sidebar, invoices and printed documents.</p>
+                  </div>
+                  <label className="shrink-0">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      className="hidden"
+                      disabled={!isAdmin || uploadingLogo}
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        setUploadingLogo(true);
+                        try {
+                          const path = `company/logo-${Date.now()}-${f.name.replace(/[^\w.\-]/g, "_")}`;
+                          const { error } = await supabase.storage.from("avatars").upload(path, f, { upsert: true });
+                          if (error) throw error;
+                          const url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+                          setCompany((p) => ({ ...p, logo_url: url }));
+                          toast({ title: "Logo uploaded", description: "Hit Save to keep it." });
+                        } catch (err: any) {
+                          toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+                        } finally {
+                          setUploadingLogo(false);
+                        }
+                      }}
+                    />
+                    <span className={cn(
+                      "inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border text-xs font-bold cursor-pointer transition-colors",
+                      uploadingLogo ? "opacity-60" : "hover:border-primary hover:text-primary",
+                    )}>
+                      {uploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {company.logo_url ? "Replace logo" : "Upload logo"}
+                    </span>
+                  </label>
+                </div>
                 <div className="space-y-1 md:col-span-2">
                   <Label className="text-xs">Trading name</Label>
                   <Input value={company.name} onChange={(e) => setCompany({ ...company, name: e.target.value })} placeholder="Calvary Connect" />
