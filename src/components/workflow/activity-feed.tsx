@@ -58,7 +58,7 @@ export function ActivityFeed({ entityType, entityId, limit = 25, className }: Ac
 
   if (loading) {
     return (
-      <div className={cn("flex items-center gap-2 text-sm text-slate-400", className)}>
+      <div className={cn("flex items-center gap-2 text-sm text-muted-foreground", className)}>
         <Clock className="w-4 h-4 animate-pulse" /> Loading activity…
       </div>
     );
@@ -66,7 +66,7 @@ export function ActivityFeed({ entityType, entityId, limit = 25, className }: Ac
 
   if (logs.length === 0) {
     return (
-      <div className={cn("text-sm text-slate-400 italic", className)}>
+      <div className={cn("text-sm text-muted-foreground italic", className)}>
         No activity recorded yet.
       </div>
     );
@@ -89,7 +89,7 @@ export function ActivityFeed({ entityType, entityId, limit = 25, className }: Ac
             </span>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span className="text-sm font-semibold text-slate-700">{meta.label}</span>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-muted-foreground">
                 {log.timestamp
                   ? formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })
                   : ""}
@@ -97,7 +97,7 @@ export function ActivityFeed({ entityType, entityId, limit = 25, className }: Ac
             </div>
             <p className="text-sm text-slate-600 mt-0.5">{log.description}</p>
             {log.user_id && (
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 by <span className="font-mono">{log.user_id.slice(0, 8)}</span>
               </p>
             )}

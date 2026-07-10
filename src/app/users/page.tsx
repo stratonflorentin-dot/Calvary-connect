@@ -591,7 +591,7 @@ export default function UsersPage() {
                     readOnly 
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 font-mono cursor-not-allowed" 
                   />
-                  <p className="text-[10px] text-gray-400">
+                  <p className="text-[10px] text-muted-foreground">
                     Auto-generated. Cannot be changed.
                   </p>
                 </div>
@@ -835,7 +835,7 @@ export default function UsersPage() {
                         </span>
                       )}
                       {(u.login_count ?? 0) > 0 && (
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-muted-foreground">
                           {u.login_count} logins
                         </span>
                       )}

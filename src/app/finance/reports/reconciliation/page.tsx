@@ -119,7 +119,7 @@ export default function ReconciliationReport() {
               <CardContent className="pt-6">
                 <div className="flex flex-wrap gap-4 items-end">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-1 block">Start Date</label>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Start Date</label>
                     <input
                       type="date"
                       value={startDate}
@@ -128,7 +128,7 @@ export default function ReconciliationReport() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground mb-1 block">End Date</label>
+                    <label className="text-sm font-medium text-foreground mb-1 block">End Date</label>
                     <input
                       type="date"
                       value={endDate}

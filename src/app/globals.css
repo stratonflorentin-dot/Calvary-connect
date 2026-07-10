@@ -29,7 +29,9 @@
     --secondary-foreground: 222 47% 11%;
 
     --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 46%;
+    /* 38% lightness ≈ slate-600: keeps the muted look but passes WCAG AA
+       (≈7:1 on white) even at small font sizes */
+    --muted-foreground: 215 19% 38%;
 
     --accent: 235 84% 96%;              /* subtle indigo tint */
     --accent-foreground: 235 84% 30%;
@@ -98,7 +100,7 @@
     --secondary-foreground: 210 40% 96%;
 
     --muted: 222 47% 14%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 215 20% 72%;
 
     --accent: 235 60% 18%;
     --accent-foreground: 235 84% 90%;

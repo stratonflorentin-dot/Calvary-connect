@@ -446,7 +446,7 @@ export default function FinanceOverviewPage() {
           </div>
           <div className="p-5 space-y-5">
             {arCurrencies.length === 0 ? (
-              <p className="text-sm text-slate-400 italic">No receivables.</p>
+              <p className="text-sm text-muted-foreground italic">No receivables.</p>
             ) : arCurrencies.map((cur) => {
               const s = arByCcy[cur];
               return (
@@ -468,7 +468,7 @@ export default function FinanceOverviewPage() {
                         </div>
                         <div className="text-right w-32 shrink-0">
                           <p className="text-xs font-black text-slate-700">{fmt(amt, cur)}</p>
-                          <p className="text-[10px] text-slate-400">{s.counts[b.key]} inv</p>
+                          <p className="text-[10px] text-muted-foreground">{s.counts[b.key]} inv</p>
                         </div>
                       </div>
                     );
@@ -491,7 +491,7 @@ export default function FinanceOverviewPage() {
           </div>
           <div className="p-5 space-y-5">
             {apCurrencies.length === 0 ? (
-              <p className="text-sm text-slate-400 italic">No payables.</p>
+              <p className="text-sm text-muted-foreground italic">No payables.</p>
             ) : apCurrencies.map((cur) => {
               const s = apByCcy[cur];
               return (
@@ -513,7 +513,7 @@ export default function FinanceOverviewPage() {
                         </div>
                         <div className="text-right w-32 shrink-0">
                           <p className="text-xs font-black text-slate-700">{fmt(amt, cur)}</p>
-                          <p className="text-[10px] text-slate-400">{s.counts[b.key]} bills</p>
+                          <p className="text-[10px] text-muted-foreground">{s.counts[b.key]} bills</p>
                         </div>
                       </div>
                     );
@@ -532,7 +532,7 @@ export default function FinanceOverviewPage() {
             <SectionHeader title="Top Overdue Customers" sub="Follow-up recommended" href="/finance/invoicing/customer-invoices" />
           </div>
           {topDebtors.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-400 italic">All caught up — no overdue receivables.</div>
+            <div className="p-8 text-center text-sm text-muted-foreground italic">All caught up — no overdue receivables.</div>
           ) : (
             <div className="divide-y divide-slate-100">
               {topDebtors.map((d: any) => {
@@ -565,7 +565,7 @@ export default function FinanceOverviewPage() {
           </div>
           <div className="p-5 space-y-2">
             {Object.keys(cashByCurrency).length === 0 ? (
-              <p className="text-sm text-slate-400 italic">No bank accounts registered.</p>
+              <p className="text-sm text-muted-foreground italic">No bank accounts registered.</p>
             ) : (
               Object.entries(cashByCurrency).map(([cur, bal]) => (
                 <div key={cur} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
@@ -575,7 +575,7 @@ export default function FinanceOverviewPage() {
                     </div>
                     <div>
                       <p className="text-xs font-black uppercase tracking-widest text-slate-500">{cur}</p>
-                      <p className="text-xs text-slate-400">Available</p>
+                      <p className="text-xs text-muted-foreground">Available</p>
                     </div>
                   </div>
                   <p className="text-sm font-black text-slate-800">{fmt(bal, cur)}</p>
@@ -615,7 +615,7 @@ export default function FinanceOverviewPage() {
                   <p className="text-sm font-bold text-slate-800">{r.label}</p>
                   <p className="text-xs text-slate-500">{r.sub}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </Link>
             ))}
           </div>
@@ -629,7 +629,7 @@ export default function FinanceOverviewPage() {
         </div>
         <div className="divide-y divide-slate-100">
           {recentEntries.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-400 italic">No journal entries yet.</div>
+            <div className="p-8 text-center text-sm text-muted-foreground italic">No journal entries yet.</div>
           ) : (
             recentEntries.map((e: any, i: number) => (
               <div key={e.id || i} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
@@ -642,7 +642,7 @@ export default function FinanceOverviewPage() {
                 </div>
                 <div className="text-right shrink-0 ml-4">
                   <p className="text-sm font-black text-slate-700">{fmt(Number(e.total_amount ?? e.debit ?? 0), e.currency ?? "TZS")}</p>
-                  <p className="text-[10px] text-slate-400">{e.entry_date ?? e.created_at?.slice(0, 10)}</p>
+                  <p className="text-[10px] text-muted-foreground">{e.entry_date ?? e.created_at?.slice(0, 10)}</p>
                 </div>
               </div>
             ))

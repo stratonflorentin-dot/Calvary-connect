@@ -174,7 +174,7 @@ export default function BulkImportPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center">
-                <Upload className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+                <Upload className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
                 <input ref={fileInputRef} type="file" accept=".csv,.json" onChange={handleFileSelect} className="hidden" />
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
                   Select File

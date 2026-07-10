@@ -257,7 +257,7 @@ export default function CustomerInvoicesPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 rounded-full">Accounts Receivable</span>
-            <Link href="/finance" className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5">
+            <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5">
               Finance <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
@@ -326,7 +326,7 @@ export default function CustomerInvoicesPage() {
           </button>
         ))}
         <div className="ml-auto relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search invoice #, customer…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
         </div>
       </div>
@@ -352,13 +352,13 @@ export default function CustomerInvoicesPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-16 text-slate-400">
+                  <td colSpan={10} className="text-center py-16 text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-16 text-slate-400">
+                  <td colSpan={10} className="text-center py-16 text-muted-foreground">
                     <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     No invoices match the current filter.
                   </td>
@@ -387,7 +387,7 @@ export default function CustomerInvoicesPage() {
                             {bucketMeta?.label}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-400">—</span>
+                          <span className="text-[10px] text-muted-foreground">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-slate-800">{fmt(total, inv.currency)}</td>
@@ -565,19 +565,19 @@ export default function CustomerInvoicesPage() {
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Customer</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Customer</p>
                   <p className="font-bold text-slate-800">{detail.customer_name ?? detail.client_name}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Status</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Status</p>
                   <Badge className={STATUS_BADGES[detail.status ?? "pending"]}>{detail.status ?? "pending"}</Badge>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Issued</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Issued</p>
                   <p className="text-slate-700">{detail.issue_date}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Due</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Due</p>
                   <p className="text-slate-700">{detail.due_date}</p>
                 </div>
               </div>
@@ -590,7 +590,7 @@ export default function CustomerInvoicesPage() {
               </div>
               {detail.description && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-1">Notes</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mb-1">Notes</p>
                   <p className="text-sm text-slate-700 whitespace-pre-wrap">{detail.description}</p>
                 </div>
               )}

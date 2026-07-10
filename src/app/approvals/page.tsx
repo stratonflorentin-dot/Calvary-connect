@@ -165,7 +165,7 @@ export default function ApprovalsInboxPage() {
                 <h1 className="text-lg font-black text-slate-800 leading-tight">
                   Approvals Inbox
                 </h1>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   Items awaiting decision, routed by amount tier and role.
                 </p>
               </div>
@@ -189,7 +189,7 @@ export default function ApprovalsInboxPage() {
                       : "border-slate-200 bg-white hover:bg-slate-50",
                   )}
                 >
-                  <span className="text-[10px] text-slate-400 font-medium">{s.label}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{s.label}</span>
                   <span className={cn("text-sm font-black", s.color)}>{s.value}</span>
                 </button>
               ))}
@@ -206,13 +206,13 @@ export default function ApprovalsInboxPage() {
 
         <main className="flex-1 px-6 py-5 space-y-3">
           {loading ? (
-            <div className="flex items-center justify-center py-24 text-slate-400">
+            <div className="flex items-center justify-center py-24 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
             </div>
           ) : visible.length === 0 ? (
             <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-slate-200">
               <CheckCircle2 className="w-10 h-10 text-emerald-300 mx-auto mb-3" />
-              <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">
+              <p className="text-muted-foreground font-bold uppercase text-xs tracking-widest">
                 Inbox zero. Nothing awaiting your decision.
               </p>
             </div>
@@ -244,7 +244,7 @@ export default function ApprovalsInboxPage() {
                       </div>
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center flex-wrap gap-2">
-                          <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                          <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">
                             {meta.label}
                           </span>
                           {level && (

@@ -299,7 +299,7 @@ export function FuelManagement() {
                 return (
                   <div key={v.id}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium text-slate-700">{v.plate_number} <span className="text-slate-400 text-xs">({v.make})</span></span>
+                      <span className="font-medium text-slate-700">{v.plate_number} <span className="text-muted-foreground text-xs">({v.make})</span></span>
                       <div className="flex gap-4 text-xs">
                         <span className="text-amber-600 font-bold">TZS {v.cost.toLocaleString()}</span>
                         <span className="text-slate-500">{v.litres.toFixed(0)}L</span>
@@ -384,7 +384,7 @@ export function FuelManagement() {
                 ))}
                 {filteredLogs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10 text-slate-400">
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                       <Fuel className="size-8 mx-auto mb-2 opacity-20" />
                       <p className="text-sm">No fuel logs yet. Click "Log Fuel Fill" to start tracking.</p>
                     </TableCell>

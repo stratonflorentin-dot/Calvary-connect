@@ -187,14 +187,14 @@ export default function ContractsPage() {
                                             {contract.client_signed_at ? (
                                                 <span className="text-green-600 font-semibold">✓ Signed</span>
                                             ) : (
-                                                <span className="text-gray-400">Pending</span>
+                                                <span className="text-muted-foreground">Pending</span>
                                             )}
                                         </TableCell>
                                         <TableCell>
                                             {contract.transporter_signed_at ? (
                                                 <span className="text-green-600 font-semibold">✓ Signed</span>
                                             ) : (
-                                                <span className="text-gray-400">Pending</span>
+                                                <span className="text-muted-foreground">Pending</span>
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right">

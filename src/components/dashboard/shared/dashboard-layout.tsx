@@ -129,7 +129,7 @@ export function DashboardLayout({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
                 placeholder="Search resources..."
                 className="h-8 w-full min-w-[180px] border-slate-200 bg-slate-50 pl-8 lg:w-[260px] text-xs focus-visible:ring-indigo-500 rounded-lg"

@@ -1346,7 +1346,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
                 <p className="text-xs">Director</p>
                 <div className="border-b border-gray-400 h-8 mt-2"></div>
                 <p className="text-xs text-gray-500 mt-1">Signature</p>
-                <div className="border-2 border-dashed border-gray-300 p-2 mt-2 text-center text-gray-400 text-xs">
+                <div className="border-2 border-dashed border-gray-300 p-2 mt-2 text-center text-muted-foreground text-xs">
                   [Company Stamp]
                 </div>
               </div>
@@ -1357,7 +1357,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
                 <p className="text-xs">Director</p>
                 <div className="border-b border-gray-400 h-8 mt-2"></div>
                 <p className="text-xs text-gray-500 mt-1">Signature</p>
-                <div className="border-2 border-dashed border-gray-300 p-2 mt-2 text-center text-gray-400 text-xs">
+                <div className="border-2 border-dashed border-gray-300 p-2 mt-2 text-center text-muted-foreground text-xs">
                   [Company Stamp]
                 </div>
               </div>

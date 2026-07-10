@@ -93,7 +93,7 @@ function AccountPicker({
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "w-full text-left px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm hover:border-indigo-300",
-          !value.code && "text-slate-400",
+          !value.code && "text-muted-foreground",
         )}
       >
         {value.code ? (
@@ -118,7 +118,7 @@ function AccountPicker({
           </div>
           <div className="overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="p-3 text-xs text-slate-400 italic text-center">No matching accounts.</div>
+              <div className="p-3 text-xs text-muted-foreground italic text-center">No matching accounts.</div>
             ) : (
               filtered.map((a) => (
                 <button
@@ -135,7 +135,7 @@ function AccountPicker({
                     <span className="font-mono text-xs font-black text-slate-500 shrink-0">{a.code}</span>
                     <span className="text-sm text-slate-800 truncate">{a.name}</span>
                   </span>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground shrink-0">
                     {a.category}
                   </span>
                 </button>
@@ -337,7 +337,7 @@ export default function JournalEntriesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
@@ -374,7 +374,7 @@ export default function JournalEntriesPage() {
           </button>
         ))}
         <div className="ml-auto relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search reference or description…" className="pl-9 h-9" />
         </div>
       </div>
@@ -396,9 +396,9 @@ export default function JournalEntriesPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-16 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…</td></tr>
+                <tr><td colSpan={7} className="text-center py-16 text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…</td></tr>
               ) : filteredEntries.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-16 text-slate-400"><BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" /> No entries.</td></tr>
+                <tr><td colSpan={7} className="text-center py-16 text-muted-foreground"><BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" /> No entries.</td></tr>
               ) : filteredEntries.map((e) => {
                 const lineCount = e.journal_entry_lines?.length ?? 0;
                 const total = (e.journal_entry_lines ?? []).reduce((s: number, l: any) => s + (Number(l.debit_amount) || 0), 0);
@@ -420,7 +420,7 @@ export default function JournalEntriesPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </td>
                   </tr>
                 );
@@ -510,7 +510,7 @@ export default function JournalEntriesPage() {
                       placeholder="Optional line note"
                     />
                     <Button variant="ghost" size="icon" onClick={() => removeLine(i)} disabled={lines.length <= 2}>
-                      <Trash2 className="w-4 h-4 text-slate-400" />
+                      <Trash2 className="w-4 h-4 text-muted-foreground" />
                     </Button>
                   </div>
                 ))}
@@ -520,15 +520,15 @@ export default function JournalEntriesPage() {
                   </Button>
                   <div className="flex items-center gap-6 text-xs">
                     <div>
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Debits</p>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-right">Debits</p>
                       <p className="font-black text-slate-800 text-sm">{fmt(totals.debit, form.currency)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Credits</p>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-right">Credits</p>
                       <p className="font-black text-slate-800 text-sm">{fmt(totals.credit, form.currency)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Diff</p>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-right">Diff</p>
                       <p className={cn("font-black text-sm", totals.balanced ? "text-emerald-700" : "text-rose-700")}>
                         {totals.balanced ? "Balanced" : fmt(Math.abs(totals.diff), form.currency)}
                       </p>
@@ -576,15 +576,15 @@ export default function JournalEntriesPage() {
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Date</p>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Date</p>
                   <p className="font-bold text-slate-800">{new Date(detail.entry_date).toLocaleDateString()}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Currency</p>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Currency</p>
                   <p className="font-bold text-slate-800">{detail.currency ?? "TZS"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Status</p>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</p>
                   <Badge className={cn(
                     "text-[10px] uppercase font-black tracking-wider border",
                     (detail.status ?? "posted") === "posted"
@@ -595,7 +595,7 @@ export default function JournalEntriesPage() {
                   </Badge>
                 </div>
                 <div className="col-span-3">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Description</p>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Description</p>
                   <p className="text-slate-700">{detail.description}</p>
                 </div>
               </div>

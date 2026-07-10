@@ -349,7 +349,7 @@ export function PODViewer({ tripId }: { tripId: string }) {
 
   if (loading) return <div className="animate-pulse h-24 bg-slate-100 rounded-xl" />;
   if (!pod?.pod_uploaded_at) return (
-    <div className="text-center py-6 text-slate-400 text-sm">
+    <div className="text-center py-6 text-muted-foreground text-sm">
       <FileImage className="size-8 mx-auto mb-2 opacity-30" />
       <p>No POD uploaded yet</p>
     </div>

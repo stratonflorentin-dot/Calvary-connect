@@ -180,7 +180,7 @@ export default function UploadPdfPage() {
                     <div className="space-y-2">
                         <Label htmlFor="pdf-file">PDF File</Label>
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                            <FileUp className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                            <FileUp className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
                             <div className="space-y-2">
                                 <p className="font-semibold text-gray-700">
                                     {file ? file.name : 'Click to upload or drag and drop'}

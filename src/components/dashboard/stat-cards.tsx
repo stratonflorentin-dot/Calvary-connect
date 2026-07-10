@@ -336,7 +336,7 @@ export function StatCards() {
               <stat.icon className={cn("size-4 sm:size-5", stat.color)} />
             </div>
             {stat.trend && (
-              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-muted-foreground">
                 {stat.trend === "up" && "↑"}
                 {stat.trend === "down" && "↓"}
                 {stat.trend === "alert" && "⚠"}

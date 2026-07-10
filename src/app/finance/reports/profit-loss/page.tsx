@@ -260,7 +260,7 @@ export default function ProfitLossPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
@@ -272,9 +272,9 @@ export default function ProfitLossPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 py-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">From</span>
+            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">From</span>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 border-0 focus-visible:ring-0 px-1" />
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">To</span>
+            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">To</span>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 border-0 focus-visible:ring-0 px-1" />
           </div>
           <button
@@ -358,9 +358,9 @@ export default function ProfitLossPage() {
 
       {/* Per-currency P&L */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
+        <div className="flex items-center justify-center py-16 text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin" /></div>
       ) : currencies.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-slate-400 italic">
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-muted-foreground italic">
           No posted journal entries in this period.
         </div>
       ) : (
@@ -447,11 +447,11 @@ export default function ProfitLossPage() {
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">{SECTION_LABEL[section]}</h3>
                         <div className="flex items-center gap-6 text-right">
                           <div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Prior</p>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Prior</p>
                             <p className="text-sm text-slate-500">{fmt(prevSectionTotal, cur)}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Current</p>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Current</p>
                             <p className="text-sm font-black text-slate-800">{fmt(total, cur)}</p>
                           </div>
                         </div>

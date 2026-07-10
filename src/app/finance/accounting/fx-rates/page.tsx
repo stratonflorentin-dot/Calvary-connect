@@ -146,7 +146,7 @@ export default function FxRatesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
@@ -176,9 +176,9 @@ export default function FxRatesPage() {
           <p className="text-xs text-slate-500">Effective right now — the rate reports will pick up today</p>
         </div>
         {loading ? (
-          <div className="p-8 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+          <div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
         ) : latestPerPair.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-400 italic">
+          <div className="p-8 text-center text-sm text-muted-foreground italic">
             No rates on file. Use “Seed common pairs” or record one manually.
           </div>
         ) : (
@@ -189,10 +189,10 @@ export default function FxRatesPage() {
                   <span className="text-xs font-black uppercase tracking-widest text-slate-500">
                     {r.from_ccy} → {r.to_ccy}
                   </span>
-                  <span className="text-[10px] text-slate-400">{r.effective_date}</span>
+                  <span className="text-[10px] text-muted-foreground">{r.effective_date}</span>
                 </div>
                 <p className="text-xl font-black text-slate-900 mt-1">{Number(r.rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
-                {r.source && <p className="text-[10px] text-slate-400 mt-0.5">Source: {r.source}</p>}
+                {r.source && <p className="text-[10px] text-muted-foreground mt-0.5">Source: {r.source}</p>}
               </div>
             ))}
           </div>

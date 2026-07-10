@@ -500,7 +500,7 @@ export default function AddInsurancePage() {
 }
 
 const fieldClass =
-  'h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none ring-offset-white placeholder:text-slate-400 focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-50';
+  'h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none ring-offset-white placeholder:text-muted-foreground focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-50';
 
 function FormSection({
   icon: Icon,

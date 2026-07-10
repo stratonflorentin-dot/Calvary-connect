@@ -417,7 +417,7 @@ export default function BankReconciliationPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
@@ -513,9 +513,9 @@ export default function BankReconciliationPage() {
           </div>
           <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100">
             {loading ? (
-              <div className="p-8 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+              <div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
             ) : lines.length === 0 ? (
-              <div className="p-8 text-center text-sm text-slate-400 italic">
+              <div className="p-8 text-center text-sm text-muted-foreground italic">
                 No statement lines yet. Use Import CSV to load a bank statement.
               </div>
             ) : lines.map((l) => {
@@ -535,7 +535,7 @@ export default function BankReconciliationPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-xs text-slate-500">{new Date(l.transaction_date).toLocaleDateString()}</p>
-                      {l.reference && <span className="text-[10px] font-mono text-slate-400">{l.reference}</span>}
+                      {l.reference && <span className="text-[10px] font-mono text-muted-foreground">{l.reference}</span>}
                       {l.reconciled && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">
                           <CheckCircle2 className="w-3 h-3" /> Reconciled
@@ -548,12 +548,12 @@ export default function BankReconciliationPage() {
                     <p className={cn("text-sm font-black", net >= 0 ? "text-emerald-700" : "text-rose-700")}>
                       {net >= 0 ? "+" : ""}{fmt(net, currency)}
                     </p>
-                    {l.balance != null && <p className="text-[10px] text-slate-400">bal {fmt(l.balance, currency)}</p>}
+                    {l.balance != null && <p className="text-[10px] text-muted-foreground">bal {fmt(l.balance, currency)}</p>}
                   </div>
                   {l.reconciled && (
                     <span
                       onClick={(e) => { e.stopPropagation(); unmatch(l.id); }}
-                      className="text-[10px] text-slate-400 hover:text-red-600 cursor-pointer flex items-center gap-0.5"
+                      className="text-[10px] text-muted-foreground hover:text-red-600 cursor-pointer flex items-center gap-0.5"
                     >
                       <Undo2 className="w-3 h-3" /> undo
                     </span>
@@ -574,9 +574,9 @@ export default function BankReconciliationPage() {
           </div>
           <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100">
             {loading ? (
-              <div className="p-8 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+              <div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
             ) : book.length === 0 ? (
-              <div className="p-8 text-center text-sm text-slate-400 italic">No book entries to reconcile.</div>
+              <div className="p-8 text-center text-sm text-muted-foreground italic">No book entries to reconcile.</div>
             ) : book.map((e) => {
               const active = selectedEntry === e.id;
               return (
@@ -592,7 +592,7 @@ export default function BankReconciliationPage() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         {e.kind.replace(/_/g, " ")}
                       </span>
                       <p className="text-xs text-slate-500">{e.date}</p>

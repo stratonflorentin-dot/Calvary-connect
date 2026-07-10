@@ -973,7 +973,7 @@ export default function ChartOfAccountsPage() {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold">General Ledger</h2>
-                      <p className="text-slate-400 text-sm">Account Transaction History</p>
+                      <p className="text-muted-foreground text-sm">Account Transaction History</p>
                     </div>
                   </div>
                 </div>
@@ -1148,7 +1148,7 @@ export default function ChartOfAccountsPage() {
                   <div className="h-6 w-px bg-white/30"></div>
                   <div>
                     <DialogTitle className="text-xl text-white">Journal Entry</DialogTitle>
-                    <p className="text-sm text-slate-400 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       Ledger: {ledgerAccount?.code} - {ledgerAccount?.name}
                     </p>
                   </div>

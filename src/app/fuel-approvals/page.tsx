@@ -93,7 +93,7 @@ export default function FuelApprovalsPage() {
           ) : requests.length === 0 ? (
             <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-slate-300">
               <Fuel className="size-12 text-slate-200 mx-auto mb-4" />
-              <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No pending fuel requests</p>
+              <p className="text-muted-foreground font-bold uppercase text-xs tracking-widest">No pending fuel requests</p>
             </div>
           ) : (
             requests.map((r) => {

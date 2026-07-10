@@ -75,13 +75,13 @@ export default function AuditTrailPage() {
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
                 Financial Audit Trail
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-slate-500 dark:text-muted-foreground mt-1">
                 Trace every interaction and financial activity across the organization
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground dark:text-slate-500" />
                 <Input 
                   placeholder="Search logs..." 
                   className="pl-10 w-64 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-50 focus-visible:ring-indigo-500 rounded-xl shadow-sm"
@@ -91,7 +91,7 @@ export default function AuditTrailPage() {
               </div>
               <Select value={tableFilter} onValueChange={setTableFilter}>
                 <SelectTrigger className="w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-50 rounded-xl shadow-sm">
-                  <Filter className="w-4 h-4 mr-2 text-slate-400" />
+                  <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Filter by module" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
@@ -116,12 +116,12 @@ export default function AuditTrailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50/50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800">
-                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">Timestamp</TableHead>
-                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">User</TableHead>
-                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">Action</TableHead>
-                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">Module</TableHead>
-                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px]">Summary</TableHead>
-                      <TableHead className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[11px] text-right">Details</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-muted-foreground uppercase tracking-wider text-[11px]">Timestamp</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-muted-foreground uppercase tracking-wider text-[11px]">User</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-muted-foreground uppercase tracking-wider text-[11px]">Action</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-muted-foreground uppercase tracking-wider text-[11px]">Module</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-muted-foreground uppercase tracking-wider text-[11px]">Summary</TableHead>
+                      <TableHead className="font-bold text-slate-600 dark:text-muted-foreground uppercase tracking-wider text-[11px] text-right">Details</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -130,13 +130,13 @@ export default function AuditTrailPage() {
                         <TableCell colSpan={6} className="text-center py-12">
                           <div className="flex flex-col items-center gap-3">
                             <div className="w-8 h-8 border-3 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading audit trail pipeline...</span>
+                            <span className="text-sm font-semibold text-slate-500 dark:text-muted-foreground">Loading audit trail pipeline...</span>
                           </div>
                         </TableCell>
                       </TableRow>
                     ) : filteredLogs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-slate-500 dark:text-slate-400 text-sm font-medium">
+                        <TableCell colSpan={6} className="text-center py-12 text-slate-500 dark:text-muted-foreground text-sm font-medium">
                           No audit activity logs found matching your filters.
                         </TableCell>
                       </TableRow>
@@ -146,7 +146,7 @@ export default function AuditTrailPage() {
                           key={log.id} 
                           className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 border-slate-100 dark:border-slate-800 transition-colors"
                         >
-                          <TableCell className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                          <TableCell className="text-xs text-slate-500 dark:text-muted-foreground font-medium whitespace-nowrap">
                             {log.created_at ? format(new Date(log.created_at), 'MMM d, HH:mm:ss') : 'N/A'}
                           </TableCell>
                           <TableCell>
@@ -158,7 +158,7 @@ export default function AuditTrailPage() {
                                 <div className="font-semibold text-slate-900 dark:text-slate-100 truncate text-sm">
                                   {log.user_name || 'System / Auto-Agent'}
                                 </div>
-                                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                                <div className="text-[10px] text-slate-500 dark:text-muted-foreground font-bold uppercase tracking-wider">
                                   {log.user_role || 'ADMIN'}
                                 </div>
                               </div>
@@ -166,13 +166,13 @@ export default function AuditTrailPage() {
                           </TableCell>
                           <TableCell className="whitespace-nowrap">{getActionBadge(log.action)}</TableCell>
                           <TableCell>
-                            <div className="flex items-center text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            <div className="flex items-center text-sm font-semibold text-slate-700 dark:text-muted-foreground/70">
                               {getTableIcon(log.table_name)}
                               <span className="capitalize">{log.table_name || 'unknown'}</span>
                             </div>
                           </TableCell>
                           <TableCell className="max-w-md">
-                            <span className="text-xs md:text-sm text-slate-600 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed">
+                            <span className="text-xs md:text-sm text-slate-600 dark:text-muted-foreground/70 font-medium line-clamp-2 leading-relaxed">
                               {log.change_summary || `Updated records in ${log.table_name || 'system'}`}
                             </span>
                           </TableCell>
@@ -180,7 +180,7 @@ export default function AuditTrailPage() {
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-8 w-8 text-slate-400 hover:text-slate-900 dark:hover:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                              className="h-8 w-8 text-muted-foreground hover:text-slate-900 dark:hover:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                             >
                               <ChevronRight className="w-4 h-4" />
                             </Button>

@@ -319,7 +319,7 @@ export default function VendorBillsPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest px-2 py-0.5 bg-orange-50 rounded-full">Accounts Payable</span>
-            <Link href="/finance" className="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-0.5">
+            <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5">
               Finance <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
@@ -395,7 +395,7 @@ export default function VendorBillsPage() {
             </Button>
           )}
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Search vendor, bill #…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
           </div>
         </div>
@@ -421,9 +421,9 @@ export default function VendorBillsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={10} className="text-center py-16 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…</td></tr>
+                <tr><td colSpan={10} className="text-center py-16 text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={10} className="text-center py-16 text-slate-400"><Building2 className="w-8 h-8 mx-auto mb-2 opacity-40" /> No bills match the current filter.</td></tr>
+                <tr><td colSpan={10} className="text-center py-16 text-muted-foreground"><Building2 className="w-8 h-8 mx-auto mb-2 opacity-40" /> No bills match the current filter.</td></tr>
               ) : filtered.map((bill) => {
                 const total = Number(bill.total_amount ?? bill.amount ?? 0);
                 const paid = Number(bill.paid_amount ?? 0);
@@ -456,7 +456,7 @@ export default function VendorBillsPage() {
                           {bucketMeta?.label}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-slate-400">—</span>
+                        <span className="text-[10px] text-muted-foreground">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-slate-800">{fmt(total, bill.currency)}</td>

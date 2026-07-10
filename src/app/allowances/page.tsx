@@ -492,7 +492,7 @@ export default function AllowancesPage() {
 
                           <div className="flex flex-wrap items-center gap-4">
                             <div>
-                              <label className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Period</label>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground">Period</label>
                               <select
                                 value={periods[worker.id]}
                                 onChange={(e) => setPeriods(prev => ({ ...prev, [worker.id]: e.target.value }))}
@@ -506,7 +506,7 @@ export default function AllowancesPage() {
                             </div>
 
                             <div>
-                              <label className="block text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Method</label>
+                              <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground">Method</label>
                               <select
                                 value={paymentMethods[worker.id]}
                                 onChange={(e) => setPaymentMethods(prev => ({ ...prev, [worker.id]: e.target.value }))}
@@ -525,7 +525,7 @@ export default function AllowancesPage() {
 
                           {/* Base Salary */}
                           <div>
-                            <label className="block text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                            <label className="block text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                               <DollarSign className="w-3.5 h-3.5 text-primary" />
                               Base Salary (TZS)
                             </label>
@@ -541,7 +541,7 @@ export default function AllowancesPage() {
 
                           {/* Allowances */}
                           <div>
-                            <label className="block text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                            <label className="block text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                               <Plus className="w-3.5 h-3.5 text-green-500" />
                               Allowances (TZS)
                             </label>
@@ -557,7 +557,7 @@ export default function AllowancesPage() {
 
                           {/* Deductions */}
                           <div>
-                            <label className="block text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                            <label className="block text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                               <XCircle className="w-3.5 h-3.5 text-red-500" />
                               Deductions (TZS)
                             </label>

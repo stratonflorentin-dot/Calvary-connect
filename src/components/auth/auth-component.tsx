@@ -255,7 +255,7 @@ export function AuthComponent() {
                   </div>
                   <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signin-email" className="text-slate-600 dark:text-slate-400 text-xs">Corporate Email</Label>
+                      <Label htmlFor="signin-email" className="text-foreground text-xs">Corporate Email</Label>
                       <Input
                         id="signin-email"
                         name="email"
@@ -266,7 +266,7 @@ export function AuthComponent() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signin-password" className="text-slate-600 dark:text-slate-400 text-xs">Security Key</Label>
+                      <Label htmlFor="signin-password" className="text-foreground text-xs">Security Key</Label>
                       <Input
                         id="signin-password"
                         name="password"
@@ -293,7 +293,7 @@ export function AuthComponent() {
                   </div>
                   <form onSubmit={handleSignUp} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-name" className="text-muted-foreground text-xs">Full Name</Label>
+                      <Label htmlFor="signup-name" className="text-foreground text-xs">Full Name</Label>
                       <Input
                         id="signup-name"
                         name="name"
@@ -304,7 +304,7 @@ export function AuthComponent() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-email" className="text-muted-foreground text-xs">Authorized Email</Label>
+                      <Label htmlFor="signup-email" className="text-foreground text-xs">Authorized Email</Label>
                       <Input
                         id="signup-email"
                         name="email"
@@ -315,7 +315,7 @@ export function AuthComponent() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-password" className="text-muted-foreground text-xs">New Password</Label>
+                      <Label htmlFor="signup-password" className="text-foreground text-xs">New Password</Label>
                       <Input
                         id="signup-password"
                         name="password"
@@ -326,7 +326,7 @@ export function AuthComponent() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-role" className="text-muted-foreground text-xs">Assigned Team Role</Label>
+                      <Label htmlFor="signup-role" className="text-foreground text-xs">Assigned Team Role</Label>
                       <Select name="role" required>
                         <SelectTrigger className="bg-card dark:bg-background border-border text-foreground h-10 text-sm">
                           <SelectValue placeholder="Select assigned role" />
