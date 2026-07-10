@@ -73,7 +73,14 @@ export default function InternalChatPage() {
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `channel_id=eq.${activeChannel.id}` },
         (payload) => {
           const m = payload.new as Message;
-          setMessages((prev) => [...prev, m]);
+          setMessages((prev) => {
+            // Replace the optimistic copy of our own message if present
+            const withoutOptimistic = prev.filter(
+              (x) => !(String(x.id).startsWith("tmp-") && x.content === m.content),
+            );
+            if (withoutOptimistic.some((x) => x.id === m.id)) return withoutOptimistic;
+            return [...withoutOptimistic, m];
+          });
           scrollToBottom();
         },
       )
@@ -109,19 +116,34 @@ export default function InternalChatPage() {
 
   const loadMessages = async (channelId: string) => {
     // Fetch messages then hydrate sender names separately to avoid schema-cache FK issues.
-    const { data: rows, error: dbErr } = await supabase
+    let rows: any[] | null = null;
+    const res = await supabase
       .from("chat_messages")
-      .select("id, channel_id, sender_id, content, created_at")
+      .select("id, channel_id, sender_id, sender_name, content, created_at")
       .eq("channel_id", channelId)
       .order("created_at", { ascending: true });
-    if (dbErr) return;
+    if (res.error) {
+      // sender_name column may not exist until migration 009 runs
+      const legacy = await supabase
+        .from("chat_messages")
+        .select("id, channel_id, sender_id, content, created_at")
+        .eq("channel_id", channelId)
+        .order("created_at", { ascending: true });
+      if (legacy.error) return;
+      rows = legacy.data;
+    } else {
+      rows = res.data;
+    }
     const ids = Array.from(new Set((rows ?? []).map((r) => r.sender_id).filter(Boolean)));
     let nameMap = new Map<string, string>();
     if (ids.length > 0) {
       const { data: u } = await supabase.from("user_profiles").select("id, uid, name").in("id", ids);
       for (const p of u ?? []) nameMap.set(p.id ?? p.uid, p.name);
     }
-    setMessages((rows ?? []).map((r) => ({ ...r, sender_name: nameMap.get(r.sender_id) ?? null })));
+    setMessages((rows ?? []).map((r) => ({
+      ...r,
+      sender_name: r.sender_name ?? nameMap.get(r.sender_id) ?? null,
+    })));
     scrollToBottom();
   };
 
@@ -135,19 +157,30 @@ export default function InternalChatPage() {
     const optimistic: Message = {
       id: `tmp-${Date.now()}`,
       channel_id: activeChannel.id,
-      sender_id: user.id,
+      sender_id: dbUserId as any,
       content,
       created_at: new Date().toISOString(),
-      sender_name: user.name ?? "You",
+      sender_name: user.name ?? (user as any).email ?? "You",
     };
     setMessages((prev) => [...prev, optimistic]);
     scrollToBottom();
 
-    const { error: dbErr } = await supabase.from("chat_messages").insert({
+    const senderName = user.name ?? (user as any).email ?? "Team member";
+    let { error: dbErr } = await supabase.from("chat_messages").insert({
       channel_id: activeChannel.id,
       sender_id: dbUserId,
+      sender_name: senderName,
       content,
     });
+    if (dbErr) {
+      // sender_name column may not exist until migration 009 runs
+      const retry = await supabase.from("chat_messages").insert({
+        channel_id: activeChannel.id,
+        sender_id: dbUserId,
+        content,
+      });
+      dbErr = retry.error;
+    }
     if (dbErr) {
       // Roll back optimistic message
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
@@ -279,7 +312,10 @@ export default function InternalChatPage() {
                     </div>
                   ) : (
                     messages.map((m) => {
-                      const mine = m.sender_id === user?.id;
+                      const myName = user?.name ?? (user as any)?.email ?? null;
+                      const mine = m.sender_id
+                        ? m.sender_id === (dbUserId ?? user?.id)
+                        : m.sender_name != null && m.sender_name === myName;
                       return (
                         <div key={m.id} className={cn("flex", mine ? "justify-end" : "justify-start")}>
                           <div className={cn("max-w-lg", mine && "text-right")}>
