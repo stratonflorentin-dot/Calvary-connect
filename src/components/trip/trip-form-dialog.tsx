@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AFRICAN_CITIES } from "@/lib/trips/african-cities";
 import { Loader2, Route as RouteIcon, Save } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -37,6 +38,7 @@ interface TripFormState {
   truckId: string;
   trailerId: string;
   status: string;
+  tripType: "local" | "transit";
   salesAmount: number | "";
   vatRate: number | "";
   currency: string;
@@ -56,6 +58,7 @@ const empty = (): TripFormState => ({
   truckId: "",
   trailerId: "",
   status: "pending",
+  tripType: "local",
   salesAmount: "",
   vatRate: 18,
   currency: "TZS",
@@ -97,18 +100,19 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
         trip_number: trip.trip_number ?? "",
         origin: trip.origin ?? "",
         destination: trip.destination ?? "",
-        cargo: trip.cargo ?? trip.cargoType ?? trip.cargo_type ?? "",
+        cargo: trip.cargo_type ?? trip.cargo ?? "",
         client: trip.client ?? "",
-        driverId: trip.driverId ?? trip.driver_id ?? "",
-        truckId: trip.truckId ?? trip.vehicle_id ?? "",
-        trailerId: trip.trailerId ?? "",
+        driverId: trip.driver_id ?? trip.driverId ?? "",
+        truckId: trip.truck_id ?? trip.truckId ?? trip.vehicle_id ?? "",
+        trailerId: trip.trailer_id ?? trip.trailerId ?? "",
         status: (trip.status ?? "pending").toString().toLowerCase(),
-        salesAmount: trip.salesAmount ?? "",
-        vatRate: trip.vatRate ?? 18,
+        tripType: (trip.trip_type ?? "local") === "transit" ? "transit" : "local",
+        salesAmount: trip.sales_amount ?? trip.salesAmount ?? "",
+        vatRate: trip.vat_rate ?? trip.vatRate ?? 18,
         currency: trip.currency ?? "TZS",
-        cargoWeight: trip.cargoWeight ?? "",
-        estimatedDistance: trip.estimatedDistance ?? "",
-        estimatedDuration: trip.estimatedDuration ?? "",
+        cargoWeight: trip.cargo_weight ?? trip.cargoWeight ?? "",
+        estimatedDistance: trip.estimated_distance ?? trip.estimatedDistance ?? "",
+        estimatedDuration: trip.estimated_duration ?? trip.estimatedDuration ?? "",
         notes: trip.notes ?? "",
       });
     } else {
@@ -130,11 +134,14 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
 
   const patch = (p: Partial<TripFormState>) => setForm((prev) => ({ ...prev, ...p }));
 
+  // Transit (cross-border) trips are VAT-exempt; local trips carry VAT.
+  const effectiveVatRate = form.tripType === "transit" ? 0 : Number(form.vatRate) || 0;
+
   const totals = useMemo(() => {
     const net = Number(form.salesAmount) || 0;
-    const vat = net * ((Number(form.vatRate) || 0) / 100);
+    const vat = net * (effectiveVatRate / 100);
     return { net, vat, total: net + vat };
-  }, [form.salesAmount, form.vatRate]);
+  }, [form.salesAmount, effectiveVatRate]);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,23 +155,22 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
         trip_number: form.trip_number || `TRP-${Date.now().toString().slice(-6)}`,
         origin: form.origin.trim(),
         destination: form.destination.trim(),
-        cargo: form.cargo || null,
         cargo_type: form.cargo || null,
         client: form.client || null,
-        driverId: form.driverId || null,
         driver_id: form.driverId || null,
-        truckId: form.truckId || null,
-        vehicle_id: form.truckId || null,
-        trailerId: form.trailerId || null,
+        truck_id: form.truckId || null,
+        trailer_id: form.trailerId || null,
         status: form.status,
-        salesAmount: form.salesAmount === "" ? null : Number(form.salesAmount),
-        vatRate: form.vatRate === "" ? null : Number(form.vatRate),
-        vatAmount: totals.vat || null,
-        totalAmount: totals.total || null,
+        trip_type: form.tripType,
+        is_cross_border: form.tripType === "transit",
+        sales_amount: form.salesAmount === "" ? null : Number(form.salesAmount),
+        vat_rate: effectiveVatRate,
+        vat_amount: totals.vat || 0,
+        total_amount: totals.total || null,
         currency: form.currency,
-        cargoWeight: form.cargoWeight === "" ? null : Number(form.cargoWeight),
-        estimatedDistance: form.estimatedDistance === "" ? null : Number(form.estimatedDistance),
-        estimatedDuration: form.estimatedDuration === "" ? null : Number(form.estimatedDuration),
+        cargo_weight: form.cargoWeight === "" ? null : Number(form.cargoWeight),
+        estimated_distance: form.estimatedDistance === "" ? null : Number(form.estimatedDistance),
+        estimated_duration: form.estimatedDuration === "" ? null : Number(form.estimatedDuration),
         notes: form.notes || null,
         updated_at: new Date().toISOString(),
       };
@@ -227,12 +233,15 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Origin *</Label>
-                <Input value={form.origin} onChange={(e) => patch({ origin: e.target.value })} placeholder="Dar es Salaam" required />
+                <Input list="african-cities" value={form.origin} onChange={(e) => patch({ origin: e.target.value })} placeholder="Dar es Salaam" required />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Destination *</Label>
-                <Input value={form.destination} onChange={(e) => patch({ destination: e.target.value })} placeholder="Lusaka" required />
+                <Input list="african-cities" value={form.destination} onChange={(e) => patch({ destination: e.target.value })} placeholder="Lusaka" required />
               </div>
+              <datalist id="african-cities">
+                {AFRICAN_CITIES.map((c) => <option key={c} value={c} />)}
+              </datalist>
             </div>
             <RoutePreviewMap
               origin={form.origin}
@@ -285,7 +294,17 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Trip type</Label>
+                <Select value={form.tripType} onValueChange={(v) => patch({ tripType: v as "local" | "transit" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="local">Local (VAT applies)</SelectItem>
+                    <SelectItem value="transit">Transit (VAT exempt)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1">
                 <Label className="text-xs">Status</Label>
                 <Select value={form.status} onValueChange={(v) => patch({ status: v })}>
@@ -337,11 +356,20 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
             <div className="grid grid-cols-3 gap-3 items-end">
               <div className="space-y-1">
                 <Label className="text-xs">VAT rate (%)</Label>
-                <Input type="number" value={form.vatRate} onChange={(e) => patch({ vatRate: e.target.value === "" ? "" : Number(e.target.value) })} />
+                {form.tripType === "transit" ? (
+                  <div className="h-10 flex items-center px-3 rounded-md border border-border bg-muted/50 text-xs font-bold text-muted-foreground">
+                    Exempt (transit)
+                  </div>
+                ) : (
+                  <Input type="number" value={form.vatRate} onChange={(e) => patch({ vatRate: e.target.value === "" ? "" : Number(e.target.value) })} />
+                )}
               </div>
               <div className="col-span-2 rounded-xl bg-muted/40 border border-border p-3 text-xs space-y-0.5">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="font-mono">{new Intl.NumberFormat().format(totals.net)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">VAT</span><span className="font-mono">{new Intl.NumberFormat().format(totals.vat)}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">VAT{form.tripType === "transit" ? " (exempt — transit)" : ` (${effectiveVatRate}%)`}</span>
+                  <span className="font-mono">{new Intl.NumberFormat().format(totals.vat)}</span>
+                </div>
                 <div className="flex justify-between font-black text-foreground pt-1 border-t border-border"><span>Total</span><span className="font-mono">{new Intl.NumberFormat().format(totals.total)} {form.currency}</span></div>
               </div>
             </div>

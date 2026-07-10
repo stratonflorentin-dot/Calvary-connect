@@ -80,7 +80,7 @@ export default function TripsPage() {
     const delivered = trips.filter((t) => t.status === "delivered").length;
     const revenue = trips
       .filter((t) => t.status === "delivered")
-      .reduce((s, t) => s + Number(t.totalAmount ?? t.salesAmount ?? 0), 0);
+      .reduce((s, t) => s + Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount ?? 0), 0);
     return { total: trips.length, active, overdue, delivered, revenue };
   }, [trips]);
 
@@ -264,7 +264,7 @@ export default function TripsPage() {
                             {age > 24 ? `${(age / 24).toFixed(1)}d` : `${age.toFixed(0)}h`}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-foreground">
-                            {t.totalAmount || t.salesAmount ? format(Number(t.totalAmount ?? t.salesAmount)) : "—"}
+                            {t.total_amount || t.sales_amount || t.totalAmount || t.salesAmount ? format(Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount)) : "—"}
                           </td>
                           <td className="px-4 py-3">
                             <TransitionButtons

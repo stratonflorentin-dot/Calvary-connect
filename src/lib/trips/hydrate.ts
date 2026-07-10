@@ -33,8 +33,8 @@ function pick<T extends Record<string, any>>(row: T, ...keys: string[]): any {
 export async function hydrateTrips<T extends Record<string, any>>(rows: T[]): Promise<(T & HydratedTrip)[]> {
   if (rows.length === 0) return [];
 
-  const driverIds = Array.from(new Set(rows.map((r) => pick(r, "driverId", "driver_id")).filter(Boolean)));
-  const vehicleIds = Array.from(new Set(rows.map((r) => pick(r, "truckId", "vehicle_id", "vehicleId")).filter(Boolean)));
+  const driverIds = Array.from(new Set(rows.map((r) => pick(r, "driver_id", "driverId")).filter(Boolean)));
+  const vehicleIds = Array.from(new Set(rows.map((r) => pick(r, "truck_id", "truckId", "vehicle_id", "vehicleId")).filter(Boolean)));
 
   const [drivers, vehicles] = await Promise.all([
     driverIds.length > 0
@@ -57,8 +57,8 @@ export async function hydrateTrips<T extends Record<string, any>>(rows: T[]): Pr
   for (const v of vehicles.data ?? []) vehicleMap.set(v.id, v);
 
   return rows.map((r) => {
-    const dId = pick(r, "driverId", "driver_id");
-    const vId = pick(r, "truckId", "vehicle_id", "vehicleId");
+    const dId = pick(r, "driver_id", "driverId");
+    const vId = pick(r, "truck_id", "truckId", "vehicle_id", "vehicleId");
     const driver = dId ? driverMap.get(dId) : null;
     const vehicle = vId ? vehicleMap.get(vId) : null;
     return {
