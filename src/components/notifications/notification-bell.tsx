@@ -27,8 +27,12 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
 
+  // notifications.user_id is a uuid; the legacy offline-admin session uses a
+  // synthetic id ("admin-straton") that would 400 every query.
+  const hasDbUser = !!user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+
   useEffect(() => {
-    if (!user?.id) return;
+    if (!hasDbUser) return;
 
     fetchNotifications();
 
@@ -54,9 +58,9 @@ export function NotificationBell() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!user?.id) return null;
+  if (!hasDbUser) return null;
 
   const fetchNotifications = async () => {
     const { data, error } = await supabase

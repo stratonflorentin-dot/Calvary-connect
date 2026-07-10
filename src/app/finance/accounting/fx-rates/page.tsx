@@ -44,8 +44,8 @@ export default function FxRatesPage() {
   const load = async () => {
     setLoading(true);
     const { data } = await supabase
-      .from("fx_rates")
-      .select("*")
+      .from("exchange_rates")
+      .select("id, from_ccy:from_currency, to_ccy:to_currency, rate, effective_date, created_at")
       .order("effective_date", { ascending: false })
       .limit(500);
     setRates((data ?? []) as FxRate[]);
@@ -83,11 +83,17 @@ export default function FxRatesPage() {
         to_ccy: form.to_ccy.toUpperCase(),
         rate,
         effective_date: form.effective_date,
-        source: form.source || null,
-        note: form.note || null,
-        created_by: user?.id ?? null,
       };
-      const { data, error } = await supabase.from("fx_rates").insert(payload).select().maybeSingle();
+      const { data, error } = await supabase
+        .from("exchange_rates")
+        .insert({
+          from_currency: payload.from_ccy,
+          to_currency: payload.to_ccy,
+          rate,
+          effective_date: payload.effective_date,
+        })
+        .select("id, from_ccy:from_currency, to_ccy:to_currency, rate, effective_date")
+        .maybeSingle();
       if (error) throw error;
       if (data?.id) {
         await AuditTrailService.log({
@@ -121,15 +127,12 @@ export default function FxRatesPage() {
       return;
     }
     const rows = missing.map((c) => ({
-      from_ccy: c,
-      to_ccy: REPORTING_CURRENCY,
+      from_currency: c,
+      to_currency: REPORTING_CURRENCY,
       rate: 1,
       effective_date: new Date().toISOString().slice(0, 10),
-      source: "seed",
-      note: "Placeholder — update with the real rate.",
-      created_by: user?.id ?? null,
     }));
-    const { error } = await supabase.from("fx_rates").insert(rows);
+    const { error } = await supabase.from("exchange_rates").insert(rows);
     if (error) {
       toast({ title: "Seed failed", description: error.message, variant: "destructive" });
       return;

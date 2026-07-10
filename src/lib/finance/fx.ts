@@ -31,8 +31,8 @@ async function loadRates(force = false): Promise<FxRate[]> {
     return cache.rows;
   }
   const { data } = await supabase
-    .from("fx_rates")
-    .select("*")
+    .from("exchange_rates")
+    .select("id, from_ccy:from_currency, to_ccy:to_currency, rate, effective_date")
     .order("effective_date", { ascending: false });
   cache.rows = (data ?? []) as FxRate[];
   cache.loadedAt = Date.now();
@@ -148,7 +148,16 @@ export async function loadRateMap(
 }
 
 export async function saveRate(rate: Omit<FxRate, "id">): Promise<FxRate | null> {
-  const { data, error } = await supabase.from("fx_rates").insert(rate).select().maybeSingle();
+  const { data, error } = await supabase
+    .from("exchange_rates")
+    .insert({
+      from_currency: rate.from_ccy,
+      to_currency: rate.to_ccy,
+      rate: rate.rate,
+      effective_date: rate.effective_date,
+    })
+    .select("id, from_ccy:from_currency, to_ccy:to_currency, rate, effective_date")
+    .maybeSingle();
   if (error) throw error;
   await refreshRates();
   return (data ?? null) as FxRate | null;

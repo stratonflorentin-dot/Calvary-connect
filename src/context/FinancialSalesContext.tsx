@@ -91,7 +91,7 @@ export const FinancialSalesProvider = ({ children }: { children: ReactNode }) =>
         supabase.from('invoices').select('*'),
         supabase.from('taxes').select('*'),
         supabase.from('vehicles').select('id, plate_number, make, model').eq('status', 'active'),
-        supabase.from('user_profiles').select('id, name, commission_rate').eq('role', 'sales_rep'),
+        supabase.from('user_profiles').select('id, name').eq('role', 'SALESMAN'),
       ]);
 
       // Transform trips into revenue‑like objects (same logic as previous component)
@@ -112,7 +112,7 @@ export const FinancialSalesProvider = ({ children }: { children: ReactNode }) =>
       setTaxes(taxesData || []);
       setVehicles(vehiclesData || []);
       setTrips(tripsData || []);
-      setSalesReps(repsData || []);
+      setSalesReps((repsData || []).map((r: any) => ({ ...r, commission_rate: r.commission_rate ?? 0 })));
     } catch (e) {
       console.error('Error loading financial/sales data', e);
     } finally {

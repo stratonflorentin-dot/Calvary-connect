@@ -86,11 +86,14 @@ export function middleware(request: NextRequest) {
   // ── 3. Content Security Policy ─────────────────────────────────────────
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://vercel.live",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com",
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co https://api.mapbox.com",
+    // OSM tile hosts power the live map, trip mini map and route optimizer
+    "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://*.basemaps.cartocdn.com",
+    // wss://*.supabase.co is required for realtime (chat, live dashboards);
+    // nominatim/osrm serve geocoding and road routing
+    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
