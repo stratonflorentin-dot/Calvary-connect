@@ -275,13 +275,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "finance",
     showInNavigation: false,
   },
-  {
-    path: "/finance/reports/aging-report",
-    label: "Aging Report",
-    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
-    category: "finance",
-    showInNavigation: false,
-  },
   // Payables
   {
     path: "/finance/invoicing/vendor-bills",
@@ -293,13 +286,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/finance/transactions/expenses",
     label: "Expense Transactions",
-    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
-    category: "finance",
-    showInNavigation: false,
-  },
-  {
-    path: "/finance/transactions/revenue",
-    label: "Revenue Transactions",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
     category: "finance",
     showInNavigation: false,
@@ -419,7 +405,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     showInNavigation: false,
   },
   {
-    path: "/income",
+    path: "/finance/transactions/revenue",
     label: "Revenue Tracking",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "SALESMAN"],
     category: "finance",

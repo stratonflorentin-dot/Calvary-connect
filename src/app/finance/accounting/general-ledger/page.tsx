@@ -39,7 +39,7 @@ export default function GeneralLedgerPage() {
           .gte("date", startDate)
           .lte("date", endDate)
           .order("date", { ascending: true }),
-        supabase.from("chart_of_accounts").select("*"),
+        supabase.from("accounts").select("id, code, name, type:category, currency, balance:current_balance").eq("is_active", true),
       ]);
       if (entriesData.error) throw entriesData.error;
       if (accountsData.error) throw accountsData.error;

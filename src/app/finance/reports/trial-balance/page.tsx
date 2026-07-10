@@ -98,7 +98,7 @@ export default function TrialBalancePage() {
     setLoading(true);
     try {
       const [coaRes, lineRes] = await Promise.all([
-        supabase.from("chart_of_accounts").select("*"),
+        supabase.from("accounts").select("id, code, name, type:category, currency, balance:current_balance").eq("is_active", true),
         supabase.from("journal_entry_lines").select("*, journal_entries(entry_date, status, currency)"),
       ]);
       setAccounts(coaRes.data ?? []);

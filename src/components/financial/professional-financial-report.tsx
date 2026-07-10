@@ -107,7 +107,7 @@ export function ProfessionalFinancialReport() {
         supabase.from('maintenance_requests').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('fuel_tracking').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
         supabase.from('driver_allowances').select('*').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString()),
-        supabase.from('currency_exchange_rates').select('*').order('effective_date', { ascending: false }),
+        supabase.from('exchange_rates').select('*').order('effective_date', { ascending: false }),
       ]);
 
       // Identify all unique currencies across all financial records

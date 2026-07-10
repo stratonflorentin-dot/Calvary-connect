@@ -270,7 +270,7 @@ export default function JournalEntriesPage() {
           reference: form.reference,
           description: form.description,
           currency: form.currency,
-          status: asDraft ? "draft" : "posted",
+          status: "draft",
           total_amount: totals.debit,
           created_by: user?.id ?? null,
         })
@@ -288,6 +288,24 @@ export default function JournalEntriesPage() {
       }));
       const { error: lErr } = await supabase.from("journal_entry_lines").insert(linePayload);
       if (lErr) throw lErr;
+
+      if (!asDraft) {
+        // Server-side validated transition (balance check, period check, role check)
+        const { error: postErr } = await supabase.rpc("post_journal_entry", { p_id: header!.id });
+        if (postErr) {
+          const fnMissing = postErr.code === "PGRST202" || /post_journal_entry/i.test(postErr.message ?? "");
+          if (fnMissing) {
+            // Migration 006 not applied yet — legacy direct post
+            const { error: updErr } = await supabase
+              .from("journal_entries")
+              .update({ status: "posted", is_posted: true, posted_at: new Date().toISOString() })
+              .eq("id", header!.id);
+            if (updErr) throw updErr;
+          } else {
+            throw postErr;
+          }
+        }
+      }
 
       await AuditTrailService.log({
         user_id: user?.id,
