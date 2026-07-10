@@ -44,7 +44,7 @@ interface LedgerTransaction {
 const categoryColors: Record<string, { bg: string; text: string; border: string; icon: React.ComponentType<{ className?: string }> }> = {
   ASSETS: { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20', icon: Wallet },
   LIABILITIES: { bg: 'bg-destructive/10', text: 'text-destructive', border: 'border-destructive/20', icon: CreditCard },
-  EQUITY: { bg: 'bg-accent/10', text: 'text-accent', border: 'border-accent/20', icon: Building2 },
+  EQUITY: { bg: 'bg-accent/10', text: 'text-accent-foreground', border: 'border-accent/20', icon: Building2 },
   REVENUE: { bg: 'bg-success/10', text: 'text-success', border: 'border-success/20', icon: TrendingUp },
   COST_OF_SALES: { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20', icon: Coins },
   OPERATING_EXPENSES: { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20', icon: TrendingDown },
@@ -979,7 +979,7 @@ export default function ChartOfAccountsPage() {
                 </div>
                 <Button 
                   onClick={() => setShowAddEntryDialog(true)} 
-                  className="bg-destructive hover:bg-destructive/90 text-background"
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Entry
                 </Button>

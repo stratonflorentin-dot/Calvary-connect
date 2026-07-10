@@ -154,7 +154,7 @@ function ExecutiveDashboardContent() {
                 <StatMiniCard
                     title="Available Vehicles"
                     value={`${stats.availableVehicles}/${stats.totalVehicles}`}
-                    icon={<Grid className="w-4 h-4 text-accent" />}
+                    icon={<Grid className="w-4 h-4 text-accent-foreground" />}
                     iconBg="bg-muted"
                     valueColor="text-foreground"
                     href="/fleet"
@@ -164,7 +164,7 @@ function ExecutiveDashboardContent() {
             {/* FLEET STATUS BAR */}
             <Card className="p-6 shadow-lg">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
-                    <Truck className="w-5 h-5 text-accent" />
+                    <Truck className="w-5 h-5 text-accent-foreground" />
                     Fleet Status
                 </h3>
                 <div className="flex h-10 bg-muted rounded-xl overflow-hidden mb-4 shadow-inner">
@@ -485,7 +485,7 @@ function ExecutiveDashboardContent() {
                         subtitle="Month To Date"
                         icon={<Users className="w-5 h-5 text-white" />}
                         iconBg="bg-accent"
-                        headerGradient="bg-gradient-to-r from-accent/80 to-accent/60"
+                        headerGradient="bg-gradient-to-r from-violet-500 to-violet-400"
                     >
                         <div className="space-y-4">
                             {[

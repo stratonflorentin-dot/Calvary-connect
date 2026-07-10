@@ -276,7 +276,7 @@ export default function PODPage() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-4 flex items-center justify-between">
             <Button variant="ghost" asChild>
-              <Link href="/operations">
+              <Link href="/operations/dashboard">
                 <ArrowLeft className="size-4 mr-2" /> Back to Operations
               </Link>
             </Button>

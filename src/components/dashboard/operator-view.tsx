@@ -61,7 +61,7 @@ export function OperatorView() {
       kpis={[
         { label: "Pending", value: stats.pending, icon: ClipboardList, accent: "bg-amber-100 text-amber-700", href: "/dispatch" },
         { label: "Loading", value: stats.loading, icon: Package, accent: "bg-sky-100 text-sky-700", href: "/dispatch" },
-        { label: "In transit", value: stats.inTransit, icon: Navigation, accent: "bg-primary/10 text-primary", href: "/tracking" },
+        { label: "In transit", value: stats.inTransit, icon: Navigation, accent: "bg-primary/10 text-primary", href: "/map" },
         { label: "Overdue", value: stats.overdue, icon: Flame, accent: "bg-red-100 text-red-700", href: "/dispatch" },
         { label: "Available vehicles", value: stats.available, icon: Truck, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/fleet" },
         { label: "Fuel approvals", value: stats.fuel, icon: Fuel, accent: "bg-orange-100 text-orange-700", href: "/fuel-approvals" },
@@ -95,7 +95,7 @@ export function OperatorView() {
         {
           title: "Active trips",
           subtitle: "In progress",
-          href: "/tracking",
+          href: "/map",
           padded: false,
           content: activeTrips.length === 0 ? (
             <EmptyState icon={Navigation} title="No active trips" />
@@ -125,7 +125,7 @@ export function OperatorView() {
         { href: "/trips", label: "Trips", icon: RouteIcon, tone: "bg-sky-100 text-sky-700" },
         { href: "/bookings", label: "Bookings", icon: ClipboardList, tone: "bg-emerald-100 text-emerald-700" },
         { href: "/fuel-approvals", label: "Fuel", icon: Fuel, tone: "bg-orange-100 text-orange-700" },
-        { href: "/tracking", label: "Live map", icon: MapPin, tone: "bg-violet-100 text-violet-700" },
+        { href: "/map", label: "Live map", icon: MapPin, tone: "bg-violet-100 text-violet-700" },
         { href: "/maintenance", label: "Maintenance", icon: Wrench, tone: "bg-amber-100 text-amber-700" },
       ]}
     />

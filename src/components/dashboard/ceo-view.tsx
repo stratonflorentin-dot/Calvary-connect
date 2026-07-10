@@ -197,7 +197,7 @@ export function CeoView() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard label={`Cash (${REPORTING_CURRENCY})`} value={format(stats.cash)} icon={Wallet} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" href="/finance/banking" />
+        <StatCard label={`Cash (${REPORTING_CURRENCY})`} value={format(stats.cash)} icon={Wallet} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" href="/finance/banking/bank-accounts" />
         <StatCard label={`Revenue MTD`} value={format(stats.revenueMtd)} icon={TrendingUp} accent="bg-primary/10 text-primary" href="/finance/reports/profit-loss" />
         <StatCard label={`Expenses MTD`} value={format(stats.expensesMtd)} icon={Receipt} accent="bg-red-100 text-red-700" href="/finance/reports/expense-analysis" />
         <StatCard label={`Net MTD`} value={format(stats.netMtd)} icon={DollarSign} accent={stats.netMtd >= 0 ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" : "bg-red-100 text-red-700"} href="/finance/reports/profit-loss" />

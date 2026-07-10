@@ -351,7 +351,7 @@ export default function ManagementDashboard() {
                           activity.action === "create" && "bg-success/10 text-success",
                           activity.action === "update" && "bg-primary/10 text-primary",
                           activity.action === "delete" && "bg-destructive/10 text-destructive",
-                          activity.action === "approve" && "bg-accent/10 text-accent"
+                          activity.action === "approve" && "bg-accent/10 text-accent-foreground"
                         )}>
                           {activity.action === "create" && <CheckCircle className="size-4" />}
                           {activity.action === "update" && <FileText className="size-4" />}

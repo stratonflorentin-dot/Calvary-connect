@@ -228,7 +228,7 @@ export default function SalesDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalContracts}</div>
-                  <div className="text-xs text-accent mt-1">Active agreements</div>
+                  <div className="text-xs text-accent-foreground mt-1">Active agreements</div>
                 </CardContent>
               </Card>
             </div>

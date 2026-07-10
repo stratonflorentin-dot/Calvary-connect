@@ -149,7 +149,7 @@ export function AuthComponent() {
         {/* Right side: Start Prompt Card */}
         <div className="w-full md:w-[380px] bg-card/60 dark:bg-background/60 border border-border rounded-2xl p-8 backdrop-blur-xl shadow-2xl flex flex-col items-center text-center space-y-6 transition-colors duration-500">
           <div className="w-16 h-16 rounded-full bg-muted dark:bg-background flex items-center justify-center border border-border">
-            <Activity className="w-8 h-8 text-accent dark:text-accent/80 animate-pulse" />
+            <Activity className="w-8 h-8 text-accent-foreground dark:text-accent/80 animate-pulse" />
           </div>
           
           <div className="space-y-1">
@@ -189,7 +189,7 @@ export function AuthComponent() {
       {!hasStarted && (
         <button
           onClick={() => setHasStarted(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 h-32 w-10 bg-gradient-to-b from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-background rounded-l-2xl flex flex-col items-center justify-center gap-2 shadow-[-4px_0_20px_rgba(59,130,246,0.3)] border-y border-l border-white/10 z-40 group transition-all duration-300 hover:w-12"
+          className="fixed right-0 top-1/2 -translate-y-1/2 h-32 w-10 bg-gradient-to-b from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground rounded-l-2xl flex flex-col items-center justify-center gap-2 shadow-[-4px_0_20px_rgba(59,130,246,0.3)] border-y border-l border-white/10 z-40 group transition-all duration-300 hover:w-12"
         >
           <Lock className="w-4 h-4 group-hover:rotate-12 transition-transform" />
           <span className="text-[10px] font-extrabold uppercase tracking-widest [writing-mode:vertical-lr] select-none">
@@ -234,11 +234,11 @@ export function AuthComponent() {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent dark:from-primary/80 dark:to-accent/80 font-headline">Portal Access</CardTitle>
+                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-500 dark:from-primary/80 dark:to-violet-400 font-headline">Portal Access</CardTitle>
                   <p className="text-xs text-muted-foreground mt-1">Calvary Connect System</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-muted dark:bg-background flex items-center justify-center border border-border">
-                  <Lock className="w-5 h-5 text-accent dark:text-accent/80" />
+                  <Lock className="w-5 h-5 text-accent-foreground dark:text-accent/80" />
                 </div>
               </div>
             </CardHeader>
@@ -281,7 +281,7 @@ export function AuthComponent() {
                         {error}
                       </div>
                     )}
-                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-background font-medium shadow-lg shadow-primary/20" disabled={loading}>
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground font-medium shadow-lg shadow-primary/20" disabled={loading}>
                       {loading ? 'Authenticating...' : 'Sign In'}
                     </Button>
                   </form>
@@ -346,7 +346,7 @@ export function AuthComponent() {
                         {error}
                       </div>
                     )}
-                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-background font-medium shadow-lg shadow-primary/20" disabled={loading}>
+                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground font-medium shadow-lg shadow-primary/20" disabled={loading}>
                       {loading ? 'Creating account...' : 'Complete Registration'}
                     </Button>
                   </form>

@@ -725,7 +725,7 @@ function SalesModuleContent() {
                   <p className="text-2xl font-bold text-foreground">TZS {pipelineValue.toLocaleString()}</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shadow-sm flex-shrink-0">
-                  <TrendingUp className="h-6 w-6 text-accent" />
+                  <TrendingUp className="h-6 w-6 text-accent-foreground" />
                 </div>
               </div>
             </CardContent>
@@ -831,7 +831,7 @@ function SalesModuleContent() {
                   Sales Orders & Freight Billing
                 </CardTitle>
                 <Button asChild>
-                  <Link href="/sales/orders/new">
+                  <Link href="/bookings">
                     <Plus className="h-4 w-4 mr-2" /> New Sales Order
                   </Link>
                 </Button>

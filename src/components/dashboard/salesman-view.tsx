@@ -130,7 +130,7 @@ export default function SalesmanDashboard() {
         { href: "/sales", label: "Sales pipeline", icon: Briefcase, tone: "bg-primary/10 text-primary" },
         { href: "/customers", label: "Customers", icon: Users, tone: "bg-sky-100 text-sky-700" },
         { href: "/bookings", label: "Bookings", icon: Handshake, tone: "bg-emerald-100 text-emerald-700" },
-        { href: "/contracts", label: "Contracts", icon: FileText, tone: "bg-violet-100 text-violet-700" },
+        { href: "/admin/contracts", label: "Contracts", icon: FileText, tone: "bg-violet-100 text-violet-700" },
         { href: "/customers", label: "New lead", icon: UserPlus, tone: "bg-amber-100 text-amber-700" },
         { href: "/finance/invoicing/customer-invoices", label: "Invoices", icon: DollarSign, tone: "bg-fuchsia-100 text-fuchsia-700" },
       ]}

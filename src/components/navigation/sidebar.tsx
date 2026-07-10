@@ -258,7 +258,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
       {/* Mobile toggle button */}
       <button
         onClick={toggle}
-        className="md:hidden fixed top-4 left-4 z-[60] p-2.5 rounded-xl bg-primary text-background shadow-lg hover:bg-primary/90 transition-all duration-200"
+        className="md:hidden fixed top-4 left-4 z-[60] p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-200"
       >
         {isOpen ? <X className="size-5" /> : <Menu className="size-5" />}
       </button>

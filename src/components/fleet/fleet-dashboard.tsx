@@ -193,7 +193,7 @@ export function FleetDashboard() {
       case 'TRUCK_HEAD':
         return 'text-primary bg-primary/10';
       case 'ESCORT_CAR':
-        return 'text-accent bg-accent/10';
+        return 'text-accent-foreground bg-accent/10';
       case 'TRAILER':
         return 'text-warning bg-warning/10';
       case 'REEFER':
@@ -386,10 +386,10 @@ export function FleetDashboard() {
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">Utilization</span>
               <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shadow-sm">
-                <Gauge className="size-5 text-accent" />
+                <Gauge className="size-5 text-accent-foreground" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-accent">{fleetStats.utilization}%</p>
+            <p className="text-2xl font-bold text-accent-foreground">{fleetStats.utilization}%</p>
           </CardContent>
         </Card>
       </div>
@@ -417,7 +417,7 @@ export function FleetDashboard() {
                 <p className="text-xl font-bold text-foreground">{fleetStats.escortCars}</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shadow-sm">
-                <Car className="size-5 text-accent" />
+                <Car className="size-5 text-accent-foreground" />
               </div>
             </div>
           </CardContent>

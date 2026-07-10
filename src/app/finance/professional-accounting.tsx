@@ -150,7 +150,7 @@ const statusStyles: Record<string, string> = {
 const accountTypeStyles: Record<string, string> = {
   Asset: "border-primary/20 bg-primary/10 text-primary",
   Liability: "border-destructive/20 bg-destructive/10 text-destructive",
-  Equity: "border-accent/20 bg-accent/10 text-accent",
+  Equity: "border-accent/20 bg-accent/10 text-accent-foreground",
   Revenue: "border-success/20 bg-success/10 text-success",
   Expense: "border-warning/20 bg-warning/10 text-warning",
 };
@@ -165,7 +165,7 @@ const accountingAreas: Array<{
     {
       title: "Chart of Accounts",
       description: "Maintain assets, liabilities, equity, revenue, and expense accounts.",
-      href: "/finance/chart-of-accounts",
+      href: "/finance/accounting/chart-of-accounts",
       icon: BookOpen,
       tone: "bg-primary/10 text-primary border-primary/20",
     },
@@ -193,7 +193,7 @@ const accountingAreas: Array<{
     {
       title: "Bank Reconciliation",
       description: "Import statements and match deposits or withdrawals to ledger records.",
-      href: "/finance/bank-statement",
+      href: "/finance/banking/bank-statements",
       icon: Landmark,
       tone: "bg-info/10 text-info border-info/20",
     },
@@ -209,7 +209,7 @@ const accountingAreas: Array<{
       description: "Connect trips, vehicle costs, fuel, and revenue by route.",
       href: "/admin/reports/fleet/route-profitability",
       icon: Truck,
-      tone: "bg-accent/10 text-accent border-accent/20",
+      tone: "bg-accent/10 text-accent-foreground border-accent/20",
     },
     {
       title: "Financial Reports",
@@ -1370,7 +1370,7 @@ export default function FinancialOperations() {
     {
       title: "Bank reconciliation",
       detail: "Match bank statement lines to invoices, income, expenses, and journals.",
-      href: "/finance/bank-statement",
+      href: "/finance/banking/bank-statements",
       icon: Landmark,
       complete: reconciliationScore >= 85,
       signal: `${reconciliationScore}% reconciled`,
@@ -1394,7 +1394,7 @@ export default function FinancialOperations() {
     {
       title: "Ledger postings",
       detail: "Confirm operational journals from trips, payroll, fuel, and maintenance.",
-      href: "/finance/chart-of-accounts",
+      href: "/finance/accounting/chart-of-accounts",
       icon: BookOpen,
       complete: metrics.journalCount > 0,
       signal: `${metrics.journalCount} entries`,
@@ -1824,14 +1824,14 @@ export default function FinancialOperations() {
                   <WorkflowStep
                     title="Bank Reconciliation"
                     description="Import statements and match deposits or withdrawals against the ledger."
-                    href="/finance/bank-statement"
+                    href="/finance/banking/bank-statements"
                     icon={Landmark}
                     status={`${reconciliationScore}% matched signal`}
                   />
                   <WorkflowStep
                     title="Chart of Accounts"
                     description="Maintain the accounting structure that powers reports and journal postings."
-                    href="/finance/chart-of-accounts"
+                    href="/finance/accounting/chart-of-accounts"
                     icon={BookOpen}
                     status="Account map ready"
                   />
@@ -3007,7 +3007,7 @@ export default function FinancialOperations() {
               <h2 className="text-xl font-bold text-foreground">Bank Statement Reconciliation</h2>
               <Card className="border border-border">
                 <CardContent className="p-5">
-                  <EmptyState icon={CreditCard} title="Bank Statement Reconciliation" description="Import bank statements and match transactions to your ledger records. This feature connects to your configured bank accounts." action={<Button asChild variant="outline"><Link href="/finance/accounts">View Bank Accounts</Link></Button>} />
+                  <EmptyState icon={CreditCard} title="Bank Statement Reconciliation" description="Import bank statements and match transactions to your ledger records. This feature connects to your configured bank accounts." action={<Button asChild variant="outline"><Link href="/finance/banking/bank-accounts">View Bank Accounts</Link></Button>} />
                 </CardContent>
               </Card>
             </div>
@@ -3017,7 +3017,7 @@ export default function FinancialOperations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-foreground">Chart of Accounts</h2>
-                <Button className="gap-2" variant="outline" asChild><Link href="/finance/chart-of-accounts"><Plus className="size-4" />Add Account</Link></Button>
+                <Button className="gap-2" variant="outline" asChild><Link href="/finance/accounting/chart-of-accounts"><Plus className="size-4" />Add Account</Link></Button>
               </div>
               {coaGroups.length === 0 ? (
                 <Card className="border border-border">
@@ -3278,7 +3278,7 @@ function ReportLink({
   return (
     <Link href={href} className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-md">
       <div className="flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent shadow-sm">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent-foreground shadow-sm">
           <Icon className="size-5" />
         </div>
         <div>

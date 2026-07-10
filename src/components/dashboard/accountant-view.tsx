@@ -62,7 +62,7 @@ export function AccountantView() {
       onRefresh={load}
       storageKey="accountant-dash"
       kpis={[
-        { label: `Cash (${REPORTING_CURRENCY})`, value: format(stats.cash), icon: Wallet, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/finance/banking" },
+        { label: `Cash (${REPORTING_CURRENCY})`, value: format(stats.cash), icon: Wallet, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/finance/banking/bank-accounts" },
         { label: "Receivables", value: format(stats.ar), icon: CreditCard, accent: "bg-primary/10 text-primary", href: "/finance/invoicing/customer-invoices" },
         { label: "Payables", value: format(stats.ap), icon: Building2, accent: "bg-orange-100 text-orange-700", href: "/finance/invoicing/vendor-bills" },
         { label: "Overdue AR", value: stats.arOverdue, icon: TrendingDown, accent: "bg-red-100 text-red-700", href: "/finance/reports/aging-report" },

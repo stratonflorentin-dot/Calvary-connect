@@ -114,7 +114,7 @@ export function TripForm({ onSubmit, initialData, isLoading }: TripFormProps) {
       case 'TRAILER':
         return 'bg-success/10 text-success';
       case 'ESCORT_CAR':
-        return 'bg-accent/10 text-accent';
+        return 'bg-accent/10 text-accent-foreground';
       default: return 'bg-muted/50 text-muted-foreground';
     }
   };

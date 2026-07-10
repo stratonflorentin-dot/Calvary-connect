@@ -90,7 +90,7 @@ export default function MaintenancePage() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'requested': return 'bg-accent/10 text-accent dark:bg-accent/30';
+            case 'requested': return 'bg-accent/10 text-accent-foreground dark:bg-accent/30';
             case 'scheduled': return 'bg-primary/10 text-primary dark:bg-primary/30';
             case 'in_progress': return 'bg-warning/10 text-warning dark:bg-warning/30';
             case 'completed': return 'bg-success/10 text-success dark:bg-success/30';
@@ -124,7 +124,7 @@ export default function MaintenancePage() {
                         Preventive Scan
                     </Button>
                     <Link href="/maintenance/new">
-                        <Button className="bg-primary hover:bg-primary/90 text-background gap-2">
+                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
                             <Plus className="w-4 h-4" />
                             New Record
                         </Button>

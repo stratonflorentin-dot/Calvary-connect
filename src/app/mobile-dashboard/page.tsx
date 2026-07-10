@@ -87,7 +87,7 @@ const quickActions = [
     { label: 'New Trip', icon: MapPin, color: 'bg-primary/15 text-primary' },
     { label: 'Fuel Log', icon: Truck, color: 'bg-warning/15 text-warning' },
     { label: 'Maintenance', icon: AlertTriangle, color: 'bg-destructive/15 text-destructive' },
-    { label: 'Invoice', icon: DollarSign, color: 'bg-accent/15 text-accent' },
+    { label: 'Invoice', icon: DollarSign, color: 'bg-accent/15 text-accent-foreground' },
     { label: 'Reports', icon: ClipboardList, color: 'bg-muted/15 text-muted-foreground' },
     { label: 'AI Chat', icon: Sparkles, color: 'bg-info/15 text-info' },
 ];
@@ -137,7 +137,7 @@ export default function MobileDashboardPage() {
             </div>
 
             <div className="mx-auto max-w-6xl px-4 py-4 space-y-4">
-                <Card className="overflow-hidden rounded-[2rem] border border-border bg-gradient-to-br from-primary via-primary/80 to-accent p-5 text-primary-foreground shadow-2xl">
+                <Card className="overflow-hidden rounded-[2rem] border border-border bg-gradient-to-br from-primary via-primary/80 to-violet-500 p-5 text-primary-foreground shadow-2xl">
                     <div className="relative overflow-hidden rounded-[2rem] bg-slate-950/10 p-5">
                         <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
                         <div className="absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-primary/20 blur-2xl" />
@@ -245,7 +245,7 @@ export default function MobileDashboardPage() {
                                         <span>{shipment.progress}%</span>
                                     </div>
                                     <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                                        <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${shipment.progress}%` }} />
+                                        <div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500" style={{ width: `${shipment.progress}%` }} />
                                     </div>
                                 </div>
                             </Card>
@@ -276,7 +276,7 @@ export default function MobileDashboardPage() {
                     <Button size="sm" className="mt-4 w-full bg-warning text-warning-foreground hover:bg-warning/90">Review Now</Button>
                 </Card>
 
-                <Card className="rounded-[2rem] border border-border bg-gradient-to-r from-muted via-primary to-accent p-5 shadow-2xl">
+                <Card className="rounded-[2rem] border border-border bg-gradient-to-r from-primary/80 via-primary to-violet-500 p-5 shadow-2xl">
                     <div className="flex items-start justify-between gap-4">
                         <div className="max-w-[60%]">
                             <p className="text-sm uppercase tracking-[0.28em] text-primary/80">AI Assistant</p>

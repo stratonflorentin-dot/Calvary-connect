@@ -165,9 +165,9 @@ export default function VehicleDetailPage() {
                 <StatMiniCard
                     title="KM Driven"
                     value={stats.kmDriven.toLocaleString('en-TZ')}
-                    icon={<Truck className="w-4 h-4 text-accent" />}
+                    icon={<Truck className="w-4 h-4 text-accent-foreground" />}
                     iconBg="bg-accent/10"
-                    valueColor="text-accent"
+                    valueColor="text-accent-foreground"
                 />
                 <StatMiniCard
                     title="Fuel Litres"
@@ -201,8 +201,8 @@ export default function VehicleDetailPage() {
                             </p>
                         </div>
                         <div className="bg-accent/10 p-4 rounded-lg">
-                            <p className="text-xs text-accent mb-1">Avg Trip Distance</p>
-                            <p className="text-sm font-bold text-accent">
+                            <p className="text-xs text-accent-foreground mb-1">Avg Trip Distance</p>
+                            <p className="text-sm font-bold text-accent-foreground">
                                 {stats.avgTripDistance.toFixed(0)} km
                             </p>
                         </div>
@@ -250,8 +250,8 @@ export default function VehicleDetailPage() {
                             </p>
                         </div>
                         <div className="bg-accent/10 p-3 rounded-lg">
-                            <p className="text-xs text-accent">Revenue per Trip</p>
-                            <p className="text-sm font-bold text-accent">
+                            <p className="text-xs text-accent-foreground">Revenue per Trip</p>
+                            <p className="text-sm font-bold text-accent-foreground">
                                 {format(stats.revenuePerTrip)}
                             </p>
                         </div>
@@ -264,7 +264,7 @@ export default function VehicleDetailPage() {
                 title="Utilization Trend — Last 6 months performance"
                 icon={<Truck className="w-5 h-5 text-white" />}
                 iconBg="bg-accent"
-                headerGradient="bg-gradient-to-r from-accent to-accent/80"
+                headerGradient="bg-gradient-to-r from-violet-500 to-violet-400"
             >
                 <div className="grid grid-cols-6 gap-3 text-xs text-center">
                     {utilizationByMonth.map((month, idx) => {

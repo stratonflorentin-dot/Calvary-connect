@@ -66,7 +66,7 @@ export default function UsersPage() {
 
   // Role configuration for enhanced badges
   const ROLE_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
-    CEO: { label: 'CEO', color: 'text-accent', bgColor: 'bg-accent/10' },
+    CEO: { label: 'CEO', color: 'text-accent-foreground', bgColor: 'bg-accent/10' },
     ADMIN: { label: 'Admin', color: 'text-destructive', bgColor: 'bg-destructive/10' },
     HR: { label: 'HR', color: 'text-info', bgColor: 'bg-info/10' },
     OPERATOR: { label: 'Operations', color: 'text-primary', bgColor: 'bg-primary/10' },
@@ -559,10 +559,10 @@ export default function UsersPage() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground font-medium">Drivers</span>
               <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Shield className="size-4 text-accent" />
+                <Shield className="size-4 text-accent-foreground" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-accent">{teamStats.driversCount}</p>
+            <p className="text-2xl font-bold text-accent-foreground">{teamStats.driversCount}</p>
           </div>
           <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">

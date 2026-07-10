@@ -283,7 +283,7 @@ export default function FinanceOverviewPage() {
       value: cashTotal,
       icon: Wallet,
       accent: "bg-emerald-50 text-emerald-600",
-      href: "/finance/banking",
+      href: "/finance/banking/bank-accounts",
     },
     {
       label: `Revenue MTD (${REPORTING_CURRENCY})`,
@@ -330,7 +330,7 @@ export default function FinanceOverviewPage() {
     { href: "/expenses", icon: Receipt, label: "Record Expense", color: "text-rose-600 bg-rose-50" },
     { href: "/income", icon: TrendingUp, label: "Record Revenue", color: "text-emerald-600 bg-emerald-50" },
     { href: "/finance/accounting/journal-entries", icon: BookOpen, label: "Journal Entry", color: "text-violet-600 bg-violet-50" },
-    { href: "/finance/bank-statement", icon: Landmark, label: "Bank Reconciliation", color: "text-teal-600 bg-teal-50" },
+    { href: "/finance/banking/bank-reconciliation", icon: Landmark, label: "Bank Reconciliation", color: "text-teal-600 bg-teal-50" },
     { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-fuchsia-600 bg-fuchsia-50" },
     { href: "/finance/reports/trial-balance", icon: Calculator, label: "Trial Balance", color: "text-slate-600 bg-slate-100" },
   ];
@@ -561,7 +561,7 @@ export default function FinanceOverviewPage() {
 
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100">
-            <SectionHeader title="Cash by Currency" sub="Consolidated bank balance" href="/finance/banking" />
+            <SectionHeader title="Cash by Currency" sub="Consolidated bank balance" href="/finance/banking/bank-accounts" />
           </div>
           <div className="p-5 space-y-2">
             {Object.keys(cashByCurrency).length === 0 ? (

@@ -373,7 +373,7 @@ export default function OperationsDashboard() {
                 </Link>
               </Button>
               <Button variant="outline" asChild className="h-24 flex-col gap-2">
-                <Link href="/vehicles">
+                <Link href="/fleet">
                   <Wrench className="size-6" />
                   <span>Fleet Status</span>
                 </Link>

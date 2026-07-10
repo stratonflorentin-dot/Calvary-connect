@@ -70,7 +70,7 @@ interface Booking {
 const statusColors: Record<string, string> = {
   pending: 'bg-warning/10 text-warning border-warning/20',
   confirmed: 'bg-primary/10 text-primary border-primary/20',
-  in_progress: 'bg-accent/10 text-accent border-accent/20',
+  in_progress: 'bg-accent/10 text-accent-foreground border-accent/20',
   completed: 'bg-success/10 text-success border-success/20',
   cancelled: 'bg-destructive/10 text-destructive border-destructive/20'
 };
@@ -696,7 +696,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                               </Badge>
                             )}
                             {booking.contract_id && (
-                              <Badge variant="outline" className="text-xs bg-accent/10 text-accent border-accent/20">
+                              <Badge variant="outline" className="text-xs bg-accent/10 text-accent-foreground border-accent/20">
                                 Contract
                               </Badge>
                             )}
