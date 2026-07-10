@@ -171,6 +171,11 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
   const effectiveRole = canUseRolePreview ? resolveUserRole(String(storedRole || role || "ADMIN"), "ADMIN") : resolveUserRole(String(role || ""), "OPERATOR");
   const menuItems = getNavigationMenuByRole(effectiveRole, false, t, menuOwnerEmail, false);
 
+  // notifications.user_id is a uuid — the legacy offline-admin session uses a
+  // synthetic id that would 400 the query.
+  const isDbUser = (id?: string | null) =>
+    !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
   useEffect(() => {
     const fetchBadgeCounts = async () => {
       if (!user?.id) return;
@@ -192,13 +197,15 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
         };
 
         const [notificationsRes, maintenanceRes, serviceRequestsRes, partsRequestsRes, meetingsRes] = await Promise.all([
-          safeCount(
-            supabase
-              .from("notifications")
-              .select("id", { count: "exact" })
-              .eq("user_id", user.id)
-              .eq("read", false)
-          ),
+          isDbUser(user.id)
+            ? safeCount(
+                supabase
+                  .from("notifications")
+                  .select("id", { count: "exact" })
+                  .eq("user_id", user.id)
+                  .eq("read", false)
+              )
+            : Promise.resolve(0),
           safeCount(
             supabase
               .from("maintenance_requests")

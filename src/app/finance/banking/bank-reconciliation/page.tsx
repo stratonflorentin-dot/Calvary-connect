@@ -153,13 +153,13 @@ export default function BankReconciliationPage() {
     try {
       const [lineRes, invRes, expRes, jelRes] = await Promise.all([
         supabase
-          .from("bank_statement_lines")
-          .select("*")
+          .from("bank_statements")
+          .select("id, bank_account_id, transaction_date, description, reference:reference_number, debit:debit_amount, credit:credit_amount, balance, reconciled, matched_entity_type, matched_entity_id")
           .eq("bank_account_id", id)
           .order("transaction_date", { ascending: false }),
         supabase
           .from("invoices")
-          .select("id, invoice_number, customer_name, client_name, type, status, paid_at, paid_amount, total_amount, amount, currency, reconciled")
+          .select("id, invoice_number, customer_name, client_name, type, status, paid_at, total_amount, amount, currency, reconciled")
           .not("paid_at", "is", null)
           .order("paid_at", { ascending: false })
           .limit(500),
@@ -171,7 +171,7 @@ export default function BankReconciliationPage() {
           .limit(500),
         supabase
           .from("journal_entry_lines")
-          .select("id, account_code, account_name, debit_amount, credit_amount, memo, reconciled, journal_entries(id, entry_date, reference, description, status)")
+          .select("id, account_code, account_name, debit_amount, credit_amount, memo:description, reconciled, journal_entries(id, entry_date, reference, description, status)")
           .order("id", { ascending: false })
           .limit(500),
       ]);
@@ -180,7 +180,7 @@ export default function BankReconciliationPage() {
 
       const entries: BookEntry[] = [];
       for (const inv of invRes.data ?? []) {
-        const amt = Number(inv.paid_amount ?? inv.total_amount ?? inv.amount ?? 0);
+        const amt = Number(inv.total_amount ?? inv.amount ?? 0);
         if (!inv.paid_at || amt <= 0) continue;
         entries.push({
           id: `inv-${inv.id}`,
@@ -273,13 +273,13 @@ export default function BankReconciliationPage() {
         bank_account_id: accountId,
         transaction_date: r.transaction_date,
         description: r.description,
-        reference: r.reference,
-        debit: r.debit,
-        credit: r.credit,
+        reference_number: r.reference,
+        debit_amount: r.debit,
+        credit_amount: r.credit,
         balance: r.balance,
         reconciled: false,
       }));
-      const { error } = await supabase.from("bank_statement_lines").insert(payload);
+      const { error } = await supabase.from("bank_statements").insert(payload);
       if (error) throw error;
       await AuditTrailService.log({
         user_id: user?.id,
@@ -312,7 +312,7 @@ export default function BankReconciliationPage() {
     }
 
     const { error } = await supabase
-      .from("bank_statement_lines")
+      .from("bank_statements")
       .update({
         reconciled: true,
         matched_entity_type: entry.kind,
@@ -353,7 +353,7 @@ export default function BankReconciliationPage() {
     for (const l of openLines) {
       const suggestion = suggestMatch(l, book);
       if (!suggestion) continue;
-      await supabase.from("bank_statement_lines").update({
+      await supabase.from("bank_statements").update({
         reconciled: true,
         matched_entity_type: suggestion.kind,
         matched_entity_id: suggestion.reference_id,
@@ -375,7 +375,7 @@ export default function BankReconciliationPage() {
   };
 
   const unmatch = async (id: string) => {
-    await supabase.from("bank_statement_lines").update({
+    await supabase.from("bank_statements").update({
       reconciled: false,
       matched_entity_type: null,
       matched_entity_id: null,

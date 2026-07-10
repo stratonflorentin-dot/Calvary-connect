@@ -13,20 +13,27 @@
 --    the executing role cannot access).
 DROP TRIGGER IF EXISTS audit_chat_channels ON chat_channels;
 
--- 2. Replace the membership-gated policies with authenticated-user policies.
+-- 2. Replace the membership-gated policies. This is an internal tool whose
+--    primary owner signs in through a legacy offline session with no Supabase
+--    auth, so chat must also accept anon-key requests with a null sender.
+--    When a real session exists, the sender must match auth.uid().
 DROP POLICY IF EXISTS "Users can view channels they are member of" ON chat_channels;
 DROP POLICY IF EXISTS "Users can create channels" ON chat_channels;
-CREATE POLICY "Authenticated can view channels" ON chat_channels
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-CREATE POLICY "Authenticated can create channels" ON chat_channels
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Authenticated can view channels" ON chat_channels;
+DROP POLICY IF EXISTS "Authenticated can create channels" ON chat_channels;
+CREATE POLICY "Chat channels read" ON chat_channels
+  FOR SELECT USING (true);
+CREATE POLICY "Chat channels create" ON chat_channels
+  FOR INSERT WITH CHECK (created_by IS NULL OR created_by = auth.uid());
 
 DROP POLICY IF EXISTS "Users can view messages in their channels" ON chat_messages;
 DROP POLICY IF EXISTS "Users can send messages to their channels" ON chat_messages;
-CREATE POLICY "Authenticated can view messages" ON chat_messages
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-CREATE POLICY "Authenticated can send messages" ON chat_messages
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND sender_id = auth.uid());
+DROP POLICY IF EXISTS "Authenticated can view messages" ON chat_messages;
+DROP POLICY IF EXISTS "Authenticated can send messages" ON chat_messages;
+CREATE POLICY "Chat messages read" ON chat_messages
+  FOR SELECT USING (true);
+CREATE POLICY "Chat messages send" ON chat_messages
+  FOR INSERT WITH CHECK (sender_id IS NULL OR sender_id = auth.uid());
 
 -- 3. Make sure realtime is enabled for live message delivery.
 DO $$

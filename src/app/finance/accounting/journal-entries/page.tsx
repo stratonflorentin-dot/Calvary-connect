@@ -236,7 +236,7 @@ export default function JournalEntriesPage() {
         account_name: l.account_name,
         debit_amount: Number(l.credit_amount) || 0,
         credit_amount: Number(l.debit_amount) || 0,
-        memo: l.memo ?? undefined,
+        memo: l.memo ?? l.description ?? undefined,
       })),
     );
     setCreating(true);
@@ -284,7 +284,7 @@ export default function JournalEntriesPage() {
         account_name: l.account_name,
         debit_amount: Number(l.debit_amount) || 0,
         credit_amount: Number(l.credit_amount) || 0,
-        memo: l.memo ?? null,
+        description: l.memo || null,
       }));
       const { error: lErr } = await supabase.from("journal_entry_lines").insert(linePayload);
       if (lErr) throw lErr;
@@ -617,7 +617,7 @@ export default function JournalEntriesPage() {
                       </td>
                       <td className="px-3 py-2 text-right">{Number(l.debit_amount) > 0 ? fmt(Number(l.debit_amount), detail.currency ?? "TZS") : "—"}</td>
                       <td className="px-3 py-2 text-right">{Number(l.credit_amount) > 0 ? fmt(Number(l.credit_amount), detail.currency ?? "TZS") : "—"}</td>
-                      <td className="px-3 py-2 text-slate-500 text-xs">{l.memo ?? ""}</td>
+                      <td className="px-3 py-2 text-slate-500 text-xs">{l.memo ?? l.description ?? ""}</td>
                     </tr>
                   ))}
                 </tbody>

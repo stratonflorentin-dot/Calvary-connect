@@ -30,5 +30,33 @@ ALTER TABLE trips ADD COLUMN IF NOT EXISTS estimated_duration numeric;
 UPDATE trips SET trip_type = 'local' WHERE trip_type IS NULL;
 ALTER TABLE trips ALTER COLUMN trip_type SET DEFAULT 'local';
 
--- 4. Refresh PostgREST schema cache so new columns/tables are visible
+-- 4. Bank reconciliation support on existing tables
+ALTER TABLE bank_statements ADD COLUMN IF NOT EXISTS matched_entity_type text;
+ALTER TABLE bank_statements ADD COLUMN IF NOT EXISTS matched_entity_id uuid;
+ALTER TABLE invoices            ADD COLUMN IF NOT EXISTS reconciled boolean NOT NULL DEFAULT false;
+ALTER TABLE expenses            ADD COLUMN IF NOT EXISTS reconciled boolean NOT NULL DEFAULT false;
+ALTER TABLE journal_entry_lines ADD COLUMN IF NOT EXISTS reconciled boolean NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS bank_reconciliations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  bank_account_id uuid REFERENCES bank_accounts(id),
+  period_end date NOT NULL,
+  opening_balance numeric,
+  closing_balance numeric,
+  book_balance numeric,
+  difference numeric,
+  lines_reconciled int,
+  reconciled_by uuid,
+  status text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE bank_reconciliations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS bank_reconciliations_read ON bank_reconciliations;
+CREATE POLICY bank_reconciliations_read ON bank_reconciliations
+  FOR SELECT USING (true);
+DROP POLICY IF EXISTS bank_reconciliations_write ON bank_reconciliations;
+CREATE POLICY bank_reconciliations_write ON bank_reconciliations
+  FOR INSERT WITH CHECK (true);
+
+-- 5. Refresh PostgREST schema cache so new columns/tables are visible
 NOTIFY pgrst, 'reload schema';

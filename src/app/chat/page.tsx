@@ -54,6 +54,13 @@ export default function InternalChatPage() {
   const [creating, setCreating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // chat columns reference auth uuids; the legacy offline-admin session has a
+  // synthetic id ("admin-straton") that would 400 any insert it appears in.
+  const dbUserId =
+    user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)
+      ? user.id
+      : null;
+
   useEffect(() => { loadChannels(); }, []);
 
   useEffect(() => {
@@ -138,7 +145,7 @@ export default function InternalChatPage() {
 
     const { error: dbErr } = await supabase.from("chat_messages").insert({
       channel_id: activeChannel.id,
-      sender_id: user.id,
+      sender_id: dbUserId,
       content,
     });
     if (dbErr) {
@@ -156,7 +163,7 @@ export default function InternalChatPage() {
     setCreating(true);
     const { data, error: dbErr } = await supabase
       .from("chat_channels")
-      .insert({ name, type: "group", created_by: user?.id ?? null })
+      .insert({ name, type: "group", created_by: dbUserId })
       .select()
       .single();
     setCreating(false);

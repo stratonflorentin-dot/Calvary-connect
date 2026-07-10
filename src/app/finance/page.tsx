@@ -143,7 +143,7 @@ export default function FinanceOverviewPage() {
           .select("*, journal_entry_lines(*)")
           .order("created_at", { ascending: false })
           .limit(6),
-        supabase.from("trips").select("id, trip_number, client, salesAmount, totalAmount, status, created_at").eq("status", "delivered").limit(20),
+        supabase.from("trips").select("id, trip_number, client, salesAmount:sales_amount, totalAmount:total_amount, status, created_at").eq("status", "delivered").limit(20),
       ]);
 
       const cash: CashByCurrency = {};
