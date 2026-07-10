@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS fiscal_periods (
   UNIQUE (year, month)
 );
 
-CREATE OR REPLACE FUNCTION public.is_period_open(p_date date)
+DROP FUNCTION IF EXISTS public.is_period_open(date);
+CREATE FUNCTION public.is_period_open(p_date date)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
@@ -47,7 +48,8 @@ AS $$
 $$;
 
 -- Close / reopen are privileged operations
-CREATE OR REPLACE FUNCTION public.close_fiscal_period(p_year int, p_month int, p_lock boolean DEFAULT false)
+DROP FUNCTION IF EXISTS public.close_fiscal_period(int, int, boolean);
+CREATE FUNCTION public.close_fiscal_period(p_year int, p_month int, p_lock boolean DEFAULT false)
 RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
@@ -62,7 +64,8 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.reopen_fiscal_period(p_year int, p_month int)
+DROP FUNCTION IF EXISTS public.reopen_fiscal_period(int, int);
+CREATE FUNCTION public.reopen_fiscal_period(p_year int, p_month int)
 RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
@@ -152,7 +155,8 @@ INSERT INTO document_sequences (doc_type, prefix) VALUES
   ('expense', 'EXP-')
 ON CONFLICT (doc_type) DO NOTHING;
 
-CREATE OR REPLACE FUNCTION public.next_doc_number(p_type text)
+DROP FUNCTION IF EXISTS public.next_doc_number(text);
+CREATE FUNCTION public.next_doc_number(p_type text)
 RETURNS text
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
@@ -210,7 +214,9 @@ CREATE TRIGGER trg_guard_posted_journal
   FOR EACH ROW EXECUTE FUNCTION guard_posted_journal();
 
 -- Posting is a privileged, validated transition
-CREATE OR REPLACE FUNCTION public.post_journal_entry(p_id uuid)
+-- (drop first: CREATE OR REPLACE cannot rename parameters of a pre-existing function)
+DROP FUNCTION IF EXISTS public.post_journal_entry(uuid);
+CREATE FUNCTION public.post_journal_entry(p_id uuid)
 RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
@@ -248,7 +254,8 @@ END;
 $$;
 
 -- Reversal: creates a mirrored draft entry linked to the original
-CREATE OR REPLACE FUNCTION public.reverse_journal_entry(p_id uuid)
+DROP FUNCTION IF EXISTS public.reverse_journal_entry(uuid);
+CREATE FUNCTION public.reverse_journal_entry(p_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
