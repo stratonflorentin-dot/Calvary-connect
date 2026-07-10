@@ -39,6 +39,12 @@ const nextConfig: NextConfig = {
   experimental: {
     scrollRestoration: true,
   },
+  // FAT32 volumes make Node's readlink return EISDIR for regular files,
+  // which crashes webpack's symlink resolution. Skip it — no symlinks here.
+  webpack: (config) => {
+    config.resolve.symlinks = false;
+    return config;
+  },
   async headers() {
     return [
       {

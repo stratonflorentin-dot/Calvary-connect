@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
-    "dev:turbo": "next dev --turbopack -p 3000",
+    "dev": "node scripts/run-next.cjs dev -p 3000",
+    "dev:turbo": "node scripts/run-next.cjs dev --turbopack -p 3000",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
-    "start": "next start -p 3000",
-    "preview": "next build && next start -p 3000",
+    "build": "node scripts/run-next.cjs build",
+    "start": "node scripts/run-next.cjs start -p 3000",
+    "preview": "node scripts/run-next.cjs build && node scripts/run-next.cjs start -p 3000",
     "deploy": "node deploy.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
