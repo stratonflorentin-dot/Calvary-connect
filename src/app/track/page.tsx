@@ -72,16 +72,16 @@ function TimelineStep({
         <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 shadow-sm ${
           isComplete ? "bg-green-500 border-green-500 text-white scale-110" :
           isActive   ? "bg-sky-500   border-sky-500   text-white scale-110 shadow-lg shadow-sky-200 animate-pulse" :
-                       "bg-white     border-gray-200   text-gray-300"
+                       "bg-white     border-gray-200   text-muted-foreground/60"
         }`}>
           <Icon className="w-4.5 h-4.5" />
         </div>
       </div>
       <div className="pb-6 flex-1">
-        <p className={`text-sm font-bold leading-tight ${isComplete || isActive ? "text-slate-800" : "text-slate-400"}`}>
+        <p className={`text-sm font-bold leading-tight ${isComplete || isActive ? "text-slate-800" : "text-muted-foreground"}`}>
           {step.label}
         </p>
-        <p className={`text-xs mt-0.5 ${isComplete || isActive ? "text-slate-500" : "text-slate-300"}`}>
+        <p className={`text-xs mt-0.5 ${isComplete || isActive ? "text-slate-500" : "text-muted-foreground/60"}`}>
           {step.desc}
         </p>
       </div>
@@ -156,19 +156,19 @@ export default function TrackingPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black text-white leading-tight tracking-tight">Calvary Connect</h1>
-            <p className="text-xs text-slate-400 font-medium">Shipment Tracking Portal</p>
+            <p className="text-xs text-muted-foreground font-medium">Shipment Tracking Portal</p>
           </div>
         </div>
 
         {/* Search box */}
         <div className="w-full max-w-xl">
           <h2 className="text-3xl font-black text-white text-center mb-2">Track Your Shipment</h2>
-          <p className="text-slate-400 text-center text-sm mb-8">Enter your tracking number to get real-time status updates</p>
+          <p className="text-muted-foreground text-center text-sm mb-8">Enter your tracking number to get real-time status updates</p>
 
           <form onSubmit={handleSearch} className="relative">
             <div className="flex gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -194,7 +194,7 @@ export default function TrackingPage() {
               { icon: Globe, text: "Real-time Updates" },
               { icon: RefreshCw, text: "Always Current" },
             ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-1.5 text-slate-400 text-xs">
+              <div key={text} className="flex items-center gap-1.5 text-muted-foreground text-xs">
                 <Icon className="w-3.5 h-3.5 text-sky-400" /> {text}
               </div>
             ))}
@@ -229,7 +229,7 @@ export default function TrackingPage() {
               <div className="px-6 py-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-gray-400 font-medium">Tracking #</span>
+                    <span className="text-xs text-muted-foreground font-medium">Tracking #</span>
                   </div>
                   <p className="text-xl font-black text-slate-800 font-mono">{result.trip_number}</p>
                   {result.client && <p className="text-xs text-slate-500 mt-0.5">{result.client}</p>}
@@ -240,7 +240,7 @@ export default function TrackingPage() {
               <div className="px-6 py-5 grid md:grid-cols-2 gap-6">
                 {/* Route */}
                 <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Route</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Route</p>
                   <div className="flex items-start gap-3">
                     <div className="flex flex-col items-center gap-1 pt-1 shrink-0">
                       <div className="w-3 h-3 rounded-full bg-green-500 ring-2 ring-green-100" />
@@ -249,11 +249,11 @@ export default function TrackingPage() {
                     </div>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-[10px] text-gray-400 font-medium uppercase">Origin</p>
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase">Origin</p>
                         <p className="text-sm font-bold text-slate-700">{result.origin}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-gray-400 font-medium uppercase">Destination</p>
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase">Destination</p>
                         <p className="text-sm font-bold text-slate-700">{result.destination}</p>
                       </div>
                     </div>
@@ -281,7 +281,7 @@ export default function TrackingPage() {
                       </div>
                     )}
                     <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                       <span className="font-medium">Dispatched:</span>{" "}
                       {new Date(result.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                     </div>
@@ -290,7 +290,7 @@ export default function TrackingPage() {
 
                 {/* Timeline */}
                 <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Progress</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Progress</p>
                   {result.status === "cancelled" ? (
                     <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-100">
                       <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
@@ -319,7 +319,7 @@ export default function TrackingPage() {
 
               {/* Footer */}
               <div className="px-6 py-4 bg-slate-50 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-3">
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   For support, contact{" "}
                   <a href="tel:+254700000000" className="font-bold text-sky-600 hover:underline">
                     +254 700 000 000

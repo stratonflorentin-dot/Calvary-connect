@@ -98,7 +98,7 @@ function TripCard({
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenu(!menu)}
-              className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1 rounded-md hover:bg-gray-100 text-muted-foreground hover:text-foreground transition-colors"
             >
               <MoreVertical className="w-3.5 h-3.5" />
             </button>
@@ -167,7 +167,7 @@ function TripCard({
         {/* Client + quick action */}
         {(trip.client || next) && (
           <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-gray-50">
-            <span className="text-[10px] text-gray-400 truncate">{trip.client || ""}</span>
+            <span className="text-[10px] text-muted-foreground truncate">{trip.client || ""}</span>
             {next && (
               <button
                 onClick={() => onQuickStatus(trip, next)}
@@ -219,12 +219,12 @@ function KanbanColumn({
           </span>
         </div>
       </div>
-      <p className="px-4 text-[10px] text-gray-400 -mt-2 mb-2">{col.description}</p>
+      <p className="px-4 text-[10px] text-muted-foreground -mt-2 mb-2">{col.description}</p>
 
       {/* Cards */}
       <div className="flex-1 px-3 pb-3 space-y-2.5 overflow-y-auto max-h-[calc(100vh-260px)] scrollbar-thin">
         {trips.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-300">
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/60">
             <Icon className="w-8 h-8 mb-2 opacity-40" />
             <p className="text-xs font-medium">No trips</p>
           </div>
