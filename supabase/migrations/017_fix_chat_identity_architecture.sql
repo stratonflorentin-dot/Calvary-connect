@@ -249,7 +249,7 @@ BEGIN
     
   EXCEPTION
     WHEN OTHERS THEN
-      ROLLBACK TO SAVEPOINT create_direct_chat;
+      ROLLBACK TO create_direct_chat;
       RAISE EXCEPTION 'Failed to create direct chat: %', SQLERRM;
   END;
 END;
