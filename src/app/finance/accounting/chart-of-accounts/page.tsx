@@ -280,6 +280,19 @@ export default function ChartOfAccountsPage() {
     }
   };
 
+  // Calculate the effective balance for a COA account, including linked bank accounts
+  const getAccountEffectiveBalance = (account: Account) => {
+    let balance = account.current_balance || 0;
+    
+    // Add linked bank account balances if this is a bank asset account
+    const linkedBankAccounts = bankAccounts.filter(b => b.coa_account_code === account.code);
+    linkedBankAccounts.forEach(bank => {
+      balance += bank.current_balance;
+    });
+    
+    return balance;
+  };
+
   const filterAccounts = () => {
     let filtered = accounts;
     
@@ -304,10 +317,33 @@ export default function ChartOfAccountsPage() {
     return `${symbol} ${amount.toLocaleString(locale)}`;
   };
 
-  const getCategoryTotal = (category: string) => {
-    return accounts
+  // Get per-currency category totals
+  const getCategoryTotals = (category: string) => {
+    const totals: { [currency: string]: number } = {};
+    
+    // First add COA account balances
+    accounts
       .filter(a => a.category === category && a.is_active)
-      .reduce((sum, a) => sum + (a.type === 'debit' ? a.current_balance : -a.current_balance), 0);
+      .forEach(a => {
+        const currency = a.currency || "TZS";
+        const change = a.type === 'debit' ? a.current_balance : -a.current_balance;
+        totals[currency] = (totals[currency] || 0) + change;
+      });
+
+    // Then add linked bank account balances (only for ASSETS category)
+    if (category === 'ASSETS') {
+      bankAccounts.forEach(bank => {
+        const currency = bank.currency || "TZS";
+        // Only add if linked to a COA account in this category
+        if (bank.coa_account_code) {
+          const linkedAccount = accounts.find(a => a.code === bank.coa_account_code);
+          // If linked to this category or not linked but we want to show all bank assets
+          totals[currency] = (totals[currency] || 0) + bank.current_balance;
+        }
+      });
+    }
+
+    return totals;
   };
 
   const getParentName = (parentCode?: string) => {
@@ -691,8 +727,10 @@ export default function ChartOfAccountsPage() {
           {['ASSETS', 'LIABILITIES', 'EQUITY', 'REVENUE', 'COST_OF_SALES', 'OPERATING_EXPENSES', 'OTHER_EXPENSES'].map((category) => {
             const colors = categoryColors[category];
             const Icon = colors.icon;
-            const total = getCategoryTotal(category);
+            const totalsByCurrency = getCategoryTotals(category);
             const count = accounts.filter(a => a.category === category).length;
+            const hasMultipleCurrencies = Object.keys(totalsByCurrency).length > 1;
+            
             return (
               <Card 
                 key={category} 
@@ -704,9 +742,18 @@ export default function ChartOfAccountsPage() {
                     <Icon className={`w-4 h-4 ${colors.text}`} />
                     <span className="text-xs font-medium text-muted-foreground uppercase">{category.replace('_', ' ')}</span>
                   </div>
-                  <p className={`text-lg font-bold ${colors.text}`}>
-                    {formatCurrency(total)}
-                  </p>
+                  <div className={`space-y-1 ${colors.text}`}>
+                    {Object.entries(totalsByCurrency).map(([currency, total]) => (
+                      <p key={currency} className="text-lg font-bold">
+                        {formatCurrency(total, currency)}
+                      </p>
+                    ))}
+                    {Object.keys(totalsByCurrency).length === 0 && (
+                      <p className="text-lg font-bold">
+                        {formatCurrency(0)}
+                      </p>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">{count} accounts</p>
                 </CardContent>
               </Card>
@@ -762,13 +809,21 @@ export default function ChartOfAccountsPage() {
                     </TableRow>
                   </TableHeader>
                 <TableBody>
-                  {filteredAccounts.map((account) => (
+                  {filteredAccounts.map((account) => {
+                    const linked = bankAccounts.filter(b => b.coa_account_code === account.code);
+                    return (
                     <TableRow key={account.id}>
                       <TableCell className="font-mono font-medium">{account.code}</TableCell>
                       <TableCell>
                         <div className="font-medium">{account.name}</div>
                         {account.description && (
                           <div className="text-xs text-muted-foreground">{account.description}</div>
+                        )}
+                        {linked.length > 0 && (
+                          <div className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
+                            <Landmark className="w-3 h-3" />
+                            {linked.length} linked bank account{linked.length !== 1 ? 's' : ''}
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>
@@ -778,12 +833,12 @@ export default function ChartOfAccountsPage() {
                         {getParentName(account.parent_code)}
                       </TableCell>
                       <TableCell className={`text-right font-semibold ${
-                        account.current_balance > 0 
+                        getAccountEffectiveBalance(account) > 0 
                           ? account.type === 'debit' ? 'text-blue-600' : 'text-red-600'
                           : ''
                       }`}>
-                        {formatCurrency(account.current_balance, account.currency)}
-                        {account.current_balance !== 0 && (
+                        {formatCurrency(getAccountEffectiveBalance(account), account.currency)}
+                        {getAccountEffectiveBalance(account) !== 0 && (
                           <span className="text-xs text-muted-foreground ml-1">
                             ({account.type === 'debit' ? 'Dr' : 'Cr'})
                           </span>
@@ -819,7 +874,8 @@ export default function ChartOfAccountsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );
+                  })}
                   {filteredAccounts.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
