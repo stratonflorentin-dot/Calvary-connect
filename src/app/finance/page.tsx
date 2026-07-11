@@ -135,6 +135,18 @@ export default function FinanceOverviewPage() {
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [unbilledTrips, setUnbilledTrips] = useState<any[]>([]);
 
+  const ALL_QUICK_LINKS = [
+    { href: "/finance/invoicing/customer-invoices", icon: FileText, label: "New Invoice", color: "text-indigo-600 bg-indigo-50" },
+    { href: "/finance/invoicing/vendor-bills", icon: Building2, label: "Vendor Bills", color: "text-orange-600 bg-orange-50" },
+    { href: "/expenses", icon: Receipt, label: "Record Expense", color: "text-rose-600 bg-rose-50" },
+    { href: "/income", icon: TrendingUp, label: "Record Revenue", color: "text-emerald-600 bg-emerald-50" },
+    { href: "/finance/accounting/journal-entries", icon: BookOpen, label: "Journal Entry", color: "text-violet-600 bg-violet-50" },
+    { href: "/finance/banking/bank-reconciliation", icon: Landmark, label: "Bank Reconciliation", color: "text-teal-600 bg-teal-50" },
+    { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-fuchsia-600 bg-fuchsia-50" },
+    { href: "/finance/reports/trial-balance", icon: Calculator, label: "Trial Balance", color: "text-muted-foreground bg-muted" },
+    { href: "/finance/accounting/chart-of-accounts", icon: BookOpen, label: "Chart of Accounts", color: "text-indigo-600 bg-indigo-50", module: 'finance_chart_of_accounts' as const },
+  ];
+
   const QUICK_LINKS = ALL_QUICK_LINKS.filter(link => {
     if (!link.module) return true;
     return role ? canRead(role, link.module) : false;
@@ -330,18 +342,6 @@ export default function FinanceOverviewPage() {
       accent: "bg-orange-50 text-orange-600",
       href: "/finance/invoicing/vendor-bills",
     },
-  ];
-
-  const ALL_QUICK_LINKS = [
-    { href: "/finance/invoicing/customer-invoices", icon: FileText, label: "New Invoice", color: "text-indigo-600 bg-indigo-50" },
-    { href: "/finance/invoicing/vendor-bills", icon: Building2, label: "Vendor Bills", color: "text-orange-600 bg-orange-50" },
-    { href: "/expenses", icon: Receipt, label: "Record Expense", color: "text-rose-600 bg-rose-50" },
-    { href: "/income", icon: TrendingUp, label: "Record Revenue", color: "text-emerald-600 bg-emerald-50" },
-    { href: "/finance/accounting/journal-entries", icon: BookOpen, label: "Journal Entry", color: "text-violet-600 bg-violet-50" },
-    { href: "/finance/banking/bank-reconciliation", icon: Landmark, label: "Bank Reconciliation", color: "text-teal-600 bg-teal-50" },
-    { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-fuchsia-600 bg-fuchsia-50" },
-    { href: "/finance/reports/trial-balance", icon: Calculator, label: "Trial Balance", color: "text-muted-foreground bg-muted" },
-    { href: "/finance/accounting/chart-of-accounts", icon: BookOpen, label: "Chart of Accounts", color: "text-indigo-600 bg-indigo-50", module: 'finance_chart_of_accounts' as const },
   ];
 
   const REPORT_LINKS = [
