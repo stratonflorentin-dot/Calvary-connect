@@ -1129,8 +1129,8 @@ export default function ChartOfAccountsPage() {
                   </div>
                   <div className="bg-card p-4 rounded-lg shadow-sm border">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Current Balance</p>
-                    <p className={`text-xl font-bold ${ledgerAccount.current_balance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {formatCurrency(ledgerAccount.current_balance, ledgerAccount.currency)}
+                    <p className={`text-xl font-bold ${getAccountEffectiveBalance(ledgerAccount) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {formatCurrency(getAccountEffectiveBalance(ledgerAccount), ledgerAccount.currency)}
                     </p>
                     <Badge variant="outline" className="mt-1 text-xs">
                       {ledgerAccount.type === 'debit' ? 'Debit Account' : 'Credit Account'}
