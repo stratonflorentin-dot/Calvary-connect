@@ -29,6 +29,8 @@ import {
   Edit,
   Trash2,
   Forward,
+  Phone,
+  Video,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -40,6 +42,9 @@ import { format, isSameDay, isToday, isYesterday } from "date-fns";
 import { cn } from "@/lib/utils";
 import { uploadToBucket } from "@/lib/storage-upload";
 import { Paperclip, Image, FileText, X } from "lucide-react";
+import { WebRTCManager, CallSession, formatCallDuration, isWebRTCSupported } from "@/lib/webrtc";
+import { IncomingCallModal } from "@/components/chat/incoming-call-modal";
+import { ActiveCallUI } from "@/components/chat/active-call-ui";
 
 interface Channel {
   id: string;
@@ -135,7 +140,7 @@ export default function InternalChatPage() {
 
   // Permission check
   useEffect(() => {
-    if (role && !canRead(role, 'chat')) {
+    if (role && !canRead(role as any, 'chat')) {
       router.push("/");
     }
   }, [role, router]);
@@ -145,6 +150,15 @@ export default function InternalChatPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [recentMessages, setRecentMessages] = useState<Message[]>([]);
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
+  
+  // Call state
+  const [activeCall, setActiveCall] = useState<CallSession | null>(null);
+  const [incomingCall, setIncomingCall] = useState<CallSession | null>(null);
+  const [webrtcManager, setWebrtcManager] = useState<WebRTCManager | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
@@ -331,13 +345,87 @@ export default function InternalChatPage() {
       })
       .subscribe();
 
+    // Call sessions - listen for incoming calls
+    const callsChannel = supabase
+      .channel("call_sessions")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "call_sessions" }, (payload) => {
+        const call = payload.new as CallSession;
+        // Only show incoming calls where I'm the receiver
+        if (call.receiver_id === dbUserId && call.status === 'initiated') {
+          setIncomingCall(call);
+        }
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "call_sessions" }, (payload) => {
+        const call = payload.new as CallSession;
+        // Update active call if it's my call
+        if (activeCall && activeCall.id === call.id) {
+          setActiveCall(call);
+        }
+        // Handle call ended by other party
+        if (call.status === 'ended' || call.status === 'declined') {
+          if (incomingCall && incomingCall.id === call.id) {
+            setIncomingCall(null);
+          }
+          if (activeCall && activeCall.id === call.id) {
+            endCall();
+          }
+        }
+      })
+      .subscribe();
+
+    // Call signaling - handle WebRTC offers/answers/ICE candidates
+    const signalingChannel = supabase
+      .channel("call_signaling")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "call_signaling" }, async (payload) => {
+        const signal = payload.new as any;
+        
+        // Only process signals for my active or incoming calls
+        if (!activeCall && !incomingCall) return;
+        const relevantCallId = activeCall?.id || incomingCall?.id;
+        if (signal.call_id !== relevantCallId) return;
+        if (signal.sender_id === dbUserId) return; // Ignore my own signals
+
+        if (webrtcManager) {
+          switch (signal.signal_type) {
+            case 'offer':
+              // I'm the receiver, create answer
+              const answer = await webrtcManager.createAnswer(signal.signal_data);
+              await supabase.from('call_signaling').insert({
+                call_id: signal.call_id,
+                sender_id: dbUserId,
+                signal_type: 'answer',
+                signal_data: answer
+              });
+              break;
+            case 'answer':
+              // I'm the caller, set remote description
+              await webrtcManager.setRemoteDescription(signal.signal_data);
+              break;
+            case 'ice_candidate':
+              // Add ICE candidate
+              await webrtcManager.addIceCandidate(signal.signal_data);
+              break;
+            case 'declined':
+            case 'busy':
+              // Call ended by other party
+              if (activeCall) {
+                endCall();
+              }
+              break;
+          }
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(typingChannel);
       supabase.removeChannel(reactionsChannel);
       supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(callsChannel);
+      supabase.removeChannel(signalingChannel);
     };
-  }, []);
+  }, [dbUserId, activeCall, incomingCall, webrtcManager]);
 
   const profileById = useMemo(() => {
     const m = new Map<string, Profile>();
@@ -723,6 +811,191 @@ export default function InternalChatPage() {
     }
   };
 
+  // Call management functions
+  const startCall = async (callType: 'voice' | 'video', receiverId: string) => {
+    if (!dbUserId) {
+      setError("You must be signed in to make calls.");
+      return;
+    }
+
+    if (!isWebRTCSupported()) {
+      setError("Your browser does not support WebRTC calls.");
+      return;
+    }
+
+    try {
+      const { data: callId, error: initErr } = await supabase.rpc('initiate_call', {
+        p_receiver_id: receiverId,
+        p_call_type: callType,
+        p_channel_id: activeChannel?.id || null
+      });
+
+      if (initErr) {
+        setError("Unable to start call.");
+        console.error("Call initiation error:", initErr);
+        return;
+      }
+
+      // Fetch call details
+      const { data: call, error: callErr } = await supabase
+        .from('call_sessions')
+        .select('*')
+        .eq('id', callId)
+        .single();
+
+      if (callErr) {
+        setError("Unable to load call.");
+        console.error("Call fetch error:", callErr);
+        return;
+      }
+
+      if (call.status === 'busy') {
+        setError(`${profileById.get(receiverId)?.name || 'User'} is on another call.`);
+        return;
+      }
+
+      setActiveCall(call as CallSession);
+
+      // Initialize WebRTC
+      const manager = new WebRTCManager();
+      setWebrtcManager(manager);
+
+      await manager.initialize(
+        callType,
+        (stream) => setRemoteStream(stream),
+        async (candidate) => {
+          await supabase.from('call_signaling').insert({
+            call_id: call.id,
+            sender_id: dbUserId,
+            signal_type: 'ice_candidate',
+            signal_data: candidate
+          });
+        },
+        (state) => {
+          console.log('Connection state:', state);
+          if (state === 'disconnected' || state === 'failed') {
+            endCall();
+          }
+        }
+      );
+
+      setLocalStream(manager.getLocalStream());
+
+      // Create and send offer
+      const offer = await manager.createOffer();
+      await supabase.from('call_signaling').insert({
+        call_id: call.id,
+        sender_id: dbUserId,
+        signal_type: 'offer',
+        signal_data: offer
+      });
+
+      // Update call status to ringing
+      await supabase.from('call_sessions').update({ status: 'ringing' }).eq('id', call.id);
+
+    } catch (err: any) {
+      setError("Unable to start call.");
+      console.error("Call error:", err);
+    }
+  };
+
+  const acceptCall = async () => {
+    if (!incomingCall || !dbUserId) return;
+
+    try {
+      // Answer call in database
+      const { error: answerErr } = await supabase.rpc('answer_call', {
+        p_call_id: incomingCall.id
+      });
+
+      if (answerErr) {
+        setError("Unable to answer call.");
+        console.error("Answer error:", answerErr);
+        return;
+      }
+
+      setIncomingCall(null);
+      setActiveCall(incomingCall);
+
+      // Initialize WebRTC
+      const manager = new WebRTCManager();
+      setWebrtcManager(manager);
+
+      await manager.initialize(
+        incomingCall.call_type,
+        (stream) => setRemoteStream(stream),
+        async (candidate) => {
+          await supabase.from('call_signaling').insert({
+            call_id: incomingCall.id,
+            sender_id: dbUserId,
+            signal_type: 'ice_candidate',
+            signal_data: candidate
+          });
+        },
+        (state) => {
+          console.log('Connection state:', state);
+          if (state === 'disconnected' || state === 'failed') {
+            endCall();
+          }
+        }
+      );
+
+      setLocalStream(manager.getLocalStream());
+
+    } catch (err: any) {
+      setError("Unable to answer call.");
+      console.error("Accept call error:", err);
+    }
+  };
+
+  const declineCall = async () => {
+    if (!incomingCall || !dbUserId) return;
+
+    try {
+      await supabase.rpc('decline_call', { p_call_id: incomingCall.id });
+      setIncomingCall(null);
+    } catch (err: any) {
+      console.error("Decline call error:", err);
+    }
+  };
+
+  const endCall = async () => {
+    if (!activeCall || !dbUserId) return;
+
+    try {
+      await supabase.rpc('end_call', {
+        p_call_id: activeCall.id,
+        p_end_reason: 'user_ended'
+      });
+
+      // Cleanup WebRTC
+      if (webrtcManager) {
+        webrtcManager.cleanup();
+        setWebrtcManager(null);
+      }
+
+      setLocalStream(null);
+      setRemoteStream(null);
+      setActiveCall(null);
+      setIsMuted(false);
+      setIsSpeakerOn(true);
+
+    } catch (err: any) {
+      console.error("End call error:", err);
+    }
+  };
+
+  const toggleMute = () => {
+    if (webrtcManager) {
+      webrtcManager.toggleAudio(!isMuted);
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const toggleSpeaker = () => {
+    setIsSpeakerOn(!isSpeakerOn);
+  };
+
   // ── Sidebar ordering: most recent activity first, unread pinned visually ──
   const sortedChannels = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -748,6 +1021,34 @@ export default function InternalChatPage() {
 
   return (
     <PageShell width="wide">
+      {/* Incoming Call Modal */}
+      {incomingCall && (
+        <IncomingCallModal
+          call={incomingCall}
+          callerName={profileById.get(incomingCall.caller_id)?.name || 'Unknown'}
+          callerAvatar={profileById.get(incomingCall.caller_id)?.avatar_url}
+          onAccept={acceptCall}
+          onDecline={declineCall}
+          open={!!incomingCall}
+        />
+      )}
+
+      {/* Active Call UI */}
+      {activeCall && (
+        <ActiveCallUI
+          call={activeCall}
+          userName={profileById.get(activeCall.caller_id === dbUserId ? activeCall.receiver_id : activeCall.caller_id)?.name || 'Unknown'}
+          userAvatar={profileById.get(activeCall.caller_id === dbUserId ? activeCall.receiver_id : activeCall.caller_id)?.avatar_url}
+          localStream={localStream}
+          remoteStream={remoteStream}
+          isMuted={isMuted}
+          isSpeakerOn={isSpeakerOn}
+          onToggleMute={toggleMute}
+          onToggleSpeaker={toggleSpeaker}
+          onEndCall={endCall}
+        />
+      )}
+
       <PageHeader
         eyebrow="Team"
         title="Internal chat"
@@ -865,7 +1166,7 @@ export default function InternalChatPage() {
                       <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h2 className="text-sm font-black text-foreground truncate">{activeDisplay.name}</h2>
                     <p className="text-[10px] text-muted-foreground">
                       {activeDisplay.isDirect
@@ -874,6 +1175,28 @@ export default function InternalChatPage() {
                         : `${(membersByChannel.get(activeChannel.id) ?? []).length || "Team"} members`}
                     </p>
                   </div>
+                  {activeDisplay.isDirect && otherUserInDirectChat && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => startCall('voice', otherUserInDirectChat.id)}
+                        title="Voice call"
+                      >
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => startCall('video', otherUserInDirectChat.id)}
+                        title="Video call"
+                      >
+                        <Video className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-1 bg-muted/20">
