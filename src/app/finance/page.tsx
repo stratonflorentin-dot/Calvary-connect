@@ -33,6 +33,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/components/ui/currency-badge";
+import { useRole } from "@/hooks/use-role";
+import { canRead } from "@/lib/permissions";
 import {
   AGING_BUCKETS,
   daysOverdue,
@@ -124,6 +126,7 @@ function SectionHeader({ title, sub, href, actions }: { title: string; sub?: str
 
 export default function FinanceOverviewPage() {
   const { toast } = useToast();
+  const { role } = useRole();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [bills, setBills] = useState<any[]>([]);
@@ -131,6 +134,11 @@ export default function FinanceOverviewPage() {
   const [cashByCurrency, setCashByCurrency] = useState<CashByCurrency>({});
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [unbilledTrips, setUnbilledTrips] = useState<any[]>([]);
+
+  const QUICK_LINKS = ALL_QUICK_LINKS.filter(link => {
+    if (!link.module) return true;
+    return role ? canRead(role, link.module) : false;
+  });
 
   const load = async () => {
     setLoading(true);
@@ -324,7 +332,7 @@ export default function FinanceOverviewPage() {
     },
   ];
 
-  const QUICK_LINKS = [
+  const ALL_QUICK_LINKS = [
     { href: "/finance/invoicing/customer-invoices", icon: FileText, label: "New Invoice", color: "text-indigo-600 bg-indigo-50" },
     { href: "/finance/invoicing/vendor-bills", icon: Building2, label: "Vendor Bills", color: "text-orange-600 bg-orange-50" },
     { href: "/expenses", icon: Receipt, label: "Record Expense", color: "text-rose-600 bg-rose-50" },
@@ -333,6 +341,7 @@ export default function FinanceOverviewPage() {
     { href: "/finance/banking/bank-reconciliation", icon: Landmark, label: "Bank Reconciliation", color: "text-teal-600 bg-teal-50" },
     { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-fuchsia-600 bg-fuchsia-50" },
     { href: "/finance/reports/trial-balance", icon: Calculator, label: "Trial Balance", color: "text-muted-foreground bg-muted" },
+    { href: "/finance/accounting/chart-of-accounts", icon: BookOpen, label: "Chart of Accounts", color: "text-indigo-600 bg-indigo-50", module: 'finance_chart_of_accounts' as const },
   ];
 
   const REPORT_LINKS = [

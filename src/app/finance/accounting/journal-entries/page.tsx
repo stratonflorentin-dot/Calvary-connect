@@ -92,7 +92,7 @@ function AccountPicker({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "w-full text-left px-3 py-2 rounded-lg border border-border bg-card text-sm hover:border-indigo-300",
+          "w-full text-left px-4 py-2.5 rounded-lg border border-border bg-card text-sm hover:border-indigo-300 transition-colors",
           !value.code && "text-muted-foreground",
         )}
       >
@@ -106,19 +106,19 @@ function AccountPicker({
         )}
       </button>
       {open && (
-        <div className="absolute z-50 left-0 top-full mt-1 w-full min-w-[380px] max-w-[480px] rounded-xl border border-border bg-card shadow-xl max-h-72 overflow-hidden flex flex-col">
-          <div className="p-2 border-b border-border">
+        <div className="absolute z-50 left-0 top-full mt-1 w-full min-w-[480px] max-w-[640px] rounded-xl border border-border bg-card shadow-xl max-h-96 overflow-hidden flex flex-col">
+          <div className="p-3 border-b border-border">
             <Input
               autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search code or name…"
-              className="h-8"
+              className="h-9"
             />
           </div>
           <div className="overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="p-3 text-xs text-muted-foreground italic text-center">No matching accounts.</div>
+              <div className="p-4 text-sm text-muted-foreground italic text-center">No matching accounts.</div>
             ) : (
               filtered.map((a) => (
                 <button
@@ -129,13 +129,13 @@ function AccountPicker({
                     setOpen(false);
                     setQ("");
                   }}
-                  className="w-full text-left px-3 py-2 hover:bg-indigo-50 flex items-baseline justify-between gap-3 border-b border-slate-50 last:border-0"
+                  className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center justify-between gap-4 border-b border-slate-50 last:border-0 transition-colors"
                 >
-                  <span className="flex items-baseline gap-2 min-w-0">
-                    <span className="font-mono text-xs font-black text-muted-foreground shrink-0">{a.code}</span>
+                  <span className="flex items-center gap-3 min-w-0">
+                    <span className="font-mono text-sm font-black text-muted-foreground shrink-0 w-14">{a.code}</span>
                     <span className="text-sm text-foreground truncate">{a.name}</span>
                   </span>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground shrink-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground shrink-0 px-2 py-0.5 bg-muted rounded-full">
                     {a.category}
                   </span>
                 </button>

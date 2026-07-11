@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
+import { useRole } from '@/hooks/use-role';
+import { canRead } from '@/lib/permissions';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -162,6 +165,8 @@ const DEFAULT_ACCOUNTS = [
 ];
 
 export default function ChartOfAccountsPage() {
+  const { role } = useRole();
+  const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [filteredAccounts, setFilteredAccounts] = useState<Account[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -207,8 +212,16 @@ export default function ChartOfAccountsPage() {
   const [entryDescription, setEntryDescription] = useState('');
 
   useEffect(() => {
-    loadAccounts();
-  }, []);
+    if (role && !canRead(role, 'finance_chart_of_accounts')) {
+      router.push('/finance');
+    }
+  }, [role, router]);
+
+  useEffect(() => {
+    if (role && canRead(role, 'finance_chart_of_accounts')) {
+      loadAccounts();
+    }
+  }, [role]);
 
   useEffect(() => {
     filterAccounts();

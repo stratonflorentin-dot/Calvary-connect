@@ -12,6 +12,7 @@
 
 export type UserRole =
   | 'CEO'
+  | 'ADMIN'
   | 'ACCOUNTANT'
   | 'HR'
   | 'OPERATOR'
@@ -33,6 +34,7 @@ export type Module =
   | 'finance_expenses'
   | 'finance_income'
   | 'finance_reports'
+  | 'finance_chart_of_accounts'
   | 'inventory'
   | 'maintenance'
   | 'fuel_requests'
@@ -52,6 +54,7 @@ export type Module =
 export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>> = {
   trips: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'READ',
     HR:        'READ',
     OPERATOR:  'FULL',
@@ -61,6 +64,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   fleet: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'READ',
     HR:        'READ',
     OPERATOR:  'FULL',
@@ -68,8 +72,19 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
     MECHANIC:  'CREATE',
     CUSTOMER:  'NONE',
   },
+  finance_chart_of_accounts: {
+    CEO:       'FULL',
+    ADMIN:     'FULL',
+    ACCOUNTANT: 'FULL',
+    HR:        'NONE',
+    OPERATOR:  'NONE',
+    DRIVER:    'NONE',
+    MECHANIC:  'NONE',
+    CUSTOMER:  'NONE',
+  },
   finance_expenses: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'FULL',
     HR:        'NONE',
     OPERATOR:  'CREATE',
@@ -79,6 +94,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   finance_income: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'FULL',
     HR:        'NONE',
     OPERATOR:  'NONE',
@@ -88,6 +104,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   finance_reports: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'FULL',
     HR:        'READ',
     OPERATOR:  'READ',
@@ -97,6 +114,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   inventory: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'READ',
     HR:        'NONE',
     OPERATOR:  'FULL',
@@ -106,6 +124,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   maintenance: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'NONE',
     HR:        'NONE',
     OPERATOR:  'READ',
@@ -115,6 +134,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   fuel_requests: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'APPROVE',
     HR:        'NONE',
     OPERATOR:  'APPROVE',
@@ -124,6 +144,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   spare_parts: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'NONE',
     HR:        'NONE',
     OPERATOR:  'APPROVE',
@@ -133,6 +154,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   users_hr: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'NONE',
     HR:        'FULL',
     OPERATOR:  'NONE',
@@ -142,6 +164,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   ai_insights: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'READ',
     HR:        'NONE',
     OPERATOR:  'NONE',
@@ -151,6 +174,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   audit_logs: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'NONE',
     HR:        'NONE',
     OPERATOR:  'NONE',
@@ -160,6 +184,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   system_settings: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'NONE',
     HR:        'NONE',
     OPERATOR:  'NONE',
@@ -169,6 +194,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   customers: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'READ',
     HR:        'READ',
     OPERATOR:  'FULL',
@@ -178,6 +204,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   notifications: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'OWN',
     HR:        'OWN',
     OPERATOR:  'OWN',
@@ -187,6 +214,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   contracts: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'READ',
     HR:        'NONE',
     OPERATOR:  'READ',
@@ -196,6 +224,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   dispatch: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'NONE',
     HR:        'NONE',
     OPERATOR:  'FULL',
@@ -205,6 +234,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
   },
   map: {
     CEO:       'FULL',
+    ADMIN:     'FULL',
     ACCOUNTANT: 'NONE',
     HR:        'NONE',
     OPERATOR:  'FULL',
