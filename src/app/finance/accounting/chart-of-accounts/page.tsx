@@ -573,7 +573,7 @@ export default function ChartOfAccountsPage() {
                 <Plus className="h-4 w-4 mr-2" /> New Account
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Account</DialogTitle>
               </DialogHeader>
@@ -810,7 +810,7 @@ export default function ChartOfAccountsPage() {
 
             {/* View Account Dialog */}
             <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Account Details</DialogTitle>
                 </DialogHeader>
@@ -871,7 +871,7 @@ export default function ChartOfAccountsPage() {
 
     {/* Edit Account Dialog */}
     <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Account</DialogTitle>
         </DialogHeader>
