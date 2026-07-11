@@ -195,7 +195,8 @@ export default function InternalChatPage() {
         supabase.from("user_profiles").select("id, name, role, presence_status, last_seen_at").order("name"),
       ]);
       if (ch.error) {
-        setError(ch.error.message);
+        setError("Unable to load conversations.");
+        console.error("Chat load error:", ch.error);
         return;
       }
       setChannels((ch.data ?? []) as Channel[]);
@@ -203,7 +204,12 @@ export default function InternalChatPage() {
 
       // Memberships power direct-chat names and unread counts.
       const mem = await supabase.from("chat_channel_members").select("channel_id, user_id, last_read_at");
-      setMembers(mem.error ? [] : (mem.data ?? []));
+      if (mem.error) {
+        console.error("Members load error:", mem.error);
+        setMembers([]);
+      } else {
+        setMembers(mem.data ?? []);
+      }
 
       // Recent messages
       const recent = await supabase
@@ -216,6 +222,9 @@ export default function InternalChatPage() {
       // Reactions
       const react = await supabase.from("chat_reactions").select("*");
       if (!react.error) setReactions(react.data ?? []);
+    } catch (err) {
+      setError("Unable to load conversations.");
+      console.error("Chat load error:", err);
     } finally {
       setLoading(false);
     }
@@ -634,38 +643,39 @@ export default function InternalChatPage() {
     }
     setCreating(true);
     try {
-      const myChannels = new Set(members.filter((m) => m.user_id === dbUserId).map((m) => m.channel_id));
-      const existing = channels.find((c) => {
-        if (c.type !== "direct" || !myChannels.has(c.id)) return false;
-        const mem = membersByChannel.get(c.id) ?? [];
-        return mem.some((m) => m.user_id === person.id);
+      // Use the database function to find or create direct chat (prevents race conditions)
+      const { data: channelId, error: fnErr } = await supabase.rpc('find_or_create_direct_chat', {
+        user1_id: dbUserId,
+        user2_id: person.id
       });
-      if (existing) {
-        setNewChatOpen(false);
-        openChannel(existing);
-        return;
+      
+      if (fnErr) {
+        setError("Unable to start conversation.");
+        console.error("Direct chat error:", fnErr);
+        throw fnErr;
       }
+      
+      // Fetch the channel details
       const { data: ch, error: chErr } = await supabase
         .from("chat_channels")
-        .insert({ name: null, type: "direct", created_by: dbUserId })
-        .select()
+        .select("*")
+        .eq("id", channelId)
         .single();
-      if (chErr) throw chErr;
-      const { error: memErr } = await supabase.from("chat_channel_members").insert([
-        { channel_id: ch.id, user_id: dbUserId },
-        { channel_id: ch.id, user_id: person.id },
-      ]);
-      if (memErr) throw memErr;
-      setChannels((prev) => [ch as Channel, ...prev]);
-      setMembers((prev) => [
-        ...prev,
-        { channel_id: ch.id, user_id: dbUserId },
-        { channel_id: ch.id, user_id: person.id },
-      ]);
+      
+      if (chErr) {
+        setError("Unable to load conversation.");
+        console.error("Channel load error:", chErr);
+        throw chErr;
+      }
+      
+      // Refresh channels and members
+      await loadAll();
+      
       setNewChatOpen(false);
       openChannel(ch as Channel);
     } catch (err: any) {
-      setError(err.message);
+      setError("Unable to start conversation.");
+      console.error("Direct chat error:", err);
     } finally {
       setCreating(false);
     }
@@ -676,20 +686,41 @@ export default function InternalChatPage() {
     const name = channelNameDraft.trim();
     if (!name || creating) return;
     setCreating(true);
-    const { data, error: dbErr } = await supabase
-      .from("chat_channels")
-      .insert({ name, type: "group", created_by: dbUserId })
-      .select()
-      .single();
-    setCreating(false);
-    if (dbErr) {
-      setError(dbErr.message);
-      return;
+    try {
+      const { data, error: dbErr } = await supabase
+        .from("chat_channels")
+        .insert({ name, type: "group", created_by: dbUserId })
+        .select()
+        .single();
+      
+      if (dbErr) {
+        setError("Unable to create channel.");
+        console.error("Channel creation error:", dbErr);
+        throw dbErr;
+      }
+      
+      // Add creator as member
+      const { error: memErr } = await supabase.from("chat_channel_members").insert({
+        channel_id: data.id,
+        user_id: dbUserId
+      });
+      
+      if (memErr) {
+        setError("Unable to add you to the channel.");
+        console.error("Member addition error:", memErr);
+        throw memErr;
+      }
+      
+      setChannelNameDraft("");
+      setNewChatOpen(false);
+      await loadAll();
+      openChannel(data as Channel);
+    } catch (err: any) {
+      setError("Unable to create channel.");
+      console.error("Group channel error:", err);
+    } finally {
+      setCreating(false);
     }
-    setChannelNameDraft("");
-    setNewChatOpen(false);
-    setChannels((prev) => [data as Channel, ...prev]);
-    openChannel(data as Channel);
   };
 
   // ── Sidebar ordering: most recent activity first, unread pinned visually ──
