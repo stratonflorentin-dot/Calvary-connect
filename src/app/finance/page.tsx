@@ -247,49 +247,57 @@ export default function FinanceOverviewPage() {
     currency: i.currency,
   })), 5), [invoices]);
 
-  // Revenue / expense KPIs are shown in the reporting currency only.
-  // Non-reporting-currency amounts are counted in the per-currency reports.
-  const revenue = useMemo(() => {
+  // Revenue / expense KPIs are shown per currency.
+  const revenueByCurrency = useMemo(() => {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
     const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
     const prevMonthEnd = monthStart;
 
-    let mtd = 0, ytd = 0, prevMtd = 0;
+    const result: Record<string, { mtd: number; ytd: number; prevMtd: number }> = {};
     for (const i of invoices) {
-      if (normalizeCurrency(i.currency) !== REPORTING_CURRENCY) continue;
+      const currency = normalizeCurrency(i.currency);
+      if (!result[currency]) result[currency] = { mtd: 0, ytd: 0, prevMtd: 0 };
+      
       const paidAt = i.paid_at ? new Date(i.paid_at).getTime() : null;
       if (i.status !== "paid" || !paidAt) continue;
       const amt = Number(i.total_amount ?? i.amount) || 0;
-      if (paidAt >= monthStart) mtd += amt;
-      if (paidAt >= yearStart) ytd += amt;
-      if (paidAt >= prevMonthStart && paidAt < prevMonthEnd) prevMtd += amt;
+      if (paidAt >= monthStart) result[currency].mtd += amt;
+      if (paidAt >= yearStart) result[currency].ytd += amt;
+      if (paidAt >= prevMonthStart && paidAt < prevMonthEnd) result[currency].prevMtd += amt;
     }
-    return { mtd, ytd, prevMtd } as RangeStat;
+    return result;
   }, [invoices]);
 
-  const expenseStats = useMemo(() => {
+  const expenseStatsByCurrency = useMemo(() => {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
     const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
     const prevMonthEnd = monthStart;
 
-    let mtd = 0, ytd = 0, prevMtd = 0, pending = 0;
+    const result: Record<string, { mtd: number; ytd: number; prevMtd: number; pending: number }> = {};
+    let totalPending = 0;
     for (const e of expenses) {
-      const inReporting = normalizeCurrency(e.currency) === REPORTING_CURRENCY;
-      if (e.status === "pending") pending += 1;
-      if (!inReporting) continue;
+      const currency = normalizeCurrency(e.currency);
+      if (!result[currency]) result[currency] = { mtd: 0, ytd: 0, prevMtd: 0, pending: 0 };
+      
+      if (e.status === "pending") totalPending += 1;
       if (e.status !== "approved" && e.status !== "paid") continue;
       const date = e.date ? new Date(e.date).getTime() : new Date(e.created_at ?? Date.now()).getTime();
       const amt = Number(e.amount) || 0;
-      if (date >= monthStart) mtd += amt;
-      if (date >= yearStart) ytd += amt;
-      if (date >= prevMonthStart && date < prevMonthEnd) prevMtd += amt;
+      if (date >= monthStart) result[currency].mtd += amt;
+      if (date >= yearStart) result[currency].ytd += amt;
+      if (date >= prevMonthStart && date < prevMonthEnd) result[currency].prevMtd += amt;
     }
-    return { mtd, ytd, prevMtd, pending };
+    // Add totalPending to all for convenience, but we use this later
+    return { byCurrency: result, totalPending };
   }, [expenses]);
+
+  // Keep single currency for backward compatibility (header still uses this)
+  const revenue = revenueByCurrency[REPORTING_CURRENCY] ?? { mtd:0, ytd:0, prevMtd:0 };
+  const expenseStats = expenseStatsByCurrency.byCurrency[REPORTING_CURRENCY] ?? { mtd:0, ytd:0, prevMtd:0, pending:expenseStatsByCurrency.totalPending };
 
   // Cash "total" is deliberately per-currency; this variable holds the
   // reporting-currency slice only, since summing across currencies is wrong.
@@ -297,52 +305,95 @@ export default function FinanceOverviewPage() {
   const netProfitMtd = revenue.mtd - expenseStats.mtd;
   const netProfitYtd = revenue.ytd - expenseStats.ytd;
 
-  const KPIS = [
-    {
-      label: `Cash (${REPORTING_CURRENCY})`,
-      value: cashTotal,
-      icon: Wallet,
-      accent: "bg-emerald-50 text-emerald-600",
-      href: "/finance/banking/bank-accounts",
-    },
-    {
-      label: `Revenue MTD (${REPORTING_CURRENCY})`,
-      value: revenue.mtd,
-      delta: pctDelta(revenue.mtd, revenue.prevMtd),
-      icon: TrendingUp,
-      accent: "bg-indigo-50 text-indigo-600",
-      href: "/finance/reports/revenue-analysis",
-    },
-    {
-      label: `Expenses MTD (${REPORTING_CURRENCY})`,
-      value: expenseStats.mtd,
-      delta: pctDelta(expenseStats.mtd, expenseStats.prevMtd),
-      icon: TrendingDown,
-      accent: "bg-rose-50 text-rose-600",
-      href: "/finance/reports/expense-analysis",
-    },
-    {
-      label: `Net Profit MTD (${REPORTING_CURRENCY})`,
-      value: netProfitMtd,
-      icon: DollarSign,
-      accent: netProfitMtd >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600",
-      href: "/finance/reports/profit-loss",
-    },
-    {
-      label: `Receivables (${REPORTING_CURRENCY})`,
-      value: arSummary.totalOutstanding,
-      icon: CreditCard,
-      accent: "bg-amber-50 text-amber-600",
-      href: "/finance/invoicing/customer-invoices",
-    },
-    {
-      label: `Payables (${REPORTING_CURRENCY})`,
-      value: apSummary.totalOutstanding,
-      icon: Building2,
-      accent: "bg-orange-50 text-orange-600",
-      href: "/finance/invoicing/vendor-bills",
-    },
-  ];
+  const allCurrencies = useMemo(() => {
+    const currencies = new Set<string>();
+    Object.keys(cashByCurrency).forEach(c => currencies.add(c));
+    Object.keys(revenueByCurrency).forEach(c => currencies.add(c));
+    Object.keys(expenseStatsByCurrency.byCurrency).forEach(c => currencies.add(c));
+    Object.keys(arByCcy).forEach(c => currencies.add(c));
+    Object.keys(apByCcy).forEach(c => currencies.add(c));
+    return sortCurrencyKeys(Array.from(currencies));
+  }, [cashByCurrency, revenueByCurrency, expenseStatsByCurrency, arByCcy, apByCcy]);
+
+  const KPIS = useMemo(() => {
+    const kpis: any[] = [];
+    allCurrencies.forEach(cur => {
+      const rev = revenueByCurrency[cur] ?? { mtd:0, prevMtd:0, ytd:0 };
+      const exp = expenseStatsByCurrency.byCurrency[cur] ?? { mtd:0, prevMtd:0, ytd:0, pending:0 };
+      const net = rev.mtd - exp.mtd;
+      const ar = arByCcy[cur] ?? summarize([]);
+      const ap = apByCcy[cur] ?? summarize([]);
+      
+      // Cash
+      if (cashByCurrency[cur] !== undefined) {
+        kpis.push({
+          label: `Cash (${cur})`,
+          value: cashByCurrency[cur],
+          currency: cur,
+          icon: Wallet,
+          accent: "bg-emerald-50 text-emerald-600",
+          href: "/finance/banking/bank-accounts",
+        });
+      }
+      
+      // Revenue
+      kpis.push({
+        label: `Revenue MTD (${cur})`,
+        value: rev.mtd,
+        currency: cur,
+        delta: pctDelta(rev.mtd, rev.prevMtd),
+        icon: TrendingUp,
+        accent: "bg-indigo-50 text-indigo-600",
+        href: "/finance/reports/revenue-analysis",
+      });
+      
+      // Expenses
+      kpis.push({
+        label: `Expenses MTD (${cur})`,
+        value: exp.mtd,
+        currency: cur,
+        delta: pctDelta(exp.mtd, exp.prevMtd),
+        icon: TrendingDown,
+        accent: "bg-rose-50 text-rose-600",
+        href: "/finance/reports/expense-analysis",
+      });
+      
+      // Net Profit
+      kpis.push({
+        label: `Net Profit MTD (${cur})`,
+        value: net,
+        currency: cur,
+        icon: DollarSign,
+        accent: net >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600",
+        href: "/finance/reports/profit-loss",
+      });
+      
+      // Receivables
+      if (ar.totalOutstanding > 0 || Object.keys(arByCcy).includes(cur)) {
+        kpis.push({
+          label: `Receivables (${cur})`,
+          value: ar.totalOutstanding,
+          currency: cur,
+          icon: CreditCard,
+          accent: "bg-amber-50 text-amber-600",
+          href: "/finance/invoicing/customer-invoices",
+        });
+      }
+      
+      // Payables
+      if (ap.totalOutstanding > 0 || Object.keys(apByCcy).includes(cur)) {
+        kpis.push({
+          label: `Payables (${cur})`,
+          value: ap.totalOutstanding,
+          currency: cur,
+          icon: Building2,
+          accent: "bg-orange-50 text-orange-600",
+          href: "/finance/invoicing/vendor-bills",
+        });
+      }
+    });
+    return kpis;
+  }, [allCurrencies, cashByCurrency, revenueByCurrency, expenseStatsByCurrency, arByCcy, apByCcy]);
 
   const REPORT_LINKS = [
     { label: "Profit & Loss", sub: "Income vs expenditure", href: "/finance/reports/profit-loss", color: "border-l-indigo-500" },
@@ -400,13 +451,13 @@ export default function FinanceOverviewPage() {
       </div>
 
       {/* Alerts */}
-      {(expenseStats.pending > 0 || arSummary.totalOverdue > 0 || unbilledTrips.length > 0) && (
+      {(expenseStatsByCurrency.totalPending > 0 || arSummary.totalOverdue > 0 || unbilledTrips.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {expenseStats.pending > 0 && (
+          {expenseStatsByCurrency.totalPending > 0 && (
             <Link href="/approvals" className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors">
               <div className="p-2 bg-amber-100 rounded-lg"><Receipt className="w-4 h-4 text-amber-700" /></div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-amber-900">{expenseStats.pending} expense{expenseStats.pending > 1 ? "s" : ""} pending</p>
+                <p className="text-sm font-bold text-amber-900">{expenseStatsByCurrency.totalPending} expense{expenseStatsByCurrency.totalPending > 1 ? "s" : ""} pending</p>
                 <p className="text-xs text-amber-700">Route through approvals inbox</p>
               </div>
             </Link>
