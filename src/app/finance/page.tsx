@@ -414,9 +414,9 @@ export default function FinanceOverviewPage() {
   );
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 pb-safe-bottom">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 rounded-full">Finance & Accounting</span>
@@ -424,8 +424,8 @@ export default function FinanceOverviewPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
             </span>
           </div>
-          <h1 className="text-2xl font-black text-foreground">Financial Control Center</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-black text-foreground">Financial Control Center</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {REPORTING_CURRENCY} YTD Revenue {formatCurrencyShort(revenue.ytd, REPORTING_CURRENCY)} · YTD Net {formatCurrencyShort(netProfitYtd, REPORTING_CURRENCY)} · Cash {formatCurrencyShort(cashTotal, REPORTING_CURRENCY)}
             {Object.keys(cashByCurrency).filter((c) => c !== REPORTING_CURRENCY).length > 0 && (
               <>
@@ -452,7 +452,7 @@ export default function FinanceOverviewPage() {
 
       {/* Alerts */}
       {(expenseStatsByCurrency.totalPending > 0 || arSummary.totalOverdue > 0 || unbilledTrips.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {expenseStatsByCurrency.totalPending > 0 && (
             <Link href="/approvals" className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors">
               <div className="p-2 bg-amber-100 rounded-lg"><Receipt className="w-4 h-4 text-amber-700" /></div>
@@ -488,12 +488,12 @@ export default function FinanceOverviewPage() {
       )}
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
         {KPIS.map((k) => <KPICard key={k.label} {...k} />)}
       </div>
 
       {/* AR / AP aging strips — per currency */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <SectionHeader
@@ -586,7 +586,7 @@ export default function FinanceOverviewPage() {
       </div>
 
       {/* Top debtors + Cash */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <SectionHeader title="Top Overdue Customers" sub="Follow-up recommended" href="/finance/invoicing/customer-invoices" />
@@ -647,7 +647,7 @@ export default function FinanceOverviewPage() {
       </div>
 
       {/* Quick actions + reports */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <SectionHeader title="Quick Actions" sub="Common finance operations" />

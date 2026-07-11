@@ -278,7 +278,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
         "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
         "bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-r border-[hsl(var(--sidebar-border))] shadow-xl",
         isCollapsed ? "w-20" : "w-64",
-        // Mobile transition
+        // Mobile transition - fully hidden on mobile when closed
         "md:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>

@@ -182,7 +182,7 @@ export default function FleetPage() {
         <PageSkeleton kpiCount={5} />
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             <StatCard label="Vehicles" value={stats.total} icon={Truck} accent="bg-primary/10 text-primary" />
             <StatCard label="Utilization" value={`${stats.utilization.toFixed(0)}%`} sub={`${stats.inUse} in use`} icon={Gauge} accent="bg-sky-100 text-sky-700" />
             <StatCard label="Available" value={stats.available} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
@@ -190,24 +190,26 @@ export default function FleetPage() {
             <StatCard label="Needs attention" value={stats.attention} icon={AlertTriangle} accent="bg-red-100 text-red-700" />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
             <div className="lg:col-span-2">
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                {chips.map((c) => (
-                  <button
-                    key={c.key}
-                    onClick={() => setFilter(c.key)}
-                    className={cn(
-                      "px-3 py-1.5 text-xs font-bold rounded-full border transition-colors",
-                      filter === c.key
-                        ? "border-primary bg-[hsl(var(--primary-soft))] text-primary shadow-sm"
-                        : "border-border bg-card text-foreground hover:bg-muted",
-                    )}
-                  >
-                    {c.label} <span className="ml-1 text-[10px] font-black bg-background/60 rounded-full px-1.5">{c.count}</span>
-                  </button>
-                ))}
-                <div className="ml-auto relative w-full sm:w-64">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {chips.map((c) => (
+                    <button
+                      key={c.key}
+                      onClick={() => setFilter(c.key)}
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-bold rounded-full border transition-colors",
+                        filter === c.key
+                          ? "border-primary bg-[hsl(var(--primary-soft))] text-primary shadow-sm"
+                          : "border-border bg-card text-foreground hover:bg-muted",
+                      )}
+                    >
+                      {c.label} <span className="ml-1 text-[10px] font-black bg-background/60 rounded-full px-1.5">{c.count}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search plate, make…" className="pl-9 h-9" />
                 </div>

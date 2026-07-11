@@ -54,7 +54,7 @@ export function BottomTabs({ role }: { role: UserRole }) {
   const tabs = menuItems.slice(0, 5);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] shadow-sm backdrop-blur">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 px-2 pb-safe-bottom shadow-sm backdrop-blur">
       <div className="flex h-[64px] items-center gap-1 overflow-x-auto scrollbar-hide">
         {tabs.map((tab) => {
           const isActive = pathname === tab.path;

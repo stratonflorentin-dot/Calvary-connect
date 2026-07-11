@@ -110,7 +110,7 @@ export default function DriverExpensesPage() {
               New
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-sm mx-auto max-h-[90dvh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Submit expense</DialogTitle>
             </DialogHeader>
@@ -118,7 +118,7 @@ export default function DriverExpensesPage() {
               <div>
                 <Label>Category</Label>
                 <Select value={category} onValueChange={setCategory} required>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -132,7 +132,7 @@ export default function DriverExpensesPage() {
               </div>
               <div>
                 <Label htmlFor="amount">Amount</Label>
-                <Input id="amount" name="amount" type="number" step="0.01" min="0" required />
+                <Input id="amount" name="amount" type="number" step="0.01" min="0" required className="h-11" inputMode="decimal" />
               </div>
               <div>
                 <Label htmlFor="date">Date</Label>
@@ -142,21 +142,22 @@ export default function DriverExpensesPage() {
                   type="date"
                   defaultValue={new Date().toISOString().slice(0, 10)}
                   required
+                  className="h-11"
                 />
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" required />
+                <Textarea id="description" name="description" required className="min-h-[80px]" />
               </div>
               <div>
                 <Label htmlFor="tripRef">Trip reference (optional)</Label>
-                <Input id="tripRef" name="tripRef" placeholder="Trip # or route" />
+                <Input id="tripRef" name="tripRef" placeholder="Trip # or route" className="h-11" />
               </div>
               <div>
                 <Label htmlFor="receipt">Receipt upload</Label>
-                <Input id="receipt" name="receipt" type="file" accept="image/*,.pdf" />
+                <Input id="receipt" name="receipt" type="file" accept="image/*,.pdf" className="h-11" />
               </div>
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button type="submit" className="w-full h-11" disabled={submitting}>
                 {submitting ? "Submitting…" : "Submit"}
               </Button>
             </form>

@@ -146,7 +146,7 @@ export default function TripsPage() {
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             <StatCard label="Total trips" value={stats.total} icon={ClipboardList} accent="bg-primary/10 text-primary" />
             <StatCard label="Active" value={stats.active} icon={Truck} accent="bg-sky-100 text-sky-700" />
             <StatCard label="Overdue" value={stats.overdue} icon={Flame} accent="bg-red-100 text-red-700" />
@@ -155,23 +155,25 @@ export default function TripsPage() {
           </div>
 
           {/* Filter chips */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            {chips.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => setFilter(c.key)}
-                className={cn(
-                  "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors",
-                  filter === c.key
-                    ? "border-primary bg-[hsl(var(--primary-soft))] text-primary shadow-sm"
-                    : "border-border bg-card text-foreground hover:bg-muted",
-                )}
-              >
-                {c.label}
-                <span className="text-[10px] font-black bg-background/60 rounded-full px-1.5">{c.count}</span>
-              </button>
-            ))}
-            <div className="ml-auto relative w-full sm:w-72">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {chips.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => setFilter(c.key)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors",
+                    filter === c.key
+                      ? "border-primary bg-[hsl(var(--primary-soft))] text-primary shadow-sm"
+                      : "border-border bg-card text-foreground hover:bg-muted",
+                  )}
+                >
+                  {c.label}
+                  <span className="text-[10px] font-black bg-background/60 rounded-full px-1.5">{c.count}</span>
+                </button>
+              ))}
+            </div>
+            <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search trip #, driver, city…" className="pl-9 h-9" />
             </div>
@@ -193,7 +195,7 @@ export default function TripsPage() {
                 }
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/40 border-b border-border">
                     <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -283,6 +285,86 @@ export default function TripsPage() {
                 </table>
               </div>
             )}
+
+            {/* Mobile card view */}
+            <div className="sm:hidden space-y-3">
+              {filtered.map((t) => {
+                const meta = STATUS_META[t.status] ?? STATUS_META.pending;
+                const overdue = t.status !== "delivered" && t.status !== "cancelled" && t.created_at && isOverdue("trip", t.created_at);
+                const age = t.created_at ? hoursSince(t.created_at) : 0;
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => { setEditing(t); setFormOpen(true); }}
+                    className="bg-card border border-border rounded-xl p-4 hover:border-indigo-300 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <button
+                          type="button"
+                          className="font-mono text-xs font-black text-foreground hover:text-primary underline-offset-4 hover:underline"
+                        >
+                          {t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}
+                        </button>
+                        <div className="flex items-center gap-1.5 text-sm text-foreground mt-1">
+                          <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="truncate">{t.origin || "—"}</span>
+                          <span className="text-muted-foreground">→</span>
+                          <span className="truncate">{t.destination || "—"}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 items-end">
+                        <span className={cn("cv-chip", meta.chip)}>
+                          <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
+                          {meta.label}
+                        </span>
+                        {overdue && (
+                          <span className="cv-chip cv-chip-danger">
+                            <Flame className="w-2.5 h-2.5" /> {(age - slaHours.trip).toFixed(0)}h late
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Client</span>
+                        <span className="font-medium">{t.client || "—"}</span>
+                      </div>
+                      {t.driver_name && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Driver</span>
+                          <span className="font-medium">{t.driver_name}</span>
+                        </div>
+                      )}
+                      {t.vehicle_plate && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Vehicle</span>
+                          <span className="font-medium font-mono">{t.vehicle_plate}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Age</span>
+                        <span className="font-medium">{age > 24 ? `${(age / 24).toFixed(1)}d` : `${age.toFixed(0)}h`}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Amount</span>
+                        <span className="font-bold">{t.total_amount || t.sales_amount || t.totalAmount || t.salesAmount ? format(Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount)) : "—"}</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <TransitionButtons
+                        kind="trip"
+                        entity={t}
+                        actorId={user?.id ?? "system"}
+                        actorRole={role ?? undefined}
+                        onDone={load}
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </SectionCard>
         </>
       )}

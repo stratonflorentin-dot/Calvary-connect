@@ -479,8 +479,8 @@ export default function JournalEntriesPage() {
 
       {/* Create modal */}
       {creating && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="w-full max-w-4xl bg-card rounded-2xl shadow-2xl my-8">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className="w-full max-w-4xl bg-card rounded-2xl shadow-2xl my-4 sm:my-8 mx-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
                 <h3 className="text-base font-black text-foreground">New Journal Entry</h3>
@@ -488,9 +488,9 @@ export default function JournalEntriesPage() {
               </div>
               <Button variant="ghost" size="icon" onClick={() => setCreating(false)}><X className="w-4 h-4" /></Button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-3 sm:p-5 space-y-4">
               {/* Header fields */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Date</Label>
                   <Input type="date" value={form.entry_date} onChange={(e) => setForm({ ...form, entry_date: e.target.value })} />
@@ -514,7 +514,7 @@ export default function JournalEntriesPage() {
 
               {/* Lines */}
               <div className="border border-border rounded-xl overflow-hidden">
-                <div className="grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 bg-muted border-b border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                <div className="hidden sm:grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 bg-muted border-b border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   <div>Account</div>
                   <div className="text-right">Debit</div>
                   <div className="text-right">Credit</div>
@@ -522,51 +522,106 @@ export default function JournalEntriesPage() {
                   <div />
                 </div>
                 {lines.map((l, i) => (
-                  <div key={l.id} className="grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 border-b border-slate-50 last:border-0 items-center">
-                    <AccountPicker
-                      value={{ code: l.account_code, name: l.account_name }}
-                      accounts={accounts}
-                      lineId={l.id}
-                      onChange={(a) => updateLine(i, { account_code: a.code, account_name: a.name })}
-                    />
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={l.debit_amount || ""}
-                      onChange={(e) => {
-                        const v = Number(e.target.value) || 0;
-                        updateLine(i, { debit_amount: v, credit_amount: v ? 0 : l.credit_amount });
-                      }}
-                      className="text-right h-9"
-                      placeholder="0.00"
-                    />
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={l.credit_amount || ""}
-                      onChange={(e) => {
-                        const v = Number(e.target.value) || 0;
-                        updateLine(i, { credit_amount: v, debit_amount: v ? 0 : l.debit_amount });
-                      }}
-                      className="text-right h-9"
-                      placeholder="0.00"
-                    />
-                    <Input
-                      value={l.memo ?? ""}
-                      onChange={(e) => updateLine(i, { memo: e.target.value })}
-                      className="h-9"
-                      placeholder="Optional line note"
-                    />
-                    <Button variant="ghost" size="icon" onClick={() => removeLine(i)} disabled={lines.length <= 2}>
-                      <Trash2 className="w-4 h-4 text-muted-foreground" />
-                    </Button>
+                  <div key={l.id} className="p-3 border-b border-slate-50 last:border-0 space-y-3 sm:space-y-0">
+                    <div className="sm:hidden">
+                      <Label className="text-xs mb-1 block">Account</Label>
+                      <AccountPicker
+                        value={{ code: l.account_code, name: l.account_name }}
+                        accounts={accounts}
+                        lineId={l.id}
+                        onChange={(a) => updateLine(i, { account_code: a.code, account_name: a.name })}
+                      />
+                    </div>
+                    <div className="hidden sm:grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 items-center">
+                      <AccountPicker
+                        value={{ code: l.account_code, name: l.account_name }}
+                        accounts={accounts}
+                        lineId={l.id}
+                        onChange={(a) => updateLine(i, { account_code: a.code, account_name: a.name })}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={l.debit_amount || ""}
+                        onChange={(e) => {
+                          const v = Number(e.target.value) || 0;
+                          updateLine(i, { debit_amount: v, credit_amount: v ? 0 : l.credit_amount });
+                        }}
+                        className="text-right h-9"
+                        placeholder="0.00"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={l.credit_amount || ""}
+                        onChange={(e) => {
+                          const v = Number(e.target.value) || 0;
+                          updateLine(i, { credit_amount: v, debit_amount: v ? 0 : l.debit_amount });
+                        }}
+                        className="text-right h-9"
+                        placeholder="0.00"
+                      />
+                      <Input
+                        value={l.memo ?? ""}
+                        onChange={(e) => updateLine(i, { memo: e.target.value })}
+                        className="h-9"
+                        placeholder="Optional line note"
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => removeLine(i)} disabled={lines.length <= 2}>
+                        <Trash2 className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    </div>
+                    <div className="sm:hidden grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs mb-1 block">Debit</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={l.debit_amount || ""}
+                          onChange={(e) => {
+                            const v = Number(e.target.value) || 0;
+                            updateLine(i, { debit_amount: v, credit_amount: v ? 0 : l.credit_amount });
+                          }}
+                          className="text-right h-11"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs mb-1 block">Credit</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={l.credit_amount || ""}
+                          onChange={(e) => {
+                            const v = Number(e.target.value) || 0;
+                            updateLine(i, { credit_amount: v, debit_amount: v ? 0 : l.debit_amount });
+                          }}
+                          className="text-right h-11"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div className="sm:hidden">
+                      <Label className="text-xs mb-1 block">Memo</Label>
+                      <Input
+                        value={l.memo ?? ""}
+                        onChange={(e) => updateLine(i, { memo: e.target.value })}
+                        className="h-11"
+                        placeholder="Optional line note"
+                      />
+                    </div>
+                    <div className="sm:hidden flex justify-end">
+                      <Button variant="ghost" size="icon" onClick={() => removeLine(i)} disabled={lines.length <= 2}>
+                        <Trash2 className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
-                <div className="px-3 py-2 border-t border-border flex items-center justify-between bg-muted/50">
-                  <Button variant="outline" size="sm" onClick={addLine} className="h-8 gap-1">
+                <div className="px-3 py-2 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/50">
+                  <Button variant="outline" size="sm" onClick={addLine} className="h-9 sm:h-8 gap-1 w-full sm:w-auto">
                     <Plus className="w-3.5 h-3.5" /> Add line
                   </Button>
-                  <div className="flex items-center gap-6 text-xs">
+                  <div className="flex items-center gap-4 sm:gap-6 text-xs w-full sm:w-auto justify-between sm:justify-end">
                     <div>
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-right">Debits</p>
                       <p className="font-black text-foreground text-sm">{fmt(totals.debit, form.currency)}</p>
@@ -585,18 +640,18 @@ export default function JournalEntriesPage() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-between items-center gap-2 px-5 py-4 border-t border-border bg-muted">
-              <div className={cn("text-xs font-bold", totals.balanced ? "text-emerald-700" : "text-rose-700")}>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 px-5 py-4 border-t border-border bg-muted">
+              <div className={cn("text-xs font-bold text-center sm:text-left", totals.balanced ? "text-emerald-700" : "text-rose-700")}>
                 {totals.balanced
                   ? "Ready to post"
                   : totals.debit === 0 && totals.credit === 0
                   ? "Enter debit and credit amounts"
                   : `Off by ${fmt(Math.abs(totals.diff), form.currency)}`}
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setCreating(false)} disabled={posting}>Cancel</Button>
-                <Button variant="outline" onClick={() => post(true)} disabled={posting}>Save as Draft</Button>
-                <Button onClick={() => post(false)} disabled={posting || !totals.balanced} className="bg-violet-600 hover:bg-violet-700 gap-2">
+              <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={() => setCreating(false)} disabled={posting} className="w-full sm:w-auto">Cancel</Button>
+                <Button variant="outline" onClick={() => post(true)} disabled={posting} className="w-full sm:w-auto">Save as Draft</Button>
+                <Button onClick={() => post(false)} disabled={posting || !totals.balanced} className="bg-violet-600 hover:bg-violet-700 gap-2 w-full sm:w-auto">
                   {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Post Entry
                 </Button>
               </div>

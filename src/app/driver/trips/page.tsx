@@ -60,10 +60,10 @@ export default function DriverTripsPage() {
     >
       <Tabs value={tab} onValueChange={(v) => setTab(v as TripTab)} className="w-full">
         <TabsList className="grid w-full grid-cols-4 h-auto">
-          <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
-          <TabsTrigger value="pending" className="text-xs">Pending</TabsTrigger>
-          <TabsTrigger value="transit" className="text-xs">In transit</TabsTrigger>
-          <TabsTrigger value="delivered" className="text-xs">Done</TabsTrigger>
+          <TabsTrigger value="all" className="text-xs py-3">All</TabsTrigger>
+          <TabsTrigger value="pending" className="text-xs py-3">Pending</TabsTrigger>
+          <TabsTrigger value="transit" className="text-xs py-3">In transit</TabsTrigger>
+          <TabsTrigger value="delivered" className="text-xs py-3">Done</TabsTrigger>
         </TabsList>
 
         <TabsContent value={tab} className="mt-4 space-y-3">
