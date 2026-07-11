@@ -318,7 +318,6 @@ export default function JournalEntriesPage() {
           description: form.description,
           currency: form.currency,
           status: "draft",
-          total_amount: totals.debit,
           created_by: user?.id ?? null,
         })
         .select()
