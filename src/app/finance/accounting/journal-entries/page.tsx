@@ -29,12 +29,13 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createPortal } from "react-dom";
 
 const CURRENCIES = ["TZS", "USD", "EUR", "KES"] as const;
 const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
 
 interface Line {
-  id?: string;
+  id: string;
   account_code: string;
   account_name: string;
   debit_amount: number;
@@ -53,27 +54,39 @@ interface Entry {
   journal_entry_lines?: any[];
 }
 
-const emptyLine = (): Line => ({ account_code: "", account_name: "", debit_amount: 0, credit_amount: 0, memo: "" });
+const emptyLine = (): Line => ({ 
+  id: `line-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  account_code: "", 
+  account_name: "", 
+  debit_amount: 0, 
+  credit_amount: 0, 
+  memo: "" 
+});
 
 function AccountPicker({
   value,
   onChange,
   accounts,
   placeholder = "Account…",
+  lineId,
 }: {
   value: { code: string; name: string };
   onChange: (a: { code: string; name: string }) => void;
   accounts: COAAccount[];
   placeholder?: string;
+  lineId: string;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+  const ref = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node) && dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -87,25 +100,82 @@ function AccountPicker({
       .slice(0, 40);
   }, [accounts, q]);
 
-  const getDropdownPosition = () => {
-    if (!ref.current) return { left: 0, right: 'auto' };
+  const handleOpen = () => {
+    if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     const dropdownWidth = Math.max(rect.width, 480);
+    const dropdownHeight = 400;
     
-    if (rect.left + dropdownWidth > viewportWidth) {
-      return { right: 0, left: 'auto' };
+    let left = rect.left;
+    let top = rect.bottom + 4;
+    
+    // Adjust horizontal position if dropdown would go off screen
+    if (left + dropdownWidth > viewportWidth) {
+      left = viewportWidth - dropdownWidth - 16;
     }
-    return { left: 0, right: 'auto' };
+    if (left < 16) left = 16;
+    
+    // Adjust vertical position if dropdown would go off screen bottom
+    if (top + dropdownHeight > viewportHeight) {
+      top = rect.top - dropdownHeight - 4;
+    }
+    
+    setPosition({ top, left, width: dropdownWidth });
+    setOpen(true);
   };
 
-  const position = getDropdownPosition();
+  const dropdownContent = (
+    <div 
+      ref={dropdownRef}
+      className="fixed z-[10000] rounded-xl border border-border bg-card shadow-xl max-h-96 overflow-hidden flex flex-col"
+      style={{ top: position.top, left: position.left, width: position.width }}
+    >
+      <div className="p-3 border-b border-border">
+        <Input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search code or name…"
+          className="h-9"
+        />
+      </div>
+      <div className="overflow-y-auto">
+        {filtered.length === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground italic text-center">No matching accounts.</div>
+        ) : (
+          filtered.map((a) => (
+            <button
+              key={a.code}
+              type="button"
+              onClick={() => {
+                onChange({ code: a.code, name: a.name });
+                setOpen(false);
+                setQ("");
+              }}
+              className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center justify-between gap-4 border-b border-slate-50 last:border-0 transition-colors"
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <span className="font-mono text-sm font-black text-muted-foreground shrink-0 w-14">{a.code}</span>
+                <span className="text-sm text-foreground truncate">{a.name}</span>
+              </span>
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground shrink-0 px-2 py-0.5 bg-muted rounded-full">
+                {a.category}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
+        ref={ref}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleOpen}
         className={cn(
           "w-full text-left px-4 py-2.5 rounded-lg border border-border bg-card text-sm hover:border-indigo-300 transition-colors",
           !value.code && "text-muted-foreground",
@@ -120,50 +190,8 @@ function AccountPicker({
           placeholder
         )}
       </button>
-      {open && (
-        <div 
-          ref={dropdownRef}
-          className="absolute z-[9999] top-full mt-1 min-w-[480px] max-w-[640px] rounded-xl border border-border bg-card shadow-xl max-h-96 overflow-hidden flex flex-col"
-          style={position}
-        >
-          <div className="p-3 border-b border-border">
-            <Input
-              autoFocus
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search code or name…"
-              className="h-9"
-            />
-          </div>
-          <div className="overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="p-4 text-sm text-muted-foreground italic text-center">No matching accounts.</div>
-            ) : (
-              filtered.map((a) => (
-                <button
-                  key={a.code}
-                  type="button"
-                  onClick={() => {
-                    onChange({ code: a.code, name: a.name });
-                    setOpen(false);
-                    setQ("");
-                  }}
-                  className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center justify-between gap-4 border-b border-slate-50 last:border-0 transition-colors"
-                >
-                  <span className="flex items-center gap-3 min-w-0">
-                    <span className="font-mono text-sm font-black text-muted-foreground shrink-0 w-14">{a.code}</span>
-                    <span className="text-sm text-foreground truncate">{a.name}</span>
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground shrink-0 px-2 py-0.5 bg-muted rounded-full">
-                    {a.category}
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+      {open && typeof window !== 'undefined' && createPortal(dropdownContent, document.body)}
+    </>
   );
 }
 
@@ -494,10 +522,11 @@ export default function JournalEntriesPage() {
                   <div />
                 </div>
                 {lines.map((l, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 border-b border-slate-50 last:border-0 items-center">
+                  <div key={l.id} className="grid grid-cols-[1fr_140px_140px_180px_36px] gap-2 px-3 py-2 border-b border-slate-50 last:border-0 items-center">
                     <AccountPicker
                       value={{ code: l.account_code, name: l.account_name }}
                       accounts={accounts}
+                      lineId={l.id}
                       onChange={(a) => updateLine(i, { account_code: a.code, account_name: a.name })}
                     />
                     <Input
