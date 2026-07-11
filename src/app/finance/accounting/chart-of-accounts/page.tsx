@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, BookOpen, Calculator, ArrowLeft, Edit2, Trash2, Wallet, CreditCard, Building2, TrendingUp, TrendingDown, Coins, FileText } from 'lucide-react';
+import { Plus, Search, BookOpen, Calculator, ArrowLeft, Edit2, Trash2, Wallet, CreditCard, Building2, TrendingUp, TrendingDown, Coins, FileText, Landmark } from 'lucide-react';
 import Link from 'next/link';
 
 interface Account {
@@ -42,6 +42,19 @@ interface LedgerTransaction {
   credit: number;
   running_balance: number;
   created_at: string;
+}
+
+interface BankAccount {
+  id: string;
+  account_name: string;
+  account_number: string;
+  bank_name: string;
+  current_balance: number;
+  currency: string;
+  account_type: string;
+  is_active: boolean;
+  branch?: string;
+  coa_account_code?: string;
 }
 
 const categoryColors: Record<string, { bg: string; text: string; border: string; icon: React.ComponentType<{ className?: string }> }> = {
@@ -202,6 +215,7 @@ export default function ChartOfAccountsPage() {
   const [ledgerAccount, setLedgerAccount] = useState<Account | null>(null);
   const [ledgerTransactions, setLedgerTransactions] = useState<LedgerTransaction[]>([]);
   const [isLoadingLedger, setIsLoadingLedger] = useState(false);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   
   // Manual entry form for ledger - multi-line journal entry
   const [showAddEntryDialog, setShowAddEntryDialog] = useState(false);
@@ -220,6 +234,7 @@ export default function ChartOfAccountsPage() {
   useEffect(() => {
     if (role && canRead(role, 'finance_chart_of_accounts')) {
       loadAccounts();
+      loadBankAccounts();
     }
   }, [role]);
 
@@ -254,6 +269,15 @@ export default function ChartOfAccountsPage() {
       setAccounts(defaultAccts);
     }
     setIsLoading(false);
+  };
+
+  const loadBankAccounts = async () => {
+    try {
+      const { data } = await supabase.from('bank_accounts').select('*');
+      setBankAccounts(data || []);
+    } catch (e) {
+      console.error("Error loading bank accounts", e);
+    }
   };
 
   const filterAccounts = () => {
@@ -864,6 +888,39 @@ export default function ChartOfAccountsPage() {
                         </Badge></p>
                       </div>
                     </div>
+                    {selectedAccount.category === 'ASSETS' && (
+                      <div className="mt-4">
+                        <Label className="text-muted-foreground mb-2 block">Linked Bank Accounts</Label>
+                        {(() => {
+                          const linkedBankAccounts = bankAccounts.filter(b => b.coa_account_code === selectedAccount.code);
+                          if (linkedBankAccounts.length === 0) {
+                            return <p className="text-sm text-muted-foreground italic">No linked bank accounts</p>
+                          }
+                          return (
+                            <div className="space-y-2">
+                              {linkedBankAccounts.map((bankAccount) => (
+                                <div key={bankAccount.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                                  <div>
+                                    <p className="font-medium flex items-center gap-2">
+                                      <Landmark className="w-4 h-4 text-muted-foreground" />
+                                      {bankAccount.account_name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">{bankAccount.bank_name} • {bankAccount.account_number} • {bankAccount.account_type}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold">{formatCurrency(bankAccount.current_balance, bankAccount.currency)}</p>
+                                    <Link href="/finance/banking/bank-accounts" className="text-xs text-primary hover:text-primary/80">
+                                      View Account
+                                    </Link>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 )}
               </DialogContent>

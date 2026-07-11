@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
-import { Landmark, ArrowLeft, Plus, Trash2, Pencil } from "lucide-react";
+import { Landmark, ArrowLeft, Plus, Trash2, Pencil, BookOpen } from "lucide-react";
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { ChartOfAccountsService, COAAccount } from "@/services/chart-of-accounts-service";
 
 interface BankAccount {
   id: string;
@@ -24,10 +25,12 @@ interface BankAccount {
   account_type: string;
   is_active: boolean;
   branch?: string;
+  coa_account_code?: string;
 }
 
 export default function BankAccountsPage() {
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
+  const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
@@ -41,10 +44,12 @@ export default function BankAccountsPage() {
     currency: "TZS",
     account_type: "current",
     is_active: true,
+    coa_account_code: "",
   });
 
   useEffect(() => {
     loadAccounts();
+    loadCoaAccounts();
   }, []);
 
   async function loadAccounts() {
@@ -62,6 +67,15 @@ export default function BankAccountsPage() {
     setLoading(false);
   }
 
+  async function loadCoaAccounts() {
+    try {
+      const accounts = await ChartOfAccountsService.getAccounts();
+      setCoaAccounts(accounts.filter(acc => acc.category === 'ASSETS'));
+    } catch (e) {
+      console.error("Error loading COA accounts", e);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -74,6 +88,7 @@ export default function BankAccountsPage() {
         currency: formData.currency,
         account_type: formData.account_type,
         is_active: formData.is_active,
+        coa_account_code: formData.coa_account_code || null,
       };
       
       const { error } = await supabase
@@ -96,6 +111,7 @@ export default function BankAccountsPage() {
         currency: formData.currency,
         account_type: formData.account_type,
         is_active: formData.is_active,
+        coa_account_code: formData.coa_account_code || null,
       };
       
       const { error } = await supabase.from("bank_accounts").insert([insertData]);
@@ -117,6 +133,7 @@ export default function BankAccountsPage() {
       currency: "TZS",
       account_type: "current",
       is_active: true,
+      coa_account_code: "",
     });
     loadAccounts();
   }
@@ -144,6 +161,7 @@ export default function BankAccountsPage() {
       currency: account.currency,
       account_type: account.account_type,
       is_active: account.is_active,
+      coa_account_code: account.coa_account_code || "",
     });
     setDialogOpen(true);
   }
@@ -158,6 +176,7 @@ export default function BankAccountsPage() {
       currency: "TZS",
       account_type: "current",
       is_active: true,
+      coa_account_code: "",
     });
     setDialogOpen(true);
   }
@@ -237,46 +256,64 @@ export default function BankAccountsPage() {
                 </CardHeader>
                 <CardContent className="pt-6">
                   <div className="space-y-3">
-                    {currencyAccounts.map((account) => (
-                      <div
-                        key={account.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{account.account_name}</h3>
-                            {!account.is_active && (
-                              <Badge variant="secondary">Inactive</Badge>
-                            )}
+                    {currencyAccounts.map((account) => {
+                      const linkedCoaAccount = coaAccounts.find(
+                        (coa) => coa.code === account.coa_account_code
+                      );
+                      
+                      return (
+                        <div
+                          key={account.id}
+                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">{account.account_name}</h3>
+                              {!account.is_active && (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {account.bank_name} - {account.account_number}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-muted-foreground">{account.account_type}</p>
+                              {linkedCoaAccount && (
+                                <>
+                                  <span className="text-muted-foreground text-xs">•</span>
+                                  <Link
+                                    href="/finance/accounting/chart-of-accounts"
+                                    className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                                  >
+                                    <BookOpen className="w-3 h-3" />
+                                    {linkedCoaAccount.code} - {linkedCoaAccount.name}
+                                  </Link>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {account.bank_name} - {account.account_number}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {account.account_type}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-semibold">{formatCurrency(account.current_balance || 0, currency)}</p>
-                          <div className="flex gap-2 mt-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleEdit(account)}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(account.id)}
-                            >
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
+                          <div className="text-right">
+                            <p className="text-lg font-semibold">{formatCurrency(account.current_balance || 0, currency)}</p>
+                            <div className="flex gap-2 mt-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEdit(account)}
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDelete(account.id)}
+                              >
+                                <Trash2 className="size-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -363,6 +400,24 @@ export default function BankAccountsPage() {
                   <SelectItem value="current">Current</SelectItem>
                   <SelectItem value="savings">Savings</SelectItem>
                   <SelectItem value="fixed_deposit">Fixed Deposit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="coa_account_code">Linked Chart of Accounts</Label>
+              <Select
+                value={formData.coa_account_code}
+                onValueChange={(value) => setFormData({ ...formData, coa_account_code: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select COA Account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {coaAccounts.map((acc) => (
+                    <SelectItem key={acc.code} value={acc.code}>
+                      {acc.code} - {acc.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
