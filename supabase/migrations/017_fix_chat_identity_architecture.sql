@@ -153,28 +153,11 @@ CREATE POLICY chat_messages_delete ON chat_messages
   FOR DELETE USING (sender_id = auth.uid());
 
 -- ============================================================================
--- PHASE 6: Backfill chat_channel_members with correct auth.users IDs
+-- PHASE 6: Skip backfill - no users table exists to backfill from
 -- ============================================================================
-
--- Create temporary mapping table
-CREATE TEMPORARY TABLE IF NOT EXISTS user_id_mapping AS
-SELECT 
-  u.id as users_id,
-  up.id as user_profiles_id,
-  au.id as auth_users_id
-FROM users u
-LEFT JOIN user_profiles up ON u.email = up.email
-LEFT JOIN auth.users au ON up.id = au.id
-WHERE au.id IS NOT NULL;
-
--- Update chat_channel_members with correct auth.users IDs
-UPDATE chat_channel_members ccm
-SET user_id = mapping.auth_users_id
-FROM user_id_mapping mapping
-WHERE ccm.user_id = mapping.users_id;
-
--- Drop temporary table
-DROP TABLE IF EXISTS user_id_mapping;
+-- Note: The 'users' table does not exist in this database schema.
+-- Only user_profiles and auth.users exist. Since there's no existing
+-- chat data to migrate, we skip the backfill phase.
 
 -- ============================================================================
 -- PHASE 7: Add function to find or create direct chat channel
