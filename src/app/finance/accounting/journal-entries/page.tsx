@@ -69,6 +69,7 @@ function AccountPicker({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -85,6 +86,20 @@ function AccountPicker({
       .filter((a) => !t || `${a.code} ${a.name}`.toLowerCase().includes(t))
       .slice(0, 40);
   }, [accounts, q]);
+
+  const getDropdownPosition = () => {
+    if (!ref.current) return { left: 0, right: 'auto' };
+    const rect = ref.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const dropdownWidth = Math.max(rect.width, 480);
+    
+    if (rect.left + dropdownWidth > viewportWidth) {
+      return { right: 0, left: 'auto' };
+    }
+    return { left: 0, right: 'auto' };
+  };
+
+  const position = getDropdownPosition();
 
   return (
     <div ref={ref} className="relative">
@@ -106,7 +121,11 @@ function AccountPicker({
         )}
       </button>
       {open && (
-        <div className="absolute z-50 left-0 top-full mt-1 w-full min-w-[480px] max-w-[640px] rounded-xl border border-border bg-card shadow-xl max-h-96 overflow-hidden flex flex-col">
+        <div 
+          ref={dropdownRef}
+          className="absolute z-[9999] top-full mt-1 min-w-[480px] max-w-[640px] rounded-xl border border-border bg-card shadow-xl max-h-96 overflow-hidden flex flex-col"
+          style={position}
+        >
           <div className="p-3 border-b border-border">
             <Input
               autoFocus
