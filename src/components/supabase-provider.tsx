@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase, ADMIN_EMAIL, ADMIN_ROLE, DEMO_MODE, isPrimaryOwnerEmail } from '@/lib/supabase';
 import { UserRole } from '@/types/roles';
 import { resolveUserRole } from '@/lib/user-role-utils';
@@ -70,35 +70,97 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email, role]);
 
+  // Sync admin user to Supabase for tracking
+  const syncAdminToSupabase = useCallback(async (adminUser: User): Promise<string> => {
+    try {
+      // Check if admin already exists in Supabase
+      const { data: existingUser, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('email', adminUser.email)
+        .single();
+
+      if (checkError || !existingUser) {
+        // Generate a real UUID for the admin
+        const { data: newUser, error: insertError } = await supabase
+          .from('user_profiles')
+          .insert([{
+            email: adminUser.email,
+            name: adminUser.name,
+            role: adminUser.role,
+            status: 'active',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }])
+          .select('id')
+          .single();
+
+        if (insertError) {
+          console.error('Error creating admin in Supabase:', insertError);
+          return adminUser.id; // Fallback to original ID
+        }
+        console.log('Admin user synced to Supabase successfully with UUID:', newUser?.id);
+        return newUser?.id || adminUser.id;
+      } else {
+        // Update last login time
+        await supabase
+          .from('user_profiles')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('email', adminUser.email);
+        console.log('Admin user already exists with UUID:', existingUser.id);
+        return existingUser.id;
+      }
+    } catch (err) {
+      console.error('Error syncing admin to Supabase:', err);
+      return adminUser.id; // Fallback to original ID
+    }
+  }, []);
+
   // Check for admin auto-login on mount
   useEffect(() => {
     // Check if admin is already logged in via localStorage (admin only)
     const adminSession = localStorage.getItem('admin_session');
     const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
 
-    if (adminSession) {
-      const adminUser = {
-        id: 'admin-straton',
-        email: ADMIN_EMAIL,
-        name: 'Straton Florentin Tesha',
-        role: resolveUserRole(savedRole || 'ADMIN', 'ADMIN')
-      };
-      setUser(adminUser);
-      setRole(resolveUserRole(savedRole || 'ADMIN', 'ADMIN'));
-      setIsLoading(false);
-      return;
-    }
-
-    // Check for Supabase authenticated user
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchUserProfile(session.user.id, session.user.email || '');
+    const handleAdminSession = async () => {
+      if (adminSession) {
+        const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
+        const adminRole = resolveUserRole(savedRole || 'ADMIN', 'ADMIN');
+        const tempAdminUser = {
+          id: 'admin-straton', // Temporary ID, will be replaced with real UUID
+          email: ADMIN_EMAIL,
+          name: 'Straton Florentin Tesha',
+          role: adminRole
+        };
+        
+        // Sync to get real UUID from database
+        const realUuid = await syncAdminToSupabase(tempAdminUser);
+        
+        const adminUser = {
+          id: realUuid,
+          email: ADMIN_EMAIL,
+          name: 'Straton Florentin Tesha',
+          role: adminRole
+        };
+        setUser(adminUser);
+        setRole(adminRole);
+        setIsLoading(false);
+        return;
       }
-      setIsLoading(false);
+
+      // Check for Supabase authenticated user
+      const checkAuth = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await fetchUserProfile(session.user.id, session.user.email || '');
+        }
+        setIsLoading(false);
+      };
+
+      checkAuth();
     };
 
-    checkAuth();
+    handleAdminSession();
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -111,48 +173,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  // Sync admin user to Supabase for tracking
-  const syncAdminToSupabase = async (adminUser: User) => {
-    try {
-      // Check if admin already exists in Supabase
-      const { data: existingUser, error: checkError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('email', adminUser.email)
-        .single();
-
-      if (checkError || !existingUser) {
-        // Create admin record in Supabase
-        const { error: insertError } = await supabase
-          .from('user_profiles')
-          .insert([{
-            id: adminUser.id,
-            email: adminUser.email,
-            name: adminUser.name,
-            role: adminUser.role,
-            status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }]);
-
-        if (insertError) {
-          console.error('Error creating admin in Supabase:', insertError);
-        } else {
-          console.log('Admin user synced to Supabase successfully');
-        }
-      } else {
-        // Update last login time
-        await supabase
-          .from('user_profiles')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('email', adminUser.email);
-      }
-    } catch (err) {
-      console.error('Error syncing admin to Supabase:', err);
-    }
-  };
+  }, [syncAdminToSupabase]);
 
   // Fetch user profile from Supabase
   const fetchUserProfile = async (userId: string, email: string) => {
@@ -427,9 +448,18 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         // Get saved role or default to ADMIN
         const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
         const adminRole = resolveUserRole(savedRole || 'ADMIN', 'ADMIN');
-
+        const tempAdminUser = {
+          id: 'admin-straton', // Temporary ID, will be replaced with real UUID
+          email: ADMIN_EMAIL,
+          name: 'Straton Florentin Tesha',
+          role: adminRole
+        };
+        
+        // Sync to get real UUID from database
+        const realUuid = await syncAdminToSupabase(tempAdminUser);
+        
         const adminUser = {
-          id: 'admin-straton',
+          id: realUuid,
           email: ADMIN_EMAIL,
           name: 'Straton Florentin Tesha',
           role: adminRole
