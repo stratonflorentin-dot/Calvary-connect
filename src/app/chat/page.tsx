@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/components/supabase-provider";
+import { useRole } from "@/hooks/use-role";
+import { canRead } from "@/lib/permissions";
 import { PageShell, PageHeader, EmptyState } from "@/components/shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -127,6 +130,16 @@ function StatusIcon({ status }: { status?: string }) {
 
 export default function InternalChatPage() {
   const { user } = useSupabase();
+  const { role } = useRole();
+  const router = useRouter();
+
+  // Permission check
+  useEffect(() => {
+    if (role && !canRead(role, 'chat')) {
+      router.push("/");
+    }
+  }, [role, router]);
+
   const [channels, setChannels] = useState<Channel[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);

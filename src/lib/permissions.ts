@@ -47,7 +47,8 @@ export type Module =
   | 'notifications'
   | 'contracts'
   | 'dispatch'
-  | 'map';
+  | 'map'
+  | 'chat';
 
 // ─── Permission Matrix ───────────────────────────────────────────────────────
 
@@ -240,6 +241,16 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
     OPERATOR:  'FULL',
     DRIVER:    'OWN',
     MECHANIC:  'READ',
+    CUSTOMER:  'NONE',
+  },
+  chat: {
+    CEO:       'FULL',
+    ADMIN:     'FULL',
+    ACCOUNTANT: 'FULL',
+    HR:        'FULL',
+    OPERATOR:  'FULL',
+    DRIVER:    'FULL',
+    MECHANIC:  'FULL',
     CUSTOMER:  'NONE',
   },
 };

@@ -102,7 +102,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/chat",
     label: "Internal Chat",
-    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"],
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"],
     category: "logistics",
   },
   {
