@@ -46,12 +46,12 @@ function ExecutiveDashboardContent() {
     };
 
     return (
-        <div className="p-8 space-y-8">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-safe-bottom">
             {/* PAGE HEADER */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-bold text-foreground">Welcome back, {user?.name || user?.email || 'User'}!</h1>
-                    <p className="text-base text-muted-foreground mt-2">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Welcome back, {user?.name || user?.email || 'User'}!</h1>
+                    <p className="text-sm sm:text-base text-muted-foreground mt-2">
                         {new Date().toLocaleDateString('en-TZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                 </div>
@@ -68,9 +68,9 @@ function ExecutiveDashboardContent() {
             </div>
 
             {/* FILTER BAR */}
-            <Card className="p-6 shadow-lg">
-                <div className="flex flex-wrap items-end gap-6">
-                    <div className="flex-1 min-w-56">
+            <Card className="p-4 sm:p-6 shadow-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="min-w-56">
                         <label className="text-sm font-semibold mb-2 block text-foreground">Period</label>
                         <Select value={range} onValueChange={(newRange) => handleFilterChange(newRange, mode)}>
                             <SelectTrigger>
@@ -87,7 +87,7 @@ function ExecutiveDashboardContent() {
                         </Select>
                     </div>
 
-                    <div className="flex-1 min-w-56">
+                    <div className="min-w-56">
                         <label className="text-sm font-semibold mb-2 block text-foreground">Dashboard Mode</label>
                         <Select value={mode} onValueChange={(newMode) => handleFilterChange(range, newMode)}>
                             <SelectTrigger>
@@ -100,18 +100,11 @@ function ExecutiveDashboardContent() {
                             </SelectContent>
                         </Select>
                     </div>
-
-                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-6 shadow-md hover:shadow-lg transition-shadow">Apply</Button>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-border text-xs text-muted-foreground flex justify-between">
-                    <span>Mode: {mode.toUpperCase()} • Analytics cache: 90s</span>
-                    <span>Last refreshed: {lastRefreshed.toLocaleTimeString('en-TZ')}</span>
                 </div>
             </Card>
 
             {/* STAT CARDS ROW */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 <StatMiniCard
                     title="Active Shipments"
                     value={stats.activeShipments}
@@ -162,12 +155,12 @@ function ExecutiveDashboardContent() {
             </div>
 
             {/* FLEET STATUS BAR */}
-            <Card className="p-6 shadow-lg">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
-                    <Truck className="w-5 h-5 text-accent-foreground" />
+            <Card className="p-4 sm:p-6 shadow-lg">
+                <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
+                    <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-accent-foreground" />
                     Fleet Status
                 </h3>
-                <div className="flex h-10 bg-muted rounded-xl overflow-hidden mb-4 shadow-inner">
+                <div className="flex h-8 sm:h-10 bg-muted rounded-xl overflow-hidden mb-4 shadow-inner">
                     <div
                         className="bg-info transition-all duration-500"
                         style={{ width: `${(fleetStatus.inTransit / stats.totalVehicles) * 100}%` }}
@@ -181,17 +174,17 @@ function ExecutiveDashboardContent() {
                         style={{ width: `${(fleetStatus.maintenance / stats.totalVehicles) * 100}%` }}
                     ></div>
                 </div>
-                <div className="grid grid-cols-3 gap-6 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-xs sm:text-sm">
                     <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 bg-info rounded-lg shadow-sm"></div>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-info rounded-lg shadow-sm"></div>
                         <span className="text-foreground font-medium">In Transit: {fleetStatus.inTransit}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 bg-success rounded-lg shadow-sm"></div>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-success rounded-lg shadow-sm"></div>
                         <span className="text-foreground font-medium">Available: {fleetStatus.available}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 bg-warning rounded-lg shadow-sm"></div>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-warning rounded-lg shadow-sm"></div>
                         <span className="text-foreground font-medium">Maintenance: {fleetStatus.maintenance}</span>
                     </div>
                 </div>

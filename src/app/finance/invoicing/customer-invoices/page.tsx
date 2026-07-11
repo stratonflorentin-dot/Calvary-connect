@@ -251,9 +251,9 @@ export default function CustomerInvoicesPage() {
   ];
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 pb-safe-bottom">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 rounded-full">Accounts Receivable</span>
@@ -261,8 +261,8 @@ export default function CustomerInvoicesPage() {
               Finance <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <h1 className="text-2xl font-black text-slate-900">Customer Invoices</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900">Customer Invoices</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             {kpis.openCount} open · {kpis.overdueCount} overdue · {kpis.paidCount} paid
             {currencies.length > 0 && (
               <>
@@ -311,21 +311,23 @@ export default function CustomerInvoicesPage() {
       })}
 
       {/* Filter chips + search */}
-      <div className="flex flex-wrap items-center gap-2">
-        {filterChips.map((c) => (
-          <button
-            key={c.key}
-            onClick={() => setFilter(c.key)}
-            className={cn(
-              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors",
-              filter === c.key ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : c.tone,
-            )}
-          >
-            {c.label}
-            <span className="text-[10px] font-black bg-white/60 rounded-full px-1.5">{c.count}</span>
-          </button>
-        ))}
-        <div className="ml-auto relative w-full sm:w-64">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {filterChips.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => setFilter(c.key)}
+              className={cn(
+                "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors",
+                filter === c.key ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : c.tone,
+              )}
+            >
+              {c.label}
+              <span className="text-[10px] font-black bg-white/60 rounded-full px-1.5">{c.count}</span>
+            </button>
+          ))}
+        </div>
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search invoice #, customer…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
         </div>

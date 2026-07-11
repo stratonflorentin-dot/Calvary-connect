@@ -313,9 +313,9 @@ export default function VendorBillsPage() {
   ];
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 pb-safe-bottom">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest px-2 py-0.5 bg-orange-50 rounded-full">Accounts Payable</span>
@@ -323,8 +323,8 @@ export default function VendorBillsPage() {
               Finance <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <h1 className="text-2xl font-black text-slate-900">Vendor Bills</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900">Vendor Bills</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             {kpis.openCount} open · {kpis.overdueCount} overdue · {kpis.dueThisWeekCount} due ≤ 7d
             {currencies.length > 0 && (
               <>
@@ -360,7 +360,7 @@ export default function VendorBillsPage() {
                 Full report <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               {AGING_BUCKETS.map((b) => (
                 <div key={b.key} className={cn("rounded-xl border p-4", b.color)}>
                   <p className={cn("text-[10px] font-black uppercase tracking-widest", b.textColor)}>{b.label}</p>
@@ -374,21 +374,23 @@ export default function VendorBillsPage() {
       })}
 
       {/* Filter chips + search + pay run */}
-      <div className="flex flex-wrap items-center gap-2">
-        {filterChips.map((c) => (
-          <button
-            key={c.key}
-            onClick={() => setFilter(c.key)}
-            className={cn(
-              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors",
-              filter === c.key ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : c.tone,
-            )}
-          >
-            {c.label}
-            <span className="text-[10px] font-black bg-white/60 rounded-full px-1.5">{c.count}</span>
-          </button>
-        ))}
-        <div className="ml-auto flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {filterChips.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => setFilter(c.key)}
+              className={cn(
+                "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors",
+                filter === c.key ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : c.tone,
+              )}
+            >
+              {c.label}
+              <span className="text-[10px] font-black bg-white/60 rounded-full px-1.5">{c.count}</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           {selectedIds.size > 0 && (
             <Button size="sm" onClick={runPayBatch} className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700">
               <Wallet className="w-3.5 h-3.5" /> Pay {selectedIds.size} · {selectedTotalLabel}

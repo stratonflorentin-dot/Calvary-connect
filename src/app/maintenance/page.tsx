@@ -103,15 +103,15 @@ export default function MaintenancePage() {
     if (!isAdmin) return <div className="p-8 text-center text-muted-foreground">Access denied</div>;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-safe-bottom">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-                        <Wrench className="w-8 h-8 text-primary" />
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+                        <Wrench className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                         Maintenance
                     </h1>
-                    <p className="text-muted-foreground mt-1">Fleet servicing, repairs and inspections</p>
+                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Fleet servicing, repairs and inspections</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button
@@ -133,7 +133,7 @@ export default function MaintenancePage() {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 overflow-x-auto pb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 overflow-x-auto pb-4">
                 {[
                     { label: 'Total', value: stats.total, color: 'bg-muted/50 dark:bg-muted' },
                     { label: 'Pending Review', value: stats.requested, color: 'bg-accent/10 dark:bg-accent/30', icon: AlertTriangle },
@@ -160,7 +160,7 @@ export default function MaintenancePage() {
             {/* Filter Bar */}
             <Card>
                 <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <Input
                             placeholder="Search record #, title, technician..."
                             value={search}
@@ -168,7 +168,7 @@ export default function MaintenancePage() {
                                 setSearch(e.target.value);
                                 setCurrentPage(1);
                             }}
-                            className="md:col-span-2"
+                            className="sm:col-span-2 lg:col-span-1"
                         />
                         <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val as typeof statusFilter); setCurrentPage(1); }}>
                             <SelectTrigger>

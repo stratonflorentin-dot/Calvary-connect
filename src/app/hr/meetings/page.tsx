@@ -233,14 +233,14 @@ function MeetingsPageInner() {
         <PageSkeleton kpiCount={4} />
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <StatCard label="Upcoming" value={upcoming.length} icon={CalendarDays} accent="bg-primary/10 text-primary" />
             <StatCard label="This week" value={thisWeek} icon={Clock} accent="bg-[hsl(var(--info-soft))] text-[hsl(var(--info))]" />
             <StatCard label="Completed" value={completed} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
             <StatCard label="Cancelled" value={cancelled} icon={Ban} accent="bg-red-100 text-red-700" />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {(["upcoming", "past"] as const).map((k) => (
               <button
                 key={k}

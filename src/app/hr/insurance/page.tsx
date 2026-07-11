@@ -188,7 +188,7 @@ export default function InsuranceDashboard() {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             title="Active Policies"
             value={summary?.total_active_policies ?? 0}
@@ -219,7 +219,7 @@ export default function InsuranceDashboard() {
           />
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-3">
+        <section className="grid gap-4 grid-cols-1 lg:grid-cols-3">
           <Card className="border-border shadow-lg lg:col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between gap-4">
@@ -235,7 +235,7 @@ export default function InsuranceDashboard() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="grid gap-5 md:grid-cols-2">
+            <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-2">
               <div className="space-y-4 rounded-lg border border-border p-4">
                 <div className="flex items-center justify-between">
                   <div>
