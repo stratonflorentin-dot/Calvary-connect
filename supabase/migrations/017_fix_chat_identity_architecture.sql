@@ -173,6 +173,15 @@ DECLARE
   v_channel_id UUID;
   v_channel_ids UUID[];
 BEGIN
+  -- Validate inputs
+  IF user1_id IS NULL OR user2_id IS NULL THEN
+    RAISE EXCEPTION 'Both user IDs are required';
+  END IF;
+  
+  IF user1_id = user2_id THEN
+    RAISE EXCEPTION 'Cannot create direct chat with yourself';
+  END IF;
+  
   -- Find existing direct chat between these two users
   SELECT ARRAY_AGG(DISTINCT ccm.channel_id)
   INTO v_channel_ids
@@ -186,16 +195,22 @@ BEGIN
     RETURN v_channel_ids[1];
   END IF;
   
-  -- Create new direct channel
-  INSERT INTO chat_channels (type, created_by)
-  VALUES ('direct', user1_id)
-  RETURNING id INTO v_channel_id;
-  
-  -- Add both users as members
-  INSERT INTO chat_channel_members (channel_id, user_id)
-  VALUES (v_channel_id, user1_id), (v_channel_id, user2_id);
-  
-  RETURN v_channel_id;
+  -- Create new direct channel with transaction safety
+  BEGIN
+    -- Create channel
+    INSERT INTO chat_channels (type, created_by)
+    VALUES ('direct', user1_id)
+    RETURNING id INTO v_channel_id;
+    
+    -- Add both users as members
+    INSERT INTO chat_channel_members (channel_id, user_id)
+    VALUES (v_channel_id, user1_id), (v_channel_id, user2_id);
+    
+    RETURN v_channel_id;
+  EXCEPTION
+    WHEN OTHERS THEN
+      RAISE EXCEPTION 'Failed to create direct chat: %', SQLERRM;
+  END;
 END;
 $$;
 

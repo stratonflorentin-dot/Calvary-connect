@@ -211,6 +211,14 @@ export default function InternalChatPage() {
       if (ch.error) {
         setError("Unable to load conversations.");
         console.error("Chat load error:", ch.error);
+        // Clear stale active channel if it no longer exists
+        if (activeChannel) {
+          const channelExists = ch.data?.some((c: any) => c.id === activeChannel.id);
+          if (!channelExists) {
+            console.log("Clearing stale active channel:", activeChannel.id);
+            setActiveChannel(null);
+          }
+        }
         return;
       }
       setChannels((ch.data ?? []) as Channel[]);
@@ -242,7 +250,7 @@ export default function InternalChatPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeChannel]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -748,12 +756,20 @@ export default function InternalChatPage() {
         .from("chat_channels")
         .select("*")
         .eq("id", channelId)
-        .single();
+        .maybeSingle();
       
       if (chErr) {
         setError("Unable to load conversation.");
         console.error("Channel load error:", chErr);
         throw chErr;
+      }
+      
+      if (!ch) {
+        setError("Conversation not found. Please try again.");
+        console.error("Channel not found after creation:", channelId);
+        await loadAll();
+        setNewChatOpen(false);
+        return;
       }
       
       // Refresh channels and members
@@ -779,12 +795,18 @@ export default function InternalChatPage() {
         .from("chat_channels")
         .insert({ name, type: "group", created_by: dbUserId })
         .select()
-        .single();
+        .maybeSingle();
       
       if (dbErr) {
         setError("Unable to create channel.");
         console.error("Channel creation error:", dbErr);
         throw dbErr;
+      }
+      
+      if (!data) {
+        setError("Channel creation failed. Please try again.");
+        console.error("Channel not created");
+        return;
       }
       
       // Add creator as member

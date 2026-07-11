@@ -163,10 +163,15 @@ async function networkFirst(request, timeoutMs) {
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
-  const response = await fetch(request);
-  const cache = await caches.open(CACHE_NAME);
-  if (response.ok) cache.put(request, response.clone());
-  return response;
+  try {
+    const response = await fetch(request);
+    const cache = await caches.open(CACHE_NAME);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch (err) {
+    console.warn('[SW] cacheFirst fetch failed:', request.url, err);
+    return new Response('', { status: 404 });
+  }
 }
 
 async function syncQueue(queueName) {
