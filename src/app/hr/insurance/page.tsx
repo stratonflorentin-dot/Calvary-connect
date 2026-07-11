@@ -401,7 +401,7 @@ function PolicyTable({ policies, loading }: { policies: TruckInsurance[]; loadin
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border">
+    <div className="overflow-hidden rounded-xl border border-border shadow-lg">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[960px] text-sm">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
@@ -420,7 +420,7 @@ function PolicyTable({ policies, loading }: { policies: TruckInsurance[]; loadin
               const days = daysUntil(policy.expiry_date);
               const risk = getRisk(policy);
               return (
-                <tr key={policy.id} className="hover:bg-muted/50">
+                <tr key={policy.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-4">
                     <div className="font-medium text-foreground">{policy.insurer_name}</div>
                     <div className="mt-1 text-xs text-muted-foreground">{policy.tira_reference_number}</div>
@@ -428,7 +428,7 @@ function PolicyTable({ policies, loading }: { policies: TruckInsurance[]; loadin
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2 text-foreground">
                       <Truck className="h-4 w-4 text-muted-foreground" />
-                      <span>{policy.vehicle_id?.slice(0, 8) || 'Unassigned'}</span>
+                      <span className="font-medium">{policy.vehicle_id?.slice(0, 8) || 'Unassigned'}</span>
                     </div>
                     {policy.assigned_driver_id && <div className="mt-1 text-xs text-muted-foreground">Driver {policy.assigned_driver_id.slice(0, 8)}</div>}
                   </td>
@@ -464,7 +464,7 @@ function PolicyTable({ policies, loading }: { policies: TruckInsurance[]; loadin
                   <td className="px-4 py-4 font-medium text-foreground">{formatMoney(policy.annual_premium)}</td>
                   <td className="px-4 py-4 text-right">
                     <Link href={`/hr/insurance/${policy.id}`}>
-                      <Button variant="ghost" size="sm" className="gap-2">
+                      <Button variant="ghost" size="sm" className="gap-2 hover:bg-muted">
                         <Eye className="h-4 w-4" />
                         View
                       </Button>

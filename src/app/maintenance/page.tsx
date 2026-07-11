@@ -218,41 +218,47 @@ export default function MaintenancePage() {
             </Card>
 
             {/* Data Table */}
-            <Card>
+            <Card className="shadow-lg">
                 <CardContent className="pt-6">
                     {loading ? (
-                        <div className="text-center py-8 text-muted-foreground">Loading records...</div>
+                        <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
+                            <Loader2 className="w-8 h-8 animate-spin" />
+                            <p>Loading records...</p>
+                        </div>
                     ) : paginatedRecords.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">No maintenance records found</div>
+                        <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
+                            <Wrench className="w-12 h-12 opacity-20" />
+                            <p>No maintenance records found</p>
+                        </div>
                     ) : (
                         <>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto rounded-xl border border-border">
                                 <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b">
-                                            <th className="text-left py-3 px-4 font-semibold">#</th>
-                                            <th className="text-left py-3 px-4 font-semibold">Vehicle</th>
-                                            <th className="text-left py-3 px-4 font-semibold">Title/Source</th>
-                                            <th className="text-left py-3 px-4 font-semibold">Type</th>
-                                            <th className="text-left py-3 px-4 font-semibold">Priority</th>
-                                            <th className="text-left py-3 px-4 font-semibold">Scheduled</th>
-                                            <th className="text-left py-3 px-4 font-semibold">Technician</th>
-                                            <th className="text-right py-3 px-4 font-semibold">Cost</th>
-                                            <th className="text-left py-3 px-4 font-semibold">Status</th>
-                                            <th className="text-left py-3 px-4 font-semibold">Actions</th>
+                                    <thead className="bg-muted/50">
+                                        <tr className="border-b border-border">
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">#</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Vehicle</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Title/Source</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Type</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Priority</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Scheduled</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Technician</th>
+                                            <th className="text-right py-3 px-4 font-semibold text-foreground">Cost</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Status</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-border bg-card">
                                         {paginatedRecords.map((record) => (
                                             <tr
                                                 key={record.id}
                                                 className={cn(
-                                                    'border-b hover:bg-muted/50 transition-colors',
-                                                    record.status === 'requested' && 'bg-accent/50/30 dark:bg-accent/10'
+                                                    'hover:bg-muted/30 transition-colors',
+                                                    record.status === 'requested' && 'bg-accent/10'
                                                 )}
                                             >
                                                 <td className="py-3 px-4">
-                                                    <div className="font-mono text-xs font-bold">{record.record_number}</div>
+                                                    <div className="font-mono text-xs font-bold text-foreground">{record.record_number}</div>
                                                     <div className="text-xs text-muted-foreground">
                                                         {new Date(record.created_at).toLocaleDateString()}
                                                     </div>
@@ -260,25 +266,25 @@ export default function MaintenancePage() {
                                                 <td className="py-3 px-4">
                                                     {record.vehicles ? (
                                                         <Link href={`/vehicles/${record.vehicle_id}`} className="text-primary hover:underline">
-                                                            <div className="font-mono text-xs font-bold">{record.vehicles.plate_number}</div>
+                                                            <div className="font-mono text-xs font-bold text-foreground">{record.vehicles.plate_number}</div>
                                                             <div className="text-xs text-muted-foreground">{record.vehicles.make} {record.vehicles.model}</div>
                                                         </Link>
                                                     ) : (
                                                         <span className="text-muted-foreground">N/A</span>
                                                     )}
                                                 </td>
-                                                <td className="py-3 px-4">{record.title}</td>
+                                                <td className="py-3 px-4 text-foreground font-medium">{record.title}</td>
                                                 <td className="py-3 px-4">
-                                                    <Badge variant="outline" className="text-xs">{record.type}</Badge>
+                                                    <Badge variant="outline" className="text-xs border-border">{record.type}</Badge>
                                                 </td>
                                                 <td className="py-3 px-4">
                                                     <Badge className={cn('text-xs', getPriorityColor(record.priority))}>
                                                         {record.priority}
                                                     </Badge>
                                                 </td>
-                                                <td className="py-3 px-4 text-xs">{record.scheduled_date ? new Date(record.scheduled_date).toLocaleDateString() : '-'}</td>
-                                                <td className="py-3 px-4 text-xs">{record.technician || '-'}</td>
-                                                <td className="py-3 px-4 text-right text-xs font-mono">
+                                                <td className="py-3 px-4 text-xs text-muted-foreground">{record.scheduled_date ? new Date(record.scheduled_date).toLocaleDateString() : '-'}</td>
+                                                <td className="py-3 px-4 text-xs text-muted-foreground">{record.technician || '-'}</td>
+                                                <td className="py-3 px-4 text-right text-xs font-mono text-foreground">
                                                     {record.actual_cost ? format(record.actual_cost) : (record.estimated_cost ? format(record.estimated_cost) : '-')}
                                                 </td>
                                                 <td className="py-3 px-4">
@@ -288,11 +294,11 @@ export default function MaintenancePage() {
                                                 </td>
                                                 <td className="py-3 px-4">
                                                     <Link href={`/maintenance/${record.id}`}>
-                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-muted">
                                                             {record.status === 'requested' ? (
-                                                                <Eye className="w-4 h-4 text-purple-600" />
+                                                                <Eye className="w-4 h-4 text-primary" />
                                                             ) : (
-                                                                <Edit className="w-4 h-4 text-blue-600" />
+                                                                <Edit className="w-4 h-4 text-primary" />
                                                             )}
                                                         </Button>
                                                     </Link>
