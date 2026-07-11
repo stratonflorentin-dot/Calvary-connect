@@ -172,6 +172,8 @@ AS $$
 DECLARE
   v_channel_id UUID;
   v_channel_ids UUID[];
+  v_user1_exists BOOLEAN;
+  v_user2_exists BOOLEAN;
 BEGIN
   -- Validate inputs
   IF user1_id IS NULL OR user2_id IS NULL THEN
@@ -182,11 +184,27 @@ BEGIN
     RAISE EXCEPTION 'Cannot create direct chat with yourself';
   END IF;
   
+  -- Verify both users exist in auth.users
+  SELECT EXISTS (SELECT 1 FROM auth.users WHERE id = user1_id) INTO v_user1_exists;
+  SELECT EXISTS (SELECT 1 FROM auth.users WHERE id = user2_id) INTO v_user2_exists;
+  
+  IF NOT v_user1_exists THEN
+    RAISE EXCEPTION 'User 1 does not exist in auth.users';
+  END IF;
+  
+  IF NOT v_user2_exists THEN
+    RAISE EXCEPTION 'User 2 does not exist in auth.users';
+  END IF;
+  
   -- Find existing direct chat between these two users
+  -- Use a subquery to avoid RLS recursion
   SELECT ARRAY_AGG(DISTINCT ccm.channel_id)
   INTO v_channel_ids
-  FROM chat_channel_members ccm
-  WHERE ccm.user_id IN (user1_id, user2_id)
+  FROM (
+    SELECT channel_id, user_id
+    FROM chat_channel_members
+    WHERE user_id IN (user1_id, user2_id)
+  ) ccm
   GROUP BY ccm.channel_id
   HAVING COUNT(DISTINCT ccm.user_id) = 2;
   
@@ -195,20 +213,43 @@ BEGIN
     RETURN v_channel_ids[1];
   END IF;
   
-  -- Create new direct channel with transaction safety
+  -- Create new direct channel atomically
+  -- Use a savepoint to allow rollback on failure
+  SAVEPOINT create_direct_chat;
+  
   BEGIN
     -- Create channel
     INSERT INTO chat_channels (type, created_by)
     VALUES ('direct', user1_id)
     RETURNING id INTO v_channel_id;
     
-    -- Add both users as members
-    INSERT INTO chat_channel_members (channel_id, user_id)
-    VALUES (v_channel_id, user1_id), (v_channel_id, user2_id);
+    IF v_channel_id IS NULL THEN
+      RAISE EXCEPTION 'Failed to create channel ID';
+    END IF;
     
+    -- Add both users as members in a single statement
+    INSERT INTO chat_channel_members (channel_id, user_id)
+    SELECT v_channel_id, user1_id
+    UNION ALL
+    SELECT v_channel_id, user2_id;
+    
+    -- Verify both memberships were created
+    IF NOT EXISTS (
+      SELECT 1 FROM chat_channel_members 
+      WHERE channel_id = v_channel_id AND user_id = user1_id
+    ) OR NOT EXISTS (
+      SELECT 1 FROM chat_channel_members 
+      WHERE channel_id = v_channel_id AND user_id = user2_id
+    ) THEN
+      RAISE EXCEPTION 'Failed to create both memberships';
+    END IF;
+    
+    RELEASE SAVEPOINT create_direct_chat;
     RETURN v_channel_id;
+    
   EXCEPTION
     WHEN OTHERS THEN
+      ROLLBACK TO SAVEPOINT create_direct_chat;
       RAISE EXCEPTION 'Failed to create direct chat: %', SQLERRM;
   END;
 END;
