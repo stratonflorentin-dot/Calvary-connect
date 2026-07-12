@@ -42,7 +42,7 @@ import { format, isSameDay, isToday, isYesterday } from "date-fns";
 import { cn } from "@/lib/utils";
 import { uploadToBucket } from "@/lib/storage-upload";
 import { Paperclip, Image, FileText, X } from "lucide-react";
-import { WebRTCManager, CallSession, formatCallDuration, isWebRTCSupported } from "@/lib/webrtc";
+import { WebRTCManager, CallSession, formatCallDuration, isWebRTCSupported, getWebRTCConfig } from "@/lib/webrtc";
 import { IncomingCallModal } from "@/components/chat/incoming-call-modal";
 import { ActiveCallUI } from "@/components/chat/active-call-ui";
 
@@ -158,6 +158,15 @@ export default function InternalChatPage() {
   const [webrtcManager, setWebrtcManager] = useState<WebRTCManager | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+
+  // Refs to avoid stale closures in Realtime subscriptions
+  const activeCallRef = useRef<CallSession | null>(null);
+  const incomingCallRef = useRef<CallSession | null>(null);
+  const webrtcManagerRef = useRef<WebRTCManager | null>(null);
+  const dbUserIdRef = useRef<string | null>(null);
+  // ICE candidate queue: buffer candidates before remoteDescription is set
+  const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
+  const remoteDescSet = useRef(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -198,6 +207,12 @@ export default function InternalChatPage() {
 
   const dbUserId = user?.id && UUID_RE.test(user.id) ? user.id : null;
   const myName = user?.name ?? (user as any)?.email ?? null;
+
+  // Keep refs in sync with state for use in subscriptions
+  useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
+  useEffect(() => { incomingCallRef.current = incomingCall; }, [incomingCall]);
+  useEffect(() => { webrtcManagerRef.current = webrtcManager; }, [webrtcManager]);
+  useEffect(() => { dbUserIdRef.current = dbUserId; }, [dbUserId]);
 
   const scrollToBottom = () =>
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
@@ -354,74 +369,129 @@ export default function InternalChatPage() {
       })
       .subscribe();
 
-    // Call sessions - listen for incoming calls
+    // Call sessions - listen for incoming calls (uses ref to avoid stale closures)
     const callsChannel = supabase
-      .channel("call_sessions")
+      .channel("call_sessions_changes")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "call_sessions" }, (payload) => {
         const call = payload.new as CallSession;
-        // Only show incoming calls where I'm the receiver
-        if (call.receiver_id === dbUserId && call.status === 'initiated') {
+        const uid = dbUserIdRef.current;
+        // Only show incoming calls where I'm the receiver and not already in a call
+        if (call.receiver_id === uid && call.status === 'initiated' && !activeCallRef.current) {
+          console.log('[CALL] Incoming call from', call.caller_id);
           setIncomingCall(call);
         }
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "call_sessions" }, (payload) => {
         const call = payload.new as CallSession;
-        // Update active call if it's my call
-        if (activeCall && activeCall.id === call.id) {
+        const curActive = activeCallRef.current;
+        const curIncoming = incomingCallRef.current;
+        // Update active call state
+        if (curActive && curActive.id === call.id) {
           setActiveCall(call);
         }
-        // Handle call ended by other party
+        // Handle call ended/declined by remote party — cleanup without looping back
         if (call.status === 'ended' || call.status === 'declined') {
-          if (incomingCall && incomingCall.id === call.id) {
+          if (curIncoming && curIncoming.id === call.id) {
             setIncomingCall(null);
           }
-          if (activeCall && activeCall.id === call.id) {
-            endCall();
+          if (curActive && curActive.id === call.id) {
+            // Cleanup WebRTC directly instead of calling endCall (which calls rpc again)
+            const mgr = webrtcManagerRef.current;
+            if (mgr) { mgr.cleanup(); setWebrtcManager(null); }
+            setLocalStream(null);
+            setRemoteStream(null);
+            setActiveCall(null);
+            setIsMuted(false);
+            iceCandidateQueue.current = [];
+            remoteDescSet.current = false;
           }
         }
       })
       .subscribe();
 
     // Call signaling - handle WebRTC offers/answers/ICE candidates
+    // Uses refs so the handler always sees current call/manager state
     const signalingChannel = supabase
-      .channel("call_signaling")
+      .channel("call_signaling_changes")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "call_signaling" }, async (payload) => {
         const signal = payload.new as any;
-        
-        // Only process signals for my active or incoming calls
-        if (!activeCall && !incomingCall) return;
-        const relevantCallId = activeCall?.id || incomingCall?.id;
-        if (signal.call_id !== relevantCallId) return;
-        if (signal.sender_id === dbUserId) return; // Ignore my own signals
+        const uid = dbUserIdRef.current;
+        const curActive = activeCallRef.current;
+        const curIncoming = incomingCallRef.current;
+        const mgr = webrtcManagerRef.current;
 
-        if (webrtcManager) {
+        // Only process signals for my active or incoming calls
+        const relevantCallId = curActive?.id || curIncoming?.id;
+        if (!relevantCallId) return;
+        if (signal.call_id !== relevantCallId) return;
+        if (signal.sender_id === uid) return; // Ignore own signals
+
+        console.log('[SIGNALING] Received', signal.signal_type, 'for call', signal.call_id);
+
+        if (!mgr) {
+          console.warn('[SIGNALING] webrtcManager not ready for signal:', signal.signal_type);
+          return;
+        }
+
+        try {
           switch (signal.signal_type) {
-            case 'offer':
-              // I'm the receiver, create answer
-              const answer = await webrtcManager.createAnswer(signal.signal_data);
+            case 'offer': {
+              // Receiver: process offer and send answer
+              remoteDescSet.current = false;
+              const answer = await mgr.createAnswer(signal.signal_data);
+              remoteDescSet.current = true;
+              // Drain queued ICE candidates
+              for (const c of iceCandidateQueue.current) {
+                await mgr.addIceCandidate(c);
+              }
+              iceCandidateQueue.current = [];
               await supabase.from('call_signaling').insert({
                 call_id: signal.call_id,
-                sender_id: dbUserId,
+                sender_id: uid,
                 signal_type: 'answer',
                 signal_data: answer
               });
               break;
-            case 'answer':
-              // I'm the caller, set remote description
-              await webrtcManager.setRemoteDescription(signal.signal_data);
+            }
+            case 'answer': {
+              // Caller: set remote description from answer
+              await mgr.setRemoteDescription(signal.signal_data);
+              remoteDescSet.current = true;
+              // Drain queued ICE candidates
+              for (const c of iceCandidateQueue.current) {
+                await mgr.addIceCandidate(c);
+              }
+              iceCandidateQueue.current = [];
               break;
-            case 'ice_candidate':
-              // Add ICE candidate
-              await webrtcManager.addIceCandidate(signal.signal_data);
-              break;
-            case 'declined':
-            case 'busy':
-              // Call ended by other party
-              if (activeCall) {
-                endCall();
+            }
+            case 'ice_candidate': {
+              if (remoteDescSet.current) {
+                await mgr.addIceCandidate(signal.signal_data);
+              } else {
+                // Queue until remoteDescription is set
+                iceCandidateQueue.current.push(signal.signal_data);
+                console.log('[SIGNALING] Queued ICE candidate, queue length:', iceCandidateQueue.current.length);
               }
               break;
+            }
+            case 'declined':
+            case 'busy':
+            case 'ended': {
+              // Remote party ended - cleanup
+              mgr.cleanup();
+              setWebrtcManager(null);
+              setLocalStream(null);
+              setRemoteStream(null);
+              setActiveCall(null);
+              setIncomingCall(null);
+              setIsMuted(false);
+              iceCandidateQueue.current = [];
+              remoteDescSet.current = false;
+              break;
+            }
           }
+        } catch (err) {
+          console.error('[SIGNALING] Error handling signal:', signal.signal_type, err);
         }
       })
       .subscribe();
@@ -434,7 +504,8 @@ export default function InternalChatPage() {
       supabase.removeChannel(callsChannel);
       supabase.removeChannel(signalingChannel);
     };
-  }, [dbUserId, activeCall, incomingCall, webrtcManager]);
+  // Only re-subscribe when dbUserId changes — refs handle stale closures for call/webrtc state
+  }, [dbUserId]);
 
   const profileById = useMemo(() => {
     const m = new Map<string, Profile>();
@@ -880,7 +951,7 @@ export default function InternalChatPage() {
       setActiveCall(call as CallSession);
 
       // Initialize WebRTC
-      const manager = new WebRTCManager();
+      const manager = new WebRTCManager(getWebRTCConfig());
       setWebrtcManager(manager);
 
       await manager.initialize(
@@ -924,11 +995,12 @@ export default function InternalChatPage() {
 
   const acceptCall = async () => {
     if (!incomingCall || !dbUserId) return;
+    const callSnapshot = incomingCall;
 
     try {
-      // Answer call in database
+      // Answer call in database first
       const { error: answerErr } = await supabase.rpc('answer_call', {
-        p_call_id: incomingCall.id
+        p_call_id: callSnapshot.id
       });
 
       if (answerErr) {
@@ -938,32 +1010,68 @@ export default function InternalChatPage() {
       }
 
       setIncomingCall(null);
-      setActiveCall(incomingCall);
+      setActiveCall(callSnapshot);
+
+      // Reset ICE queue and remoteDesc flag
+      iceCandidateQueue.current = [];
+      remoteDescSet.current = false;
 
       // Initialize WebRTC
-      const manager = new WebRTCManager();
+      const manager = new WebRTCManager(getWebRTCConfig());
+      // Set ref immediately so signaling handler can use it
+      webrtcManagerRef.current = manager;
       setWebrtcManager(manager);
 
       await manager.initialize(
-        incomingCall.call_type,
+        callSnapshot.call_type,
         (stream) => setRemoteStream(stream),
         async (candidate) => {
           await supabase.from('call_signaling').insert({
-            call_id: incomingCall.id,
+            call_id: callSnapshot.id,
             sender_id: dbUserId,
             signal_type: 'ice_candidate',
             signal_data: candidate
           });
         },
         (state) => {
-          console.log('Connection state:', state);
-          if (state === 'disconnected' || state === 'failed') {
+          console.log('[WebRTC] Connection state:', state);
+          if (state === 'failed') {
             endCall();
           }
         }
       );
 
       setLocalStream(manager.getLocalStream());
+
+      // Now fetch the offer that the caller already sent to the DB
+      // (It may have arrived before acceptCall was called)
+      const { data: signals } = await supabase
+        .from('call_signaling')
+        .select('*')
+        .eq('call_id', callSnapshot.id)
+        .eq('signal_type', 'offer')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (signals && signals.length > 0) {
+        const offerSignal = signals[0];
+        console.log('[WebRTC] Processing existing offer from DB');
+        const answer = await manager.createAnswer(offerSignal.signal_data);
+        remoteDescSet.current = true;
+        // Drain any queued ICE candidates
+        for (const c of iceCandidateQueue.current) {
+          await manager.addIceCandidate(c);
+        }
+        iceCandidateQueue.current = [];
+        await supabase.from('call_signaling').insert({
+          call_id: callSnapshot.id,
+          sender_id: dbUserId,
+          signal_type: 'answer',
+          signal_data: answer
+        });
+      } else {
+        console.log('[WebRTC] No offer in DB yet, waiting for signaling subscription');
+      }
 
     } catch (err: any) {
       setError("Unable to answer call.");
@@ -983,28 +1091,31 @@ export default function InternalChatPage() {
   };
 
   const endCall = async () => {
-    if (!activeCall || !dbUserId) return;
+    const callSnapshot = activeCallRef.current;
+    if (!callSnapshot || !dbUserIdRef.current) return;
+
+    // Cleanup WebRTC immediately (before await) so UI updates fast
+    const mgr = webrtcManagerRef.current;
+    if (mgr) {
+      mgr.cleanup();
+      webrtcManagerRef.current = null;
+      setWebrtcManager(null);
+    }
+    setLocalStream(null);
+    setRemoteStream(null);
+    setActiveCall(null);
+    setIsMuted(false);
+    setIsSpeakerOn(true);
+    iceCandidateQueue.current = [];
+    remoteDescSet.current = false;
 
     try {
       await supabase.rpc('end_call', {
-        p_call_id: activeCall.id,
+        p_call_id: callSnapshot.id,
         p_end_reason: 'user_ended'
       });
-
-      // Cleanup WebRTC
-      if (webrtcManager) {
-        webrtcManager.cleanup();
-        setWebrtcManager(null);
-      }
-
-      setLocalStream(null);
-      setRemoteStream(null);
-      setActiveCall(null);
-      setIsMuted(false);
-      setIsSpeakerOn(true);
-
     } catch (err: any) {
-      console.error("End call error:", err);
+      console.error("End call RPC error:", err);
     }
   };
 

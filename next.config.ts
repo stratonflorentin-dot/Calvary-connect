@@ -82,10 +82,10 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://vercel.live",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com",
               "font-src 'self' https://fonts.gstatic.com",
-              // Supabase REST + Realtime WS, Firebase, Mapbox, OSRM, Nominatim
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live",
-              // Images from data URIs, blobs (WebRTC), and allowed CDNs
-              "img-src 'self' data: blob: https://*.supabase.co https://placehold.co https://images.unsplash.com https://picsum.photos",
+              // Supabase REST + Realtime WS, Firebase, Mapbox, OSRM, Nominatim, WebRTC STUN
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live stun:stun.l.google.com:19302 stun:stun1.l.google.com:19302",
+              // Images from data URIs, blobs (WebRTC), allowed CDNs, and OpenStreetMap tiles
+              "img-src 'self' data: blob: https://*.supabase.co https://placehold.co https://images.unsplash.com https://picsum.photos https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://*.basemaps.cartocdn.com https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com",
               // Service worker must be from same origin
               "worker-src 'self' blob:",
               // WebRTC audio/video streams

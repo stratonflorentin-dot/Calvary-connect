@@ -29,14 +29,44 @@ export interface WebRTCConfig {
   iceServers: RTCIceServer[];
 }
 
-// Default STUN servers (production should use TURN servers)
+// Default STUN servers (production MUST configure TURN via env vars for reliable calls)
+// Set these environment variables for production:
+//   NEXT_PUBLIC_WEBRTC_STUN_URL   (optional override)
+//   NEXT_PUBLIC_WEBRTC_TURN_URL
+//   NEXT_PUBLIC_WEBRTC_TURN_USERNAME
+//   NEXT_PUBLIC_WEBRTC_TURN_CREDENTIAL
+export function getWebRTCConfig(): WebRTCConfig {
+  const iceServers: RTCIceServer[] = [
+    { urls: process.env.NEXT_PUBLIC_WEBRTC_STUN_URL || 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ];
+
+  const turnUrl = process.env.NEXT_PUBLIC_WEBRTC_TURN_URL;
+  const turnUsername = process.env.NEXT_PUBLIC_WEBRTC_TURN_USERNAME;
+  const turnCredential = process.env.NEXT_PUBLIC_WEBRTC_TURN_CREDENTIAL;
+
+  if (turnUrl && turnUsername && turnCredential) {
+    iceServers.push({
+      urls: turnUrl,
+      username: turnUsername,
+      credential: turnCredential,
+    });
+    console.log('[WebRTC] TURN server configured:', turnUrl);
+  } else {
+    console.warn(
+      '[WebRTC] No TURN server configured. ' +
+      'Calls may fail across NAT/mobile networks. ' +
+      'Set NEXT_PUBLIC_WEBRTC_TURN_URL, NEXT_PUBLIC_WEBRTC_TURN_USERNAME, NEXT_PUBLIC_WEBRTC_TURN_CREDENTIAL.'
+    );
+  }
+
+  return { iceServers };
+}
+
 export const DEFAULT_WEBRTC_CONFIG: WebRTCConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
   ],
 };
 

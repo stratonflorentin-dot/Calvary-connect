@@ -10,7 +10,7 @@
 //   - Firebase Realtime Database
 //   - Any authenticated API endpoint
 
-const CACHE_VERSION = 'calvary-connect-v3';
+const CACHE_VERSION = 'calvary-connect-v4';
 
 // Only cache assets that are guaranteed to exist at the root level
 const STATIC_PRECACHE = [
@@ -81,12 +81,15 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('firebaseapp.com')
   ) return;
 
-  // BYPASS: Mapbox and routing APIs
+  // BYPASS: Mapbox, OSM, and CARTO tile servers
   if (
     url.hostname.includes('api.mapbox.com') ||
     url.hostname.includes('events.mapbox.com') ||
     url.hostname.includes('router.project-osrm.org') ||
-    url.hostname.includes('nominatim.openstreetmap.org')
+    url.hostname.includes('nominatim.openstreetmap.org') ||
+    url.hostname.includes('tile.openstreetmap.org') ||
+    url.hostname.includes('tile.openstreetmap.de') ||
+    url.hostname.includes('basemaps.cartocdn.com')
   ) return;
 
   // BYPASS: Vercel Live / deployment tooling
