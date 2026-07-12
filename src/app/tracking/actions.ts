@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { isPrimaryOwnerEmail } from "@/lib/supabase";
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -37,7 +36,6 @@ async function verifyManager(
   clientRole?: string | null,
   isAdminBypass?: boolean,
 ) {
-  if (email && isPrimaryOwnerEmail(email)) return true;
   if (isAdminBypass) return true;
   if (
     clientRole &&

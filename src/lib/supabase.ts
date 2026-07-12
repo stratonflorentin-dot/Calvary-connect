@@ -12,10 +12,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Admin user configuration
-export const ADMIN_EMAIL = 'stratonflorentin@gmail.com';
-export const ADMIN_ROLE = 'CEO';
-
 export async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -32,12 +28,3 @@ export async function getCurrentUser() {
     role: profile?.role || 'USER',
   };
 }
-
-/** Primary install owner (offline admin / legacy bypass). Not every staff @ domain. */
-export function isPrimaryOwnerEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase();
-}
-
-// Demo mode flag - should be false in production
-export const DEMO_MODE = false;

@@ -5,7 +5,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
-import { isPrimaryOwnerEmail } from "@/lib/supabase";
 import { isValidRole, normalizeRole } from "@/lib/user-role-utils";
 import { DRIVER_ROUTE_CONFIG } from "@/lib/driver-routes";
 import {
@@ -609,9 +608,8 @@ export function useRouteGuard() {
   const checkAccess = useCallback(
     (path: string): boolean => {
       try {
-        // Owner (admin email) or CEO/ADMIN role has full access to everything, even during role switching
+        // CEO/ADMIN role has full access to everything, even during role switching
         const isOwnerOrAdmin =
-          isPrimaryOwnerEmail(user?.email) ||
           user?.role === 'ADMIN' ||
           user?.role === 'CEO';
 
@@ -659,9 +657,8 @@ export function useRouteGuard() {
   useEffect(() => {
     if (isUserLoading || !isInitialized) return;
 
-    // Check if admin user (owner) - should always have access, no redirects
+    // Check if admin user - should always have access, no redirects
     const isAdminUser =
-      isPrimaryOwnerEmail(user?.email) ||
       user?.role === 'ADMIN' ||
       user?.role === 'CEO';
 
@@ -712,14 +709,14 @@ export function getMenuByRole(
     role != null ? normalizeRole(String(role)) : null;
   if (!normalizedRole) return [];
 
-  // Owner (admin email) gets full access UNLESS they are previewing another role
-  const isOwnerOrAdminEmail = isPrimaryOwnerEmail(userEmail);
+  // CEO and ADMIN see all routes
+  const isOwnerOrAdminEmail = normalizedRole === 'CEO' || normalizedRole === 'ADMIN';
 
   if (
     isOwnerOrAdminEmail &&
     !respectRoleSwitch
   ) {
-    routeDebug("log", "[RouteConfig] Owner gets full menu access");
+    routeDebug("log", "[RouteConfig] Admin/CEO gets full menu access");
     return ROUTE_CONFIG;
   }
 

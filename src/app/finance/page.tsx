@@ -149,7 +149,7 @@ export default function FinanceOverviewPage() {
 
   const QUICK_LINKS = ALL_QUICK_LINKS.filter(link => {
     if (!link.module) return true;
-    return role ? canRead(role, link.module) : false;
+    return role ? canRead(role as any, link.module) : false;
   });
 
   const load = async () => {

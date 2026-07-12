@@ -40,7 +40,6 @@ import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
 import { useLanguage } from "@/hooks/use-language";
 import { useSupabase } from "@/components/supabase-provider";
-import { isPrimaryOwnerEmail } from "@/lib/supabase";
 import {
   NAVIGATION_CATEGORY_LABELS,
   NAVIGATION_CATEGORY_ORDER,
@@ -97,21 +96,12 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { signOut, user, uploadAvatar } = useSupabase();
-  const [storedRole, setStoredRole] = useState<UserRole | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [maintenanceCount, setMaintenanceCount] = useState(0);
-  const [serviceRequestCount, setServiceRequestCount] = useState(0);
-  const [partsRequestCount, setPartsRequestCount] = useState(0);
-  const [meetingCount, setMeetingCount] = useState(0);
-
-  // Use our new sidebar hook for state management
   const { isOpen, isCollapsed, toggle, open, close, toggleCollapse } = useSidebar();
 
   // Ref for quick return scroll behavior
   const lastScrollY = useRef(0);
-  const canUseRolePreview = user?.role === "ADMIN" || user?.role === "CEO" || isPrimaryOwnerEmail(user?.email);
-  const menuOwnerEmail = isPrimaryOwnerEmail(user?.email) ? user?.email : undefined;
+  const canUseRolePreview = user?.role === "ADMIN" || user?.role === "CEO";
+  const menuOwnerEmail: string | undefined = undefined;
 
   // Quick return behavior - show/hide sidebar on scroll
   useEffect(() => {
@@ -135,6 +125,16 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [open, close]);
 
+  const [isUploading, setIsUploading] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [maintenanceCount, setMaintenanceCount] = useState(0);
+  const [serviceRequestCount, setServiceRequestCount] = useState(0);
+  const [partsRequestCount, setPartsRequestCount] = useState(0);
+  const [meetingCount, setMeetingCount] = useState(0);
+
+  const effectiveRole = canUseRolePreview ? resolveUserRole(String(role || "ADMIN"), "ADMIN") : resolveUserRole(String(role || ""), "OPERATOR");
+  const menuItems = getNavigationMenuByRole(effectiveRole, false, t, menuOwnerEmail, false);
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -152,24 +152,6 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
       setIsUploading(false);
     }
   };
-
-  useEffect(() => {
-    const saved = localStorage.getItem("fleet_command_role") as UserRole | null;
-    setStoredRole(saved);
-    const handleStorageChange = () => {
-      const updated = localStorage.getItem("fleet_command_role") as UserRole | null;
-      setStoredRole(updated);
-    };
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("roleChanged", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("roleChanged", handleStorageChange);
-    };
-  }, []);
-
-  const effectiveRole = canUseRolePreview ? resolveUserRole(String(storedRole || role || "ADMIN"), "ADMIN") : resolveUserRole(String(role || ""), "OPERATOR");
-  const menuItems = getNavigationMenuByRole(effectiveRole, false, t, menuOwnerEmail, false);
 
   // notifications.user_id is a uuid — the legacy offline-admin session uses a
   // synthetic id that would 400 the query.

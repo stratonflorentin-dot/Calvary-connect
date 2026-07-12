@@ -15,6 +15,7 @@ import type { UserRole } from '@/lib/permissions';
 // ─── Limits per role (requests per minute) ───────────────────────────────────
 const ROLE_LIMITS: Record<UserRole | 'ANONYMOUS', { rpm: number; burst: number }> = {
   CEO:       { rpm: 600, burst: 200 },
+  ADMIN:     { rpm: 600, burst: 200 },
   ACCOUNTANT: { rpm: 200, burst: 50 },
   HR:        { rpm: 200, burst: 50 },
   OPERATOR:  { rpm: 300, burst: 100 },

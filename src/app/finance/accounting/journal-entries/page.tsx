@@ -278,7 +278,8 @@ export default function JournalEntriesPage() {
     });
     const src = (e.journal_entry_lines ?? []) as any[];
     setLines(
-      src.map((l) => ({
+      src.map((l, idx) => ({
+        id: `line-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 9)}`,
         account_code: l.account_code,
         account_name: l.account_name,
         debit_amount: Number(l.credit_amount) || 0,

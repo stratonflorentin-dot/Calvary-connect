@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,30 +66,6 @@ export function AuthComponent() {
       setLoading(false);
     }
   };
-
-  // Load Visme embed script dynamically when component mounts
-  useEffect(() => {
-    // Remove any existing script tag to force clean initialization
-    const existingScript = document.getElementById('visme-embed-script');
-    if (existingScript) {
-      existingScript.remove();
-    }
-
-    const script = document.createElement('script');
-    script.id = 'visme-embed-script';
-    script.src = 'https://static-bundles.visme.co/forms/vismeforms-embed.js';
-    script.async = true;
-    
-    // Append to body to trigger Visme's parser
-    document.body.appendChild(script);
-
-    return () => {
-      const scriptToRemove = document.getElementById('visme-embed-script');
-      if (scriptToRemove) {
-        scriptToRemove.remove();
-      }
-    };
-  }, []);
 
   const [hasStarted, setHasStarted] = useState(false);
 

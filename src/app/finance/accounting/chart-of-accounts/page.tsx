@@ -226,13 +226,13 @@ export default function ChartOfAccountsPage() {
   const [entryDescription, setEntryDescription] = useState('');
 
   useEffect(() => {
-    if (role && !canRead(role, 'finance_chart_of_accounts')) {
+    if (role && !canRead(role as any, 'finance_chart_of_accounts')) {
       router.push('/finance');
     }
   }, [role, router]);
 
   useEffect(() => {
-    if (role && canRead(role, 'finance_chart_of_accounts')) {
+    if (role && canRead(role as any, 'finance_chart_of_accounts')) {
       loadAccounts();
       loadBankAccounts();
     }

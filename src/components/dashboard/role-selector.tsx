@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { useSupabase } from "@/components/supabase-provider";
 import { UserRole } from "@/types/roles";
-import { isPrimaryOwnerEmail } from "@/lib/supabase";
 import { ROLE_DEFAULT_ROUTES } from "@/lib/route-config";
 
 const ROLE_ICONS = {
@@ -63,7 +62,6 @@ export function RoleSelector() {
   }
 
   const isAdmin =
-    isPrimaryOwnerEmail(user.email) ||
     user.role === 'ADMIN' ||
     user.role === 'CEO';
 

@@ -87,6 +87,7 @@ interface Profile {
   role?: string | null;
   presence_status?: "online" | "away" | "offline";
   last_seen_at?: string | null;
+  avatar_url?: string | null;
 }
 
 interface TypingUser {
@@ -213,7 +214,7 @@ export default function InternalChatPage() {
         console.error("Chat load error:", ch.error);
         // Clear stale active channel if it no longer exists
         if (activeChannel) {
-          const channelExists = ch.data?.some((c: any) => c.id === activeChannel.id);
+          const channelExists = Array.isArray(ch.data) && (ch.data as any[]).some((c: any) => c.id === activeChannel.id);
           if (!channelExists) {
             console.log("Clearing stale active channel:", activeChannel.id);
             setActiveChannel(null);
@@ -739,10 +740,10 @@ export default function InternalChatPage() {
     }
     setCreating(true);
     try {
-      // Use the database function to find or create direct chat (prevents race conditions)
+      // Use the database RPC to find or create the direct chat transactionally.
+      // The function resolves auth.uid() internally — no need to pass current user ID.
       const { data: channelId, error: fnErr } = await supabase.rpc('find_or_create_direct_chat', {
-        user1_id: dbUserId,
-        user2_id: person.id
+        p_other_user_id: person.id
       });
       
       if (fnErr) {
@@ -1048,7 +1049,7 @@ export default function InternalChatPage() {
         <IncomingCallModal
           call={incomingCall}
           callerName={profileById.get(incomingCall.caller_id)?.name || 'Unknown'}
-          callerAvatar={profileById.get(incomingCall.caller_id)?.avatar_url}
+          callerAvatar={profileById.get(incomingCall.caller_id)?.avatar_url || undefined}
           onAccept={acceptCall}
           onDecline={declineCall}
           open={!!incomingCall}
@@ -1060,7 +1061,7 @@ export default function InternalChatPage() {
         <ActiveCallUI
           call={activeCall}
           userName={profileById.get(activeCall.caller_id === dbUserId ? activeCall.receiver_id : activeCall.caller_id)?.name || 'Unknown'}
-          userAvatar={profileById.get(activeCall.caller_id === dbUserId ? activeCall.receiver_id : activeCall.caller_id)?.avatar_url}
+          userAvatar={profileById.get(activeCall.caller_id === dbUserId ? activeCall.receiver_id : activeCall.caller_id)?.avatar_url || undefined}
           localStream={localStream}
           remoteStream={remoteStream}
           isMuted={isMuted}

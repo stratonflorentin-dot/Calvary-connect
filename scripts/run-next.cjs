@@ -3,6 +3,6 @@
 require('./fat32-readlink-fix.cjs');
 
 const existing = process.env.NODE_OPTIONS ? process.env.NODE_OPTIONS + ' ' : '';
-process.env.NODE_OPTIONS = existing + '--require ./scripts/fat32-readlink-fix.cjs';
+process.env.NODE_OPTIONS = existing + '--require ./scripts/fat32-readlink-fix.cjs --max-old-space-size=4096';
 
 require('next/dist/bin/next');

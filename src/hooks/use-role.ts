@@ -3,7 +3,6 @@
 import { useEffect, useCallback } from 'react';
 import { UserRole } from '@/types/roles';
 import { useSupabase } from '@/components/supabase-provider';
-import { isPrimaryOwnerEmail } from '@/lib/supabase';
 import { resolveUserRole } from '@/lib/user-role-utils';
 
 // Department-based permission mapping
@@ -59,8 +58,7 @@ export function useRole() {
   const actualRole = user?.role ? resolveUserRole(user.role) : null;
   const isAdmin =
     actualRole === 'ADMIN' ||
-    actualRole === 'CEO' ||
-    isPrimaryOwnerEmail(user?.email);
+    actualRole === 'CEO';
 
   const currentRole = contextRole
     ? resolveUserRole(contextRole)

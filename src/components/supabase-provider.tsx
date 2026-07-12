@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { supabase, ADMIN_EMAIL, ADMIN_ROLE, DEMO_MODE, isPrimaryOwnerEmail } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { UserRole } from '@/types/roles';
 import { resolveUserRole } from '@/lib/user-role-utils';
 import { SyncManager } from '@/lib/offline-sync';
@@ -42,153 +42,20 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Reload / page refresh role restoration logic for admin preview sessions.
-  // If the admin session marker is present, restore the last preview role from localStorage
-  // so navigation between admin pages does not lose the impersonated role.
-  useEffect(() => {
-    const adminSession = localStorage.getItem('admin_session');
-    const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
-
-    if (adminSession === 'true' && savedRole) {
-      console.log('[SupabaseProvider] Initializing admin role from localStorage:', savedRole);
-      setRole(resolveUserRole(savedRole, 'ADMIN'));
-    }
-  }, []);
-
-  // Sync role from localStorage when user changes (for role switching)
-  useEffect(() => {
-    const ownerEmail =
-      isPrimaryOwnerEmail(user?.email);
-    if (ownerEmail) {
-      const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
-      const resolved = savedRole ? resolveUserRole(savedRole, 'ADMIN') : null;
-      if (resolved && resolved !== role) {
-        console.log('[SupabaseProvider] Syncing role from localStorage:', resolved);
-        setRole(resolved);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.email, role]);
-
-  // Sync admin user to Supabase for tracking
-  const syncAdminToSupabase = useCallback(async (adminUser: User): Promise<string> => {
-    try {
-      // Check if admin already exists in Supabase
-      const { data: existingUser, error: checkError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('email', adminUser.email)
-        .single();
-
-      if (checkError || !existingUser) {
-        // Generate a real UUID for the admin
-        const { data: newUser, error: insertError } = await supabase
-          .from('user_profiles')
-          .insert([{
-            email: adminUser.email,
-            name: adminUser.name,
-            role: adminUser.role,
-            status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }])
-          .select('id')
-          .single();
-
-        if (insertError) {
-          console.error('Error creating admin in Supabase:', insertError);
-          return adminUser.id; // Fallback to original ID
-        }
-        console.log('Admin user synced to Supabase successfully with UUID:', newUser?.id);
-        return newUser?.id || adminUser.id;
-      } else {
-        // Update last login time
-        await supabase
-          .from('user_profiles')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('email', adminUser.email);
-        console.log('Admin user already exists with UUID:', existingUser.id);
-        return existingUser.id;
-      }
-    } catch (err) {
-      console.error('Error syncing admin to Supabase:', err);
-      return adminUser.id; // Fallback to original ID
-    }
-  }, []);
-
-  // Check for admin auto-login on mount
-  useEffect(() => {
-    // Check if admin is already logged in via localStorage (admin only)
-    const adminSession = localStorage.getItem('admin_session');
-    const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
-
-    const handleAdminSession = async () => {
-      if (adminSession) {
-        const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
-        const adminRole = resolveUserRole(savedRole || 'ADMIN', 'ADMIN');
-        const tempAdminUser = {
-          id: 'admin-straton', // Temporary ID, will be replaced with real UUID
-          email: ADMIN_EMAIL,
-          name: 'Straton Florentin Tesha',
-          role: adminRole
-        };
-        
-        // Sync to get real UUID from database
-        const realUuid = await syncAdminToSupabase(tempAdminUser);
-        
-        const adminUser = {
-          id: realUuid,
-          email: ADMIN_EMAIL,
-          name: 'Straton Florentin Tesha',
-          role: adminRole
-        };
-        setUser(adminUser);
-        setRole(adminRole);
-        setIsLoading(false);
-        return;
-      }
-
-      // Check for Supabase authenticated user
-      const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await fetchUserProfile(session.user.id, session.user.email || '');
-        }
-        setIsLoading(false);
-      };
-
-      checkAuth();
-    };
-
-    handleAdminSession();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        await fetchUserProfile(session.user.id, session.user.email || '');
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setRole(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [syncAdminToSupabase]);
-
-  // Fetch user profile from Supabase
-  const fetchUserProfile = async (userId: string, email: string) => {
+  // Fetch user profile from Supabase using the authenticated user's UUID
+  const fetchUserProfile = useCallback(async (userId: string, email: string) => {
     const invitedLike = (s: unknown) => {
-      const raw = String(s ?? "").toLowerCase().trim();
-      return ["invited", "pending", "invite_pending", "invitation_sent", "invite"].includes(raw);
+      const raw = String(s ?? '').toLowerCase().trim();
+      return ['invited', 'pending', 'invite_pending', 'invitation_sent', 'invite'].includes(raw);
     };
 
     const recordLoginAndActivate = async (uid: string, status: unknown, userEmail: string) => {
       const wasInvited = invitedLike(status);
       try {
         const updated = await activateUserOnLoginAction(uid, userEmail);
-        if (updated?.status === "active") return true;
+        if (updated?.status === 'active') return true;
       } catch (err) {
-        console.warn("[SupabaseProvider] activateUserOnLoginAction:", err);
+        console.warn('[SupabaseProvider] activateUserOnLoginAction:', err);
       }
       return wasInvited;
     };
@@ -197,7 +64,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       const normalizedEmail = email.toLowerCase().trim();
       console.log('[SupabaseProvider] Fetching profile for:', normalizedEmail, 'ID:', userId);
 
-      // Try to get profile by ID first
+      // Try to get profile by auth UUID
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
@@ -206,14 +73,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (profile && !profileError) {
         console.log('[SupabaseProvider] Profile found by ID:', profile.role);
-
         const wasInvite = await recordLoginAndActivate(profile.id, profile.status, normalizedEmail);
         if (wasInvite) profile.status = 'active';
-
         return profile;
       }
 
-      // If not found by ID, try to find by email (for pre-added users)
+      // Not found by UUID — check if a pre-created profile exists by email
       if (profileError) {
         console.log('[SupabaseProvider] Profile not found by ID, searching by email:', normalizedEmail);
 
@@ -226,12 +91,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         if (!emailError && existingByEmail) {
           console.log('[SupabaseProvider] Found profile by email, linking to auth ID:', userId);
 
-          // Update the pre-added profile with the real auth ID
+          // Update the pre-added profile with the real auth UUID
           const { data: updatedProfile, error: updateError } = await supabase
             .from('user_profiles')
             .update({
               id: userId,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
             .eq('email', existingByEmail.email)
             .select()
@@ -244,7 +109,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
               updatedProfile.status,
               normalizedEmail,
             );
-            if (wasInvite) updatedProfile.status = "active";
+            if (wasInvite) updatedProfile.status = 'active';
             return updatedProfile;
           }
 
@@ -254,12 +119,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             existingByEmail.status,
             normalizedEmail,
           );
-          if (wasInvite) existingByEmail.status = "active";
+          if (wasInvite) existingByEmail.status = 'active';
           return existingByEmail;
         }
       }
 
-      // No profile found - create new one
+      // No profile found — create a new one using the real auth UUID
       console.log('[SupabaseProvider] No profile found, creating new one');
       const { data: newProfile, error: createError } = await supabase
         .from('user_profiles')
@@ -277,7 +142,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (createError) {
         console.error('[SupabaseProvider] Error creating profile:', createError);
-        // Try once more with minimal data
+        // Try with minimal data
         const { data: minimalProfile } = await supabase
           .from('user_profiles')
           .insert([{
@@ -297,36 +162,42 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       console.error('[SupabaseProvider] Error fetching/creating profile:', err);
       return null;
     }
-  };
+  }, []);
 
-  // Listen for auth changes
+  const applyProfile = useCallback((profile: Record<string, unknown>) => {
+    setUser({
+      id: profile.id as string,
+      email: profile.email as string,
+      name: profile.name as string | undefined,
+      role: resolveUserRole(profile.role as string),
+      avatar: (profile.avatar_url as string | undefined) || (profile.avatar as string | undefined),
+      phone: profile.phone as string | undefined,
+      employeeId: profile.employee_id as string | undefined,
+      department: profile.department as string | undefined,
+    });
+    setRole(resolveUserRole(profile.role as string));
+  }, []);
+
+  // Listen for auth changes (single subscription)
   useEffect(() => {
-    // Initialize offline sync
     SyncManager.init();
+
+    let initialized = false;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const profile = await fetchUserProfile(session.user.id, session.user.email!);
         if (profile) {
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            name: profile.name,
-            role: resolveUserRole(profile.role),
-            avatar: profile.avatar_url || profile.avatar,
-            phone: profile.phone,
-            employeeId: profile.employee_id,
-            department: profile.department,
-          });
-          setRole(resolveUserRole(profile.role));
+          applyProfile(profile);
         } else {
-          // User profile deleted - sign out immediately
-          console.log('[SupabaseProvider] User profile not found, signing out deleted user');
-          await signOut();
+          console.log('[SupabaseProvider] No profile after auth state change — signing out');
+          await supabase.auth.signOut();
+          setUser(null);
+          setRole(null);
           toast({
-            title: "Account Deleted",
-            description: "Your account has been removed from the system.",
-            variant: "destructive"
+            title: 'Account Error',
+            description: 'Your user profile could not be found. Please contact your administrator.',
+            variant: 'destructive',
           });
         }
       } else {
@@ -334,32 +205,24 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         setRole(null);
       }
       setIsLoading(false);
+      initialized = true;
     });
 
-    // Check initial session
+    // Check the initial session in case onAuthStateChange fires late
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (initialized) return; // Already handled by onAuthStateChange
       if (session?.user) {
         const profile = await fetchUserProfile(session.user.id, session.user.email!);
         if (profile) {
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            name: profile.name,
-            role: resolveUserRole(profile.role),
-            avatar: profile.avatar_url || profile.avatar,
-            phone: profile.phone,
-            employeeId: profile.employee_id,
-            department: profile.department,
-          });
-          setRole(resolveUserRole(profile.role));
+          applyProfile(profile);
         } else {
-          // User profile deleted - sign out immediately
-          console.log('[SupabaseProvider] User profile not found on init, signing out deleted user');
-          await signOut();
+          await supabase.auth.signOut();
+          setUser(null);
+          setRole(null);
           toast({
-            title: "Account Deleted",
-            description: "Your account has been removed from the system.",
-            variant: "destructive"
+            title: 'Account Error',
+            description: 'Your user profile could not be found. Please contact your administrator.',
+            variant: 'destructive',
           });
         }
       }
@@ -367,18 +230,12 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserProfile, applyProfile]);
 
   // Periodic validation to catch deleted users during active sessions
   useEffect(() => {
     const validateUserExists = async () => {
       if (!user?.id) return;
-
-      const isBypassAdmin =
-        isPrimaryOwnerEmail(user.email) ||
-        user.role === 'ADMIN' ||
-        user.role === 'CEO';
-      if (isBypassAdmin) return;
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -388,24 +245,21 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (!profile) {
         console.log('[SupabaseProvider] User deleted during session, signing out');
-        await signOut();
+        await supabase.auth.signOut();
+        setUser(null);
+        setRole(null);
         toast({
-          title: "Account Deleted",
-          description: "Your account has been removed from the system.",
-          variant: "destructive"
+          title: 'Account Deleted',
+          description: 'Your account has been removed from the system.',
+          variant: 'destructive',
         });
       }
     };
 
-    // Check every 30 seconds and on visibility change
     const interval = setInterval(validateUserExists, 30000);
-
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        validateUserExists();
-      }
+      if (document.visibilityState === 'visible') validateUserExists();
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
@@ -418,19 +272,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       const profile = await fetchUserProfile(session.user.id, session.user.email!);
-      if (profile) {
-        setUser({
-          id: profile.id,
-          email: profile.email,
-          name: profile.name,
-          role: resolveUserRole(profile.role),
-          avatar: profile.avatar_url || profile.avatar,
-          phone: profile.phone,
-          employeeId: profile.employee_id,
-          department: profile.department,
-        });
-        setRole(resolveUserRole(profile.role));
-      }
+      if (profile) applyProfile(profile);
     }
   };
 
@@ -439,44 +281,16 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      // Admin auto-login with any password
-      const normalizedEmail = email.toLowerCase().trim();
-      if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
-        console.log('Admin login detected for:', email);
-        localStorage.setItem('admin_session', 'true');
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase().trim(),
+        password,
+      });
 
-        // Get saved role or default to ADMIN
-        const savedRole = localStorage.getItem('fleet_command_role') as UserRole | null;
-        const adminRole = resolveUserRole(savedRole || 'ADMIN', 'ADMIN');
-        const tempAdminUser = {
-          id: 'admin-straton', // Temporary ID, will be replaced with real UUID
-          email: ADMIN_EMAIL,
-          name: 'Straton Florentin Tesha',
-          role: adminRole
-        };
-        
-        // Sync to get real UUID from database
-        const realUuid = await syncAdminToSupabase(tempAdminUser);
-        
-        const adminUser = {
-          id: realUuid,
-          email: ADMIN_EMAIL,
-          name: 'Straton Florentin Tesha',
-          role: adminRole
-        };
-        setUser(adminUser);
-        setRole(adminRole);
-        console.log('Admin user set successfully with role:', adminRole);
-        return;
+      if (signInError) {
+        console.error('[SupabaseProvider] Supabase login error:', signInError);
+        throw signInError;
       }
 
-      // Use Supabase auth for all other users
-      console.log('Attempting Supabase login for:', email);
-      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        console.error('Supabase login error:', error);
-        throw error;
-      }
       if (signInData?.user?.email) {
         try {
           await activateUserOnLoginAction(signInData.user.id, signInData.user.email);
@@ -485,7 +299,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (err) {
-      console.error('Sign in error:', err);
+      console.error('[SupabaseProvider] Sign in error:', err);
       setError(err as Error);
       throw err;
     } finally {
@@ -499,16 +313,17 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       const normalizedEmail = email.toLowerCase().trim();
       console.log('[SupabaseProvider] Starting sign up for:', normalizedEmail);
 
-      // Check if user was pre-added by admin/HR/CEO in user_profiles securely bypassing RLS
+      // Verify user was pre-invited by admin/HR/CEO
       const pendingUser = await checkInviteAction(normalizedEmail);
 
       if (!pendingUser) {
         console.warn('[SupabaseProvider] Sign up blocked: No invitation found for', normalizedEmail);
-        throw new Error('You must be invited by an administrator before signing up. Please contact HR or your manager.');
+        throw new Error(
+          'You must be invited by an administrator before signing up. Please contact HR or your manager.',
+        );
       }
 
       console.log('[SupabaseProvider] Invitation found, creating Supabase auth account');
-      // Try Supabase auth
       const { data: { user: authUser }, error: signUpError } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
@@ -520,15 +335,15 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       }
 
       if (authUser) {
-        console.log('[SupabaseProvider] Auth account created, updating profile');
-        // Update the pre-created profile securely using Server Action to bypass RLS
+        console.log('[SupabaseProvider] Auth account created, linking profile');
         try {
           await linkUserProfileAction(normalizedEmail, authUser.id, name);
           console.log('[SupabaseProvider] Profile linked successfully via Server Action');
-        } catch (profileError: any) {
-          console.warn('[SupabaseProvider] Server-side profile link error:', profileError.message);
+        } catch (profileError: unknown) {
+          const msg = profileError instanceof Error ? profileError.message : String(profileError);
+          console.warn('[SupabaseProvider] Server-side profile link error:', msg);
 
-          // Verify if a database trigger (handle_new_user_signup) already linked it automatically
+          // Verify if a database trigger already linked it
           const { data: verifiedProfile } = await supabase
             .from('user_profiles')
             .select('id')
@@ -553,6 +368,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear any legacy localStorage keys that may have been set previously
     localStorage.removeItem('admin_session');
     localStorage.removeItem('fleet_command_role');
     await supabase.auth.signOut();
@@ -566,20 +382,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
   const updateRole = async (newRole: UserRole) => {
     if (!user) return;
 
-    // Admin can switch roles locally without database update
-    if (user.email && isPrimaryOwnerEmail(user.email)) {
-      setUser(prev => prev ? { ...prev, role: newRole } : null);
-      setRole(newRole);
-      return;
-    }
-
     const { error } = await supabase
       .from('user_profiles')
       .update({ role: newRole })
       .eq('id', user.id);
 
     if (error) {
-      console.error('Error updating role:', error);
+      console.error('[SupabaseProvider] Error updating role:', error);
       return;
     }
 
@@ -589,10 +398,9 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (updates: Partial<{ name: string; avatar: string; phone: string }>) => {
     if (!user) return;
-
     setIsLoading(true);
     try {
-      const dbUpdates: any = {};
+      const dbUpdates: Record<string, unknown> = {};
       if (updates.name) dbUpdates.name = updates.name;
       if (updates.avatar) dbUpdates.avatar_url = updates.avatar;
       if (updates.phone) dbUpdates.phone = updates.phone;
@@ -605,12 +413,11 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // Refresh local user state
       await refreshUser();
-      toast({ title: "Profile Updated", description: "Your changes have been saved." });
+      toast({ title: 'Profile Updated', description: 'Your changes have been saved.' });
     } catch (err) {
-      console.error('Error updating profile:', err);
-      toast({ title: "Error", description: "Failed to update profile", variant: "destructive" });
+      console.error('[SupabaseProvider] Error updating profile:', err);
+      toast({ title: 'Error', description: 'Failed to update profile', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -618,7 +425,6 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
 
   const uploadAvatar = async (file: File) => {
     if (!user) return;
-
     setIsLoading(true);
     try {
       const fileExt = file.name.split('.').pop();
@@ -638,29 +444,30 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       await updateProfile({ avatar: publicUrl });
       return publicUrl;
     } catch (err) {
-      console.error('Error uploading avatar:', err);
-      toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+      console.error('[SupabaseProvider] Error uploading avatar:', err);
+      toast({ title: 'Error', description: 'Failed to upload photo', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // changeRole for admin role switching without DB update
+  /**
+   * changeRole — allows users with ADMIN/CEO role (verified from database) to
+   * switch their UI view role WITHOUT changing the database.
+   * This is a legitimate preview/impersonation tool for admins only.
+   * Roles are resolved from the authenticated Supabase session, NOT localStorage.
+   */
   const changeRole = (newRole: UserRole) => {
     if (!user) return;
 
-    const isAdminUser =
-      isPrimaryOwnerEmail(user.email) ||
-      user.role === 'ADMIN' ||
-      user.role === 'CEO';
+    const isAdminUser = user.role === 'ADMIN' || user.role === 'CEO';
 
     if (!isAdminUser) {
       console.warn('[SupabaseProvider] changeRole ignored for non-admin user:', user.email);
       return;
     }
 
-    console.log('[SupabaseProvider] changeRole:', newRole);
-    localStorage.setItem('fleet_command_role', newRole);
+    console.log('[SupabaseProvider] changeRole (UI preview):', newRole);
     setRole(newRole);
     window.dispatchEvent(new Event('roleChanged'));
   };
