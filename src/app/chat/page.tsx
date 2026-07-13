@@ -245,7 +245,10 @@ export default function InternalChatPage() {
         dbUserId,
         profileCount: prof.data?.length,
         profiles: prof.data?.map(p => ({ id: p.id, name: p.name, role: p.role })),
-        currentUserProfile: prof.data?.find((p: any) => p.id === dbUserId)
+        currentUserProfile: prof.data?.find((p: any) => p.id === dbUserId),
+        allProfileIds: prof.data?.map(p => p.id),
+        duplicateIds: prof.data?.map(p => p.id).filter((id, index, arr) => arr.indexOf(id) !== index),
+        idMatchesCurrentUser: prof.data?.filter(p => p.id === dbUserId).length
       });
 
       // Memberships power direct-chat names and unread counts.
@@ -591,6 +594,21 @@ export default function InternalChatPage() {
       const mem = membersByChannel.get(c.id) ?? [];
       const other = mem.find((m) => m.user_id !== dbUserId);
       const mine = mem.find((m) => m.user_id === dbUserId);
+
+      // DIAGNOSTIC: Log channel member resolution
+      console.log('[CHAT DIAGNOSTIC] Channel display resolution:', {
+        channelId: c.id,
+        channelType: c.type,
+        dbUserId,
+        members: mem,
+        otherMember: other,
+        myMember: mine,
+        otherProfile: other ? profileById.get(other.user_id) : null,
+        myProfile: mine ? profileById.get(mine.user_id) : null,
+        memberCount: mem.length,
+        distinctUserIds: [...new Set(mem.map(m => m.user_id))]
+      });
+
       if (other && (mine || mem.length === 1)) {
         return { name: profileById.get(other.user_id)?.name ?? "Direct chat", isDirect: true };
       }
@@ -817,6 +835,21 @@ export default function InternalChatPage() {
       setNewChatOpen(false);
       return;
     }
+
+    // HARD ASSERTION: Block self-chat creation
+    if (person.id === dbUserId) {
+      const error = new Error("SELF_CHAT_BLOCKED: Cannot create direct chat with yourself");
+      console.error("[SELF_CHAT_BLOCKED]", {
+        currentAuthUid: dbUserId,
+        selectedProfileId: person.id,
+        selectedProfileName: person.name,
+        error: error.message
+      });
+      setError("Cannot create a conversation with yourself.");
+      setNewChatOpen(false);
+      return;
+    }
+
     setCreating(true);
     try {
       // DIAGNOSTIC: Log identity mapping
