@@ -973,6 +973,18 @@ export default function InternalChatPage() {
       return;
     }
 
+    // HARD ASSERTION: Block self-call
+    if (receiverId === dbUserId) {
+      const error = new Error("SELF_CALL_BLOCKED: Cannot call yourself");
+      console.error("[SELF_CALL_BLOCKED]", {
+        currentAuthUid: dbUserId,
+        receiverId,
+        error: error.message
+      });
+      setError("Cannot call yourself.");
+      return;
+    }
+
     if (!isWebRTCSupported()) {
       setError("Your browser does not support WebRTC calls.");
       return;
@@ -1370,7 +1382,19 @@ export default function InternalChatPage() {
                         : `${(membersByChannel.get(activeChannel.id) ?? []).length || "Team"} members`}
                     </p>
                   </div>
-                  {activeDisplay.isDirect && otherUserInDirectChat && (
+                  {(() => {
+                    // DIAGNOSTIC: Log call button visibility condition
+                    console.log('[CALL BUTTONS DIAGNOSTIC]', {
+                      activeDisplay,
+                      isDirect: activeDisplay?.isDirect,
+                      otherUserInDirectChat,
+                      otherUserId: otherUserInDirectChat?.id,
+                      otherUserName: otherUserInDirectChat?.name,
+                      dbUserId,
+                      shouldShow: activeDisplay?.isDirect && otherUserInDirectChat
+                    });
+                    return activeDisplay?.isDirect && otherUserInDirectChat;
+                  })() && (
                     <div className="flex items-center gap-2">
                       <Button
                         size="icon"
@@ -1378,6 +1402,7 @@ export default function InternalChatPage() {
                         className="h-8 w-8"
                         onClick={() => startCall('voice', otherUserInDirectChat.id)}
                         title="Voice call"
+                        aria-label="Start voice call"
                       >
                         <Phone className="h-4 w-4" />
                       </Button>
@@ -1387,6 +1412,7 @@ export default function InternalChatPage() {
                         className="h-8 w-8"
                         onClick={() => startCall('video', otherUserInDirectChat.id)}
                         title="Video call"
+                        aria-label="Start video call"
                       >
                         <Video className="h-4 w-4" />
                       </Button>
