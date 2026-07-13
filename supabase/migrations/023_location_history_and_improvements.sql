@@ -2,6 +2,23 @@
 -- Calvary Connect — Migration 023: Location History & GPS Improvements
 -- ============================================================================
 
+-- 0. Create driver_locations table if it doesn't exist
+CREATE TABLE IF NOT EXISTS driver_locations (
+  driver_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  latitude double precision NOT NULL,
+  longitude double precision NOT NULL,
+  accuracy double precision,
+  altitude double precision,
+  altitude_accuracy double precision,
+  speed double precision,
+  heading double precision,
+  is_active boolean DEFAULT true,
+  last_updated timestamptz NOT NULL DEFAULT now(),
+  vehicle_type text DEFAULT 'truck',
+  CONSTRAINT dl_valid_latitude CHECK (latitude BETWEEN -90 AND 90),
+  CONSTRAINT dl_valid_longitude CHECK (longitude BETWEEN -180 AND 180)
+);
+
 -- 1. Add accuracy column to driver_locations if missing
 DO $$ BEGIN
   ALTER TABLE driver_locations ADD COLUMN IF NOT EXISTS accuracy double precision;
@@ -39,18 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_dlh_trip
 
 
 
--- 4. Add validation constraints to driver_locations
-DO $$ BEGIN
-  ALTER TABLE driver_locations
-    ADD CONSTRAINT dl_valid_latitude CHECK (latitude BETWEEN -90 AND 90);
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  ALTER TABLE driver_locations
-    ADD CONSTRAINT dl_valid_longitude CHECK (longitude BETWEEN -180 AND 180);
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+-- 4. Validation constraints already added in CREATE TABLE above
 
 -- 5. Enable RLS on location history
 ALTER TABLE driver_location_history ENABLE ROW LEVEL SECURITY;
