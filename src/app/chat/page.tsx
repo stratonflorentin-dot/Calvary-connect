@@ -240,6 +240,14 @@ export default function InternalChatPage() {
       setChannels((ch.data ?? []) as Channel[]);
       setProfiles(prof.data ?? []);
 
+      // DIAGNOSTIC: Log profile identity mapping
+      console.log('[CHAT DIAGNOSTIC] Loaded profiles:', {
+        dbUserId,
+        profileCount: prof.data?.length,
+        profiles: prof.data?.map(p => ({ id: p.id, name: p.name, role: p.role })),
+        currentUserProfile: prof.data?.find((p: any) => p.id === dbUserId)
+      });
+
       // Memberships power direct-chat names and unread counts.
       const mem = await supabase.from("chat_channel_members").select("channel_id, user_id, last_read_at");
       if (mem.error) {
@@ -811,10 +819,30 @@ export default function InternalChatPage() {
     }
     setCreating(true);
     try {
-      // Use the database RPC to find or create the direct chat transactionally.
-      // The function resolves auth.uid() internally — no need to pass current user ID.
+      // DIAGNOSTIC: Log identity mapping
+      console.log('[CHAT DIAGNOSTIC] Starting direct chat with:', {
+        currentAuthUid: dbUserId,
+        selectedProfileId: person.id,
+        selectedProfileName: person.name,
+        selectedProfileRole: person.role,
+        rpcName: 'find_or_create_direct_chat',
+        rpcPayload: { p_other_user_id: person.id }
+      });
+
+      // CRITICAL FIX: The RPC expects auth.users.id, not user_profiles.id
+      // Since user_profiles.id should match auth.users.id after proper linking,
+      // we pass person.id directly. If this fails, it indicates a profile linking issue.
       const { data: channelId, error: fnErr } = await supabase.rpc('find_or_create_direct_chat', {
         p_other_user_id: person.id
+      });
+
+      console.log('[CHAT DIAGNOSTIC] RPC response:', {
+        channelId,
+        error: fnErr,
+        errorCode: fnErr?.code,
+        errorMessage: fnErr?.message,
+        errorDetails: fnErr?.details,
+        errorHint: fnErr?.hint
       });
       
       if (fnErr) {
