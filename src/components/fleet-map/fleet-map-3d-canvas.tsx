@@ -30,6 +30,9 @@ const MAJOR_CITIES = [
 const MAP_STYLE_URL =
   "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
+// Fallback style if primary fails - OSM raster tiles via MapLibre
+const FALLBACK_STYLE_URL = "https://demotiles.maplibre.org/style.json";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type FleetMapCanvasHandle = {
   zoomIn: () => void;
@@ -253,137 +256,171 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       const el = containerRef.current;
       if (!el || mapRef.current) return;
 
-      const map = new maplibregl.Map({
-        container: el,
-        style: MAP_STYLE_URL,
-        center: [defaultCenter[1], defaultCenter[0]], // [lng, lat]
-        zoom: locations.length > 0 ? 10 : 6.5,
-        pitch: 48,
-        bearing: 0,
-      });
+      let mapInstance: maplibregl.Map | null = null;
+      let usingFallback = false;
 
-      mapRef.current = map;
+      const initMap = (styleUrl: string, isFallback: boolean = false) => {
+        console.log(`[MapLibre] Initializing map with ${isFallback ? 'fallback' : 'primary'} style:`, styleUrl);
 
-      map.addControl(
-        new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }),
-        "top-left",
-      );
-      map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+        const map = new maplibregl.Map({
+          container: el,
+          style: styleUrl,
+          center: [defaultCenter[1], defaultCenter[0]], // [lng, lat]
+          zoom: locations.length > 0 ? 10 : 6.5,
+          pitch: isFallback ? 0 : 48, // Disable 3D for fallback
+          bearing: 0,
+        });
 
-      map.on("error", (e) => {
-        console.error("[MapLibre]", e);
-        setLoadErr("Map tiles failed to load. Check your connection.");
-      });
+        mapRef.current = map;
+        mapInstance = map;
+        usingFallback = isFallback;
 
-      map.on("load", () => {
-        mapReady.current = true;
+        map.addControl(
+          new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }),
+          "top-left",
+        );
+        map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
 
-        // 3D building extrusions
-        const layers = map.getStyle()?.layers ?? [];
-        let labelId = "";
-        for (const layer of layers) {
-          if (layer.type === "symbol" && (layer.layout as any)?.["text-field"]) {
-            labelId = layer.id;
-            break;
+        map.on("error", (e: any) => {
+          console.error("[MapLibre Error]", {
+            error: e.error,
+            errorMessage: e.error?.message,
+            sourceId: e.source?.id,
+            sourceType: e.source?.type,
+            tile: e.tile,
+            status: e.status,
+            url: e.url,
+            originalEvent: e
+          });
+
+          // If primary style fails and we haven't tried fallback yet, try it
+          if (!usingFallback && !e.source?.id) {
+            console.warn("[MapLibre] Primary style failed, trying fallback...");
+            if (mapInstance) {
+              mapInstance.remove();
+              mapRef.current = null;
+            }
+            initMap(FALLBACK_STYLE_URL, true);
+          } else {
+            setLoadErr(`Map error: ${e.error?.message || 'Unknown error'}. Check console for details.`);
           }
-        }
-        try {
-          map.addLayer(
-            {
-              id: "3d-buildings",
-              source: "openmaptiles",
-              "source-layer": "building",
-              type: "fill-extrusion",
-              minzoom: 14,
-              paint: {
-                "fill-extrusion-color": [
-                  "interpolate", ["linear"],
-                  ["coalesce", ["get", "height"], 0],
-                  0,   "#dde6f0",
-                  15,  "#c8d8e8",
-                  40,  "#aabfd4",
-                  80,  "#8aa5bc",
-                  200, "#6b8ea8",
-                ],
-                "fill-extrusion-height": [
-                  "interpolate", ["linear"], ["zoom"],
-                  14, 0,
-                  14.1, ["coalesce", ["get", "render_height"], ["get", "height"], 10],
-                ],
-                "fill-extrusion-base": [
-                  "interpolate", ["linear"], ["zoom"],
-                  14, 0,
-                  14.1, ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
-                ],
-                "fill-extrusion-opacity": 0.72,
-              },
+        });
+
+        map.on("load", () => {
+          mapReady.current = true;
+
+          // 3D building extrusions (only for primary style)
+          if (!isFallback) {
+            const layers = map.getStyle()?.layers ?? [];
+            let labelId = "";
+            for (const layer of layers) {
+              if (layer.type === "symbol" && (layer.layout as any)?.["text-field"]) {
+                labelId = layer.id;
+                break;
+              }
+            }
+            try {
+              map.addLayer(
+                {
+                  id: "3d-buildings",
+                  source: "openmaptiles",
+                  "source-layer": "building",
+                  type: "fill-extrusion",
+                  minzoom: 14,
+                  paint: {
+                    "fill-extrusion-color": [
+                      "interpolate", ["linear"],
+                      ["coalesce", ["get", "height"], 0],
+                      0,   "#dde6f0",
+                      15,  "#c8d8e8",
+                      40,  "#aabfd4",
+                      80,  "#8aa5bc",
+                      200, "#6b8ea8",
+                    ],
+                    "fill-extrusion-height": [
+                      "interpolate", ["linear"], ["zoom"],
+                      14, 0,
+                      14.1, ["coalesce", ["get", "render_height"], ["get", "height"], 10],
+                    ],
+                    "fill-extrusion-base": [
+                      "interpolate", ["linear"], ["zoom"],
+                      14, 0,
+                      14.1, ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
+                    ],
+                    "fill-extrusion-opacity": 0.72,
+                  },
+                },
+                labelId || undefined,
+              );
+            } catch (e) {
+              console.warn("[3D buildings]", e);
+            }
+          }
+
+          // GPS accuracy circle layers
+          map.addSource("accuracy-src", {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: "accuracy-fill",
+            type: "fill",
+            source: "accuracy-src",
+            paint: { "fill-color": "#0284c7", "fill-opacity": 0.12 },
+          });
+          map.addLayer({
+            id: "accuracy-line",
+            type: "line",
+            source: "accuracy-src",
+            paint: {
+              "line-color": "#0284c7",
+              "line-width": 1.5,
+              "line-dasharray": [2, 2],
             },
-            labelId || undefined,
-          );
-        } catch (e) {
-          console.warn("[3D buildings]", e);
-        }
+          });
 
-        // GPS accuracy circle layers
-        map.addSource("accuracy-src", {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
-        map.addLayer({
-          id: "accuracy-fill",
-          type: "fill",
-          source: "accuracy-src",
-          paint: { "fill-color": "#0284c7", "fill-opacity": 0.12 },
-        });
-        map.addLayer({
-          id: "accuracy-line",
-          type: "line",
-          source: "accuracy-src",
-          paint: {
-            "line-color": "#0284c7",
-            "line-width": 1.5,
-            "line-dasharray": [2, 2],
-          },
-        });
+          // Static markers — border points
+          BORDER_POINTS.forEach((p) => {
+            const el = document.createElement("div");
+            el.innerHTML = `<div style="width:26px;height:26px;border-radius:50%;background:#0ea5e9;
+              border:2px solid #fff;display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:10px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.2);
+              font-family:system-ui,sans-serif;">${p.name[0]}</div>`;
+            const popup = new maplibregl.Popup({ offset: 12 }).setHTML(
+              `<p style="font-family:system-ui;margin:0;font-size:12px;font-weight:700;
+                color:#0f172a;">${p.name} Border</p>`,
+            );
+            staticRef.current.push(
+              new maplibregl.Marker({ element: el })
+                .setLngLat([p.coords[1], p.coords[0]])
+                .setPopup(popup)
+                .addTo(map),
+            );
+          });
 
-        // Static markers — border points
-        BORDER_POINTS.forEach((p) => {
-          const el = document.createElement("div");
-          el.innerHTML = `<div style="width:26px;height:26px;border-radius:50%;background:#0ea5e9;
-            border:2px solid #fff;display:flex;align-items:center;justify-content:center;
-            color:#fff;font-size:10px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,0.2);
-            font-family:system-ui,sans-serif;">${p.name[0]}</div>`;
-          const popup = new maplibregl.Popup({ offset: 12 }).setHTML(
-            `<p style="font-family:system-ui;margin:0;font-size:12px;font-weight:700;
-              color:#0f172a;">${p.name} Border</p>`,
-          );
-          staticRef.current.push(
-            new maplibregl.Marker({ element: el })
-              .setLngLat([p.coords[1], p.coords[0]])
-              .setPopup(popup)
-              .addTo(map),
-          );
+          // Static markers — cities
+          MAJOR_CITIES.forEach((c) => {
+            const el = document.createElement("div");
+            el.innerHTML = `<div style="width:22px;height:22px;border-radius:50%;background:#6366f1;
+              border:2px solid #fff;display:flex;align-items:center;justify-content:center;
+              color:#fff;font-size:9px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,0.15);
+              font-family:system-ui,sans-serif;">${c.name[0]}</div>`;
+            const popup = new maplibregl.Popup({ offset: 10 }).setHTML(
+              `<p style="font-family:system-ui;margin:0;font-size:12px;font-weight:700;
+                color:#0f172a;">${c.name}</p>`,
+            );
+            staticRef.current.push(
+              new maplibregl.Marker({ element: el })
+                .setLngLat([c.coords[1], c.coords[0]])
+                .setPopup(popup)
+                .addTo(map),
+            );
+          });
         });
+      };
 
-        // Static markers — cities
-        MAJOR_CITIES.forEach((c) => {
-          const el = document.createElement("div");
-          el.innerHTML = `<div style="width:22px;height:22px;border-radius:50%;background:#6366f1;
-            border:2px solid #fff;display:flex;align-items:center;justify-content:center;
-            color:#fff;font-size:9px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,0.15);
-            font-family:system-ui,sans-serif;">${c.name[0]}</div>`;
-          const popup = new maplibregl.Popup({ offset: 10 }).setHTML(
-            `<p style="font-family:system-ui;margin:0;font-size:12px;font-weight:700;
-              color:#0f172a;">${c.name}</p>`,
-          );
-          staticRef.current.push(
-            new maplibregl.Marker({ element: el })
-              .setLngLat([c.coords[1], c.coords[0]])
-              .setPopup(popup)
-              .addTo(map),
-          );
-        });
-      });
+      // Initialize map with primary style
+      initMap(MAP_STYLE_URL, false);
 
       return () => {
         staticRef.current.forEach((m) => m.remove());
