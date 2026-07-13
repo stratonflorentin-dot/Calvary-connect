@@ -56,11 +56,15 @@ export function useFleetMapLocations() {
           latitude: loc.latitude,
           longitude: loc.longitude,
           speed: loc.speed,
-          status: loc.isOnline ? "active" : "inactive",
+          status: loc.status,
           isOnline: loc.isOnline,
           vehiclePlate: loc.vehiclePlate,
           lastUpdate: loc.lastUpdate,
           heading: loc.heading,
+          accuracy: loc.accuracy,
+          altitude: loc.altitude,
+          altitudeAccuracy: loc.altitudeAccuracy,
+          vehicleType: loc.vehicleType,
         })),
       );
     } catch (err) {

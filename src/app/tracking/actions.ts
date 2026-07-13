@@ -114,12 +114,18 @@ async function findDriverProfile(
   return { ...byEmail, id: authUserId };
 }
 
+import { isValidCoordinate } from "@/lib/geo-utils";
+
 export type DriverLocationPayload = {
   latitude: number;
   longitude: number;
   accuracy?: number;
+  altitude?: number | null;
+  altitude_accuracy?: number | null;
   speed?: number | null;
   heading?: number | null;
+  trip_id?: string | null;
+  vehicle_type?: string | null;
   is_active?: boolean;
 };
 
@@ -131,7 +137,12 @@ export type MapDriverLocation = {
   longitude: number;
   heading: number;
   speed: number;
+  accuracy: number | null;
+  altitude: number | null;
+  altitudeAccuracy: number | null;
+  vehicleType: string;
   isOnline: boolean;
+  status: "LIVE" | "DELAYED" | "STALE" | "OFFLINE";
   lastUpdate: string;
   vehiclePlate: string;
   hasGps: boolean;
@@ -151,20 +162,24 @@ export async function upsertDriverLocationAction(
     throw new Error("Only drivers can report location");
   }
 
-  const row = {
-    driver_id: user.id,
-    latitude: payload.latitude,
-    longitude: payload.longitude,
-    accuracy: payload.accuracy ?? null,
-    speed: payload.speed ?? null,
-    heading: payload.heading ?? null,
-    is_active: payload.is_active ?? true,
-    last_updated: new Date().toISOString(),
-  };
+  // 1. Coordinate range and Null Island validation
+  if (!isValidCoordinate(payload.latitude, payload.longitude)) {
+    throw new Error(`Invalid GPS coordinates rejected: ${payload.latitude}, ${payload.longitude}`);
+  }
 
-  const { error } = await admin
-    .from("driver_locations")
-    .upsert(row, { onConflict: "driver_id" });
+  // 2. Call secure stored procedure to update current location and insert history row
+  const { error } = await admin.rpc("upsert_driver_location", {
+    p_driver_id: user.id,
+    p_latitude: payload.latitude,
+    p_longitude: payload.longitude,
+    p_accuracy: payload.accuracy ?? null,
+    p_altitude: payload.altitude ?? null,
+    p_altitude_accuracy: payload.altitude_accuracy ?? null,
+    p_speed: payload.speed ?? null,
+    p_heading: payload.heading ?? null,
+    p_trip_id: payload.trip_id ?? null,
+    p_vehicle_type: payload.vehicle_type || "truck",
+  });
 
   if (error) throw new Error(error.message);
   return true;
@@ -172,7 +187,7 @@ export async function upsertDriverLocationAction(
 
 function buildLocationRows(
   admin: ReturnType<typeof getAdminClient>,
-  locationsData: Record<string, unknown>[],
+  locationsData: Record<string, any>[],
   driverProfiles: { id: string; name?: string; email?: string; role?: string }[],
   authByEmail: Map<string, string>,
 ) {
@@ -197,15 +212,28 @@ function buildLocationRows(
   for (const loc of locationsData) {
     const lat = Number(loc.latitude);
     const lng = Number(loc.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-    if (lat === 0 && lng === 0) continue;
+    if (!isValidCoordinate(lat, lng)) continue;
 
     const driverId = String(loc.driver_id);
     const driverName =
       nameByDriverId.get(driverId) || `Driver ${driverId.slice(0, 8)}`;
 
-    const staleMs = Date.now() - new Date(String(loc.last_updated || 0)).getTime();
-    const isOnline = !!loc.is_active && staleMs < 20 * 60 * 1000;
+    const lastUpdatedTime = new Date(String(loc.last_updated || 0)).getTime();
+    const staleMs = Date.now() - lastUpdatedTime;
+    
+    // Freshness status rules
+    let status: "LIVE" | "DELAYED" | "STALE" | "OFFLINE" = "OFFLINE";
+    if (loc.is_active) {
+      if (staleMs <= 30000) {
+        status = "LIVE";
+      } else if (staleMs <= 120000) {
+        status = "DELAYED";
+      } else if (staleMs <= 600000) {
+        status = "STALE";
+      }
+    }
+    
+    const isOnline = status === "LIVE" || status === "DELAYED";
 
     if (seenDriverIds.has(driverId)) continue;
     seenDriverIds.add(driverId);
@@ -218,7 +246,12 @@ function buildLocationRows(
       longitude: lng,
       heading: Number(loc.heading) || 0,
       speed: Number(loc.speed) || 0,
+      accuracy: loc.accuracy !== null ? Number(loc.accuracy) : null,
+      altitude: loc.altitude !== null ? Number(loc.altitude) : null,
+      altitudeAccuracy: loc.altitude_accuracy !== null ? Number(loc.altitude_accuracy) : null,
+      vehicleType: String(loc.vehicle_type || "truck"),
       isOnline,
+      status,
       lastUpdate: String(loc.last_updated || ""),
       vehiclePlate: "—",
       hasGps: true,
@@ -227,6 +260,7 @@ function buildLocationRows(
 
   return { locations };
 }
+
 
 async function fetchMapLocationsInternal(
   admin: ReturnType<typeof getAdminClient>,

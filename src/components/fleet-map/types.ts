@@ -4,11 +4,15 @@ export interface FleetMapDriver {
   latitude: number;
   longitude: number;
   speed: number;
-  status: string;
+  status: "LIVE" | "DELAYED" | "STALE" | "OFFLINE";
   isOnline: boolean;
   vehiclePlate: string;
   lastUpdate: string;
   heading?: number;
+  accuracy: number | null;
+  altitude: number | null;
+  altitudeAccuracy: number | null;
+  vehicleType: string;
 }
 
 export interface FleetMapViewProps {

@@ -36,14 +36,14 @@ import IconFallback from '@/components/icons/IconFallback.client';
 
 const FleetMapCanvas = dynamic(
   () =>
-    import("@/components/fleet-map/fleet-map-canvas").then((m) => m.FleetMapCanvas),
+    import("@/components/fleet-map/fleet-map-3d-canvas").then((m) => m.FleetMap3DCanvas),
   {
     ssr: false,
     loading: () => (
       <div className="absolute inset-0 flex items-center justify-center bg-muted/5">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm font-medium text-primary">Loading fleet map…</p>
+          <p className="text-sm font-medium text-primary">Loading 3D vector map…</p>
         </div>
       </div>
     ),
@@ -161,6 +161,22 @@ function DriverDetailPanel({
           </div>
         </div>
 
+        {/* GPS Metadata readouts */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-muted/50 p-3 border border-border">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground block mb-1">GPS Accuracy</span>
+            <p className="text-xs font-bold text-primary">
+              {driver.accuracy ? `±${Math.round(driver.accuracy)} m` : "—"}
+            </p>
+          </div>
+          <div className="rounded-xl bg-muted/50 p-3 border border-border">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground block mb-1">Altitude</span>
+            <p className="text-xs font-bold text-primary">
+              {driver.altitude !== null ? `${Math.round(driver.altitude)} m` : "—"}
+            </p>
+          </div>
+        </div>
+
         <div className="rounded-xl bg-muted/50 p-3 border border-border">
           <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
             Coordinates
@@ -254,6 +270,7 @@ export default function FleetMapView({
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"overview" | "follow" | "follow-3d" | "north-up" | "heading-up">("follow-3d");
 
   // Removed auto-selection to allow users to see the full map on load
 
@@ -278,7 +295,7 @@ export default function FleetMapView({
   const handleSelect = useCallback((driver: FleetMapDriver) => {
     setSelectedId(driver.id);
     setMobileSheetOpen(false);
-    canvasRef.current?.flyToDriver(driver.latitude, driver.longitude, 14);
+    canvasRef.current?.flyToDriver(driver.latitude, driver.longitude, 14.5);
   }, []);
 
   return (
@@ -289,6 +306,7 @@ export default function FleetMapView({
         defaultCenter={defaultCenter}
         selectedId={selectedId}
         onSelectDriver={handleSelect}
+        cameraMode={cameraMode}
       />
 
       {/* Top bar — search & live stats */}
@@ -415,27 +433,59 @@ export default function FleetMapView({
         </AnimatePresence>
       </div>
 
-      {/* Map controls */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-2 pointer-events-auto">
-        {[
-          { icon: ZoomIn, action: () => canvasRef.current?.zoomIn() },
-          { icon: ZoomOut, action: () => canvasRef.current?.zoomOut() },
-          { icon: LocateFixed, action: () => canvasRef.current?.fitDrivers() },
-        ].map(({ icon: Icon, action }, i) => (
+      {/* Map Controls & Camera modes */}
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-3 pointer-events-auto">
+        {/* Navigation & Zoom controls */}
+        <div className="flex flex-col gap-1.5">
           <Button
-            key={i}
             variant="outline"
             size="icon"
-            className={cn(
-              glass,
-              "h-11 w-11 rounded-xl border-0 hover:scale-105 active:scale-95 transition-transform",
-              i === 2 && "bg-[#2952A3] text-white hover:bg-[#1e3a5f] hover:text-white",
-            )}
-            onClick={action}
+            className={cn(glass, "h-10 w-10 rounded-xl border-0 hover:scale-105 active:scale-95 transition-all shadow-md")}
+            onClick={() => canvasRef.current?.zoomIn()}
           >
-            <Icon className="h-5 w-5" />
+            <ZoomIn className="h-4.5 w-4.5" />
           </Button>
-        ))}
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(glass, "h-10 w-10 rounded-xl border-0 hover:scale-105 active:scale-95 transition-all shadow-md")}
+            onClick={() => canvasRef.current?.zoomOut()}
+          >
+            <ZoomOut className="h-4.5 w-4.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(glass, "h-10 w-10 rounded-xl border-0 hover:scale-105 active:scale-95 transition-all bg-[#2952A3] text-white hover:bg-[#1e3a5f] hover:text-white shadow-md")}
+            onClick={() => canvasRef.current?.fitDrivers()}
+          >
+            <LocateFixed className="h-4.5 w-4.5" />
+          </Button>
+        </div>
+
+        {/* 3D Smart Camera Mode Controls */}
+        <div className={cn(glass, "flex flex-col gap-1.5 p-1 rounded-xl shadow-md")}>
+          <p className="text-[7.5px] font-extrabold text-center uppercase tracking-wider text-muted-foreground pt-1 pb-0.5">Cam</p>
+          {[
+            { mode: "follow-3d", label: "3D Follow", icon: Navigation },
+            { mode: "follow", label: "2D Follow", icon: Crosshair },
+            { mode: "overview", label: "Overview", icon: MapPin },
+          ].map(({ mode, label, icon: Icon }) => (
+            <Button
+              key={mode}
+              variant={cameraMode === mode ? "default" : "ghost"}
+              size="icon"
+              title={label}
+              className={cn(
+                "h-8 w-8 rounded-lg transition-all",
+                cameraMode === mode ? "bg-[#2952A3] text-white hover:bg-[#1e3a5f]" : "text-muted-foreground hover:bg-muted"
+              )}
+              onClick={() => setCameraMode(mode as any)}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Bottom — driver list + mobile legend */}
