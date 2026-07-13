@@ -83,6 +83,10 @@ interface Member {
 
 interface Profile {
   id: string;
+  uid?: string | null;
+  user_id?: string | null;
+  auth_id?: string | null;
+  auth_user_id?: string | null;
   name: string | null;
   role?: string | null;
   presence_status?: "online" | "away" | "offline";
@@ -109,6 +113,18 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 function initials(name?: string | null) {
   if (!name) return "?";
   return name.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function resolveProfileUserId(profile?: Partial<Profile> | null): string | null {
+  const candidates = [
+    profile?.id,
+    profile?.uid,
+    (profile as Partial<Profile> & { user_id?: string | null })?.user_id,
+    (profile as Partial<Profile> & { auth_id?: string | null })?.auth_id,
+    (profile as Partial<Profile> & { auth_user_id?: string | null })?.auth_user_id,
+  ];
+
+  return candidates.find((value): value is string => typeof value === "string" && value.trim().length > 0) ?? null;
 }
 
 function dayLabel(date: Date) {
@@ -151,7 +167,7 @@ export default function InternalChatPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [recentMessages, setRecentMessages] = useState<Message[]>([]);
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
-  
+
   // Call state
   const [activeCall, setActiveCall] = useState<CallSession | null>(null);
   const [incomingCall, setIncomingCall] = useState<CallSession | null>(null);
@@ -222,7 +238,7 @@ export default function InternalChatPage() {
     try {
       const [ch, prof] = await Promise.all([
         supabase.from("chat_channels").select("*").order("created_at", { ascending: false }),
-        supabase.from("user_profiles").select("id, name, role, presence_status, last_seen_at").order("name"),
+        supabase.from("user_profiles").select("id, uid, name, role, presence_status, last_seen_at").order("name"),
       ]);
       if (ch.error) {
         setError("Unable to load conversations.");
@@ -375,7 +391,7 @@ export default function InternalChatPage() {
     const profilesChannel = supabase
       .channel("profiles_presence")
       .on("postgres_changes", { event: "*", schema: "public", table: "user_profiles" }, async () => {
-        const { data } = await supabase.from("user_profiles").select("id, name, role, presence_status, last_seen_at").order("name");
+        const { data } = await supabase.from("user_profiles").select("id, uid, user_id, auth_id, auth_user_id, name, role, presence_status, last_seen_at").order("name");
         setProfiles(data ?? []);
       })
       .subscribe();
@@ -515,12 +531,15 @@ export default function InternalChatPage() {
       supabase.removeChannel(callsChannel);
       supabase.removeChannel(signalingChannel);
     };
-  // Only re-subscribe when dbUserId changes — refs handle stale closures for call/webrtc state
+    // Only re-subscribe when dbUserId changes — refs handle stale closures for call/webrtc state
   }, [dbUserId]);
 
   const profileById = useMemo(() => {
     const m = new Map<string, Profile>();
-    for (const p of profiles) m.set(p.id, p);
+    for (const p of profiles) {
+      const ids = [p.id, p.uid, (p as Profile & { user_id?: string | null }).user_id, (p as Profile & { auth_id?: string | null }).auth_id, (p as Profile & { auth_user_id?: string | null }).auth_user_id].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+      for (const id of ids) m.set(id, p);
+    }
     return m;
   }, [profiles]);
 
@@ -695,7 +714,7 @@ export default function InternalChatPage() {
     setReplyToMessage(null); // Clear reply after sending
     const attachmentsToSend = [...pendingAttachments];
     setPendingAttachments([]); // Clear pending
-    
+
     const optimistic: Message = {
       id: `tmp-${Date.now()}`,
       channel_id: activeChannel.id,
@@ -728,9 +747,9 @@ export default function InternalChatPage() {
 
   const toggleReaction = async (messageId: string, emoji: string) => {
     if (!dbUserId) return;
-    
+
     const existingReaction = reactions.find(r => r.message_id === messageId && r.user_id === dbUserId && r.emoji === emoji);
-    
+
     if (existingReaction) {
       // Remove reaction
       await supabase.from("chat_reactions").delete().match({ id: existingReaction.id });
@@ -836,12 +855,19 @@ export default function InternalChatPage() {
       return;
     }
 
+    const recipientId = resolveProfileUserId(person);
+    if (!recipientId) {
+      setError("Unable to resolve the selected colleague's account.");
+      setNewChatOpen(false);
+      return;
+    }
+
     // HARD ASSERTION: Block self-chat creation
-    if (person.id === dbUserId) {
+    if (recipientId === dbUserId) {
       const error = new Error("SELF_CHAT_BLOCKED: Cannot create direct chat with yourself");
       console.error("[SELF_CHAT_BLOCKED]", {
         currentAuthUid: dbUserId,
-        selectedProfileId: person.id,
+        selectedProfileId: recipientId,
         selectedProfileName: person.name,
         error: error.message
       });
@@ -856,17 +882,15 @@ export default function InternalChatPage() {
       console.log('[CHAT DIAGNOSTIC] Starting direct chat with:', {
         currentAuthUid: dbUserId,
         selectedProfileId: person.id,
+        resolvedRecipientId: recipientId,
         selectedProfileName: person.name,
         selectedProfileRole: person.role,
         rpcName: 'find_or_create_direct_chat',
-        rpcPayload: { p_other_user_id: person.id }
+        rpcPayload: { p_other_user_id: recipientId }
       });
 
-      // CRITICAL FIX: The RPC expects auth.users.id, not user_profiles.id
-      // Since user_profiles.id should match auth.users.id after proper linking,
-      // we pass person.id directly. If this fails, it indicates a profile linking issue.
       const { data: channelId, error: fnErr } = await supabase.rpc('find_or_create_direct_chat', {
-        p_other_user_id: person.id
+        p_other_user_id: recipientId
       });
 
       console.log('[CHAT DIAGNOSTIC] RPC response:', {
@@ -877,26 +901,26 @@ export default function InternalChatPage() {
         errorDetails: fnErr?.details,
         errorHint: fnErr?.hint
       });
-      
+
       if (fnErr) {
         setError("Unable to start conversation.");
         console.error("Direct chat error:", fnErr);
         throw fnErr;
       }
-      
+
       // Fetch the channel details
       const { data: ch, error: chErr } = await supabase
         .from("chat_channels")
         .select("*")
         .eq("id", channelId)
         .maybeSingle();
-      
+
       if (chErr) {
         setError("Unable to load conversation.");
         console.error("Channel load error:", chErr);
         throw chErr;
       }
-      
+
       if (!ch) {
         setError("Conversation not found. Please try again.");
         console.error("Channel not found after creation:", channelId);
@@ -904,10 +928,10 @@ export default function InternalChatPage() {
         setNewChatOpen(false);
         return;
       }
-      
+
       // Refresh channels and members
       await loadAll();
-      
+
       setNewChatOpen(false);
       openChannel(ch as Channel);
     } catch (err: any) {
@@ -929,31 +953,31 @@ export default function InternalChatPage() {
         .insert({ name, type: "group", created_by: dbUserId })
         .select()
         .maybeSingle();
-      
+
       if (dbErr) {
         setError("Unable to create channel.");
         console.error("Channel creation error:", dbErr);
         throw dbErr;
       }
-      
+
       if (!data) {
         setError("Channel creation failed. Please try again.");
         console.error("Channel not created");
         return;
       }
-      
+
       // Add creator as member
       const { error: memErr } = await supabase.from("chat_channel_members").insert({
         channel_id: data.id,
         user_id: dbUserId
       });
-      
+
       if (memErr) {
         setError("Unable to add you to the channel.");
         console.error("Member addition error:", memErr);
         throw memErr;
       }
-      
+
       setChannelNameDraft("");
       setNewChatOpen(false);
       await loadAll();
@@ -1219,7 +1243,7 @@ export default function InternalChatPage() {
   const people = useMemo(() => {
     const q = peopleSearch.trim().toLowerCase();
     return profiles
-      .filter((p) => p.id !== dbUserId)
+      .filter((p) => resolveProfileUserId(p) !== dbUserId)
       .filter((p) => !q || (p.name ?? "").toLowerCase().includes(q));
   }, [profiles, peopleSearch, dbUserId]);
 
@@ -1377,8 +1401,8 @@ export default function InternalChatPage() {
                     <h2 className="text-sm font-black text-foreground truncate">{activeDisplay.name}</h2>
                     <p className="text-[10px] text-muted-foreground">
                       {activeDisplay.isDirect
-                        ? (otherUserInDirectChat?.presence_status === "online" ? "Online" : 
-                           otherUserInDirectChat?.last_seen_at ? `Last seen ${format(new Date(otherUserInDirectChat.last_seen_at), "MMM d, HH:mm")}` : "Offline")
+                        ? (otherUserInDirectChat?.presence_status === "online" ? "Online" :
+                          otherUserInDirectChat?.last_seen_at ? `Last seen ${format(new Date(otherUserInDirectChat.last_seen_at), "MMM d, HH:mm")}` : "Offline")
                         : `${(membersByChannel.get(activeChannel.id) ?? []).length || "Team"} members`}
                     </p>
                   </div>
@@ -1395,29 +1419,29 @@ export default function InternalChatPage() {
                     });
                     return activeDisplay?.isDirect && otherUserInDirectChat;
                   })() && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => startCall('voice', otherUserInDirectChat!.id)}
-                        title="Voice call"
-                        aria-label="Start voice call"
-                      >
-                        <Phone className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => startCall('video', otherUserInDirectChat!.id)}
-                        title="Video call"
-                        aria-label="Start video call"
-                      >
-                        <Video className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => startCall('voice', otherUserInDirectChat!.id)}
+                          title="Voice call"
+                          aria-label="Start voice call"
+                        >
+                          <Phone className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => startCall('video', otherUserInDirectChat!.id)}
+                          title="Video call"
+                          aria-label="Start video call"
+                        >
+                          <Video className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-1 bg-muted/20">
@@ -1467,8 +1491,8 @@ export default function InternalChatPage() {
                                 return (
                                   <div className={cn(
                                     "mb-2 p-2 rounded-lg text-xs border-l-2",
-                                    mine 
-                                      ? "bg-primary-foreground/10 border-primary-foreground/30" 
+                                    mine
+                                      ? "bg-primary-foreground/10 border-primary-foreground/30"
                                       : "bg-muted/50 border-primary"
                                   )}>
                                     <p className="font-bold mb-0.5">↩️ {quotedSender}</p>
@@ -1525,31 +1549,31 @@ export default function InternalChatPage() {
                                     </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align={mine ? "end" : "start"}>
-                    <DropdownMenuItem onClick={() => handleReply(m)}>
-                      <Reply className="w-4 h-4 mr-2" />
-                      Reply
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleForward(m)}>
-                      <Forward className="w-4 h-4 mr-2" />
-                      Forward
-                    </DropdownMenuItem>
-                    {mine && (
-                      <DropdownMenuItem onClick={() => handleEdit(m)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => setDeleteConfirm({ messageId: m.id, type: 'me' })}>
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete for me
-                    </DropdownMenuItem>
-                    {mine && (
-                      <DropdownMenuItem onClick={() => setDeleteConfirm({ messageId: m.id, type: 'everyone' })}>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete for everyone
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => handleReply(m)}>
+                                      <Reply className="w-4 h-4 mr-2" />
+                                      Reply
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleForward(m)}>
+                                      <Forward className="w-4 h-4 mr-2" />
+                                      Forward
+                                    </DropdownMenuItem>
+                                    {mine && (
+                                      <DropdownMenuItem onClick={() => handleEdit(m)}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem onClick={() => setDeleteConfirm({ messageId: m.id, type: 'me' })}>
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete for me
+                                    </DropdownMenuItem>
+                                    {mine && (
+                                      <DropdownMenuItem onClick={() => setDeleteConfirm({ messageId: m.id, type: 'everyone' })}>
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete for everyone
+                                      </DropdownMenuItem>
+                                    )}
+                                  </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
                               {Object.keys(reactionCounts).length > 0 && (
@@ -1557,13 +1581,13 @@ export default function InternalChatPage() {
                                   {Object.entries(reactionCounts).map(([emoji, count]) => {
                                     const userReacted = msgReactions.some(r => r.user_id === dbUserId && r.emoji === emoji);
                                     return (
-                                      <button 
-                                        key={emoji} 
+                                      <button
+                                        key={emoji}
                                         onClick={() => toggleReaction(m.id, emoji)}
                                         className={cn(
                                           "border rounded-full px-2 py-0.5 text-xs transition-colors",
-                                          userReacted 
-                                            ? "bg-primary/20 border-primary text-primary" 
+                                          userReacted
+                                            ? "bg-primary/20 border-primary text-primary"
                                             : "bg-background border-border text-muted-foreground hover:border-primary/50"
                                         )}
                                       >
@@ -1595,7 +1619,7 @@ export default function InternalChatPage() {
                     </div>
                   )}
                   <div ref={messagesEndRef} />
-                  
+
                   {/* Reaction picker */}
                   {showReactionPicker && (
                     <div className="fixed inset-0 bg-transparent z-50 flex items-center justify-center" onClick={() => setShowReactionPicker(null)}>
@@ -1783,8 +1807,8 @@ export default function InternalChatPage() {
                       <DialogTitle>Delete message?</DialogTitle>
                     </DialogHeader>
                     <p className="text-sm text-muted-foreground">
-                      {deleteConfirm?.type === 'me' 
-                        ? "This will delete the message only for you." 
+                      {deleteConfirm?.type === 'me'
+                        ? "This will delete the message only for you."
                         : "This will delete the message for everyone in the conversation."}
                     </p>
                     <div className="flex justify-end gap-2 mt-4">
