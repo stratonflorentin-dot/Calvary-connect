@@ -1400,7 +1400,7 @@ export default function InternalChatPage() {
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8"
-                        onClick={() => startCall('voice', otherUserInDirectChat.id)}
+                        onClick={() => startCall('voice', otherUserInDirectChat?.id)}
                         title="Voice call"
                         aria-label="Start voice call"
                       >
@@ -1410,7 +1410,7 @@ export default function InternalChatPage() {
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8"
-                        onClick={() => startCall('video', otherUserInDirectChat.id)}
+                        onClick={() => startCall('video', otherUserInDirectChat?.id)}
                         title="Video call"
                         aria-label="Start video call"
                       >
