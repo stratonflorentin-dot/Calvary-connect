@@ -82,8 +82,8 @@ const fromLegacyStatus = (status: string | null | undefined): Status => {
   }
 };
 
-/** Typed payload matching the live `vehicles` columns exactly — one insert,
- *  no field-stripping retries. A schema mismatch must surface as a real error. */
+/** Typed payload matching the live `vehicles` columns — one write, no
+ *  field-stripping retries. A schema mismatch must surface as a real error. */
 interface VehicleWritePayload {
   plate_number: string;
   make: string;
@@ -95,13 +95,23 @@ interface VehicleWritePayload {
   mileage: number | null;
   fuel_capacity: number | null;
   service_interval_km: number | null;
-  next_maintenance_due: string | null;
-  insurance_expiry: string | null;
-  registration_expiry: string | null;
-  next_inspection_due: string | null;
+  next_maintenance_due?: string | null;
+  insurance_expiry?: string | null;
+  registration_expiry?: string | null;
+  next_inspection_due?: string | null;
   updated_at: string;
   created_at?: string;
 }
+
+/** Columns added by migration 026. Until that migration runs, the live table
+ *  doesn't have them: sending an empty one would fail the whole save, so empty
+ *  values are omitted. A FILLED value is always sent — if the column is
+ *  missing, the save fails with an explicit "run migration 026" error rather
+ *  than silently discarding what the user typed. */
+const MIGRATION_026_DATE_COLUMNS = [
+  "next_maintenance_due",
+  "registration_expiry",
+] as const;
 
 interface Props {
   open: boolean;
@@ -167,12 +177,21 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         mileage: form.mileage === "" ? null : Number(form.mileage),
         fuel_capacity: form.fuel_capacity === "" ? null : Number(form.fuel_capacity),
         service_interval_km: form.service_interval_km === "" ? null : Number(form.service_interval_km),
-        next_maintenance_due: form.next_maintenance_due || null,
         insurance_expiry: form.insurance_expiry || null,
-        registration_expiry: form.registration_expiry || null,
         next_inspection_due: form.next_inspection_due || null,
         updated_at: new Date().toISOString(),
       };
+
+      // Migration-026 columns: include only when the user provided a value
+      // (or is clearing a previously stored one during edit).
+      for (const col of MIGRATION_026_DATE_COLUMNS) {
+        const value = form[col];
+        if (value) {
+          payload[col] = value;
+        } else if (isEdit && vehicle?.[col]) {
+          payload[col] = null; // user cleared an existing date
+        }
+      }
 
       if (isEdit) {
         const { error } = await supabase.from("vehicles").update(payload).eq("id", vehicle.id);
@@ -198,8 +217,8 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
       const hint =
         raw.includes("duplicate key") ? "A vehicle with this plate already exists." :
           raw.includes("permission") || raw.includes("policy") ? "Your role isn't allowed to add vehicles. Contact an admin." :
-            raw.includes("does not exist") ? `Database schema is out of date — run migration 026 in Supabase. (${raw})` :
-              raw.includes("check constraint") ? `The database rejected a field value — run migration 026 in Supabase. (${raw})` :
+            raw.includes("does not exist") || raw.includes("schema cache") ? `Database schema is out of date — run migration 026 in the Supabase SQL editor, then retry. (${raw})` :
+              raw.includes("check constraint") ? `The database rejected a field value — run migration 026 in the Supabase SQL editor, then retry. (${raw})` :
                 raw;
       toast({ title: isEdit ? "Update failed" : "Add failed", description: hint, variant: "destructive" });
     } finally {
