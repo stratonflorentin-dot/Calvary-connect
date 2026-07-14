@@ -32,8 +32,13 @@ export function NotificationBell() {
 
     fetchNotifications();
 
-    const subscription = supabase
-      .channel(`notifications:${user.id}`)
+    // The bell is mounted twice (desktop sidebar + mobile top bar). Channel
+    // topics must be unique per mount: supabase.channel() returns the SAME
+    // object for an identical topic, and calling .on() after another mount
+    // already subscribed it throws "cannot add postgres_changes callbacks
+    // after subscribe()".
+    const channel = supabase
+      .channel(`notifications:${user.id}:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
@@ -52,7 +57,7 @@ export function NotificationBell() {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
