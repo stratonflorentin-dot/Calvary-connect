@@ -10,7 +10,7 @@
 //   - Firebase Realtime Database
 //   - Any authenticated API endpoint
 
-const CACHE_VERSION = 'calvary-connect-v4';
+const CACHE_VERSION = 'calvary-connect-v5';
 
 // Only cache assets that are guaranteed to exist at the root level
 const STATIC_PRECACHE = [
@@ -81,7 +81,9 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('firebaseapp.com')
   ) return;
 
-  // BYPASS: Mapbox, OSM, and CARTO tile servers
+  // BYPASS: Mapbox, OSM, CARTO and MapLibre tile/style/glyph/sprite servers.
+  // Map resources must NEVER be served from a stale cache — a cached bad tile
+  // or style.json keeps the map broken across deployments.
   if (
     url.hostname.includes('api.mapbox.com') ||
     url.hostname.includes('events.mapbox.com') ||
@@ -89,20 +91,19 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('nominatim.openstreetmap.org') ||
     url.hostname.includes('tile.openstreetmap.org') ||
     url.hostname.includes('tile.openstreetmap.de') ||
-    url.hostname.includes('basemaps.cartocdn.com')
+    url.hostname.includes('cartocdn.com') ||
+    url.hostname.includes('maplibre.org')
   ) return;
 
   // BYPASS: Vercel Live / deployment tooling
   if (url.hostname.includes('vercel.live')) return;
 
-  // Static assets: CacheFirst
-  if (url.pathname.match(/\.(js|css|woff2?|png|jpg|jpeg|webp|svg|ico|gif)$/)) {
-    event.respondWith(cacheFirst(request));
-    return;
-  }
+  // BYPASS: every other cross-origin request. The service worker only
+  // manages same-origin assets; third-party requests go straight to network.
+  if (url.origin !== self.location.origin) return;
 
-  // Font stylesheets from Google Fonts: CacheFirst with network fallback
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+  // Static assets (same-origin): CacheFirst
+  if (url.pathname.match(/\.(js|css|woff2?|png|jpg|jpeg|webp|svg|ico|gif)$/)) {
     event.respondWith(cacheFirst(request));
     return;
   }
@@ -114,10 +115,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Everything else same-origin: NetworkFirst
-  if (url.origin === self.location.origin) {
-    event.respondWith(networkFirst(request, 5000));
-    return;
-  }
+  event.respondWith(networkFirst(request, 5000));
 });
 
 // ─── Push Notifications ───────────────────────────────────────────────────────

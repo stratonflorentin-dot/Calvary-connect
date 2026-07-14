@@ -64,12 +64,13 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       const normalizedEmail = email.toLowerCase().trim();
       console.log('[SupabaseProvider] Fetching profile for:', normalizedEmail, 'ID:', userId);
 
-      // Try to get profile by auth UUID
+      // Try to get profile by auth UUID.
+      // maybeSingle: zero rows is a valid outcome, not a PGRST116 error.
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (profile && !profileError) {
         console.log('[SupabaseProvider] Profile found by ID:', profile.role);
@@ -79,14 +80,14 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       }
 
       // Not found by UUID — check if a pre-created profile exists by email
-      if (profileError) {
+      if (!profile) {
         console.log('[SupabaseProvider] Profile not found by ID, searching by email:', normalizedEmail);
 
         const { data: existingByEmail, error: emailError } = await supabase
           .from('user_profiles')
           .select('*')
           .ilike('email', normalizedEmail)
-          .single();
+          .maybeSingle();
 
         if (!emailError && existingByEmail) {
           console.log('[SupabaseProvider] Found profile by email, linking to auth ID:', userId);
@@ -100,7 +101,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
             })
             .eq('email', existingByEmail.email)
             .select()
-            .single();
+            .maybeSingle();
 
           if (!updateError && updatedProfile) {
             console.log('[SupabaseProvider] Profile linked successfully');
@@ -183,51 +184,83 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     SyncManager.init();
 
     let initialized = false;
+    let settled = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id, session.user.email!);
-        if (profile) {
-          applyProfile(profile);
+    const finishAuth = () => {
+      if (settled) return;
+      settled = true;
+      initialized = true;
+      setIsLoading(false);
+    };
+
+    const handleAuthState = async (event: string, session: any) => {
+      try {
+        if (session?.user) {
+          const profile = await fetchUserProfile(session.user.id, session.user.email!);
+          if (profile) {
+            applyProfile(profile);
+          } else {
+            console.log('[SupabaseProvider] No profile after auth state change — signing out');
+            await supabase.auth.signOut();
+            setUser(null);
+            setRole(null);
+            toast({
+              title: 'Account Error',
+              description: 'Your user profile could not be found. Please contact your administrator.',
+              variant: 'destructive',
+            });
+          }
         } else {
-          console.log('[SupabaseProvider] No profile after auth state change — signing out');
-          await supabase.auth.signOut();
           setUser(null);
           setRole(null);
-          toast({
-            title: 'Account Error',
-            description: 'Your user profile could not be found. Please contact your administrator.',
-            variant: 'destructive',
-          });
         }
-      } else {
+      } catch (err) {
+        console.error('[SupabaseProvider] Auth state handling error:', err);
         setUser(null);
         setRole(null);
+      } finally {
+        finishAuth();
       }
-      setIsLoading(false);
-      initialized = true;
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      void handleAuthState(event, session);
     });
 
     // Check the initial session in case onAuthStateChange fires late
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (initialized) return; // Already handled by onAuthStateChange
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id, session.user.email!);
-        if (profile) {
-          applyProfile(profile);
+    const initializeSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (initialized) return; // Already handled by onAuthStateChange
+        if (session?.user) {
+          const profile = await fetchUserProfile(session.user.id, session.user.email!);
+          if (profile) {
+            applyProfile(profile);
+          } else {
+            await supabase.auth.signOut();
+            setUser(null);
+            setRole(null);
+            toast({
+              title: 'Account Error',
+              description: 'Your user profile could not be found. Please contact your administrator.',
+              variant: 'destructive',
+            });
+          }
         } else {
-          await supabase.auth.signOut();
           setUser(null);
           setRole(null);
-          toast({
-            title: 'Account Error',
-            description: 'Your user profile could not be found. Please contact your administrator.',
-            variant: 'destructive',
-          });
         }
+      } catch (err) {
+        console.error('[SupabaseProvider] Initial session load error:', err);
+        setUser(null);
+        setRole(null);
+      } finally {
+        finishAuth();
       }
-      setIsLoading(false);
-    });
+    };
+
+    void initializeSession();
 
     return () => subscription.unsubscribe();
   }, [fetchUserProfile, applyProfile]);

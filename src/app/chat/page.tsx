@@ -83,16 +83,21 @@ interface Member {
 
 interface Profile {
   id: string;
-  uid?: string | null;
-  user_id?: string | null;
-  auth_id?: string | null;
-  auth_user_id?: string | null;
+  email?: string | null;
   name: string | null;
   role?: string | null;
+  status?: string | null;
+  employee_id?: string | null;
+  department?: string | null;
   presence_status?: "online" | "away" | "offline";
   last_seen_at?: string | null;
   avatar_url?: string | null;
 }
+
+/** Columns that actually exist on user_profiles — selecting unknown columns
+ *  makes PostgREST return 400 and silently empties the colleague directory. */
+const PROFILE_COLUMNS =
+  "id, email, name, role, status, employee_id, department, presence_status, last_seen_at, avatar_url";
 
 interface TypingUser {
   channel_id: string;
@@ -115,16 +120,10 @@ function initials(name?: string | null) {
   return name.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
 
+/** user_profiles.id IS the Supabase auth UUID — the only identity source. */
 function resolveProfileUserId(profile?: Partial<Profile> | null): string | null {
-  const candidates = [
-    profile?.id,
-    profile?.uid,
-    (profile as Partial<Profile> & { user_id?: string | null })?.user_id,
-    (profile as Partial<Profile> & { auth_id?: string | null })?.auth_id,
-    (profile as Partial<Profile> & { auth_user_id?: string | null })?.auth_user_id,
-  ];
-
-  return candidates.find((value): value is string => typeof value === "string" && value.trim().length > 0) ?? null;
+  const id = profile?.id;
+  return typeof id === "string" && UUID_RE.test(id) ? id : null;
 }
 
 function dayLabel(date: Date) {
@@ -194,6 +193,7 @@ export default function InternalChatPage() {
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [peopleSearch, setPeopleSearch] = useState("");
   const [channelNameDraft, setChannelNameDraft] = useState("");
   const [creating, setCreating] = useState(false);
@@ -235,37 +235,31 @@ export default function InternalChatPage() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
+    setDirectoryError(null);
     try {
       const [ch, prof] = await Promise.all([
-        supabase.from("chat_channels").select("*").order("created_at", { ascending: false }),
-        supabase.from("user_profiles").select("id, uid, name, role, presence_status, last_seen_at").order("name"),
+        supabase.from("chat_channels").select("id, name, type, created_at").order("created_at", { ascending: false }),
+        supabase.from("user_profiles").select(PROFILE_COLUMNS).order("name"),
       ]);
       if (ch.error) {
         setError("Unable to load conversations.");
         console.error("Chat load error:", ch.error);
-        // Clear stale active channel if it no longer exists
-        if (activeChannel) {
-          const channelExists = Array.isArray(ch.data) && (ch.data as any[]).some((c: any) => c.id === activeChannel.id);
-          if (!channelExists) {
-            console.log("Clearing stale active channel:", activeChannel.id);
-            setActiveChannel(null);
-          }
-        }
         return;
       }
       setChannels((ch.data ?? []) as Channel[]);
-      setProfiles(prof.data ?? []);
 
-      // DIAGNOSTIC: Log profile identity mapping
-      console.log('[CHAT DIAGNOSTIC] Loaded profiles:', {
-        dbUserId,
-        profileCount: prof.data?.length,
-        profiles: prof.data?.map(p => ({ id: p.id, name: p.name, role: p.role })),
-        currentUserProfile: prof.data?.find((p: any) => p.id === dbUserId),
-        allProfileIds: prof.data?.map(p => p.id),
-        duplicateIds: prof.data?.map(p => p.id).filter((id, index, arr) => arr.indexOf(id) !== index),
-        idMatchesCurrentUser: prof.data?.filter(p => p.id === dbUserId).length
-      });
+      if (prof.error) {
+        // Distinguish a directory failure (RLS / schema) from an empty directory
+        console.error("Colleague directory load error:", prof.error);
+        setDirectoryError(
+          prof.error.code === "42501" || /permission|policy/i.test(prof.error.message)
+            ? "You don't have permission to view colleagues. Ask an admin to run the latest database migration."
+            : "Couldn't load the colleague directory. Please retry.",
+        );
+        setProfiles([]);
+      } else {
+        setProfiles((prof.data ?? []) as Profile[]);
+      }
 
       // Memberships power direct-chat names and unread counts.
       const mem = await supabase.from("chat_channel_members").select("channel_id, user_id, last_read_at");
@@ -293,7 +287,7 @@ export default function InternalChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeChannel]);
+  }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -301,12 +295,14 @@ export default function InternalChatPage() {
   useEffect(() => {
     if (!dbUserId) return;
 
+    // UPDATE, not upsert: a partial upsert violates NOT NULL columns
+    // (name/email/role) on user_profiles and returns HTTP 400.
     const updatePresence = async (status: "online" | "offline" | "away") => {
-      await supabase.from("user_profiles").upsert({
-        id: dbUserId,
-        presence_status: status,
-        last_seen_at: new Date().toISOString()
-      }, { onConflict: "id" });
+      const { error: presenceErr } = await supabase
+        .from("user_profiles")
+        .update({ presence_status: status, last_seen_at: new Date().toISOString() })
+        .eq("id", dbUserId);
+      if (presenceErr) console.error("Presence update failed:", presenceErr);
     };
 
     updatePresence("online");
@@ -391,8 +387,8 @@ export default function InternalChatPage() {
     const profilesChannel = supabase
       .channel("profiles_presence")
       .on("postgres_changes", { event: "*", schema: "public", table: "user_profiles" }, async () => {
-        const { data } = await supabase.from("user_profiles").select("id, uid, user_id, auth_id, auth_user_id, name, role, presence_status, last_seen_at").order("name");
-        setProfiles(data ?? []);
+        const { data } = await supabase.from("user_profiles").select(PROFILE_COLUMNS).order("name");
+        if (data) setProfiles(data as Profile[]);
       })
       .subscribe();
 
@@ -536,10 +532,7 @@ export default function InternalChatPage() {
 
   const profileById = useMemo(() => {
     const m = new Map<string, Profile>();
-    for (const p of profiles) {
-      const ids = [p.id, p.uid, (p as Profile & { user_id?: string | null }).user_id, (p as Profile & { auth_id?: string | null }).auth_id, (p as Profile & { auth_user_id?: string | null }).auth_user_id].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
-      for (const id of ids) m.set(id, p);
-    }
+    for (const p of profiles) m.set(p.id, p);
     return m;
   }, [profiles]);
 
@@ -613,20 +606,6 @@ export default function InternalChatPage() {
       const mem = membersByChannel.get(c.id) ?? [];
       const other = mem.find((m) => m.user_id !== dbUserId);
       const mine = mem.find((m) => m.user_id === dbUserId);
-
-      // DIAGNOSTIC: Log channel member resolution
-      console.log('[CHAT DIAGNOSTIC] Channel display resolution:', {
-        channelId: c.id,
-        channelType: c.type,
-        dbUserId,
-        members: mem,
-        otherMember: other,
-        myMember: mine,
-        otherProfile: other ? profileById.get(other.user_id) : null,
-        myProfile: mine ? profileById.get(mine.user_id) : null,
-        memberCount: mem.length,
-        distinctUserIds: [...new Set(mem.map(m => m.user_id))]
-      });
 
       if (other && (mine || mem.length === 1)) {
         return { name: profileById.get(other.user_id)?.name ?? "Direct chat", isDirect: true };
@@ -729,7 +708,7 @@ export default function InternalChatPage() {
     setMessages((prev) => [...prev, optimistic]);
     scrollToBottom();
 
-    let { error: dbErr, data } = await supabase.from("chat_messages").insert({
+    const { error: dbErr } = await supabase.from("chat_messages").insert({
       channel_id: activeChannel.id,
       sender_id: dbUserId,
       sender_name: myName ?? "Team member",
@@ -737,7 +716,7 @@ export default function InternalChatPage() {
       status: "sent",
       reply_to: replyToMessage?.id || null,
       attachments: attachmentsToSend
-    }).select();
+    });
     if (dbErr) {
       setMessages((prev) => prev.map(m => m.id === optimistic.id ? { ...m, status: "failed" } : m));
       setError("Failed to send message.");
@@ -850,7 +829,7 @@ export default function InternalChatPage() {
   /** Start (or resume) a 1:1 conversation with a colleague. */
   const startDirectChat = async (person: Profile) => {
     if (!dbUserId) {
-      setError("Direct messages need a signed-in account — the offline admin session can use group channels.");
+      setError("You must be signed in to start a direct message.");
       setNewChatOpen(false);
       return;
     }
@@ -864,13 +843,6 @@ export default function InternalChatPage() {
 
     // HARD ASSERTION: Block self-chat creation
     if (recipientId === dbUserId) {
-      const error = new Error("SELF_CHAT_BLOCKED: Cannot create direct chat with yourself");
-      console.error("[SELF_CHAT_BLOCKED]", {
-        currentAuthUid: dbUserId,
-        selectedProfileId: recipientId,
-        selectedProfileName: person.name,
-        error: error.message
-      });
       setError("Cannot create a conversation with yourself.");
       setNewChatOpen(false);
       return;
@@ -878,28 +850,8 @@ export default function InternalChatPage() {
 
     setCreating(true);
     try {
-      // DIAGNOSTIC: Log identity mapping
-      console.log('[CHAT DIAGNOSTIC] Starting direct chat with:', {
-        currentAuthUid: dbUserId,
-        selectedProfileId: person.id,
-        resolvedRecipientId: recipientId,
-        selectedProfileName: person.name,
-        selectedProfileRole: person.role,
-        rpcName: 'find_or_create_direct_chat',
-        rpcPayload: { p_other_user_id: recipientId }
-      });
-
       const { data: channelId, error: fnErr } = await supabase.rpc('find_or_create_direct_chat', {
         p_other_user_id: recipientId
-      });
-
-      console.log('[CHAT DIAGNOSTIC] RPC response:', {
-        channelId,
-        error: fnErr,
-        errorCode: fnErr?.code,
-        errorMessage: fnErr?.message,
-        errorDetails: fnErr?.details,
-        errorHint: fnErr?.hint
       });
 
       if (fnErr) {
@@ -999,12 +951,6 @@ export default function InternalChatPage() {
 
     // HARD ASSERTION: Block self-call
     if (receiverId === dbUserId) {
-      const error = new Error("SELF_CALL_BLOCKED: Cannot call yourself");
-      console.error("[SELF_CALL_BLOCKED]", {
-        currentAuthUid: dbUserId,
-        receiverId,
-        error: error.message
-      });
       setError("Cannot call yourself.");
       return;
     }
@@ -1243,8 +1189,18 @@ export default function InternalChatPage() {
   const people = useMemo(() => {
     const q = peopleSearch.trim().toLowerCase();
     return profiles
-      .filter((p) => resolveProfileUserId(p) !== dbUserId)
-      .filter((p) => !q || (p.name ?? "").toLowerCase().includes(q));
+      // The current user must never appear as a colleague
+      .filter((p) => resolveProfileUserId(p) !== null && p.id !== dbUserId)
+      // Exclude deleted / disabled / suspended accounts
+      .filter((p) => !p.status || p.status === "active")
+      .filter(
+        (p) =>
+          !q ||
+          (p.name ?? "").toLowerCase().includes(q) ||
+          (p.email ?? "").toLowerCase().includes(q) ||
+          (p.employee_id ?? "").toLowerCase().includes(q) ||
+          (p.role ?? "").toLowerCase().includes(q),
+      );
   }, [profiles, peopleSearch, dbUserId]);
 
   const activeDisplay = activeChannel ? channelDisplay(activeChannel) : null;
@@ -1406,42 +1362,32 @@ export default function InternalChatPage() {
                         : `${(membersByChannel.get(activeChannel.id) ?? []).length || "Team"} members`}
                     </p>
                   </div>
-                  {(() => {
-                    // DIAGNOSTIC: Log call button visibility condition
-                    console.log('[CALL BUTTONS DIAGNOSTIC]', {
-                      activeDisplay,
-                      isDirect: activeDisplay?.isDirect,
-                      otherUserInDirectChat,
-                      otherUserId: otherUserInDirectChat?.id,
-                      otherUserName: otherUserInDirectChat?.name,
-                      dbUserId,
-                      shouldShow: activeDisplay?.isDirect && otherUserInDirectChat
-                    });
-                    return activeDisplay?.isDirect && otherUserInDirectChat;
-                  })() && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => startCall('voice', otherUserInDirectChat!.id)}
-                          title="Voice call"
-                          aria-label="Start voice call"
-                        >
-                          <Phone className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => startCall('video', otherUserInDirectChat!.id)}
-                          title="Video call"
-                          aria-label="Start video call"
-                        >
-                          <Video className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
+                  {activeDisplay.isDirect && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        disabled={!otherUserInDirectChat || !dbUserId}
+                        onClick={() => otherUserInDirectChat && startCall('voice', otherUserInDirectChat.id)}
+                        title="Voice call"
+                        aria-label="Start voice call"
+                      >
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        disabled={!otherUserInDirectChat || !dbUserId}
+                        onClick={() => otherUserInDirectChat && startCall('video', otherUserInDirectChat.id)}
+                        title="Video call"
+                        aria-label="Start video call"
+                      >
+                        <Video className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-1 bg-muted/20">
@@ -1895,8 +1841,23 @@ export default function InternalChatPage() {
                 <Input value={peopleSearch} onChange={(e) => setPeopleSearch(e.target.value)} placeholder="Search people…" className="pl-9 h-9" />
               </div>
               <div className="max-h-56 overflow-y-auto rounded-xl border border-border divide-y divide-border">
-                {people.length === 0 ? (
-                  <p className="p-3 text-xs text-muted-foreground italic text-center">No colleagues found.</p>
+                {loading ? (
+                  <div className="p-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading colleagues…
+                  </div>
+                ) : directoryError ? (
+                  <div className="p-3 space-y-2 text-center">
+                    <p className="text-xs text-destructive">{directoryError}</p>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => loadAll()}>
+                      Retry
+                    </Button>
+                  </div>
+                ) : people.length === 0 ? (
+                  <p className="p-3 text-xs text-muted-foreground italic text-center">
+                    {peopleSearch.trim()
+                      ? "No colleagues match your search."
+                      : "No other active colleagues are registered yet."}
+                  </p>
                 ) : (
                   people.map((p) => (
                     <button
@@ -1915,7 +1876,9 @@ export default function InternalChatPage() {
                       </div>
                       <span className="min-w-0">
                         <span className="block text-sm font-bold text-foreground truncate">{p.name ?? "Unnamed"}</span>
-                        <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">{p.role ?? ""}</span>
+                        <span className="block text-[10px] text-muted-foreground uppercase tracking-wider truncate">
+                          {[p.employee_id, p.role, p.department].filter(Boolean).join(" · ")}
+                        </span>
                       </span>
                     </button>
                   ))

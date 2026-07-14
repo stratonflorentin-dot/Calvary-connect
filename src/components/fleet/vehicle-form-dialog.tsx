@@ -62,6 +62,47 @@ const empty = (): VehicleFormState => ({
   next_inspection_due: "",
 });
 
+/** Rows written before the status vocabulary was unified may carry legacy
+ *  values; normalize them for display when editing. Writes always use the
+ *  canonical app vocabulary (migration 026 makes the CHECK accept it). */
+const fromLegacyStatus = (status: string | null | undefined): Status => {
+  switch (status) {
+    case "available":
+    case "in_use":
+    case "maintenance":
+    case "out_of_service":
+      return status;
+    case "active":
+      return "available";
+    case "sold":
+    case "decommissioned":
+      return "out_of_service";
+    default:
+      return "available";
+  }
+};
+
+/** Typed payload matching the live `vehicles` columns exactly — one insert,
+ *  no field-stripping retries. A schema mismatch must surface as a real error. */
+interface VehicleWritePayload {
+  plate_number: string;
+  make: string;
+  model: string;
+  year: number;
+  type: FleetType;
+  trailer_sub_type: string | null;
+  status: Status;
+  mileage: number | null;
+  fuel_capacity: number | null;
+  service_interval_km: number | null;
+  next_maintenance_due: string | null;
+  insurance_expiry: string | null;
+  registration_expiry: string | null;
+  next_inspection_due: string | null;
+  updated_at: string;
+  created_at?: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -87,7 +128,7 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         year: Number(vehicle.year ?? new Date().getFullYear()),
         type: (vehicle.type ?? "DUMP_TRUCK") as FleetType,
         trailer_sub_type: (vehicle.trailer_sub_type ?? vehicle.trailerSubType ?? "") as any,
-        status: (vehicle.status ?? "available") as Status,
+        status: fromLegacyStatus(vehicle.status),
         mileage: vehicle.mileage ?? "",
         fuel_capacity: vehicle.fuel_capacity ?? vehicle.fuelCapacity ?? "",
         service_interval_km: vehicle.service_interval_km ?? "",
@@ -115,7 +156,7 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
     }
     setSaving(true);
     try {
-      const payload: Record<string, any> = {
+      const payload: VehicleWritePayload = {
         plate_number: form.plate_number.trim().toUpperCase(),
         make: form.make.trim(),
         model: form.model.trim(),
@@ -153,12 +194,13 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
     } catch (err: any) {
       console.error("[vehicle-form]", err);
       const raw = err?.message ?? String(err);
-      // Friendlier hint for the common case
+      // Surface the real database error with an actionable hint
       const hint =
         raw.includes("duplicate key") ? "A vehicle with this plate already exists." :
-        raw.includes("permission") || raw.includes("policy") ? "Your role isn't allowed to add vehicles. Contact an admin." :
-        raw.includes("does not exist") ? "The vehicles table is missing a column. Run the latest migrations." :
-        raw;
+          raw.includes("permission") || raw.includes("policy") ? "Your role isn't allowed to add vehicles. Contact an admin." :
+            raw.includes("does not exist") ? `Database schema is out of date — run migration 026 in Supabase. (${raw})` :
+              raw.includes("check constraint") ? `The database rejected a field value — run migration 026 in Supabase. (${raw})` :
+                raw;
       toast({ title: isEdit ? "Update failed" : "Add failed", description: hint, variant: "destructive" });
     } finally {
       setSaving(false);

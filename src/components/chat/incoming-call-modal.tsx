@@ -1,6 +1,6 @@
 "use client";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Phone, Video, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,6 +35,10 @@ export function IncomingCallModal({
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onDecline()}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+        {/* Radix requires a DialogTitle for screen readers */}
+        <DialogTitle className="sr-only">
+          Incoming {call.call_type === "voice" ? "voice" : "video"} call from {callerName}
+        </DialogTitle>
         <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6 text-center">
           {/* Avatar */}
           <div className="mx-auto mb-4">

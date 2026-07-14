@@ -47,7 +47,29 @@ type Props = {
   selectedId: string | null;
   onSelectDriver: (driver: FleetMapDriver) => void;
   cameraMode?: "overview" | "follow" | "follow-3d" | "north-up" | "heading-up";
+  /** Called when both the primary and fallback styles fail — the parent
+   *  should switch to the 2D Leaflet engine instead of showing a blank map. */
+  onFatalError?: (message: string) => void;
 };
+
+/** Turn a MapLibre failure into a message that tells the user (and us) which
+ *  layer of the stack broke — offline, CSP/blocked provider, or bad style. */
+function describeMapFailure(e: { error?: Error; status?: number; url?: string }): string {
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return "You appear to be offline.";
+  }
+  const msg = e.error?.message ?? "";
+  if (/CSP|Content Security Policy|blocked/i.test(msg)) {
+    return "The map provider is blocked by the browser security policy.";
+  }
+  if (e.status && e.status >= 400) {
+    return `The map style provider returned HTTP ${e.status}.`;
+  }
+  if (/Failed to fetch|NetworkError|load failed/i.test(msg)) {
+    return "The map style could not be downloaded (provider unreachable or blocked).";
+  }
+  return msg || "The map style failed to load.";
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -197,7 +219,7 @@ function popupHtml(d: FleetMapDriver): string {
 
 export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
   function FleetMap3DCanvas(
-    { locations, defaultCenter, selectedId, onSelectDriver, cameraMode = "follow-3d" },
+    { locations, defaultCenter, selectedId, onSelectDriver, cameraMode = "follow-3d", onFatalError },
     ref,
   ) {
     const containerRef  = useRef<HTMLDivElement>(null);
@@ -283,26 +305,29 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
         map.on("error", (e: any) => {
           console.error("[MapLibre Error]", {
-            error: e.error,
             errorMessage: e.error?.message,
             sourceId: e.source?.id,
-            sourceType: e.source?.type,
-            tile: e.tile,
             status: e.status,
             url: e.url,
-            originalEvent: e
           });
 
-          // If primary style fails and we haven't tried fallback yet, try it
-          if (!usingFallback && !e.source?.id) {
-            console.warn("[MapLibre] Primary style failed, trying fallback...");
+          // Individual tile errors are transient — only style-level failures
+          // (no source id) warrant fallback or escalation.
+          if (e.source?.id) return;
+
+          const reason = describeMapFailure(e);
+
+          if (!usingFallback) {
+            console.warn("[MapLibre] Primary style failed, trying fallback style…");
             if (mapInstance) {
               mapInstance.remove();
               mapRef.current = null;
             }
             initMap(FALLBACK_STYLE_URL, true);
           } else {
-            setLoadErr(`Map error: ${e.error?.message || 'Unknown error'}. Check console for details.`);
+            setLoadErr(reason);
+            // Both styles failed — hand control back to the parent for 2D fallback
+            onFatalError?.(reason);
           }
         });
 
@@ -419,10 +444,24 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         });
       };
 
-      // Initialize map with primary style
-      initMap(MAP_STYLE_URL, false);
+      // Initialize map with primary style. A synchronous throw here usually
+      // means WebGL is unavailable or the blob: worker was blocked by CSP.
+      try {
+        initMap(MAP_STYLE_URL, false);
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : "3D map engine failed to start.";
+        setLoadErr(reason);
+        onFatalError?.(reason);
+      }
+
+      // Keep the canvas sized to its container (sidebar/tab/layout changes)
+      const resizeObserver = new ResizeObserver(() => {
+        mapRef.current?.resize();
+      });
+      resizeObserver.observe(el);
 
       return () => {
+        resizeObserver.disconnect();
         staticRef.current.forEach((m) => m.remove());
         staticRef.current = [];
         markersRef.current.forEach((m) => m.remove());

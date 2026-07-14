@@ -315,6 +315,10 @@ export default function JournalEntriesPage() {
         .from("journal_entries")
         .insert({
           entry_date: form.entry_date,
+          // Legacy NOT NULL columns on the live table — send explicitly
+          date: form.entry_date,
+          total_debit: totals.debit,
+          total_credit: totals.credit,
           reference: form.reference,
           description: form.description,
           currency: form.currency,
@@ -324,6 +328,7 @@ export default function JournalEntriesPage() {
         .select()
         .maybeSingle();
       if (hErr) throw hErr;
+      if (!header) throw new Error("Journal entry was not created — check your permissions.");
 
       const linePayload = usable.map((l) => ({
         journal_entry_id: header!.id,

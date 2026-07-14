@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
+
+// Self-hosted at build time by next/font — no runtime requests to
+// fonts.googleapis.com / fonts.gstatic.com (and no CSP entries for them).
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 import { Toaster } from "@/components/ui/toaster";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { PageLoader } from "@/components/page-loader";
@@ -68,13 +77,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-        <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css" rel="stylesheet" />
-      </head>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body className="font-body antialiased">
         <ThemeProvider
           attribute="class"

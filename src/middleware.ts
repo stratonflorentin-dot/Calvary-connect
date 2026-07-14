@@ -89,14 +89,22 @@ export function middleware(request: NextRequest) {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://vercel.live",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com",
     "font-src 'self' https://fonts.gstatic.com",
-    // OSM tile hosts power the live map, trip mini map and route optimizer
-    "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://*.basemaps.cartocdn.com",
+    // OSM/CARTO tile hosts power the Leaflet 2D map; the CARTO apex domain
+    // (basemaps.cartocdn.com, no subdomain) serves MapLibre sprites — a
+    // *.basemaps wildcard does NOT match the apex, which is why tiles failed.
+    "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org",
     // wss://*.supabase.co is required for realtime (chat, live dashboards);
-    // nominatim/osrm serve geocoding and road routing
-    // fonts.gstatic.com: the service worker fetches fonts via fetch(), which
-    // is governed by connect-src, not font-src. exchangerate-api powers the
-    // live currency hook.
-    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://*.basemaps.cartocdn.com",
+    // nominatim/osrm serve geocoding and road routing.
+    // MapLibre fetches its style.json, vector tiles, glyphs and sprites via
+    // fetch() — all governed by connect-src. basemaps.cartocdn.com (apex)
+    // hosts the Voyager GL style; demotiles.maplibre.org is the fallback style.
+    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org",
+    // MapLibre GL spawns its tile workers from blob: URLs; without worker-src
+    // the default-src 'self' fallback blocks them and the canvas stays blank.
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:",
+    // Vercel Live preview toolbar + the route-map-dialog Google Maps embed
+    "frame-src 'self' https://vercel.live https://www.google.com",
 
     "frame-ancestors 'none'",
     "base-uri 'self'",

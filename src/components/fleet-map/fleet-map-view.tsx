@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { useMemo, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -32,22 +32,30 @@ import {
   Crosshair,
   // AlertCircle used via dynamic fallback to avoid runtime import errors
 } from "lucide-react";
-import IconFallback from '@/components/icons/IconFallback.client';
 
-const FleetMapCanvas = dynamic(
-  () =>
-    import("@/components/fleet-map/fleet-map-3d-canvas").then((m) => m.FleetMap3DCanvas),
-  {
-    ssr: false,
-    loading: () => (
+const mapLoading = (label: string) =>
+  function MapLoading() {
+    return (
       <div className="absolute inset-0 flex items-center justify-center bg-muted/5">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm font-medium text-primary">Loading 3D vector map…</p>
+          <p className="text-sm font-medium text-primary">{label}</p>
         </div>
       </div>
-    ),
-  },
+    );
+  };
+
+const FleetMap3D = dynamic(
+  () =>
+    import("@/components/fleet-map/fleet-map-3d-canvas").then((m) => m.FleetMap3DCanvas),
+  { ssr: false, loading: mapLoading("Loading 3D vector map…") },
+);
+
+// Reliable Leaflet raster fallback — always available if MapLibre fails
+const FleetMap2D = dynamic(
+  () =>
+    import("@/components/fleet-map/fleet-map-canvas").then((m) => m.FleetMapCanvas),
+  { ssr: false, loading: mapLoading("Loading map…") },
 );
 
 const glass =
@@ -193,40 +201,6 @@ function DriverDetailPanel({
           </div>
         </div>
 
-        {/* Driver Compliance Records */}
-        <div className="rounded-xl bg-card p-3 border border-border shadow-sm">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-2">
-            Compliance & Licensing
-          </p>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground">Profile Status</span>
-              <Badge variant="outline" className="bg-success/10 text-success border-success/20 py-0 text-[10px]">
-                Valid & Compliant
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">License Class</span>
-              <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border py-0 text-[10px]">
-                Class CE (Heavy)
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">License Expiry</span>
-              {/* Simulate expiry warning dynamically based on driver id string length */}
-              {driver.id.length % 2 === 0 ? (
-                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 py-0 text-[10px] flex items-center gap-1">
-                  <IconFallback name="AlertCircle" className="size-3" /> Expires in 45 Days
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border py-0 text-[10px]">
-                  Nov 2027
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-
         <div className="grid grid-cols-3 gap-2">
           {[
             { icon: Navigation, label: "Navigate" },
@@ -271,6 +245,16 @@ export default function FleetMapView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [cameraMode, setCameraMode] = useState<"overview" | "follow" | "follow-3d" | "north-up" | "heading-up">("follow-3d");
+  const [mapEngine, setMapEngine] = useState<"3d" | "2d">("3d");
+  const [engineNotice, setEngineNotice] = useState<string | null>(null);
+
+  // If the MapLibre style/tiles cannot load, fall back to the Leaflet 2D map
+  // instead of leaving a blank canvas.
+  const handle3DFatalError = useCallback((message: string) => {
+    console.warn("[FleetMap] 3D engine failed, falling back to 2D:", message);
+    setMapEngine("2d");
+    setEngineNotice("3D map unavailable — showing 2D map. " + message);
+  }, []);
 
   // Removed auto-selection to allow users to see the full map on load
 
@@ -300,14 +284,25 @@ export default function FleetMapView({
 
   return (
     <div className="fleet-map-root relative h-full w-full min-h-[calc(100dvh-0px)] overflow-hidden bg-muted">
-      <FleetMapCanvas
-        ref={canvasRef}
-        locations={locations}
-        defaultCenter={defaultCenter}
-        selectedId={selectedId}
-        onSelectDriver={handleSelect}
-        cameraMode={cameraMode}
-      />
+      {mapEngine === "3d" ? (
+        <FleetMap3D
+          ref={canvasRef}
+          locations={locations}
+          defaultCenter={defaultCenter}
+          selectedId={selectedId}
+          onSelectDriver={handleSelect}
+          cameraMode={cameraMode}
+          onFatalError={handle3DFatalError}
+        />
+      ) : (
+        <FleetMap2D
+          ref={canvasRef}
+          locations={locations}
+          defaultCenter={defaultCenter}
+          selectedId={selectedId}
+          onSelectDriver={handleSelect}
+        />
+      )}
 
       {/* Top bar — search & live stats */}
       <div
@@ -352,6 +347,11 @@ export default function FleetMapView({
           {loadError && (
             <p className="text-xs text-warning bg-warning/10 border border-warning/20 rounded-lg px-3 py-2 mb-2">
               {loadError}
+            </p>
+          )}
+          {engineNotice && (
+            <p className="text-xs text-warning bg-warning/10 border border-warning/20 rounded-lg px-3 py-2 mb-2">
+              {engineNotice}
             </p>
           )}
           {driversWithoutGps.length > 0 && locations.length === 0 && (
@@ -463,29 +463,54 @@ export default function FleetMapView({
           </Button>
         </div>
 
-        {/* 3D Smart Camera Mode Controls */}
-        <div className={cn(glass, "flex flex-col gap-1.5 p-1 rounded-xl shadow-md")}>
-          <p className="text-[7.5px] font-extrabold text-center uppercase tracking-wider text-muted-foreground pt-1 pb-0.5">Cam</p>
-          {[
-            { mode: "follow-3d", label: "3D Follow", icon: Navigation },
-            { mode: "follow", label: "2D Follow", icon: Crosshair },
-            { mode: "overview", label: "Overview", icon: MapPin },
-          ].map(({ mode, label, icon: Icon }) => (
+        {/* Map engine: 3D (MapLibre vector) vs 2D (Leaflet raster) */}
+        <div className={cn(glass, "flex flex-col gap-1 p-1 rounded-xl shadow-md")}>
+          <p className="text-[7.5px] font-extrabold text-center uppercase tracking-wider text-muted-foreground pt-1 pb-0.5">Map</p>
+          {(["3d", "2d"] as const).map((engine) => (
             <Button
-              key={mode}
-              variant={cameraMode === mode ? "default" : "ghost"}
+              key={engine}
+              variant={mapEngine === engine ? "default" : "ghost"}
               size="icon"
-              title={label}
+              title={engine === "3d" ? "3D vector map" : "2D map"}
               className={cn(
-                "h-8 w-8 rounded-lg transition-all",
-                cameraMode === mode ? "bg-[#2952A3] text-white hover:bg-[#1e3a5f]" : "text-muted-foreground hover:bg-muted"
+                "h-8 w-8 rounded-lg text-[10px] font-black transition-all",
+                mapEngine === engine ? "bg-[#2952A3] text-white hover:bg-[#1e3a5f]" : "text-muted-foreground hover:bg-muted"
               )}
-              onClick={() => setCameraMode(mode as any)}
+              onClick={() => {
+                setEngineNotice(null);
+                setMapEngine(engine);
+              }}
             >
-              <Icon className="h-3.5 w-3.5" />
+              {engine.toUpperCase()}
             </Button>
           ))}
         </div>
+
+        {/* 3D Smart Camera Mode Controls */}
+        {mapEngine === "3d" && (
+          <div className={cn(glass, "flex flex-col gap-1.5 p-1 rounded-xl shadow-md")}>
+            <p className="text-[7.5px] font-extrabold text-center uppercase tracking-wider text-muted-foreground pt-1 pb-0.5">Cam</p>
+            {[
+              { mode: "follow-3d", label: "3D Follow", icon: Navigation },
+              { mode: "follow", label: "2D Follow", icon: Crosshair },
+              { mode: "overview", label: "Overview", icon: MapPin },
+            ].map(({ mode, label, icon: Icon }) => (
+              <Button
+                key={mode}
+                variant={cameraMode === mode ? "default" : "ghost"}
+                size="icon"
+                title={label}
+                className={cn(
+                  "h-8 w-8 rounded-lg transition-all",
+                  cameraMode === mode ? "bg-[#2952A3] text-white hover:bg-[#1e3a5f]" : "text-muted-foreground hover:bg-muted"
+                )}
+                onClick={() => setCameraMode(mode as any)}
+              >
+                <Icon className="h-3.5 w-3.5" />
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Bottom — driver list + mobile legend */}
