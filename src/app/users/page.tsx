@@ -343,7 +343,7 @@ export default function UsersPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role!} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
+      <main className="flex-1 md:ml-64 p-4 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">User Management</h1>

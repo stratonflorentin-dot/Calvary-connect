@@ -39,7 +39,9 @@ export function PageShell({ children, width = "default", className }: PageShellP
           isCollapsed ? "md:ml-20" : "md:ml-64",
         )}
       >
-        <main className={cn("flex-1 px-4 sm:px-6 lg:px-8 py-6 mx-auto w-full", widthClass, className)}>
+        {/* Mobile: clear the fixed top app bar / bottom nav (globals.css adds
+            safe-area-aware padding via :has(); these classes are the fallback). */}
+        <main className={cn("flex-1 px-4 sm:px-6 lg:px-8 pt-[4.5rem] pb-24 md:py-6 mx-auto w-full", widthClass, className)}>
           {children}
         </main>
       </div>

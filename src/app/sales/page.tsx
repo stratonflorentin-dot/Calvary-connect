@@ -670,7 +670,7 @@ function SalesModuleContent() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role || 'OPERATOR'} />
-      <div className="flex-1 p-4 md:p-8 md:ml-64">
+      <div data-page-content className="flex-1 p-4 md:p-8 md:ml-64">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground">Sales & Commercial</h1>
           <p className="text-base text-muted-foreground mt-2">Manage customers, quotations, contracts, and sales pipeline</p>

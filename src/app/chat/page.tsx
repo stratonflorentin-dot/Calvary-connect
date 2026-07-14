@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
+  ArrowLeft,
   Hash,
   Loader2,
   MessageSquare,
@@ -1244,10 +1245,16 @@ export default function InternalChatPage() {
         iconAccent="bg-primary text-primary-foreground"
       />
 
-      <div className="cv-surface overflow-hidden" style={{ height: "calc(100vh - 220px)" }}>
+      {/* Phones show either the list OR the conversation; md+ shows both. */}
+      <div className="cv-surface overflow-hidden h-[calc(100dvh-20rem)] md:h-[calc(100vh-220px)]">
         <div className="flex h-full">
           {/* ── Conversation list ── */}
-          <aside className="w-80 shrink-0 border-r border-border flex flex-col bg-muted/30">
+          <aside
+            className={cn(
+              "w-full md:w-80 shrink-0 md:border-r border-border flex-col bg-muted/30",
+              activeChannel ? "hidden md:flex" : "flex",
+            )}
+          >
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Chats</p>
@@ -1336,12 +1343,25 @@ export default function InternalChatPage() {
           </aside>
 
           {/* ── Messages pane ── */}
-          <section className="flex-1 flex flex-col min-w-0">
+          <section
+            className={cn(
+              "flex-1 flex-col min-w-0",
+              activeChannel ? "flex" : "hidden md:flex",
+            )}
+          >
             {!activeChannel || !activeDisplay ? (
               <EmptyState icon={MessageSquare} title="Pick a conversation" description="Choose a chat on the left, or start a new one with any colleague." />
             ) : (
               <>
-                <header className="px-5 py-3 border-b border-border flex items-center gap-3">
+                <header className="px-3 sm:px-5 py-3 border-b border-border flex items-center gap-2 sm:gap-3">
+                  {/* Back to the conversation list on phones */}
+                  <button
+                    onClick={() => setActiveChannel(null)}
+                    aria-label="Back to conversations"
+                    className="md:hidden p-1.5 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
                   <div className="relative">
                     <div className={cn(
                       "w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0",

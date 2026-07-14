@@ -15,31 +15,29 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isOpen, setIsOpen] = useState(true);
+  // isOpen is the MOBILE drawer — it must always start closed so phones never
+  // load with navigation covering the page. Only the desktop collapse state
+  // is worth persisting across sessions.
+  const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Load saved state from localStorage for persistence on refresh
+  // Load saved collapse state from localStorage for persistence on refresh
   useEffect(() => {
     try {
-      const savedOpen = localStorage.getItem("sidebar-open");
       const savedCollapsed = localStorage.getItem("sidebar-collapsed");
-      
-      if (savedOpen !== null) setIsOpen(savedOpen === "true");
       if (savedCollapsed !== null) setIsCollapsed(savedCollapsed === "true");
     } catch (e) {
       console.warn("Failed to load sidebar state from localStorage", e);
     }
   }, []);
 
-  // Save state to localStorage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem("sidebar-open", String(isOpen));
       localStorage.setItem("sidebar-collapsed", String(isCollapsed));
     } catch (e) {
       console.warn("Failed to save sidebar state to localStorage", e);
     }
-  }, [isOpen, isCollapsed]);
+  }, [isCollapsed]);
 
   const toggle = useCallback(() => setIsOpen(prev => !prev), []);
   const open = useCallback(() => setIsOpen(true), []);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Truck,
@@ -92,38 +92,18 @@ const routeIconMap: Record<string, any> = {
   "https://logipro.milelepower.co.tz/": Globe
 };
 
+/** The routes worth a slot in the phone bottom bar, in priority order.
+ *  Only routes the current role can actually see are used. */
+const BOTTOM_NAV_PRIORITY = ["/", "/trips", "/fleet", "/chat", "/finance", "/map", "/maintenance"];
+
 export function Sidebar({ role }: { role?: UserRole | null }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { signOut, user, uploadAvatar } = useSupabase();
-  const { isOpen, isCollapsed, toggle, open, close, toggleCollapse } = useSidebar();
+  const { isOpen, isCollapsed, toggle, close, toggleCollapse } = useSidebar();
 
-  // Ref for quick return scroll behavior
-  const lastScrollY = useRef(0);
   const canUseRolePreview = user?.role === "ADMIN" || user?.role === "CEO";
   const menuOwnerEmail: string | undefined = undefined;
-
-  // Quick return behavior - show/hide sidebar on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
-        // Scrolling down - hide sidebar on small screens or collapse on larger
-        if (window.innerWidth < 768) {
-          close();
-        }
-      } else if (currentScrollY < lastScrollY.current) {
-        // Scrolling up - show sidebar
-        if (window.innerWidth < 768) {
-          open();
-        }
-      }
-      lastScrollY.current = currentScrollY;
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [open, close]);
 
   const [isUploading, setIsUploading] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -242,28 +222,119 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
     });
   };
 
+  // Phone bottom bar: the first four destinations this role can see, in
+  // priority order, plus a Menu button that opens the full drawer.
+  const bottomNavItems = BOTTOM_NAV_PRIORITY
+    .map((path) => menuItems.find((m) => m.path === path))
+    .filter(Boolean)
+    .slice(0, 4) as { path: string; label: string }[];
+
   return (
     <>
-      {/* Mobile toggle button */}
-      <button
-        onClick={toggle}
-        className="md:hidden fixed top-4 left-4 z-[60] p-2.5 rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all duration-200"
+      {/* ── Mobile top app bar (data attribute drives global content padding) ── */}
+      <header
+        data-mobile-topbar
+        className="md:hidden fixed top-0 inset-x-0 z-40 bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-b border-[hsl(var(--sidebar-border))] shadow-md"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        {isOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-      </button>
+        <div className="h-14 px-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={toggle}
+              aria-label={isOpen ? "Close navigation" : "Open navigation"}
+              className="p-2 -ml-1 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              {isOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </button>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] p-1 rounded-lg shrink-0">
+                <Zap className="size-4" />
+              </div>
+              <span className="font-headline text-base font-extrabold tracking-tighter text-white uppercase truncate">
+                Calvary
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <div className="text-[hsl(var(--sidebar-foreground))] hover:text-white [&_button]:hover:bg-white/10 [&_svg]:size-4">
+              <NotificationBell />
+            </div>
+            <Link href="/profile" aria-label="Profile">
+              <Avatar className="size-8 border border-white/20">
+                <AvatarImage src={user?.avatar} />
+                <AvatarFallback className="bg-[hsl(var(--sidebar-primary))] text-white text-xs">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          </div>
+        </div>
+      </header>
 
-      {/* Mobile overlay */}
-      {isOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={close} />}
+      {/* ── Mobile bottom navigation ── */}
+      <nav
+        data-mobile-bottomnav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[hsl(var(--sidebar-background))] border-t border-[hsl(var(--sidebar-border))] shadow-[0_-4px_16px_rgba(0,0,0,0.25)]"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="h-16 grid grid-cols-5">
+          {bottomNavItems.map((item) => {
+            const Icon = routeIconMap[item.path] || LayoutDashboard;
+            const active = pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                href={item.path}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors",
+                  active
+                    ? "text-white"
+                    : "text-[hsl(var(--sidebar-muted))] hover:text-white",
+                )}
+              >
+                <span className={cn(
+                  "flex items-center justify-center size-8 rounded-xl transition-colors",
+                  active && "bg-[hsl(var(--sidebar-primary))] shadow-md",
+                )}>
+                  <Icon className="size-4.5" />
+                </span>
+                <span className="truncate max-w-[64px]">{item.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            onClick={toggle}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors",
+              isOpen ? "text-white" : "text-[hsl(var(--sidebar-muted))] hover:text-white",
+            )}
+          >
+            <span className={cn(
+              "flex items-center justify-center size-8 rounded-xl transition-colors",
+              isOpen && "bg-[hsl(var(--sidebar-accent))]",
+            )}>
+              <Menu className="size-4.5" />
+            </span>
+            <span>Menu</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile overlay (above the bars, below the drawer) */}
+      {isOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-[45]" onClick={close} />}
 
       {/* Sidebar */}
-      <aside className={cn(
-        "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
-        "bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-r border-[hsl(var(--sidebar-border))] shadow-xl",
-        isCollapsed ? "w-20" : "w-64",
-        // Mobile transition - fully hidden on mobile when closed
-        "md:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-      )}>
+      <aside
+        className={cn(
+          "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
+          "bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-r border-[hsl(var(--sidebar-border))] shadow-xl",
+          isCollapsed ? "w-20" : "w-64",
+          // Mobile transition - fully hidden on mobile when closed
+          "md:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+        style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         <div className={cn("p-6 flex items-center justify-between", isCollapsed && "p-4 justify-center")}>
           {!isCollapsed ? (
             <>

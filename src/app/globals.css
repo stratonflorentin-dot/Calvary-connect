@@ -358,3 +358,19 @@
   .ios-safe-top { padding-top: env(safe-area-inset-top); }
   .ios-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* ── Mobile app chrome spacing ─────────────────────────────────────────────
+   The Sidebar component renders a fixed top app bar and bottom navigation on
+   phones (tagged with data attributes). Whenever they are present, push the
+   page's main content clear of them — one rule instead of editing every page.
+   Applies below the md breakpoint only. */
+@media (max-width: 767px) {
+  body:has([data-mobile-topbar]) main,
+  body:has([data-mobile-topbar]) [data-page-content] {
+    padding-top: calc(4.5rem + env(safe-area-inset-top));
+  }
+  body:has([data-mobile-bottomnav]) main,
+  body:has([data-mobile-bottomnav]) [data-page-content] {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+}
