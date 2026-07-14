@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { RoleSelector } from '@/components/dashboard/role-selector';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
@@ -115,9 +114,7 @@ export default function InventoryPage() {
             <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
             <p className="text-muted-foreground text-sm">You do not have permission to access the warehouse inventory.</p>
           </div>
-        </main>
-        <BottomTabs role={role!} />
-        <RoleSelector />
+        </main>        <RoleSelector />
       </div>
     );
   }
@@ -206,9 +203,7 @@ export default function InventoryPage() {
             </TableBody>
           </Table>
         </div>
-      </main>
-      <BottomTabs role={role!} />
-      <RoleSelector />
+      </main>      <RoleSelector />
     </div>
   );
 }

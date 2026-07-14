@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
+import { uploadToBucket } from '@/lib/storage-upload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -257,21 +258,11 @@ export default function TruckHistoryPage() {
     try {
       setUploadingInsurance(true);
       
-      // Upload file to Supabase Storage
-      const fileExt = insuranceForm.file.name.split('.').pop();
+      // Server-action upload — direct client uploads violate storage RLS
+      const fileExt = insuranceForm.file.name.split('.').pop() || 'pdf';
       const fileName = `${selectedVehicleId}_${Date.now()}.${fileExt}`;
-      const filePath = `insurance/${fileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('vehicle-documents')
-        .upload(filePath, insuranceForm.file, { upsert: true });
-        
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('vehicle-documents')
-        .getPublicUrl(filePath);
+      const publicUrl = await uploadToBucket('vehicle-documents', 'insurance', insuranceForm.file, fileName);
+      if (!publicUrl) throw new Error('Insurance document upload failed');
       
       // Save document record to database
       const { error: dbError } = await supabase
@@ -286,7 +277,7 @@ export default function TruckHistoryPage() {
           policy_number: insuranceForm.policyNumber,
           expiry_date: insuranceForm.expiryDate || null,
           file_url: publicUrl,
-          file_path: filePath,
+          file_path: `insurance/${fileName}`,
           status: 'active',
           created_at: new Date().toISOString()
         });

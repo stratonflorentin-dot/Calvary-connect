@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { RoleSelector } from '@/components/dashboard/role-selector';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
@@ -38,6 +37,7 @@ interface UserProfile {
 }
 
 import { inviteUserAction, getUsersAction, deleteUserAction, updateUserAction, backfillEmployeeIdsAction } from './actions';
+import { uploadToBucket } from '@/lib/storage-upload';
 import { effectiveUserStatus } from '@/lib/user-status-utils';
 
 export default function UsersPage() {
@@ -126,24 +126,12 @@ export default function UsersPage() {
 
   const uploadPhoto = async (userId: string): Promise<string | null> => {
     if (!selectedPhoto) return null;
-    
+
     try {
       setUploading(true);
-      const fileExt = selectedPhoto.name.split('.').pop();
-      const fileName = `${userId}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('profile-photos')
-        .upload(filePath, selectedPhoto, { upsert: true });
-        
-      if (uploadError) throw uploadError;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(filePath);
-        
-      return publicUrl;
+      const fileExt = selectedPhoto.name.split('.').pop() || 'jpg';
+      // Server-action upload path — direct client uploads violate storage RLS
+      return await uploadToBucket('profile-photos', 'avatars', selectedPhoto, `${userId}.${fileExt}`);
     } catch (error) {
       console.error('Error uploading photo:', error);
       return null;
@@ -874,9 +862,7 @@ export default function UsersPage() {
           </Table>
           </div>
         </div>
-      </main>
-      <BottomTabs role={role!} />
-      <RoleSelector />
+      </main>      <RoleSelector />
     </div>
   );
 }

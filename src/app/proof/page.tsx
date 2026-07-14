@@ -4,7 +4,6 @@ import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -668,7 +667,6 @@ export default function DeliveryProofPage() {
           </Dialog>
         </div>
       </main>
-      <BottomTabs role={role} />
     </div>
   );
 }

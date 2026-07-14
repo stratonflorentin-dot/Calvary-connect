@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { uploadToBucket } from '@/lib/storage-upload';
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -93,12 +94,9 @@ export function PODUploadDialog({ trip, open, onClose, onPODUploaded }: PODUploa
 
   const uploadPhoto = async (file: File, index: number): Promise<string | null> => {
     try {
-      const ext = file.name.split(".").pop();
-      const path = `pod/${trip.id}/${Date.now()}_${index}.${ext}`;
-      const { error } = await supabase.storage.from("documents").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from("documents").getPublicUrl(path);
-      return data.publicUrl;
+      const ext = file.name.split(".").pop() || "jpg";
+      // Server-action upload — direct client uploads violate storage RLS
+      return await uploadToBucket("documents", `pod/${trip.id}`, file, `${Date.now()}_${index}.${ext}`);
     } catch {
       return null;
     }

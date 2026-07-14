@@ -4,7 +4,6 @@
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { AuthComponent } from '@/components/auth/auth-component';
 import { CeoView } from '@/components/dashboard/ceo-view';
 import AdminDashboard from '@/components/dashboard/admin-view';
@@ -115,9 +114,7 @@ export default function Home() {
           {renderContent()}
         </div>
 
-        {/* Always show BottomTabs on mobile for all roles */}
-        <BottomTabs role={role} />
-      </main>
+        {/* Always show BottomTabs on mobile for all roles */}      </main>
     </div>
   );
 }

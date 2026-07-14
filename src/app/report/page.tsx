@@ -3,7 +3,6 @@
 import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -114,9 +113,7 @@ export default function MaintenanceReportPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-      <BottomTabs role={role} />
-    </div>
+      </main>    </div>
   );
 }
 

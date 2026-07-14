@@ -540,6 +540,61 @@ BEGIN
 END $$;
 
 -- =============================================================================
+-- SECTION 10b: Storage policies — authenticated users can upload
+--
+-- storage.objects has RLS enabled but NO write policies, so every client
+-- upload (avatars, chat attachments, POD photos, documents) failed with
+-- "new row violates row-level security policy". The app now uploads through a
+-- verified server action, but these policies restore the direct client path
+-- and keep the storage API usable from the browser.
+-- =============================================================================
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'storage' AND table_name = 'objects'
+  ) THEN
+    DROP POLICY IF EXISTS app_buckets_insert ON storage.objects;
+    CREATE POLICY app_buckets_insert ON storage.objects
+      FOR INSERT TO authenticated
+      WITH CHECK (bucket_id IN (
+        'profile-photos', 'avatars', 'chat-attachments', 'compliance-docs',
+        'documents', 'vehicle-documents'
+      ));
+
+    DROP POLICY IF EXISTS app_buckets_update ON storage.objects;
+    CREATE POLICY app_buckets_update ON storage.objects
+      FOR UPDATE TO authenticated
+      USING (bucket_id IN (
+        'profile-photos', 'avatars', 'chat-attachments', 'compliance-docs',
+        'documents', 'vehicle-documents'
+      ));
+
+    DROP POLICY IF EXISTS app_buckets_select ON storage.objects;
+    CREATE POLICY app_buckets_select ON storage.objects
+      FOR SELECT TO authenticated
+      USING (bucket_id IN (
+        'profile-photos', 'avatars', 'chat-attachments', 'compliance-docs',
+        'documents', 'vehicle-documents'
+      ));
+
+    DROP POLICY IF EXISTS app_buckets_delete ON storage.objects;
+    CREATE POLICY app_buckets_delete ON storage.objects
+      FOR DELETE TO authenticated
+      USING (
+        bucket_id IN (
+          'profile-photos', 'avatars', 'chat-attachments', 'compliance-docs',
+          'documents', 'vehicle-documents'
+        )
+        AND owner = auth.uid()
+      );
+
+    RAISE NOTICE 'Storage upload policies created';
+  END IF;
+END $$;
+
+-- =============================================================================
 -- SECTION 11: Reload PostgREST schema cache
 -- =============================================================================
 

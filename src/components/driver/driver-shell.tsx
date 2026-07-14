@@ -1,7 +1,6 @@
 "use client";
 
 import { Sidebar } from "@/components/navigation/sidebar";
-import { BottomTabs } from "@/components/navigation/bottom-tabs";
 import type { ReactNode } from "react";
 
 interface DriverShellProps {
@@ -29,7 +28,6 @@ export function DriverShell({ title, description, children, action }: DriverShel
         </header>
         {children}
       </main>
-      <BottomTabs role="DRIVER" />
     </div>
   );
 }

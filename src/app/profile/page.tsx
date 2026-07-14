@@ -4,7 +4,6 @@ import { useState, useRef } from 'react';
 import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { BottomTabs } from '@/components/navigation/bottom-tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { User, Mail, Shield, LogOut, Camera, Pencil, Save, X, Building2, Phone, Hash } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { uploadToBucket } from '@/lib/storage-upload';
 import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
@@ -69,39 +69,16 @@ export default function ProfilePage() {
     try {
       let avatarUrl = user.avatar;
 
-      // Upload new avatar if changed - handle missing bucket gracefully
+      // Upload new avatar if changed. Goes through the server-action upload
+      // path — direct client uploads violate storage RLS until migration 026.
       if (avatarFile) {
-        try {
-          const fileExt = avatarFile.name.split('.').pop();
-          const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-          const filePath = `avatars/${fileName}`;
-          const { error: uploadError, data } = await supabase.storage
-            .from('profile-photos')
-            .upload(filePath, avatarFile);
-
-          if (uploadError) {
-            if (uploadError.message?.includes('Bucket not found')) {
-              console.warn('Avatar bucket not found in Supabase. Skipping avatar upload.');
-              // Continue without avatar - don't block profile update
-            } else {
-              console.error('Avatar upload error:', uploadError);
-              throw new Error('Failed to upload avatar: ' + uploadError.message);
-            }
-          } else {
-            const { data: { publicUrl } } = supabase.storage
-              .from('profile-photos')
-              .getPublicUrl(filePath);
-
-            avatarUrl = publicUrl;
-          }
-        } catch (uploadErr: any) {
-          if (uploadErr.message?.includes('Bucket not found')) {
-            console.warn('Storage bucket not configured. Skipping avatar upload.');
-            // Continue without avatar
-          } else {
-            throw uploadErr;
-          }
+        const fileExt = avatarFile.name.split('.').pop() || 'jpg';
+        const publicUrl = await uploadToBucket('profile-photos', 'avatars', avatarFile, `${user.id}.${fileExt}`);
+        if (!publicUrl) {
+          throw new Error('Failed to upload avatar. Please try again.');
         }
+        // Cache-bust: the path is stable per user, the content changed
+        avatarUrl = `${publicUrl}?v=${Date.now()}`;
       }
 
       // Update user profile - create if not exists
@@ -388,7 +365,6 @@ export default function ProfilePage() {
           </DialogContent>
         </Dialog>
       </main>
-      <BottomTabs role={role} />
     </div>
   );
 }

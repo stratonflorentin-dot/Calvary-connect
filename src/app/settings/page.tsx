@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { uploadToBucket } from '@/lib/storage-upload';
 import { PageShell, PageHeader, SectionCard, RefreshControl } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -221,10 +222,9 @@ export default function SettingsPage() {
                         if (!f) return;
                         setUploadingLogo(true);
                         try {
-                          const path = `company/logo-${Date.now()}-${f.name.replace(/[^\w.\-]/g, "_")}`;
-                          const { error } = await supabase.storage.from("avatars").upload(path, f, { upsert: true });
-                          if (error) throw error;
-                          const url = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+                          const name = `logo-${Date.now()}-${f.name.replace(/[^\w.\-]/g, "_")}`;
+                          const url = await uploadToBucket("avatars", "company", f, name);
+                          if (!url) throw new Error("Logo upload failed");
                           setCompany((p) => ({ ...p, logo_url: url }));
                           toast({ title: "Logo uploaded", description: "Hit Save to keep it." });
                         } catch (err: any) {

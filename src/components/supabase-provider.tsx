@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { uploadToBucket } from '@/lib/storage-upload';
 import { UserRole } from '@/types/roles';
 import { resolveUserRole } from '@/lib/user-role-utils';
 import { SyncManager } from '@/lib/offline-sync';
@@ -460,22 +461,15 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     setIsLoading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      // Deterministic name per user (upsert on the server) — no orphan files
+      const publicUrl = await uploadToBucket('profile-photos', 'avatars', file, `${user.id}.${fileExt}`);
+      if (!publicUrl) throw new Error('Upload failed');
 
-      const { error: uploadError } = await supabase.storage
-        .from('profile-photos')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(filePath);
-
-      await updateProfile({ avatar: publicUrl });
-      return publicUrl;
+      // Cache-bust so the new photo shows immediately despite the same path
+      const bustedUrl = `${publicUrl}?v=${Date.now()}`;
+      await updateProfile({ avatar: bustedUrl });
+      return bustedUrl;
     } catch (err) {
       console.error('[SupabaseProvider] Error uploading avatar:', err);
       toast({ title: 'Error', description: 'Failed to upload photo', variant: 'destructive' });

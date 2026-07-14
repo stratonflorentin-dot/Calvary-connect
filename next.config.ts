@@ -38,6 +38,11 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     scrollRestoration: true,
+    serverActions: {
+      // File uploads (avatars, chat attachments, POD photos, insurance docs)
+      // go through server actions; the 1 MB default rejects real photos.
+      bodySizeLimit: '10mb',
+    },
   },
   // FAT32 volumes make Node's readlink return EISDIR for regular files,
   // which crashes webpack's symlink resolution. Skip it — no symlinks here.

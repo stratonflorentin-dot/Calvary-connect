@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { uploadToBucket } from '@/lib/storage-upload';
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/hooks/use-toast";
@@ -251,10 +252,11 @@ export default function CompliancePage() {
 
   const uploadAttachment = async (): Promise<string | null> => {
     if (!file) return null;
-    const path = `${form.vehicle_id}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
-    const { error } = await supabase.storage.from("compliance-docs").upload(path, file, { upsert: false });
-    if (error) throw new Error(`Attachment upload failed: ${error.message}`);
-    return supabase.storage.from("compliance-docs").getPublicUrl(path).data.publicUrl;
+    // Server-action upload — direct client uploads violate storage RLS
+    const name = `${Date.now()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
+    const url = await uploadToBucket("compliance-docs", form.vehicle_id, file, name);
+    if (!url) throw new Error("Attachment upload failed");
+    return url;
   };
 
   const notifyManagers = async (title: string, message: string) => {
