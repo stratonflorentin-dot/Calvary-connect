@@ -15,6 +15,11 @@ const MIN_UPDATE_INTERVAL_MS = 5000;
 /** High-quality threshold — below this, we protect recent readings from being overwritten. */
 const HIGH_QUALITY_ACCURACY_M = 30;
 
+/** Heartbeat interval. watchPosition only fires on movement, so a stationary
+ *  driver stops writing and goes "offline" on the map after 120s. Re-saving
+ *  the last good fix keeps last_updated fresh while the app is open. */
+const HEARTBEAT_INTERVAL_MS = 45000;
+
 interface GeoPosition {
   latitude: number;
   longitude: number;
@@ -31,6 +36,7 @@ export function SilentLocationTracker() {
   const lastUpdateRef = useRef<number>(0);
   const lastAccuracyRef = useRef<number>(9999);
   const savingRef = useRef(false);
+  const lastGoodPositionRef = useRef<GeoPosition | null>(null);
 
   const saveLocation = useCallback(
     async (pos: GeoPosition, force = false) => {
@@ -53,6 +59,9 @@ export function SilentLocationTracker() {
         );
         return;
       }
+
+      // Passed coordinate + accuracy validation — remember it for the heartbeat.
+      lastGoodPositionRef.current = pos;
 
       const now = Date.now();
       const timeSinceLastUpdate = now - lastUpdateRef.current;
@@ -208,7 +217,17 @@ export function SilentLocationTracker() {
       },
     );
 
+    // Heartbeat: re-save the last good fix when watchPosition has been quiet
+    // (stationary vehicle) so the driver stays "online" on the fleet map.
+    const heartbeat = setInterval(() => {
+      const last = lastGoodPositionRef.current;
+      if (!last) return;
+      if (Date.now() - lastUpdateRef.current < HEARTBEAT_INTERVAL_MS) return;
+      saveLocation(last, true);
+    }, HEARTBEAT_INTERVAL_MS);
+
     return () => {
+      clearInterval(heartbeat);
       if (watchIdRef.current !== null) geo.clearWatch(watchIdRef.current);
       // Mark driver as inactive when component unmounts
       supabase

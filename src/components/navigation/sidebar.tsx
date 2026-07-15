@@ -89,12 +89,19 @@ const routeIconMap: Record<string, any> = {
   "/hr/insurance": Shield,
   "/hr/meetings": CalendarDays,
   "/profile": UserIcon,
+  "/driver/trips": Route,
+  "/proof": Camera,
+  "/driver/fuel": Fuel,
+  "/driver/expenses": Receipt,
+  "/driver/maintenance": Wrench,
+  "/driver/profile": UserIcon,
   "https://logipro.milelepower.co.tz/": Globe
 };
 
 /** The routes worth a slot in the phone bottom bar, in priority order.
- *  Only routes the current role can actually see are used. */
-const BOTTOM_NAV_PRIORITY = ["/", "/trips", "/fleet", "/chat", "/finance", "/map", "/maintenance"];
+ *  Only routes the current role can actually see are used, so the driver
+ *  paths never surface for manager roles and vice versa. */
+const BOTTOM_NAV_PRIORITY = ["/", "/trips", "/driver/trips", "/fleet", "/chat", "/proof", "/finance", "/map", "/maintenance"];
 
 export function Sidebar({ role }: { role?: UserRole | null }) {
   const pathname = usePathname();

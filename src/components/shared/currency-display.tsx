@@ -8,15 +8,15 @@ export function CurrencyDisplay() {
   const { currency, toggleCurrency, format, exchangeRate } = useCurrency();
 
   return (
-    <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2 shadow-sm border">
+    <div className="flex items-center gap-3 bg-card rounded-xl px-4 py-2 shadow-sm border">
       <div className="flex items-center gap-2">
         <TrendingUp className="size-4 text-green-600" />
-        <span className="text-sm font-medium text-gray-600">
+        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
           1 USD = {exchangeRate.toLocaleString()} TSH
         </span>
       </div>
 
-      <div className="h-4 w-px bg-gray-300" />
+      <div className="h-4 w-px bg-border" />
 
       <Button
         variant="ghost"

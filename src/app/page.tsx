@@ -95,8 +95,12 @@ export default function Home() {
         <header className="sticky top-0 h-14 md:h-16 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b flex items-center justify-between px-4 md:px-6 z-40 mb-4 md:mb-6 -mx-4 md:-mx-8">
           <div className="md:hidden font-headline tracking-tighter text-primary text-lg font-bold">Calvary Connect</div>
           <div className="hidden md:block" />
-          <div className="flex items-center gap-3">
-            <CurrencyDisplay />
+          <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
+            {/* Too wide for a phone header row — the bell/language buttons were
+                pushed past the clipped edge and became unreachable. */}
+            <div className="hidden md:block">
+              <CurrencyDisplay />
+            </div>
             <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={toggleLanguage} className="rounded-full gap-2 border text-primary h-9 px-3">
               <Languages className="size-4" />

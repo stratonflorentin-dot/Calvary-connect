@@ -33,9 +33,12 @@ export function PageShell({ children, width = "default", className }: PageShellP
   return (
     <div className="min-h-screen flex bg-background">
       <Sidebar role={(role as any) ?? "ADMIN"} />
+      {/* min-w-0 is load-bearing: without it this flex child refuses to shrink
+          below its content's intrinsic width, and any wide page (chat, tables)
+          pushes the whole column past the phone viewport. */}
       <div
         className={cn(
-          "flex-1 flex flex-col min-h-screen transition-all duration-300",
+          "flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300",
           isCollapsed ? "md:ml-20" : "md:ml-64",
         )}
       >

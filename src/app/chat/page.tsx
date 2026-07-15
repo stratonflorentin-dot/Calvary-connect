@@ -1251,7 +1251,7 @@ export default function InternalChatPage() {
           {/* ── Conversation list ── */}
           <aside
             className={cn(
-              "w-full md:w-80 shrink-0 md:border-r border-border flex-col bg-muted/30",
+              "w-full min-w-0 md:w-80 md:shrink-0 md:border-r border-border flex-col bg-muted/30",
               activeChannel ? "hidden md:flex" : "flex",
             )}
           >
