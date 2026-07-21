@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/components/supabase-provider";
 import { useToast } from "@/hooks/use-toast";
 import { AuditTrailService } from "@/services/audit-trail-service";
+import { uploadToBucket } from "@/lib/storage-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Save, Truck } from "lucide-react";
+import { Camera, Loader2, Save, Truck } from "lucide-react";
 
 /**
  * Add / edit a vehicle.
@@ -99,6 +100,7 @@ interface VehicleWritePayload {
   insurance_expiry?: string | null;
   registration_expiry?: string | null;
   next_inspection_due?: string | null;
+  photo_url?: string | null;
   updated_at: string;
   created_at?: string;
 }
@@ -126,10 +128,23 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<VehicleFormState>(empty);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(vehicle?.id);
+
+  const pickPhoto = () => photoInputRef.current?.click();
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
 
   useEffect(() => {
     if (!open) return;
+    setPhotoFile(null);
+    setPhotoPreview(vehicle?.photo_url ?? null);
     if (vehicle) {
       setForm({
         plate_number: vehicle.plate_number ?? vehicle.plateNumber ?? "",
@@ -166,6 +181,17 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
     }
     setSaving(true);
     try {
+      let photoUrl = vehicle?.photo_url ?? null;
+      if (photoFile) {
+        const uploaded = await uploadToBucket("vehicle-photos", "vehicles", photoFile);
+        if (!uploaded) {
+          toast({ title: "Photo upload failed", description: "Vehicle was not saved. Please try again.", variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+        photoUrl = uploaded;
+      }
+
       const payload: VehicleWritePayload = {
         plate_number: form.plate_number.trim().toUpperCase(),
         make: form.make.trim(),
@@ -193,6 +219,13 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         }
       }
 
+      // `photo_url` (migration 028) is only sent when the user actually
+      // uploaded a photo — omitting it otherwise keeps this save working
+      // even before that migration has been applied.
+      if (photoFile && photoUrl) {
+        payload.photo_url = photoUrl;
+      }
+
       if (isEdit) {
         const { error } = await supabase.from("vehicles").update(payload).eq("id", vehicle.id);
         if (error) throw error;
@@ -217,7 +250,7 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
       const hint =
         raw.includes("duplicate key") ? "A vehicle with this plate already exists." :
           raw.includes("permission") || raw.includes("policy") ? "Your role isn't allowed to add vehicles. Contact an admin." :
-            raw.includes("does not exist") || raw.includes("schema cache") ? `Database schema is out of date — run migration 026 in the Supabase SQL editor, then retry. (${raw})` :
+            raw.includes("does not exist") || raw.includes("schema cache") ? `Database schema is out of date — run migrations 026 and 028 in the Supabase SQL editor, then retry. (${raw})` :
               raw.includes("check constraint") ? `The database rejected a field value — run migration 026 in the Supabase SQL editor, then retry. (${raw})` :
                 raw;
       toast({ title: isEdit ? "Update failed" : "Add failed", description: hint, variant: "destructive" });
@@ -239,6 +272,39 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         </DialogHeader>
 
         <form onSubmit={save} className="space-y-5">
+          {/* Photo */}
+          <div className="flex items-center gap-4">
+            <div
+              onClick={pickPhoto}
+              className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-dashed border-border cursor-pointer hover:border-primary/40 transition-colors shrink-0 bg-muted"
+            >
+              {photoPreview ? (
+                <img src={photoPreview} alt="Vehicle preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Truck className="size-6 text-muted-foreground" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                <Camera className="size-5 text-white" />
+              </div>
+            </div>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              onChange={onPhotoChange}
+              className="hidden"
+            />
+            <div className="space-y-1">
+              <Button type="button" variant="outline" size="sm" onClick={pickPhoto}>
+                <Camera className="size-4 mr-2" />
+                {photoPreview ? "Change photo" : "Add photo"}
+              </Button>
+              <p className="text-xs text-muted-foreground">Optional. JPG, PNG or WEBP.</p>
+            </div>
+          </div>
+
           {/* Identity */}
           <fieldset className="space-y-3">
             <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Identity</legend>

@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Bell, Check, Trash2, FileText, AlertTriangle, UserPlus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { playNotificationSound } from "@/lib/sounds";
 
 interface Notification {
   id: string;
@@ -52,6 +53,7 @@ export function NotificationBell() {
           newNotification.is_read = newNotification.read;
           setNotifications((prev) => [newNotification, ...prev]);
           setUnreadCount((prev) => prev + 1);
+          playNotificationSound();
         }
       )
       .subscribe();

@@ -258,6 +258,13 @@ export class WebRTCManager {
   getConnectionState(): RTCPeerConnectionState | null {
     return this.peerConnection?.connectionState || null;
   }
+
+  // True once the peer connection exists (i.e. initialize() has finished
+  // acquiring media and creating it) so callers know it's safe to add
+  // remote descriptions / ICE candidates instead of racing initialize().
+  isReady(): boolean {
+    return this.peerConnection !== null;
+  }
 }
 
 // Format call duration

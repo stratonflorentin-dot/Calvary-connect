@@ -83,9 +83,17 @@ export default function VehicleDetailPage() {
 
                         {/* Vehicle Icon & Info */}
                         <div className="flex items-start gap-4 mb-4">
-                            <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
-                                <Truck className="w-7 h-7 text-primary-foreground" />
-                            </div>
+                            {vehicle.photo_url ? (
+                                <img
+                                    src={vehicle.photo_url}
+                                    alt={vehicle.vehicle_code}
+                                    className="w-14 h-14 rounded-xl object-cover border border-border"
+                                />
+                            ) : (
+                                <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
+                                    <Truck className="w-7 h-7 text-primary-foreground" />
+                                </div>
+                            )}
                             <div>
                                 <h1 className="text-2xl font-bold">{vehicle.vehicle_code}</h1>
                                 <p className="text-sm text-muted-foreground">

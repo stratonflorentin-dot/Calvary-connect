@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Phone, Video, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CallSession } from "@/lib/webrtc";
+import { playRingtone } from "@/lib/sounds";
 
 interface IncomingCallModalProps {
   call: CallSession;
@@ -23,6 +25,12 @@ export function IncomingCallModal({
   onDecline,
   open,
 }: IncomingCallModalProps) {
+  useEffect(() => {
+    if (!open) return;
+    const stop = playRingtone();
+    return stop;
+  }, [open]);
+
   const getInitials = (name: string) => {
     return name
       .split(" ")

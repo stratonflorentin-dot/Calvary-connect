@@ -20,6 +20,7 @@ const ALLOWED_BUCKETS = new Set([
   "compliance-docs",
   "documents",
   "vehicle-documents",
+  "vehicle-photos",
 ]);
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB

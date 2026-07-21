@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { uploadToBucket } from "@/lib/storage-upload";
 import { Paperclip, Image, FileText, X } from "lucide-react";
 import { WebRTCManager, CallSession, formatCallDuration, isWebRTCSupported, getWebRTCConfig } from "@/lib/webrtc";
+import { playRingback, playMessageSound } from "@/lib/sounds";
 import { IncomingCallModal } from "@/components/chat/incoming-call-modal";
 import { ActiveCallUI } from "@/components/chat/active-call-ui";
 
@@ -453,7 +454,16 @@ export default function InternalChatPage() {
         console.log('[SIGNALING] Received', signal.signal_type, 'for call', signal.call_id);
 
         if (!mgr) {
-          console.warn('[SIGNALING] webrtcManager not ready for signal:', signal.signal_type);
+          // Manager isn't created yet (e.g. receiver hasn't clicked Accept).
+          // ICE candidates would otherwise be silently lost, breaking the
+          // connection — queue them so they can be drained once the
+          // manager exists and the remote description is set.
+          if (signal.signal_type === 'ice_candidate') {
+            iceCandidateQueue.current.push(signal.signal_data);
+            console.log('[SIGNALING] webrtcManager not ready, queued ICE candidate. Queue length:', iceCandidateQueue.current.length);
+          } else {
+            console.warn('[SIGNALING] webrtcManager not ready for signal:', signal.signal_type);
+          }
           return;
         }
 
@@ -489,10 +499,11 @@ export default function InternalChatPage() {
               break;
             }
             case 'ice_candidate': {
-              if (remoteDescSet.current) {
+              if (mgr.isReady() && remoteDescSet.current) {
                 await mgr.addIceCandidate(signal.signal_data);
               } else {
-                // Queue until remoteDescription is set
+                // Peer connection not created yet, or remoteDescription not
+                // set yet — queue until both are ready.
                 iceCandidateQueue.current.push(signal.signal_data);
                 console.log('[SIGNALING] Queued ICE candidate, queue length:', iceCandidateQueue.current.length);
               }
@@ -1173,6 +1184,35 @@ export default function InternalChatPage() {
   const toggleSpeaker = () => {
     setIsSpeakerOn(!isSpeakerOn);
   };
+
+  // Ringback tone: play to the caller while the other side hasn't answered yet.
+  useEffect(() => {
+    const isCallerWaiting =
+      activeCall &&
+      activeCall.caller_id === dbUserId &&
+      (activeCall.status === "initiated" || activeCall.status === "ringing");
+
+    if (!isCallerWaiting) return;
+    const stop = playRingback();
+    return stop;
+  }, [activeCall, dbUserId]);
+
+  // Message notification sound for incoming messages from other users.
+  // Skip the very first population of recentMessages (initial load of history).
+  const messageSoundReady = useRef(false);
+  useEffect(() => {
+    if (recentMessages.length === 0) return;
+    if (!messageSoundReady.current) {
+      messageSoundReady.current = true;
+      return;
+    }
+    const latest = recentMessages[0];
+    if (latest.sender_id && latest.sender_id !== dbUserId) {
+      playMessageSound();
+    }
+    // Only fire when a new message actually arrives (id change), not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentMessages.length > 0 ? recentMessages[0].id : null]);
 
   // ── Sidebar ordering: most recent activity first, unread pinned visually ──
   const sortedChannels = useMemo(() => {

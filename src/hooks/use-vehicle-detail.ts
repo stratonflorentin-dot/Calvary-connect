@@ -30,6 +30,7 @@ interface Vehicle {
     registration_number: string;
     status: string;
     created_at: string;
+    photo_url?: string | null;
 }
 
 interface Trip {

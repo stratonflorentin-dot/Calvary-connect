@@ -40,6 +40,7 @@ interface Vehicle {
   currentDriverId?: string | null;
   currentFuelLevel?: number | null;
   fuelCapacity?: number | null;
+  photo_url?: string | null;
 }
 
 function daysUntil(date?: string | null): number | null {
@@ -241,9 +242,17 @@ export default function FleetPage() {
                       return (
                         <li key={v.id} className="px-5 py-3 hover:bg-muted/40 transition-colors">
                           <div className="flex items-center gap-4">
-                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", meta.chip)}>
-                              <Truck className="w-5 h-5" />
-                            </div>
+                            {v.photo_url ? (
+                              <img
+                                src={v.photo_url}
+                                alt={v.plate_number}
+                                className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
+                              />
+                            ) : (
+                              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", meta.chip)}>
+                                <Truck className="w-5 h-5" />
+                              </div>
+                            )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-baseline gap-2 flex-wrap">
                                 <p className="font-mono font-black text-sm text-foreground">{v.plate_number}</p>

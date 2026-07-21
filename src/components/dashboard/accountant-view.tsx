@@ -5,8 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { RoleDashboard } from "./shared/role-dashboard";
 import { EmptyState } from "@/components/shell";
 import { useCurrency } from "@/hooks/use-currency";
-import { REPORTING_CURRENCY, normalizeCurrency } from "@/lib/finance/multi-currency";
-import { daysOverdue, isOpenForAging } from "@/lib/finance/aging";
+import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
+import { daysOverdue, isOpenForAging, summarize, summarizeByCurrency } from "@/lib/finance/aging";
 import {
   BookOpen,
   Building2,
@@ -23,6 +23,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+
+// Always show these even when the balance/outstanding total is zero, so the
+// accountant dashboard consistently surfaces both operating currencies.
+const PINNED_CURRENCIES = ["TZS", "USD"];
 
 export function AccountantView() {
   const { format } = useCurrency();
@@ -43,28 +47,76 @@ export function AccountantView() {
 
   useEffect(() => { load(); }, []);
 
+  // Cash, receivables and payables are kept per-currency — never summed
+  // across currencies (see memory: multi-currency).
+  const cashByCurrency = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const a of banks) {
+      const cur = normalizeCurrency(a.currency);
+      out[cur] = (out[cur] || 0) + Number(a.current_balance || 0);
+    }
+    return out;
+  }, [banks]);
+
+  const arByCcy = useMemo(() => summarizeByCurrency(
+    invoices
+      .filter((i) => (i.type ?? "receivable") === "receivable" && isOpenForAging(i.status))
+      .map((i) => ({ amount: Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0), due_date: i.due_date, status: i.status, currency: i.currency })),
+  ), [invoices]);
+
+  const apByCcy = useMemo(() => summarizeByCurrency(
+    invoices
+      .filter((i) => i.type === "payable" && isOpenForAging(i.status))
+      .map((i) => ({ amount: Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0), due_date: i.due_date, status: i.status, currency: i.currency })),
+  ), [invoices]);
+
+  const currencies = useMemo(() => {
+    const set = new Set<string>(PINNED_CURRENCIES);
+    Object.keys(cashByCurrency).forEach((c) => set.add(c));
+    Object.keys(arByCcy).forEach((c) => set.add(c));
+    Object.keys(apByCcy).forEach((c) => set.add(c));
+    return sortCurrencyKeys(Array.from(set));
+  }, [cashByCurrency, arByCcy, apByCcy]);
+
   const stats = useMemo(() => {
-    const cash = banks.filter((a) => normalizeCurrency(a.currency) === REPORTING_CURRENCY).reduce((s, a) => s + Number(a.current_balance || 0), 0);
-    const ar = invoices.filter((i) => (i.type ?? "receivable") === "receivable" && isOpenForAging(i.status)).reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0), 0);
-    const ap = invoices.filter((i) => i.type === "payable" && isOpenForAging(i.status)).reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0), 0);
     const pendingExpenses = expenses.filter((e) => e.status === "pending").length;
     const arOverdue = invoices.filter((i) => (i.type ?? "receivable") === "receivable" && isOpenForAging(i.status) && daysOverdue(i.due_date) > 0).length;
-    return { cash, ar, ap, pendingExpenses, arOverdue };
-  }, [invoices, expenses, banks]);
+    return { pendingExpenses, arOverdue };
+  }, [invoices, expenses]);
 
   const recentPending = useMemo(() => expenses.filter((e) => e.status === "pending").slice(0, 5), [expenses]);
+
+  const apTotalLabel = useMemo(
+    () => currencies
+      .map((c) => ({ c, v: apByCcy[c]?.totalOutstanding ?? 0 }))
+      .filter(({ v }) => v > 0)
+      .map(({ c, v }) => format(v, c))
+      .join(" + ") || format(0, "TZS"),
+    [currencies, apByCcy, format],
+  );
+
+  const currencyKpis = currencies.flatMap((cur) => {
+    const cash = cashByCurrency[cur];
+    const ar = arByCcy[cur] ?? summarize([]);
+    const ap = apByCcy[cur] ?? summarize([]);
+    const kpis: { label: string; value: string; icon: any; accent: string; href: string }[] = [];
+    if (cash !== undefined || PINNED_CURRENCIES.includes(cur)) {
+      kpis.push({ label: `Cash (${cur})`, value: format(cash ?? 0, cur), icon: Wallet, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/finance/banking/bank-accounts" });
+    }
+    kpis.push({ label: `Receivables (${cur})`, value: format(ar.totalOutstanding, cur), icon: CreditCard, accent: "bg-primary/10 text-primary", href: "/finance/invoicing/customer-invoices" });
+    kpis.push({ label: `Payables (${cur})`, value: format(ap.totalOutstanding, cur), icon: Building2, accent: "bg-orange-100 text-orange-700", href: "/finance/invoicing/vendor-bills" });
+    return kpis;
+  });
 
   return (
     <RoleDashboard
       eyebrow="Accountant Console"
       title="Welcome"
-      subtitle={`${stats.pendingExpenses} expenses to review · ${stats.arOverdue} overdue AR · ${format(stats.ap)} owed to vendors`}
+      subtitle={`${stats.pendingExpenses} expenses to review · ${stats.arOverdue} overdue AR · ${apTotalLabel} owed to vendors`}
       onRefresh={load}
       storageKey="accountant-dash"
       kpis={[
-        { label: `Cash (${REPORTING_CURRENCY})`, value: format(stats.cash), icon: Wallet, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/finance/banking/bank-accounts" },
-        { label: "Receivables", value: format(stats.ar), icon: CreditCard, accent: "bg-primary/10 text-primary", href: "/finance/invoicing/customer-invoices" },
-        { label: "Payables", value: format(stats.ap), icon: Building2, accent: "bg-orange-100 text-orange-700", href: "/finance/invoicing/vendor-bills" },
+        ...currencyKpis,
         { label: "Overdue AR", value: stats.arOverdue, icon: TrendingDown, accent: "bg-red-100 text-red-700", href: "/finance/reports/aging-report" },
       ]}
       sections={[
