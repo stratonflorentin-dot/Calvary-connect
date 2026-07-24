@@ -105,6 +105,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "logistics",
   },
   {
+    path: "/chat/instagram",
+    label: "Instagram",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "OPERATOR"],
+    category: "logistics",
+  },
+  {
     path: "/route-optimizer",
     label: "Route Optimizer",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR"],

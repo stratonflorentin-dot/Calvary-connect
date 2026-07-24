@@ -35,6 +35,7 @@ import {
   ChevronRight,
   ArrowUpCircle,
   MessageSquare,
+  Instagram,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
@@ -60,6 +61,7 @@ const routeIconMap: Record<string, any> = {
   "/trips": Route,
   "/dispatch": Navigation,
   "/chat": MessageSquare,
+  "/chat/instagram": Instagram,
   "/route-optimizer": Route,
   "/track": Globe,
   "/trip-history": ClipboardList,
