@@ -12,8 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AFRICAN_CITIES } from "@/lib/trips/african-cities";
-import { Loader2, Route as RouteIcon, Save } from "lucide-react";
+import { Loader2, Route as RouteIcon, Save, Sparkles } from "lucide-react";
 import dynamic from "next/dynamic";
+
+interface DispatchSuggestion {
+  driverId: string;
+  vehicleId: string;
+  trailerId?: string;
+  score: number;
+  reasoning: string;
+}
 
 const RoutePreviewMap = dynamic(
   () => import("@/components/trip/route-preview-map").then((m) => m.RoutePreviewMap),
@@ -82,6 +90,9 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
   const [drivers, setDrivers] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [form, setForm] = useState<TripFormState>(empty);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<DispatchSuggestion[]>([]);
+  const [suggestionCaveats, setSuggestionCaveats] = useState<string[]>([]);
   const isEdit = Boolean(trip?.id);
 
   useEffect(() => {
@@ -121,7 +132,49 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
         trip_number: `TRP-${Date.now().toString().slice(-6)}`,
       });
     }
+    setSuggestions([]);
+    setSuggestionCaveats([]);
   }, [open, trip]);
+
+  const fetchSuggestions = async () => {
+    setSuggesting(true);
+    setSuggestions([]);
+    setSuggestionCaveats([]);
+    try {
+      const res = await fetch("/api/ai/dispatch-suggestion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: form.origin,
+          destination: form.destination,
+          cargoDescription: form.cargo,
+          cargoWeightTons: form.cargoWeight === "" ? undefined : form.cargoWeight,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Suggestion request failed");
+      setSuggestions(json.suggestions ?? []);
+      setSuggestionCaveats(json.caveats ?? []);
+      if ((json.suggestions ?? []).length === 0) {
+        toast({ title: "No suggestions", description: json.caveats?.[0] ?? "No available drivers/vehicles matched." });
+      }
+    } catch (err: any) {
+      toast({ title: "Suggestion failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const applySuggestion = (s: DispatchSuggestion) => {
+    const vehicle = vehicles.find((v) => v.id === s.vehicleId);
+    const isTrailer = vehicle?.type === "TRAILER";
+    patch({
+      driverId: s.driverId,
+      truckId: isTrailer ? form.truckId : s.vehicleId,
+      trailerId: s.trailerId ?? (isTrailer ? s.vehicleId : form.trailerId),
+    });
+    setSuggestions([]);
+  };
 
   const trucks = useMemo(
     () => vehicles.filter((v) => ["DUMP_TRUCK", "TRUCK_HEAD"].includes(v.type)),
@@ -261,7 +314,45 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
           </fieldset>
 
           <fieldset className="space-y-3">
-            <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assignment</legend>
+            <div className="flex items-center justify-between">
+              <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Assignment</legend>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
+                disabled={!form.origin.trim() || !form.destination.trim() || suggesting}
+                onClick={fetchSuggestions}
+              >
+                {suggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                Suggest driver/vehicle
+              </Button>
+            </div>
+            {suggestions.length > 0 && (
+              <div className="space-y-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                {suggestions.map((s, i) => {
+                  const driver = drivers.find((d) => (d.id ?? d.uid) === s.driverId);
+                  const vehicle = vehicles.find((v) => v.id === s.vehicleId);
+                  return (
+                    <div key={i} className="flex items-start justify-between gap-3 rounded-lg bg-background border border-border p-2.5">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-foreground">
+                          {driver?.name ?? "Unknown driver"} · {vehicle?.plate_number ?? "Unknown vehicle"}
+                          <span className="ml-1.5 text-muted-foreground font-normal">({s.score}/100)</span>
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{s.reasoning}</p>
+                      </div>
+                      <Button type="button" size="sm" className="h-7 shrink-0 text-xs" onClick={() => applySuggestion(s)}>
+                        Use this
+                      </Button>
+                    </div>
+                  );
+                })}
+                {suggestionCaveats.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground italic">{suggestionCaveats.join(" · ")}</p>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Driver</Label>

@@ -1,5 +1,6 @@
 // AI Database Context - Provides database schema and query functions for AI agent
 import { supabase } from './supabase';
+import { getDriverLocationsForMapAction } from '@/app/tracking/actions';
 
 export interface DatabaseSchema {
   tables: {
@@ -133,21 +134,21 @@ FLEET_SCHEMA.tables.push(
 );
 
 // Data fetchers for AI context
-export async function getFleetContext() {
-  async function safeQuery(queryFn: () => any, fallbackKey = 'data') {
-    try {
-      const res = await Promise.resolve(queryFn());
-      if (res && res.error) {
-        console.warn('Supabase query error:', res.error.message || res.error);
-        return { [fallbackKey]: [] };
-      }
-      return res || { [fallbackKey]: [] };
-    } catch (err) {
-      console.warn('Supabase query threw:', err);
+async function safeQuery(queryFn: () => any, fallbackKey = 'data') {
+  try {
+    const res = await Promise.resolve(queryFn());
+    if (res && res.error) {
+      console.warn('Supabase query error:', res.error.message || res.error);
       return { [fallbackKey]: [] };
     }
+    return res || { [fallbackKey]: [] };
+  } catch (err) {
+    console.warn('Supabase query threw:', err);
+    return { [fallbackKey]: [] };
   }
+}
 
+export async function getFleetContext() {
   const [vehicles, trips, expenses, users, contracts, clients, fuelLogs, maintenance, rateSheets] = await Promise.all([
     safeQuery(() => supabase.from('vehicles').select('*').limit(200)),
     safeQuery(() => supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(200)),
@@ -195,6 +196,96 @@ export async function getFleetContext() {
     fuelLogs: (fuelLogs.data || []).map((f: any) => ({ ...f, vehicle: f.vehicles })),
     maintenance: (maintenance.data || []).map((m: any) => ({ ...m, vehicle: m.vehicles })),
     rateSheets: rateSheets.data || []
+  };
+}
+
+const BUSY_TRIP_STATUSES = ["pending", "loading", "in_transit"];
+
+export interface DispatchCandidateVehicle {
+  id: string;
+  plate_number: string;
+  type: string | null;
+  trailer_sub_type: string | null;
+  status: string | null;
+  cargo_capacity_tons: number | null;
+  gvw_kg: number | null;
+  tare_weight_kg: number | null;
+  tank_capacity_litres: number | null;
+  dimensions: string | null;
+}
+
+export interface DispatchCandidateDriver {
+  id: string;
+  name: string;
+  license_class: string | null;
+  license_expiry: string | null;
+  performanceScore: number;
+  location: { status: string; lastUpdate: string } | null;
+}
+
+export interface DispatchContext {
+  vehicles: DispatchCandidateVehicle[];
+  drivers: DispatchCandidateDriver[];
+  busyVehicleIds: Set<string>;
+  busyDriverIds: Set<string>;
+}
+
+/**
+ * Context for AI dispatch suggestions — trimmed to what a driver+vehicle
+ * ranking prompt needs, unlike `getFleetContext()` which returns full rows
+ * for a general-purpose chat/analysis feature. Driver "busy" status has no
+ * DB column and is derived from active trip assignments.
+ */
+export async function getDispatchContext(): Promise<DispatchContext> {
+  const [vehiclesRes, driversRes, activeTripsRes, reviewsRes, locationsResult] = await Promise.all([
+    safeQuery(() =>
+      supabase
+        .from('vehicles')
+        .select('id, plate_number, type, trailer_sub_type, status, cargo_capacity_tons, gvw_kg, tare_weight_kg, tank_capacity_litres, dimensions')
+        .limit(300),
+    ),
+    safeQuery(() => supabase.from('user_profiles').select('id, name, license_class, license_expiry').eq('role', 'DRIVER').limit(300)),
+    safeQuery(() => supabase.from('trips').select('driver_id, truck_id, trailer_id, vehicle_id, status').in('status', BUSY_TRIP_STATUSES)),
+    safeQuery(() => supabase.from('performance_reviews').select('employee_id, rating')),
+    // Trusted server-side context (same as getFleetContext, which has no
+    // auth check either) — bypasses the manager-session verification that
+    // gates this action's normal client-facing callers.
+    getDriverLocationsForMapAction(null, null, null, true).catch(() => ({ locations: [] as const })),
+  ]);
+
+  const activeTrips = activeTripsRes.data || [];
+  const busyDriverIds = new Set<string>(activeTrips.map((t: any) => t.driver_id).filter(Boolean));
+  const busyVehicleIds = new Set<string>(
+    activeTrips.flatMap((t: any) => [t.truck_id, t.trailer_id, t.vehicle_id]).filter(Boolean),
+  );
+
+  const reviews = reviewsRes.data || [];
+  const scoreByDriver = new Map<string, number>();
+  for (const driver of driversRes.data || []) {
+    const driverReviews = reviews.filter((r: any) => r.employee_id === driver.id);
+    const avg = driverReviews.length > 0
+      ? driverReviews.reduce((s: number, r: any) => s + (r.rating || 0), 0) / driverReviews.length
+      : 4.5; // default, matches driver-performance route's convention for unreviewed drivers
+    scoreByDriver.set(driver.id, Number(avg.toFixed(1)));
+  }
+
+  const locationByDriver = new Map<string, { status: string; lastUpdate: string }>();
+  for (const loc of locationsResult.locations || []) {
+    locationByDriver.set(loc.driverId, { status: loc.status, lastUpdate: loc.lastUpdate });
+  }
+
+  return {
+    vehicles: vehiclesRes.data || [],
+    drivers: (driversRes.data || []).map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      license_class: d.license_class,
+      license_expiry: d.license_expiry,
+      performanceScore: scoreByDriver.get(d.id) ?? 4.5,
+      location: locationByDriver.get(d.id) ?? null,
+    })),
+    busyVehicleIds,
+    busyDriverIds,
   };
 }
 
