@@ -442,7 +442,7 @@ export default function CompliancePage() {
       const { data: recent } = await supabase
         .from("notifications")
         .select("message")
-        .eq("type", "compliance_reminder")
+        .eq("type", "compliance")
         .gte("created_at", since);
       const recentSet = new Set((recent ?? []).map((n: any) => n.message));
       const { data: managers } = await supabase.from("user_profiles").select("id").in("role", MANAGER_ROLES);
@@ -454,7 +454,7 @@ export default function CompliancePage() {
         await supabase.from("notifications").insert(
           (managers ?? []).map((m: any) => ({
             user_id: m.id,
-            type: "compliance_reminder",
+            type: "compliance",
             title: r.days! < 0 ? "Compliance document EXPIRED" : "Compliance renewal due",
             message,
             read: false,

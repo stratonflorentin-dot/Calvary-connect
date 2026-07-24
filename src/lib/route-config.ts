@@ -480,6 +480,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "people",
   },
   {
+    path: "/admin/hr/driver-compliance",
+    label: "Driver Compliance",
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR"],
+    category: "people",
+  },
+  {
     path: "/hr/insurance/add",
     label: "New Insurance",
     allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "ACCOUNTANT"],

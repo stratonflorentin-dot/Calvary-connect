@@ -8,6 +8,7 @@ export const ALLOWED_NOTIFICATION_CATEGORIES = [
   "finance",
   "hr",
   "maintenance",
+  "compliance",
 ] as const;
 
 export function isAllowedNotification(row: Record<string, unknown>): boolean {

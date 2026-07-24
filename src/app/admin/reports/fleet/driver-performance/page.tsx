@@ -37,8 +37,10 @@ interface DriverStat {
   totalRevenueTZS: number;
   totalFuelCostTZS: number;
   totalFuelLiters: number;
-  incidentsCount: number;
-  onTimeDeliveryRate: number;
+  incidentsCount: number | null;
+  incidentsTracked: boolean;
+  onTimeDeliveryRate: number | null;
+  onTimeSampleSize: number;
   averagePerformanceScore: number;
 }
 
@@ -46,7 +48,7 @@ interface SummaryStats {
   totalDriversActive: number;
   totalTrips: number;
   totalRevenue: number;
-  avgOnTimePercent: number;
+  avgOnTimePercent: number | null;
 }
 
 export default function DriverPerformancePage() {
@@ -129,10 +131,16 @@ export default function DriverPerformancePage() {
     return amount.toLocaleString('en-TZ') + ' TZS';
   };
 
-  // Find top performer (highest completed trips)
-  const topPerformer = drivers.length > 0
-    ? drivers.reduce((prev, curr) => (curr.completedTripsCount > prev.completedTripsCount ? curr : prev), drivers[0])
-    : null;
+  // Composite rank: performance score, then on-time rate (undated drivers
+  // rank last on this tiebreaker, not first), then trip volume.
+  const rankedDrivers = [...drivers].sort((a, b) => {
+    if (b.averagePerformanceScore !== a.averagePerformanceScore) return b.averagePerformanceScore - a.averagePerformanceScore;
+    const aOnTime = a.onTimeDeliveryRate ?? -1;
+    const bOnTime = b.onTimeDeliveryRate ?? -1;
+    if (bOnTime !== aOnTime) return bOnTime - aOnTime;
+    return b.completedTripsCount - a.completedTripsCount;
+  });
+  const medal = (rank: number) => (rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : null);
 
   return (
     <div id="report-root" className="flex min-h-screen bg-background" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
@@ -267,7 +275,7 @@ export default function DriverPerformancePage() {
                     <CheckCircle2 className="size-5 text-purple-800" />
                   </div>
                   <p className="text-xs font-bold text-purple-800/80 uppercase tracking-wider">On-Time Delivery</p>
-                  <p className="text-2xl font-black text-purple-900 mt-1">{summary.avgOnTimePercent}%</p>
+                  <p className="text-2xl font-black text-purple-900 mt-1">{summary.avgOnTimePercent === null ? "No data" : `${summary.avgOnTimePercent}%`}</p>
                 </div>
 
               </div>
@@ -287,25 +295,30 @@ export default function DriverPerformancePage() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-muted border-b border-border">
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Rank</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Driver</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Trips</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Distance (KM)</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Fuel Dispatched</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Revenue Generated</th>
-                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">On-Time %</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">On-Time</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Incidents</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Rating</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {drivers.map((driver) => {
-                          const isTop = topPerformer && driver.id === topPerformer.id;
+                        {rankedDrivers.map((driver, rank) => {
+                          const isTop3 = rank < 3;
                           return (
-                            <tr 
+                            <tr
                               key={driver.id}
                               className={`transition-colors hover:bg-muted/50 ${
-                                isTop ? 'bg-sky-50 border-l-2 border-sky-700' : ''
+                                isTop3 ? 'bg-sky-50 border-l-2 border-sky-700' : ''
                               }`}
                             >
+                              <td className="px-6 py-4 text-center font-black text-foreground">
+                                {medal(rank) ?? `#${rank + 1}`}
+                              </td>
                               <td className="px-6 py-4">
                                 <div>
                                   <span className="font-bold text-foreground block">{driver.name}</span>
@@ -328,15 +341,22 @@ export default function DriverPerformancePage() {
                                 {formatTZS(driver.totalRevenueTZS)}
                               </td>
                               <td className="px-6 py-4 text-center">
-                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                                  driver.onTimeDeliveryRate >= 95 
-                                    ? 'bg-emerald-100 text-emerald-800' 
-                                    : driver.onTimeDeliveryRate >= 90
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {driver.onTimeDeliveryRate}%
-                                </span>
+                                {driver.onTimeDeliveryRate === null ? (
+                                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-muted text-muted-foreground">No data</span>
+                                ) : (
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                    driver.onTimeDeliveryRate >= 95
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : driver.onTimeDeliveryRate >= 90
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {driver.onTimeDeliveryRate}% ({driver.onTimeSampleSize}/{driver.completedTripsCount})
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-center text-xs text-muted-foreground">
+                                {driver.incidentsTracked ? driver.incidentsCount : "Not tracked"}
                               </td>
                               <td className="px-6 py-4">
                                 <div className="flex items-center justify-center gap-1">
@@ -360,7 +380,7 @@ export default function DriverPerformancePage() {
                   </h3>
                   <div className="h-80 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={drivers}>
+                      <BarChart data={rankedDrivers}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                         <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: 'Revenue (TZS)', angle: -90, position: 'insideLeft', offset: 10 }} />

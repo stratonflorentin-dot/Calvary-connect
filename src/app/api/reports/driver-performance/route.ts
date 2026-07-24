@@ -78,17 +78,29 @@ export async function GET(request: NextRequest) {
 
       // Calculate rating
       const driverReviews = (reviews || []).filter((r) => r.employee_id === driver.id);
-      const avgScore = driverReviews.length > 0 
-        ? driverReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / driverReviews.length 
+      const avgScore = driverReviews.length > 0
+        ? driverReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / driverReviews.length
         : 4.5; // default high performance
 
-      // On-time rate calculation (can be simulated or based on actual times)
-      const onTimeRate = completedTrips.length > 0
-        ? Math.round(90 + (driver.name.charCodeAt(0) % 8) + (completedTrips.length % 3))
-        : 100;
-
-      // Incident count (simulation since incidents table is missing)
-      const incidentsCount = driver.name.charCodeAt(0) % 15 === 0 ? 1 : 0;
+      // On-time rate: compare expected arrival (created_at + estimated_duration
+      // hours) against the actual delivery signal (pod_uploaded_at, falling
+      // back to updated_at), with a 2-hour grace window. Only trips with both
+      // an estimated_duration and a delivery timestamp count toward the
+      // sample — this used to be `charCodeAt(0) % N`, i.e. fabricated.
+      const GRACE_MS = 2 * 60 * 60 * 1000;
+      let onTimeCount = 0;
+      let onTimeSampleSize = 0;
+      for (const t of completedTrips) {
+        const durationHours = Number(t.estimated_duration);
+        if (!t.created_at || !durationHours) continue;
+        const actual = t.pod_uploaded_at || t.updated_at;
+        if (!actual) continue;
+        const expectedMs = new Date(t.created_at).getTime() + durationHours * 60 * 60 * 1000;
+        const actualMs = new Date(actual).getTime();
+        onTimeSampleSize += 1;
+        if (actualMs <= expectedMs + GRACE_MS) onTimeCount += 1;
+      }
+      const onTimeDeliveryRate = onTimeSampleSize > 0 ? Math.round((onTimeCount / onTimeSampleSize) * 100) : null;
 
       return {
         id: driver.id,
@@ -99,8 +111,12 @@ export async function GET(request: NextRequest) {
         totalRevenueTZS: totalRevenue,
         totalFuelCostTZS: totalFuelCost,
         totalFuelLiters,
-        incidentsCount,
-        onTimeDeliveryRate: Math.min(100, onTimeRate),
+        // No incidents table exists anywhere in the schema — surface that
+        // honestly instead of a fabricated count.
+        incidentsCount: null as number | null,
+        incidentsTracked: false,
+        onTimeDeliveryRate,
+        onTimeSampleSize,
         averagePerformanceScore: parseFloat(avgScore.toFixed(1)),
         status: driver.status || 'active'
       };
@@ -110,9 +126,10 @@ export async function GET(request: NextRequest) {
     const activeDrivers = driverPerformance.filter((d) => d.completedTripsCount > 0 || d.status === 'active');
     const totalTrips = driverPerformance.reduce((sum, d) => sum + d.completedTripsCount, 0);
     const totalRevenue = driverPerformance.reduce((sum, d) => sum + d.totalRevenueTZS, 0);
-    const avgOnTime = driverPerformance.length > 0
-      ? Math.round(driverPerformance.reduce((sum, d) => sum + d.onTimeDeliveryRate, 0) / driverPerformance.length)
-      : 100;
+    const driversWithOnTimeData = driverPerformance.filter((d) => d.onTimeDeliveryRate !== null);
+    const avgOnTime = driversWithOnTimeData.length > 0
+      ? Math.round(driversWithOnTimeData.reduce((sum, d) => sum + (d.onTimeDeliveryRate as number), 0) / driversWithOnTimeData.length)
+      : null;
 
     return NextResponse.json({
       success: true,
