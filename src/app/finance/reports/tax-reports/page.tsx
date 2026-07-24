@@ -35,6 +35,7 @@ type Invoice = {
   currency: string;
   due_date: string;
   tax_amount?: number;
+  wht_amount?: number;
   type: string;
 };
 
@@ -110,9 +111,10 @@ export default function TaxReportsPage() {
     const corporateTax = (invoices.reduce((sum, i) => sum + i.amount, 0) - 
                          expenses.reduce((sum, e) => sum + e.amount, 0)) * 0.3;
     
-    const witholdingTax = invoices
-      .filter((i) => i.type === "AP")
-      .reduce((sum, i) => sum + (i.amount * 0.05), 0);
+    // Real per-invoice WHT (deducted by clients paying us, per invoices.wht_amount),
+    // not a flat 5% guess — invoices created before this column was populated
+    // will correctly show 0 here rather than a fabricated estimate.
+    const witholdingTax = invoices.reduce((sum, i) => sum + (Number(i.wht_amount) || 0), 0);
 
     const totalTaxDue = taxes
       .filter((t) => t.status !== "paid")

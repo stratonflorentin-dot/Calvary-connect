@@ -20,6 +20,8 @@ import {
   summarizeByCurrency,
 } from "@/lib/finance/aging";
 import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
+import { calculateInvoiceTotals } from "@/lib/tanzania-tax-rules";
+import { TRAInvoiceDialog } from "@/components/financial/tra-invoice-dialog";
 import { AuditTrailService } from "@/services/audit-trail-service";
 import { useSupabase } from "@/components/supabase-provider";
 import {
@@ -67,17 +69,35 @@ export default function CustomerInvoicesPage() {
   const [paying, setPaying] = useState<any | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("bank_transfer");
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [printing, setPrinting] = useState<any | null>(null);
 
   const [form, setForm] = useState({
+    customer_id: "",
     customer_name: "",
     invoice_number: "",
     amount: "",
     vat_rate: "18",
+    vat_applicable: true,
+    wht_applicable: true,
     currency: "TZS",
     due_date: "",
     description: "",
     payment_terms: "30 days",
   });
+
+  useEffect(() => {
+    supabase
+      .from("customers")
+      .select("id, company_name, tax_id")
+      .order("company_name")
+      .then(({ data }) => setCustomers(data ?? []));
+  }, []);
+
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.id === form.customer_id) ?? null,
+    [customers, form.customer_id],
+  );
 
   const loadInvoices = async () => {
     setLoading(true);
@@ -160,18 +180,26 @@ export default function CustomerInvoicesPage() {
     setSubmitting(true);
     try {
       const amount = parseFloat(form.amount) || 0;
-      const vatRate = parseFloat(form.vat_rate) || 0;
-      const vatAmount = amount * (vatRate / 100);
+      const { vatAmount, whtAmount, totalPayable } = calculateInvoiceTotals({
+        subtotal: amount,
+        vatApplicable: form.vat_applicable,
+        whtApplicable: form.wht_applicable,
+      });
       const totalAmount = amount + vatAmount;
       const invoiceNum = form.invoice_number || `INV-${Date.now().toString().slice(-8)}`;
 
       const { data, error } = await supabase.from("invoices").insert({
+        customer_id: form.customer_id || null,
         customer_name: form.customer_name,
         invoice_number: invoiceNum,
         client_name: form.customer_name,
         amount,
+        vat_applicable: form.vat_applicable,
         vat_amount: vatAmount,
+        wht_applicable: form.wht_applicable,
+        wht_amount: whtAmount,
         total_amount: totalAmount,
+        total_payable: totalPayable,
         currency: form.currency,
         due_date: form.due_date,
         issue_date: new Date().toISOString().split("T")[0],
@@ -188,7 +216,19 @@ export default function CustomerInvoicesPage() {
 
       await loadInvoices();
       setCreating(false);
-      setForm({ customer_name: "", invoice_number: "", amount: "", vat_rate: "18", currency: "TZS", due_date: "", description: "", payment_terms: "30 days" });
+      setForm({
+        customer_id: "",
+        customer_name: "",
+        invoice_number: "",
+        amount: "",
+        vat_rate: "18",
+        vat_applicable: true,
+        wht_applicable: true,
+        currency: "TZS",
+        due_date: "",
+        description: "",
+        payment_terms: "30 days",
+      });
       toast({ title: "Invoice created", description: `${invoiceNum} for ${fmt(totalAmount, form.currency)}` });
     } catch (err: any) {
       toast({ title: "Failed to create", description: err?.message ?? "Unknown error", variant: "destructive" });
@@ -443,8 +483,26 @@ export default function CustomerInvoicesPage() {
             </div>
             <div className="p-5 space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs">Customer Name *</Label>
-                <Input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} placeholder="e.g. Dangote Cement Tanzania" />
+                <Label className="text-xs">Customer *</Label>
+                <Select
+                  value={form.customer_id}
+                  onValueChange={(v) => {
+                    const c = customers.find((x) => x.id === v);
+                    setForm({ ...form, customer_id: v, customer_name: c?.company_name ?? "" });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select a customer" /></SelectTrigger>
+                  <SelectContent>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-slate-500">
+                  {selectedCustomer ? `TIN: ${selectedCustomer.tax_id || "not on file"}` : (
+                    <>Don't see them? <Link href="/customers" className="text-indigo-600 font-bold hover:underline">Add a customer</Link> first.</>
+                  )}
+                </p>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Invoice Number</Label>
@@ -456,17 +514,41 @@ export default function CustomerInvoicesPage() {
                   <Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">VAT Rate (%)</Label>
-                  <Input type="number" value={form.vat_rate} onChange={(e) => setForm({ ...form, vat_rate: e.target.value })} />
+                  <Label className="text-xs">VAT Rate</Label>
+                  <Input value={form.vat_applicable ? `${form.vat_rate}% (TRA standard)` : "Exempt"} disabled />
                 </div>
               </div>
-              {form.amount && (
-                <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-xs space-y-1">
-                  <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span>{fmt(parseFloat(form.amount) || 0, form.currency)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">VAT ({form.vat_rate}%)</span><span>{fmt((parseFloat(form.amount) || 0) * (parseFloat(form.vat_rate) || 0) / 100, form.currency)}</span></div>
-                  <div className="flex justify-between font-black text-slate-900 pt-1 border-t border-slate-200"><span>Total</span><span>{fmt((parseFloat(form.amount) || 0) * (1 + (parseFloat(form.vat_rate) || 0) / 100), form.currency)}</span></div>
-                </div>
-              )}
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium">
+                  <input type="checkbox" className="rounded" checked={form.vat_applicable} onChange={(e) => setForm({ ...form, vat_applicable: e.target.checked })} />
+                  Apply VAT
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium">
+                  <input type="checkbox" className="rounded" checked={form.wht_applicable} onChange={(e) => setForm({ ...form, wht_applicable: e.target.checked })} />
+                  WHT deductible (5%, over TZS 500,000)
+                </label>
+              </div>
+              {form.amount && (() => {
+                const subtotal = parseFloat(form.amount) || 0;
+                const { vatAmount, whtAmount, totalPayable } = calculateInvoiceTotals({
+                  subtotal,
+                  vatApplicable: form.vat_applicable,
+                  whtApplicable: form.wht_applicable,
+                });
+                return (
+                  <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-xs space-y-1">
+                    <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span>{fmt(subtotal, form.currency)}</span></div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{form.vat_applicable ? `VAT (${form.vat_rate}%)` : "VAT"}</span>
+                      <span>{form.vat_applicable ? fmt(vatAmount, form.currency) : "Exempt"}</span>
+                    </div>
+                    {whtAmount > 0 && (
+                      <div className="flex justify-between text-red-600"><span>WHT deductible (5%)</span><span>({fmt(whtAmount, form.currency)})</span></div>
+                    )}
+                    <div className="flex justify-between font-black text-slate-900 pt-1 border-t border-slate-200"><span>Total payable</span><span>{fmt(totalPayable, form.currency)}</span></div>
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Currency</Label>
@@ -585,10 +667,13 @@ export default function CustomerInvoicesPage() {
               </div>
               <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span>{fmt(Number(detail.amount) || 0, detail.currency)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">VAT</span><span>{fmt(Number(detail.vat_amount) || 0, detail.currency)}</span></div>
-                <div className="flex justify-between font-black text-slate-900 pt-1 border-t border-slate-200"><span>Total</span><span>{fmt(Number(detail.total_amount ?? detail.amount) || 0, detail.currency)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">VAT</span><span>{detail.vat_applicable === false ? "Exempt" : fmt(Number(detail.vat_amount) || 0, detail.currency)}</span></div>
+                {Number(detail.wht_amount) > 0 && (
+                  <div className="flex justify-between text-red-600"><span>WHT deductible</span><span>({fmt(Number(detail.wht_amount), detail.currency)})</span></div>
+                )}
+                <div className="flex justify-between font-black text-slate-900 pt-1 border-t border-slate-200"><span>Total payable</span><span>{fmt(Number(detail.total_payable ?? detail.total_amount ?? detail.amount) || 0, detail.currency)}</span></div>
                 <div className="flex justify-between text-emerald-700"><span>Paid</span><span>{fmt(Number(detail.paid_amount ?? 0), detail.currency)}</span></div>
-                <div className="flex justify-between font-black text-rose-600"><span>Outstanding</span><span>{fmt(Number(detail.total_amount ?? detail.amount ?? 0) - Number(detail.paid_amount ?? 0), detail.currency)}</span></div>
+                <div className="flex justify-between font-black text-rose-600"><span>Outstanding</span><span>{fmt(Number(detail.total_payable ?? detail.total_amount ?? detail.amount ?? 0) - Number(detail.paid_amount ?? 0), detail.currency)}</span></div>
               </div>
               {detail.description && (
                 <div>
@@ -599,14 +684,31 @@ export default function CustomerInvoicesPage() {
             </div>
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50">
               <Button variant="outline" onClick={() => setDetail(null)}>Close</Button>
+              <Button variant="outline" onClick={() => setPrinting(detail)} className="gap-2">
+                <FileText className="w-4 h-4" /> Print / Download TRA Invoice
+              </Button>
               {detail.status !== "paid" && detail.status !== "cancelled" && (
-                <Button onClick={() => { setPaying(detail); setPayAmount(String(Number(detail.total_amount ?? detail.amount) - Number(detail.paid_amount ?? 0))); setDetail(null); }} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Button onClick={() => { setPaying(detail); setPayAmount(String(Number(detail.total_payable ?? detail.total_amount ?? detail.amount) - Number(detail.paid_amount ?? 0))); setDetail(null); }} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
                   <CheckCircle2 className="w-4 h-4" /> Record Payment
                 </Button>
               )}
             </div>
           </div>
         </div>
+      )}
+
+      {printing && (
+        <TRAInvoiceDialog
+          open={!!printing}
+          mode="view"
+          invoice={printing}
+          client={(() => {
+            const c = customers.find((x) => x.id === printing.customer_id);
+            return c ? { company_name: c.company_name, tin: c.tax_id } : { company_name: printing.customer_name };
+          })()}
+          onClose={() => setPrinting(null)}
+          onSaved={() => { setPrinting(null); loadInvoices(); }}
+        />
       )}
     </div>
   );

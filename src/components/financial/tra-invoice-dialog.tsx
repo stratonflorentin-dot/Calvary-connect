@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { calculateInvoiceTotals } from "@/lib/tanzania-tax-rules";
 
 // ─── Company Info ─────────────────────────────────────────────────────────────
 const COMPANY = {
@@ -28,19 +29,13 @@ const COMPANY = {
   bank:    "CRDB Bank PLC — Account No: XXXXXXXXXXXXXXX",
 };
 
-// Tanzania VAT rates
-const VAT_RATE   = 0.18;  // 18% VAT
-const WHT_RATE   = 0.05;  // 5% Withholding Tax (transport services)
-const WHT_EXEMPT = 500000; // WHT not applicable below TZS 500,000
-
 function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[]): string {
   const subtotal = lineItems.reduce((s, l) => s + (l.qty * l.unit_price), 0);
-  const vatAmount = invoice.vat_applicable ? subtotal * VAT_RATE : 0;
-  const totalBeforeWHT = subtotal + vatAmount;
-  const whtAmount = (invoice.wht_applicable && totalBeforeWHT > WHT_EXEMPT)
-    ? subtotal * WHT_RATE
-    : 0;
-  const totalPayable = totalBeforeWHT - whtAmount;
+  const { vatAmount, whtAmount, totalPayable } = calculateInvoiceTotals({
+    subtotal,
+    vatApplicable: !!invoice.vat_applicable,
+    whtApplicable: !!invoice.wht_applicable,
+  });
 
   const statusStamp = invoice.status === "paid"
     ? `<div style="position:absolute;top:220px;right:60px;transform:rotate(-20deg);border:3px solid #059669;color:#059669;padding:8px 20px;font-size:24px;font-weight:900;letter-spacing:4px;opacity:0.2;border-radius:4px">PAID</div>`
@@ -293,10 +288,11 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
   };
 
   const subtotal = lineItems.reduce((s, l) => s + l.qty * l.unit_price, 0);
-  const vatAmount = vatApplicable ? subtotal * VAT_RATE : 0;
-  const totalBeforeWHT = subtotal + vatAmount;
-  const whtAmount = (whtApplicable && totalBeforeWHT > WHT_EXEMPT) ? subtotal * WHT_RATE : 0;
-  const totalPayable = totalBeforeWHT - whtAmount;
+  const { vatAmount, whtAmount, totalPayable } = calculateInvoiceTotals({
+    subtotal,
+    vatApplicable,
+    whtApplicable,
+  });
 
   const printInvoice = () => {
     const html = buildInvoiceHTML(invoiceData, client, lineItems);
