@@ -92,7 +92,10 @@ export function middleware(request: NextRequest) {
     // OSM/CARTO tile hosts power the Leaflet 2D map; the CARTO apex domain
     // (basemaps.cartocdn.com, no subdomain) serves MapLibre sprites — a
     // *.basemaps wildcard does NOT match the apex, which is why tiles failed.
-    "img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org",
+    // Supabase Storage serves vehicle photos, avatars, chat attachments, and
+    // compliance docs — without it here, images upload fine but the browser
+    // silently refuses to render them.
+    "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org",
     // wss://*.supabase.co is required for realtime (chat, live dashboards);
     // nominatim/osrm serve geocoding and road routing.
     // MapLibre fetches its style.json, vector tiles, glyphs and sprites via
