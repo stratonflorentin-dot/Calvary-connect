@@ -34,6 +34,7 @@ export function ActiveCallUI({
   const [duration, setDuration] = useState(0);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
 
   // Update duration
   useEffect(() => {
@@ -58,6 +59,9 @@ export function ActiveCallUI({
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+    }
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
@@ -96,13 +100,15 @@ export function ActiveCallUI({
         {call.call_type === "video" ? (
           <>
             {/* Remote Video */}
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            
+            <div className="w-full h-full bg-black">
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-contain"
+              />
+            </div>
+
             {/* Local Video (Picture-in-Picture) */}
             {localStream && (
               <div className="absolute bottom-24 right-4 w-32 h-48 bg-black rounded-lg overflow-hidden shadow-lg border-2 border-background">
@@ -111,14 +117,17 @@ export function ActiveCallUI({
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               </div>
             )}
           </>
         ) : (
-          /* Voice Call - Show Avatar */
+          /* Voice Call - Show Avatar. No <video> is mounted in this branch,
+             so the remote audio track needs its own element or nobody hears
+             anything. */
           <div className="text-center">
+            <audio ref={remoteAudioRef} autoPlay />
             <Avatar className="h-32 w-32 mx-auto mb-4">
               <AvatarImage src={userAvatar} alt={userName} />
               <AvatarFallback className="text-4xl font-bold bg-primary text-primary-foreground">

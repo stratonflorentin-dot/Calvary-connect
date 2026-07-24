@@ -13,6 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { User, Mail, Shield, LogOut, Camera, Pencil, Save, X, Building2, Phone, Hash } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { uploadToBucket } from '@/lib/storage-upload';
+import { resizeImageToJpeg } from '@/lib/image-resize';
 import { cn } from '@/lib/utils';
 
 export default function ProfilePage() {
@@ -71,9 +72,15 @@ export default function ProfilePage() {
 
       // Upload new avatar if changed. Goes through the server-action upload
       // path — direct client uploads violate storage RLS until migration 026.
+      // Resized/re-encoded to JPEG first: the bucket caps uploads at 2MB and
+      // only accepts jpeg/png/webp, while camera photos (esp. iPhone HEIC)
+      // routinely blow past both.
       if (avatarFile) {
-        const fileExt = avatarFile.name.split('.').pop() || 'jpg';
-        const publicUrl = await uploadToBucket('profile-photos', 'avatars', avatarFile, `${user.id}.${fileExt}`);
+        const resized = await resizeImageToJpeg(avatarFile).catch(() => null);
+        if (!resized) {
+          throw new Error('This image format is not supported. Please try a different photo.');
+        }
+        const publicUrl = await uploadToBucket('profile-photos', 'avatars', resized, `${user.id}.jpg`);
         if (!publicUrl) {
           throw new Error('Failed to upload avatar. Please try again.');
         }

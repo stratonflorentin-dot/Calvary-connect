@@ -38,6 +38,7 @@ interface UserProfile {
 
 import { inviteUserAction, getUsersAction, deleteUserAction, updateUserAction, backfillEmployeeIdsAction } from './actions';
 import { uploadToBucket } from '@/lib/storage-upload';
+import { resizeImageToJpeg } from '@/lib/image-resize';
 import { effectiveUserStatus } from '@/lib/user-status-utils';
 
 export default function UsersPage() {
@@ -115,8 +116,8 @@ export default function UsersPage() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Photo must be less than 2MB');
+      if (file.size > 8 * 1024 * 1024) {
+        alert('Photo must be less than 8MB');
         return;
       }
       setSelectedPhoto(file);
@@ -129,9 +130,16 @@ export default function UsersPage() {
 
     try {
       setUploading(true);
-      const fileExt = selectedPhoto.name.split('.').pop() || 'jpg';
+      // Re-encode to JPEG and downscale before upload: the bucket caps
+      // uploads at 2MB and only accepts jpeg/png/webp, while camera photos
+      // (esp. iPhone HEIC) routinely blow past both.
+      const resized = await resizeImageToJpeg(selectedPhoto).catch(() => null);
+      if (!resized) {
+        console.error('Error uploading photo: unsupported image format');
+        return null;
+      }
       // Server-action upload path — direct client uploads violate storage RLS
-      return await uploadToBucket('profile-photos', 'avatars', selectedPhoto, `${userId}.${fileExt}`);
+      return await uploadToBucket('profile-photos', 'avatars', resized, `${userId}.jpg`);
     } catch (error) {
       console.error('Error uploading photo:', error);
       return null;
