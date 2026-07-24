@@ -105,6 +105,13 @@ export function CeoView() {
       .filter((e) => new Date(e.date ?? e.created_at ?? 0).getTime() >= monthStart)
       .reduce((s, e) => s + Number(e.amount || 0), 0);
 
+    // Company also spends in USD — surface it alongside TZS, never summed together
+    const expensesMtdUsd = expenses
+      .filter((e) => normalizeCurrency(e.currency) === "USD")
+      .filter((e) => e.status === "approved" || e.status === "paid")
+      .filter((e) => new Date(e.date ?? e.created_at ?? 0).getTime() >= monthStart)
+      .reduce((s, e) => s + Number(e.amount || 0), 0);
+
     const activeTrips = trips.filter((t) => ["pending", "loading", "in_transit"].includes(String(t.status).toLowerCase())).length;
     const overdueTrips = trips.filter((t) => !["delivered", "cancelled"].includes(String(t.status).toLowerCase()) && t.created_at && isOverdue("trip", t.created_at)).length;
     const inUseVehicles = vehicles.filter((v) => v.status === "in_use").length;
@@ -127,7 +134,9 @@ export function CeoView() {
       ap,
       revenueMtd,
       expensesMtd,
+      expensesMtdUsd,
       netMtd: revenueMtd - expensesMtd,
+      netMtdUsd: revenueMtdUsd - expensesMtdUsd,
       activeTrips,
       overdueTrips,
       totalVehicles: vehicles.length,
@@ -221,8 +230,20 @@ export function CeoView() {
           accent="bg-primary/10 text-primary"
           href="/finance/reports/profit-loss"
         />
-        <StatCard label={`Expenses MTD`} value={format(stats.expensesMtd)} icon={Receipt} accent="bg-red-100 text-red-700" href="/finance/reports/expense-analysis" />
-        <StatCard label={`Net MTD`} value={format(stats.netMtd)} icon={DollarSign} accent={stats.netMtd >= 0 ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" : "bg-red-100 text-red-700"} href="/finance/reports/profit-loss" />
+        <StatCard
+          label={`Expenses MTD${stats.expensesMtdUsd > 0 ? " (TZS · USD)" : ""}`}
+          value={stats.expensesMtdUsd > 0 ? `${format(stats.expensesMtd)} · $${stats.expensesMtdUsd.toLocaleString()}` : format(stats.expensesMtd)}
+          icon={Receipt}
+          accent="bg-red-100 text-red-700"
+          href="/finance/reports/expense-analysis"
+        />
+        <StatCard
+          label={`Net MTD${stats.expensesMtdUsd > 0 || stats.revenueMtdUsd > 0 ? " (TZS · USD)" : ""}`}
+          value={stats.expensesMtdUsd > 0 || stats.revenueMtdUsd > 0 ? `${format(stats.netMtd)} · $${stats.netMtdUsd.toLocaleString()}` : format(stats.netMtd)}
+          icon={DollarSign}
+          accent={stats.netMtd >= 0 ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" : "bg-red-100 text-red-700"}
+          href="/finance/reports/profit-loss"
+        />
         <StatCard label="AR outstanding" value={format(stats.ar)} icon={CreditCard} accent="bg-amber-100 text-amber-700" href="/finance/invoicing/customer-invoices" />
         <StatCard label="AP outstanding" value={format(stats.ap)} icon={Building2} accent="bg-orange-100 text-orange-700" href="/finance/invoicing/vendor-bills" />
       </div>

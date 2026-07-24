@@ -70,13 +70,25 @@ export function AccountantView() {
       .map((i) => ({ amount: Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0), due_date: i.due_date, status: i.status, currency: i.currency })),
   ), [invoices]);
 
+  // Recognized (approved/paid) expenses, kept per-currency like cash/AR/AP.
+  const expensesByCurrency = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const e of expenses) {
+      if (e.status !== "approved" && e.status !== "paid") continue;
+      const cur = normalizeCurrency(e.currency);
+      out[cur] = (out[cur] || 0) + Number(e.amount || 0);
+    }
+    return out;
+  }, [expenses]);
+
   const currencies = useMemo(() => {
     const set = new Set<string>(PINNED_CURRENCIES);
     Object.keys(cashByCurrency).forEach((c) => set.add(c));
     Object.keys(arByCcy).forEach((c) => set.add(c));
     Object.keys(apByCcy).forEach((c) => set.add(c));
+    Object.keys(expensesByCurrency).forEach((c) => set.add(c));
     return sortCurrencyKeys(Array.from(set));
-  }, [cashByCurrency, arByCcy, apByCcy]);
+  }, [cashByCurrency, arByCcy, apByCcy, expensesByCurrency]);
 
   const stats = useMemo(() => {
     const pendingExpenses = expenses.filter((e) => e.status === "pending").length;
@@ -99,12 +111,16 @@ export function AccountantView() {
     const cash = cashByCurrency[cur];
     const ar = arByCcy[cur] ?? summarize([]);
     const ap = apByCcy[cur] ?? summarize([]);
+    const expensesTotal = expensesByCurrency[cur];
     const kpis: { label: string; value: string; icon: any; accent: string; href: string }[] = [];
     if (cash !== undefined || PINNED_CURRENCIES.includes(cur)) {
       kpis.push({ label: `Cash (${cur})`, value: format(cash ?? 0, cur), icon: Wallet, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/finance/banking/bank-accounts" });
     }
     kpis.push({ label: `Receivables (${cur})`, value: format(ar.totalOutstanding, cur), icon: CreditCard, accent: "bg-primary/10 text-primary", href: "/finance/invoicing/customer-invoices" });
     kpis.push({ label: `Payables (${cur})`, value: format(ap.totalOutstanding, cur), icon: Building2, accent: "bg-orange-100 text-orange-700", href: "/finance/invoicing/vendor-bills" });
+    if (expensesTotal !== undefined || PINNED_CURRENCIES.includes(cur)) {
+      kpis.push({ label: `Expenses (${cur})`, value: format(expensesTotal ?? 0, cur), icon: Receipt, accent: "bg-red-100 text-red-700", href: "/finance/reports/expense-analysis" });
+    }
     return kpis;
   });
 
