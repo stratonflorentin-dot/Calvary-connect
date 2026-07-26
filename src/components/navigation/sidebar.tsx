@@ -116,6 +116,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
 
   const [isUploading, setIsUploading] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [instagramUnreadCount, setInstagramUnreadCount] = useState(0);
   const [maintenanceCount, setMaintenanceCount] = useState(0);
   const [serviceRequestCount, setServiceRequestCount] = useState(0);
   const [partsRequestCount, setPartsRequestCount] = useState(0);
@@ -167,7 +168,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
           }
         };
 
-        const [notificationsRes, maintenanceRes, serviceRequestsRes, partsRequestsRes, meetingsRes] = await Promise.all([
+        const [notificationsRes, instagramUnreadRes, maintenanceRes, serviceRequestsRes, partsRequestsRes, meetingsRes] = await Promise.all([
           isDbUser(user.id)
             ? safeCount(
                 supabase
@@ -177,6 +178,15 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                   .eq("read", false)
               )
             : Promise.resolve(0),
+          // RLS already scopes this to inbox-role users, so it naturally
+          // returns 0 for anyone without access rather than needing a
+          // client-side role check here too.
+          safeCount(
+            supabase
+              .from("instagram_conversations")
+              .select("id", { count: "exact" })
+              .eq("is_read", false)
+          ),
           safeCount(
             supabase
               .from("maintenance_requests")
@@ -204,6 +214,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
         ]);
 
         setNotificationCount(notificationsRes);
+        setInstagramUnreadCount(instagramUnreadRes);
         setMaintenanceCount(maintenanceRes);
         setServiceRequestCount(serviceRequestsRes);
         setPartsRequestCount(partsRequestsRes);
@@ -410,6 +421,11 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                         {!isCollapsed && item.path === "/notifications" && notificationCount > 0 && (
                           <Badge className="ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-rose-500 text-white border-0">
                             {notificationCount}
+                          </Badge>
+                        )}
+                        {!isCollapsed && item.path === "/chat/instagram" && instagramUnreadCount > 0 && (
+                          <Badge className="ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-rose-500 text-white border-0">
+                            {instagramUnreadCount}
                           </Badge>
                         )}
                         {!isCollapsed && item.path === "/maintenance" && maintenanceCount > 0 && (

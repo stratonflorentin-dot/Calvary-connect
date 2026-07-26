@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { sendInstagramMessage } from "@/lib/instagram/graph-client";
+import { sendManyChatMessage } from "@/lib/instagram/manychat-client";
 
 const INBOX_ROLES = ["CEO", "ADMIN", "SALESMAN", "OPERATOR"];
 
@@ -42,14 +42,13 @@ export async function sendInstagramReply(
       .single();
     if (convError || !conversation) return { success: false, error: "Conversation not found" };
 
-    const result = await sendInstagramMessage(conversation.ig_sender_id, text);
+    const result = await sendManyChatMessage(conversation.ig_sender_id, text);
     if (!result.success) return { success: false, error: result.error };
 
     await admin.from("instagram_messages").insert({
       conversation_id: conversationId,
       direction: "outbound",
       content: text,
-      ig_message_id: result.messageId,
       sent_by: userId,
     });
     await admin
