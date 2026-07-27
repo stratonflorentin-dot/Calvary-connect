@@ -19,6 +19,7 @@ import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
 import { DriverSilentTrackingRoot } from '@/components/tracking/driver-silent-tracking-root';
 import { ThemeProvider } from '@/components/theme-provider';
 import { FinancialSalesProvider } from '@/context/FinancialSalesContext';
+import { RouteOverridesProvider } from '@/components/route-overrides-provider';
 import { SidebarProvider } from '@/hooks/use-sidebar';
 
 export const viewport: Viewport = {
@@ -92,7 +93,9 @@ export default function RootLayout({
                 <SupabaseProvider>
                   <ToastProvider />
                   <DriverSilentTrackingRoot />
-                  <FinancialSalesProvider>{children}</FinancialSalesProvider>
+                  <RouteOverridesProvider>
+                    <FinancialSalesProvider>{children}</FinancialSalesProvider>
+                  </RouteOverridesProvider>
                   <Toaster />
                   <RoleSelectorWrapper />
                   <PWAInstallPrompt />

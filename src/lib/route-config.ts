@@ -7,6 +7,7 @@ import { useRole } from "@/hooks/use-role";
 import { UserRole } from "@/types/roles";
 import { isValidRole, normalizeRole } from "@/lib/user-role-utils";
 import { DRIVER_ROUTE_CONFIG } from "@/lib/driver-routes";
+import { getEffectiveAllowedRoles } from "@/lib/route-overrides-store";
 import {
   Briefcase,
   BarChart2,
@@ -620,7 +621,8 @@ export function useRouteGuard() {
   const checkAccess = useCallback(
     (path: string): boolean => {
       try {
-        // CEO/ADMIN role has full access to everything, even during role switching
+        // CEO/ADMIN role has full access to everything, even during role switching.
+        // Do not move this below the overrides lookup — it's the lock-out safety net.
         const isOwnerOrAdmin =
           user?.role === 'ADMIN' ||
           user?.role === 'CEO';
@@ -643,7 +645,7 @@ export function useRouteGuard() {
 
         const normalizedRole = normalizeRole(String(role));
         if (!normalizedRole) return false;
-        const hasAccess = route.allowedRoles.includes(normalizedRole);
+        const hasAccess = getEffectiveAllowedRoles(route).includes(normalizedRole);
         if (!hasAccess) {
           routeDebug("warn", "Access denied:", role, path);
         }
@@ -669,7 +671,8 @@ export function useRouteGuard() {
   useEffect(() => {
     if (isUserLoading || !isInitialized) return;
 
-    // Check if admin user - should always have access, no redirects
+    // Check if admin user - should always have access, no redirects.
+    // Do not move this below the overrides lookup — it's the lock-out safety net.
     const isAdminUser =
       user?.role === 'ADMIN' ||
       user?.role === 'CEO';
@@ -721,7 +724,8 @@ export function getMenuByRole(
     role != null ? normalizeRole(String(role)) : null;
   if (!normalizedRole) return [];
 
-  // CEO and ADMIN see all routes
+  // CEO and ADMIN see all routes.
+  // Do not move this below the overrides lookup — it's the lock-out safety net.
   const isOwnerOrAdminEmail = normalizedRole === 'CEO' || normalizedRole === 'ADMIN';
 
   if (
@@ -743,7 +747,7 @@ export function getMenuByRole(
 
   // Others see only their allowed routes
   return ROUTE_CONFIG.filter((route) =>
-    route.allowedRoles.includes(normalizedRole),
+    getEffectiveAllowedRoles(route).includes(normalizedRole),
   );
 }
 
@@ -775,7 +779,7 @@ export function roleHasTripsAccess(role: UserRole | null): boolean {
   if (!normalized) return false;
   if (normalized === "DRIVER") return false;
   const tripRoute = ROUTE_CONFIG.find((r) => r.path === "/trips");
-  return !!tripRoute?.allowedRoles.includes(normalized);
+  return !!tripRoute && getEffectiveAllowedRoles(tripRoute).includes(normalized);
 }
 
 export { isValidRole, normalizeRole };

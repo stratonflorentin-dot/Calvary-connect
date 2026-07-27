@@ -22,6 +22,7 @@ import {
   Clock,
   CircleDollarSign,
   Cog,
+  KeyRound,
   Loader2,
   Save,
   Shield,
@@ -29,6 +30,7 @@ import {
   Sliders,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RoutePermissionsPanel } from "./permissions/route-permissions-panel";
 
 interface CompanySettings {
   name: string;
@@ -50,6 +52,7 @@ const TABS = [
   { id: "money",   label: "Money & FX",  icon: CircleDollarSign },
   { id: "workflow", label: "Workflow SLAs", icon: Clock },
   { id: "approvals", label: "Approvals",  icon: Shield },
+  { id: "permissions", label: "Role Permissions", icon: KeyRound },
   { id: "notifications", label: "Notifications", icon: Bell },
 ] as const;
 
@@ -386,6 +389,12 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground">
                 Tier thresholds live in <span className="font-mono">src/lib/workflow/approvals.ts</span>. Edit and redeploy to change them.
               </p>
+            </SectionCard>
+          )}
+
+          {tab === "permissions" && (
+            <SectionCard title="Role Permissions" subtitle="Control which roles see which parts of the app">
+              <RoutePermissionsPanel />
             </SectionCard>
           )}
 

@@ -54,6 +54,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useSidebar } from "@/hooks/use-sidebar";
+import { useRouteOverridesSnapshot } from "@/lib/route-overrides-store";
 
 // ✅ Move icon map OUTSIDE the component so it's always available
 const routeIconMap: Record<string, any> = {
@@ -122,6 +123,12 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
   const [partsRequestCount, setPartsRequestCount] = useState(0);
   const [meetingCount, setMeetingCount] = useState(0);
 
+  // Subscribed for its re-render trigger only — getNavigationMenuByRole reads
+  // the same module store internally (route-overrides-store.ts) rather than
+  // taking this value as a parameter, so the sidebar needs to re-render when
+  // DB-backed role overrides load or change, even though it doesn't use the
+  // returned map directly here.
+  useRouteOverridesSnapshot();
   const effectiveRole = canUseRolePreview ? resolveUserRole(String(role || "ADMIN"), "ADMIN") : resolveUserRole(String(role || ""), "OPERATOR");
   const menuItems = getNavigationMenuByRole(effectiveRole, false, t, menuOwnerEmail, false);
 
