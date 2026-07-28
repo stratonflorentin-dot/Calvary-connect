@@ -8,6 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { ArrowLeft, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 import { TruckInsurance, InsuranceClaim } from '@/types/roles';
+import { supabase } from '@/lib/supabase';
+
+async function authHeaders(extra?: Record<string, string>) {
+    const { data: { session } } = await supabase.auth.getSession();
+    return {
+        ...extra,
+        ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    };
+}
 
 export default function InsuranceDetailPage() {
     const params = useParams();
@@ -27,12 +36,13 @@ export default function InsuranceDetailPage() {
     const fetchDetails = async () => {
         try {
             setLoading(true);
-            const res = await fetch(`/api/insurance/${id}`);
+            const headers = await authHeaders();
+            const res = await fetch(`/api/insurance/${id}`, { headers });
             const data = await res.json();
             setInsurance(data.data);
             setEditData(data.data);
 
-            const claimsRes = await fetch(`/api/insurance/${id}/claims`);
+            const claimsRes = await fetch(`/api/insurance/${id}/claims`, { headers });
             if (claimsRes.ok) {
                 const claimsData = await claimsRes.json();
                 setClaims(claimsData.data || []);
@@ -48,7 +58,7 @@ export default function InsuranceDetailPage() {
         try {
             const res = await fetch(`/api/insurance/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await authHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(editData),
             });
 
@@ -66,7 +76,7 @@ export default function InsuranceDetailPage() {
         if (!confirm('Are you sure you want to delete this insurance policy?')) return;
 
         try {
-            await fetch(`/api/insurance/${id}`, { method: 'DELETE' });
+            await fetch(`/api/insurance/${id}`, { method: 'DELETE', headers: await authHeaders() });
             router.push('/hr/insurance');
         } catch (error) {
             console.error('Error deleting insurance:', error);

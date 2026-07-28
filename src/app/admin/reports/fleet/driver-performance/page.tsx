@@ -14,7 +14,9 @@ import {
   ArrowLeft,
   Star,
   RefreshCw,
-  TrendingUp
+  TrendingUp,
+  Sparkles,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -34,14 +36,17 @@ interface DriverStat {
   employeeId: string;
   completedTripsCount: number;
   totalDistanceKm: number;
+  distanceTracked: boolean;
   totalRevenueTZS: number;
   totalFuelCostTZS: number;
   totalFuelLiters: number;
+  fuelPriceIsEstimate: boolean;
   incidentsCount: number | null;
   incidentsTracked: boolean;
   onTimeDeliveryRate: number | null;
   onTimeSampleSize: number;
-  averagePerformanceScore: number;
+  averagePerformanceScore: number | null;
+  hasReviews: boolean;
 }
 
 interface SummaryStats {
@@ -55,7 +60,32 @@ export default function DriverPerformancePage() {
   const { role } = useRole();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
+  // AI performance summary panel
+  const [summaryDriver, setSummaryDriver] = useState<DriverStat | null>(null);
+  const [summaryText, setSummaryText] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  const runAiSummary = async (driver: DriverStat) => {
+    setSummaryDriver(driver);
+    setSummaryText(null);
+    setSummaryLoading(true);
+    try {
+      const res = await fetch('/api/ai/driver-performance-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to generate summary');
+      setSummaryText(json.summary);
+    } catch (err: any) {
+      setSummaryText(`Could not generate a summary: ${err.message}`);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   // Date states
   const defaultFrom = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
   const defaultTo = new Date().toISOString().split('T')[0];
@@ -131,10 +161,13 @@ export default function DriverPerformancePage() {
     return amount.toLocaleString('en-TZ') + ' TZS';
   };
 
-  // Composite rank: performance score, then on-time rate (undated drivers
-  // rank last on this tiebreaker, not first), then trip volume.
+  // Composite rank: performance score, then on-time rate, then trip volume.
+  // Drivers with no reviews/no on-time data rank last on those tiebreakers,
+  // not first — null must never sort as if it beat a real low score.
   const rankedDrivers = [...drivers].sort((a, b) => {
-    if (b.averagePerformanceScore !== a.averagePerformanceScore) return b.averagePerformanceScore - a.averagePerformanceScore;
+    const aScore = a.averagePerformanceScore ?? -1;
+    const bScore = b.averagePerformanceScore ?? -1;
+    if (bScore !== aScore) return bScore - aScore;
     const aOnTime = a.onTimeDeliveryRate ?? -1;
     const bOnTime = b.onTimeDeliveryRate ?? -1;
     if (bOnTime !== aOnTime) return bOnTime - aOnTime;
@@ -304,6 +337,7 @@ export default function DriverPerformancePage() {
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">On-Time</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Incidents</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Rating</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">AI Summary</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -329,11 +363,15 @@ export default function DriverPerformancePage() {
                                 {driver.completedTripsCount}
                               </td>
                               <td className="px-6 py-4 text-right text-foreground font-mono">
-                                {driver.totalDistanceKm.toLocaleString()} km
+                                {driver.distanceTracked ? `${driver.totalDistanceKm.toLocaleString()} km` : (
+                                  <span className="text-xs text-muted-foreground font-sans">Not recorded</span>
+                                )}
                               </td>
                               <td className="px-6 py-4 text-right text-foreground">
                                 <div>
-                                  <span className="font-mono block">{driver.totalFuelLiters.toLocaleString()} Liters</span>
+                                  <span className="font-mono block">
+                                    {driver.totalFuelLiters.toLocaleString()} Liters{driver.fuelPriceIsEstimate ? " (est.)" : ""}
+                                  </span>
                                   <span className="text-[10px] text-muted-foreground block font-semibold">{formatTZS(driver.totalFuelCostTZS)}</span>
                                 </div>
                               </td>
@@ -359,10 +397,22 @@ export default function DriverPerformancePage() {
                                 {driver.incidentsTracked ? driver.incidentsCount : "Not tracked"}
                               </td>
                               <td className="px-6 py-4">
-                                <div className="flex items-center justify-center gap-1">
-                                  <Star className="size-4 text-amber-400 fill-amber-400" />
-                                  <span className="text-sm font-bold text-foreground">{driver.averagePerformanceScore}</span>
-                                </div>
+                                {driver.hasReviews ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <Star className="size-4 text-amber-400 fill-amber-400" />
+                                    <span className="text-sm font-bold text-foreground">{driver.averagePerformanceScore}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground block text-center">No reviews yet</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <button
+                                  onClick={() => runAiSummary(driver)}
+                                  className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                                >
+                                  <Sparkles className="size-3.5" /> Summarize
+                                </button>
                               </td>
                             </tr>
                           );
@@ -404,6 +454,28 @@ export default function DriverPerformancePage() {
 
         </div>
       </main>
+
+      {summaryDriver && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="size-4 text-primary" /> AI Summary — {summaryDriver.name}
+              </CardTitle>
+              <button onClick={() => setSummaryDriver(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </CardHeader>
+            <CardContent>
+              {summaryLoading ? (
+                <p className="text-sm text-muted-foreground">Generating…</p>
+              ) : (
+                <p className="text-sm text-foreground whitespace-pre-line">{summaryText}</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

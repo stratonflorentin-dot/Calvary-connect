@@ -120,6 +120,20 @@ export function FuelManagement() {
       if (error) throw error;
 
       toast({ title: "✅ Fuel Log Saved", description: `${litres}L recorded for ${vehicles.find(v => v.id === form.vehicle_id)?.plate_number}` });
+
+      // Fire-and-forget fraud scan for this vehicle so anomalies (impossible
+      // volume, efficiency outlier, too-frequent refuel, price outlier) are
+      // flagged right away rather than waiting for a manual scan. Errors here
+      // shouldn't block the fuel log the user just successfully saved.
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) return;
+        fetch("/api/fuel/detect-anomalies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ vehicle_id: form.vehicle_id }),
+        }).catch((err) => console.warn("[fuel anomaly scan]", err));
+      });
+
       setAddOpen(false);
       setForm({
         vehicle_id: "", trip_id: "", fuel_date: format(new Date(), "yyyy-MM-dd"),

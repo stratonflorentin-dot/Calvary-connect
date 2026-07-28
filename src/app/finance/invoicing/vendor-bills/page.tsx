@@ -70,6 +70,8 @@ export default function VendorBillsPage() {
   const [paying, setPaying] = useState<any | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("bank_transfer");
+  const [payBankAccountId, setPayBankAccountId] = useState("");
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [form, setForm] = useState({
@@ -85,13 +87,16 @@ export default function VendorBillsPage() {
   const loadBills = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .eq("type", "payable")
-        .order("due_date", { ascending: true });
+      const [{ data, error }, { data: accounts }] = await Promise.all([
+        supabase.from("invoices").select("*").eq("type", "payable").order("due_date", { ascending: true }),
+        supabase.from("bank_accounts").select("id, account_name, account_number, currency").eq("is_active", true),
+      ]);
       if (error) throw error;
       setBills(data ?? []);
+      setBankAccounts(accounts ?? []);
+      if (accounts && accounts.length > 0) {
+        setPayBankAccountId((prev) => prev || accounts[0].id);
+      }
     } catch (err: any) {
       console.error("[bills]", err);
       setBills([]);
@@ -227,10 +232,34 @@ export default function VendorBillsPage() {
       toast({ title: "Invalid amount", variant: "destructive" });
       return;
     }
+    if (!payBankAccountId) {
+      toast({ title: "Select a bank account", variant: "destructive" });
+      return;
+    }
     const total = Number(paying.total_amount ?? paying.amount ?? 0);
     const prevPaid = Number(paying.paid_amount ?? 0);
     const newPaid = prevPaid + amt;
     const newStatus = newPaid >= total ? "paid" : "partial";
+
+    // Atomically deducts bank_accounts.current_balance and records the
+    // bank_transactions row (post_bank_transaction, migration 035) before
+    // touching the invoice — previously this page never moved money at all.
+    const { error: txError } = await supabase.rpc("post_bank_transaction", {
+      p_bank_account_id: payBankAccountId,
+      p_amount: amt,
+      p_direction: "out",
+      p_transaction_type: "withdrawal",
+      p_currency: paying.currency,
+      p_description: `Vendor bill payment ${paying.invoice_number} - ${paying.vendor ?? paying.customer_name ?? ""}`,
+      p_reference: paying.invoice_number,
+      p_reference_type: "invoice",
+      p_reference_id: paying.id,
+      p_idempotency_key: crypto.randomUUID(),
+    });
+    if (txError) {
+      toast({ title: "Payment failed", description: txError.message, variant: "destructive" });
+      return;
+    }
 
     const { error } = await supabase
       .from("invoices")
@@ -267,13 +296,40 @@ export default function VendorBillsPage() {
 
   const runPayBatch = async () => {
     if (selectedIds.size === 0) return;
+    if (!payBankAccountId) {
+      toast({ title: "Select a bank account first", description: "Use the Pay dialog on any bill to pick an account, then retry the batch.", variant: "destructive" });
+      return;
+    }
     const method = window.prompt("Payment method for the pay run (bank_transfer / cheque / cash)?", "bank_transfer") ?? "bank_transfer";
     let paidCount = 0;
+    let skippedCount = 0;
     for (const bill of filtered.filter((b) => selectedIds.has(b.id))) {
       const total = Number(bill.total_amount ?? bill.amount ?? 0);
       const prevPaid = Number(bill.paid_amount ?? 0);
       const balance = total - prevPaid;
       if (balance <= 0) continue;
+
+      // Atomically deducts bank_accounts.current_balance per bill (migration
+      // 035) — skip (don't mark paid) any bill whose payment fails to post,
+      // e.g. insufficient exchange-rate data for its currency.
+      const { error: txError } = await supabase.rpc("post_bank_transaction", {
+        p_bank_account_id: payBankAccountId,
+        p_amount: balance,
+        p_direction: "out",
+        p_transaction_type: "withdrawal",
+        p_currency: bill.currency,
+        p_description: `Batch vendor bill payment ${bill.invoice_number} - ${bill.vendor ?? bill.customer_name ?? ""}`,
+        p_reference: bill.invoice_number,
+        p_reference_type: "invoice",
+        p_reference_id: bill.id,
+        p_idempotency_key: crypto.randomUUID(),
+      });
+      if (txError) {
+        console.error("[runPayBatch]", bill.id, txError);
+        skippedCount += 1;
+        continue;
+      }
+
       await supabase.from("invoices").update({
         paid_amount: total,
         status: "paid",
@@ -291,7 +347,10 @@ export default function VendorBillsPage() {
       });
       paidCount += 1;
     }
-    toast({ title: "Pay run complete", description: `${paidCount} bill(s) settled.` });
+    toast({
+      title: "Pay run complete",
+      description: `${paidCount} bill(s) settled.${skippedCount ? ` ${skippedCount} skipped — check console for errors.` : ""}`,
+    });
     setSelectedIds(new Set());
     loadBills();
   };
@@ -577,6 +636,17 @@ export default function VendorBillsPage() {
                     <SelectItem value="mobile_money">Mobile Money</SelectItem>
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="cheque">Cheque</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Pay From</Label>
+                <Select value={payBankAccountId} onValueChange={setPayBankAccountId}>
+                  <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.account_name} - {a.account_number} ({a.currency})</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

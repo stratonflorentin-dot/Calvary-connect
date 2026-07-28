@@ -25,7 +25,8 @@ type BankTransaction = {
   debit: number;
   credit: number;
   balance: number;
-  transaction_type: "deposit" | "withdrawal" | "transfer_in" | "transfer_out";
+  currency?: string;
+  transaction_type: "deposit" | "withdrawal" | "transfer_in" | "transfer_out" | "reversal";
   matched?: boolean;
   matched_to_id?: string;
   matched_to_type?: string;
@@ -125,43 +126,50 @@ export default function BankTransactionsPage() {
     try {
       const amount = parseFloat(transactionForm.amount);
       const isDeposit = transactionForm.transaction_type === "deposit" || transactionForm.transaction_type === "transfer_in";
-      const isWithdrawal = transactionForm.transaction_type === "withdrawal" || transactionForm.transaction_type === "transfer_out";
 
-      const transactionData: BankTransaction = {
-        bank_account_id: transactionForm.bank_account_id,
-        transaction_date: transactionForm.transaction_date,
-        description: transactionForm.description,
-        reference: transactionForm.reference,
-        debit: isWithdrawal ? amount : 0,
-        credit: isDeposit ? amount : 0,
-        balance: 0,
-        transaction_type: transactionForm.transaction_type,
-        matched: false,
-      };
-
-      let error;
       if (editingTransaction?.id) {
-        error = (await supabase.from("bank_transactions").update(transactionData).eq("id", editingTransaction.id)).error;
+        // Amount/type/account changes affect bank_accounts.current_balance and
+        // must go through post_bank_transaction to stay accurate — editing
+        // here is limited to non-financial fields. Delete + re-create to
+        // change the amount, direction, or account.
+        const { error } = await supabase
+          .from("bank_transactions")
+          .update({ description: transactionForm.description, reference: transactionForm.reference })
+          .eq("id", editingTransaction.id);
+        if (error) throw error;
       } else {
-        error = (await supabase.from("bank_transactions").insert(transactionData)).error;
-      }
+        // Atomically deducts/credits bank_accounts.current_balance and
+        // records the bank_transactions row (post_bank_transaction, migration
+        // 035) instead of the old direct insert, which never touched the
+        // account balance at all.
+        const { error: txError } = await supabase.rpc("post_bank_transaction", {
+          p_bank_account_id: transactionForm.bank_account_id,
+          p_amount: amount,
+          p_direction: isDeposit ? "in" : "out",
+          p_transaction_type: transactionForm.transaction_type,
+          p_currency: transactionForm.currency,
+          p_description: transactionForm.description,
+          p_reference: transactionForm.reference || null,
+          p_transaction_date: transactionForm.transaction_date,
+          p_idempotency_key: crypto.randomUUID(),
+        });
+        if (txError) throw txError;
 
-      if (error) throw error;
-
-      // If transfer, create corresponding transaction for destination account
-      if (transactionForm.transaction_type === "transfer_out" && transactionForm.to_account_id) {
-        const transferInData: BankTransaction = {
-          bank_account_id: transactionForm.to_account_id,
-          transaction_date: transactionForm.transaction_date,
-          description: `Transfer from: ${transactionForm.description}`,
-          reference: transactionForm.reference,
-          debit: 0,
-          credit: amount,
-          balance: 0,
-          transaction_type: "transfer_in",
-          matched: false,
-        };
-        await supabase.from("bank_transactions").insert(transferInData);
+        // If transfer, credit the destination account too.
+        if (transactionForm.transaction_type === "transfer_out" && transactionForm.to_account_id) {
+          const { error: transferError } = await supabase.rpc("post_bank_transaction", {
+            p_bank_account_id: transactionForm.to_account_id,
+            p_amount: amount,
+            p_direction: "in",
+            p_transaction_type: "transfer_in",
+            p_currency: transactionForm.currency,
+            p_description: `Transfer from: ${transactionForm.description}`,
+            p_reference: transactionForm.reference || null,
+            p_transaction_date: transactionForm.transaction_date,
+            p_idempotency_key: crypto.randomUUID(),
+          });
+          if (transferError) throw transferError;
+        }
       }
 
       await loadTransactions();
@@ -190,10 +198,28 @@ export default function BankTransactionsPage() {
     if (!confirm("Are you sure you want to delete this transaction?")) return;
 
     try {
+      const txn = transactions.find((t) => t.id === id);
+      if (txn && (txn.debit > 0 || txn.credit > 0)) {
+        // Reverse the balance impact before removing the row — a plain
+        // DELETE would leave bank_accounts.current_balance permanently
+        // out of sync with the transaction history.
+        const amount = txn.debit > 0 ? txn.debit : txn.credit;
+        const { error: reverseError } = await supabase.rpc("post_bank_transaction", {
+          p_bank_account_id: txn.bank_account_id,
+          p_amount: amount,
+          p_direction: txn.debit > 0 ? "in" : "out",
+          p_transaction_type: "reversal",
+          p_currency: txn.currency || "TZS",
+          p_description: `Reversal of deleted transaction: ${txn.description}`,
+          p_idempotency_key: crypto.randomUUID(),
+        });
+        if (reverseError) throw reverseError;
+      }
+
       const { error } = await supabase.from("bank_transactions").delete().eq("id", id);
       if (error) throw error;
       await loadTransactions();
-      toast({ title: "Success", description: "Transaction deleted" });
+      toast({ title: "Success", description: "Transaction deleted and balance reversed" });
     } catch (err) {
       console.error("Error deleting transaction:", err);
       toast({ title: "Error", description: "Failed to delete transaction", variant: "destructive" });
@@ -289,10 +315,16 @@ export default function BankTransactionsPage() {
                 <DialogHeader>
                   <DialogTitle>{editingTransaction ? "Edit Transaction" : "New Transaction"}</DialogTitle>
                 </DialogHeader>
+                {editingTransaction && (
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    Only description and reference can be edited here — delete and re-create the transaction to change the amount, type, or account.
+                  </p>
+                )}
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label>Transaction Type</Label>
                     <Select
+                      disabled={!!editingTransaction}
                       value={transactionForm.transaction_type}
                       onValueChange={(value: any) => setTransactionForm({ ...transactionForm, transaction_type: value })}
                     >
@@ -309,7 +341,7 @@ export default function BankTransactionsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Bank Account</Label>
-                    <Select value={transactionForm.bank_account_id} onValueChange={(value) => setTransactionForm({ ...transactionForm, bank_account_id: value })}>
+                    <Select disabled={!!editingTransaction} value={transactionForm.bank_account_id} onValueChange={(value) => setTransactionForm({ ...transactionForm, bank_account_id: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -342,7 +374,7 @@ export default function BankTransactionsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Amount</Label>
-                      <Input type="number" value={transactionForm.amount} onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })} />
+                      <Input disabled={!!editingTransaction} type="number" value={transactionForm.amount} onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })} />
                     </div>
                     <div className="space-y-2">
                       <Label>Date</Label>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ElementType } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 import {
   AlertTriangle,
   CalendarClock,
@@ -94,9 +95,11 @@ export default function InsuranceDashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders = session ? { Authorization: `Bearer ${session.access_token}` } : undefined;
       const [summaryRes, insuranceRes] = await Promise.all([
         fetch('/api/insurance/summary'),
-        fetch('/api/insurance'),
+        fetch('/api/insurance', { headers: authHeaders }),
       ]);
 
       const summaryData = await summaryRes.json();

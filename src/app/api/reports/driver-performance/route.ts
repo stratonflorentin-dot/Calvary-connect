@@ -46,15 +46,39 @@ export async function GET(request: NextRequest) {
       .lte('created_at', toDate)
       .eq('status', 'approved');
 
+    // 6. Real fleet-wide cost-per-litre from fuel_logs (falls back to a
+    // labeled estimate only when no fuel_logs rows exist at all — previously
+    // this was an unconditional hardcoded 3000 TZS/L).
+    const { data: recentFuelLogs } = await supabase
+      .from('fuel_logs')
+      .select('cost_per_litre')
+      .gte('fuel_date', fromDate)
+      .lte('fuel_date', toDate)
+      .not('cost_per_litre', 'is', null);
+    const realRates = (recentFuelLogs || []).map((r) => Number(r.cost_per_litre)).filter((v) => v > 0);
+    const fuelPriceIsEstimate = realRates.length === 0;
+    const fleetCostPerLitre = fuelPriceIsEstimate
+      ? 3000
+      : realRates.reduce((s, v) => s + v, 0) / realRates.length;
+
     // Process driver stats
     const driverPerformance = (drivers || []).map((driver) => {
       const driverTrips = (trips || []).filter((t) => t.driver_id === driver.id || t.driverId === driver.id);
       const completedTrips = driverTrips.filter((t) => t.status?.toLowerCase() !== 'cancelled');
 
-      // Calculate total distance
-      const totalDistance = completedTrips.reduce((sum, t) => {
-        return sum + (t.actual_distance || t.actualDistance || t.estimated_distance || t.estimatedDistance || t.distance_km || 120);
-      }, 0);
+      // Calculate total distance — only from trips with a real distance
+      // value recorded. Previously missing distance fabricated 120km per
+      // trip; now such trips are excluded and flagged via distanceTracked.
+      let totalDistance = 0;
+      let tripsWithDistance = 0;
+      for (const t of completedTrips) {
+        const d = t.actual_distance ?? t.actualDistance ?? t.estimated_distance ?? t.estimatedDistance ?? t.distance_km;
+        if (d) {
+          totalDistance += Number(d);
+          tripsWithDistance += 1;
+        }
+      }
+      const distanceTracked = tripsWithDistance > 0;
 
       // Calculate total revenue
       const totalRevenue = completedTrips.reduce((sum, t) => {
@@ -73,14 +97,15 @@ export async function GET(request: NextRequest) {
       const fuelFromExpenses = driverFuelExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
 
       const totalFuelCost = Math.max(fuelFromReqs, fuelFromExpenses);
-      // Assuming fuel cost per litre is 3,000 TZS
-      const totalFuelLiters = Math.round(totalFuelCost / 3000);
+      const totalFuelLiters = Math.round(totalFuelCost / fleetCostPerLitre);
 
-      // Calculate rating
+      // Calculate rating — a driver with zero reviews has no evidenced
+      // score, not an assumed-good one. Previously defaulted to 4.5.
       const driverReviews = (reviews || []).filter((r) => r.employee_id === driver.id);
-      const avgScore = driverReviews.length > 0
+      const hasReviews = driverReviews.length > 0;
+      const avgScore = hasReviews
         ? driverReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / driverReviews.length
-        : 4.5; // default high performance
+        : null;
 
       // On-time rate: compare expected arrival (created_at + estimated_duration
       // hours) against the actual delivery signal (pod_uploaded_at, falling
@@ -108,16 +133,19 @@ export async function GET(request: NextRequest) {
         employeeId: driver.employeeId || driver.employee_id || 'N/A',
         completedTripsCount: completedTrips.length,
         totalDistanceKm: totalDistance,
+        distanceTracked,
         totalRevenueTZS: totalRevenue,
         totalFuelCostTZS: totalFuelCost,
         totalFuelLiters,
+        fuelPriceIsEstimate,
         // No incidents table exists anywhere in the schema — surface that
         // honestly instead of a fabricated count.
         incidentsCount: null as number | null,
         incidentsTracked: false,
         onTimeDeliveryRate,
         onTimeSampleSize,
-        averagePerformanceScore: parseFloat(avgScore.toFixed(1)),
+        averagePerformanceScore: avgScore !== null ? parseFloat(avgScore.toFixed(1)) : null,
+        hasReviews,
         status: driver.status || 'active'
       };
     });

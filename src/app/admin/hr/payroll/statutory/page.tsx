@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSupabase } from "@/components/supabase-provider";
+import { supabase } from "@/lib/supabase";
 import { useRole } from "@/hooks/use-role";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -133,7 +134,10 @@ export default function StatutoryReportsPage() {
     try {
       const url = new URL("/api/admin/hr/payroll/statutory", window.location.origin);
       if (period) url.searchParams.set("period", period);
-      const response = await fetch(url.toString());
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(url.toString(), {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+      });
       if (!response.ok) throw new Error("Failed to load statutory payroll data");
       const json = await response.json();
       const nextPeriod = json.selectedPeriod || json.payrollRuns?.[0] || "";
@@ -175,7 +179,23 @@ export default function StatutoryReportsPage() {
       const url = new URL("/api/admin/hr/payroll/statutory/export/pdf", window.location.origin);
       url.searchParams.set("period", selectedPeriod);
       url.searchParams.set("agency", agencyKey);
-      window.open(url.toString(), "_blank");
+      // window.open() can't attach an Authorization header (it's a plain
+      // navigation), and this route now requires one — fetch the PDF as a
+      // blob instead and hand the browser an object URL to open/download.
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(url.toString(), {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+      });
+      if (!response.ok) throw new Error("Could not export PDF.");
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `statutory_${agencyKey}_${selectedPeriod}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
     } catch (error: any) {
       toast({ title: "Export Failed", description: error.message || "Could not export PDF.", variant: "destructive" });
     } finally {

@@ -41,6 +41,24 @@ const PUBLIC_ROUTES = [
   '/api/health',
 ];
 
+// NOTE: PROTECTED_ROUTES/PUBLIC_ROUTES and the two helpers below are
+// currently unused by middleware() — this is deliberate, not an oversight.
+// The Supabase client (src/lib/supabase.ts) uses the default supabase-js
+// session storage, which persists the auth token in browser localStorage,
+// not a cookie. Middleware runs on the Edge runtime with access to request
+// cookies only, so there is no session state it can currently read to
+// redirect unauthenticated requests before the page loads.
+//
+// This is not the actual security boundary: RLS policies (see
+// supabase/migrations/033_fix_user_profiles_role_escalation.sql and
+// 034_lock_down_finance_rls.sql) enforce who can read/write each table
+// regardless of what the UI does, and src/lib/route-config.ts's
+// useRouteGuard() redirects client-side once the session is known. The gap
+// this leaves is UX only: an unauthenticated visitor can load a protected
+// route's JS shell before being redirected, though every data call it makes
+// is rejected by RLS. Closing that gap for real requires migrating session
+// storage to cookies (e.g. @supabase/ssr) so middleware can check it — a
+// separate, larger change, not done here.
 function isProtectedRoute(pathname: string): boolean {
   return PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
 }
@@ -74,7 +92,7 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'geolocation=(self), camera=(self)');
+  response.headers.set('Permissions-Policy', 'geolocation=(self), camera=(self), microphone=(self)');
 
   if (process.env.NODE_ENV === 'production') {
     response.headers.set(
@@ -95,17 +113,20 @@ export function middleware(request: NextRequest) {
     // Supabase Storage serves vehicle photos, avatars, chat attachments, and
     // compliance docs — without it here, images upload fine but the browser
     // silently refuses to render them.
-    "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org",
+    "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://placehold.co https://images.unsplash.com https://picsum.photos",
     // wss://*.supabase.co is required for realtime (chat, live dashboards);
     // nominatim/osrm serve geocoding and road routing.
     // MapLibre fetches its style.json, vector tiles, glyphs and sprites via
     // fetch() — all governed by connect-src. basemaps.cartocdn.com (apex)
     // hosts the Voyager GL style; demotiles.maplibre.org is the fallback style.
-    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org",
+    // stun: entries are WebRTC ICE candidate gathering for voice/video calls.
+    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org stun:stun.l.google.com:19302 stun:stun1.l.google.com:19302",
     // MapLibre GL spawns its tile workers from blob: URLs; without worker-src
     // the default-src 'self' fallback blocks them and the canvas stays blank.
     "worker-src 'self' blob:",
     "child-src 'self' blob:",
+    // WebRTC audio/video call streams
+    "media-src 'self' blob:",
     // Vercel Live preview toolbar + the route-map-dialog Google Maps embed
     "frame-src 'self' https://vercel.live https://www.google.com",
 

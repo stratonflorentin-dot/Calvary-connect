@@ -409,7 +409,14 @@ export default function CompliancePage() {
     if (!window.confirm(`Delete ${DOC_TYPE_LABELS[r.doc_type]} for ${r.plate}? The action is logged.`)) return;
     const res =
       r.source === "insurance"
-        ? await fetch(`/api/insurance/${r.id}`, { method: "DELETE" }).then((x) => ({ error: x.ok ? null : { message: `API ${x.status}` } }))
+        ? await (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const x = await fetch(`/api/insurance/${r.id}`, {
+              method: "DELETE",
+              headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+            });
+            return { error: x.ok ? null : { message: `API ${x.status}` } };
+          })()
         : await supabase.from("vehicle_documents").delete().eq("id", r.id);
     if (res.error) {
       toast({ title: "Delete failed", description: res.error.message, variant: "destructive" });

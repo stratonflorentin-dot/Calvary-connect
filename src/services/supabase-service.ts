@@ -38,44 +38,6 @@ export class SupabaseService {
     return to === 'TZS' ? Math.round(converted) : Number(converted.toFixed(2));
   }
 
-  static async markInvoicePaid(id: string, accountId: string) {
-    const user = await getCurrentUser();
-    const { data: invoice, error: invError } = await supabase.from('invoices').select('*').eq('id', id).single();
-    if (invError) throw invError;
-
-    const { error: updateError } = await supabase.from('invoices').update({ status: 'paid' }).eq('id', id);
-    if (updateError) throw updateError;
-
-    // Fetch bank account and convert payment amount into account currency, if needed
-    const { data: account, error: accError } = await supabase.from('bank_accounts').select('current_balance, currency').eq('id', accountId).single();
-    if (accError) throw accError;
-    const accountCurrency = account?.currency || 'TZS';
-    const paymentAmount = SupabaseService.convertCurrency(parseFloat(invoice.amount), invoice.currency || 'TZS', accountCurrency);
-
-    const { error: txError } = await supabase.from('bank_statements').insert({
-      account_id: accountId,
-      date: new Date().toISOString().split('T')[0],
-      description: `Payment for Invoice ${invoice.invoice_number} (${invoice.currency || 'TZS'})`,
-      amount: paymentAmount,
-      type: invoice.type === 'receivable' ? 'credit' : 'debit',
-      ref: invoice.invoice_number
-    });
-    if (txError) throw txError;
-
-    if (account) {
-      const currentBalance = parseFloat(account.current_balance || 0);
-      const newBalance = invoice.type === 'receivable'
-        ? currentBalance + paymentAmount
-        : currentBalance - paymentAmount;
-      await supabase.from('bank_accounts').update({ current_balance: newBalance }).eq('id', accountId);
-    }
-
-    if (user && SyncManager.isOnline()) {
-      await AuditService.logCRUD(user, 'UPDATE', 'invoices', id, invoice, { ...invoice, status: 'paid' },
-        `Marked invoice ${invoice.invoice_number} as paid and updated bank account ${accountId}`);
-    }
-  }
-
   // Utility for offline-aware requests
   private static async performAction(table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', data: any, id?: string) {
     if (!SyncManager.isOnline()) {

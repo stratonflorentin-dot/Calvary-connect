@@ -66,8 +66,9 @@ export class InsuranceService {
     return data;
   }
 
-  static async updateInsurance(id: string, updates: Partial<TruckInsurance>) {
-    const user = await getCurrentUser();
+  static async updateInsurance(id: string, updates: Partial<TruckInsurance>, accessToken?: string) {
+    const user = await getCurrentUser(accessToken);
+    if (!user) throw new Error('You must be signed in to update an insurance policy.');
     const { data: oldData } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
@@ -107,8 +108,9 @@ export class InsuranceService {
     return data;
   }
 
-  static async deleteInsurance(id: string) {
-    const user = await getCurrentUser();
+  static async deleteInsurance(id: string, accessToken?: string) {
+    const user = await getCurrentUser(accessToken);
+    if (!user) throw new Error('You must be signed in to delete an insurance policy.');
     const { data: oldData } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
@@ -135,13 +137,16 @@ export class InsuranceService {
     }
   }
 
-  static async getInsurance(id: string) {
+  static async getInsurance(id: string, accessToken?: string) {
+    const user = await getCurrentUser(accessToken);
+    if (!user) throw new Error('You must be signed in to view insurance policies.');
+
     const { data, error } = await supabaseAdmin()
       .from('truck_insurance')
       .select('*')
       .eq('id', id)
       .single();
-    
+
     if (error) throw error;
     return data as TruckInsurance;
   }
@@ -161,7 +166,10 @@ export class InsuranceService {
     status?: InsuranceStatus;
     insurer?: string;
     policy_type?: string;
-  }) {
+  }, accessToken?: string) {
+    const user = await getCurrentUser(accessToken);
+    if (!user) throw new Error('You must be signed in to view insurance policies.');
+
     let query = supabaseAdmin().from('truck_insurance').select('*');
     
     if (filters?.status) query = query.eq('status', filters.status);

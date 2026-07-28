@@ -156,6 +156,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "fleet",
   },
   {
+    path: "/fleet/fuel-anomalies",
+    label: "Fuel Fraud Alerts",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT"],
+    category: "fleet",
+  },
+  {
     path: "/fuel",
     label: "Fuel Management",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "MECHANIC"],

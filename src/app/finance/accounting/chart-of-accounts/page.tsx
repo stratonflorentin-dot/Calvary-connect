@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { useRole } from '@/hooks/use-role';
+import { useSupabase } from '@/components/supabase-provider';
 import { canRead } from '@/lib/permissions';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -179,6 +180,7 @@ const DEFAULT_ACCOUNTS = [
 
 export default function ChartOfAccountsPage() {
   const { role } = useRole();
+  const { user } = useSupabase();
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [filteredAccounts, setFilteredAccounts] = useState<Account[]>([]);
@@ -546,7 +548,15 @@ export default function ChartOfAccountsPage() {
     }
 
     try {
-      // Create journal entry
+      // Insert as unposted and let post_journal_entry() (supabase/migrations/
+      // 008_coa_integration.sql) do the posting — it row-locks the entry,
+      // validates debits=credits, checks the fiscal period is open, and
+      // rolls the lines into accounts.current_balance atomically. Inserting
+      // directly with is_posted:true (the old behavior) bypassed all of
+      // that plus the guard_posted_journal trigger that protects posted
+      // entries from being mutated, and separately patched account balances
+      // from stale client-side state, which could silently drift from the
+      // real balance under concurrent edits.
       const entryNumber = `JE-${Date.now()}`;
       const { data: jeData, error: jeError } = await supabase.from('journal_entries').insert({
         entry_number: entryNumber,
@@ -555,9 +565,9 @@ export default function ChartOfAccountsPage() {
         reference: entryReference,
         total_debit: totalDebit,
         total_credit: totalCredit,
-        is_posted: true,
+        is_posted: false,
         source: 'manual',
-        created_by: 'Super Admin',
+        created_by: user?.id ?? null,
         created_at: new Date().toISOString()
       }).select().single();
 
@@ -578,20 +588,8 @@ export default function ChartOfAccountsPage() {
       const { error: linesError } = await supabase.from('journal_entry_lines').insert(linesToInsert);
       if (linesError) throw linesError;
 
-      // Update account balances
-      for (const line of linesToInsert) {
-        const account = accounts.find(a => a.code === line.account_code);
-        if (account) {
-          const balanceChange = account.type === 'debit' 
-            ? line.debit_amount - line.credit_amount
-            : line.credit_amount - line.debit_amount;
-          
-          await supabase.from('accounts').update({
-            current_balance: account.current_balance + balanceChange,
-            updated_at: new Date().toISOString()
-          }).eq('id', account.id);
-        }
-      }
+      const { error: postError } = await supabase.rpc('post_journal_entry', { p_id: jeData.id });
+      if (postError) throw postError;
 
       toast({ title: 'Success', description: `Journal Entry ${entryNumber} created` });
       setShowAddEntryDialog(false);

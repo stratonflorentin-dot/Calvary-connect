@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/components/supabase-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,16 +22,18 @@ const CURRENCIES = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  completed: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  pending: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  cancelled: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  posted: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  draft: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  voided: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
 };
 
 export default function PaymentsPage() {
   const { toast } = useToast();
+  const { user } = useSupabase();
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [filterCurrency, setFilterCurrency] = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
@@ -38,6 +41,7 @@ export default function PaymentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     invoice_id: "",
+    bank_account_id: "",
     amount: "",
     currency: "TZS",
     payment_method: "",
@@ -48,14 +52,21 @@ export default function PaymentsPage() {
   const loadPayments = async () => {
     setLoading(true);
     try {
-      const [paymentsData, invoicesData] = await Promise.all([
+      const [paymentsData, invoicesData, accountsData] = await Promise.all([
         supabase.from("payments").select("*").order("payment_date", { ascending: false }),
-        supabase.from("invoices").select("*"),
+        // This page records customer receipts against receivable invoices —
+        // vendor bills (type='payable') are paid via /finance/invoicing/vendor-bills.
+        supabase.from("invoices").select("*").eq("type", "receivable"),
+        supabase.from("bank_accounts").select("id, account_name, account_number, currency").eq("is_active", true),
       ]);
       if (paymentsData.error) throw paymentsData.error;
       if (invoicesData.error) throw invoicesData.error;
       setPayments(paymentsData.data || []);
       setInvoices(invoicesData.data || []);
+      setBankAccounts(accountsData.data || []);
+      if (accountsData.data && accountsData.data.length > 0) {
+        setPaymentForm((prev) => ({ ...prev, bank_account_id: prev.bank_account_id || accountsData.data[0].id }));
+      }
     } catch (err) {
       console.error("Error loading payments:", err);
       toast({ title: "Error", description: "Failed to load payments", variant: "destructive" });
@@ -73,27 +84,79 @@ export default function PaymentsPage() {
       toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
-    if (parseFloat(paymentForm.amount) <= 0) {
+    if (!paymentForm.bank_account_id) {
+      toast({ title: "Validation Error", description: "Please select a bank account", variant: "destructive" });
+      return;
+    }
+    const amount = parseFloat(paymentForm.amount);
+    if (amount <= 0) {
       toast({ title: "Validation Error", description: "Amount must be greater than 0", variant: "destructive" });
       return;
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("payments").insert({
-        invoice_id: paymentForm.invoice_id,
-        amount: parseFloat(paymentForm.amount),
-        currency: paymentForm.currency,
-        payment_method: paymentForm.payment_method,
-        payment_date: paymentForm.payment_date,
-        notes: paymentForm.notes,
-        status: "completed",
-        created_at: new Date().toISOString(),
+      const invoice = invoices.find((inv) => inv.id === paymentForm.invoice_id);
+
+      // Atomically deposits into bank_accounts.current_balance (migration 035)
+      // — this page previously inserted into a `payments` shape that didn't
+      // match the live schema (missing `direction`, wrong status values) and
+      // never moved money or updated the invoice at all.
+      const { error: txError } = await supabase.rpc("post_bank_transaction", {
+        p_bank_account_id: paymentForm.bank_account_id,
+        p_amount: amount,
+        p_direction: "in",
+        p_transaction_type: "deposit",
+        p_currency: paymentForm.currency,
+        p_description: `Payment received for invoice ${invoice?.invoice_number ?? paymentForm.invoice_id}`,
+        p_reference: invoice?.invoice_number ?? null,
+        p_reference_type: "invoice",
+        p_reference_id: paymentForm.invoice_id,
+        p_transaction_date: paymentForm.payment_date,
+        p_idempotency_key: crypto.randomUUID(),
       });
+      if (txError) throw txError;
+
+      const { data: payment, error } = await supabase.from("payments").insert({
+        direction: "in",
+        counterparty_type: "customer",
+        counterparty_id: invoice?.customer_id ?? null,
+        counterparty_name: invoice?.customer_name ?? null,
+        bank_account_id: paymentForm.bank_account_id,
+        amount,
+        currency: paymentForm.currency,
+        payment_date: paymentForm.payment_date,
+        method: paymentForm.payment_method,
+        reference: invoice?.invoice_number ?? null,
+        notes: paymentForm.notes,
+        status: "posted",
+        created_by: user?.id ?? null,
+      }).select().single();
       if (error) throw error;
+
+      const { error: allocError } = await supabase.from("payment_allocations").insert({
+        payment_id: payment.id,
+        invoice_id: paymentForm.invoice_id,
+        amount,
+      });
+      if (allocError) throw allocError;
+
+      // Simple same-currency full-settlement rule, matching the pattern
+      // already used by the vendor-bills page — partial/cross-currency
+      // allocation tracking stays in payment_allocations either way.
+      if (invoice && paymentForm.currency === invoice.currency) {
+        const newPaid = Number(invoice.paid_amount ?? 0) + amount;
+        const total = Number(invoice.total_amount ?? invoice.amount ?? 0);
+        await supabase.from("invoices").update({
+          paid_amount: newPaid,
+          status: newPaid >= total ? "paid" : invoice.status,
+        }).eq("id", invoice.id);
+      }
+
       await loadPayments();
       setModal(null);
       setPaymentForm({
         invoice_id: "",
+        bank_account_id: paymentForm.bank_account_id,
         amount: "",
         currency: "TZS",
         payment_method: "",
@@ -101,9 +164,9 @@ export default function PaymentsPage() {
         notes: "",
       });
       toast({ title: "Success", description: "Payment recorded successfully" });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving payment:", err);
-      toast({ title: "Error", description: "Failed to record payment", variant: "destructive" });
+      toast({ title: "Error", description: err.message || "Failed to record payment", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -122,15 +185,10 @@ export default function PaymentsPage() {
     }
   };
 
-  const getInvoiceDetails = (invoiceId: string) => {
-    return invoices.find((inv) => inv.id === invoiceId);
-  };
-
   const filteredPayments = payments.filter((p) => {
-    const invoice = getInvoiceDetails(p.invoice_id);
     const matchesSearch = !search ||
-      invoice?.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
-      invoice?.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.reference?.toLowerCase().includes(search.toLowerCase()) ||
+      p.counterparty_name?.toLowerCase().includes(search.toLowerCase()) ||
       p.notes?.toLowerCase().includes(search.toLowerCase());
     const matchesCurrency = filterCurrency === "ALL" || p.currency === filterCurrency;
     const matchesStatus = filterStatus === "ALL" || p.status === filterStatus;
@@ -213,9 +271,9 @@ export default function PaymentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">All Status.</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="posted">Posted</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="voided">Voided</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -256,21 +314,20 @@ export default function PaymentsPage() {
                   </TableRow>
                 ) : (
                   filteredPayments.map((payment) => {
-                    const invoice = getInvoiceDetails(payment.invoice_id);
                     return (
                       <TableRow key={payment.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="text-muted-foreground font-medium whitespace-nowrap">
                           {formatDate(payment.payment_date)}
                         </TableCell>
                         <TableCell className="font-semibold text-foreground">
-                          {invoice?.invoice_number || "N/A"}
+                          {payment.reference || "N/A"}
                         </TableCell>
                         <TableCell className="text-foreground">
-                          {invoice?.customer_name || "Unknown"}
+                          {payment.counterparty_name || "Unknown"}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="capitalize">
-                            {payment.payment_method?.replace("_", " ") || "N/A"}
+                            {payment.method?.replace("_", " ") || "N/A"}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-bold text-emerald-700 dark:text-emerald-400 text-right whitespace-nowrap">
@@ -282,7 +339,7 @@ export default function PaymentsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn(STATUS_STYLES[payment.status] || STATUS_STYLES.pending, "capitalize")}>
+                          <Badge className={cn(STATUS_STYLES[payment.status] || STATUS_STYLES.draft, "capitalize")}>
                             {payment.status}
                           </Badge>
                         </TableCell>
@@ -318,6 +375,21 @@ export default function PaymentsPage() {
                     {invoices.map((inv) => (
                       <SelectItem key={inv.id} value={inv.id}>
                         {inv.invoice_number} - {inv.customer_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank-account">Deposit To</Label>
+                <Select value={paymentForm.bank_account_id} onValueChange={(value) => setPaymentForm({ ...paymentForm, bank_account_id: value })}>
+                  <SelectTrigger id="bank-account">
+                    <SelectValue placeholder="Select bank account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.account_name} - {a.account_number} ({a.currency})
                       </SelectItem>
                     ))}
                   </SelectContent>

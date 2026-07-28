@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { FileText, Download, Printer, Calendar, DollarSign, MapPin, Truck, Save, CheckCircle } from 'lucide-react';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 
 interface ContractTemplate {
   id: string;
@@ -316,7 +317,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
             <title>Transportation Agreement - ${selectedCustomerData?.company_name}</title>
           </head>
           <body>
-            ${generateContractHTML()}
+            ${sanitizeHtml(generateContractHTML())}
           </body>
         </html>
       `);
@@ -363,7 +364,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
         client_signatory_name: contractDetails.client_signatory_name || null,
         client_signatory_title: contractDetails.client_signatory_title || null,
         special_notes: contractDetails.special_notes || null,
-        generated_html: generateContractHTML(),
+        generated_html: sanitizeHtml(generateContractHTML()),
         created_by: user?.id
       }]);
 
@@ -935,7 +936,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
           </div>
           <div 
             className="mt-4"
-            dangerouslySetInnerHTML={{ __html: generateContractHTML() }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(generateContractHTML()) }}
           />
         </DialogContent>
       </Dialog>

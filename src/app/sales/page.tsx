@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import { toast } from '@/hooks/use-toast';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -1316,7 +1317,7 @@ function SalesModuleContent() {
                                     <Button variant="ghost" size="sm" onClick={() => {
                                       const w = window.open('', '_blank');
                                       if (w) {
-                                        w.document.write(`<html><head><title>${c.contract_number}</title></head><body>${c.generated_html}</body></html>`);
+                                        w.document.write(`<html><head><title>${c.contract_number}</title></head><body>${sanitizeHtml(c.generated_html ?? '')}</body></html>`);
                                         w.document.close();
                                         w.print();
                                       }
@@ -1351,7 +1352,7 @@ function SalesModuleContent() {
                       <Button variant="outline" size="sm" onClick={() => {
                         const w = window.open('', '_blank');
                         if (w) {
-                          w.document.write(`<html><head><title>${previewContract.contract_number}</title></head><body>${previewContract.generated_html}</body></html>`);
+                          w.document.write(`<html><head><title>${previewContract.contract_number}</title></head><body>${sanitizeHtml(previewContract.generated_html ?? '')}</body></html>`);
                           w.document.close();
                           w.print();
                         }
@@ -1359,7 +1360,7 @@ function SalesModuleContent() {
                         <Printer className="h-4 w-4 mr-2" /> Print / PDF
                       </Button>
                     </div>
-                    <div dangerouslySetInnerHTML={{ __html: previewContract.generated_html }} />
+                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewContract.generated_html) }} />
                   </div>
                 ) : (
                   <div className="py-12 text-center text-muted-foreground">

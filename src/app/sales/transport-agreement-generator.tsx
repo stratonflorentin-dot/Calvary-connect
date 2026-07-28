@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FileText, Download, Printer, Plus, Settings, Trash2, Pencil } from 'lucide-react';
 import { RATE_SHEET, ContractData, formatContractHTML, downloadContract, printContract } from '@/lib/contract-service';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import { fetchRateSheets, upsertRateSheet, deleteRateSheet, RateSheetRoute } from '@/lib/rate-sheet-service';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
@@ -65,7 +66,7 @@ export function TransportAgreementGenerator() {
 
   const handleGeneratePreview = () => {
     const html = formatContractHTML(formData);
-    setPreviewHTML(html);
+    setPreviewHTML(sanitizeHtml(html));
     setIsPreviewOpen(true);
   };
 
@@ -908,7 +909,7 @@ export function CalvaryTransportAgreementGenerator({ initialData, onClose }: Cal
       printWindow.document.write(`
         <html>
           <head>
-            <title>Transportation Agreement - ${agreementData.clientCompany}</title>
+            <title>Transportation Agreement - ${agreementData.clientCompany.replace(/[<>&]/g, '')}</title>
             <style>
               @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
               body { 

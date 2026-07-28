@@ -32,7 +32,8 @@ export function buildDispatchPrompt(trip: DispatchTripInput, context: DispatchCo
           const loc = d.location
             ? `location ${d.location.status.toLowerCase()} (last update ${d.location.lastUpdate || "unknown"})`
             : "no GPS reporting";
-          return `- ${d.name} · license ${d.license_class ?? "unknown"} · performance score ${d.performanceScore}/5 · ${loc} · id=${d.id}`;
+          const scoreLabel = d.performanceScore !== null ? `${d.performanceScore}/5` : "no reviews yet";
+          return `- ${d.name} · license ${d.license_class ?? "unknown"} · performance score ${scoreLabel} · ${loc} · id=${d.id}`;
         })
         .join("\n")
     : "(no available drivers)";
@@ -60,8 +61,8 @@ Rank up to 3 driver+vehicle pairings for this trip, considering:
    guess, not a verified fit).
 2. Cargo description vs vehicle type/trailer suitability (reason over the
    free-text description — it is not a fixed taxonomy).
-3. Driver performance score (do not penalize a 4.5 default score — it
-   means no reviews exist yet, not average performance).
+3. Driver performance score — treat "no reviews yet" as neutral (unknown),
+   not as a penalty or a bonus.
 4. Driver location freshness — prefer LIVE/DELAYED over STALE, but do not
    exclude a driver just for lacking GPS; note it as a caveat instead.
 

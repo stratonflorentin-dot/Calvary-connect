@@ -29,6 +29,31 @@ export const createAdminClient = () => {
     return createClient(url, key, { auth: { persistSession: false } });
 };
 
+const STATUTORY_ROLES = ['CEO', 'ADMIN', 'ACCOUNTANT'];
+
+// These routes use the service-role client (bypasses RLS) to build payroll/
+// statutory reports, so they must verify the caller themselves rather than
+// relying on RLS. Mirrors verifyInboxAccess() in src/app/chat/instagram/actions.ts.
+export async function requireStatutoryAccess(request: Request) {
+    const accessToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    if (!accessToken) {
+        throw new Error('UNAUTHORIZED: missing access token');
+    }
+
+    const admin = createAdminClient();
+    const { data: { user }, error } = await admin.auth.getUser(accessToken);
+    if (error || !user) {
+        throw new Error('UNAUTHORIZED: invalid session');
+    }
+
+    const { data: profile } = await admin.from('user_profiles').select('role').eq('id', user.id).maybeSingle();
+    if (!profile || !STATUTORY_ROLES.includes(String(profile.role).toUpperCase())) {
+        throw new Error('FORBIDDEN: not authorized to access payroll statutory data');
+    }
+
+    return admin;
+}
+
 export const parseReason = (reason: unknown) => {
     if (!reason) return {};
     if (typeof reason === 'string') {

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient, buildStatutoryData, normalizePeriods, getPayrollPeriod } from './helpers';
+import { requireStatutoryAccess, buildStatutoryData, normalizePeriods, getPayrollPeriod } from './helpers';
 
 export async function GET(request: NextRequest) {
     try {
         const url = new URL(request.url);
         const period = url.searchParams.get('period') || '';
-        const supabase = createAdminClient();
+        const supabase = await requireStatutoryAccess(request);
 
         const { data, error } = await supabase
             .from('driver_allowances')
@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
             details: payload.details,
         });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message || 'Failed to fetch statutory data' }, { status: 500 });
+        const status = /^UNAUTHORIZED/.test(error.message) ? 401 : /^FORBIDDEN/.test(error.message) ? 403 : 500;
+        return NextResponse.json({ error: error.message || 'Failed to fetch statutory data' }, { status });
     }
 }

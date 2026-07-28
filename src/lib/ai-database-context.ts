@@ -219,7 +219,7 @@ export interface DispatchCandidateDriver {
   name: string;
   license_class: string | null;
   license_expiry: string | null;
-  performanceScore: number;
+  performanceScore: number | null;
   location: { status: string; lastUpdate: string } | null;
 }
 
@@ -260,13 +260,16 @@ export async function getDispatchContext(): Promise<DispatchContext> {
   );
 
   const reviews = reviewsRes.data || [];
-  const scoreByDriver = new Map<string, number>();
+  const scoreByDriver = new Map<string, number | null>();
   for (const driver of driversRes.data || []) {
     const driverReviews = reviews.filter((r: any) => r.employee_id === driver.id);
+    // No reviews means no evidenced score, not an assumed-average one —
+    // see src/app/api/reports/driver-performance/route.ts, which used to
+    // default this to 4.5 and has since been fixed to do the same.
     const avg = driverReviews.length > 0
       ? driverReviews.reduce((s: number, r: any) => s + (r.rating || 0), 0) / driverReviews.length
-      : 4.5; // default, matches driver-performance route's convention for unreviewed drivers
-    scoreByDriver.set(driver.id, Number(avg.toFixed(1)));
+      : null;
+    scoreByDriver.set(driver.id, avg !== null ? Number(avg.toFixed(1)) : null);
   }
 
   const locationByDriver = new Map<string, { status: string; lastUpdate: string }>();
@@ -281,7 +284,7 @@ export async function getDispatchContext(): Promise<DispatchContext> {
       name: d.name,
       license_class: d.license_class,
       license_expiry: d.license_expiry,
-      performanceScore: scoreByDriver.get(d.id) ?? 4.5,
+      performanceScore: scoreByDriver.get(d.id) ?? null,
       location: locationByDriver.get(d.id) ?? null,
     })),
     busyVehicleIds,

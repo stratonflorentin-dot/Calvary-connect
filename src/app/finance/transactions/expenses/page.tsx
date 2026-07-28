@@ -239,23 +239,32 @@ export default function ExpensesPage() {
       toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
     }
+    if (!paymentForm.bank_account_id) {
+      toast({ title: "Validation Error", description: "Please select a bank account", variant: "destructive" });
+      return;
+    }
 
     setSubmitting(true);
     try {
       const paymentAmount = parseFloat(paymentForm.amount);
 
-      // Create bank transaction for payment
-      const transactionData = {
-        bank_account_id: paymentForm.bank_account_id || bankAccounts[0]?.id,
-        transaction_type: "withdrawal",
-        amount: paymentAmount,
-        currency: paymentModal.currency,
-        transaction_date: paymentForm.payment_date,
-        description: `Payment for vendor bill ${paymentModal.bill_number} - ${paymentModal.vendor_name}`,
-        reference: paymentForm.reference,
-      };
-
-      const { error: txError } = await supabase.from("bank_transactions").insert(transactionData);
+      // Atomically deducts bank_accounts.current_balance and records the
+      // bank_transactions row in one DB transaction (post_bank_transaction,
+      // supabase/migrations/035_post_bank_transaction_function.sql) instead
+      // of the old plain insert, which never touched the account balance.
+      const { error: txError } = await supabase.rpc("post_bank_transaction", {
+        p_bank_account_id: paymentForm.bank_account_id,
+        p_amount: paymentAmount,
+        p_direction: "out",
+        p_transaction_type: "withdrawal",
+        p_currency: paymentModal.currency,
+        p_description: `Payment for vendor bill ${paymentModal.bill_number} - ${paymentModal.vendor_name}`,
+        p_reference: paymentForm.reference || null,
+        p_reference_type: "vendor_bill",
+        p_reference_id: paymentModal.id,
+        p_transaction_date: paymentForm.payment_date,
+        p_idempotency_key: crypto.randomUUID(),
+      });
       if (txError) throw txError;
 
       // Update vendor bill status

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type NotificationCategory =
   | "trip_assigned"
@@ -292,6 +293,40 @@ export async function notifyFinanceTeamInvoiceGenerated(
         entityId: invoiceId,
         actionUrl: `/finance/invoicing/customer-invoices`,
       }),
+    ),
+  );
+}
+
+// Fuel Fraud Detection Notifications
+// Takes an injectable client because this runs from src/app/api/fuel/detect-anomalies/route.ts
+// (a server route with no cookie session) using the service-role admin client,
+// not the browser client this file otherwise imports.
+export async function notifyFuelAnomalyDetected(
+  db: SupabaseClient,
+  params: { vehiclePlate: string; anomalyType: string; description: string; severity: "low" | "medium" | "high" },
+) {
+  const { data: recipients } = await db
+    .from("user_profiles")
+    .select("id")
+    .in("role", ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT"]);
+
+  const type: NotificationType = params.severity === "high" ? "error" : params.severity === "medium" ? "warning" : "info";
+
+  await Promise.all(
+    (recipients || []).map((u: { id: string }) =>
+      db.from("notifications").insert([
+        {
+          user_id: u.id,
+          title: `Fuel Anomaly: ${params.vehiclePlate}`,
+          message: params.description,
+          type,
+          module: "fuel_fraud",
+          entity_type: "fuel_anomaly",
+          action_url: "/fleet/fuel-anomalies",
+          read: false,
+          created_at: new Date().toISOString(),
+        },
+      ]),
     ),
   );
 }

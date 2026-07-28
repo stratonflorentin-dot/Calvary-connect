@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
-import { createAdminClient, buildStatutoryData, getPayrollPeriod, buildPdfMarkup } from '../../helpers';
+import { requireStatutoryAccess, buildStatutoryData, getPayrollPeriod, buildPdfMarkup } from '../../helpers';
 
 export async function GET(request: NextRequest) {
     try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Missing payroll period' }, { status: 400 });
         }
 
-        const supabase = createAdminClient();
+        const supabase = await requireStatutoryAccess(request);
         const { data, error } = await supabase
             .from('driver_allowances')
             .select('id,driver_id,driver_name,employee_id,role,amount,status,reason,created_at')
@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         });
     } catch (error: any) {
         console.error('PDF export error', error);
-        return NextResponse.json({ error: error.message || 'Could not generate PDF' }, { status: 500 });
+        const status = /^UNAUTHORIZED/.test(error.message) ? 401 : /^FORBIDDEN/.test(error.message) ? 403 : 500;
+        return NextResponse.json({ error: error.message || 'Could not generate PDF' }, { status });
     }
 }
