@@ -16,13 +16,22 @@ export async function generateAI(opts: { system: string; messages: Msg[] }) {
             // user prompt should be included in messages already
         ];
 
-        const resp = await fetch('https://api.openrouter.ai/v1/chat/completions', {
+        // Was 'https://api.openrouter.ai/...' — that host doesn't resolve at
+        // all (confirmed via curl); the real API lives under openrouter.ai/api.
+        // Also was hardcoded to an Anthropic model id, which OpenRouter's API
+        // doesn't recognize (it expects "provider/model", e.g. the free model
+        // already configured in .env) — every call silently failed over to
+        // Genkit/Groq regardless of AI_PROVIDER.
+        const baseUrl = process.env.NEXT_PUBLIC_OPENROUTER_BASE_URL || 'https://openrouter.ai/api';
+        const model = process.env.NEXT_PUBLIC_OPENROUTER_MODEL || 'minimax/minimax-m2.5:free';
+
+        const resp = await fetch(`${baseUrl}/v1/chat/completions`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${openKey}`,
             },
-            body: JSON.stringify({ model: 'claude-sonnet-4-20250514', messages: orMessages, max_tokens: 1000 }),
+            body: JSON.stringify({ model, messages: orMessages, max_tokens: 1000 }),
         });
 
         const raw = await resp.text();
