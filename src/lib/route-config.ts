@@ -86,6 +86,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     icon: Building2,
     category: "sales",
   },
+  {
+    path: "/customers/[id]",
+    label: "Customer Details",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    showInNavigation: false,
+  },
   // --- Shipments ---
   {
     path: "/trips",

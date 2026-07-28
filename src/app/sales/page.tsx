@@ -26,6 +26,7 @@ import {
   Thermometer, Weight, Ruler, CalendarDays, X, Eye, Save, Pencil, Trash2
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
+import { logCustomerActivity } from '@/lib/customer-activity';
 import Link from 'next/link';
 import { ContractGenerator } from './contract-generator';
 import { TransportAgreementGenerator } from './transport-agreement-generator';
@@ -406,6 +407,13 @@ function SalesModuleContent() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
+      logCustomerActivity({
+        customerId: quotationForm.customer_id,
+        activityType: 'quotation',
+        description: `Quotation ${quotationNumber} created`,
+        amount: total,
+        createdBy: user?.id,
+      });
       toast({ title: 'Success', description: 'Quotation created successfully' });
       setShowQuotationDialog(false);
       fetchQuotations();
@@ -478,6 +486,13 @@ function SalesModuleContent() {
     if (updateError) {
       toast({ title: 'Error', description: 'Failed to update quotation', variant: 'destructive' });
     } else {
+      logCustomerActivity({
+        customerId: quotation.customer_id,
+        activityType: 'booking',
+        description: `Booking ${bookingNumber} created from quotation ${quotation.quotation_number}`,
+        amount: quotation.total_amount,
+        createdBy: user?.id,
+      });
       toast({ title: 'Success', description: `Booking created: ${bookingNumber}` });
       fetchQuotations();
     }
@@ -513,6 +528,13 @@ function SalesModuleContent() {
     if (updateError) {
       toast({ title: 'Error', description: 'Failed to update contract', variant: 'destructive' });
     } else {
+      logCustomerActivity({
+        customerId: contract.customer_id,
+        activityType: 'booking',
+        description: `Booking ${bookingNumber} created from contract`,
+        amount: contract.contract_value,
+        createdBy: user?.id,
+      });
       toast({ title: 'Success', description: `Booking created: ${bookingNumber}` });
       fetchContracts();
     }
@@ -533,6 +555,13 @@ function SalesModuleContent() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
+      logCustomerActivity({
+        customerId: contractForm.customer_id,
+        activityType: 'contract',
+        description: `${contractForm.contract_type} contract signed`,
+        amount: parseFloat(contractForm.contract_value as string) || 0,
+        createdBy: user?.id,
+      });
       toast({ title: 'Success', description: 'Contract created successfully' });
       setShowContractDialog(false);
       fetchContracts();

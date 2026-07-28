@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/components/supabase-provider";
+import { logCustomerActivity } from "@/lib/customer-activity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,6 +151,16 @@ export default function PaymentsPage() {
           paid_amount: newPaid,
           status: newPaid >= total ? "paid" : invoice.status,
         }).eq("id", invoice.id);
+      }
+
+      if (invoice?.customer_id) {
+        logCustomerActivity({
+          customerId: invoice.customer_id,
+          activityType: "payment",
+          description: `Payment received for invoice ${invoice.invoice_number}`,
+          amount,
+          createdBy: user?.id,
+        });
       }
 
       await loadPayments();

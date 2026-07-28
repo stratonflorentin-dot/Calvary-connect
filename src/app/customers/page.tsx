@@ -30,6 +30,8 @@ interface Customer {
   country: string;
   tax_id: string;
   credit_limit: number;
+  current_balance?: number;
+  risk_level?: 'low' | 'medium' | 'high' | null;
   payment_terms: string;
   status: string;
   notes: string;
@@ -138,6 +140,7 @@ export default function CustomersPage() {
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter(c => c.status === 'active').length;
   const totalCreditLimit = customers.reduce((sum, c) => sum + (c.credit_limit || 0), 0);
+  const highRiskCustomers = customers.filter(c => c.risk_level === 'high').length;
 
   if (!role) return null;
 
@@ -189,8 +192,8 @@ export default function CustomersPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Pending Follow-ups</p>
-                    <p className="text-2xl font-bold">0</p>
+                    <p className="text-sm text-muted-foreground">High-Risk Customers</p>
+                    <p className="text-2xl font-bold">{highRiskCustomers}</p>
                   </div>
                   <Briefcase className="h-8 w-8 text-orange-500" />
                 </div>
@@ -324,7 +327,7 @@ export default function CustomersPage() {
                       <TableCell>Tsh {customer.credit_limit?.toLocaleString()}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          <Button variant="ghost" size="sm">View</Button>
+                          <Button variant="ghost" size="sm" onClick={() => window.location.href = `/customers/${customer.id}`}>View</Button>
                           <Button variant="ghost" size="sm" onClick={() => window.location.href = `/trips?customer=${customer.id}&name=${encodeURIComponent(customer.company_name)}`}>
                             <Route className="size-3 mr-1" />
                             Trip
