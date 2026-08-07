@@ -36,6 +36,7 @@ import {
   ArrowUpCircle,
   MessageSquare,
   Instagram,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
@@ -88,6 +89,7 @@ const routeIconMap: Record<string, any> = {
   "/admin/hr/payroll/statutory": BarChart2,
   "/audit": Shield,
   "/ai-insights": Sparkles,
+  "/company-ai": Bot,
   "/notifications": Bell,
   "/hr/insurance": Shield,
   "/hr/meetings": CalendarDays,

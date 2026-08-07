@@ -2,8 +2,9 @@
 // Chooses provider by `AI_PROVIDER` env (openrouter|genkit) or falls back.
 
 type Msg = { role: string; content: Array<{ text: string }> };
+type Usage = { tokensIn: number; tokensOut: number } | null;
 
-export async function generateAI(opts: { system: string; messages: Msg[] }) {
+export async function generateAI(opts: { system: string; messages: Msg[] }): Promise<{ text: string; provider: string; usage: Usage }> {
     const { system, messages } = opts;
     const preferred = (process.env.AI_PROVIDER || '').toLowerCase();
     const openKey = process.env.OPENROUTER_API_KEY;
@@ -48,9 +49,12 @@ export async function generateAI(opts: { system: string; messages: Msg[] }) {
         try {
             const json = JSON.parse(raw);
             const text = json?.choices?.[0]?.message?.content || json?.choices?.[0]?.text || JSON.stringify(json);
-            return { text: String(text), provider: 'openrouter' };
+            const usage: Usage = json?.usage
+                ? { tokensIn: Number(json.usage.prompt_tokens) || 0, tokensOut: Number(json.usage.completion_tokens) || 0 }
+                : null;
+            return { text: String(text), provider: 'openrouter', usage };
         } catch (e) {
-            return { text: raw, provider: 'openrouter' };
+            return { text: raw, provider: 'openrouter', usage: null as Usage };
         }
     };
 
@@ -61,7 +65,11 @@ export async function generateAI(opts: { system: string; messages: Msg[] }) {
         const ai = await createGenkit();
         const response = await (ai as any).generate({ system, messages });
         const text = (response as any).text || '';
-        return { text, provider: 'genkit' };
+        const rawUsage = (response as any).usage;
+        const usage: Usage = rawUsage
+            ? { tokensIn: Number(rawUsage.inputTokens ?? rawUsage.promptTokens) || 0, tokensOut: Number(rawUsage.outputTokens ?? rawUsage.completionTokens) || 0 }
+            : null;
+        return { text, provider: 'genkit', usage };
     };
 
     // Decide order

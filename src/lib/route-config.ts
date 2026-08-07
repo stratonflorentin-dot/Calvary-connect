@@ -543,6 +543,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN"],
     category: "system",
   },
+  {
+    path: "/company-ai",
+    label: "Company AI",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "system",
+  },
 
   // --- Driver Specific (Hidden from Sidebar Main Menu) ---
   {
