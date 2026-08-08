@@ -583,9 +583,9 @@ export default function UsersPage() {
                   <Label>Employee ID</Label>
                   <Input 
                     type="text" 
-                    value={editingUser.employee_id} 
-                    readOnly 
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 font-mono cursor-not-allowed" 
+                    value={editingUser.employee_id}
+                    readOnly
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted text-muted-foreground font-mono cursor-not-allowed"
                   />
                   <p className="text-[10px] text-muted-foreground">
                     Auto-generated. Cannot be changed.
@@ -696,7 +696,7 @@ export default function UsersPage() {
                       <button
                         type="button"
                         onClick={clearPhoto}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -763,7 +763,7 @@ export default function UsersPage() {
               ) : filteredUsers?.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 font-mono">
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-info/10 text-info font-mono">
                       {u.employee_id || '—'}
                     </span>
                   </TableCell>
@@ -783,7 +783,7 @@ export default function UsersPage() {
                   </TableCell>
                   {(role === 'CEO' || role === 'ADMIN') && (
                     <TableCell>
-                      <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-600">
+                      <code className="text-xs bg-muted px-2 py-1 rounded font-mono text-muted-foreground">
                         {u.password || 'N/A'}
                       </code>
                     </TableCell>
@@ -814,7 +814,7 @@ export default function UsersPage() {
                             </span>
                           )}
                           {displayStatus === 'active' && u.last_login_at && (
-                            <span className="text-[10px] text-emerald-600">
+                            <span className="text-[10px] text-success">
                               Last login {new Date(u.last_login_at).toLocaleDateString()}
                             </span>
                           )}
@@ -826,7 +826,7 @@ export default function UsersPage() {
                     <div className="flex flex-col gap-1">
                       <span>{u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
                       {u.last_login_at && (
-                        <span className="text-[10px] text-slate-500">
+                        <span className="text-[10px] text-muted-foreground">
                           Login: {new Date(u.last_login_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                         </span>
                       )}
@@ -847,7 +847,7 @@ export default function UsersPage() {
                             setEditingUser(u);
                             setIsEditDialogOpen(true);
                           }}
-                          className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                          className="text-primary hover:text-primary/80 hover:bg-primary/10"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -857,7 +857,7 @@ export default function UsersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteUser(u.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

@@ -164,7 +164,7 @@ export function FuelManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Fuel className="size-7 text-amber-500" />
+            <Fuel className="size-7 text-primary" />
             Fuel Management
           </h2>
           <p className="text-muted-foreground text-sm mt-1">Track fuel consumption, costs, and efficiency per vehicle</p>
@@ -175,14 +175,14 @@ export function FuelManagement() {
           </Button>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-amber-500 hover:bg-amber-600">
+              <Button>
                 <Plus className="size-4 mr-2" />Log Fuel Fill
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <Fuel className="size-5 text-amber-500" />
+                  <Fuel className="size-5 text-primary" />
                   Record Fuel Fill-Up
                 </DialogTitle>
               </DialogHeader>
@@ -233,7 +233,7 @@ export function FuelManagement() {
 
                 {/* Show estimated total */}
                 {form.litres && form.cost_per_litre && (
-                  <div className="bg-amber-50 rounded-lg p-2 text-sm text-amber-700 font-medium text-center">
+                  <div className="bg-[hsl(var(--primary-soft))] rounded-lg p-2 text-sm text-primary font-medium text-center">
                     Total: TZS {(parseFloat(form.litres) * parseFloat(form.cost_per_litre)).toLocaleString()}
                   </div>
                 )}
@@ -266,7 +266,7 @@ export function FuelManagement() {
 
                 <div className="flex gap-2 pt-1">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setAddOpen(false)} disabled={saving}>Cancel</Button>
-                  <Button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600" disabled={saving}>
+                  <Button type="submit" className="flex-1" disabled={saving}>
                     {saving ? <RefreshCw className="size-4 mr-2 animate-spin" /> : <Fuel className="size-4 mr-2" />}
                     Save Log
                   </Button>
@@ -280,18 +280,20 @@ export function FuelManagement() {
       {/* KPI Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Fuel Cost", value: `TZS ${totalCost.toLocaleString()}`, icon: <Fuel className="size-5 text-amber-500" />, bg: "bg-amber-50 border-amber-200" },
-          { label: "Total Litres", value: `${totalLitres.toLocaleString()} L`, icon: <Droplets className="size-5 text-blue-500" />, bg: "bg-blue-50 border-blue-200" },
-          { label: "Total Distance", value: `${totalDistance.toLocaleString()} km`, icon: <Truck className="size-5 text-green-500" />, bg: "bg-green-50 border-green-200" },
-          { label: "Avg Efficiency", value: avgEfficiency > 0 ? `${avgEfficiency.toFixed(2)} km/L` : "—", icon: <Gauge className="size-5 text-purple-500" />, bg: "bg-purple-50 border-purple-200" },
+          { label: "Total Fuel Cost", value: `TZS ${totalCost.toLocaleString()}`, icon: <Fuel className="size-5 text-primary" /> },
+          { label: "Total Litres", value: `${totalLitres.toLocaleString()} L`, icon: <Droplets className="size-5 text-primary" /> },
+          { label: "Total Distance", value: `${totalDistance.toLocaleString()} km`, icon: <Truck className="size-5 text-primary" /> },
+          { label: "Avg Efficiency", value: avgEfficiency > 0 ? `${avgEfficiency.toFixed(2)} km/L` : "—", icon: <Gauge className="size-5 text-primary" /> },
         ].map(stat => (
-          <Card key={stat.label} className={cn("border", stat.bg)}>
+          <Card key={stat.label} className="border border-border bg-card">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500 font-medium">{stat.label}</p>
-                <p className="text-xl font-black text-slate-800 mt-0.5">{stat.value}</p>
+                <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                <p className="text-xl font-black text-foreground mt-0.5">{stat.value}</p>
               </div>
-              {stat.icon}
+              <div className="w-9 h-9 rounded-lg bg-[hsl(var(--primary-soft))] flex items-center justify-center shrink-0">
+                {stat.icon}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -302,7 +304,7 @@ export function FuelManagement() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart2 className="size-5 text-purple-600" />Vehicle Fuel Efficiency Ranking
+              <BarChart2 className="size-5 text-primary" />Vehicle Fuel Efficiency Ranking
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -313,15 +315,15 @@ export function FuelManagement() {
                 return (
                   <div key={v.id}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium text-slate-700">{v.plate_number} <span className="text-muted-foreground text-xs">({v.make})</span></span>
+                      <span className="font-medium text-foreground">{v.plate_number} <span className="text-muted-foreground text-xs">({v.make})</span></span>
                       <div className="flex gap-4 text-xs">
-                        <span className="text-amber-600 font-bold">TZS {v.cost.toLocaleString()}</span>
-                        <span className="text-slate-500">{v.litres.toFixed(0)}L</span>
-                        {v.efficiency > 0 && <span className="text-purple-600 font-medium">{v.efficiency.toFixed(2)} km/L</span>}
+                        <span className="text-foreground font-bold">TZS {v.cost.toLocaleString()}</span>
+                        <span className="text-muted-foreground">{v.litres.toFixed(0)}L</span>
+                        {v.efficiency > 0 && <span className="text-primary font-medium">{v.efficiency.toFixed(2)} km/L</span>}
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div className="bg-amber-400 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 );
@@ -336,7 +338,7 @@ export function FuelManagement() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <Fuel className="size-5 text-amber-500" />Fuel Fill-Up Logs
+              <Fuel className="size-5 text-primary" />Fuel Fill-Up Logs
             </CardTitle>
             <Select value={filterVehicle} onValueChange={setFilterVehicle}>
               <SelectTrigger className="w-48 h-8 text-xs">
@@ -374,21 +376,21 @@ export function FuelManagement() {
                       <span className="font-medium">{log.vehicles?.plate_number || "—"}</span>
                       {log.fuel_card_used && <Badge variant="outline" className="ml-1 text-[9px] py-0">Card</Badge>}
                     </TableCell>
-                    <TableCell className="text-slate-500 text-xs">{log.fuel_station || "—"}</TableCell>
-                    <TableCell className="text-right font-medium text-blue-600">{log.litres} L</TableCell>
-                    <TableCell className="text-right text-slate-500 text-xs">{log.cost_per_litre?.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-bold text-amber-600">
+                    <TableCell className="text-muted-foreground text-xs">{log.fuel_station || "—"}</TableCell>
+                    <TableCell className="text-right font-medium text-foreground">{log.litres} L</TableCell>
+                    <TableCell className="text-right text-muted-foreground text-xs">{log.cost_per_litre?.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-bold text-foreground">
                       TZS {log.total_cost?.toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-right text-slate-500 text-xs">
+                    <TableCell className="text-right text-muted-foreground text-xs">
                       {log.distance_km ? `${log.distance_km} km` : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       {log.efficiency_km_l ? (
                         <span className={cn(
-                          "font-bold text-xs",
-                          log.efficiency_km_l >= 4 ? "text-green-600" :
-                          log.efficiency_km_l >= 2.5 ? "text-amber-600" : "text-red-600"
+                          "font-bold text-xs rounded-full px-2 py-0.5",
+                          log.efficiency_km_l >= 4 ? "bg-success/10 text-success" :
+                          log.efficiency_km_l >= 2.5 ? "bg-warning/10 text-warning" : "bg-destructive/10 text-destructive"
                         )}>
                           {log.efficiency_km_l.toFixed(2)}
                         </span>

@@ -143,9 +143,9 @@ function StatusIcon({ status }: { status?: string }) {
     case "delivered":
       return <CheckCheck className="w-3 h-3 opacity-70" />;
     case "read":
-      return <CheckCheck className="w-3 h-3 text-blue-400" />;
+      return <CheckCheck className="w-3 h-3 text-info" />;
     case "failed":
-      return <XCircle className="w-3 h-3 text-red-400" />;
+      return <XCircle className="w-3 h-3 text-destructive" />;
     default:
       return <Check className="w-3 h-3 opacity-70" />;
   }
@@ -1348,7 +1348,7 @@ export default function InternalChatPage() {
                           const other = (membersByChannel.get(c.id) ?? []).find((m) => m.user_id !== dbUserId);
                           const profile = other ? profileById.get(other.user_id) : null;
                           if (profile?.presence_status === "online") {
-                            return <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />;
+                            return <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success rounded-full border-2 border-background" />;
                           }
                           return null;
                         })()}
@@ -1410,7 +1410,7 @@ export default function InternalChatPage() {
                       {activeDisplay.isDirect ? initials(activeDisplay.name) : <Hash className="w-4 h-4" />}
                     </div>
                     {activeDisplay.isDirect && otherUserInDirectChat?.presence_status === "online" && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border-2 border-background" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -1524,7 +1524,7 @@ export default function InternalChatPage() {
                                           href={attachment.url}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="flex items-center gap-2 p-2 rounded-lg bg-black/5 hover:bg-black/10 transition-colors"
+                                          className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                                         >
                                           {attachment.type.startsWith("image/") ? (
                                             <Image className="w-8 h-8 text-muted-foreground" />
@@ -1931,7 +1931,7 @@ export default function InternalChatPage() {
                           {initials(p.name)}
                         </span>
                         {p.presence_status === "online" && (
-                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border-2 border-background" />
                         )}
                       </div>
                       <span className="min-w-0">

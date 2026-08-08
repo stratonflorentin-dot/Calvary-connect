@@ -14,8 +14,6 @@ import {
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend
 } from 'recharts';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444ff', '#8b5cf6', '#06b6d4'];
-
 interface FinancialData {
   currency: string;
   totalRevenue: number;
@@ -233,10 +231,10 @@ export function ProfessionalFinancialReport() {
           otherExpenses,
           monthlyData: monthlyStats,
           expenseBreakdown: [
-            { name: 'Fuel', value: fuelCost, color: '#3b82f6' },
-            { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
-            { name: 'Allowances', value: allowanceCost, color: '#10b981' },
-            { name: 'Other Expenses', value: otherExpenses, color: '#8b5cf6' }
+            { name: 'Fuel', value: fuelCost, color: 'hsl(var(--chart-1))' },
+            { name: 'Maintenance', value: maintenanceCost, color: 'hsl(var(--chart-3))' },
+            { name: 'Allowances', value: allowanceCost, color: 'hsl(var(--chart-2))' },
+            { name: 'Other Expenses', value: otherExpenses, color: 'hsl(var(--chart-6))' }
           ].filter(cat => cat.value > 0),
           tripPerformance: tripPerformance.sort((a, b) => b.netProfit - a.netProfit)
         };
@@ -311,10 +309,10 @@ export function ProfessionalFinancialReport() {
         otherExpenses,
         monthlyData: consolidatedMonthlyData,
         expenseBreakdown: [
-          { name: 'Fuel', value: fuelCost, color: '#3b82f6' },
-          { name: 'Maintenance', value: maintenanceCost, color: '#f59e0b' },
-          { name: 'Allowances', value: driverCost, color: '#10b981' },
-          { name: 'Other Expenses', value: otherExpenses, color: '#8b5cf6' }
+          { name: 'Fuel', value: fuelCost, color: 'hsl(var(--chart-1))' },
+          { name: 'Maintenance', value: maintenanceCost, color: 'hsl(var(--chart-3))' },
+          { name: 'Allowances', value: driverCost, color: 'hsl(var(--chart-2))' },
+          { name: 'Other Expenses', value: otherExpenses, color: 'hsl(var(--chart-6))' }
         ].filter(cat => cat.value > 0),
         tripPerformance: consolidatedTripPerformance.sort((a, b) => b.netProfit - a.netProfit)
       };
@@ -374,14 +372,14 @@ export function ProfessionalFinancialReport() {
             <p>
               {selectedMonth ? months[selectedMonth - 1] : 'Annual'} {selectedYear} Financial Overview
             </p>
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-bold uppercase">
+            <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-bold uppercase">
               {selectedCurrency}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-            <SelectTrigger className="w-[100px] border-blue-200 bg-blue-50/50">
+            <SelectTrigger className="w-[100px] border-primary/30 bg-primary/5">
               <SelectValue placeholder="Currency" />
             </SelectTrigger>
             <SelectContent>
@@ -422,17 +420,17 @@ export function ProfessionalFinancialReport() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-500 shadow-sm">
+        <Card className="border-l-4 border-l-primary shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
               Total Revenue
-              <span className="text-[10px] bg-blue-50 px-1 rounded">{selectedCurrency}</span>
+              <span className="text-[10px] bg-primary/10 text-primary px-1 rounded">{selectedCurrency}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{formatCurrency(data.totalRevenue)}</div>
-              <DollarSign className="h-5 w-5 text-blue-500" />
+              <div className="text-2xl font-bold text-foreground">{formatCurrency(data.totalRevenue)}</div>
+              <DollarSign className="h-5 w-5 text-primary" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {data.totalTrips} trips completed
@@ -440,17 +438,17 @@ export function ProfessionalFinancialReport() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500 shadow-sm">
+        <Card className="border-l-4 border-l-destructive shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
               Total Expenses
-              <span className="text-[10px] bg-red-50 px-1 rounded">{selectedCurrency}</span>
+              <span className="text-[10px] bg-destructive/10 text-destructive px-1 rounded">{selectedCurrency}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{formatCurrency(data.totalExpenses)}</div>
-              <TrendingDown className="h-5 w-5 text-red-500" />
+              <div className="text-2xl font-bold text-foreground">{formatCurrency(data.totalExpenses)}</div>
+              <TrendingDown className="h-5 w-5 text-destructive" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {formatNumber(data.totalExpenses / data.totalTrips || 0)} per trip
@@ -458,22 +456,22 @@ export function ProfessionalFinancialReport() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500 shadow-sm">
+        <Card className="border-l-4 border-l-success shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
               Net Profit
-              <span className="text-[10px] bg-green-50 px-1 rounded">{selectedCurrency}</span>
+              <span className="text-[10px] bg-success/10 text-success px-1 rounded">{selectedCurrency}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className={`text-2xl font-bold ${data.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`text-2xl font-bold ${data.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {formatCurrency(data.netProfit)}
               </div>
               {data.netProfit >= 0 ? (
-                <TrendingUp className="h-5 w-5 text-green-500" />
+                <TrendingUp className="h-5 w-5 text-success" />
               ) : (
-                <TrendingDown className="h-5 w-5 text-red-500" />
+                <TrendingDown className="h-5 w-5 text-destructive" />
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -482,17 +480,17 @@ export function ProfessionalFinancialReport() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 shadow-sm">
+        <Card className="border-l-4 border-l-accent shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
               Avg Revenue/Trip
-              <span className="text-[10px] bg-purple-50 px-1 rounded">{selectedCurrency}</span>
+              <span className="text-[10px] bg-accent/10 text-accent-foreground px-1 rounded">{selectedCurrency}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{formatCurrency(data.averageRevenuePerTrip)}</div>
-              <Truck className="h-5 w-5 text-purple-500" />
+              <div className="text-2xl font-bold text-foreground">{formatCurrency(data.averageRevenuePerTrip)}</div>
+              <Truck className="h-5 w-5 text-accent-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Per trip average
@@ -502,7 +500,7 @@ export function ProfessionalFinancialReport() {
       </div>
 
       {/* Currency Warning */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm flex items-center gap-2">
+      <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-warning text-sm flex items-center gap-2">
         <PieChartIcon className="h-4 w-4" />
         Note: This report is isolated to <strong>{selectedCurrency}</strong> transactions. Cross-currency data is excluded to maintain ledger integrity.
       </div>
@@ -520,13 +518,16 @@ export function ProfessionalFinancialReport() {
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                  />
                   <Legend />
-                  <Bar dataKey="revenue" fill="#3b82f6" name="Revenue" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expenses" fill="#ef4444" name="Expenses" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenue" fill="hsl(var(--chart-1))" name="Revenue" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expenses" fill="hsl(var(--chart-5))" name="Expenses" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -557,7 +558,10 @@ export function ProfessionalFinancialReport() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                  />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -581,16 +585,19 @@ export function ProfessionalFinancialReport() {
                 <AreaChart data={data.monthlyData}>
                   <defs>
                     <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.2}/>
+                      <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                  />
                   <Legend />
-                  <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" name="Net Profit" />
+                  <Area type="monotone" dataKey="profit" stroke="hsl(var(--chart-2))" fillOpacity={1} fill="url(#colorProfit)" name="Net Profit" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -608,12 +615,15 @@ export function ProfessionalFinancialReport() {
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.tripPerformance.slice(0, 5)} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="tripNumber" type="category" width={100} />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis dataKey="tripNumber" type="category" width={100} tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                  />
                   <Legend />
-                  <Bar dataKey="netProfit" fill="#10b981" name="Net Profit" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="netProfit" fill="hsl(var(--chart-2))" name="Net Profit" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -648,16 +658,16 @@ export function ProfessionalFinancialReport() {
                 {data.tripPerformance.length > 0 ? (
                   data.tripPerformance.map((trip, idx) => (
                     <tr key={idx} className="hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{trip.tripNumber}</td>
-                      <td className="px-4 py-3 text-right text-blue-600">{formatCurrency(trip.revenue)}</td>
-                      <td className="px-4 py-3 text-right text-red-500">{formatCurrency(trip.fuelCost)}</td>
-                      <td className="px-4 py-3 text-right text-red-500">{formatCurrency(trip.allowanceCost)}</td>
-                      <td className="px-4 py-3 text-right text-red-500">{formatCurrency(trip.otherCost)}</td>
-                      <td className="px-4 py-3 text-right font-semibold">{formatCurrency(trip.expenses)}</td>
-                      <td className={`px-4 py-3 text-right font-bold ${trip.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <td className="px-4 py-3 font-medium text-foreground">{trip.tripNumber}</td>
+                      <td className="px-4 py-3 text-right text-primary">{formatCurrency(trip.revenue)}</td>
+                      <td className="px-4 py-3 text-right text-destructive">{formatCurrency(trip.fuelCost)}</td>
+                      <td className="px-4 py-3 text-right text-destructive">{formatCurrency(trip.allowanceCost)}</td>
+                      <td className="px-4 py-3 text-right text-destructive">{formatCurrency(trip.otherCost)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-foreground">{formatCurrency(trip.expenses)}</td>
+                      <td className={`px-4 py-3 text-right font-bold ${trip.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
                         {formatCurrency(trip.netProfit)}
                       </td>
-                      <td className={`px-4 py-3 text-right ${trip.margin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <td className={`px-4 py-3 text-right ${trip.margin >= 0 ? 'text-success' : 'text-destructive'}`}>
                         {trip.margin.toFixed(1)}%
                       </td>
                     </tr>
@@ -685,45 +695,45 @@ export function ProfessionalFinancialReport() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="p-4 bg-primary/10 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Fuel className="h-5 w-5 text-blue-600" />
-                <p className="font-medium">Fuel Costs</p>
+                <Fuel className="h-5 w-5 text-primary" />
+                <p className="font-medium text-foreground">Fuel Costs</p>
               </div>
-              <p className="text-2xl font-bold text-blue-600">{formatCurrency(data.fuelCost)}</p>
+              <p className="text-2xl font-bold text-primary">{formatCurrency(data.fuelCost)}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {data.totalExpenses > 0 ? ((data.fuelCost / data.totalExpenses) * 100).toFixed(1) : 0}% of total
               </p>
             </div>
 
-            <div className="p-4 bg-amber-50 rounded-lg">
+            <div className="p-4 bg-warning/10 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Wrench className="h-5 w-5 text-amber-600" />
-                <p className="font-medium">Maintenance</p>
+                <Wrench className="h-5 w-5 text-warning" />
+                <p className="font-medium text-foreground">Maintenance</p>
               </div>
-              <p className="text-2xl font-bold text-amber-600">{formatCurrency(data.maintenanceCost)}</p>
+              <p className="text-2xl font-bold text-warning">{formatCurrency(data.maintenanceCost)}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {data.totalExpenses > 0 ? ((data.maintenanceCost / data.totalExpenses) * 100).toFixed(1) : 0}% of total
               </p>
             </div>
 
-            <div className="p-4 bg-green-50 rounded-lg">
+            <div className="p-4 bg-success/10 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <p className="font-medium">Driver Costs</p>
+                <DollarSign className="h-5 w-5 text-success" />
+                <p className="font-medium text-foreground">Driver Costs</p>
               </div>
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(data.driverCost)}</p>
+              <p className="text-2xl font-bold text-success">{formatCurrency(data.driverCost)}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {data.totalExpenses > 0 ? ((data.driverCost / data.totalExpenses) * 100).toFixed(1) : 0}% of total
               </p>
             </div>
 
-            <div className="p-4 bg-purple-50 rounded-lg">
+            <div className="p-4 bg-accent/10 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-5 w-5 text-purple-600" />
-                <p className="font-medium">Other Expenses</p>
+                <FileText className="h-5 w-5 text-accent-foreground" />
+                <p className="font-medium text-foreground">Other Expenses</p>
               </div>
-              <p className="text-2xl font-bold text-purple-600">{formatCurrency(data.otherExpenses)}</p>
+              <p className="text-2xl font-bold text-accent-foreground">{formatCurrency(data.otherExpenses)}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {data.totalExpenses > 0 ? ((data.otherExpenses / data.totalExpenses) * 100).toFixed(1) : 0}% of total
               </p>
@@ -744,14 +754,14 @@ export function ProfessionalFinancialReport() {
           <div className="h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }} />
                 <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="trips" stroke="#8b5cf6" strokeWidth={2} name="Trips" />
-                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} name="Revenue" />
+                <Line yAxisId="left" type="monotone" dataKey="trips" stroke="hsl(var(--chart-6))" strokeWidth={2} name="Trips" />
+                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="hsl(var(--chart-1))" strokeWidth={2} name="Revenue" />
               </LineChart>
             </ResponsiveContainer>
           </div>

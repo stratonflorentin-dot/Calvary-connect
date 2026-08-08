@@ -81,7 +81,7 @@ function KPICard({
 }) {
   const positive = (delta ?? 0) >= 0;
   const inner = (
-    <div className="bg-card border border-border rounded-2xl p-5 hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5 transition-all group h-full">
+    <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all group h-full">
       <div className="flex items-start justify-between mb-4">
         <div className={cn("p-2.5 rounded-xl", accent)}>
           <Icon className="w-5 h-5" />
@@ -90,7 +90,7 @@ function KPICard({
           <span
             className={cn(
               "flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full",
-              positive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+              positive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
             )}
           >
             {positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -115,7 +115,7 @@ function SectionHeader({ title, sub, href, actions }: { title: string; sub?: str
       <div className="flex items-center gap-2 shrink-0">
         {actions}
         {href && (
-          <Link href={href} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+          <Link href={href} className="text-xs font-bold text-primary hover:text-primary/70 flex items-center gap-1">
             View all <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         )}
@@ -136,15 +136,16 @@ export default function FinanceOverviewPage() {
   const [unbilledTrips, setUnbilledTrips] = useState<any[]>([]);
 
   const ALL_QUICK_LINKS = [
-    { href: "/finance/invoicing/customer-invoices", icon: FileText, label: "New Invoice", color: "text-indigo-600 bg-indigo-50" },
-    { href: "/finance/invoicing/vendor-bills", icon: Building2, label: "Vendor Bills", color: "text-orange-600 bg-orange-50" },
-    { href: "/expenses", icon: Receipt, label: "Record Expense", color: "text-rose-600 bg-rose-50" },
-    { href: "/income", icon: TrendingUp, label: "Record Revenue", color: "text-emerald-600 bg-emerald-50" },
-    { href: "/finance/accounting/journal-entries", icon: BookOpen, label: "Journal Entry", color: "text-violet-600 bg-violet-50" },
-    { href: "/finance/banking/bank-reconciliation", icon: Landmark, label: "Bank Reconciliation", color: "text-teal-600 bg-teal-50" },
-    { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-fuchsia-600 bg-fuchsia-50" },
+    { href: "/finance/invoicing/customer-invoices", icon: FileText, label: "New Invoice", color: "text-primary bg-primary/10" },
+    { href: "/finance/invoicing/vendor-bills", icon: Building2, label: "Vendor Bills", color: "text-warning bg-warning/10" },
+    { href: "/expenses", icon: Receipt, label: "Record Expense", color: "text-destructive bg-destructive/10" },
+    { href: "/income", icon: TrendingUp, label: "Record Revenue", color: "text-success bg-success/10" },
+    { href: "/finance/accounting/journal-entries", icon: BookOpen, label: "Journal Entry", color: "text-info bg-info/10" },
+    { href: "/finance/banking/bank-reconciliation", icon: Landmark, label: "Bank Reconciliation", color: "text-primary bg-primary/10" },
+    { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-warning bg-warning/10" },
     { href: "/finance/reports/trial-balance", icon: Calculator, label: "Trial Balance", color: "text-muted-foreground bg-muted" },
-    { href: "/finance/accounting/chart-of-accounts", icon: BookOpen, label: "Chart of Accounts", color: "text-indigo-600 bg-indigo-50", module: 'finance_chart_of_accounts' as const },
+    { href: "/finance/accounting/chart-of-accounts", icon: BookOpen, label: "Chart of Accounts", color: "text-primary bg-primary/10", module: 'finance_chart_of_accounts' as const },
+    { href: "/fleet/fuel-anomalies", icon: Fuel, label: "Fuel Anomalies", color: "text-warning bg-warning/10" },
   ];
 
   const QUICK_LINKS = ALL_QUICK_LINKS.filter(link => {
@@ -331,7 +332,7 @@ export default function FinanceOverviewPage() {
           value: cashByCurrency[cur],
           currency: cur,
           icon: Wallet,
-          accent: "bg-emerald-50 text-emerald-600",
+          accent: "bg-success/10 text-success",
           href: "/finance/banking/bank-accounts",
         });
       }
@@ -343,7 +344,7 @@ export default function FinanceOverviewPage() {
         currency: cur,
         delta: pctDelta(rev.mtd, rev.prevMtd),
         icon: TrendingUp,
-        accent: "bg-indigo-50 text-indigo-600",
+        accent: "bg-primary/10 text-primary",
         href: "/finance/reports/revenue-analysis",
       });
       
@@ -354,7 +355,7 @@ export default function FinanceOverviewPage() {
         currency: cur,
         delta: pctDelta(exp.mtd, exp.prevMtd),
         icon: TrendingDown,
-        accent: "bg-rose-50 text-rose-600",
+        accent: "bg-destructive/10 text-destructive",
         href: "/finance/reports/expense-analysis",
       });
       
@@ -364,7 +365,7 @@ export default function FinanceOverviewPage() {
         value: net,
         currency: cur,
         icon: DollarSign,
-        accent: net >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600",
+        accent: net >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
         href: "/finance/reports/profit-loss",
       });
       
@@ -375,7 +376,7 @@ export default function FinanceOverviewPage() {
           value: ar.totalOutstanding,
           currency: cur,
           icon: CreditCard,
-          accent: "bg-amber-50 text-amber-600",
+          accent: "bg-warning/10 text-warning",
           href: "/finance/invoicing/customer-invoices",
         });
       }
@@ -387,7 +388,7 @@ export default function FinanceOverviewPage() {
           value: ap.totalOutstanding,
           currency: cur,
           icon: Building2,
-          accent: "bg-orange-50 text-orange-600",
+          accent: "bg-warning/10 text-warning",
           href: "/finance/invoicing/vendor-bills",
         });
       }
@@ -396,18 +397,18 @@ export default function FinanceOverviewPage() {
   }, [allCurrencies, cashByCurrency, revenueByCurrency, expenseStatsByCurrency, arByCcy, apByCcy]);
 
   const REPORT_LINKS = [
-    { label: "Profit & Loss", sub: "Income vs expenditure", href: "/finance/reports/profit-loss", color: "border-l-indigo-500" },
-    { label: "Balance Sheet", sub: "Assets, liabilities & equity", href: "/finance/reports/balance-sheet", color: "border-l-emerald-500" },
-    { label: "Cash Flow", sub: "Operating, investing, financing", href: "/finance/reports/cash-flow", color: "border-l-sky-500" },
-    { label: "Aging Report", sub: "AR & AP aging buckets", href: "/finance/reports/aging-report", color: "border-l-amber-500" },
-    { label: "Trial Balance", sub: "GL debit / credit totals", href: "/finance/reports/trial-balance", color: "border-l-violet-500" },
-    { label: "VAT / Tax Report", sub: "Statutory obligations", href: "/finance/reports/tax-reports", color: "border-l-rose-500" },
+    { label: "Profit & Loss", sub: "Income vs expenditure", href: "/finance/reports/profit-loss", color: "border-l-primary" },
+    { label: "Balance Sheet", sub: "Assets, liabilities & equity", href: "/finance/reports/balance-sheet", color: "border-l-success" },
+    { label: "Cash Flow", sub: "Operating, investing, financing", href: "/finance/reports/cash-flow", color: "border-l-info" },
+    { label: "Aging Report", sub: "AR & AP aging buckets", href: "/finance/reports/aging-report", color: "border-l-warning" },
+    { label: "Trial Balance", sub: "GL debit / credit totals", href: "/finance/reports/trial-balance", color: "border-l-info" },
+    { label: "VAT / Tax Report", sub: "Statutory obligations", href: "/finance/reports/tax-reports", color: "border-l-destructive" },
   ];
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         <p className="text-sm text-muted-foreground font-medium">Loading financial data…</p>
       </div>
     </div>
@@ -419,9 +420,9 @@ export default function FinanceOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 rounded-full">Finance & Accounting</span>
-            <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+            <span className="text-[10px] font-black text-primary uppercase tracking-widest px-2 py-0.5 bg-primary/10 rounded-full">Finance & Accounting</span>
+            <span className="flex items-center gap-1 text-[10px] text-success font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> Live
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-foreground">Financial Control Center</h1>
@@ -442,7 +443,7 @@ export default function FinanceOverviewPage() {
           <Button variant="outline" size="sm" onClick={load} className="h-9 gap-2 border-border text-muted-foreground rounded-lg text-xs">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </Button>
-          <Button size="sm" asChild className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold shadow-sm">
+          <Button size="sm" asChild className="h-9 gap-2 bg-primary hover:bg-primary/90 rounded-lg text-xs font-bold shadow-sm">
             <Link href="/finance/invoicing/customer-invoices">
               <Plus className="w-3.5 h-3.5" /> New Invoice
             </Link>
@@ -454,33 +455,33 @@ export default function FinanceOverviewPage() {
       {(expenseStatsByCurrency.totalPending > 0 || arSummary.totalOverdue > 0 || unbilledTrips.length > 0) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {expenseStatsByCurrency.totalPending > 0 && (
-            <Link href="/approvals" className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors">
-              <div className="p-2 bg-amber-100 rounded-lg"><Receipt className="w-4 h-4 text-amber-700" /></div>
+            <Link href="/approvals" className="flex items-center gap-3 px-4 py-3 bg-warning/10 border border-warning/20 rounded-xl hover:bg-warning/20 transition-colors">
+              <div className="p-2 bg-warning/20 rounded-lg"><Receipt className="w-4 h-4 text-warning" /></div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-amber-900">{expenseStatsByCurrency.totalPending} expense{expenseStatsByCurrency.totalPending > 1 ? "s" : ""} pending</p>
-                <p className="text-xs text-amber-700">Route through approvals inbox</p>
+                <p className="text-sm font-bold text-warning">{expenseStatsByCurrency.totalPending} expense{expenseStatsByCurrency.totalPending > 1 ? "s" : ""} pending</p>
+                <p className="text-xs text-warning">Route through approvals inbox</p>
               </div>
             </Link>
           )}
           {arCurrencies.some((c) => arByCcy[c].totalOverdue > 0) && (
-            <Link href="/finance/reports/aging-report" className="flex items-center gap-3 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition-colors">
-              <div className="p-2 bg-rose-100 rounded-lg"><AlertTriangle className="w-4 h-4 text-rose-700" /></div>
+            <Link href="/finance/reports/aging-report" className="flex items-center gap-3 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl hover:bg-destructive/20 transition-colors">
+              <div className="p-2 bg-destructive/20 rounded-lg"><AlertTriangle className="w-4 h-4 text-destructive" /></div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-rose-900">
+                <p className="text-sm font-bold text-destructive">
                   Overdue AR: {arCurrencies.filter((c) => arByCcy[c].totalOverdue > 0).map((c) => `${c} ${fmt(arByCcy[c].totalOverdue, c)}`).join(" · ")}
                 </p>
-                <p className="text-xs text-rose-700">
+                <p className="text-xs text-destructive">
                   {Math.max(...arCurrencies.map((c) => arByCcy[c].worstDays), 0)} days worst-case
                 </p>
               </div>
             </Link>
           )}
           {unbilledTrips.length > 0 && (
-            <Link href="/trips" className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors">
-              <div className="p-2 bg-indigo-100 rounded-lg"><Sparkles className="w-4 h-4 text-indigo-700" /></div>
+            <Link href="/trips" className="flex items-center gap-3 px-4 py-3 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary/20 transition-colors">
+              <div className="p-2 bg-primary/20 rounded-lg"><Sparkles className="w-4 h-4 text-primary" /></div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-indigo-900">{unbilledTrips.length} unbilled deliveries</p>
-                <p className="text-xs text-indigo-700">Revenue waiting to be invoiced</p>
+                <p className="text-sm font-bold text-primary">{unbilledTrips.length} unbilled deliveries</p>
+                <p className="text-xs text-primary">Revenue waiting to be invoiced</p>
               </div>
             </Link>
           )}
@@ -600,7 +601,7 @@ export default function FinanceOverviewPage() {
                 return (
                   <div key={d.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/60">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-black text-xs">
+                      <div className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center font-black text-xs">
                         {(d.customer_name ?? "?").slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -609,8 +610,8 @@ export default function FinanceOverviewPage() {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-black text-rose-600">{fmt(Number(d.amount) || 0, d.currency ?? "TZS")}</p>
-                      <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">{days} days overdue</p>
+                      <p className="text-sm font-black text-destructive">{fmt(Number(d.amount) || 0, d.currency ?? "TZS")}</p>
+                      <p className="text-[10px] font-bold text-destructive uppercase tracking-wider">{days} days overdue</p>
                     </div>
                   </div>
                 );
@@ -630,7 +631,7 @@ export default function FinanceOverviewPage() {
               Object.entries(cashByCurrency).map(([cur, bal]) => (
                 <div key={cur} className="flex items-center justify-between p-3 rounded-xl bg-muted border border-border">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center">
                       <CircleDollarSign className="w-4 h-4" />
                     </div>
                     <div>
@@ -654,7 +655,7 @@ export default function FinanceOverviewPage() {
           </div>
           <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
             {QUICK_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-center">
+              <Link key={l.href} href={l.href} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-primary/20 hover:bg-primary/5 transition-all text-center">
                 <div className={cn("p-2 rounded-lg", l.color.split(" ")[1])}>
                   <l.icon className={cn("w-4 h-4", l.color.split(" ")[0])} />
                 </div>
@@ -694,7 +695,7 @@ export default function FinanceOverviewPage() {
             recentEntries.map((e: any, i: number) => (
               <div key={e.id || i} className="flex items-center justify-between px-5 py-3 hover:bg-muted/60 transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={cn("w-2 h-2 rounded-full shrink-0", e.status === "posted" ? "bg-emerald-500" : "bg-amber-500")} />
+                  <div className={cn("w-2 h-2 rounded-full shrink-0", e.status === "posted" ? "bg-success" : "bg-warning")} />
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-foreground truncate">{e.reference ?? `JE-${e.id?.slice(0, 6)}`}</p>
                     <p className="text-xs text-muted-foreground truncate">{e.description}</p>

@@ -17,7 +17,7 @@ export function ActivityFeed() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Activity className="size-5 text-slate-500" />
+          <Activity className="size-5 text-muted-foreground" />
           Agent Activity
         </CardTitle>
         <Button size="sm" variant="ghost" onClick={refresh} disabled={loading}>

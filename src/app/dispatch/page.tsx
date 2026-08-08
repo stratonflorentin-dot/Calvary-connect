@@ -38,21 +38,21 @@ interface DispatchTrip {
 
 // ─── Column Config ────────────────────────────────────────────────────────────
 const COLUMNS: { id: TripStatus; label: string; color: string; bg: string; icon: React.ElementType; description: string }[] = [
-  { id: "pending",    label: "Pending",    color: "text-amber-600",  bg: "bg-amber-50  border-amber-200",  icon: Clock,        description: "Awaiting assignment" },
-  { id: "loading",   label: "Loading",    color: "text-blue-600",   bg: "bg-blue-50   border-blue-200",   icon: Package,      description: "Being loaded at origin" },
-  { id: "in_transit",label: "In Transit", color: "text-sky-600",    bg: "bg-sky-50    border-sky-200",    icon: Navigation,   description: "Currently on the road" },
-  { id: "delivered", label: "Delivered",  color: "text-green-600",  bg: "bg-green-50  border-green-200",  icon: CheckCircle2, description: "Successfully delivered" },
-  { id: "cancelled", label: "Cancelled",  color: "text-red-500",    bg: "bg-red-50    border-red-200",    icon: X,            description: "Cancelled or rejected" },
+  { id: "pending",    label: "Pending",    color: "text-warning",          bg: "bg-warning/5 border-warning/20",           icon: Clock,        description: "Awaiting assignment" },
+  { id: "loading",   label: "Loading",    color: "text-muted-foreground", bg: "bg-muted/50 border-border",                icon: Package,      description: "Being loaded at origin" },
+  { id: "in_transit",label: "In Transit", color: "text-info",             bg: "bg-info/5 border-info/20",                 icon: Navigation,   description: "Currently on the road" },
+  { id: "delivered", label: "Delivered",  color: "text-success",          bg: "bg-success/5 border-success/20",           icon: CheckCircle2, description: "Successfully delivered" },
+  { id: "cancelled", label: "Cancelled",  color: "text-destructive",      bg: "bg-destructive/5 border-destructive/20",   icon: X,            description: "Cancelled or rejected" },
 ];
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 const StatusPip = ({ status }: { status: TripStatus }) => {
   const map: Record<TripStatus, string> = {
-    pending:    "bg-amber-400",
-    loading:    "bg-blue-500",
-    in_transit: "bg-sky-500 animate-pulse",
-    delivered:  "bg-green-500",
-    cancelled:  "bg-red-400",
+    pending:    "bg-warning",
+    loading:    "bg-muted-foreground",
+    in_transit: "bg-info animate-pulse",
+    delivered:  "bg-success",
+    cancelled:  "bg-destructive",
   };
   return <span className={`inline-block w-2 h-2 rounded-full ${map[status]}`} />;
 };
@@ -84,36 +84,36 @@ function TripCard({
     <div
       draggable
       onDragStart={(e) => onDragStart(e, trip)}
-      className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-grab active:cursor-grabbing select-none"
+      className="group bg-card rounded-xl border border-border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-grab active:cursor-grabbing select-none"
     >
       {/* Card header */}
-      <div className="p-3 pb-2 border-b border-gray-50">
+      <div className="p-3 pb-2 border-b border-border/60">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <StatusPip status={trip.status} />
-            <span className="text-xs font-bold text-gray-500 font-mono">
+            <span className="text-xs font-bold text-muted-foreground font-mono">
               {trip.trip_number || `TRP-${trip.id.slice(0, 6).toUpperCase()}`}
             </span>
           </div>
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenu(!menu)}
-              className="p-1 rounded-md hover:bg-gray-100 text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
               <MoreVertical className="w-3.5 h-3.5" />
             </button>
             {menu && (
-              <div className="absolute right-0 top-6 z-20 bg-white border border-gray-100 rounded-xl shadow-xl py-1 w-40 text-xs">
-                <Link href={`/trips/${trip.id}`} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-gray-700">
+              <div className="absolute right-0 top-6 z-20 bg-card border border-border rounded-xl shadow-xl py-1 w-40 text-xs">
+                <Link href={`/trips/${trip.id}`} className="flex items-center gap-2 px-3 py-2 hover:bg-muted text-foreground">
                   <Eye className="w-3.5 h-3.5" /> View Details
                 </Link>
-                <Link href={`/trips`} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-gray-700">
+                <Link href={`/trips`} className="flex items-center gap-2 px-3 py-2 hover:bg-muted text-foreground">
                   <Edit className="w-3.5 h-3.5" /> Edit Trip
                 </Link>
                 {next && (
                   <button
                     onClick={() => { onQuickStatus(trip, next); setMenu(false); }}
-                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-sky-50 text-sky-600 font-semibold"
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-primary/10 text-primary font-semibold"
                   >
                     <Zap className="w-3.5 h-3.5" /> Move to {next.replace("_", " ")}
                   </button>
@@ -128,30 +128,30 @@ function TripCard({
       <div className="px-3 py-2.5">
         <div className="flex items-start gap-2 mb-2.5">
           <div className="flex flex-col items-center gap-1 pt-0.5 shrink-0">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <div className="w-px h-5 bg-gray-200" />
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+            <div className="w-1.5 h-1.5 rounded-full bg-success" />
+            <div className="w-px h-5 bg-border" />
+            <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
           </div>
           <div className="space-y-1 min-w-0">
-            <p className="text-xs font-semibold text-gray-700 truncate leading-tight">{trip.origin || "—"}</p>
-            <p className="text-xs font-semibold text-gray-700 truncate leading-tight">{trip.destination || "—"}</p>
+            <p className="text-xs font-semibold text-foreground truncate leading-tight">{trip.origin || "—"}</p>
+            <p className="text-xs font-semibold text-foreground truncate leading-tight">{trip.destination || "—"}</p>
           </div>
         </div>
 
         {/* Metadata chips */}
         <div className="flex flex-wrap gap-1.5 mt-2">
           {trip.driver_name && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 rounded-full px-2 py-0.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
               <User className="w-2.5 h-2.5" /> {trip.driver_name}
             </span>
           )}
           {trip.vehicle_plate && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-600 bg-indigo-50 rounded-full px-2 py-0.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">
               <Truck className="w-2.5 h-2.5" /> {trip.vehicle_plate}
             </span>
           )}
           {trip.cargo_type && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-warning bg-warning/10 rounded-full px-2 py-0.5">
               <Package className="w-2.5 h-2.5" /> {trip.cargo_type}
             </span>
           )}
@@ -159,19 +159,19 @@ function TripCard({
 
         {/* SLA warning */}
         {overdue && (
-          <div className="flex items-center gap-1 mt-2 px-2 py-1 rounded-md bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-1 mt-2 px-2 py-1 rounded-md bg-destructive/10 text-destructive text-[10px] font-bold uppercase tracking-wider">
             <AlertTriangle className="w-3 h-3" /> Overdue by {(ageH - slaHours.trip).toFixed(1)}h
           </div>
         )}
 
         {/* Client + quick action */}
         {(trip.client || next) && (
-          <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-gray-50">
+          <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/60">
             <span className="text-[10px] text-muted-foreground truncate">{trip.client || ""}</span>
             {next && (
               <button
                 onClick={() => onQuickStatus(trip, next)}
-                className="text-[10px] font-bold text-sky-600 hover:text-sky-700 flex items-center gap-0.5 shrink-0"
+                className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-0.5 shrink-0"
               >
                 {next.replace("_", " ")} <ArrowRight className="w-3 h-3" />
               </button>
@@ -203,7 +203,7 @@ function KanbanColumn({
   return (
     <div
       className={`flex flex-col rounded-2xl border-2 transition-all duration-200 min-w-[260px] max-w-[300px] flex-1 ${
-        over ? "border-sky-400 bg-sky-50/60 shadow-lg shadow-sky-100" : `border-transparent ${col.bg}`
+        over ? "border-primary/40 bg-primary/5 shadow-lg shadow-primary/10" : `border-transparent ${col.bg}`
       }`}
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
@@ -214,7 +214,7 @@ function KanbanColumn({
         <div className="flex items-center gap-2">
           <Icon className={`w-4 h-4 ${col.color}`} />
           <span className={`text-sm font-bold ${col.color}`}>{col.label}</span>
-          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${col.color} bg-white/80 border border-current/20`}>
+          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${col.color} bg-card/80 border border-current/20`}>
             {trips.length}
           </span>
         </div>
@@ -235,7 +235,7 @@ function KanbanColumn({
         )}
         {/* Drop hint */}
         {over && (
-          <div className="border-2 border-dashed border-sky-300 rounded-xl h-16 flex items-center justify-center text-xs text-sky-400 font-medium">
+          <div className="border-2 border-dashed border-primary/30 rounded-xl h-16 flex items-center justify-center text-xs text-primary/70 font-medium">
             Drop here
           </div>
         )}
@@ -343,9 +343,9 @@ export default function DispatchBoardPage() {
   // Stats
   const stats = [
     { label: "Total", value: trips.length, color: "text-foreground" },
-    { label: "Pending", value: trips.filter(t => t.status === "pending").length, color: "text-amber-600" },
-    { label: "In Transit", value: trips.filter(t => t.status === "in_transit").length, color: "text-sky-600" },
-    { label: "Delivered", value: trips.filter(t => t.status === "delivered").length, color: "text-[hsl(var(--success))]" },
+    { label: "Pending", value: trips.filter(t => t.status === "pending").length, color: "text-warning" },
+    { label: "In Transit", value: trips.filter(t => t.status === "in_transit").length, color: "text-info" },
+    { label: "Delivered", value: trips.filter(t => t.status === "delivered").length, color: "text-success" },
   ];
 
   return (
@@ -355,7 +355,7 @@ export default function DispatchBoardPage() {
         title="Dispatch Board"
         subtitle={`${trips.length} trips · ${trips.filter(t => t.status === "in_transit").length} in transit${saving ? " · saving…" : ""}`}
         icon={Navigation}
-        iconAccent="bg-gradient-to-br from-sky-500 to-primary text-white"
+        iconAccent="bg-primary text-primary-foreground"
         actions={
           <>
             <div className="relative">

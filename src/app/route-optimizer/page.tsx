@@ -153,15 +153,15 @@ function RouteMap({ route }: { route: OptimizedRoute }) {
         subdomains: ["a", "b", "c"],
       }).addTo(map);
 
-      const line = L.polyline(route.geometry, { color: "#4f46e5", weight: 4, opacity: 0.85 }).addTo(map);
+      const line = L.polyline(route.geometry, { color: "hsl(var(--primary))", weight: 4, opacity: 0.85 }).addTo(map);
       route.ordered.forEach((stop, i) => {
         const isFirst = i === 0;
         const isLast = i === route.ordered.length - 1;
-        const color = isFirst ? "#16a34a" : isLast ? "#dc2626" : "#4f46e5";
+        const color = isFirst ? "hsl(var(--success))" : isLast ? "hsl(var(--destructive))" : "hsl(var(--primary))";
         L.marker([stop.lat, stop.lon], {
           icon: L.divIcon({
             className: "",
-            html: `<div style="min-width:22px;height:22px;padding:0 4px;border-radius:11px;background:${color};color:white;font:900 11px/22px Inter,sans-serif;text-align:center;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)">${i + 1}</div>`,
+            html: `<div style="min-width:22px;height:22px;padding:0 4px;border-radius:11px;background:${color};color:white;font:900 11px/22px 'Space Grotesk',sans-serif;text-align:center;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4)">${i + 1}</div>`,
             iconSize: [22, 22],
             iconAnchor: [11, 11],
           }),
@@ -241,7 +241,7 @@ export default function RouteOptimizerPage() {
                       i === 0
                         ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]"
                         : i === waypoints.length - 1
-                          ? "bg-red-100 text-red-700"
+                          ? "bg-destructive/10 text-destructive"
                           : "bg-primary/10 text-primary",
                     )}
                   >

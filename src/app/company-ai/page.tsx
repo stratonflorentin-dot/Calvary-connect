@@ -36,7 +36,7 @@ export default function CompanyAiPage() {
           <Card className="flex flex-col">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="size-5 text-indigo-600 shrink-0" />
+                <Sparkles className="size-5 text-primary shrink-0" />
                 General Analyst
               </CardTitle>
             </CardHeader>

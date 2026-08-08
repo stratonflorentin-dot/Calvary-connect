@@ -60,6 +60,7 @@ export default function ServiceRequestsPage() {
   const { user } = useSupabase();
   const [requests, setRequests] = useState<Req[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_review' | 'approved' | 'completed'>('all');
 
   useEffect(() => {
     const loadRequests = async () => {
@@ -156,7 +157,7 @@ export default function ServiceRequestsPage() {
         <Sidebar role={role!} />
         <main className="flex-1 md:ml-60 p-4 md:p-8 flex items-center justify-center">
           <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
-            <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
+            <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
             <p className="text-muted-foreground text-sm">You do not have permission to view service requests.</p>
           </div>
         </main>
@@ -164,37 +165,79 @@ export default function ServiceRequestsPage() {
     );
   }
 
+  const STATUS_TABS: { key: typeof statusFilter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'in_review', label: 'In Review' },
+    { key: 'approved', label: 'Approved' },
+    { key: 'completed', label: 'Completed' },
+  ];
+
+  const visibleRequests = requests.filter((r) => {
+    if (statusFilter === 'all') return true;
+    const status = reqStatus(r);
+    if (statusFilter === 'in_review') return status === 'in_review' || status === 'in_progress';
+    return status === statusFilter;
+  });
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role!} />
       <main className="flex-1 md:ml-60 p-4 md:p-8">
-        <header className="mb-8">
+        <header className="mb-6">
           <h1 className="text-3xl font-headline tracking-tighter">Service Queue</h1>
           <p className="text-muted-foreground text-sm font-sans">Manage active repairs and submit service logs.</p>
         </header>
 
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          {STATUS_TABS.map((tab) => {
+            const count = tab.key === 'all'
+              ? requests.length
+              : requests.filter((r) => {
+                  const status = reqStatus(r);
+                  return tab.key === 'in_review' ? (status === 'in_review' || status === 'in_progress') : status === tab.key;
+                }).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setStatusFilter(tab.key)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-bold rounded-full border transition-colors",
+                  statusFilter === tab.key
+                    ? "border-primary bg-primary/10 text-primary shadow-sm"
+                    : "border-border bg-card text-foreground hover:bg-muted",
+                )}
+              >
+                {tab.label} <span className="ml-1 text-[10px] font-black bg-background/60 rounded-full px-1.5">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="grid grid-cols-1 gap-4">
           {loading ? (
             <div className="py-12 text-center">Loading requests...</div>
-          ) : requests?.length === 0 ? (
-            <div className="py-12 text-center bg-white rounded-2xl border border-dashed">
-              <CheckCircle2 className="size-12 text-emerald-500 mx-auto mb-4" />
-              <p className="text-muted-foreground">No pending maintenance requests.</p>
+          ) : visibleRequests?.length === 0 ? (
+            <div className="py-12 text-center bg-card rounded-2xl border border-dashed">
+              <CheckCircle2 className="size-12 text-success mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                {requests.length === 0 ? 'No pending maintenance requests.' : 'No requests match this filter.'}
+              </p>
             </div>
           ) : (
-            requests?.map((r) => {
+            visibleRequests?.map((r) => {
               const status = reqStatus(r);
               const id = String(r.id);
               const mechanicNotes = typeof r.mechanic_notes === 'string' ? r.mechanic_notes : '';
               return (
-                <Card key={id} className="rounded-2xl shadow-sm border-none overflow-hidden bg-white">
+                <Card key={id} className="rounded-2xl shadow-sm border-none overflow-hidden bg-card">
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row justify-between gap-4">
                       <div className="space-y-3 flex-1">
                         <div className="flex items-center gap-2">
                           <Badge className={cn(
                             "text-[10px] font-bold",
-                            reqUrgency(r).includes('crit') || reqUrgency(r).includes('urgent') ? 'bg-rose-500' : 'bg-amber-500'
+                            reqUrgency(r).includes('crit') || reqUrgency(r).includes('urgent') ? 'bg-destructive' : 'bg-warning'
                           )}>
                             {reqUrgency(r).toUpperCase()}
                           </Badge>
@@ -231,7 +274,7 @@ export default function ServiceRequestsPage() {
                             </Button>
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button className="w-full rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700">
+                                <Button className="w-full rounded-xl gap-2 bg-success hover:bg-success/90 text-success-foreground">
                                   <CheckCircle2 className="size-4" /> Complete
                                 </Button>
                               </DialogTrigger>
@@ -257,7 +300,7 @@ export default function ServiceRequestsPage() {
                         {status === 'approved' && (
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button className="w-full rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700">
+                              <Button className="w-full rounded-xl gap-2 bg-success hover:bg-success/90 text-success-foreground">
                                 <CheckCircle2 className="size-4" /> Complete
                               </Button>
                             </DialogTrigger>
@@ -282,9 +325,9 @@ export default function ServiceRequestsPage() {
 
                         <Badge className={cn(
                           "w-full justify-center py-1 mt-auto",
-                          status === 'completed' ? 'bg-emerald-500' :
-                            status === 'approved' ? 'bg-blue-500' :
-                              status === 'in_review' || status === 'in_progress' ? 'bg-amber-500' : 'bg-slate-400'
+                          status === 'completed' ? 'bg-success' :
+                            status === 'approved' ? 'bg-info' :
+                              status === 'in_review' || status === 'in_progress' ? 'bg-warning' : 'bg-muted text-muted-foreground'
                         )}>
                           {statusLabel(status)}
                         </Badge>

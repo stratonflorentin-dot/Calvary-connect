@@ -44,7 +44,7 @@ const CATEGORIES = [
 
 function expenseBadge(status: string) {
   const s = (status || "pending").toLowerCase();
-  if (s === "approved") return <Badge className="bg-emerald-100 text-emerald-800">Approved</Badge>;
+  if (s === "approved") return <Badge className="bg-success/10 text-success">Approved</Badge>;
   if (s === "rejected") return <Badge variant="destructive">Rejected</Badge>;
   return <Badge variant="secondary">Pending</Badge>;
 }

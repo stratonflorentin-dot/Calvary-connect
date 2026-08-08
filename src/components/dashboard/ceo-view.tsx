@@ -154,10 +154,10 @@ export function CeoView() {
 
   const alerts = useMemo(() => {
     const list: { id: string; icon: any; title: string; description: string; href: string; tone: string }[] = [];
-    if (stats.overdueTrips > 0) list.push({ id: "trips", icon: Flame, title: `${stats.overdueTrips} overdue trips`, description: "Dispatch operations are behind SLA", href: "/dispatch", tone: "bg-red-50 border-red-200 text-red-800" });
-    if (stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance > 0) list.push({ id: "appr", icon: ClipboardList, title: `${stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} items waiting for approval`, description: "Route through the Approvals inbox", href: "/approvals", tone: "bg-amber-50 border-amber-200 text-amber-800" });
+    if (stats.overdueTrips > 0) list.push({ id: "trips", icon: Flame, title: `${stats.overdueTrips} overdue trips`, description: "Dispatch operations are behind SLA", href: "/dispatch", tone: "bg-destructive/10 border-destructive/20 text-destructive" });
+    if (stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance > 0) list.push({ id: "appr", icon: ClipboardList, title: `${stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} items waiting for approval`, description: "Route through the Approvals inbox", href: "/approvals", tone: "bg-warning/10 border-warning/20 text-warning" });
     const arOverdue = invoices.filter((i) => (i.type ?? "receivable") === "receivable" && i.status !== "paid" && i.due_date && new Date(i.due_date) < new Date());
-    if (arOverdue.length > 0) list.push({ id: "ar", icon: AlertTriangle, title: `${arOverdue.length} overdue receivables`, description: "Collections need attention", href: "/finance/reports/aging-report", tone: "bg-red-50 border-red-200 text-red-800" });
+    if (arOverdue.length > 0) list.push({ id: "ar", icon: AlertTriangle, title: `${arOverdue.length} overdue receivables`, description: "Collections need attention", href: "/finance/reports/aging-report", tone: "bg-destructive/10 border-destructive/20 text-destructive" });
     return list;
   }, [stats, invoices]);
 
@@ -178,7 +178,7 @@ export function CeoView() {
   return (
     <div className="space-y-6">
       {/* Command header */}
-      <div className="cv-panel bg-gradient-to-br from-primary/95 via-primary to-[hsl(235_84%_65%)] text-primary-foreground border-primary">
+      <div className="cv-panel bg-gradient-to-br from-sidebar via-sidebar to-sidebar-accent text-sidebar-foreground border-sidebar-border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Executive Command</p>
@@ -234,26 +234,26 @@ export function CeoView() {
           label={`Expenses MTD${stats.expensesMtdUsd > 0 ? " (TZS · USD)" : ""}`}
           value={stats.expensesMtdUsd > 0 ? `${format(stats.expensesMtd)} · $${stats.expensesMtdUsd.toLocaleString()}` : format(stats.expensesMtd)}
           icon={Receipt}
-          accent="bg-red-100 text-red-700"
+          accent="bg-destructive/10 text-destructive"
           href="/finance/reports/expense-analysis"
         />
         <StatCard
           label={`Net MTD${stats.expensesMtdUsd > 0 || stats.revenueMtdUsd > 0 ? " (TZS · USD)" : ""}`}
           value={stats.expensesMtdUsd > 0 || stats.revenueMtdUsd > 0 ? `${format(stats.netMtd)} · $${stats.netMtdUsd.toLocaleString()}` : format(stats.netMtd)}
           icon={DollarSign}
-          accent={stats.netMtd >= 0 ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" : "bg-red-100 text-red-700"}
+          accent={stats.netMtd >= 0 ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" : "bg-destructive/10 text-destructive"}
           href="/finance/reports/profit-loss"
         />
-        <StatCard label="AR outstanding" value={format(stats.ar)} icon={CreditCard} accent="bg-amber-100 text-amber-700" href="/finance/invoicing/customer-invoices" />
-        <StatCard label="AP outstanding" value={format(stats.ap)} icon={Building2} accent="bg-orange-100 text-orange-700" href="/finance/invoicing/vendor-bills" />
+        <StatCard label="AR outstanding" value={format(stats.ar)} icon={CreditCard} accent="bg-destructive/10 text-destructive" href="/finance/invoicing/customer-invoices" />
+        <StatCard label="AP outstanding" value={format(stats.ap)} icon={Building2} accent="bg-info/10 text-info" href="/finance/invoicing/vendor-bills" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard label="Total vehicles" value={stats.totalVehicles} icon={Truck} accent="bg-primary/10 text-primary" href="/fleet" />
-        <StatCard label="In use" value={stats.inUseVehicles} sub={`${stats.utilization.toFixed(0)}% utilization`} icon={Navigation} accent="bg-sky-100 text-sky-700" href="/fleet" />
+        <StatCard label="In use" value={stats.inUseVehicles} sub={`${stats.utilization.toFixed(0)}% utilization`} icon={Navigation} accent="bg-info/10 text-info" href="/fleet" />
         <StatCard label="Available" value={stats.availableVehicles} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" href="/fleet" />
-        <StatCard label="In maintenance" value={stats.maintenanceVehicles} icon={Wrench} accent="bg-amber-100 text-amber-700" href="/maintenance" />
-        <StatCard label="Out of service" value={stats.outOfServiceVehicles} icon={AlertTriangle} accent="bg-red-100 text-red-700" href="/fleet" />
+        <StatCard label="In maintenance" value={stats.maintenanceVehicles} icon={Wrench} accent="bg-warning/10 text-warning" href="/maintenance" />
+        <StatCard label="Out of service" value={stats.outOfServiceVehicles} icon={AlertTriangle} accent="bg-destructive/10 text-destructive" href="/fleet" />
         <StatCard label="Active trips" value={stats.activeTrips} sub={`${stats.overdueTrips} overdue`} icon={Package} accent="bg-primary/10 text-primary" href="/dispatch" />
       </div>
 
@@ -286,8 +286,8 @@ export function CeoView() {
 
         <SectionCard title="Approvals & maintenance" className="md:col-span-2">
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Pending approvals" value={stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} icon={ClipboardList} accent="bg-amber-100 text-amber-700" href="/approvals" />
-            <StatCard label="Maintenance open" value={maintenance.length} icon={Wrench} accent="bg-red-100 text-red-700" href="/maintenance" />
+            <StatCard label="Pending approvals" value={stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} icon={ClipboardList} accent="bg-warning/10 text-warning" href="/approvals" />
+            <StatCard label="Maintenance open" value={maintenance.length} icon={Wrench} accent="bg-warning/10 text-warning" href="/maintenance" />
           </div>
         </SectionCard>
       </div>
@@ -331,7 +331,7 @@ export function CeoView() {
             <ul className="divide-y divide-border">
               {topDebtors.map((d: any) => (
                 <li key={d.id} className="px-5 py-3 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive font-black text-xs flex items-center justify-center shrink-0">
                     {(d.customer_name ?? "?").slice(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -339,7 +339,7 @@ export function CeoView() {
                     <p className="text-[10px] text-muted-foreground font-mono truncate">{d.invoice_number}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-black text-red-600">{format(Number(d.total_amount ?? d.amount ?? 0))}</p>
+                    <p className="text-sm font-black text-destructive">{format(Number(d.total_amount ?? d.amount ?? 0))}</p>
                   </div>
                 </li>
               ))}
@@ -353,11 +353,11 @@ export function CeoView() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
           {[
             { href: "/dispatch", label: "Dispatch", icon: Navigation, tone: "bg-primary/10 text-primary" },
-            { href: "/trips", label: "Trips", icon: ClipboardList, tone: "bg-sky-100 text-sky-700" },
-            { href: "/fleet", label: "Fleet", icon: Truck, tone: "bg-emerald-100 text-emerald-700" },
-            { href: "/maintenance", label: "Maintenance", icon: Wrench, tone: "bg-amber-100 text-amber-700" },
-            { href: "/approvals", label: "Approvals", icon: ClipboardList, tone: "bg-fuchsia-100 text-fuchsia-700" },
-            { href: "/finance", label: "Finance", icon: BarChart2, tone: "bg-indigo-100 text-indigo-700" },
+            { href: "/trips", label: "Trips", icon: ClipboardList, tone: "bg-primary/10 text-primary" },
+            { href: "/fleet", label: "Fleet", icon: Truck, tone: "bg-primary/10 text-primary" },
+            { href: "/maintenance", label: "Maintenance", icon: Wrench, tone: "bg-primary/10 text-primary" },
+            { href: "/approvals", label: "Approvals", icon: ClipboardList, tone: "bg-primary/10 text-primary" },
+            { href: "/finance", label: "Finance", icon: BarChart2, tone: "bg-primary/10 text-primary" },
           ].map((l) => {
             const Icon = l.icon;
             return (

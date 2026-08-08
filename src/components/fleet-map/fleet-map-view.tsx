@@ -59,7 +59,7 @@ const FleetMap2D = dynamic(
 );
 
 const glass =
-  "bg-white/90 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_rgba(15,23,42,0.12)]";
+  "bg-card/90 backdrop-blur-xl border border-border/60 shadow-[0_8px_32px_rgba(15,23,42,0.12)]";
 
 function LegendItem({
   color,
@@ -107,7 +107,7 @@ function DriverDetailPanel({
         "rounded-2xl overflow-hidden w-full md:w-[320px] flex flex-col max-h-[calc(100vh-120px)]",
       )}
     >
-      <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2952A3] px-4 py-4 text-white">
+      <div className="bg-gradient-to-br from-sidebar to-sidebar-accent px-4 py-4 text-white">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
@@ -135,7 +135,7 @@ function DriverDetailPanel({
               "border-0 text-[10px] font-semibold",
               driver.isOnline
                 ? "bg-success/20 text-success/90"
-                : "bg-card/10 text-muted-foreground",
+                : "bg-white/10 text-blue-100",
             )}
           >
             {driver.isOnline ? (
@@ -456,7 +456,7 @@ export default function FleetMapView({
           <Button
             variant="outline"
             size="icon"
-            className={cn(glass, "h-10 w-10 rounded-xl border-0 hover:scale-105 active:scale-95 transition-all bg-[#2952A3] text-white hover:bg-[#1e3a5f] hover:text-white shadow-md")}
+            className={cn(glass, "h-10 w-10 rounded-xl border-0 hover:scale-105 active:scale-95 transition-all bg-primary text-primary-foreground hover:bg-primary/90 shadow-md")}
             onClick={() => canvasRef.current?.fitDrivers()}
           >
             <LocateFixed className="h-4.5 w-4.5" />
@@ -474,7 +474,7 @@ export default function FleetMapView({
               title={engine === "3d" ? "3D vector map" : "2D map"}
               className={cn(
                 "h-8 w-8 rounded-lg text-[10px] font-black transition-all",
-                mapEngine === engine ? "bg-[#2952A3] text-white hover:bg-[#1e3a5f]" : "text-muted-foreground hover:bg-muted"
+                mapEngine === engine ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:bg-muted"
               )}
               onClick={() => {
                 setEngineNotice(null);
@@ -502,7 +502,7 @@ export default function FleetMapView({
                 title={label}
                 className={cn(
                   "h-8 w-8 rounded-lg transition-all",
-                  cameraMode === mode ? "bg-[#2952A3] text-white hover:bg-[#1e3a5f]" : "text-muted-foreground hover:bg-muted"
+                  cameraMode === mode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:bg-muted"
                 )}
                 onClick={() => setCameraMode(mode as any)}
               >
@@ -555,16 +555,16 @@ export default function FleetMapView({
               mobileSheetOpen ? "block" : "hidden md:block",
             )}
           >
-            <div className="px-4 py-2.5 border-b border-slate-100/80 hidden md:flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <div className="px-4 py-2.5 border-b border-border/80 hidden md:flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Active fleet
               </span>
-              <span className="text-xs text-slate-500">{filtered.length} drivers</span>
+              <span className="text-xs text-muted-foreground">{filtered.length} drivers</span>
             </div>
             <ScrollArea className="max-h-[140px] md:max-h-[160px]">
               <div className="flex gap-2 p-3 md:flex-col md:gap-1.5 md:p-2">
                 {filtered.length === 0 ? (
-                  <p className="text-sm text-slate-500 px-2 py-4 text-center w-full">
+                  <p className="text-sm text-muted-foreground px-2 py-4 text-center w-full">
                     {search ? "No drivers match your search" : "No drivers to display"}
                   </p>
                 ) : (
@@ -577,7 +577,7 @@ export default function FleetMapView({
                         "flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all min-w-[200px] md:min-w-0 md:w-full shrink-0 md:shrink",
                         selectedId === loc.id
                           ? "bg-primary/10 border border-primary/30 shadow-[0_0_0_1px_rgba(41,82,163,0.15)]"
-                          : "bg-muted/50/80 border border-transparent hover:bg-muted/90 hover:border-border/60",
+                          : "bg-muted/50 border border-transparent hover:bg-muted/90 hover:border-border/60",
                       )}
                     >
                       <span className="relative flex h-2.5 w-2.5 shrink-0">
@@ -644,20 +644,20 @@ export default function FleetMapView({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 z-[999] flex items-center justify-center bg-[#0f172a]/20 backdrop-blur-[2px] pointer-events-none"
+          className="absolute inset-0 z-[999] flex items-center justify-center bg-foreground/10 backdrop-blur-[2px] pointer-events-none"
         >
           <div className={cn(glass, "rounded-2xl p-8 max-w-sm text-center pointer-events-auto mx-4")}>
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#2952A3]/10">
-              <MapPin className="h-7 w-7 text-[#2952A3]" />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+              <MapPin className="h-7 w-7 text-primary" />
             </div>
-            <h3 className="text-lg font-bold text-[#0f172a] mb-2">Awaiting GPS data</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">
+            <h3 className="text-lg font-bold text-foreground mb-2">Awaiting GPS data</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Drivers appear here once they sign in on mobile and allow location access.
               Updates refresh every 15–30 seconds.
             </p>
             {onRefresh && (
               <Button
-                className="mt-4 rounded-xl bg-[#2952A3] hover:bg-[#1e3a5f]"
+                className="mt-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={onRefresh}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />

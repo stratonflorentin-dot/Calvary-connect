@@ -91,11 +91,11 @@ export function AuthComponent() {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-              className="absolute -inset-4 border border-dashed border-blue-500/40 rounded-2xl"
+              className="absolute -inset-4 border border-dashed border-primary/40 rounded-2xl"
             />
-            
+
             {/* 3D graphic lookalike block */}
-            <div className="relative w-24 h-24 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-xl shadow-blue-500/20">
+            <div className="relative w-24 h-24 bg-gradient-to-tr from-primary to-[#002d5c] rounded-xl flex items-center justify-center shadow-xl shadow-primary/20">
               <Truck className="w-12 h-12 text-white" />
               {/* Glowing core */}
               <div className="absolute inset-0 border border-white/20 rounded-xl animate-pulse" />
@@ -103,7 +103,7 @@ export function AuthComponent() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 font-headline">
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#002d5c] dark:from-primary dark:to-[#a5c5fd] font-headline">
               Calvary Connect
             </h1>
             <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base">
@@ -165,7 +165,7 @@ export function AuthComponent() {
       {!hasStarted && (
         <button
           onClick={() => setHasStarted(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 h-32 w-10 bg-gradient-to-b from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground rounded-l-2xl flex flex-col items-center justify-center gap-2 shadow-[-4px_0_20px_rgba(59,130,246,0.3)] border-y border-l border-white/10 z-40 group transition-all duration-300 hover:w-12"
+          className="fixed right-0 top-1/2 -translate-y-1/2 h-32 w-10 bg-gradient-to-b from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground rounded-l-2xl flex flex-col items-center justify-center gap-2 shadow-[-4px_0_20px_rgba(13,185,242,0.3)] border-y border-l border-white/10 z-40 group transition-all duration-300 hover:w-12"
         >
           <Lock className="w-4 h-4 group-hover:rotate-12 transition-transform" />
           <span className="text-[10px] font-extrabold uppercase tracking-widest [writing-mode:vertical-lr] select-none">
@@ -210,7 +210,7 @@ export function AuthComponent() {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-500 dark:from-primary/80 dark:to-violet-400 font-headline">Portal Access</CardTitle>
+                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#002d5c] dark:from-primary/80 dark:to-[#a5c5fd] font-headline">Portal Access</CardTitle>
                   <p className="text-xs text-muted-foreground mt-1">Calvary Connect System</p>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-muted dark:bg-background flex items-center justify-center border border-border">

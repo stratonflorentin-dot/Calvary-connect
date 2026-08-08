@@ -96,7 +96,7 @@ export function AgentChatDrawer({
       <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
         <SheetHeader className="p-4 border-b">
           <SheetTitle className="flex items-center gap-2">
-            <Bot className="size-5 text-indigo-600" />
+            <Bot className="size-5 text-primary" />
             {agent.name}
           </SheetTitle>
         </SheetHeader>

@@ -402,10 +402,10 @@ export default function AIAnalysisDashboard() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Top Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-primary via-[#0089c2] to-[#002d5c] text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
         {/* Decorative background elements */}
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-0 left-10 -mb-4 w-24 h-24 bg-blue-400/20 rounded-full blur-xl"></div>
+        <div className="absolute bottom-0 left-10 -mb-4 w-24 h-24 bg-primary/20 rounded-full blur-xl"></div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
@@ -527,7 +527,7 @@ export default function AIAnalysisDashboard() {
           <Card className="bg-card shadow-sm border-border">
             <CardHeader className="bg-muted/30 border-b pb-4">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Sparkles className="size-5 text-indigo-500 animate-pulse" />
+                <Sparkles className="size-5 text-primary animate-pulse" />
                 Strategic Insights
               </CardTitle>
             </CardHeader>
@@ -538,7 +538,7 @@ export default function AIAnalysisDashboard() {
                     key={i}
                     className="flex items-start gap-3 p-4 rounded-xl bg-muted/50 border border-border hover:bg-muted/80 transition-all duration-300"
                   >
-                    <div className="size-8 rounded-lg flex items-center justify-center shrink-0 bg-indigo-100 text-indigo-600">
+                    <div className="size-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 text-primary">
                       <Activity className="size-4" />
                     </div>
                     <p className="text-sm text-foreground leading-relaxed font-medium">{insight}</p>
@@ -887,7 +887,7 @@ export default function AIAnalysisDashboard() {
         <div className="lg:col-span-2">
           <Card className="h-[580px] bg-card border-border shadow-md flex flex-col overflow-hidden rounded-2xl">
             <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center gap-2">
-              <Bot className="size-5 text-indigo-600" />
+              <Bot className="size-5 text-primary" />
               <CardTitle className="text-sm font-semibold tracking-wide text-foreground uppercase">
                 Interactive AI Agent Console
               </CardTitle>
@@ -910,7 +910,7 @@ export default function AIAnalysisDashboard() {
                   >
                     <span className={cn(
                       "font-bold block text-[10px] uppercase mb-1.5 tracking-wider",
-                      msg.role === 'user' ? "text-primary-foreground/80" : "text-indigo-600"
+                      msg.role === 'user' ? "text-primary-foreground/80" : "text-primary"
                     )}>
                       {msg.role === 'user' ? 'Board Member / CEO' : 'Calvary AI Analyst'}
                     </span>
@@ -925,7 +925,7 @@ export default function AIAnalysisDashboard() {
                   animate={{ opacity: 1 }}
                   className="mr-auto bg-muted/50 border border-border rounded-2xl p-4 flex items-center gap-3 text-muted-foreground"
                 >
-                  <Loader2 className="animate-spin size-4 text-indigo-600" />
+                  <Loader2 className="animate-spin size-4 text-primary" />
                   <span className="text-xs font-medium">Analyzing ledger metrics...</span>
                 </motion.div>
               )}
@@ -947,12 +947,12 @@ export default function AIAnalysisDashboard() {
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
                   placeholder="Ask for cost analysis or business audit..."
-                  className="flex-1 bg-background border-border text-foreground h-11 focus-visible:ring-indigo-500 rounded-xl"
+                  className="flex-1 bg-background border-border text-foreground h-11 focus-visible:ring-primary rounded-xl"
                   disabled={aiLoading}
                 />
                 <Button
                   type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11 w-11 shrink-0 p-0 rounded-xl transition-all shadow-md"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-11 w-11 shrink-0 p-0 rounded-xl transition-all shadow-md"
                   disabled={aiLoading}
                 >
                   <Send className="size-4" />

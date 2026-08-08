@@ -3,134 +3,137 @@
 @tailwind utilities;
 
 /*
-  Professional light-first design system for Calvary Fleet.
+  Calvary Connect design system (derived from
+  stitch_screens_board/calvary_connect/DESIGN.md — Calvary Cyan on Deep Navy,
+  Space Grotesk, technical-minimalist SaaS for road-freight operations).
 
   Token names match shadcn/ui conventions so all existing Card, Button, Input,
-  Badge components inherit the new palette automatically. Dark mode swaps the
-  same tokens rather than defining a parallel system.
+  Badge components inherit the new palette automatically. Dark mode is derived
+  from DESIGN.md's Material "inverse-*"/"*-fixed-dim" tonal roles, since the
+  source system itself only specifies a light theme.
 */
 
 @layer base {
   :root {
-    /* Surfaces — layered slate whites */
-    --background: 210 40% 98%;         /* page bg (soft blue-white) */
-    --foreground: 222 47% 11%;         /* body text */
-    --card: 0 0% 100%;                  /* card surface */
-    --card-foreground: 222 47% 11%;
+    /* Surfaces — Calvary Connect surface family (#f8f9ff base) */
+    --background: 231 100% 99%;        /* #f8f9ff page bg */
+    --foreground: 212 63% 12%;         /* #0b1c30 on-surface */
+    --card: 0 0% 100%;                  /* #ffffff surface-container-lowest */
+    --card-foreground: 212 63% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 212 63% 12%;
 
-    /* Brand — deep indigo, professional and calm */
-    --primary: 235 84% 55%;
+    /* Brand — Calvary Cyan (#0db9f2), the primary action/active-state color */
+    --primary: 195 90% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 235 84% 96%;       /* tint for hover / soft chips */
+    --primary-soft: 195 90% 95%;       /* tint for hover / soft chips */
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 219 60% 95%;          /* soft brand-tinted neutral bg */
+    --secondary-foreground: 212 63% 12%;
 
-    --muted: 210 40% 96%;
-    /* 38% lightness ≈ slate-600: keeps the muted look but passes WCAG AA
-       (≈7:1 on white) even at small font sizes */
-    --muted-foreground: 215 19% 38%;
+    --muted: 221 100% 97%;             /* #eff4ff surface-container-low */
+    /* on-surface-variant (#3d484f) — already ≈7:1 on white at 27% L */
+    --muted-foreground: 203 13% 30%;
 
-    --accent: 235 84% 96%;              /* subtle indigo tint */
-    --accent-foreground: 235 84% 30%;
+    --accent: 195 90% 95%;              /* Calvary Cyan tint */
+    --accent-foreground: 195 100% 18%;  /* #00465e on-primary-container */
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 60%;           /* #ef4444 — Critical Alert */
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 76% 36%;             /* emerald */
+    --success: 142 71% 45%;             /* #22c55e — In Transit / Delivered */
     --success-foreground: 0 0% 100%;
-    --success-soft: 152 76% 94%;
+    --success-soft: 142 71% 95%;
 
-    --warning: 32 95% 48%;              /* amber */
+    --warning: 38 92% 50%;              /* #f59e0b — Delayed */
     --warning-foreground: 0 0% 100%;
-    --warning-soft: 45 100% 94%;
+    --warning-soft: 38 92% 95%;
 
-    --info: 199 89% 48%;
+    --info: 195 90% 50%;                /* Calvary Cyan doubles as info */
     --info-foreground: 0 0% 100%;
-    --info-soft: 199 89% 94%;
+    --info-soft: 195 90% 95%;
 
-    --border: 215 25% 92%;
-    --input: 215 25% 92%;
-    --ring: 235 84% 55%;
-    --radius: 0.75rem;                  /* 12px — modern but not soft */
+    --border: 218 30% 90%;
+    --input: 218 30% 88%;
+    --ring: 195 90% 50%;
+    --radius: 0.5rem;                   /* DESIGN.md: 0.5rem for cards/containers */
 
-    /* Sidebar — nearly black slate, high contrast */
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 215 20% 82%;
-    --sidebar-muted: 215 15% 55%;
-    --sidebar-primary: 235 84% 65%;
+    /* Sidebar — Calvary Deep Blue (#002d5c), white text, cyan active state */
+    --sidebar-background: 211 100% 18%;
+    --sidebar-foreground: 210 40% 92%;
+    --sidebar-muted: 210 30% 65%;
+    --sidebar-primary: 195 90% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent: 209 83% 24%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 20%;
-    --sidebar-ring: 235 84% 65%;
+    --sidebar-border: 210 70% 22%;
+    --sidebar-ring: 195 90% 50%;
 
-    /* Chart palette — 8 pro colors */
-    --chart-1: 235 84% 55%;             /* indigo */
-    --chart-2: 152 76% 36%;             /* emerald */
-    --chart-3: 32 95% 48%;              /* amber */
-    --chart-4: 199 89% 48%;             /* sky */
-    --chart-5: 340 82% 52%;             /* rose */
-    --chart-6: 262 83% 58%;             /* violet */
-    --chart-7: 173 80% 40%;             /* teal */
-    --chart-8: 43 74% 49%;              /* gold */
+    /* Chart palette — brand cyan/green/amber first, then supporting hues */
+    --chart-1: 195 90% 50%;             /* Calvary Cyan */
+    --chart-2: 142 71% 45%;             /* success green */
+    --chart-3: 38 92% 50%;              /* warning amber */
+    --chart-4: 216 40% 41%;             /* brand secondary blue */
+    --chart-5: 0 84% 60%;               /* critical red */
+    --chart-6: 262 60% 55%;             /* violet */
+    --chart-7: 173 65% 38%;             /* teal */
+    --chart-8: 43 70% 48%;              /* gold */
 
     /* Elevation — soft shadow tokens */
-    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
-    --shadow: 0 1px 3px 0 hsl(222 47% 11% / 0.08), 0 1px 2px -1px hsl(222 47% 11% / 0.06);
-    --shadow-md: 0 4px 6px -1px hsl(222 47% 11% / 0.08), 0 2px 4px -2px hsl(222 47% 11% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.08), 0 4px 6px -4px hsl(222 47% 11% / 0.05);
+    --shadow-sm: 0 1px 2px 0 hsl(212 63% 12% / 0.05);
+    --shadow: 0 1px 3px 0 hsl(212 63% 12% / 0.08), 0 1px 2px -1px hsl(212 63% 12% / 0.06);
+    --shadow-md: 0 4px 6px -1px hsl(212 63% 12% / 0.08), 0 2px 4px -2px hsl(212 63% 12% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(212 63% 12% / 0.08), 0 4px 6px -4px hsl(212 63% 12% / 0.05);
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
-    --card: 222 47% 10%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 47% 10%;
-    --popover-foreground: 210 40% 96%;
+    /* Dark surfaces derived from DESIGN.md's inverse-surface (#213145) role */
+    --background: 213 35% 7%;
+    --foreground: 220 100% 96%;         /* #eaf1ff inverse-on-surface */
+    --card: 213 35% 11%;
+    --card-foreground: 220 100% 96%;
+    --popover: 213 35% 11%;
+    --popover-foreground: 220 100% 96%;
 
-    --primary: 235 84% 65%;
-    --primary-foreground: 0 0% 100%;
-    --primary-soft: 235 60% 20%;
+    --primary: 200 100% 73%;            /* #74d1ff inverse-primary */
+    --primary-foreground: 195 100% 12%;
+    --primary-soft: 195 60% 18%;
 
-    --secondary: 222 47% 14%;
-    --secondary-foreground: 210 40% 96%;
+    --secondary: 218 40% 18%;
+    --secondary-foreground: 220 100% 92%;
 
-    --muted: 222 47% 14%;
-    --muted-foreground: 215 20% 72%;
+    --muted: 213 30% 14%;
+    --muted-foreground: 210 25% 72%;
 
-    --accent: 235 60% 18%;
-    --accent-foreground: 235 84% 90%;
+    --accent: 195 60% 16%;
+    --accent-foreground: 200 100% 85%;
 
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 71% 42%;
-    --success-foreground: 0 0% 100%;
-    --success-soft: 152 60% 15%;
-    --warning: 32 95% 55%;
-    --warning-foreground: 0 0% 100%;
-    --warning-soft: 32 60% 15%;
-    --info: 199 89% 55%;
-    --info-foreground: 0 0% 100%;
-    --info-soft: 199 60% 15%;
+    --success: 137 72% 59%;             /* #4ae176 tertiary-fixed-dim */
+    --success-foreground: 146 100% 10%;
+    --success-soft: 142 50% 16%;
+    --warning: 38 95% 60%;
+    --warning-foreground: 32 100% 10%;
+    --warning-soft: 38 60% 16%;
+    --info: 200 100% 73%;
+    --info-foreground: 195 100% 12%;
+    --info-soft: 195 60% 16%;
 
-    --border: 222 47% 18%;
-    --input: 222 47% 18%;
-    --ring: 235 84% 65%;
+    --border: 213 30% 18%;
+    --input: 213 30% 18%;
+    --ring: 200 100% 73%;
 
-    --sidebar-background: 222 47% 4%;
-    --sidebar-foreground: 215 20% 82%;
-    --sidebar-muted: 215 15% 55%;
-    --sidebar-primary: 235 84% 65%;
+    --sidebar-background: 213 45% 5%;
+    --sidebar-foreground: 210 40% 88%;
+    --sidebar-muted: 210 25% 55%;
+    --sidebar-primary: 195 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 12%;
+    --sidebar-accent: 213 40% 12%;
     --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 222 47% 14%;
-    --sidebar-ring: 235 84% 65%;
+    --sidebar-border: 213 35% 14%;
+    --sidebar-ring: 195 90% 55%;
   }
 
   * {
@@ -174,11 +177,11 @@
 @layer components {
   /* Universal surfaces used across the app */
   .cv-surface {
-    @apply rounded-2xl border border-border bg-card shadow-sm;
+    @apply rounded-lg border border-border bg-card shadow-sm;
   }
 
   .cv-panel {
-    @apply rounded-2xl border border-border bg-card p-5 shadow-sm;
+    @apply rounded-lg border border-border bg-card p-5 shadow-sm;
   }
 
   .cv-header {
@@ -236,7 +239,7 @@
   .app-section { @apply cv-panel; }
   .app-toolbar { @apply flex flex-wrap items-center gap-3 cv-panel; }
   .app-kpi { @apply cv-kpi; }
-  .app-muted-panel { @apply rounded-2xl bg-muted p-6; }
+  .app-muted-panel { @apply rounded-lg bg-muted p-6; }
   .app-table-shell { @apply cv-surface overflow-hidden; }
 }
 

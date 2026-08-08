@@ -318,7 +318,7 @@ export default function AllowancesPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
                 Calvary Worker Payroll & Allowances Center
               </h1>
               <p className="text-muted-foreground mt-1">
@@ -336,7 +336,7 @@ export default function AllowancesPage() {
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Sync System
               </Button>
-              <Button asChild className="bg-sky-700 text-white hover:bg-sky-800">
+              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <a href="/admin/hr/payroll/statutory">
                   <FileText className="w-4 h-4 mr-2" />
                   Statutory Reports
@@ -347,54 +347,54 @@ export default function AllowancesPage() {
 
           {/* Premium Overview Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-amber-500/50 transition-all duration-300">
+            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-warning/50 transition-all duration-300">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-500">Pending Approval</p>
-                  <p className="text-2xl font-bold text-amber-500 dark:text-amber-400 mt-1">{format(statsPending)}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-warning">Pending Approval</p>
+                  <p className="text-2xl font-bold text-warning mt-1">{format(statsPending)}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Awaiting manager process</p>
                 </div>
-                <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center">
-                  <Calculator className="w-6 h-6 text-amber-500 dark:text-amber-400 animate-pulse" />
+                <div className="w-12 h-12 bg-warning/10 border border-warning/20 rounded-xl flex items-center justify-center">
+                  <Calculator className="w-6 h-6 text-warning animate-pulse" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-blue-500/50 transition-all duration-300">
+            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-info/50 transition-all duration-300">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-blue-500">Approved Ledger</p>
-                  <p className="text-2xl font-bold text-blue-500 dark:text-blue-400 mt-1">{format(statsApproved)}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-info">Approved Ledger</p>
+                  <p className="text-2xl font-bold text-info mt-1">{format(statsApproved)}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Synced to bills & expenses</p>
                 </div>
-                <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center">
-                  <Coins className="w-6 h-6 text-blue-500 dark:text-blue-400" />
+                <div className="w-12 h-12 bg-info/10 border border-info/20 rounded-xl flex items-center justify-center">
+                  <Coins className="w-6 h-6 text-info" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-green-500/50 transition-all duration-300">
+            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-success/50 transition-all duration-300">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-green-500">Disbursed Wages</p>
-                  <p className="text-2xl font-bold text-green-500 dark:text-green-400 mt-1">{format(statsPaid)}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-success">Disbursed Wages</p>
+                  <p className="text-2xl font-bold text-success mt-1">{format(statsPaid)}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Successfully paid workers</p>
                 </div>
-                <div className="w-12 h-12 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-center">
-                  <Landmark className="w-6 h-6 text-green-500 dark:text-green-400" />
+                <div className="w-12 h-12 bg-success/10 border border-success/20 rounded-xl flex items-center justify-center">
+                  <Landmark className="w-6 h-6 text-success" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-indigo-500/50 transition-all duration-300">
+            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-primary/50 transition-all duration-300">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">Active Directory</p>
-                  <p className="text-2xl font-bold text-indigo-500 dark:text-indigo-400 mt-1">{statsTotalWorkers}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">Active Directory</p>
+                  <p className="text-2xl font-bold text-primary mt-1">{statsTotalWorkers}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Registered company profiles</p>
                 </div>
-                <div className="w-12 h-12 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center">
-                  <User className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
+                <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center">
+                  <User className="w-6 h-6 text-primary" />
                 </div>
               </CardContent>
             </Card>
@@ -471,7 +471,7 @@ export default function AllowancesPage() {
                         {/* Worker Identity Header */}
                         <div className="p-4 md:p-6 bg-muted/30 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold border border-blue-400/20 shadow-md">
+                            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold border border-primary/20 shadow-md">
                               {worker.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                             </div>
                             <div>
@@ -542,14 +542,14 @@ export default function AllowancesPage() {
                           {/* Allowances */}
                           <div>
                             <label className="block text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                              <Plus className="w-3.5 h-3.5 text-green-500" />
+                              <Plus className="w-3.5 h-3.5 text-success" />
                               Allowances (TZS)
                             </label>
                             <div className="relative">
                               <Input
                                 value={allowances.toLocaleString()}
                                 onChange={(e) => handleNumChange(worker.id, e.target.value, setAllowancesInputs)}
-                                className="bg-background border-border text-foreground focus-visible:ring-green-500 font-mono text-sm pr-12"
+                                className="bg-background border-border text-foreground focus-visible:ring-success font-mono text-sm pr-12"
                               />
                               <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">TZS</span>
                             </div>
@@ -558,14 +558,14 @@ export default function AllowancesPage() {
                           {/* Deductions */}
                           <div>
                             <label className="block text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                              <XCircle className="w-3.5 h-3.5 text-red-500" />
+                              <XCircle className="w-3.5 h-3.5 text-destructive" />
                               Deductions (TZS)
                             </label>
                             <div className="relative">
                               <Input
                                 value={deductions.toLocaleString()}
                                 onChange={(e) => handleNumChange(worker.id, e.target.value, setDeductionsInputs)}
-                                className="bg-background border-border text-foreground focus-visible:ring-red-500 font-mono text-sm pr-12"
+                                className="bg-background border-border text-foreground focus-visible:ring-destructive font-mono text-sm pr-12"
                               />
                               <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">TZS</span>
                             </div>
@@ -575,7 +575,7 @@ export default function AllowancesPage() {
                           <div className="bg-muted/40 border border-border p-4 rounded-xl flex items-center justify-between col-span-1 sm:col-span-2 lg:col-span-1">
                             <div>
                               <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Calculated Net</p>
-                              <p className={`text-xl font-black mt-1 font-mono ${netSalary >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              <p className={`text-xl font-black mt-1 font-mono ${netSalary >= 0 ? 'text-success' : 'text-destructive'}`}>
                                 {format(netSalary)}
                               </p>
                             </div>
@@ -718,8 +718,8 @@ export default function AllowancesPage() {
                               {/* Category */}
                               <TableCell className="py-4">
                                 <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${isManual
-                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 dark:text-blue-400'
-                                    : 'bg-purple-500/10 border-purple-500/20 text-purple-500 dark:text-purple-400'
+                                    ? 'bg-primary/10 border-primary/20 text-primary'
+                                    : 'bg-muted border-border text-muted-foreground'
                                   }`}>
                                   {isManual ? 'Manual Payroll' : 'Trip Allowance'}
                                 </span>
@@ -764,10 +764,10 @@ export default function AllowancesPage() {
                               <TableCell className="py-4">
                                 <Badge
                                   variant="outline"
-                                  className={`font-semibold capitalize text-[10px] ${item.status === 'paid' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' :
-                                      item.status === 'approved' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
-                                        item.status === 'rejected' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' :
-                                          'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
+                                  className={`font-semibold capitalize text-[10px] ${item.status === 'paid' ? 'bg-info/10 text-info border-info/20' :
+                                      item.status === 'approved' ? 'bg-success/10 text-success border-success/20' :
+                                        item.status === 'rejected' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                                          'bg-warning/10 text-warning border-warning/20 animate-pulse'
                                     }`}
                                 >
                                   {item.status}
@@ -809,7 +809,7 @@ export default function AllowancesPage() {
                                     variant="ghost"
                                     onClick={() => handleDeletePayroll(item.id)}
                                     disabled={isActionLoading}
-                                    className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 h-7 w-7 p-0 flex items-center justify-center rounded-lg"
+                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0 flex items-center justify-center rounded-lg"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </Button>

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Clock, CheckCircle, XCircle, AlertTriangle, Wrench } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 // Type definitions
 interface MaintenanceRequest {
@@ -53,6 +53,11 @@ export default function PartsRequestsPage() {
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+
+  const filteredRequests = statusFilter === 'all'
+    ? requests
+    : requests.filter((r) => r.status === statusFilter);
 
   useEffect(() => {
     const loadData = async () => {
@@ -128,7 +133,7 @@ export default function PartsRequestsPage() {
         <Sidebar role={role!} />
         <main className="flex-1 md:ml-60 p-4 md:p-8 flex items-center justify-center">
           <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
-            <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
+            <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
             <p className="text-muted-foreground text-sm">You do not have permission to review parts requests.</p>
           </div>
         </main>
@@ -146,35 +151,52 @@ export default function PartsRequestsPage() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="rounded-2xl border-none shadow-sm bg-white">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-sans uppercase tracking-widest text-muted-foreground">Pending Requests</CardTitle>
-              <Clock className="size-5 text-amber-500" />
+              <Clock className="size-5 text-warning" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-headline">{requests?.filter(r => r.status === 'pending').length || 0}</div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-none shadow-sm bg-white">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-sans uppercase tracking-widest text-muted-foreground">Approved Today</CardTitle>
-              <CheckCircle className="size-5 text-emerald-500" />
+              <CardTitle className="text-sm font-sans uppercase tracking-widest text-muted-foreground">Approved</CardTitle>
+              <CheckCircle className="size-5 text-success" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-headline">{requests?.filter(r => r.status === 'approved').length || 0}</div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-none shadow-sm bg-white">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-sans uppercase tracking-widest text-muted-foreground">Inventory Alerts</CardTitle>
-              <Package className="size-5 text-rose-500" />
+              <Package className="size-5 text-destructive" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-headline">{inventory?.filter(item => item.quantity_available <= item.min_stock_level).length || 0}</div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="flex items-center gap-1 mb-6 border-b border-border">
+          {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setStatusFilter(tab)}
+              className={cn(
+                "px-4 py-2 text-sm font-medium capitalize border-b-2 -mb-px transition-colors",
+                statusFilter === tab
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {tab === 'all' ? 'All Requests' : tab}
+            </button>
+          ))}
         </div>
 
         <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-hidden">
@@ -186,16 +208,17 @@ export default function PartsRequestsPage() {
                 <TableHead>Quantity</TableHead>
                 <TableHead>Urgency</TableHead>
                 <TableHead>Reason</TableHead>
+                <TableHead>Requested</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right px-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8">Loading requests...</TableCell></TableRow>
-              ) : requests?.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8">No maintenance requests found.</TableCell></TableRow>
-              ) : requests?.map((r) => (
+                <TableRow><TableCell colSpan={8} className="text-center py-8">Loading requests...</TableCell></TableRow>
+              ) : filteredRequests?.length === 0 ? (
+                <TableRow><TableCell colSpan={8} className="text-center py-8">No maintenance requests found.</TableCell></TableRow>
+              ) : filteredRequests?.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="px-6 py-4 font-medium flex items-center gap-3">
                     <Wrench className="size-4 text-primary" />
@@ -211,17 +234,18 @@ export default function PartsRequestsPage() {
                   <TableCell>
                     <Badge variant="outline" className={cn(
                       "text-[10px] font-bold",
-                      r.urgency === 'High' ? 'text-rose-600 border-rose-200' : 'text-slate-500'
+                      r.urgency === 'High' ? 'text-destructive border-destructive/30' : 'text-muted-foreground'
                     )}>
                       {r.urgency}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{r.reason}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{r.createdAt ? formatDate(r.createdAt) : '—'}</TableCell>
                   <TableCell>
                     <Badge className={cn(
                       "text-[10px]",
-                      r.status === 'approved' ? 'bg-emerald-500' :
-                        r.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
+                      r.status === 'approved' ? 'bg-success' :
+                        r.status === 'rejected' ? 'bg-destructive' : 'bg-warning'
                     )}>
                       {r.status.toUpperCase()}
                     </Badge>
@@ -232,7 +256,7 @@ export default function PartsRequestsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-emerald-600 hover:bg-emerald-50"
+                          className="text-success hover:bg-success/10"
                           onClick={() => handleAction(r.id, 'approved', r)}
                         >
                           <CheckCircle className="size-4" />
@@ -240,7 +264,7 @@ export default function PartsRequestsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-rose-600 hover:bg-rose-50"
+                          className="text-destructive hover:bg-destructive/10"
                           onClick={() => handleAction(r.id, 'rejected', r)}
                         >
                           <XCircle className="size-4" />

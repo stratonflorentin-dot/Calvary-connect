@@ -52,8 +52,8 @@ function daysUntil(date?: string | null): number | null {
 const STATUS_META: Record<string, { label: string; chip: string }> = {
   available:      { label: "Available",      chip: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" },
   in_use:         { label: "In Use",         chip: "bg-primary/10 text-primary" },
-  maintenance:    { label: "In Maintenance", chip: "bg-amber-100 text-amber-700" },
-  out_of_service: { label: "Out of Service", chip: "bg-red-100 text-red-700" },
+  maintenance:    { label: "In Maintenance", chip: "bg-warning/10 text-warning" },
+  out_of_service: { label: "Out of Service", chip: "bg-destructive/10 text-destructive" },
 };
 
 export default function FleetPage() {
@@ -185,10 +185,10 @@ export default function FleetPage() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             <StatCard label="Vehicles" value={stats.total} icon={Truck} accent="bg-primary/10 text-primary" />
-            <StatCard label="Utilization" value={`${stats.utilization.toFixed(0)}%`} sub={`${stats.inUse} in use`} icon={Gauge} accent="bg-sky-100 text-sky-700" />
+            <StatCard label="Utilization" value={`${stats.utilization.toFixed(0)}%`} sub={`${stats.inUse} in use`} icon={Gauge} accent="bg-info/10 text-info" />
             <StatCard label="Available" value={stats.available} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
-            <StatCard label="In maintenance" value={stats.maint} icon={Wrench} accent="bg-amber-100 text-amber-700" />
-            <StatCard label="Needs attention" value={stats.attention} icon={AlertTriangle} accent="bg-red-100 text-red-700" />
+            <StatCard label="In maintenance" value={stats.maint} icon={Wrench} accent="bg-warning/10 text-warning" />
+            <StatCard label="Needs attention" value={stats.attention} icon={AlertTriangle} accent="bg-destructive/10 text-destructive" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
@@ -262,12 +262,12 @@ export default function FleetPage() {
                               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
                                 {v.mileage != null && <span>{Number(v.mileage).toLocaleString()} km</span>}
                                 {insDays != null && (
-                                  <span className={cn(insDays <= 14 && "text-red-600 font-bold")}>
+                                  <span className={cn(insDays <= 14 && "text-destructive font-bold")}>
                                     Insurance {insDays >= 0 ? `expires in ${insDays}d` : `expired ${Math.abs(insDays)}d ago`}
                                   </span>
                                 )}
                                 {regDays != null && (
-                                  <span className={cn(regDays <= 14 && "text-red-600 font-bold")}>
+                                  <span className={cn(regDays <= 14 && "text-destructive font-bold")}>
                                     Reg {regDays >= 0 ? `expires in ${regDays}d` : `expired ${Math.abs(regDays)}d ago`}
                                   </span>
                                 )}
@@ -280,7 +280,7 @@ export default function FleetPage() {
                                     <Fuel className="w-3 h-3" /> {fuel.toFixed(0)}%
                                   </div>
                                   <div className="w-16 h-1.5 rounded-full bg-muted mt-0.5 overflow-hidden">
-                                    <div className={cn("h-full", fuel < 25 ? "bg-red-500" : fuel < 50 ? "bg-amber-500" : "bg-emerald-500")} style={{ width: `${fuel}%` }} />
+                                    <div className={cn("h-full", fuel < 25 ? "bg-destructive" : fuel < 50 ? "bg-warning" : "bg-success")} style={{ width: `${fuel}%` }} />
                                   </div>
                                 </div>
                               )}
@@ -310,7 +310,7 @@ export default function FleetPage() {
                   <ul className="divide-y divide-border">
                     {expiringSoon.map((r, i) => (
                       <li key={i} className="px-5 py-3 flex items-center gap-3 hover:bg-muted/40 transition-colors">
-                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", r.days <= 7 ? "bg-red-100 text-red-700" : r.days <= 14 ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>
+                        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", r.days <= 7 ? "bg-destructive/10 text-destructive" : r.days <= 14 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground")}>
                           <AlertTriangle className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 flex-1">

@@ -2,7 +2,7 @@ Add-Type -AssemblyName System.Drawing
 
 $publicDir = "c:\my projects\fleet management\public"
 
-$bgColor = [System.Drawing.Color]::FromArgb(255, 41, 82, 163)   # #2952A3
+$bgColor = [System.Drawing.Color]::FromArgb(255, 0, 45, 92)   # #002d5c
 $accentColor = [System.Drawing.Color]::FromArgb(255, 82, 202, 224) # #52CAE0
 $wheelColor = [System.Drawing.Color]::FromArgb(255, 26, 58, 107)  # #1a3a6b
 $whiteColor = [System.Drawing.Color]::White

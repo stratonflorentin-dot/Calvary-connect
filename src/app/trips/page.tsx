@@ -33,11 +33,11 @@ import {
 import { cn } from "@/lib/utils";
 
 const STATUS_META: Record<string, { label: string; chip: string; dot: string }> = {
-  pending:    { label: "Pending",    chip: "bg-amber-50 text-amber-700",   dot: "bg-amber-400" },
-  loading:    { label: "Loading",    chip: "bg-sky-50 text-sky-700",       dot: "bg-sky-500" },
+  pending:    { label: "Pending",    chip: "bg-warning/10 text-warning",   dot: "bg-warning" },
+  loading:    { label: "Loading",    chip: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
   in_transit: { label: "In Transit", chip: "bg-[hsl(var(--info-soft))] text-[hsl(var(--info))]", dot: "bg-[hsl(var(--info))] animate-pulse" },
   delivered:  { label: "Delivered",  chip: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", dot: "bg-[hsl(var(--success))]" },
-  cancelled:  { label: "Cancelled",  chip: "bg-red-50 text-red-700",       dot: "bg-red-400" },
+  cancelled:  { label: "Cancelled",  chip: "bg-destructive/10 text-destructive", dot: "bg-destructive" },
 };
 
 type FilterKey = "all" | "active" | "pending" | "delivered" | "overdue";
@@ -148,10 +148,10 @@ export default function TripsPage() {
           {/* KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             <StatCard label="Total trips" value={stats.total} icon={ClipboardList} accent="bg-primary/10 text-primary" />
-            <StatCard label="Active" value={stats.active} icon={Truck} accent="bg-sky-100 text-sky-700" />
-            <StatCard label="Overdue" value={stats.overdue} icon={Flame} accent="bg-red-100 text-red-700" />
+            <StatCard label="Active" value={stats.active} icon={Truck} accent="bg-info/10 text-info" />
+            <StatCard label="Overdue" value={stats.overdue} icon={Flame} accent="bg-destructive/10 text-destructive" />
             <StatCard label="Delivered" value={stats.delivered} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
-            <StatCard label="Revenue (delivered)" value={format(stats.revenue)} icon={Package} accent="bg-amber-100 text-amber-700" />
+            <StatCard label="Revenue (delivered)" value={format(stats.revenue)} icon={Package} accent="bg-success/10 text-success" />
           </div>
 
           {/* Filter chips */}
@@ -227,7 +227,7 @@ export default function TripsPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5 text-sm text-foreground">
-                              <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                              <MapPin className="w-3 h-3 text-success shrink-0" />
                               <span className="truncate">{t.origin || "—"}</span>
                               <span className="text-muted-foreground">→</span>
                               <span className="truncate">{t.destination || "—"}</span>
@@ -296,7 +296,7 @@ export default function TripsPage() {
                   <div
                     key={t.id}
                     onClick={() => { setEditing(t); setFormOpen(true); }}
-                    className="bg-card border border-border rounded-xl p-4 hover:border-indigo-300 transition-colors cursor-pointer"
+                    className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-colors cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -307,7 +307,7 @@ export default function TripsPage() {
                           {t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}
                         </button>
                         <div className="flex items-center gap-1.5 text-sm text-foreground mt-1">
-                          <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <MapPin className="w-3 h-3 text-success shrink-0" />
                           <span className="truncate">{t.origin || "—"}</span>
                           <span className="text-muted-foreground">→</span>
                           <span className="truncate">{t.destination || "—"}</span>

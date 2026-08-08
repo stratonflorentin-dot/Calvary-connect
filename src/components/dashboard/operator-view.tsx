@@ -59,12 +59,12 @@ export function OperatorView() {
       onRefresh={load}
       storageKey="operator-dash"
       kpis={[
-        { label: "Pending", value: stats.pending, icon: ClipboardList, accent: "bg-amber-100 text-amber-700", href: "/dispatch" },
-        { label: "Loading", value: stats.loading, icon: Package, accent: "bg-sky-100 text-sky-700", href: "/dispatch" },
+        { label: "Pending", value: stats.pending, icon: ClipboardList, accent: "bg-warning/10 text-warning", href: "/dispatch" },
+        { label: "Loading", value: stats.loading, icon: Package, accent: "bg-info/10 text-info", href: "/dispatch" },
         { label: "In transit", value: stats.inTransit, icon: Navigation, accent: "bg-primary/10 text-primary", href: "/map" },
-        { label: "Overdue", value: stats.overdue, icon: Flame, accent: "bg-red-100 text-red-700", href: "/dispatch" },
+        { label: "Overdue", value: stats.overdue, icon: Flame, accent: "bg-destructive/10 text-destructive", href: "/dispatch" },
         { label: "Available vehicles", value: stats.available, icon: Truck, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/fleet" },
-        { label: "Fuel approvals", value: stats.fuel, icon: Fuel, accent: "bg-orange-100 text-orange-700", href: "/fuel-approvals" },
+        { label: "Fuel approvals", value: stats.fuel, icon: Fuel, accent: "bg-warning/10 text-warning", href: "/fuel-approvals" },
       ]}
       sections={[
         {
@@ -79,12 +79,12 @@ export function OperatorView() {
             <ul className="divide-y divide-border">
               {unassigned.map((t) => (
                 <li key={t.id} className="px-5 py-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
                     <Navigation className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-foreground truncate">{t.trip_number ?? `TRP-${t.id.slice(0, 6)}`}</p>
-                    <p className="text-xs text-muted-foreground truncate flex items-center gap-1"><MapPin className="w-3 h-3 text-emerald-500" /> {t.origin} → {t.destination}</p>
+                    <p className="text-xs text-muted-foreground truncate flex items-center gap-1"><MapPin className="w-3 h-3 text-success" /> {t.origin} → {t.destination}</p>
                   </div>
                   <Link href="/dispatch" className="text-primary text-xs font-bold hover:underline">Assign →</Link>
                 </li>
@@ -105,7 +105,7 @@ export function OperatorView() {
                 <li key={t.id} className="px-5 py-3 flex items-center gap-3">
                   <div className={cn(
                     "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                    String(t.status).toLowerCase() === "in_transit" ? "bg-primary/10 text-primary" : "bg-sky-100 text-sky-700",
+                    String(t.status).toLowerCase() === "in_transit" ? "bg-primary/10 text-primary" : "bg-info/10 text-info",
                   )}>
                     <Navigation className="w-4 h-4" />
                   </div>
@@ -122,11 +122,11 @@ export function OperatorView() {
       ]}
       quickActions={[
         { href: "/dispatch", label: "Dispatch board", icon: Navigation, tone: "bg-primary/10 text-primary" },
-        { href: "/trips", label: "Trips", icon: RouteIcon, tone: "bg-sky-100 text-sky-700" },
-        { href: "/bookings", label: "Bookings", icon: ClipboardList, tone: "bg-emerald-100 text-emerald-700" },
-        { href: "/fuel-approvals", label: "Fuel", icon: Fuel, tone: "bg-orange-100 text-orange-700" },
-        { href: "/map", label: "Live map", icon: MapPin, tone: "bg-violet-100 text-violet-700" },
-        { href: "/maintenance", label: "Maintenance", icon: Wrench, tone: "bg-amber-100 text-amber-700" },
+        { href: "/trips", label: "Trips", icon: RouteIcon, tone: "bg-primary/10 text-primary" },
+        { href: "/bookings", label: "Bookings", icon: ClipboardList, tone: "bg-primary/10 text-primary" },
+        { href: "/fuel-approvals", label: "Fuel", icon: Fuel, tone: "bg-primary/10 text-primary" },
+        { href: "/map", label: "Live map", icon: MapPin, tone: "bg-primary/10 text-primary" },
+        { href: "/maintenance", label: "Maintenance", icon: Wrench, tone: "bg-primary/10 text-primary" },
       ]}
     />
   );

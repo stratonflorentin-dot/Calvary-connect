@@ -110,8 +110,8 @@ export default function DriverProfilePage() {
               <Badge variant="secondary" className="mt-1">
                 DRIVER
               </Badge>
-              <div className="flex items-center gap-1 mt-2 text-amber-600">
-                <Star className="size-4 fill-amber-400" />
+              <div className="flex items-center gap-1 mt-2 text-warning">
+                <Star className="size-4 fill-warning" />
                 <span className="font-semibold">{rating.toFixed(1)}</span>
                 <span className="text-xs text-muted-foreground">performance</span>
               </div>

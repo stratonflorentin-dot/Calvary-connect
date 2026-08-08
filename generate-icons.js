@@ -17,7 +17,7 @@ function drawIcon(canvas, size) {
   const r = s * 0.18; // border radius ratio
 
   // Background rounded rect
-  ctx.fillStyle = '#2952A3';
+  ctx.fillStyle = '#002d5c';
   ctx.beginPath();
   ctx.moveTo(r, 0);
   ctx.lineTo(s - r, 0);

@@ -124,11 +124,27 @@ export default function CustomersPage() {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      active: 'bg-green-100 text-green-700',
-      inactive: 'bg-gray-100 text-gray-700',
-      blacklisted: 'bg-red-100 text-red-700'
+      active: 'bg-success/10 text-success',
+      inactive: 'bg-muted text-muted-foreground',
+      blacklisted: 'bg-destructive/10 text-destructive',
+      prospect: 'bg-info/10 text-info'
     };
-    return <Badge className={styles[status] || 'bg-gray-100'}>{status}</Badge>;
+    return <Badge className={styles[status] || 'bg-muted text-muted-foreground'}>{status}</Badge>;
+  };
+
+  const getRiskBadge = (risk?: 'low' | 'medium' | 'high' | null) => {
+    if (!risk) return <span className="text-muted-foreground text-sm">—</span>;
+    const styles: Record<string, string> = {
+      low: 'text-success',
+      medium: 'text-warning',
+      high: 'text-destructive'
+    };
+    return (
+      <span className={`inline-flex items-center gap-1.5 text-sm font-medium capitalize ${styles[risk]}`}>
+        <span className={`h-2 w-2 rounded-full ${risk === 'low' ? 'bg-success' : risk === 'medium' ? 'bg-warning' : 'bg-destructive'}`} />
+        {risk}
+      </span>
+    );
   };
 
   const filteredCustomers = customers.filter(c => 
@@ -162,7 +178,9 @@ export default function CustomersPage() {
                     <p className="text-sm text-muted-foreground">Total Customers</p>
                     <p className="text-2xl font-bold">{totalCustomers}</p>
                   </div>
-                  <Building2 className="h-8 w-8 text-blue-500" />
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Building2 className="h-6 w-6 text-primary" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -173,7 +191,9 @@ export default function CustomersPage() {
                     <p className="text-sm text-muted-foreground">Active Customers</p>
                     <p className="text-2xl font-bold">{activeCustomers}</p>
                   </div>
-                  <TrendingUp className="h-8 w-8 text-green-500" />
+                  <div className="p-2 rounded-lg bg-success/10">
+                    <TrendingUp className="h-6 w-6 text-success" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -184,7 +204,9 @@ export default function CustomersPage() {
                     <p className="text-sm text-muted-foreground">Total Credit Limit</p>
                     <p className="text-2xl font-bold">Tsh {totalCreditLimit.toLocaleString()}</p>
                   </div>
-                  <DollarSign className="h-8 w-8 text-purple-500" />
+                  <div className="p-2 rounded-lg bg-info/10">
+                    <DollarSign className="h-6 w-6 text-info" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -195,7 +217,9 @@ export default function CustomersPage() {
                     <p className="text-sm text-muted-foreground">High-Risk Customers</p>
                     <p className="text-2xl font-bold">{highRiskCustomers}</p>
                   </div>
-                  <Briefcase className="h-8 w-8 text-orange-500" />
+                  <div className="p-2 rounded-lg bg-destructive/10">
+                    <Briefcase className="h-6 w-6 text-destructive" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -303,6 +327,7 @@ export default function CustomersPage() {
                     <TableHead>Company</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Risk</TableHead>
                     <TableHead>Credit Limit</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -324,6 +349,7 @@ export default function CustomersPage() {
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(customer.status)}</TableCell>
+                      <TableCell>{getRiskBadge(customer.risk_level)}</TableCell>
                       <TableCell>Tsh {customer.credit_limit?.toLocaleString()}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">

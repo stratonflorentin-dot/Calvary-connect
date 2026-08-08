@@ -10,19 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { format } from 'date-fns';
 import {
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
   Area,
   AreaChart
 } from 'recharts';
@@ -87,8 +80,6 @@ export default function ExecutiveSummaryPage() {
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
   const [topExpenses, setTopExpenses] = useState<TopExpense[]>([]);
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   useEffect(() => {
     loadExecutiveSummaryData();

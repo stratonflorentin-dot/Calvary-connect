@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
 // Self-hosted at build time by next/font — no runtime requests to
 // fonts.googleapis.com / fonts.gstatic.com (and no CSP entries for them).
-const inter = Inter({
+// Calvary Connect brand typeface (see stitch_screens_board/calvary_connect/DESIGN.md).
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-inter',
@@ -28,7 +29,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
-  themeColor: '#2952A3',
+  themeColor: '#002d5c',
   minimumScale: 1,
 }
 
@@ -46,7 +47,7 @@ export const metadata: Metadata = {
       {
         rel: 'mask-icon',
         url: '/favicon.svg',
-        color: '#2952A3',
+        color: '#002d5c',
       },
     ],
   },
@@ -78,7 +79,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html lang="en" suppressHydrationWarning className={spaceGrotesk.variable}>
       <body className="font-body antialiased">
         <ThemeProvider
           attribute="class"

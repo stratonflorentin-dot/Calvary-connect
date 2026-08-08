@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, BookOpen, CheckCircle2, XCircle, Flame, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, DollarSign, BookOpen, CheckCircle2, XCircle, Flame, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChartOfAccountsService, COAAccount, EXPENSE_CATEGORY_COA_MAP } from '@/services/chart-of-accounts-service';
 import { applyTransition } from '@/lib/workflow/engine';
@@ -29,7 +29,7 @@ interface Expense {
     amount: number;
     category: string;
     date: string;
-    status: 'pending' | 'approved' | 'rejected';
+    status: 'pending' | 'approved' | 'rejected' | 'paid';
     createdAt: string;
     approvedBy?: string;
     clientReference?: string;
@@ -237,6 +237,7 @@ export default function ExpensesPage() {
 
     const totalExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
     const pendingExpenses = expenses?.filter(e => e.status === 'pending').length || 0;
+    const overdueExpenses = expenses?.filter(e => e.status === 'pending' && isOverdue('expense', e.created_at ?? e.createdAt ?? e.date)).length || 0;
 
     if (!role) return null;
 
@@ -394,15 +395,14 @@ export default function ExpensesPage() {
                                 <div className="text-2xl font-bold">{pendingExpenses}</div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className={cn(overdueExpenses > 0 && 'border-destructive/40 bg-destructive/5')}>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">This Month</CardTitle>
-                                <Calendar className="size-4 text-muted-foreground" />
+                                <CardTitle className={cn("text-sm font-medium", overdueExpenses > 0 && 'text-destructive')}>Overdue SLA</CardTitle>
+                                <AlertTriangle className={cn("size-4", overdueExpenses > 0 ? 'text-destructive' : 'text-muted-foreground')} />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {format(expenses?.filter(e => new Date(e.date).getMonth() === new Date().getMonth()).reduce((sum, e) => sum + e.amount, 0) || 0)}
-                                </div>
+                                <div className={cn("text-2xl font-bold", overdueExpenses > 0 && 'text-destructive')}>{overdueExpenses}</div>
+                                <p className="text-xs text-muted-foreground mt-1">{overdueExpenses > 0 ? 'items require attention' : 'all within SLA'}</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -478,10 +478,10 @@ export default function ExpensesPage() {
                                                 <div className="flex flex-col gap-1">
                                                     <Badge
                                                         className={cn(
-                                                            expense.status === 'approved' && 'bg-green-500',
-                                                            expense.status === 'rejected' && 'bg-red-500',
-                                                            expense.status === 'paid' && 'bg-emerald-600',
-                                                            expense.status === 'pending' && 'bg-yellow-500'
+                                                            expense.status === 'approved' && 'bg-success',
+                                                            expense.status === 'rejected' && 'bg-destructive',
+                                                            expense.status === 'paid' && 'bg-info',
+                                                            expense.status === 'pending' && 'bg-warning'
                                                         )}
                                                     >
                                                         {expense.status}
@@ -498,12 +498,12 @@ export default function ExpensesPage() {
                                                                     </Badge>
                                                                 )}
                                                                 {overdue && (
-                                                                    <Badge className="text-[9px] uppercase tracking-wider bg-red-50 text-red-600 hover:bg-red-50 flex items-center gap-1">
+                                                                    <Badge className="text-[9px] uppercase tracking-wider bg-destructive/10 text-destructive hover:bg-destructive/10 flex items-center gap-1">
                                                                         <Flame className="size-2.5" /> {(age - slaHours.expense).toFixed(0)}h late
                                                                     </Badge>
                                                                 )}
                                                                 {!overdue && age > slaHours.expense * 0.75 && (
-                                                                    <Badge className="text-[9px] uppercase tracking-wider bg-amber-50 text-amber-600 hover:bg-amber-50 flex items-center gap-1">
+                                                                    <Badge className="text-[9px] uppercase tracking-wider bg-warning/10 text-warning hover:bg-warning/10 flex items-center gap-1">
                                                                         <AlertTriangle className="size-2.5" /> Near SLA
                                                                     </Badge>
                                                                 )}
@@ -514,11 +514,11 @@ export default function ExpensesPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex gap-2">
-                                                    {expense.status === 'pending' && (
+                                                    {(['CEO', 'ADMIN', 'ACCOUNTANT', 'HR'].includes(role || '')) && expense.status === 'pending' && (
                                                         <>
                                                             <Button
                                                                 size="sm"
-                                                                className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                                className="h-8 rounded-lg bg-success hover:bg-success/90 text-success-foreground"
                                                                 onClick={() => handleStatusChange(expense, 'approved')}
                                                                 title="Approve"
                                                             >
@@ -527,7 +527,7 @@ export default function ExpensesPage() {
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                className="h-8 rounded-lg border-red-200 text-red-600 hover:bg-red-50"
+                                                                className="h-8 rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10"
                                                                 onClick={() => handleStatusChange(expense, 'rejected')}
                                                                 title="Reject"
                                                             >
@@ -673,26 +673,6 @@ export default function ExpensesPage() {
                                                             </form>
                                                         </DialogContent>
                                                     </Dialog>
-                                                    {(['CEO', 'ADMIN', 'ACCOUNTANT', 'HR'].includes(role || '')) && expense.status === 'pending' && (
-                                                        <>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleStatusChange(expense.id, 'approved')}
-                                                                className="text-green-600 hover:text-green-700"
-                                                            >
-                                                                Approve
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleStatusChange(expense.id, 'rejected')}
-                                                                className="text-red-600 hover:text-red-700"
-                                                            >
-                                                                Reject
-                                                            </Button>
-                                                        </>
-                                                    )}
                                                 </div>
                                             </TableCell>
                                         </TableRow>

@@ -659,9 +659,22 @@ function SalesModuleContent() {
       case 'contract_lost': return 'bg-destructive';
       case 'negotiation': return 'bg-warning';
       case 'quotation_sent': return 'bg-primary';
+      case 'qualification': return 'bg-info';
       default: return 'bg-warning';
     }
   }
+
+  // Matches the sales_opportunities.stage CHECK constraint exactly —
+  // database/patches/sales/sales-module-schema.sql line 167. Six real
+  // stages, not the 5 a Stitch mockup assumed.
+  const PIPELINE_STAGES: { value: string; label: string }[] = [
+    { value: 'lead', label: 'Lead' },
+    { value: 'qualification', label: 'Qualification' },
+    { value: 'quotation_sent', label: 'Quotation Sent' },
+    { value: 'negotiation', label: 'Negotiation' },
+    { value: 'contract_won', label: 'Contract Won' },
+    { value: 'contract_lost', label: 'Contract Lost' },
+  ];
 
   // Calculate totals
   const totalCustomers = customers.length;
@@ -1083,6 +1096,10 @@ function SalesModuleContent() {
                         <DialogTitle className="text-xl font-semibold">Create Route Quotation</DialogTitle>
                       </DialogHeader>
                       <div className="grid grid-cols-2 gap-4 space-y-6">
+                        <div className="col-span-2 flex items-center gap-2 pb-1 border-b border-border">
+                          <Truck className="h-4 w-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Service &amp; Cargo</h4>
+                        </div>
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-foreground">Customer</Label>
                           <Select value={quotationForm.customer_id} onValueChange={v => setQuotationForm({ ...quotationForm, customer_id: v })}>
@@ -1139,6 +1156,10 @@ function SalesModuleContent() {
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="col-span-2 flex items-center gap-2 pb-1 border-b border-border">
+                          <Route className="h-4 w-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Logistics Parameters</h4>
+                        </div>
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-foreground">Rate per km (TZS)</Label>
                           <Input type="number" value={quotationForm.rate_per_km} onChange={e => setQuotationForm({ ...quotationForm, rate_per_km: parseFloat(e.target.value) || 0 })} className="h-11" />
@@ -1146,6 +1167,10 @@ function SalesModuleContent() {
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-foreground">Fuel Surcharge %</Label>
                           <Input type="number" value={quotationForm.fuel_surcharge_pct} onChange={e => setQuotationForm({ ...quotationForm, fuel_surcharge_pct: parseFloat(e.target.value) || 0 })} className="h-11" />
+                        </div>
+                        <div className="col-span-2 flex items-center gap-2 pb-1 border-b border-border">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fees &amp; Taxes</h4>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-foreground">Border Fees (TZS)</Label>
@@ -1225,10 +1250,10 @@ function SalesModuleContent() {
                           <TableCell>TZS {(q.total_amount || 0).toLocaleString()}</TableCell>
                           <TableCell>
                             <Badge className={
-                              q.approval_status === 'draft' ? 'bg-gray-10 text-gray border-gray/20' :
-                                q.approval_status === 'sent' ? 'bg-blue-10 text-blue border-blue/20' :
+                              q.approval_status === 'draft' ? 'bg-muted text-muted-foreground border-border' :
+                                q.approval_status === 'sent' ? 'bg-info/10 text-info border-info/20' :
                                   q.approval_status === 'approved' ? 'bg-success/10 text-success border-success/20' :
-                                    q.approval_status === 'converted' ? 'bg-purple-10 text-purple border-purple/20' :
+                                    q.approval_status === 'converted' ? 'bg-primary/10 text-primary border-primary/20' :
                                       'bg-warning/10 text-warning border-warning/20'
                             }>
                               {q.approval_status || q.status}
@@ -1767,42 +1792,56 @@ function SalesModuleContent() {
                 )}
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Opportunity</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Monthly Revenue</TableHead>
-                        <TableHead>Probability</TableHead>
-                        <TableHead>Stage</TableHead>
-                        <TableHead>Expected Close</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {opportunities.map(o => (
-                        <TableRow key={o.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium text-foreground">{o.opportunity_name}</TableCell>
-                          <TableCell className="text-foreground">{o.company_name}</TableCell>
-                          <TableCell className="text-foreground">{String(o.service_type || "").replace('_', ' ')}</TableCell>
-                          <TableCell className="text-foreground">TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 bg-muted rounded-full h-2">
-                                <div className="bg-primary h-2 rounded-full" style={{ width: `${o.probability}%` }}></div>
+                <div className="overflow-x-auto pb-2">
+                  <div className="flex gap-4 items-start min-w-max">
+                    {PIPELINE_STAGES.map(({ value, label }) => {
+                      const stageDeals = opportunities.filter(o => o.stage === value);
+                      const stageValue = stageDeals.reduce((sum, o) => sum + (o.estimated_monthly_revenue || 0), 0);
+                      return (
+                        <div key={value} className="w-[280px] shrink-0 flex flex-col">
+                          <div className="flex items-center justify-between border-b-2 border-border pb-2 mb-3">
+                            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                              {label}
+                              <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">{stageDeals.length}</span>
+                            </h3>
+                            <span className="text-xs font-medium text-muted-foreground">
+                              TZS {stageValue >= 1_000_000 ? `${(stageValue / 1_000_000).toFixed(1)}M` : stageValue.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-3">
+                            {stageDeals.map(o => (
+                              <Card key={o.id} className="cv-surface hover:border-primary/40 hover:shadow-md transition-all cursor-default">
+                                <CardContent className="p-4 space-y-3">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="font-medium text-foreground text-sm leading-snug">{o.company_name || o.opportunity_name}</p>
+                                  </div>
+                                  {o.expected_close_date && (
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                      <CalendarDays className="h-3.5 w-3.5" />
+                                      Close: {format(new Date(o.expected_close_date), 'MMM dd')}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center justify-between pt-1">
+                                    <Badge variant="outline" className={`${getStageColor(o.stage)} text-white border-0 text-[11px]`}>
+                                      {o.probability}%
+                                    </Badge>
+                                    <span className="text-sm font-semibold text-primary">
+                                      TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}
+                                    </span>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                            {stageDeals.length === 0 && (
+                              <div className="border border-dashed border-border rounded-lg p-4 text-center text-xs text-muted-foreground">
+                                No deals
                               </div>
-                              <span className="text-sm text-foreground">{o.probability}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStageColor(o.stage)} variant="outline">{String(o.stage || "").replace('_', ' ')}</Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{format(new Date(o.expected_close_date), 'MMM dd, yyyy')}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </CardContent>
             </Card>

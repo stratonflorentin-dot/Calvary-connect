@@ -385,7 +385,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
               </div>
             </>
           ) : (
-            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-indigo-400 hover:bg-white/10 transition-colors">
+            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[hsl(var(--sidebar-primary))] hover:bg-white/10 transition-colors">
               <ChevronRight className="size-5" />
             </Button>
           )}
@@ -472,7 +472,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
             variant="ghost"
             size="sm"
             onClick={scrollToTop}
-            className="w-full mb-2 text-indigo-400 hover:bg-white/10 transition-colors"
+            className="w-full mb-2 text-[hsl(var(--sidebar-primary))] hover:bg-white/10 transition-colors"
           >
             <ArrowUpCircle className="size-4 mr-2" />
             {!isCollapsed && "Back to Top"}
@@ -491,7 +491,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-[hsl(var(--sidebar-primary-foreground))] truncate">{user?.name || "Super Admin"}</p>
-                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">{effectiveRole}</p>
+                <p className="text-[10px] text-[hsl(var(--sidebar-primary))] font-bold uppercase tracking-wider">{effectiveRole}</p>
               </div>
             )}
             {!isCollapsed && (

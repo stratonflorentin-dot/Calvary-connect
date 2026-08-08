@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { toast } from "@/hooks/use-toast";
 import { AuditTrailService } from "@/services/audit-trail-service";
+import { PageShell, PageHeader } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, ShieldAlert, RefreshCw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { ShieldAlert, RefreshCw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 
@@ -47,10 +47,10 @@ const SEVERITY_STYLES: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  open: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  reviewed: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
-  confirmed: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-  dismissed: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
+  open: "bg-warning/10 text-warning border-warning/20",
+  reviewed: "bg-info/10 text-info border-info/20",
+  confirmed: "bg-destructive/10 text-destructive border-destructive/20",
+  dismissed: "bg-muted text-muted-foreground border-border",
 };
 
 export default function FuelAnomaliesPage() {
@@ -131,24 +131,26 @@ export default function FuelAnomaliesPage() {
   const highCount = anomalies.filter((a) => a.status === "open" && a.severity === "high").length;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <Button variant="ghost" asChild>
-          <Link href="/fleet">
-            <ArrowLeft className="size-4 mr-2" /> Back to Fleet
-          </Link>
-        </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
-          </Button>
-          {canReview && (
-            <Button onClick={runScan} disabled={scanning}>
-              <ShieldAlert className={cn("size-4 mr-2", scanning && "animate-spin")} /> {scanning ? "Scanning…" : "Scan Now"}
+    <PageShell width="wide">
+      <PageHeader
+        eyebrow="Fleet"
+        title="Fuel Anomalies"
+        subtitle="Review flagged efficiency, volume, frequency, and price outliers"
+        icon={ShieldAlert}
+        crumbs={[{ label: "Fleet", href: "/fleet" }, { label: "Fuel Anomalies" }]}
+        actions={
+          <>
+            <Button variant="outline" onClick={load} disabled={loading}>
+              <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
             </Button>
-          )}
-        </div>
-      </div>
+            {canReview && (
+              <Button onClick={runScan} disabled={scanning}>
+                <ShieldAlert className={cn("size-4 mr-2", scanning && "animate-spin")} /> {scanning ? "Scanning…" : "Scan Now"}
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
@@ -226,7 +228,7 @@ export default function FuelAnomaliesPage() {
                               <ShieldAlert className="size-4 text-destructive" />
                             </Button>
                             <Button variant="ghost" size="sm" title="Mark reviewed" onClick={() => updateStatus(a, "reviewed")}>
-                              <CheckCircle2 className="size-4 text-sky-600" />
+                              <CheckCircle2 className="size-4 text-info" />
                             </Button>
                             <Button variant="ghost" size="sm" title="Dismiss" onClick={() => updateStatus(a, "dismissed")}>
                               <XCircle className="size-4 text-muted-foreground" />
@@ -242,6 +244,6 @@ export default function FuelAnomaliesPage() {
           </Table>
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }

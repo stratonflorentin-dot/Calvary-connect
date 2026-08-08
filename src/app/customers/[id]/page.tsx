@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Building2, TrendingUp, TrendingDown, DollarSign, FileText,
-  CalendarDays, AlertTriangle, Sparkles, Clock,
+  CalendarDays, AlertTriangle, Sparkles, Clock, Truck, FileSignature,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -36,6 +36,32 @@ const RISK_STYLES: Record<string, string> = {
   low: "bg-success/10 text-success border-success/20",
 };
 
+const BOOKING_STATUS_STYLES: Record<string, string> = {
+  pending: "bg-warning/10 text-warning border-warning/20",
+  confirmed: "bg-info/10 text-info border-info/20",
+  in_progress: "bg-primary/10 text-primary border-primary/20",
+  completed: "bg-success/10 text-success border-success/20",
+  cancelled: "bg-destructive/10 text-destructive border-destructive/20",
+};
+
+const QUOTATION_STATUS_STYLES: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground border-border",
+  sent: "bg-info/10 text-info border-info/20",
+  accepted: "bg-success/10 text-success border-success/20",
+  rejected: "bg-destructive/10 text-destructive border-destructive/20",
+  expired: "bg-warning/10 text-warning border-warning/20",
+  converted: "bg-primary/10 text-primary border-primary/20",
+};
+
+const CONTRACT_STATUS_STYLES: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground border-border",
+  pending_signature: "bg-warning/10 text-warning border-warning/20",
+  active: "bg-success/10 text-success border-success/20",
+  suspended: "bg-warning/10 text-warning border-warning/20",
+  expired: "bg-destructive/10 text-destructive border-destructive/20",
+  terminated: "bg-destructive/10 text-destructive border-destructive/20",
+};
+
 function monthKey(dateStr: string) {
   const d = new Date(dateStr);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -52,6 +78,7 @@ export default function CustomerDetailPage() {
   const [quotations, setQuotations] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -67,7 +94,7 @@ export default function CustomerDetailPage() {
       if (customerError) throw customerError;
       setCustomer(customerData);
 
-      const [bookingsRes, quotationsRes, invoicesRes, activitiesRes] = await Promise.all([
+      const [bookingsRes, quotationsRes, invoicesRes, activitiesRes, contractsRes] = await Promise.all([
         supabase.from("bookings").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
         supabase.from("route_quotations").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
         // customer_id is the reliable join; older rows may only have the
@@ -78,12 +105,14 @@ export default function CustomerDetailPage() {
           .or(`customer_id.eq.${customerId},customer_name.eq.${customerData.company_name}`)
           .order("created_at", { ascending: false }),
         supabase.from("customer_activities").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
+        supabase.from("transport_contracts").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
       ]);
 
       setBookings(bookingsRes.data || []);
       setQuotations(quotationsRes.data || []);
       setInvoices(invoicesRes.data || []);
       setActivities(activitiesRes.data || []);
+      setContracts(contractsRes.data || []);
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Failed to load customer", variant: "destructive" });
     } finally {
@@ -258,29 +287,119 @@ export default function CustomerDetailPage() {
                 )}
               </Card>
 
-              <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><CalendarDays className="size-4" /> Activity Timeline</CardTitle></CardHeader>
-                <CardContent>
-                  {activities.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No activity recorded yet in this timeline. New bookings, quotations, contracts, and payments for this
-                      customer will appear here going forward — history predating this feature isn't reconstructable.
-                    </p>
-                  ) : (
-                    <ul className="space-y-3">
-                      {activities.map((a) => (
-                        <li key={a.id} className="flex justify-between border-b border-border pb-2 last:border-0">
-                          <div>
-                            <span className="font-medium capitalize">{a.activity_type}</span>
-                            <span className="text-muted-foreground"> — {a.description}</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(a.created_at)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader><CardTitle className="flex items-center gap-2"><CalendarDays className="size-4" /> Activity Timeline</CardTitle></CardHeader>
+                  <CardContent>
+                    {activities.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No activity recorded yet in this timeline. New bookings, quotations, contracts, and payments for this
+                        customer will appear here going forward — history predating this feature isn't reconstructable.
+                      </p>
+                    ) : (
+                      <ul className="space-y-3">
+                        {activities.map((a) => (
+                          <li key={a.id} className="flex justify-between border-b border-border pb-2 last:border-0">
+                            <div>
+                              <span className="font-medium capitalize">{a.activity_type}</span>
+                              <span className="text-muted-foreground"> — {a.description}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(a.created_at)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle className="flex items-center gap-2"><Truck className="size-4" /> Recent Bookings</CardTitle>
+                      <Button variant="link" size="sm" className="h-auto p-0" onClick={() => router.push(`/bookings?customer=${customerId}`)}>View All</Button>
+                    </CardHeader>
+                    <CardContent>
+                      {bookings.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No bookings yet for this customer.</p>
+                      ) : (
+                        <ul className="space-y-3">
+                          {bookings.slice(0, 5).map((b) => (
+                            <li key={b.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 gap-2">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{b.pickup_location || b.origin || "—"} → {b.delivery_location || b.destination || "—"}</p>
+                                <p className="text-xs text-muted-foreground">{b.booking_number} · {formatDate(b.created_at)}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-medium">Tsh {(Number(b.amount) || 0).toLocaleString()}</p>
+                                <Badge className={`${BOOKING_STATUS_STYLES[b.status] || "bg-muted text-muted-foreground border-border"} capitalize`}>
+                                  {String(b.status || "").replace("_", " ")}
+                                </Badge>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle className="flex items-center gap-2"><FileText className="size-4" /> Recent Quotations</CardTitle>
+                      <Button variant="link" size="sm" className="h-auto p-0" onClick={() => router.push(`/sales?tab=quotations`)}>View All</Button>
+                    </CardHeader>
+                    <CardContent>
+                      {quotations.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No quotations yet for this customer.</p>
+                      ) : (
+                        <ul className="space-y-3">
+                          {quotations.slice(0, 5).map((q) => (
+                            <li key={q.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 gap-2">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{q.origin} → {q.destination}</p>
+                                <p className="text-xs text-muted-foreground">{q.quotation_number} · {formatDate(q.created_at)}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-medium">Tsh {(Number(q.total_amount) || 0).toLocaleString()}</p>
+                                <Badge className={`${QUOTATION_STATUS_STYLES[q.status] || "bg-muted text-muted-foreground border-border"} capitalize`}>
+                                  {q.status}
+                                </Badge>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle className="flex items-center gap-2"><FileSignature className="size-4" /> Recent Contracts</CardTitle>
+                      <Button variant="link" size="sm" className="h-auto p-0" onClick={() => router.push(`/sales?tab=contracts`)}>View All</Button>
+                    </CardHeader>
+                    <CardContent>
+                      {contracts.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No contracts yet for this customer.</p>
+                      ) : (
+                        <ul className="space-y-3">
+                          {contracts.slice(0, 5).map((c) => (
+                            <li key={c.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 gap-2">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate capitalize">{String(c.contract_type || "").replace("_", " ") || "Contract"}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {c.contract_number}{c.end_date ? ` · Expires ${formatDate(c.end_date)}` : ""}
+                                </p>
+                              </div>
+                              <Badge className={`${CONTRACT_STATUS_STYLES[c.status] || "bg-muted text-muted-foreground border-border"} capitalize shrink-0`}>
+                                {String(c.status || "").replace("_", " ")}
+                              </Badge>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </>
           )}
         </div>

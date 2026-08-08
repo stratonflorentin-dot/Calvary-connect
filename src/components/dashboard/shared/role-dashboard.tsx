@@ -59,7 +59,7 @@ export function RoleDashboard({
   const { user } = useSupabase();
   return (
     <div className="space-y-6">
-      <div className="cv-panel bg-gradient-to-br from-primary/95 via-primary to-[hsl(235_84%_65%)] text-primary-foreground border-primary">
+      <div className="cv-panel bg-gradient-to-br from-sidebar via-sidebar to-sidebar-accent text-sidebar-foreground border-sidebar-border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">{eyebrow}</p>

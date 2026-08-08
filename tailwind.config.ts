@@ -20,11 +20,13 @@ export default {
     },
     extend: {
       fontFamily: {
-        // --font-inter is injected by next/font in src/app/layout.tsx
-        body: ['var(--font-inter)', 'Inter', 'sans-serif'],
-        headline: ['var(--font-inter)', 'Inter', 'sans-serif'],
+        // --font-inter is injected by next/font in src/app/layout.tsx — it now
+        // loads Space Grotesk (Calvary Connect brand typeface), var name kept
+        // as-is to avoid touching the ~25 files that reference font-body/font-headline.
+        body: ['var(--font-inter)', 'Space Grotesk', 'sans-serif'],
+        headline: ['var(--font-inter)', 'Space Grotesk', 'sans-serif'],
         code: ['monospace'],
-        sans: ['var(--font-inter)', 'Inter', 'sans-serif'],
+        sans: ['var(--font-inter)', 'Space Grotesk', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',

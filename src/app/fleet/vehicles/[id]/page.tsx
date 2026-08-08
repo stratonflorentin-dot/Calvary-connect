@@ -58,16 +58,23 @@ export default function VehicleDetailPage() {
         );
     }
 
-    // Determine status badge color
+    // Determine status badge color — mirrors the real `vehicles_status_check`
+    // constraint (available | in_use | maintenance | out_of_service).
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
             case 'available': return 'bg-success';
-            case 'in_transit': return 'bg-info';
+            case 'in_use': return 'bg-info';
             case 'maintenance': return 'bg-warning';
-            case 'repair': return 'bg-warning';
+            case 'out_of_service': return 'bg-destructive';
             default: return 'bg-muted';
         }
     };
+
+    const formatStatusLabel = (status: string) =>
+        status
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
 
     // Check docs validity
     const docsValid = documents.every(d => d.status === 'valid' || d.status === 'no_expiry');
@@ -105,7 +112,7 @@ export default function VehicleDetailPage() {
                         {/* Status Badges */}
                         <div className="flex flex-wrap gap-2">
                             <Badge className={`${getStatusColor(vehicle.status)}`}>
-                                {vehicle.status}
+                                {formatStatusLabel(vehicle.status)}
                             </Badge>
                             <Badge variant={docsValid ? 'outline' : 'destructive'}>
                                 {docsValid ? '✓ Docs Valid' : '✗ Docs Expired'}
@@ -152,9 +159,9 @@ export default function VehicleDetailPage() {
                 <StatMiniCard
                     title="Fuel Spend"
                     value={format(stats.fuelSpend)}
-                    icon={<Truck className="w-4 h-4 text-sky-500" />}
-                    iconBg="bg-sky-100"
-                    valueColor="text-sky-600"
+                    icon={<Truck className="w-4 h-4 text-info" />}
+                    iconBg="bg-info/10"
+                    valueColor="text-info"
                 />
                 <StatMiniCard
                     title="Maintenance"
@@ -180,9 +187,9 @@ export default function VehicleDetailPage() {
                 <StatMiniCard
                     title="Fuel Litres"
                     value={stats.totalLitres.toLocaleString('en-TZ')}
-                    icon={<Truck className="w-4 h-4 text-sky-500" />}
-                    iconBg="bg-sky-100"
-                    valueColor="text-sky-600"
+                    icon={<Truck className="w-4 h-4 text-info" />}
+                    iconBg="bg-info/10"
+                    valueColor="text-info"
                 />
             </div>
 
@@ -272,7 +279,7 @@ export default function VehicleDetailPage() {
                 title="Utilization Trend — Last 6 months performance"
                 icon={<Truck className="w-5 h-5 text-white" />}
                 iconBg="bg-accent"
-                headerGradient="bg-gradient-to-r from-violet-500 to-violet-400"
+                headerGradient="bg-gradient-to-r from-info to-info/80"
             >
                 <div className="grid grid-cols-6 gap-3 text-xs text-center">
                     {utilizationByMonth.map((month, idx) => {
@@ -450,12 +457,14 @@ export default function VehicleDetailPage() {
                             <Card className="p-4">
                                 <h3 className="font-semibold text-sm mb-4">Change Status</h3>
                                 <div className="space-y-3">
-                                    <select className="w-full border rounded px-2 py-2 text-sm bg-card">
-                                        <option>Available</option>
-                                        <option>In Transit</option>
-                                        <option>Maintenance</option>
-                                        <option>Repair</option>
-                                        <option>Retired</option>
+                                    <select
+                                        defaultValue={vehicle.status}
+                                        className="w-full border border-border rounded-lg px-2 py-2 text-sm bg-card text-foreground"
+                                    >
+                                        <option value="available">Available</option>
+                                        <option value="in_use">In Use</option>
+                                        <option value="maintenance">Maintenance</option>
+                                        <option value="out_of_service">Out of Service</option>
                                     </select>
                                     <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                                         Update Status
@@ -464,7 +473,7 @@ export default function VehicleDetailPage() {
                             </Card>
 
                             {/* Danger Zone */}
-                            <Card className="p-4 border-destructive border">
+                            <Card className="p-4 border-destructive border bg-destructive/10">
                                 <h3 className="font-semibold text-sm text-destructive mb-4">Danger Zone</h3>
                                 <Button variant="destructive" className="w-full">
                                     Delete Vehicle

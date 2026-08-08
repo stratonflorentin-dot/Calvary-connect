@@ -10,6 +10,7 @@ import { TransitionButtons } from "@/components/workflow/transition-buttons";
 import { useRole } from "@/hooks/use-role";
 import { hydrateTrips } from "@/lib/trips/hydrate";
 import {
+  AlertTriangle,
   Camera,
   CheckCircle2,
   Clock,
@@ -88,7 +89,7 @@ export function DriverView() {
 
   return (
     <div className="space-y-6">
-      <div className="cv-panel bg-gradient-to-br from-primary/95 via-primary to-[hsl(235_84%_65%)] text-primary-foreground border-primary">
+      <div className="cv-panel bg-gradient-to-br from-sidebar via-sidebar to-sidebar-accent text-sidebar-foreground border-sidebar-border">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Driver Console</p>
@@ -103,9 +104,9 @@ export function DriverView() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Completed this month" value={completedThisMonth} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
-        <StatCard label="Pending fuel" value={pendingFuel} icon={Fuel} accent="bg-amber-100 text-amber-700" href="/fuel" />
+        <StatCard label="Pending fuel" value={pendingFuel} icon={Fuel} accent="bg-warning/10 text-warning" href="/fuel" />
         <StatCard label="Approved allowances" value={format(approvedAllowance)} icon={Wallet} accent="bg-primary/10 text-primary" href="/allowances" />
-        <StatCard label="Upcoming trips" value={upcomingTrips.length} icon={RouteIcon} accent="bg-sky-100 text-sky-700" href="/trips" />
+        <StatCard label="Upcoming trips" value={upcomingTrips.length} icon={RouteIcon} accent="bg-info/10 text-info" href="/trips" />
       </div>
 
       <SectionCard title="Current trip" subtitle={currentTrip ? "Live workflow — advance the status as you go" : "Nothing to do right now"}>
@@ -174,15 +175,25 @@ export function DriverView() {
               <Link href="/proof" className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold text-foreground hover:bg-muted/50 transition-colors">
                 <Camera className="w-4 h-4" /> Upload POD
               </Link>
-              <Link href="/fuel" className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold text-foreground hover:bg-muted/50 transition-colors">
-                <Fuel className="w-4 h-4" /> Request fuel
-              </Link>
-              <Link href="/driver/expenses" className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold text-foreground hover:bg-muted/50 transition-colors">
-                <Receipt className="w-4 h-4" /> Log expense
-              </Link>
             </div>
           </div>
         )}
+      </SectionCard>
+
+      <SectionCard title="Quick actions" subtitle="Common driver tasks">
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/fuel" className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/30 transition-colors">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary"><Fuel className="w-4 h-4" /></div>
+            <span className="text-xs font-bold text-foreground">Request fuel</span>
+          </Link>
+          <Link href="/driver/expenses" className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/30 transition-colors">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary"><Receipt className="w-4 h-4" /></div>
+            <span className="text-xs font-bold text-foreground">Log expense</span>
+          </Link>
+        </div>
+        <Link href="/driver/maintenance" className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-3 text-sm font-bold text-destructive hover:bg-destructive/15 transition-colors">
+          <AlertTriangle className="w-4 h-4" /> Report an issue
+        </Link>
       </SectionCard>
 
       <SectionCard title="Upcoming assignments" subtitle="Trips assigned to you but not yet started" href="/trips" padded={false}>

@@ -44,7 +44,7 @@ export function AgentCard({ agent, onRan }: { agent: AgentMetadata; onRan?: () =
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Bot className="size-5 text-indigo-600 shrink-0" />
+          <Bot className="size-5 text-primary shrink-0" />
           {agent.name}
           <Badge variant="outline" className="ml-auto text-[10px] uppercase tracking-wide">
             {agent.category}
