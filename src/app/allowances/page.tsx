@@ -21,6 +21,7 @@ import {
   savePayrollAction,
   getPayrollHistoryAction,
   approvePayrollRecordAction,
+  markPayrollPaidAction,
   rejectPayrollRecordAction,
   deletePayrollRecordAction,
   updateWorkerSalaryAction
@@ -229,6 +230,25 @@ export default function AllowancesPage() {
       }
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to approve record.", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Mark an approved payroll record as paid — closes the loop into Finance
+  // (sets invoices.paid_at so it surfaces in Bank Reconciliation and Reports).
+  const handleMarkPaidPayroll = async (id: string) => {
+    setActionLoading(id);
+    try {
+      const res = await markPayrollPaidAction(id);
+      if (res.success) {
+        toast({ title: "Payroll Paid", description: "Marked as disbursed — linked invoice and expense updated." });
+        await loadHistory();
+      } else {
+        toast({ title: "Could Not Mark Paid", description: res.error || "Please try again.", variant: "destructive" });
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to update record.", variant: "destructive" });
     } finally {
       setActionLoading(null);
     }
@@ -802,6 +822,17 @@ export default function AllowancesPage() {
                                         Reject
                                       </Button>
                                     </>
+                                  )}
+
+                                  {item.status === 'approved' && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleMarkPaidPayroll(item.id)}
+                                      disabled={isActionLoading}
+                                      className="bg-info hover:bg-info/90 text-info-foreground text-[10px] h-7 px-3 font-semibold shadow-md"
+                                    >
+                                      Mark Paid
+                                    </Button>
                                   )}
 
                                   <Button

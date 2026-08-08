@@ -271,6 +271,99 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
   }
 }
 
+/**
+ * Marks an already-approved payroll record as paid (disbursed) and closes
+ * the loop into Finance: without this, approval alone never touches
+ * `invoices.paid_at`, so the payroll expense can never surface in Bank
+ * Reconciliation's book-entries panel (that query requires paid_at set) or
+ * in the Executive Summary's "paid" revenue/expense figures — the linkage
+ * approvePayrollRecordAction sets up (expense + payable invoice) was a dead
+ * end without this step. Finds the invoice via the same deterministic
+ * `PAY-{id}` number approvePayrollRecordAction always uses, so no new
+ * column/schema change is needed to relate them.
+ */
+export async function markPayrollPaidAction(id: string) {
+  try {
+    const supabaseAdmin = getAdminClient();
+    const now = new Date().toISOString();
+
+    const { data: record, error: fetchErr } = await supabaseAdmin
+      .from("driver_allowances")
+      .select("id, driver_id, driver_name, amount, status")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !record) {
+      throw new Error("Payroll record not found: " + (fetchErr?.message || "Unknown error"));
+    }
+    if (record.status !== "approved") {
+      throw new Error("Only approved payroll can be marked as paid.");
+    }
+
+    const { error: updateErrD } = await supabaseAdmin
+      .from("driver_allowances")
+      .update({ status: "paid", updated_at: now })
+      .eq("id", id);
+    if (updateErrD) throw updateErrD;
+
+    try {
+      await supabaseAdmin
+        .from("allowances")
+        .update({ status: "paid", updated_at: now })
+        .eq("id", id);
+    } catch (err) {
+      console.log("Allowances table update bypassed");
+    }
+
+    // Locate the payable invoice approvePayrollRecordAction created for this
+    // record (deterministic number, so no stored foreign key needed).
+    const invoiceNumber = `PAY-${id.substring(0, 8).toUpperCase()}`;
+    const { data: invoice, error: invFetchErr } = await supabaseAdmin
+      .from("invoices")
+      .select("id, linked_expense")
+      .eq("invoice_number", invoiceNumber)
+      .maybeSingle();
+
+    if (invFetchErr) {
+      console.error("Failed to look up payroll invoice:", invFetchErr);
+    } else if (invoice) {
+      const { error: invUpdateErr } = await supabaseAdmin
+        .from("invoices")
+        .update({ status: "paid", paid_at: now })
+        .eq("id", invoice.id);
+      if (invUpdateErr) console.error("Failed to mark payroll invoice paid:", invUpdateErr);
+
+      if (invoice.linked_expense) {
+        const { error: expUpdateErr } = await supabaseAdmin
+          .from("expenses")
+          .update({ status: "paid" })
+          .eq("id", invoice.linked_expense);
+        if (expUpdateErr) console.error("Failed to mark payroll expense paid:", expUpdateErr);
+      }
+    } else {
+      console.warn(`No payable invoice found for payroll record ${id} (expected ${invoiceNumber}) — approve it first.`);
+    }
+
+    try {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: record.driver_id,
+        category: "general",
+        title: "Payroll Paid",
+        message: `Your payroll of TZS ${Number(record.amount).toLocaleString()} has been disbursed.`,
+        severity: "success",
+        created_at: now,
+      });
+    } catch (notifErr) {
+      console.error("Failed to send notification:", notifErr);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Failed to mark payroll record as paid:", error);
+    return { success: false, error: error.message || "Failed to mark payroll record as paid" };
+  }
+}
+
 /** Rejects/Deletes a payroll or allowance record */
 export async function rejectPayrollRecordAction(id: string) {
   try {

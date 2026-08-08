@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { AFRICAN_CITIES } from "@/lib/trips/african-cities";
+import { PlaceAutocomplete } from "@/components/ui/place-autocomplete";
 import { Loader2, Route as RouteIcon, Save, Sparkles } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -286,15 +286,12 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Origin *</Label>
-                <Input list="african-cities" value={form.origin} onChange={(e) => patch({ origin: e.target.value })} placeholder="Dar es Salaam" required />
+                <PlaceAutocomplete value={form.origin} onChange={(v) => patch({ origin: v })} placeholder="Dar es Salaam" required />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Destination *</Label>
-                <Input list="african-cities" value={form.destination} onChange={(e) => patch({ destination: e.target.value })} placeholder="Lusaka" required />
+                <PlaceAutocomplete value={form.destination} onChange={(v) => patch({ destination: v })} placeholder="Lusaka" required />
               </div>
-              <datalist id="african-cities">
-                {AFRICAN_CITIES.map((c) => <option key={c} value={c} />)}
-              </datalist>
             </div>
             <RoutePreviewMap
               origin={form.origin}

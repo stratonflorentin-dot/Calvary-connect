@@ -22,13 +22,13 @@ interface TransitionButtonsProps {
 
 const intentClasses: Record<NonNullable<Transition["intent"]>, string> = {
   primary:
-    "bg-gradient-to-r from-sky-500 to-indigo-600 text-white hover:from-sky-600 hover:to-indigo-700 shadow-sm",
+    "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
   success:
-    "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+    "bg-success text-success-foreground hover:bg-success/90 shadow-sm",
   danger:
-    "border border-red-200 bg-white text-red-600 hover:bg-red-50",
+    "border border-destructive/30 bg-card text-destructive hover:bg-destructive/10",
   neutral:
-    "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+    "border border-border bg-card text-foreground hover:bg-muted",
 };
 
 export function TransitionButtons({

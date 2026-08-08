@@ -5,6 +5,7 @@ import { PageShell, PageHeader, SectionCard, EmptyState } from "@/components/she
 import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PlaceAutocomplete } from "@/components/ui/place-autocomplete";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,
@@ -247,12 +248,14 @@ export default function RouteOptimizerPage() {
                   >
                     {i + 1}
                   </span>
-                  <Input
-                    value={wp.address}
-                    onChange={(e) => patchWp(wp.id, e.target.value)}
-                    placeholder={i === 0 ? "Origin — e.g. Dar es Salaam" : i === waypoints.length - 1 ? "Destination — e.g. Mbeya" : `Stop ${i}`}
-                    className="h-9"
-                  />
+                  <div className="flex-1">
+                    <PlaceAutocomplete
+                      value={wp.address}
+                      onChange={(v) => patchWp(wp.id, v)}
+                      placeholder={i === 0 ? "Origin — e.g. Dar es Salaam" : i === waypoints.length - 1 ? "Destination — e.g. Mbeya" : `Stop ${i}`}
+                      className="h-9"
+                    />
+                  </div>
                   {waypoints.length > 2 && (
                     <button
                       onClick={() => setWaypoints((prev) => prev.filter((x) => x.id !== wp.id))}

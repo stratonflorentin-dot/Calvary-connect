@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,17 +38,39 @@ import {
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 
+// Per-currency money maps — never blend raw amounts across currencies.
+// e.g. { TZS: 4_500_000, USD: 1_200 }. Populated dynamically from whatever
+// currencies actually appear on the underlying invoices/expenses.
+type MoneyByCurrency = Record<string, number>;
+
 interface ExecutiveSummaryData {
-  totalRevenue: number;
-  totalExpenses: number;
-  netProfit: number;
-  outstandingInvoices: number;
+  totalRevenue: MoneyByCurrency;
+  totalExpenses: MoneyByCurrency;
+  netProfit: MoneyByCurrency;
+  outstandingInvoices: MoneyByCurrency;
   totalTrips: number;
   totalCustomers: number;
-  fuelCosts: number;
-  maintenanceCosts: number;
+  fuelCosts: MoneyByCurrency;
+  maintenanceCosts: MoneyByCurrency;
   revenueTrend: number;
   expenseTrend: number;
+}
+
+const PRIMARY_CURRENCY = "TZS";
+
+function normCurrency(c: string | null | undefined): string {
+  return (c || PRIMARY_CURRENCY).toUpperCase();
+}
+
+function addTo(map: MoneyByCurrency, currency: string, amount: number) {
+  map[currency] = (map[currency] || 0) + amount;
+}
+
+/** Every currency present in a map other than the primary one, non-zero, sorted for stable rendering. */
+function secondaryCurrencies(map: MoneyByCurrency): string[] {
+  return Object.keys(map)
+    .filter((c) => c !== PRIMARY_CURRENCY && Math.abs(map[c]) > 0.001)
+    .sort();
 }
 
 interface MonthlyData {
@@ -117,14 +140,36 @@ export default function ExecutiveSummaryPage() {
         .from('clients')
         .select('*');
 
-      // Calculate totals
-      const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-      const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-      const outstandingInvoices = invoices?.filter(inv => inv.status !== 'paid').reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-      const fuelCosts = expenses?.filter(exp => exp.category?.toLowerCase().includes('fuel')).reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-      const maintenanceCosts = expenses?.filter(exp => exp.category?.toLowerCase().includes('maintenance')).reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+      // Calculate totals — grouped per currency, never blended. A TZS
+      // invoice and a USD invoice are different money; summing their raw
+      // amounts together produces a number that means nothing.
+      const totalRevenue: MoneyByCurrency = {};
+      const outstandingInvoices: MoneyByCurrency = {};
+      invoices?.forEach((inv) => {
+        const cur = normCurrency(inv.currency);
+        addTo(totalRevenue, cur, inv.total_amount || 0);
+        if (inv.status !== 'paid') addTo(outstandingInvoices, cur, inv.total_amount || 0);
+      });
 
-      // Calculate trends (compare to previous period)
+      const totalExpenses: MoneyByCurrency = {};
+      const fuelCosts: MoneyByCurrency = {};
+      const maintenanceCosts: MoneyByCurrency = {};
+      expenses?.forEach((exp) => {
+        const cur = normCurrency(exp.currency);
+        addTo(totalExpenses, cur, exp.amount || 0);
+        const category = exp.category?.toLowerCase() || '';
+        if (category.includes('fuel')) addTo(fuelCosts, cur, exp.amount || 0);
+        if (category.includes('maintenance')) addTo(maintenanceCosts, cur, exp.amount || 0);
+      });
+
+      const netProfit: MoneyByCurrency = {};
+      for (const cur of new Set([...Object.keys(totalRevenue), ...Object.keys(totalExpenses)])) {
+        netProfit[cur] = (totalRevenue[cur] || 0) - (totalExpenses[cur] || 0);
+      }
+
+      // Calculate trends (compare to previous period) — tracked in the
+      // primary currency only; the KPI cards below show the full per-currency
+      // breakdown, this trend arrow just describes the headline number.
       const prevFromDate = new Date(fromDate);
       prevFromDate.setMonth(prevFromDate.getMonth() - 1);
       const prevToDate = new Date(toDate);
@@ -132,26 +177,32 @@ export default function ExecutiveSummaryPage() {
 
       const { data: prevInvoices } = await supabase
         .from('invoices')
-        .select('total_amount')
+        .select('total_amount, currency')
         .gte('created_at', prevFromDate.toISOString())
         .lte('created_at', prevToDate.toISOString());
 
       const { data: prevExpenses } = await supabase
         .from('expenses')
-        .select('amount')
+        .select('amount, currency')
         .gte('date', prevFromDate.toISOString())
         .lte('date', prevToDate.toISOString());
 
-      const prevRevenue = prevInvoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-      const prevExpensesTotal = prevExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+      const prevRevenuePrimary = prevInvoices
+        ?.filter((inv) => normCurrency(inv.currency) === PRIMARY_CURRENCY)
+        .reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
+      const prevExpensesPrimary = prevExpenses
+        ?.filter((exp) => normCurrency(exp.currency) === PRIMARY_CURRENCY)
+        .reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
 
-      const revenueTrend = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
-      const expenseTrend = prevExpensesTotal > 0 ? ((totalExpenses - prevExpensesTotal) / prevExpensesTotal) * 100 : 0;
+      const revenuePrimary = totalRevenue[PRIMARY_CURRENCY] || 0;
+      const expensesPrimary = totalExpenses[PRIMARY_CURRENCY] || 0;
+      const revenueTrend = prevRevenuePrimary > 0 ? ((revenuePrimary - prevRevenuePrimary) / prevRevenuePrimary) * 100 : 0;
+      const expenseTrend = prevExpensesPrimary > 0 ? ((expensesPrimary - prevExpensesPrimary) / prevExpensesPrimary) * 100 : 0;
 
       setData({
         totalRevenue,
         totalExpenses,
-        netProfit: totalRevenue - totalExpenses,
+        netProfit,
         outstandingInvoices,
         totalTrips: trips?.length || 0,
         totalCustomers: customers?.length || 0,
@@ -169,14 +220,17 @@ export default function ExecutiveSummaryPage() {
         const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
         const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
 
+        // Trend chart is single-currency (primary/TZS) by design — plotting
+        // TZS and USD amounts on the same line would be as meaningless as
+        // summing them. See the Financial tab for full multi-currency detail.
         const monthInvoices = invoices?.filter(inv => {
           const invDate = new Date(inv.created_at);
-          return invDate >= monthStart && invDate <= monthEnd;
+          return invDate >= monthStart && invDate <= monthEnd && normCurrency(inv.currency) === PRIMARY_CURRENCY;
         }) || [];
 
         const monthExpenses = expenses?.filter(exp => {
           const expDate = new Date(exp.date);
-          return expDate >= monthStart && expDate <= monthEnd;
+          return expDate >= monthStart && expDate <= monthEnd && normCurrency(exp.currency) === PRIMARY_CURRENCY;
         }) || [];
 
         const revenue = monthInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
@@ -208,9 +262,10 @@ export default function ExecutiveSummaryPage() {
         .slice(0, 5);
       setTopCustomers(sortedCustomers);
 
-      // Top expenses by category
+      // Top expenses by category — primary-currency only, same reasoning as
+      // the trend chart: a category total mixing TZS and USD would be fiction.
       const categoryExpenses: Record<string, number> = {};
-      expenses?.forEach(exp => {
+      expenses?.filter(exp => normCurrency(exp.currency) === PRIMARY_CURRENCY).forEach(exp => {
         const category = exp.category || 'Other';
         categoryExpenses[category] = (categoryExpenses[category] || 0) + (exp.amount || 0);
       });
@@ -234,13 +289,17 @@ export default function ExecutiveSummaryPage() {
   };
 
   const handleExport = () => {
-    // Generate CSV export
+    // Generate CSV export — one row per currency actually present, so a
+    // TZS and a USD figure never collapse into one meaningless cell.
+    const moneyRows = (label: string, map: MoneyByCurrency | undefined) =>
+      Object.entries(map || {}).map(([cur, amt]) => [`${label} (${cur})`, amt]);
+
     const csvContent = [
       ['Metric', 'Value'],
-      ['Total Revenue', data?.totalRevenue || 0],
-      ['Total Expenses', data?.totalExpenses || 0],
-      ['Net Profit', data?.netProfit || 0],
-      ['Outstanding Invoices', data?.outstandingInvoices || 0],
+      ...moneyRows('Total Revenue', data?.totalRevenue),
+      ...moneyRows('Total Expenses', data?.totalExpenses),
+      ...moneyRows('Net Profit', data?.netProfit),
+      ...moneyRows('Outstanding Invoices', data?.outstandingInvoices),
       ['Total Trips', data?.totalTrips || 0],
       ['Total Customers', data?.totalCustomers || 0]
     ].map(row => row.join(',')).join('\n');
@@ -254,6 +313,23 @@ export default function ExecutiveSummaryPage() {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+  };
+
+  // Renders the primary-currency figure big, plus a small line per other
+  // currency actually present — instead of picking one and hiding the rest.
+  const Money = ({ map, className }: { map: MoneyByCurrency | undefined; className?: string }) => {
+    const primary = map?.[PRIMARY_CURRENCY] || 0;
+    const others = map ? secondaryCurrencies(map) : [];
+    return (
+      <div>
+        <div className={className}>{formatCurrency(primary, PRIMARY_CURRENCY)}</div>
+        {others.map((cur) => (
+          <div key={cur} className="text-xs font-semibold text-muted-foreground mt-0.5">
+            + {formatCurrency(map![cur], cur)}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -286,8 +362,8 @@ export default function ExecutiveSummaryPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(data?.totalRevenue || 0)}</div>
-            <div className="flex items-center gap-1 text-xs">
+            <Money map={data?.totalRevenue} className="text-2xl font-bold text-foreground" />
+            <div className="flex items-center gap-1 text-xs mt-1">
               {data?.revenueTrend && data.revenueTrend > 0 ? (
                 <>
                   <ArrowUpRight className="size-3 text-success" />
@@ -312,8 +388,8 @@ export default function ExecutiveSummaryPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(data?.totalExpenses || 0)}</div>
-            <div className="flex items-center gap-1 text-xs">
+            <Money map={data?.totalExpenses} className="text-2xl font-bold text-foreground" />
+            <div className="flex items-center gap-1 text-xs mt-1">
               {data?.expenseTrend && data.expenseTrend > 0 ? (
                 <>
                   <ArrowUpRight className="size-3 text-destructive" />
@@ -338,11 +414,14 @@ export default function ExecutiveSummaryPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold text-foreground ${(data?.netProfit || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {formatCurrency(data?.netProfit || 0)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {(data?.totalRevenue ?? 0) > 0 ? ((data?.netProfit || 0) / (data?.totalRevenue ?? 1) * 100).toFixed(1) : 0}% margin
+            <Money
+              map={data?.netProfit}
+              className={cn("text-2xl font-bold", (data?.netProfit?.[PRIMARY_CURRENCY] || 0) >= 0 ? "text-success" : "text-destructive")}
+            />
+            <div className="text-xs text-muted-foreground mt-1">
+              {(data?.totalRevenue?.[PRIMARY_CURRENCY] ?? 0) > 0
+                ? ((data!.netProfit[PRIMARY_CURRENCY] || 0) / data!.totalRevenue[PRIMARY_CURRENCY] * 100).toFixed(1)
+                : 0}% margin ({PRIMARY_CURRENCY})
             </div>
           </CardContent>
         </Card>
@@ -355,8 +434,8 @@ export default function ExecutiveSummaryPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{formatCurrency(data?.outstandingInvoices || 0)}</div>
-            <div className="text-xs text-muted-foreground">Pending invoices</div>
+            <Money map={data?.outstandingInvoices} className="text-2xl font-bold text-warning" />
+            <div className="text-xs text-muted-foreground mt-1">Pending invoices</div>
           </CardContent>
         </Card>
       </div>
@@ -391,9 +470,11 @@ export default function ExecutiveSummaryPage() {
             <Fuel className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-foreground">{formatCurrency(data?.fuelCosts || 0)}</div>
-            <div className="text-xs text-muted-foreground">
-              {(data?.totalExpenses ?? 0) > 0 ? ((data?.fuelCosts || 0) / (data?.totalExpenses ?? 1) * 100).toFixed(1) : 0}% of expenses
+            <Money map={data?.fuelCosts} className="text-xl font-bold text-foreground" />
+            <div className="text-xs text-muted-foreground mt-1">
+              {(data?.totalExpenses?.[PRIMARY_CURRENCY] ?? 0) > 0
+                ? ((data?.fuelCosts?.[PRIMARY_CURRENCY] || 0) / data!.totalExpenses[PRIMARY_CURRENCY] * 100).toFixed(1)
+                : 0}% of {PRIMARY_CURRENCY} expenses
             </div>
           </CardContent>
         </Card>
@@ -404,9 +485,11 @@ export default function ExecutiveSummaryPage() {
             <FileText className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-foreground">{formatCurrency(data?.maintenanceCosts || 0)}</div>
-            <div className="text-xs text-muted-foreground">
-              {(data?.totalExpenses ?? 0) > 0 ? ((data?.maintenanceCosts || 0) / (data?.totalExpenses ?? 1) * 100).toFixed(1) : 0}% of expenses
+            <Money map={data?.maintenanceCosts} className="text-xl font-bold text-foreground" />
+            <div className="text-xs text-muted-foreground mt-1">
+              {(data?.totalExpenses?.[PRIMARY_CURRENCY] ?? 0) > 0
+                ? ((data?.maintenanceCosts?.[PRIMARY_CURRENCY] || 0) / data!.totalExpenses[PRIMARY_CURRENCY] * 100).toFixed(1)
+                : 0}% of {PRIMARY_CURRENCY} expenses
             </div>
           </CardContent>
         </Card>

@@ -23,13 +23,13 @@ export function useCurrency() {
   const [baseCurrency, setBaseCurrency] = useState<Currency>("TZS");
   const [loading, setLoading] = useState(true);
 
-  const fetchRates = useCallback(async () => {
+  const fetchRates = useCallback(async (force = false) => {
     if (typeof window === 'undefined') return;
-    
+
     const cachedRates = localStorage.getItem(CACHE_KEY);
     const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
 
-    if (cachedRates && cachedTimestamp) {
+    if (!force && cachedRates && cachedTimestamp) {
       const age = Date.now() - parseInt(cachedTimestamp, 10);
       if (age < CACHE_DURATION_MS) {
         const parsed = JSON.parse(cachedRates);
@@ -127,7 +127,10 @@ export function useCurrency() {
     if (saved) setBaseCurrency(saved);
   }, []);
 
-  const exchangeRate = (rates["TZS"] || 1) / (rates["USD"] || (1 / FALLBACK_RATES["USD"]));
+  // rates[cur] is already "how many TZS for 1 unit of cur" (see normalizedRates
+  // above), so the USD→TZS rate IS rates.USD directly — dividing by it again
+  // produced ~0.0004, which .toLocaleString() rounds down to a displayed "0".
+  const exchangeRate = rates["USD"] || FALLBACK_RATES["USD"];
 
   return {
     rates,
