@@ -1,4 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import {
+    calcPaye as calcPayeStatutory,
+    calcNhif as calcNhifStatutory,
+    calcSdl as calcSdlStatutory,
+    calcWcf as calcWcfStatutory,
+} from '@/lib/finance/payroll/statutory-rates';
 
 export type StatutoryRow = {
     employee_id: string;
@@ -80,36 +86,17 @@ export const getPayrollPeriod = (record: any) => {
     return 'Unknown Period';
 };
 
-export const calcPaye = (gross: number) => {
-    if (gross <= 240000) return 0;
-    if (gross <= 323333) return Math.round(gross * 0.09);
-    if (gross <= 441666) return Math.round(gross * 0.20);
-    if (gross <= 590000) return Math.round(gross * 0.25);
-    return Math.round(gross * 0.30);
-};
-
-export const calcNhif = (gross: number) => {
-    if (gross <= 59999) return 3000;
-    if (gross <= 79999) return 4000;
-    if (gross <= 119999) return 5000;
-    if (gross <= 149999) return 6000;
-    if (gross <= 199999) return 7500;
-    if (gross <= 249999) return 8500;
-    if (gross <= 299999) return 9000;
-    if (gross <= 349999) return 9500;
-    if (gross <= 399999) return 10000;
-    if (gross <= 449999) return 11000;
-    if (gross <= 499999) return 12000;
-    if (gross <= 599999) return 13000;
-    if (gross <= 699999) return 14000;
-    if (gross <= 799999) return 15000;
-    if (gross <= 899999) return 16000;
-    if (gross <= 999999) return 17000;
-    return 18000;
-};
-
-export const calcSdl = (gross: number) => Math.round(gross * 0.045);
-export const calcWcf = (gross: number) => Math.round(gross * 0.01 * 2); // placeholder industry factor
+// PAYE/NHIF/SDL/WCF calculations now live in src/lib/finance/payroll/statutory-rates.ts
+// as a single, versioned source of truth shared with the payroll run engine
+// (src/lib/finance/payroll/engine.ts). The previous inline versions here had
+// a real bug — PAYE applied one bracket's rate to the *entire* gross pay
+// instead of taxing each band progressively, and WCF was a hardcoded
+// placeholder — both fixed in the shared module. Re-exported here so this
+// file's existing call sites don't need to change.
+export const calcPaye = calcPayeStatutory;
+export const calcNhif = calcNhifStatutory;
+export const calcSdl = calcSdlStatutory;
+export const calcWcf = calcWcfStatutory;
 
 export const getStatusLabel = (status: string) => {
     if (status === 'paid') return 'Filed';

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -14,10 +13,82 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSupabase } from '@/components/supabase-provider';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Truck, Lock, Shield, ArrowRight, Activity, Users, Settings, Moon, Sun } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
+/**
+ * DESIGN NOTE (read before editing further):
+ * This replaces a "pull-tab drawer" login that hid the actual form behind a
+ * "Start Connection" button, with sci-fi copy ("Initialize Portal",
+ * "Security Key", "Verifying Session") and generic blurred-orb decoration.
+ * That pattern added friction with nothing to show for it.
+ *
+ * The left panel's route diagram is deliberately specific to this company —
+ * Dar es Salaam to the Tunduma border crossing to Lusaka is a real transit
+ * corridor for Tanzanian cross-border freight — rather than generic glow
+ * decoration. All colors below come from the existing design tokens in
+ * globals.css (primary, warning = "Delayed", success = "Delivered"); no new
+ * colors were introduced.
+ */
+
+// Matches src/types/roles.ts UserRole exactly, minus CEO/ADMIN — those are
+// privileged roles an administrator assigns manually, not something anyone
+// should be able to self-select at signup. The original list here included
+// a "Fleet Manager" role that isn't a real UserRole value at all (would
+// have created accounts the rest of the app can't recognize or route), and
+// was missing two roles that are real: Salesman, Warehouse Staff.
+const ROLES = [
+  { value: 'DRIVER', label: 'Driver' },
+  { value: 'OPERATOR', label: 'Operator' },
+  { value: 'MECHANIC', label: 'Mechanic' },
+  { value: 'ACCOUNTANT', label: 'Accountant' },
+  { value: 'HR', label: 'HR' },
+  { value: 'SALESMAN', label: 'Salesman' },
+  { value: 'WAREHOUSE_STAFF', label: 'Warehouse Staff' },
+];
+
+function RouteSignature() {
+  return (
+    <svg viewBox="0 0 360 200" className="w-full max-w-sm" aria-hidden="true">
+      <path
+        d="M 24 152 C 90 152, 100 60, 180 60 S 270 152, 336 152"
+        fill="none"
+        stroke="hsl(var(--primary))"
+        strokeOpacity="0.35"
+        strokeWidth="2"
+        strokeDasharray="2 8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M 24 152 C 90 152, 100 60, 180 60 S 270 152, 336 152"
+        fill="none"
+        stroke="hsl(var(--primary))"
+        strokeWidth="2"
+        strokeDasharray="14 500"
+        strokeLinecap="round"
+      >
+        <animate attributeName="stroke-dashoffset" from="0" to="-514" dur="7s" repeatCount="indefinite" />
+      </path>
+
+      {/* Origin */}
+      <circle cx="24" cy="152" r="5" fill="hsl(var(--primary))" />
+      <text x="24" y="176" textAnchor="middle" className="fill-white/70 font-mono" fontSize="9" letterSpacing="0.5">
+        DAR ES SALAAM
+      </text>
+
+      {/* Border checkpoint */}
+      <circle cx="180" cy="60" r="5" fill="hsl(var(--warning))" />
+      <text x="180" y="42" textAnchor="middle" className="fill-white/70 font-mono" fontSize="9" letterSpacing="0.5">
+        TUNDUMA BORDER
+      </text>
+
+      {/* Destination */}
+      <circle cx="336" cy="152" r="5" fill="hsl(var(--success))" />
+      <text x="336" y="176" textAnchor="middle" className="fill-white/70 font-mono" fontSize="9" letterSpacing="0.5">
+        LUSAKA
+      </text>
+    </svg>
+  );
+}
 
 export function AuthComponent() {
   const [loading, setLoading] = useState(false);
@@ -33,15 +104,10 @@ export function AuthComponent() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    console.log('Attempting login with email:', email);
-
     try {
       await signIn(email, password);
-      console.log('Sign in successful');
-      // Success - page will auto-redirect when user state updates
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
+      setError(err.message || 'Could not sign in. Check your email and password.');
     } finally {
       setLoading(false);
     }
@@ -61,278 +127,164 @@ export function AuthComponent() {
     try {
       await signUp(email, password, name, role);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Could not create your account.');
     } finally {
       setLoading(false);
     }
   };
 
-  const [hasStarted, setHasStarted] = useState(false);
-
   return (
-    <div className="min-h-screen w-full bg-muted dark:bg-background text-foreground flex items-center justify-center overflow-hidden relative transition-colors duration-500">
-      {/* Background glowing decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px]" />
-      </div>
-
-      <div className="absolute top-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
-
-      {/* Main Cover Page Container (always rendered, dims/blurs when login is pulled open) */}
-      <div className={`w-full max-w-6xl px-6 py-8 flex flex-col md:flex-row items-center justify-center gap-12 z-10 transition-all duration-500 ease-out ${hasStarted ? 'blur-md opacity-40 scale-[0.98]' : 'blur-none opacity-100 scale-100'}`}>
-        
-        {/* Left side: Premium Leaning Character Graphic Concept */}
-        <div className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left space-y-6">
-          <div className="relative inline-block">
-            {/* Rotating accent border */}
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-              className="absolute -inset-4 border border-dashed border-primary/40 rounded-2xl"
-            />
-
-            {/* 3D graphic lookalike block */}
-            <div className="relative w-24 h-24 bg-gradient-to-tr from-primary to-[#002d5c] rounded-xl flex items-center justify-center shadow-xl shadow-primary/20">
-              <Truck className="w-12 h-12 text-white" />
-              {/* Glowing core */}
-              <div className="absolute inset-0 border border-white/20 rounded-xl animate-pulse" />
-            </div>
+    <div className="min-h-screen w-full flex flex-col md:flex-row">
+      {/* Left: brand panel */}
+      <div className="relative md:w-[46%] bg-[#0B1F33] text-white flex flex-col justify-between p-10 md:p-14 overflow-hidden">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-md bg-primary/20 border border-primary/40 flex items-center justify-center">
+            <span className="font-headline font-bold text-primary text-sm">CC</span>
           </div>
+          <span className="font-headline font-semibold tracking-tight">Calvary Connect</span>
+        </div>
 
-          <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#002d5c] dark:from-primary dark:to-[#a5c5fd] font-headline">
-              Calvary Connect
+        <div className="space-y-8">
+          <div className="space-y-3 max-w-sm">
+            <h1 className="font-headline text-3xl md:text-[2.25rem] leading-[1.1] font-bold tracking-tight">
+              Fleet, freight, and finance — one system.
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base">
-              Professional Transport & Fleet Management System
+            <p className="text-white/60 text-sm leading-relaxed">
+              Trip dispatch, cross-border compliance, and accounting for one connected
+              operation.
             </p>
           </div>
-
-          <p className="text-slate-500 dark:text-slate-300 text-xs md:text-sm max-w-md leading-relaxed">
-            Unlock real-time logistics tracking, automated fuel approvals, dynamic trip logs, and smart fleet maintenance scheduling.
-          </p>
-
-          <div className="flex items-center gap-4 text-slate-500 text-xs pt-2">
-            <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5 text-primary" /> SECURE TLS</span>
-            <span className="w-1 h-1 bg-foreground rounded-full" />
-            <span className="flex items-center gap-1"><Lock className="w-3.5 h-3.5 text-primary" /> SHA-256</span>
-          </div>
+          <RouteSignature />
         </div>
 
-        {/* Right side: Start Prompt Card */}
-        <div className="w-full md:w-[380px] bg-card/60 dark:bg-background/60 border border-border rounded-2xl p-8 backdrop-blur-xl shadow-2xl flex flex-col items-center text-center space-y-6 transition-colors duration-500">
-          <div className="w-16 h-16 rounded-full bg-muted dark:bg-background flex items-center justify-center border border-border">
-            <Activity className="w-8 h-8 text-accent-foreground dark:text-accent/80 animate-pulse" />
-          </div>
-          
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Initialize Portal</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Tap to pull the secure credentials interface.
-            </p>
-          </div>
+        <p className="text-white/40 text-xs font-mono">
+          Calvary Investment Company Ltd &copy; {new Date().getFullYear()}
+        </p>
 
-          {/* Pulsing Start Button */}
-          <div className="relative w-full group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-lg blur opacity-60 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt" />
-            <Button 
-              onClick={() => setHasStarted(true)}
-              className="relative w-full py-6 bg-foreground hover:bg-foreground/90 text-background font-semibold rounded-lg border border-border flex items-center justify-center gap-2 group-hover:border-primary/50 transition-all duration-300 shadow-xl"
-            >
-              <span>Start Connection</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </div>
-
-          <div className="text-[10px] text-muted-foreground">
-            Calvary Investment Company Ltd &copy; {new Date().getFullYear()}
-          </div>
-        </div>
+        <div
+          className="pointer-events-none absolute -bottom-24 -right-24 w-72 h-72 rounded-full opacity-[0.07]"
+          style={{ background: 'hsl(var(--primary))' }}
+        />
       </div>
 
-      {/* Backdrop overlay to close drawer when clicking outside */}
-      {hasStarted && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-40 backdrop-blur-[2px] transition-opacity"
-          onClick={() => setHasStarted(false)}
-        />
-      )}
+      {/* Right: sign-in form */}
+      <div className="flex-1 flex flex-col justify-center items-center p-8 md:p-14 bg-background">
+        <div className="absolute top-4 right-4 md:static md:self-end md:mb-8">
+          <ThemeToggle />
+        </div>
 
-      {/* Floating pull-tab visible on the right edge of the screen when drawer is closed */}
-      {!hasStarted && (
-        <button
-          onClick={() => setHasStarted(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 h-32 w-10 bg-gradient-to-b from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground rounded-l-2xl flex flex-col items-center justify-center gap-2 shadow-[-4px_0_20px_rgba(13,185,242,0.3)] border-y border-l border-white/10 z-40 group transition-all duration-300 hover:w-12"
-        >
-          <Lock className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-          <span className="text-[10px] font-extrabold uppercase tracking-widest [writing-mode:vertical-lr] select-none">
-            Access Portal
-          </span>
-        </button>
-      )}
-
-      {/* Visme-style pull-out Drawer (Slides in from the right edge) */}
-      <motion.div
-        initial={{ x: '100%' }}
-        animate={{ x: hasStarted ? 0 : '100%' }}
-        transition={{ type: 'spring', damping: 24, stiffness: 140 }}
-        className="fixed top-0 right-0 h-full w-full sm:w-[460px] bg-card/95 dark:bg-background/95 border-l border-border backdrop-blur-2xl shadow-[-10px_0_40px_rgba(0,0,0,0.2)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.7)] z-50 flex flex-col transition-colors duration-500"
-      >
-        {/* Drawer Pull/Close handle attached to the left edge of the drawer */}
-        <button
-          onClick={() => setHasStarted(!hasStarted)}
-          className="absolute left-[-32px] top-1/2 -translate-y-1/2 h-28 w-8 bg-card dark:bg-background border-y border-l border-border hover:bg-muted dark:hover:bg-muted text-muted-foreground hover:text-foreground rounded-l-xl flex flex-col items-center justify-center gap-2 shadow-[-5px_0_15px_rgba(0,0,0,0.1)] dark:shadow-[-5px_0_15px_rgba(0,0,0,0.3)] transition-all cursor-pointer group"
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground group-hover:bg-primary transition-colors" />
-          <span className="text-[9px] font-bold uppercase tracking-widest [writing-mode:vertical-lr] select-none text-muted-foreground group-hover:text-muted-foreground">
-            {hasStarted ? 'CLOSE PANEL' : 'PULL TO ENTER'}
-          </span>
-          <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground group-hover:bg-primary transition-colors" />
-        </button>
-
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-          <div className="flex items-center justify-between">
-            <button 
-              onClick={() => setHasStarted(false)} 
-              className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors"
-            >
-              &larr; Back to welcome
-            </button>
-            <div className="text-[10px] bg-foreground border border-border text-muted-foreground px-2.5 py-1 rounded-full font-mono">
-              Verifying Session
-            </div>
+        <div className="w-full max-w-sm space-y-6">
+          <div className="space-y-1">
+            <h2 className="font-headline text-2xl font-bold text-foreground">Sign in</h2>
+            <p className="text-sm text-muted-foreground">
+              Use the email and password your administrator set up for you.
+            </p>
           </div>
 
-          <Card className="border-border bg-card/60 dark:bg-background/60 backdrop-blur-md shadow-2xl text-foreground transition-colors duration-500">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#002d5c] dark:from-primary/80 dark:to-[#a5c5fd] font-headline">Portal Access</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">Calvary Connect System</p>
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign in</TabsTrigger>
+              <TabsTrigger value="signup">Create account</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="signin" className="mt-6 space-y-4">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email</Label>
+                  <Input
+                    id="signin-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="name@calvaryconnect.co.tz"
+                    required
+                  />
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-muted dark:bg-background flex items-center justify-center border border-border">
-                  <Lock className="w-5 h-5 text-accent-foreground dark:text-accent/80" />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signin-password">Password</Label>
+                  </div>
+                  <Input
+                    id="signin-password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    required
+                  />
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-2">
-              <Tabs defaultValue="signin" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-foreground p-1 rounded-lg">
-                  <TabsTrigger value="signin" className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground text-xs py-2">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup" className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground text-xs py-2">Sign Up</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="signin" className="mt-4 space-y-4">
-                  <div className="p-3 bg-warning/10 dark:bg-warning/20 border border-warning/20 dark:border-warning/30 rounded-lg text-xs text-warning dark:text-warning/80 leading-relaxed">
-                    <strong>First time logging in?</strong> If you have been added as an admin or staff, switch to the <strong>Sign Up</strong> tab to register your credentials.
+                {error && (
+                  <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 px-3 py-2 rounded-md">
+                    {error}
                   </div>
-                  <form onSubmit={handleSignIn} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signin-email" className="text-foreground text-xs">Corporate Email</Label>
-                      <Input
-                        id="signin-email"
-                        name="email"
-                        type="email"
-                        placeholder="name@company.com"
-                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signin-password" className="text-foreground text-xs">Security Key</Label>
-                      <Input
-                        id="signin-password"
-                        name="password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
-                        required
-                      />
-                    </div>
-                    {error && (
-                      <div className="text-xs text-destructive dark:text-destructive/80 bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 p-3 rounded-lg">
-                        {error}
-                      </div>
-                    )}
-                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground font-medium shadow-lg shadow-primary/20" disabled={loading}>
-                      {loading ? 'Authenticating...' : 'Sign In'}
-                    </Button>
-                  </form>
-                </TabsContent>
-                
-                <TabsContent value="signup" className="mt-4 space-y-4">
-                  <div className="p-3 bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-lg text-xs text-primary dark:text-primary/80 leading-relaxed">
-                    <strong>Direct Register:</strong> If you are newly registered by administration, please verify your email and complete credentials setup below.
+                )}
+                <Button type="submit" className="w-full h-11" disabled={loading}>
+                  {loading ? 'Signing in…' : 'Sign in'}
+                </Button>
+              </form>
+              <p className="text-xs text-muted-foreground text-center pt-1">
+                New staff account? Confirm your role with your administrator, then use
+                the <span className="font-medium text-foreground">Create account</span> tab.
+              </p>
+            </TabsContent>
+
+            <TabsContent value="signup" className="mt-6 space-y-4">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Full name</Label>
+                  <Input id="signup-name" name="name" type="text" placeholder="Jane Mwangi" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="name@calvaryconnect.co.tz"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input
+                    id="signup-password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="At least 6 characters"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-role">Role</Label>
+                  <Select name="role" required>
+                    <SelectTrigger id="signup-role">
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {r.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {error && (
+                  <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 px-3 py-2 rounded-md">
+                    {error}
                   </div>
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name" className="text-foreground text-xs">Full Name</Label>
-                      <Input
-                        id="signup-name"
-                        name="name"
-                        type="text"
-                        placeholder="Enter full name"
-                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email" className="text-foreground text-xs">Authorized Email</Label>
-                      <Input
-                        id="signup-email"
-                        name="email"
-                        type="email"
-                        placeholder="name@company.com"
-                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password" className="text-foreground text-xs">New Password</Label>
-                      <Input
-                        id="signup-password"
-                        name="password"
-                        type="password"
-                        placeholder="Min 6 characters"
-                        className="bg-card dark:bg-background border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary h-10 text-sm"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-role" className="text-foreground text-xs">Assigned Team Role</Label>
-                      <Select name="role" required>
-                        <SelectTrigger className="bg-card dark:bg-background border-border text-foreground h-10 text-sm">
-                          <SelectValue placeholder="Select assigned role" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card dark:bg-background border-border text-foreground">
-                          <SelectItem value="DRIVER">Driver</SelectItem>
-                          <SelectItem value="OPERATOR">Operator</SelectItem>
-                          <SelectItem value="MECHANIC">Mechanic</SelectItem>
-                          <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
-                          <SelectItem value="HR">HR</SelectItem>
-                          <SelectItem value="FLEET_MANAGER">Fleet Manager</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {error && (
-                      <div className="text-xs text-red-400 bg-red-950/40 border border-red-900/50 p-3 rounded-lg">
-                        {error}
-                      </div>
-                    )}
-                    <Button type="submit" className="w-full h-11 bg-gradient-to-r from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground font-medium shadow-lg shadow-primary/20" disabled={loading}>
-                      {loading ? 'Creating account...' : 'Complete Registration'}
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                )}
+                <Button type="submit" className="w-full h-11" disabled={loading}>
+                  {loading ? 'Creating account…' : 'Create account'}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
-

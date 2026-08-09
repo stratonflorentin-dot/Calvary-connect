@@ -1,30 +1,17 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { FileText, ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
+// This page used to be a dead-end stub ("Coming soon"). Bank statement
+// import and viewing already live at /finance/banking/bank-reconciliation
+// (see its `bank_statements` queries) — redirecting here instead of
+// duplicating that functionality or leaving a nav item that goes nowhere.
 export default function BankStatementsPage() {
-  return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mb-4">
-        <Button variant="ghost" asChild>
-          <Link href="/finance/dashboard">
-            <ArrowLeft className="size-4 mr-2" /> Back to Dashboard
-          </Link>
-        </Button>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="size-5" /> Bank Statements
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Bank statements page - Coming soon</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/finance/banking/bank-reconciliation");
+  }, [router]);
+  return null;
 }
+
