@@ -207,6 +207,50 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
     }
   }
 
+  // Money movement must be verified *before* the status flips, unlike the
+  // notification-style side effects below — those are allowed to degrade to
+  // a warning, but "marked paid with no bank account actually debited" is
+  // exactly the bug this guards against (current_balance stuck at its
+  // opening value while expenses/payroll keep getting marked paid). See
+  // supabase/migrations/035_post_bank_transaction_function.sql.
+  if (args.kind === "expense" && args.toState === "paid") {
+    const currency = entity.currency || "TZS";
+    const { data: accounts, error: acctErr } = await supabase
+      .from("bank_accounts")
+      .select("id")
+      .eq("currency", currency)
+      .eq("is_active", true);
+
+    if (acctErr) {
+      return { ok: false, code: "db_error", message: `Could not look up ${currency} bank accounts: ${acctErr.message}` };
+    }
+    if (!accounts || accounts.length !== 1) {
+      return {
+        ok: false,
+        code: "guard_failed",
+        message:
+          accounts && accounts.length > 1
+            ? `More than one active ${currency} bank account exists — use Finance → Expenses → Record Payment to choose which one.`
+            : `No active ${currency} bank account found to pay this expense from.`,
+      };
+    }
+
+    const { error: txError } = await supabase.rpc("post_bank_transaction", {
+      p_bank_account_id: accounts[0].id,
+      p_amount: Number(entity.amount) || 0,
+      p_direction: "out",
+      p_transaction_type: "withdrawal",
+      p_currency: currency,
+      p_description: entity.description || `Expense payment (${args.entityId})`,
+      p_reference_type: "expense",
+      p_reference_id: args.entityId,
+      p_idempotency_key: crypto.randomUUID(),
+    });
+    if (txError) {
+      return { ok: false, code: "db_error", message: `Bank account was not debited: ${txError.message}` };
+    }
+  }
+
   const updatePayload: Record<string, any> = {
     [statusColumn]: args.toState,
     updated_at: new Date().toISOString(),

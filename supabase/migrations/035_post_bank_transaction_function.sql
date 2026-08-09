@@ -13,14 +13,22 @@
 -- single transaction. All 4 payment UIs are rewired to call this via RPC
 -- instead of inserting into bank_transactions directly.
 --
--- No CREATE TABLE for bank_transactions exists anywhere in this repo (it
--- was created ad hoc against prod) and the two screens that already write
--- to it disagree on shape (expenses/page.tsx uses amount+transaction_type;
--- bank-transactions/page.tsx uses debit+credit). This migration adds
--- whichever columns are missing so both keep working, and the new function
--- writes all of them so neither screen's existing reads break.
+-- No CREATE TABLE for bank_transactions exists anywhere in this repo. In
+-- some environments it was created ad hoc against prod; in others (this
+-- one, confirmed live via PGRST205 "table not found") it never existed at
+-- all, which made every ALTER TABLE below fail with 42P01 before this
+-- CREATE TABLE IF NOT EXISTS was added. Either way the two screens that
+-- write to it disagree on shape (expenses/page.tsx uses
+-- amount+transaction_type; bank-transactions/page.tsx uses debit+credit).
+-- This migration creates the table if missing, then adds whichever columns
+-- are missing so both keep working, and the new function writes all of
+-- them so neither screen's existing reads break.
 --
 -- Idempotent: safe to run more than once. Run in the Supabase SQL editor.
+
+CREATE TABLE IF NOT EXISTS bank_transactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+);
 
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS bank_account_id uuid REFERENCES bank_accounts(id) ON DELETE CASCADE;
 ALTER TABLE bank_transactions ADD COLUMN IF NOT EXISTS transaction_date date NOT NULL DEFAULT CURRENT_DATE;

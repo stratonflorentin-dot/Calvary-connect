@@ -300,6 +300,42 @@ export async function markPayrollPaidAction(id: string) {
       throw new Error("Only approved payroll can be marked as paid.");
     }
 
+    // Debit the bank account BEFORE flipping status — this is the same bug
+    // class as expenses (see runSideEffects note in src/lib/workflow/engine.ts):
+    // marking something "paid" is meaningless if no bank_accounts row is
+    // ever debited. driver_allowances is always inserted with currency
+    // "TZS" (see savePayrollAction above), so that's the account to debit.
+    const currency = (record as any).currency || "TZS";
+    const { data: accounts, error: acctErr } = await supabaseAdmin
+      .from("bank_accounts")
+      .select("id")
+      .eq("currency", currency)
+      .eq("is_active", true);
+    if (acctErr) {
+      throw new Error(`Could not look up ${currency} bank accounts: ${acctErr.message}`);
+    }
+    if (!accounts || accounts.length !== 1) {
+      throw new Error(
+        accounts && accounts.length > 1
+          ? `More than one active ${currency} bank account exists — pay this from Finance instead.`
+          : `No active ${currency} bank account found to pay this payroll record from.`,
+      );
+    }
+    const { error: txError } = await supabaseAdmin.rpc("post_bank_transaction", {
+      p_bank_account_id: accounts[0].id,
+      p_amount: Number(record.amount) || 0,
+      p_direction: "out",
+      p_transaction_type: "withdrawal",
+      p_currency: currency,
+      p_description: `Payroll disbursement: ${record.driver_name || "Employee"}`,
+      p_reference_type: "payroll",
+      p_reference_id: id,
+      p_idempotency_key: crypto.randomUUID(),
+    });
+    if (txError) {
+      throw new Error(`Bank account was not debited: ${txError.message}`);
+    }
+
     const { error: updateErrD } = await supabaseAdmin
       .from("driver_allowances")
       .update({ status: "paid", updated_at: now })
