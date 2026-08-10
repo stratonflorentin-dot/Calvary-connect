@@ -70,8 +70,18 @@ function EditDriverDocDialog({ driver, open, onClose, onSaved }: EditDriverDocDi
       });
       updates.updated_at = new Date().toISOString();
 
-      const { error } = await supabase.from("user_profiles").update(updates).eq("id", driver.id);
+      // .select() is required here, not just error-checking: RLS on
+      // user_profiles only allows CEO/ADMIN or the row's own owner to
+      // update it (supabase/migrations/033_fix_user_profiles_role_
+      // escalation.sql), so an HR/OPERATOR user editing someone else's
+      // record has this UPDATE silently matched to zero rows — no
+      // Postgres error, just an empty result. Without checking that,
+      // this always showed "Documents updated" even when nothing saved.
+      const { data, error } = await supabase.from("user_profiles").update(updates).eq("id", driver.id).select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("You don't have permission to edit this driver's compliance dates. Only CEO/ADMIN can edit another user's profile.");
+      }
       toast({ title: "Documents updated", description: "Driver compliance dates saved." });
       onSaved();
       onClose();
