@@ -20,7 +20,8 @@ export type EntityKind =
   | "trip"
   | "maintenance_request"
   | "fuel_request"
-  | "expense";
+  | "expense"
+  | "leave_request";
 
 export interface TransitionContext {
   actorId: string;
@@ -320,11 +321,46 @@ export const expenseMachine: StateMachine<ExpenseState> = {
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Leave request
+// ─────────────────────────────────────────────────────────────────────────────
+export type LeaveRequestState = "pending" | "approved" | "rejected";
+
+export const leaveRequestMachine: StateMachine<LeaveRequestState> = {
+  kind: "leave_request",
+  table: "leave_requests",
+  auditModule: "hr",
+  auditEntityType: "leave_request",
+  states: ["pending", "approved", "rejected"],
+  terminal: ["approved", "rejected"],
+  transitions: {
+    pending: [
+      {
+        label: "Approve",
+        to: "approved",
+        intent: "success",
+        description: "Unpaid leave reduces taxable pay in the next payroll run for the days it covers.",
+        roles: ["HR", "ADMIN", "CEO"],
+      },
+      {
+        label: "Reject",
+        to: "rejected",
+        intent: "danger",
+        roles: ["HR", "ADMIN", "CEO"],
+        requireReason: true,
+      },
+    ],
+    approved: [],
+    rejected: [],
+  },
+};
+
 export const machines: Record<EntityKind, StateMachine<any>> = {
   trip: tripMachine,
   maintenance_request: maintenanceMachine,
   fuel_request: fuelRequestMachine,
   expense: expenseMachine,
+  leave_request: leaveRequestMachine,
 };
 
 export function getMachine(kind: EntityKind): StateMachine<any> {

@@ -487,6 +487,26 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "people",
   },
   {
+    path: "/admin/hr/payroll/loans",
+    label: "Employee Loans",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/hr/payroll/overtime",
+    label: "Overtime",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+    showInNavigation: false,
+  },
+  {
+    path: "/hr/leave",
+    label: "Leave",
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "MECHANIC", "ACCOUNTANT", "DRIVER", "SALESMAN", "WAREHOUSE_STAFF"],
+    category: "people",
+  },
+  {
     path: "/hr/meetings",
     label: "Meetings",
     allowedRoles: ["CEO", "ADMIN", "HR"],

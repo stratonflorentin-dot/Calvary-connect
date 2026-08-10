@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   Coins, Calculator, Truck, Globe, Plus, RefreshCw,
   User, DollarSign, Calendar, Search, Trash2, CheckCircle,
-  XCircle, Info, Landmark, AlertCircle, FileText
+  XCircle, Info, Landmark, AlertCircle, FileText, HandCoins, Clock
 } from 'lucide-react';
 import { useCurrency } from '@/hooks/use-currency';
 import { toast } from '@/hooks/use-toast';
@@ -355,6 +355,18 @@ export default function AllowancesPage() {
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Sync System
+              </Button>
+              <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
+                <a href="/admin/hr/payroll/overtime">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Overtime
+                </a>
+              </Button>
+              <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
+                <a href="/admin/hr/payroll/loans">
+                  <HandCoins className="w-4 h-4 mr-2" />
+                  Loans
+                </a>
               </Button>
               <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <a href="/admin/hr/payroll/statutory">

@@ -257,6 +257,13 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
   };
   if (args.payload?.scheduled_date) updatePayload.scheduled_date = args.payload.scheduled_date;
   if (args.payload?.actual_cost != null) updatePayload.actual_cost = args.payload.actual_cost;
+  if (args.kind === "leave_request" && args.toState === "approved") {
+    updatePayload.approved_by = args.actorId;
+    updatePayload.approved_at = new Date().toISOString();
+  }
+  if (args.kind === "leave_request" && args.toState === "rejected" && args.payload?.reason) {
+    updatePayload.rejected_reason = args.payload.reason;
+  }
 
   const { data: updated, error: updateError } = await supabase
     .from(machine.table)

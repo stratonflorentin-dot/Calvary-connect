@@ -49,6 +49,9 @@ ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS approved_by uuid REFERENCES 
 ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS approved_at timestamptz;
 ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS rejected_reason text;
 ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS payroll_period_id uuid REFERENCES payroll_periods(id);
+-- The workflow engine (src/lib/workflow/engine.ts) unconditionally sets
+-- updated_at on every transition for every entity kind it manages.
+ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 CREATE INDEX IF NOT EXISTS idx_leave_requests_employee ON leave_requests(employee_id);
 CREATE INDEX IF NOT EXISTS idx_leave_requests_dates ON leave_requests(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_leave_requests_payroll_period ON leave_requests(payroll_period_id);

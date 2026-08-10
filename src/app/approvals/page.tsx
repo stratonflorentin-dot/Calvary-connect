@@ -19,6 +19,7 @@ import {
 import type { EntityKind } from "@/lib/workflow/state-machines";
 import {
   AlertTriangle,
+  CalendarDays,
   CheckCircle2,
   ClipboardCheck,
   Flame,
@@ -47,6 +48,10 @@ const KIND_META: Record<
   expense: { label: "Expense", icon: Receipt, accent: "text-indigo-600 bg-indigo-50" },
   maintenance_request: { label: "Maintenance", icon: Wrench, accent: "text-sky-600 bg-sky-50" },
   trip: { label: "Trip", icon: ClipboardCheck, accent: "text-emerald-600 bg-emerald-50" },
+  // Leave has its own review surface at /hr/leave (no monetary amount to
+  // tier by, unlike the others this inbox aggregates) — this entry only
+  // satisfies EntityKind's exhaustiveness, this page doesn't fetch leave.
+  leave_request: { label: "Leave", icon: CalendarDays, accent: "text-violet-600 bg-violet-50" },
 };
 
 export default function ApprovalsInboxPage() {

@@ -21,7 +21,8 @@ export type AuditEntityType =
   | 'allowance' 
   | 'maintenance_request'
   | 'part'
-  | 'user';
+  | 'user'
+  | 'leave_request';
 
 export interface AuditLog {
   id?: string;
