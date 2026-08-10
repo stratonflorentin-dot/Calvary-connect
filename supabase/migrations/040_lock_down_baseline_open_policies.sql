@@ -84,76 +84,98 @@ ALTER TABLE delivery_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cash_requests ENABLE ROW LEVEL SECURITY;
 
 -- Finance / commercial
+DROP POLICY IF EXISTS sales_all ON sales;
 CREATE POLICY sales_all ON sales FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT','SALESMAN'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT','SALESMAN'));
+DROP POLICY IF EXISTS purchases_all ON purchases;
 CREATE POLICY purchases_all ON purchases FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT'));
+DROP POLICY IF EXISTS taxes_all ON taxes;
 CREATE POLICY taxes_all ON taxes FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT'));
+DROP POLICY IF EXISTS cash_requests_all ON cash_requests;
 CREATE POLICY cash_requests_all ON cash_requests FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT'));
+DROP POLICY IF EXISTS quotations_all ON quotations;
 CREATE POLICY quotations_all ON quotations FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','SALESMAN'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','SALESMAN'));
 
 -- Fleet / operations
+DROP POLICY IF EXISTS maintenance_requests_all ON maintenance_requests;
 CREATE POLICY maintenance_requests_all ON maintenance_requests FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'));
+DROP POLICY IF EXISTS spare_parts_all ON spare_parts;
 CREATE POLICY spare_parts_all ON spare_parts FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'));
+DROP POLICY IF EXISTS parts_requests_all ON parts_requests;
 CREATE POLICY parts_requests_all ON parts_requests FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'));
+DROP POLICY IF EXISTS vehicle_inspections_all ON vehicle_inspections;
 CREATE POLICY vehicle_inspections_all ON vehicle_inspections FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'));
+DROP POLICY IF EXISTS tire_tracking_all ON tire_tracking;
 CREATE POLICY tire_tracking_all ON tire_tracking FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','OPERATOR','MECHANIC'));
+DROP POLICY IF EXISTS delivery_notes_all ON delivery_notes;
 CREATE POLICY delivery_notes_all ON delivery_notes FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','OPERATOR','WAREHOUSE_STAFF'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','OPERATOR','WAREHOUSE_STAFF'));
+DROP POLICY IF EXISTS insurance_policies_all ON insurance_policies;
 CREATE POLICY insurance_policies_all ON insurance_policies FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT','OPERATOR'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT','OPERATOR'));
 
 -- HR
+DROP POLICY IF EXISTS allowances_all ON allowances;
 CREATE POLICY allowances_all ON allowances FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','HR','ACCOUNTANT'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','HR','ACCOUNTANT'));
+DROP POLICY IF EXISTS performance_reviews_all ON performance_reviews;
 CREATE POLICY performance_reviews_all ON performance_reviews FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','HR'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','HR'));
+DROP POLICY IF EXISTS attendance_logs_all ON attendance_logs;
 CREATE POLICY attendance_logs_all ON attendance_logs FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','HR'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','HR'));
+DROP POLICY IF EXISTS payroll_runs_all ON payroll_runs;
 CREATE POLICY payroll_runs_all ON payroll_runs FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','HR','ACCOUNTANT'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','HR','ACCOUNTANT'));
 -- Employees can see and submit their own leave; HR/CEO/ADMIN manage all.
 -- employee_id is confirmed from leave_requests' own CREATE TABLE statement
 -- (001-master-production-setup.sql).
+DROP POLICY IF EXISTS leave_requests_self ON leave_requests;
 CREATE POLICY leave_requests_self ON leave_requests FOR ALL
   USING (employee_id = auth.uid() OR current_user_role() IN ('CEO','ADMIN','HR'))
   WITH CHECK (employee_id = auth.uid() OR current_user_role() IN ('CEO','ADMIN','HR'));
 
 -- Org-wide reference data — broadly readable, HR/CEO/ADMIN write
+DROP POLICY IF EXISTS departments_read ON departments;
 CREATE POLICY departments_read ON departments FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS departments_write ON departments;
 CREATE POLICY departments_write ON departments FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','HR'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','HR'));
+DROP POLICY IF EXISTS meetings_read ON meetings;
 CREATE POLICY meetings_read ON meetings FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS meetings_write ON meetings;
 CREATE POLICY meetings_write ON meetings FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','HR'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','HR'));
 
 -- Generic reports table — unclear consumer, conservative default
+DROP POLICY IF EXISTS reports_all ON reports;
 CREATE POLICY reports_all ON reports FOR ALL
   USING (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT'))
   WITH CHECK (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT'));
