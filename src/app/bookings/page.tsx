@@ -224,27 +224,47 @@ function BookingsContent() {
     e.preventDefault();
     try {
       const bookingNumber = `BK-${Date.now().toString().slice(-8)}`;
-      
+
+      // bookings has no client-name/email/phone columns of its own — it
+      // links to customers via customer_id (see src/app/customers/page.tsx's
+      // own working insert for the customers column set this mirrors).
+      // Find-or-create by company_name so re-booking the same client
+      // doesn't spawn a duplicate customer row every time.
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('company_name', formData.clientName)
+        .maybeSingle();
+
+      let customerId = existingCustomer?.id;
+      if (!customerId) {
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            company_name: formData.clientName,
+            contact_person: formData.clientName,
+            email: formData.clientEmail || null,
+            phone: formData.clientPhone || null,
+          })
+          .select('id')
+          .single();
+        if (customerError) throw customerError;
+        customerId = newCustomer.id;
+      }
+
       const bookingData = {
         booking_number: bookingNumber,
-        clientName: formData.clientName,
-        clientEmail: formData.clientEmail,
-        clientPhone: formData.clientPhone,
-        serviceType: formData.serviceType,
-        vehicleType: formData.vehicleType,
-        origin: formData.origin,
-        destination: formData.destination,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        customer_id: customerId,
+        vehicle_requirement: formData.vehicleType || formData.serviceType,
+        pickup_location: formData.origin,
+        delivery_location: formData.destination,
+        pickup_date: formData.startDate,
+        delivery_date: formData.endDate || null,
         amount: formData.amount,
         currency: formData.currency,
         status: formData.status,
         notes: formData.notes,
         operations_review_status: 'pending',
-        pickup_location: formData.origin,
-        delivery_location: formData.destination,
-        pickup_date: formData.startDate,
-        delivery_date: formData.endDate,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
