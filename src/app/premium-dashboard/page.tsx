@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     Bell,
     ChartPie,
@@ -20,7 +20,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import {
     Table,
     TableBody,
@@ -30,135 +29,8 @@ import {
     TableRow,
     TableCaption,
 } from '@/components/ui/table';
-
-const kpis = [
-    {
-        title: 'Active Vehicles',
-        value: '128',
-        metric: '88% utilization',
-        accent: '#1976D2',
-        icon: Truck,
-    },
-    {
-        title: 'Monthly Revenue',
-        value: 'TZS 149.2M',
-        metric: '+14.8% vs last month',
-        accent: '#17A2B8',
-        icon: Wallet,
-    },
-    {
-        title: 'Fuel Expenses',
-        value: 'TZS 34.8M',
-        metric: '-6.1% savings',
-        accent: '#F9A825',
-        icon: Gauge,
-    },
-    {
-        title: 'Active Contracts',
-        value: '62',
-        metric: '4 new this week',
-        accent: '#2E7D32',
-        icon: FileText,
-    },
-];
-
-const routeTrend = [
-    { label: 'Jan', value: 82 },
-    { label: 'Feb', value: 94 },
-    { label: 'Mar', value: 105 },
-    { label: 'Apr', value: 118 },
-    { label: 'May', value: 143 },
-    { label: 'Jun', value: 132 },
-    { label: 'Jul', value: 152 },
-];
-
-const fuelTrend = [
-    { label: 'Jan', value: 36 },
-    { label: 'Feb', value: 32 },
-    { label: 'Mar', value: 30 },
-    { label: 'Apr', value: 28 },
-    { label: 'May', value: 26 },
-    { label: 'Jun', value: 24 },
-    { label: 'Jul', value: 22 },
-];
-
-const expenseBreakdown = [
-    { label: 'Fuel', value: 42, color: '#1976D2' },
-    { label: 'Maintenance', value: 26, color: '#17A2B8' },
-    { label: 'Labor', value: 18, color: '#F9A825' },
-    { label: 'Insurance', value: 9, color: '#2E7D32' },
-    { label: 'Other', value: 5, color: '#D32F2F' },
-];
-
-const recentContracts = [
-    {
-        id: 'CX-2101',
-        partner: 'East Africa Logistics',
-        type: 'Freight',
-        status: 'Active',
-        value: 'TZS 46.4M',
-        due: 'Sep 18',
-    },
-    {
-        id: 'CX-2104',
-        partner: 'Nairobi Transit',
-        type: 'Partial Load',
-        status: 'Pending',
-        value: 'TZS 18.7M',
-        due: 'Aug 30',
-    },
-    {
-        id: 'CX-2110',
-        partner: 'Rwanda Express',
-        type: 'Cross-Border',
-        status: 'Active',
-        value: 'TZS 29.3M',
-        due: 'Oct 12',
-    },
-    {
-        id: 'CX-2115',
-        partner: 'Kigali Cargo',
-        type: 'Dry Van',
-        status: 'Delayed',
-        value: 'TZS 8.1M',
-        due: 'Aug 22',
-    },
-];
-
-const fleetRows = [
-    {
-        vehicle: 'TRK-519',
-        driver: 'Moses K.',
-        location: 'Dar es Salaam',
-        status: 'Active',
-        fuel: 78,
-        updated: '12 min ago',
-    },
-    {
-        vehicle: 'TRK-423',
-        driver: 'Amina N.',
-        location: 'Mwanza',
-        status: 'Maintenance',
-        fuel: 42,
-        updated: '34 min ago',
-    },
-    {
-        vehicle: 'TRK-332',
-        driver: 'David L.',
-        location: 'Morogoro',
-        status: 'Idle',
-        fuel: 61,
-        updated: '47 min ago',
-    },
-    {
-        vehicle: 'TRK-601',
-        driver: 'Grace T.',
-        location: 'Dodoma',
-        status: 'Delayed',
-        fuel: 19,
-        updated: '6 min ago',
-    },
-];
+import { supabase } from '@/lib/supabase';
+import { useCurrency } from '@/hooks/use-currency';
 
 const navItems = [
     { label: 'Overview', icon: Layers, active: true },
@@ -169,52 +41,235 @@ const navItems = [
     { label: 'Safety', icon: ShieldCheck },
 ];
 
-const insightCards = [
-    {
-        title: 'Optimize fuel usage',
-        description: 'Route consolidation can reduce fuel spend by 14% for long-haul lanes.',
-        label: 'Recommendation',
-        color: '#17A2B8',
-    },
-    {
-        title: 'Driver readiness alert',
-        description: '3 vehicles need preventive maintenance before next dispatch.',
-        label: 'Alert',
-        color: '#F9A825',
-    },
-    {
-        title: 'Contract renewal',
-        description: 'East Africa Logistics contract renews in 22 days.',
-        label: 'Action',
-        color: '#1976D2',
-    },
-];
-
 function statusBadge(status: string) {
     const variants: Record<string, string> = {
-        Active: 'bg-[#E8F3FF] text-[#1976D2] border-[#B1D4FF]',
-        Idle: 'bg-[#F3F7FB] text-[#6B778C] border-[#DCE2EE]',
-        Maintenance: 'bg-[#E8F6EF] text-[#2E7D32] border-[#B8E0C5]',
-        Delayed: 'bg-[#FDECEA] text-[#D32F2F] border-[#F8C6C3]',
-        Pending: 'bg-[#FFF7E8] text-[#F9A825] border-[#F4DEA6]',
+        active: 'bg-[#E8F3FF] text-[#1976D2] border-[#B1D4FF]',
+        available: 'bg-[#E8F3FF] text-[#1976D2] border-[#B1D4FF]',
+        idle: 'bg-[#F3F7FB] text-[#6B778C] border-[#DCE2EE]',
+        in_use: 'bg-[#E8F6EF] text-[#2E7D32] border-[#B8E0C5]',
+        maintenance: 'bg-[#FFF7E8] text-[#F9A825] border-[#F4DEA6]',
+        repair: 'bg-[#FDECEA] text-[#D32F2F] border-[#F8C6C3]',
+        delayed: 'bg-[#FDECEA] text-[#D32F2F] border-[#F8C6C3]',
+        pending: 'bg-[#FFF7E8] text-[#F9A825] border-[#F4DEA6]',
+        draft: 'bg-[#F3F7FB] text-[#6B778C] border-[#DCE2EE]',
+        expired: 'bg-[#FDECEA] text-[#D32F2F] border-[#F8C6C3]',
     };
 
-    return variants[status] ?? 'bg-[#F3F5F9] text-[#6B778C] border-[#DCE2EE]';
+    return variants[status?.toLowerCase()] ?? 'bg-[#F3F5F9] text-[#6B778C] border-[#DCE2EE]';
+}
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function lastNMonths(n: number) {
+    const now = new Date();
+    return Array.from({ length: n }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1);
+        return { year: d.getFullYear(), month: d.getMonth(), label: MONTH_LABELS[d.getMonth()] };
+    });
+}
+
+interface ContractRow {
+    id: string;
+    contract_number: string;
+    partner: string;
+    status: string;
+    contract_value: number;
+    currency: string;
+    end_date: string | null;
+}
+
+interface FleetRow {
+    id: string;
+    plate_number: string;
+    status: string;
+    driver_name: string | null;
 }
 
 function PremiumDashboard() {
+    const { format } = useCurrency();
     const [searchQuery, setSearchQuery] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    const [vehicleCount, setVehicleCount] = useState(0);
+    const [activeVehicleCount, setActiveVehicleCount] = useState(0);
+    const [monthRevenue, setMonthRevenue] = useState(0);
+    const [monthFuelCost, setMonthFuelCost] = useState(0);
+    const [prevMonthFuelCost, setPrevMonthFuelCost] = useState(0);
+    const [activeContractCount, setActiveContractCount] = useState(0);
+    const [newContractsThisWeek, setNewContractsThisWeek] = useState(0);
+    const [routeTrend, setRouteTrend] = useState<{ label: string; value: number }[]>([]);
+    const [fuelTrend, setFuelTrend] = useState<{ label: string; value: number }[]>([]);
+    const [expenseBreakdown, setExpenseBreakdown] = useState<{ label: string; value: number; color: string }[]>([]);
+    const [contracts, setContracts] = useState<ContractRow[]>([]);
+    const [fleetRows, setFleetRows] = useState<FleetRow[]>([]);
+    const [maintenanceDueCount, setMaintenanceDueCount] = useState(0);
+    const [idleVehicleCount, setIdleVehicleCount] = useState(0);
+    const [expiringContracts, setExpiringContracts] = useState(0);
+    const [overdueInvoices, setOverdueInvoices] = useState(0);
+    const [pendingCashRequests, setPendingCashRequests] = useState(0);
+
+    useEffect(() => {
+        (async () => {
+            setLoading(true);
+            const months = lastNMonths(7);
+            const rangeStart = new Date(months[0].year, months[0].month, 1).toISOString();
+            const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+            const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+            const in30Days = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+            const today = new Date().toISOString().slice(0, 10);
+
+            const [
+                vehiclesRes,
+                tripsRes,
+                costsRes,
+                contractsRes,
+                invoicesRes,
+                cashRequestsRes,
+            ] = await Promise.all([
+                supabase.from('vehicles').select('id, plate_number, status, current_driver_id'),
+                supabase.from('trips').select('id, revenue, price, created_at').gte('created_at', rangeStart),
+                supabase.from('vehicle_costs').select('cost_type, amount, date').gte('date', rangeStart.slice(0, 10)),
+                supabase.from('transport_contracts').select('id, contract_number, status, contract_value, currency, end_date, created_at, customers(company_name)').order('created_at', { ascending: false }).limit(6),
+                supabase.from('invoices').select('id, status, due_date').lt('due_date', today).neq('status', 'paid'),
+                supabase.from('cash_requests').select('id, status').eq('status', 'pending'),
+            ]);
+
+            const vehicles = vehiclesRes.data ?? [];
+            setVehicleCount(vehicles.length);
+            setActiveVehicleCount(vehicles.filter((v: any) => v.status === 'available' || v.status === 'in_use').length);
+            setMaintenanceDueCount(vehicles.filter((v: any) => v.status === 'maintenance' || v.status === 'repair').length);
+            setIdleVehicleCount(vehicles.filter((v: any) => v.status === 'available').length);
+
+            const driverIds = Array.from(new Set(vehicles.map((v: any) => v.current_driver_id).filter(Boolean)));
+            const { data: drivers } = driverIds.length > 0
+                ? await supabase.from('user_profiles').select('id, name').in('id', driverIds)
+                : { data: [] as any[] };
+            const driverNameById = new Map((drivers ?? []).map((d: any) => [d.id, d.name]));
+            setFleetRows(
+                vehicles.slice(0, 6).map((v: any) => ({
+                    id: v.id,
+                    plate_number: v.plate_number,
+                    status: v.status,
+                    driver_name: v.current_driver_id ? driverNameById.get(v.current_driver_id) ?? null : null,
+                })),
+            );
+
+            const trips = tripsRes.data ?? [];
+            const routeByMonth = months.map(({ year, month, label }) => ({
+                label,
+                value: trips.filter((t: any) => {
+                    const d = new Date(t.created_at);
+                    return d.getFullYear() === year && d.getMonth() === month;
+                }).length,
+            }));
+            setRouteTrend(routeByMonth);
+            setMonthRevenue(
+                trips
+                    .filter((t: any) => new Date(t.created_at) >= new Date(monthStart))
+                    .reduce((s: number, t: any) => s + Number(t.revenue ?? t.price ?? 0), 0),
+            );
+
+            const costs = costsRes.data ?? [];
+            const fuelCosts = costs.filter((c: any) => c.cost_type === 'fuel');
+            const fuelByMonth = months.map(({ year, month, label }) => ({
+                label,
+                value: fuelCosts
+                    .filter((c: any) => {
+                        const d = new Date(c.date);
+                        return d.getFullYear() === year && d.getMonth() === month;
+                    })
+                    .reduce((s: number, c: any) => s + Number(c.amount || 0), 0),
+            }));
+            setFuelTrend(fuelByMonth);
+
+            const thisMonthCosts = costs.filter((c: any) => new Date(c.date) >= new Date(monthStart));
+            setMonthFuelCost(thisMonthCosts.filter((c: any) => c.cost_type === 'fuel').reduce((s: number, c: any) => s + Number(c.amount || 0), 0));
+            const prevMonthStart = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+            const prevMonthEnd = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+            setPrevMonthFuelCost(
+                costs
+                    .filter((c: any) => c.cost_type === 'fuel' && new Date(c.date) >= prevMonthStart && new Date(c.date) < prevMonthEnd)
+                    .reduce((s: number, c: any) => s + Number(c.amount || 0), 0),
+            );
+
+            const totalThisMonth = thisMonthCosts.reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
+            const byType = new Map<string, number>();
+            for (const c of thisMonthCosts) byType.set(c.cost_type, (byType.get(c.cost_type) ?? 0) + Number(c.amount || 0));
+            const typeColors: Record<string, string> = { fuel: '#1976D2', maintenance: '#17A2B8', tyre: '#F9A825', insurance: '#2E7D32', other: '#D32F2F' };
+            setExpenseBreakdown(
+                Array.from(byType.entries())
+                    .map(([label, value]) => ({ label, value: totalThisMonth > 0 ? Math.round((value / totalThisMonth) * 100) : 0, color: typeColors[label] ?? '#6B778C' }))
+                    .sort((a, b) => b.value - a.value),
+            );
+
+            const contractRows = contractsRes.data ?? [];
+            setContracts(
+                contractRows.map((c: any) => ({
+                    id: c.id,
+                    contract_number: c.contract_number,
+                    partner: c.customers?.company_name ?? 'Unknown',
+                    status: c.status,
+                    contract_value: Number(c.contract_value || 0),
+                    currency: c.currency ?? 'TZS',
+                    end_date: c.end_date,
+                })),
+            );
+            setActiveContractCount(contractRows.filter((c: any) => c.status === 'active').length);
+            setNewContractsThisWeek(contractRows.filter((c: any) => new Date(c.created_at) >= new Date(weekAgo)).length);
+            setExpiringContracts(contractRows.filter((c: any) => c.end_date && c.end_date <= in30Days && c.end_date >= today).length);
+
+            setOverdueInvoices((invoicesRes.data ?? []).length);
+            setPendingCashRequests((cashRequestsRes.data ?? []).length);
+
+            setLoading(false);
+        })();
+    }, []);
+
     const filteredContracts = useMemo(
         () =>
-            recentContracts.filter((contract) =>
+            contracts.filter((contract) =>
                 contract.partner.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                contract.id.toLowerCase().includes(searchQuery.toLowerCase())
+                contract.contract_number.toLowerCase().includes(searchQuery.toLowerCase())
             ),
-        [searchQuery]
+        [contracts, searchQuery]
     );
 
-    const maxRoute = Math.max(...routeTrend.map((point) => point.value));
-    const maxFuel = Math.max(...fuelTrend.map((point) => point.value));
+    const maxRoute = Math.max(1, ...routeTrend.map((point) => point.value));
+    const maxFuel = Math.max(1, ...fuelTrend.map((point) => point.value));
+    const fuelTrendPct = prevMonthFuelCost > 0 ? Math.round(((monthFuelCost - prevMonthFuelCost) / prevMonthFuelCost) * 100) : 0;
+    const utilizationPct = vehicleCount > 0 ? Math.round((activeVehicleCount / vehicleCount) * 100) : 0;
+
+    const kpis = [
+        { title: 'Active Vehicles', value: String(activeVehicleCount), metric: `${utilizationPct}% utilization`, accent: '#1976D2', icon: Truck },
+        { title: 'Monthly Revenue', value: format(monthRevenue), metric: 'This month, from trips', accent: '#17A2B8', icon: Wallet },
+        { title: 'Fuel Expenses', value: format(monthFuelCost), metric: fuelTrendPct === 0 ? 'Flat vs last month' : `${fuelTrendPct > 0 ? '+' : ''}${fuelTrendPct}% vs last month`, accent: '#F9A825', icon: Gauge },
+        { title: 'Active Contracts', value: String(activeContractCount), metric: `${newContractsThisWeek} new this week`, accent: '#2E7D32', icon: FileText },
+    ];
+
+    const insightCards = [
+        {
+            title: 'Fuel spend trend',
+            description: fuelTrendPct <= 0
+                ? `Fuel costs are down ${Math.abs(fuelTrendPct)}% vs last month.`
+                : `Fuel costs are up ${fuelTrendPct}% vs last month — worth a look.`,
+            label: fuelTrendPct <= 0 ? 'On track' : 'Watch',
+            color: fuelTrendPct <= 0 ? '#2E7D32' : '#F9A825',
+        },
+        {
+            title: 'Maintenance backlog',
+            description: `${maintenanceDueCount} vehicle${maintenanceDueCount === 1 ? '' : 's'} currently in maintenance or repair.`,
+            label: maintenanceDueCount > 0 ? 'Alert' : 'Clear',
+            color: maintenanceDueCount > 0 ? '#F9A825' : '#2E7D32',
+        },
+        {
+            title: 'Contract renewals',
+            description: expiringContracts > 0
+                ? `${expiringContracts} contract${expiringContracts === 1 ? '' : 's'} expiring within 30 days.`
+                : 'No contracts expiring in the next 30 days.',
+            label: expiringContracts > 0 ? 'Action' : 'Clear',
+            color: expiringContracts > 0 ? '#1976D2' : '#2E7D32',
+        },
+    ];
 
     return (
         <div className="min-h-screen bg-[#F3F5F9] text-[#243041]">
@@ -253,16 +308,6 @@ function PremiumDashboard() {
                             );
                         })}
                     </nav>
-
-                    <div className="mt-10 rounded-[16px] border border-white/10 bg-white/5 p-5">
-                        <div className="flex items-center justify-between text-sm text-[#A2B1D1]">
-                            <span>Realtime uptime</span>
-                            <span>99.8%</span>
-                        </div>
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                            <div className="h-full w-11/12 rounded-full bg-[#17A2B8]" />
-                        </div>
-                    </div>
                 </aside>
 
                 <main className="p-6">
@@ -273,7 +318,7 @@ function PremiumDashboard() {
                                 Premium Fleet Command Center
                             </h1>
                             <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6B778C]">
-                                Monitor route performance, fuel spend, contracts and AI recommendations for your logistics enterprise.
+                                Monitor route performance, fuel spend, contracts and live fleet status for your logistics enterprise.
                             </p>
                         </div>
 
@@ -282,7 +327,7 @@ function PremiumDashboard() {
                                 <Search className="text-[#6B778C]" />
                                 <input
                                     type="search"
-                                    placeholder="Search contracts, vehicles or routes"
+                                    placeholder="Search contracts by number or partner"
                                     value={searchQuery}
                                     onChange={(event) => setSearchQuery(event.target.value)}
                                     className="ml-3 w-full border-none bg-transparent text-sm text-[#243041] outline-none placeholder:text-[#A2B1D1]"
@@ -312,7 +357,7 @@ function PremiumDashboard() {
                                             <div className="flex items-center justify-between gap-3">
                                                 <div className="space-y-1">
                                                     <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#6B778C]">{item.title}</p>
-                                                    <p className="text-3xl font-semibold text-[#243041]">{item.value}</p>
+                                                    <p className="text-3xl font-semibold text-[#243041]">{loading ? '—' : item.value}</p>
                                                 </div>
                                                 <div className="flex h-12 w-12 items-center justify-center rounded-3xl" style={{ backgroundColor: `${item.accent}1A` }}>
                                                     <Icon className="h-5 w-5" style={{ color: item.accent }} />
@@ -329,12 +374,11 @@ function PremiumDashboard() {
                             <CardHeader className="p-6">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
-                                        <CardTitle className="text-2xl">AI Insights</CardTitle>
+                                        <CardTitle className="text-2xl">Fleet Insights</CardTitle>
                                         <CardDescription className="mt-2 text-sm text-[#6B778C]">
-                                            Actionable recommendations generated for your fleet and contract operations.
+                                            Live conditions computed from current fleet and contract data.
                                         </CardDescription>
                                     </div>
-                                    <Button className="h-11 rounded-[14px] bg-[#1976D2] px-4 text-white hover:bg-[#155FA3]">Run analysis</Button>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4 p-6 pt-0">
@@ -365,12 +409,9 @@ function PremiumDashboard() {
                                     <div>
                                         <CardTitle className="text-2xl">Route Analytics</CardTitle>
                                         <CardDescription className="mt-2 text-sm text-[#6B778C]">
-                                            Weekly route efficiency and planned vs actual lane performance.
+                                            Trips created per month, last 7 months.
                                         </CardDescription>
                                     </div>
-                                    <Button variant="outline" className="h-11 rounded-[14px] px-4 text-[#1976D2] border-[#DCE2EE] hover:bg-[#F3F5F9]">
-                                        Full report
-                                    </Button>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-6 pt-0">
@@ -382,42 +423,51 @@ function PremiumDashboard() {
                                                 <stop offset="100%" stopColor="#1976D2" stopOpacity="0" />
                                             </linearGradient>
                                         </defs>
-                                        <path
-                                            d={routeTrend
-                                                .map((point, index) => {
+                                        {routeTrend.length > 0 && (
+                                            <>
+                                                <path
+                                                    d={routeTrend
+                                                        .map((point, index) => {
+                                                            const x = 90 + index * 90;
+                                                            const y = 240 - (point.value / maxRoute) * 200;
+                                                            return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                                                        })
+                                                        .join(' ')}
+                                                    fill="none"
+                                                    stroke="#1976D2"
+                                                    strokeWidth="4"
+                                                    strokeLinecap="round"
+                                                />
+                                                <path
+                                                    d={`${routeTrend
+                                                        .map((point, index) => {
+                                                            const x = 90 + index * 90;
+                                                            const y = 240 - (point.value / maxRoute) * 200;
+                                                            return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+                                                        })
+                                                        .join(' ')} L 650 240 L 90 240 Z`}
+                                                    fill="url(#route-gradient)"
+                                                    opacity="0.8"
+                                                />
+                                                {routeTrend.map((point, index) => {
                                                     const x = 90 + index * 90;
                                                     const y = 240 - (point.value / maxRoute) * 200;
-                                                    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                                })
-                                                .join(' ')}
-                                            fill="none"
-                                            stroke="#1976D2"
-                                            strokeWidth="4"
-                                            strokeLinecap="round"
-                                        />
-                                        <path
-                                            d={`${routeTrend
-                                                .map((point, index) => {
-                                                    const x = 90 + index * 90;
-                                                    const y = 240 - (point.value / maxRoute) * 200;
-                                                    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                                })
-                                                .join(' ')} L 650 240 L 90 240 Z`}
-                                            fill="url(#route-gradient)"
-                                            opacity="0.8"
-                                        />
-                                        {routeTrend.map((point, index) => {
-                                            const x = 90 + index * 90;
-                                            const y = 240 - (point.value / maxRoute) * 200;
-                                            return (
-                                                <circle key={point.label} cx={x} cy={y} r="7" fill="#1976D2" stroke="#ffffff" strokeWidth="3" />
-                                            );
-                                        })}
+                                                    return (
+                                                        <circle key={point.label} cx={x} cy={y} r="7" fill="#1976D2" stroke="#ffffff" strokeWidth="3" />
+                                                    );
+                                                })}
+                                                {routeTrend.map((point, index) => (
+                                                    <text key={`${point.label}-label`} x={90 + index * 90} y="256" textAnchor="middle" className="text-xs fill-[#6B778C]">
+                                                        {point.label}
+                                                    </text>
+                                                ))}
+                                            </>
+                                        )}
                                         <text x="44" y="40" className="text-xs fill-[#6B778C]">
-                                            Total routes
+                                            Total trips (7 mo)
                                         </text>
                                         <text x="44" y="64" className="text-2xl fill-[#243041] font-semibold">
-                                            1,420
+                                            {routeTrend.reduce((s, p) => s + p.value, 0)}
                                         </text>
                                     </svg>
                                 </div>
@@ -430,7 +480,7 @@ function PremiumDashboard() {
                                     <div>
                                         <CardTitle className="text-2xl">Fuel Consumption</CardTitle>
                                         <CardDescription className="mt-2 text-sm text-[#6B778C]">
-                                            Monthly fuel burn per route segment, trending downward.
+                                            Monthly fuel spend, last 7 months.
                                         </CardDescription>
                                     </div>
                                 </CardHeader>
@@ -445,7 +495,7 @@ function PremiumDashboard() {
                                                         style={{ width: `${(point.value / maxFuel) * 100}%` }}
                                                     />
                                                 </div>
-                                                <span className="w-10 text-right font-semibold text-[#243041]">{point.value}%</span>
+                                                <span className="w-24 text-right font-semibold text-[#243041]">{format(point.value)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -457,22 +507,26 @@ function PremiumDashboard() {
                                     <div>
                                         <CardTitle className="text-2xl">Expense Breakdown</CardTitle>
                                         <CardDescription className="mt-2 text-sm text-[#6B778C]">
-                                            Relative cost distribution for the current month.
+                                            Vehicle cost distribution for the current month.
                                         </CardDescription>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4 p-6 pt-0">
-                                    {expenseBreakdown.map((item) => (
-                                        <div key={item.label} className="space-y-2">
-                                            <div className="flex items-center justify-between text-sm text-[#243041]">
-                                                <span>{item.label}</span>
-                                                <span>{item.value}%</span>
+                                    {expenseBreakdown.length === 0 ? (
+                                        <p className="text-sm text-[#6B778C]">No vehicle costs recorded this month.</p>
+                                    ) : (
+                                        expenseBreakdown.map((item) => (
+                                            <div key={item.label} className="space-y-2">
+                                                <div className="flex items-center justify-between text-sm text-[#243041] capitalize">
+                                                    <span>{item.label}</span>
+                                                    <span>{item.value}%</span>
+                                                </div>
+                                                <div className="h-3 overflow-hidden rounded-full bg-[#F3F5F9]">
+                                                    <div style={{ width: `${item.value}%`, backgroundColor: item.color }} className="h-full rounded-full" />
+                                                </div>
                                             </div>
-                                            <div className="h-3 overflow-hidden rounded-full bg-[#F3F5F9]">
-                                                <div style={{ width: `${item.value}%`, backgroundColor: item.color }} className="h-full rounded-full" />
-                                            </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </CardContent>
                             </Card>
                         </div>
@@ -485,11 +539,11 @@ function PremiumDashboard() {
                                     <div>
                                         <CardTitle className="text-2xl">Recent Contracts</CardTitle>
                                         <CardDescription className="mt-2 text-sm text-[#6B778C]">
-                                            Active agreements and renewal schedule for your logistics partners.
+                                            Latest transport contracts and renewal schedule.
                                         </CardDescription>
                                     </div>
-                                    <Button variant="outline" className="h-11 rounded-[14px] px-4 text-[#1976D2] border-[#DCE2EE] hover:bg-[#F3F5F9]">
-                                        View all
+                                    <Button variant="outline" className="h-11 rounded-[14px] px-4 text-[#1976D2] border-[#DCE2EE] hover:bg-[#F3F5F9]" asChild>
+                                        <a href="/sales?tab=contracts">View all</a>
                                     </Button>
                                 </div>
                             </CardHeader>
@@ -501,25 +555,25 @@ function PremiumDashboard() {
                                             <TableHead>Partner</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Value</TableHead>
-                                            <TableHead>Due</TableHead>
+                                            <TableHead>Ends</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredContracts.map((contract) => (
                                             <TableRow key={contract.id}>
-                                                <TableCell className="font-semibold">{contract.id}</TableCell>
+                                                <TableCell className="font-semibold">{contract.contract_number}</TableCell>
                                                 <TableCell>{contract.partner}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant="outline" className={`${statusBadge(contract.status)} border text-xs font-semibold`}>
+                                                    <Badge variant="outline" className={`${statusBadge(contract.status)} border text-xs font-semibold capitalize`}>
                                                         {contract.status}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell>{contract.value}</TableCell>
-                                                <TableCell>{contract.due}</TableCell>
+                                                <TableCell>{format(contract.contract_value)}</TableCell>
+                                                <TableCell>{contract.end_date ?? '—'}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
-                                    <TableCaption>Filtered by contract search</TableCaption>
+                                    {filteredContracts.length === 0 && <TableCaption>No contracts found.</TableCaption>}
                                 </Table>
                             </CardContent>
                         </Card>
@@ -529,35 +583,28 @@ function PremiumDashboard() {
                                 <div>
                                     <CardTitle className="text-2xl">Fleet Status</CardTitle>
                                     <CardDescription className="mt-2 text-sm text-[#6B778C]">
-                                        Real-time overview of vehicle health, fuel levels and dispatcher status.
+                                        Live vehicle status and current driver assignment.
                                     </CardDescription>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-5 p-6 pt-0">
-                                {fleetRows.map((row) => (
-                                    <div key={row.vehicle} className="rounded-[16px] border border-[#E8EBF4] bg-[#F8FBFF] p-4">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div>
-                                                <p className="text-sm font-semibold text-[#243041]">{row.vehicle} • {row.driver}</p>
-                                                <p className="text-xs text-[#6B778C]">{row.location}</p>
-                                            </div>
-                                            <Badge variant="outline" className={`${statusBadge(row.status)} text-xs font-semibold`}>
-                                                {row.status}
-                                            </Badge>
-                                        </div>
-                                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <p className="text-xs uppercase tracking-[0.2em] text-[#6B778C]">Fuel level</p>
-                                                <Progress value={row.fuel} />
-                                                <p className="text-sm font-semibold text-[#243041]">{row.fuel}% available</p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <p className="text-xs uppercase tracking-[0.2em] text-[#6B778C]">Last updated</p>
-                                                <p className="text-sm font-semibold text-[#243041]">{row.updated}</p>
+                                {fleetRows.length === 0 ? (
+                                    <p className="text-sm text-[#6B778C]">No vehicles yet.</p>
+                                ) : (
+                                    fleetRows.map((row) => (
+                                        <div key={row.id} className="rounded-[16px] border border-[#E8EBF4] bg-[#F8FBFF] p-4">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-sm font-semibold text-[#243041]">{row.plate_number}</p>
+                                                    <p className="text-xs text-[#6B778C]">{row.driver_name ?? 'Unassigned'}</p>
+                                                </div>
+                                                <Badge variant="outline" className={`${statusBadge(row.status)} text-xs font-semibold capitalize`}>
+                                                    {row.status}
+                                                </Badge>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </CardContent>
                         </Card>
                     </section>
@@ -574,20 +621,20 @@ function PremiumDashboard() {
                             <div className="mt-6 space-y-4">
                                 <div className="flex items-center justify-between gap-4 rounded-[16px] border border-[#DCE2EE] bg-[#F3F5F9] p-4">
                                     <div>
-                                        <p className="text-sm font-semibold text-[#243041]">Safety review due</p>
-                                        <p className="text-sm text-[#6B778C]">3 drivers require paperwork verification.</p>
+                                        <p className="text-sm font-semibold text-[#243041]">Maintenance backlog</p>
+                                        <p className="text-sm text-[#6B778C]">{maintenanceDueCount} vehicle{maintenanceDueCount === 1 ? '' : 's'} in maintenance or repair.</p>
                                     </div>
-                                    <Button size="sm" variant="outline" className="rounded-[14px] border-[#DCE2EE] text-[#243041] hover:bg-[#F3F5F9]">
-                                        Review
+                                    <Button size="sm" variant="outline" className="rounded-[14px] border-[#DCE2EE] text-[#243041] hover:bg-[#F3F5F9]" asChild>
+                                        <a href="/maintenance">Review</a>
                                     </Button>
                                 </div>
                                 <div className="flex items-center justify-between gap-4 rounded-[16px] border border-[#DCE2EE] bg-[#F3F5F9] p-4">
                                     <div>
-                                        <p className="text-sm font-semibold text-[#243041]">Idle asset optimization</p>
-                                        <p className="text-sm text-[#6B778C]">5 vehicles idle over 8 hours. Recommend reassignment.</p>
+                                        <p className="text-sm font-semibold text-[#243041]">Available vehicles</p>
+                                        <p className="text-sm text-[#6B778C]">{idleVehicleCount} vehicle{idleVehicleCount === 1 ? '' : 's'} available for dispatch.</p>
                                     </div>
-                                    <Button size="sm" variant="outline" className="rounded-[14px] border-[#DCE2EE] text-[#243041] hover:bg-[#F3F5F9]">
-                                        Assign
+                                    <Button size="sm" variant="outline" className="rounded-[14px] border-[#DCE2EE] text-[#243041] hover:bg-[#F3F5F9]" asChild>
+                                        <a href="/dispatch">Dispatch</a>
                                     </Button>
                                 </div>
                             </div>
@@ -602,26 +649,26 @@ function PremiumDashboard() {
                                 <AlertTriangle className="h-6 w-6 text-[#D32F2F]" />
                             </div>
                             <div className="mt-6 space-y-4 text-sm text-[#6B778C]">
-                                <div className="flex items-center justify-between rounded-[16px] border border-[#DCE2EE] bg-[#F8FBFF] p-4">
+                                <div className={`flex items-center justify-between rounded-[16px] border border-[#DCE2EE] p-4 ${overdueInvoices > 0 ? 'bg-[#FDECEA]' : 'bg-[#F8FBFF]'}`}>
                                     <div>
-                                        <p className="font-semibold text-[#243041]">On-time payments</p>
-                                        <p>95% of invoices paid within 7 days.</p>
+                                        <p className="font-semibold text-[#243041]">Overdue invoices</p>
+                                        <p>{overdueInvoices} invoice{overdueInvoices === 1 ? '' : 's'} past due date, unpaid.</p>
                                     </div>
-                                    <span className="text-sm font-semibold text-[#2E7D32]">Stable</span>
+                                    <span className={`text-sm font-semibold ${overdueInvoices > 0 ? 'text-[#D32F2F]' : 'text-[#2E7D32]'}`}>{overdueInvoices > 0 ? 'Urgent' : 'Clear'}</span>
                                 </div>
-                                <div className="flex items-center justify-between rounded-[16px] border border-[#DCE2EE] bg-[#FFF6E5] p-4">
+                                <div className={`flex items-center justify-between rounded-[16px] border border-[#DCE2EE] p-4 ${pendingCashRequests > 0 ? 'bg-[#FFF6E5]' : 'bg-[#F8FBFF]'}`}>
                                     <div>
-                                        <p className="font-semibold text-[#243041]">Fuel reserve</p>
-                                        <p>Remaining budget is on track for Q3.</p>
+                                        <p className="font-semibold text-[#243041]">Pending cash requests</p>
+                                        <p>{pendingCashRequests} request{pendingCashRequests === 1 ? '' : 's'} awaiting approval.</p>
                                     </div>
-                                    <span className="text-sm font-semibold text-[#F9A825]">Watch</span>
+                                    <span className={`text-sm font-semibold ${pendingCashRequests > 0 ? 'text-[#F9A825]' : 'text-[#2E7D32]'}`}>{pendingCashRequests > 0 ? 'Watch' : 'Clear'}</span>
                                 </div>
-                                <div className="flex items-center justify-between rounded-[16px] border border-[#DCE2EE] bg-[#FDECEA] p-4">
+                                <div className={`flex items-center justify-between rounded-[16px] border border-[#DCE2EE] p-4 ${expiringContracts > 0 ? 'bg-[#FDECEA]' : 'bg-[#F8FBFF]'}`}>
                                     <div>
                                         <p className="font-semibold text-[#243041]">Contract renewals</p>
-                                        <p>2 premium contracts require negotiation next month.</p>
+                                        <p>{expiringContracts} contract{expiringContracts === 1 ? '' : 's'} expiring within 30 days.</p>
                                     </div>
-                                    <span className="text-sm font-semibold text-[#D32F2F]">Urgent</span>
+                                    <span className={`text-sm font-semibold ${expiringContracts > 0 ? 'text-[#D32F2F]' : 'text-[#2E7D32]'}`}>{expiringContracts > 0 ? 'Urgent' : 'Clear'}</span>
                                 </div>
                             </div>
                         </Card>

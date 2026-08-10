@@ -210,6 +210,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "MECHANIC"],
     category: "dashboard",
   },
+  {
+    path: "/premium-dashboard",
+    label: "Executive Command Center",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "dashboard",
+  },
 
   // --- ERP Accounting & Finance ---
   {
