@@ -1,87 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Bell, ChevronRight, Menu, Sparkles, Truck, DollarSign, ClipboardList, AlertTriangle, MapPin, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Bell, Menu, Sparkles, Truck, DollarSign, ClipboardList, AlertTriangle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useCurrency } from '@/hooks/use-currency';
-
-const fallbackVehicles = [
-    {
-        plate: 'VH-001',
-        status: 'Available',
-        driver: 'RAPHAEL CLARENCE MALINGUMU',
-        route: 'Dar Port → Lusaka, Zambia',
-        statusColor: 'bg-success',
-        statusLabel: 'Available',
-    },
-    {
-        plate: 'VH-002',
-        status: 'In Use',
-        driver: 'STARA MPYAMBALA',
-        route: 'DSM → Kigali, Rwanda',
-        statusColor: 'bg-primary',
-        statusLabel: 'In Use',
-    },
-    {
-        plate: 'VH-003',
-        status: 'Maintenance Due',
-        driver: 'Unassigned',
-        route: 'Mwanza → Bujumbura, Burundi',
-        statusColor: 'bg-warning',
-        statusLabel: 'Review',
-    },
-];
-
-const fallbackShipments = [
-    {
-        shipment_number: 'SH-2026-0001',
-        route: 'DAR → LUSAKA',
-        driver: 'RAPHAEL MALINGUMU',
-        vehicle: 'VH-001',
-        status: 'Live',
-        progress: 64,
-    },
-    {
-        shipment_number: 'SH-2026-0002',
-        route: 'DSM → KIGALI',
-        driver: 'STARA MPYAMBALA',
-        vehicle: 'VH-002',
-        status: 'On Route',
-        progress: 48,
-    },
-    {
-        shipment_number: 'SH-2026-0003',
-        route: 'MWZ → BJM',
-        driver: 'Unassigned',
-        vehicle: 'VH-003',
-        status: 'Alert',
-        progress: 18,
-    },
-];
-
-const fallbackMaintenance = [
-    {
-        reference: 'MR-2026-0001',
-        vehicle: 'VH-001',
-        category: 'Post-trip',
-        priority: 'High',
-    },
-    {
-        reference: 'MR-2026-0002',
-        vehicle: 'VH-002',
-        category: 'Engine Check',
-        priority: 'Medium',
-    },
-    {
-        reference: 'MR-2026-0003',
-        vehicle: 'VH-003',
-        category: 'Trailer Inspection',
-        priority: 'High',
-    },
-];
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
+import { hydrateTrips } from '@/lib/trips/hydrate';
 
 const quickActions = [
     { label: 'New Trip', icon: MapPin, color: 'bg-primary/15 text-primary' },
@@ -92,27 +20,110 @@ const quickActions = [
     { label: 'AI Chat', icon: Sparkles, color: 'bg-info/15 text-info' },
 ];
 
+const VEHICLE_STATUS_STYLE: Record<string, { color: string; label: string }> = {
+    available: { color: 'bg-success', label: 'Available' },
+    in_use: { color: 'bg-primary', label: 'In Use' },
+    maintenance: { color: 'bg-warning', label: 'Maintenance' },
+    repair: { color: 'bg-destructive', label: 'Repair' },
+};
+
+interface LiveVehicle {
+    id: string;
+    plate_number: string;
+    status: string;
+    driver_name?: string | null;
+}
+
+interface TopShipment {
+    id: string;
+    trip_number?: string;
+    origin?: string;
+    destination?: string;
+    status: string;
+    driver_name?: string | null;
+    vehicle_plate?: string | null;
+}
+
+interface MaintenanceItem {
+    id: string;
+    record_number: string;
+    priority: string;
+    vehicle_plate?: string | null;
+}
+
 export default function MobileDashboardPage() {
-    const { stats, fleetStatus, actionableShipments, recentInvoices, expiringDocs, loading } = useDashboard();
+    const { stats, loading } = useDashboard();
     const { format } = useCurrency();
+    const { user } = useSupabase();
 
-    const topShipments = useMemo(() => {
-        if (!loading && actionableShipments.length > 0) {
-            return actionableShipments.slice(0, 3).map((item, index) => ({
-                ...item,
-                route: ['DAR → LUSAKA', 'DSM → KIGALI', 'MWZ → BJM'][index] ?? 'DSM → LUSAKA',
-                driver: ['RAPHAEL MALINGUMU', 'STARA MPYAMBALA', 'Unassigned'][index] ?? 'Unassigned',
-                vehicle: ['VH-001', 'VH-002', 'VH-003'][index] ?? 'VH-001',
-                progress: [72, 45, 20][index] ?? 32,
-            }));
-        }
-        return fallbackShipments;
-    }, [actionableShipments, loading]);
+    const [liveVehicles, setLiveVehicles] = useState<LiveVehicle[]>([]);
+    const [topShipments, setTopShipments] = useState<TopShipment[]>([]);
+    const [maintenanceItems, setMaintenanceItems] = useState<MaintenanceItem[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
 
-    const maintenanceItems = loading ? fallbackMaintenance : fallbackMaintenance;
-    const activeShipmentsCount = loading ? 3 : stats.activeShipments || 3;
-    const revenueValue = loading ? 51020000 : stats.revenueMtd || 51020000;
-    const vehiclesActive = loading ? '3/3' : `${stats.availableVehicles}/${stats.totalVehicles}`;
+    useEffect(() => {
+        (async () => {
+            const [vehiclesRes, tripsRes, maintenanceRes] = await Promise.all([
+                supabase.from('vehicles').select('id, plate_number, status, current_driver_id').limit(6),
+                supabase.from('trips').select('*').in('status', ['in_transit', 'loading']).order('created_at', { ascending: false }).limit(3),
+                supabase
+                    .from('maintenance_records')
+                    .select('id, record_number, priority, vehicle_id, vehicles(plate_number)')
+                    .in('status', ['requested', 'scheduled', 'in_progress'])
+                    .order('created_at', { ascending: false })
+                    .limit(3),
+            ]);
+
+            const driverIds = Array.from(new Set((vehiclesRes.data ?? []).map((v: any) => v.current_driver_id).filter(Boolean)));
+            const { data: drivers } = driverIds.length > 0
+                ? await supabase.from('user_profiles').select('id, name').in('id', driverIds)
+                : { data: [] as any[] };
+            const driverNameById = new Map((drivers ?? []).map((d: any) => [d.id, d.name]));
+            setLiveVehicles(
+                (vehiclesRes.data ?? []).map((v: any) => ({
+                    id: v.id,
+                    plate_number: v.plate_number,
+                    status: v.status,
+                    driver_name: v.current_driver_id ? driverNameById.get(v.current_driver_id) ?? null : null,
+                })),
+            );
+
+            const hydrated = tripsRes.data ? await hydrateTrips(tripsRes.data) : [];
+            setTopShipments(
+                hydrated.map((t: any) => ({
+                    id: t.id,
+                    trip_number: t.trip_number,
+                    origin: t.origin,
+                    destination: t.destination,
+                    status: t.status,
+                    driver_name: t.driver_name,
+                    vehicle_plate: t.vehicle_plate,
+                })),
+            );
+
+            setMaintenanceItems(
+                (maintenanceRes.data ?? []).map((m: any) => ({
+                    id: m.id,
+                    record_number: m.record_number,
+                    priority: m.priority,
+                    vehicle_plate: m.vehicles?.plate_number ?? null,
+                })),
+            );
+
+            if (user?.id) {
+                const { count } = await supabase
+                    .from('notifications')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .eq('is_read', false);
+                setUnreadCount(count ?? 0);
+            }
+        })();
+    }, [user?.id]);
+
+    const activeShipmentsCount = loading ? 0 : stats.activeShipments ?? 0;
+    const revenueValue = loading ? 0 : stats.revenueMtd ?? 0;
+    const vehiclesActive = loading ? '—' : `${stats.availableVehicles}/${stats.totalVehicles}`;
     const liveLabel = activeShipmentsCount > 0 ? `${activeShipmentsCount} Active Shipments` : 'No Active Shipments';
 
     return (
@@ -129,7 +140,11 @@ export default function MobileDashboardPage() {
                     <div className="flex items-center gap-3">
                         <button className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-slate-200 shadow-sm shadow-slate-950/40">
                             <Bell className="h-5 w-5" />
-                            <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">3</span>
+                            {unreadCount > 0 && (
+                                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                                    {unreadCount}
+                                </span>
+                            )}
                         </button>
                         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 border border-slate-800 text-slate-200">CC</div>
                     </div>
@@ -143,8 +158,8 @@ export default function MobileDashboardPage() {
                         <div className="absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-primary/20 blur-2xl" />
                         <div className="relative space-y-4">
                             <p className="text-sm text-primary-foreground/80">Good morning ☀️</p>
-                            <h2 className="text-3xl font-bold tracking-tight">Super Admin</h2>
-                            <p className="text-sm text-primary-foreground/90">3 Active Shipments Live</p>
+                            <h2 className="text-3xl font-bold tracking-tight">{user?.name?.split(' ')[0] ?? 'there'}</h2>
+                            <p className="text-sm text-primary-foreground/90">{liveLabel}</p>
                             <div className="grid grid-cols-2 gap-3 pt-3">
                                 <div className="rounded-3xl bg-white/10 p-4">
                                     <p className="text-xs uppercase tracking-[0.24em] text-slate-200/70">Revenue</p>
@@ -190,25 +205,33 @@ export default function MobileDashboardPage() {
                             <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Fleet</p>
                             <h3 className="text-lg font-semibold text-white">Live vehicle status</h3>
                         </div>
-                        <Button variant="ghost" className="text-slate-300">See All</Button>
+                        <Button variant="ghost" className="text-slate-300" asChild>
+                            <a href="/fleet">See All</a>
+                        </Button>
                     </div>
-                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                        {fallbackVehicles.map(vehicle => (
-                            <div key={vehicle.plate} className="min-w-[220px] rounded-3xl border border-slate-800 bg-slate-900 p-4 shadow-sm shadow-slate-950/20">
-                                <div className="flex items-center justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-white">{vehicle.plate}</p>
-                                        <p className="text-xs text-slate-400 mt-1">{vehicle.route}</p>
+                    {liveVehicles.length === 0 ? (
+                        <p className="text-sm text-slate-500 px-1">No vehicles yet.</p>
+                    ) : (
+                        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                            {liveVehicles.map(vehicle => {
+                                const meta = VEHICLE_STATUS_STYLE[vehicle.status] ?? { color: 'bg-muted', label: vehicle.status };
+                                return (
+                                    <div key={vehicle.id} className="min-w-[220px] rounded-3xl border border-slate-800 bg-slate-900 p-4 shadow-sm shadow-slate-950/20">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-white">{vehicle.plate_number}</p>
+                                            </div>
+                                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold text-slate-100 ${meta.color}`}>{meta.label}</span>
+                                        </div>
+                                        <div className="mt-4 flex items-center gap-3 text-sm text-slate-400">
+                                            <Truck className="h-4 w-4 text-primary" />
+                                            <span>{vehicle.driver_name ?? 'Unassigned'}</span>
+                                        </div>
                                     </div>
-                                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold text-slate-100 ${vehicle.statusColor}`}>{vehicle.statusLabel}</span>
-                                </div>
-                                <div className="mt-4 flex items-center gap-3 text-sm text-slate-400">
-                                    <Truck className="h-4 w-4 text-primary" />
-                                    <span>{vehicle.driver}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-3">
@@ -219,62 +242,61 @@ export default function MobileDashboardPage() {
                         </div>
                         <Badge className="bg-primary text-primary-foreground">{activeShipmentsCount}</Badge>
                     </div>
-                    <div className="space-y-3">
-                        {topShipments.map(shipment => (
-                            <Card key={shipment.shipment_number} className="rounded-3xl border border-slate-800 bg-slate-900 p-4 shadow-sm shadow-slate-950/20">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-white">{shipment.shipment_number}</p>
-                                        <p className="mt-1 text-xs text-slate-400">{shipment.route}</p>
+                    {topShipments.length === 0 ? (
+                        <p className="text-sm text-slate-500 px-1">No shipments in transit right now.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {topShipments.map(shipment => (
+                                <Card key={shipment.id} className="rounded-3xl border border-slate-800 bg-slate-900 p-4 shadow-sm shadow-slate-950/20">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-semibold text-white">{shipment.trip_number ?? shipment.id.slice(0, 8)}</p>
+                                            <p className="mt-1 text-xs text-slate-400">{shipment.origin} → {shipment.destination}</p>
+                                        </div>
+                                        <span className="rounded-2xl bg-slate-800 px-3 py-1 text-xs text-slate-300 capitalize">{shipment.status.replace('_', ' ')}</span>
                                     </div>
-                                    <span className="rounded-2xl bg-slate-800 px-3 py-1 text-xs text-slate-300">{shipment.status}</span>
-                                </div>
-                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                    <div className="rounded-2xl bg-slate-950/70 p-3 text-xs text-slate-400">
-                                        <p className="font-semibold text-slate-100">Driver</p>
-                                        <p className="mt-1">{shipment.driver}</p>
+                                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                        <div className="rounded-2xl bg-slate-950/70 p-3 text-xs text-slate-400">
+                                            <p className="font-semibold text-slate-100">Driver</p>
+                                            <p className="mt-1">{shipment.driver_name ?? 'Unassigned'}</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-slate-950/70 p-3 text-xs text-slate-400">
+                                            <p className="font-semibold text-slate-100">Vehicle</p>
+                                            <p className="mt-1">{shipment.vehicle_plate ?? 'Unassigned'}</p>
+                                        </div>
                                     </div>
-                                    <div className="rounded-2xl bg-slate-950/70 p-3 text-xs text-slate-400">
-                                        <p className="font-semibold text-slate-100">Vehicle</p>
-                                        <p className="mt-1">{shipment.vehicle}</p>
-                                    </div>
-                                </div>
-                                <div className="mt-4 space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-slate-500">
-                                        <span>Progress</span>
-                                        <span>{shipment.progress}%</span>
-                                    </div>
-                                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                                        <div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-500" style={{ width: `${shipment.progress}%` }} />
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                <Card className="rounded-[2rem] border border-warning/30 bg-warning/10 p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-semibold text-warning">⚠ Maintenance Pending</p>
-                            <p className="mt-2 text-base text-slate-100">3 maintenance records need review</p>
-                            <p className="mt-2 text-sm text-slate-400">Post-trip inspections awaiting approval for your fleet.</p>
-                        </div>
-                        <Badge className="bg-warning text-warning-foreground">3 Records</Badge>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                        {maintenanceItems.map(item => (
-                            <div key={item.reference} className="flex items-center justify-between rounded-3xl border border-warning/20 bg-warning/5 p-3">
-                                <div>
-                                    <p className="text-sm font-semibold text-white">{item.reference}</p>
-                                    <p className="text-xs text-slate-400">{item.vehicle} • {item.category}</p>
-                                </div>
-                                <span className="rounded-full bg-muted/70 px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-warning">{item.priority}</span>
+                {maintenanceItems.length > 0 && (
+                    <Card className="rounded-[2rem] border border-warning/30 bg-warning/10 p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-sm font-semibold text-warning">⚠ Maintenance Pending</p>
+                                <p className="mt-2 text-base text-slate-100">{maintenanceItems.length} maintenance record{maintenanceItems.length === 1 ? '' : 's'} need review</p>
+                                <p className="mt-2 text-sm text-slate-400">Post-trip inspections awaiting approval for your fleet.</p>
                             </div>
-                        ))}
-                    </div>
-                    <Button size="sm" className="mt-4 w-full bg-warning text-warning-foreground hover:bg-warning/90">Review Now</Button>
-                </Card>
+                            <Badge className="bg-warning text-warning-foreground">{maintenanceItems.length} Records</Badge>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                            {maintenanceItems.map(item => (
+                                <div key={item.id} className="flex items-center justify-between rounded-3xl border border-warning/20 bg-warning/5 p-3">
+                                    <div>
+                                        <p className="text-sm font-semibold text-white">{item.record_number}</p>
+                                        <p className="text-xs text-slate-400">{item.vehicle_plate ?? 'Unassigned'}</p>
+                                    </div>
+                                    <span className="rounded-full bg-muted/70 px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-warning">{item.priority}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <Button size="sm" className="mt-4 w-full bg-warning text-warning-foreground hover:bg-warning/90" asChild>
+                            <a href="/maintenance">Review Now</a>
+                        </Button>
+                    </Card>
+                )}
 
                 <Card className="rounded-[2rem] border border-border bg-gradient-to-r from-primary/80 via-primary to-violet-500 p-5 shadow-2xl">
                     <div className="flex items-start justify-between gap-4">
@@ -292,18 +314,9 @@ export default function MobileDashboardPage() {
                             <Sparkles className="h-10 w-10 text-primary" />
                         </div>
                     </div>
-                    <div className="mt-5 rounded-3xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-300">
-                        <div className="mb-3 text-slate-400">Mini chat preview</div>
-                        <div className="space-y-3">
-                            <div className="rounded-3xl bg-slate-900/90 p-3">
-                                <p className="text-xs text-slate-400">You: What is the status of SH-2026-0001?</p>
-                            </div>
-                            <div className="rounded-3xl bg-slate-900/90 p-3">
-                                <p className="text-xs text-slate-400">AI: Shipment is in transit to Lusaka and due to arrive within 8 hours.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <Button className="mt-4 w-full bg-white/10 text-white hover:bg-white/15">Open AI Console →</Button>
+                    <Button className="mt-4 w-full bg-white/10 text-white hover:bg-white/15" asChild>
+                        <a href="/ai-assistant">Open AI Console →</a>
+                    </Button>
                 </Card>
             </div>
 
