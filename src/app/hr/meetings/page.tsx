@@ -28,7 +28,7 @@ import {
 interface Meeting {
   id: string;
   title: string;
-  date: string;
+  scheduled_at: string;
   status: string;
   created_by: string | null;
   created_at: string;
@@ -62,7 +62,7 @@ function MeetingsPageInner() {
   const load = useCallback(async () => {
     setLoading(true);
     const [m, a, s] = await Promise.all([
-      supabase.from("meetings").select("*").order("date", { ascending: false }).limit(300),
+      supabase.from("meetings").select("*").order("scheduled_at", { ascending: false }).limit(300),
       supabase.from("meeting_attendees").select("meeting_id, user_id"),
       supabase.from("user_profiles").select("id, name").order("name"),
     ]);
@@ -105,7 +105,7 @@ function MeetingsPageInner() {
 
   const openEdit = (m: Meeting) => {
     setEditing(m);
-    const d = new Date(m.date);
+    const d = new Date(m.scheduled_at);
     setForm({ title: m.title, date: format(d, "yyyy-MM-dd"), time: format(d, "HH:mm") });
     supabase
       .from("meeting_attendees")
@@ -128,7 +128,7 @@ function MeetingsPageInner() {
       if (editing) {
         const { error } = await supabase
           .from("meetings")
-          .update({ title: form.title.trim(), date: when, updated_at: new Date().toISOString() })
+          .update({ title: form.title.trim(), scheduled_at: when, updated_at: new Date().toISOString() })
           .eq("id", editing.id);
         if (error) throw error;
         await supabase.from("meeting_attendees").delete().eq("meeting_id", editing.id);
@@ -141,7 +141,7 @@ function MeetingsPageInner() {
       } else {
         const { data, error } = await supabase
           .from("meetings")
-          .insert({ title: form.title.trim(), date: when, status: "scheduled", created_by: user?.id ?? null })
+          .insert({ title: form.title.trim(), scheduled_at: when, status: "scheduled", created_by: user?.id ?? null })
           .select()
           .single();
         if (error) throw error;
@@ -156,7 +156,7 @@ function MeetingsPageInner() {
               type: "meeting_invite",
               title: "Meeting invitation",
               message: `You are invited to "${form.title.trim()}" on ${format(new Date(when), "MMM d, yyyy HH:mm")}`,
-              read: false,
+              is_read: false,
             })),
           );
         }
@@ -193,14 +193,14 @@ function MeetingsPageInner() {
 
   const now = new Date();
   const upcoming = useMemo(
-    () => meetings.filter((m) => isAfter(new Date(m.date), now) && m.status !== "cancelled"),
+    () => meetings.filter((m) => isAfter(new Date(m.scheduled_at), now) && m.status !== "cancelled"),
     [meetings], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const past = useMemo(
-    () => meetings.filter((m) => !isAfter(new Date(m.date), now) || m.status === "cancelled"),
+    () => meetings.filter((m) => !isAfter(new Date(m.scheduled_at), now) || m.status === "cancelled"),
     [meetings], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const thisWeek = upcoming.filter((m) => isThisWeek(new Date(m.date), { weekStartsOn: 1 })).length;
+  const thisWeek = upcoming.filter((m) => isThisWeek(new Date(m.scheduled_at), { weekStartsOn: 1 })).length;
   const completed = meetings.filter((m) => m.status === "completed").length;
   const cancelled = meetings.filter((m) => m.status === "cancelled").length;
   const visible = tab === "upcoming" ? upcoming : past;
@@ -282,7 +282,7 @@ function MeetingsPageInner() {
                           <p className="text-sm font-black text-foreground truncate hover:text-primary transition-colors">{m.title}</p>
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                             <span className="flex items-center gap-1">
-                              <CalendarDays className="w-3.5 h-3.5" /> {format(new Date(m.date), "EEE, MMM d yyyy · HH:mm")}
+                              <CalendarDays className="w-3.5 h-3.5" /> {format(new Date(m.scheduled_at), "EEE, MMM d yyyy · HH:mm")}
                             </span>
                             <span className="flex items-center gap-1">
                               <Users className="w-3.5 h-3.5" /> {m.attendee_count ?? 0} attendee{(m.attendee_count ?? 0) === 1 ? "" : "s"}
