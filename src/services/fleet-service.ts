@@ -213,15 +213,17 @@ export class FleetService {
     if (error) throw error;
   }
 
-  static async getMaintenanceRequests(priority?: string, mechanicId?: string) {
-    let query = supabase.from('maintenance_requests').select('*');
-    
-    if (priority) query = query.eq('priority', priority);
-    if (mechanicId) query = query.eq('mechanicId', mechanicId);
-    
-    const { data, error } = await query.order('created_at', { ascending: false });
+  static async getMaintenanceRequests() {
+    // maintenance_requests has no priority or mechanic-assignment column
+    // (see database/migrations/001-master-production-setup.sql) — those
+    // filters never matched a real column, so they're dropped rather than
+    // silently filtering on nothing.
+    const { data, error } = await supabase
+      .from('maintenance_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (error) throw error;
-    
+
     return data as MaintenanceRequest[];
   }
 
@@ -296,12 +298,12 @@ export class FleetService {
 
   static async getPartsRequests(requestedBy?: string) {
     let query = supabase.from('parts_requests').select('*');
-    
-    if (requestedBy) query = query.eq('requestedBy', requestedBy);
-    
+
+    if (requestedBy) query = query.eq('requested_by', requestedBy);
+
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
-    
+
     return data as PartsRequest[];
   }
 
@@ -385,12 +387,17 @@ export class FleetService {
   }
 
   static async getLowStockParts() {
+    // Low-stock thresholds live on `inventory` (quantity_available /
+    // min_stock_level), not `spare_parts` — spare_parts only has a plain
+    // `quantity` with no reorder point. The old query also passed
+    // 'reorder_level' as a literal string, not a column reference.
     const { data, error } = await supabase
-      .from('spare_parts')
+      .from('inventory')
       .select('*')
-      .lt('quantity', 'reorder_level');
-    
+      .eq('status', 'active')
+      .order('quantity_available', { ascending: true });
+
     if (error) throw error;
-    return data as SparePart[];
+    return (data || []).filter((item: any) => item.quantity_available <= item.min_stock_level);
   }
 }
