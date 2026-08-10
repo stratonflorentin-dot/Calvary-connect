@@ -32,7 +32,7 @@ export default function SalesmanDashboard() {
     const [c, b, q, i] = await Promise.all([
       supabase.from("customers").select("*"),
       supabase.from("bookings").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("quotations").select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("route_quotations").select("*, customers(company_name)").order("created_at", { ascending: false }).limit(50),
       supabase.from("invoices").select("*").eq("type", "receivable").limit(200),
     ]);
     setCustomers(c.data ?? []);
@@ -116,7 +116,7 @@ export default function SalesmanDashboard() {
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-foreground truncate">{q.customer_name ?? q.client_name}</p>
+                    <p className="text-sm font-bold text-foreground truncate">{q.customers?.company_name ?? "Unknown customer"}</p>
                     <p className="text-[10px] text-muted-foreground font-mono">{q.quotation_number ?? q.id.slice(0, 8)}</p>
                   </div>
                   {q.total_amount && <span className="text-sm font-black text-foreground">{format(Number(q.total_amount))}</span>}

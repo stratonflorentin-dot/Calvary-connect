@@ -54,12 +54,12 @@ export default function SalesDashboard() {
       ] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(10),
         supabase.from("customers").select("*"),
-        supabase.from("quotations").select("*").eq("status", "draft").limit(5),
+        supabase.from("route_quotations").select("*").eq("status", "draft").limit(5),
         supabase.from("transport_contracts").select("*"),
         supabase.from("bookings").select("*"),
       ]);
 
-      const allQuotations = await supabase.from("quotations").select("*");
+      const allQuotations = await supabase.from("route_quotations").select("*");
       const leads = leadsData.data ?? [];
       const customers = customersData.data ?? [];
       const allQuotationRows = allQuotations.data ?? [];
