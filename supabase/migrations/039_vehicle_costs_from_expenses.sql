@@ -28,7 +28,13 @@
 -- Idempotent: safe to run more than once. Run in the Supabase SQL editor.
 
 ALTER TABLE vehicle_costs ADD COLUMN IF NOT EXISTS source_expense_id uuid REFERENCES expenses(id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicle_costs_source_expense ON vehicle_costs(source_expense_id) WHERE source_expense_id IS NOT NULL;
+-- Plain unique index, not partial: Postgres already lets unlimited NULLs
+-- coexist under a normal unique constraint (each NULL is distinct), so
+-- vehicle_costs rows from the manual fuel-costs/maintenance-costs pages
+-- (which never set source_expense_id) are unaffected. A partial index
+-- would need its WHERE predicate repeated on every ON CONFLICT clause
+-- below to be usable for conflict inference — simpler to avoid that.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicle_costs_source_expense ON vehicle_costs(source_expense_id);
 
 -- SECURITY DEFINER for the same reason as sync_trip_revenue_from_invoice:
 -- keeps vehicle_costs' direct-insert policy scoped to the manual UI
