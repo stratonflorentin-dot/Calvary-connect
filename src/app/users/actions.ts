@@ -165,7 +165,7 @@ export async function updateUserAction(userId: string, updateData: any) {
     'name', 'email', 'role', 'phone', 'avatar_url', 'status',
     'license_number', 'license_expiry', 'license_class', 'compliance_status',
     'updated_at', 'last_login_at', 'last_activity_at', 'login_count',
-    'status_reason', 'salary', 'department', 'password',
+    'status_reason', 'salary', 'department',
     'invited_at', 'invited_by',
   ];
 

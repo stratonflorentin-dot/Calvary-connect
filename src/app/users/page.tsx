@@ -24,7 +24,6 @@ interface UserProfile {
   role: string;
   status: 'active' | 'invited' | 'dormant' | 'suspended' | 'inactive';
   status_reason?: string;
-  password?: string;
   avatar_url?: string;
   created_at: string;
   last_login_at?: string;
@@ -748,7 +747,6 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead className="min-w-[80px]">Employee ID</TableHead>
                   <TableHead className="min-w-[100px]">User</TableHead>
-                  {(role === 'CEO' || role === 'ADMIN') && <TableHead className="min-w-[100px]">Password</TableHead>}
                   <TableHead className="min-w-[80px]">Role</TableHead>
                   <TableHead className="min-w-[80px]">Status</TableHead>
                   <TableHead className="min-w-[80px]">Joined</TableHead>
@@ -781,13 +779,6 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </TableCell>
-                  {(role === 'CEO' || role === 'ADMIN') && (
-                    <TableCell>
-                      <code className="text-xs bg-muted px-2 py-1 rounded font-mono text-muted-foreground">
-                        {u.password || 'N/A'}
-                      </code>
-                    </TableCell>
-                  )}
                   <TableCell>
                     <Badge className={`font-headline tracking-tighter text-[10px] ${getRoleBadgeClass(u.role)}`}>
                       {ROLE_CONFIG[u.role]?.label || u.role}
