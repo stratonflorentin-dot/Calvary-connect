@@ -59,7 +59,7 @@ BEGIN
     mapped_cost_type,
     COALESCE(NEW.amount, 0),
     COALESCE(NEW.currency, 'TZS'),
-    COALESCE(NEW.date, NEW.expense_date, NEW.created_at::date, CURRENT_DATE),
+    COALESCE(NEW.date, NEW.created_at::date, CURRENT_DATE),
     NEW.description,
     NEW.trip_id,
     NEW.id
@@ -94,7 +94,7 @@ SELECT
   END,
   COALESCE(e.amount, 0),
   COALESCE(e.currency, 'TZS'),
-  COALESCE(e.date, e.expense_date, e.created_at::date, CURRENT_DATE),
+  COALESCE(e.date, e.created_at::date, CURRENT_DATE),
   e.description,
   e.trip_id,
   e.id
