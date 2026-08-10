@@ -52,49 +52,19 @@ export default function MechanicSparePartsPage() {
     loadParts();
   }, [user]);
 
-  const handleAddPart = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    try {
-      const { error } = await supabase
-        .from('spare_parts')
-        .insert({
-          name: formData.get('name'),
-          category: formData.get('category'),
-          quantity_available: parseInt(formData.get('quantity') as string),
-          unit: formData.get('unit'),
-          status: 'in_stock'
-        });
-      
-      if (error) throw error;
-      
-      // Reload parts list
-      const { data: updatedParts } = await supabase
-        .from('spare_parts')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      setParts(updatedParts || []);
-      e.currentTarget.reset();
-    } catch (error) {
-      console.error('Error adding part:', error);
-    }
-  };
-
   const handleCreateRequest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
-    
+
     const formData = new FormData(e.currentTarget);
     try {
       await SupabaseService.createPartsRequest({
-        partNameText: formData.get('name') as string,
-        quantityNeeded: Number(formData.get('quantity')),
+        part_name: formData.get('name') as string,
+        quantity_requested: Number(formData.get('quantity')),
         urgency: formData.get('urgency') as string,
-        reasonNotes: formData.get('reason') as string,
+        reason: formData.get('reason') as string,
         status: 'pending',
-        mechanicId: user.id
+        requested_by: user.id
       } as any);
       
       // Reload parts requests list
@@ -198,9 +168,9 @@ export default function MechanicSparePartsPage() {
                 <TableRow key={r.id}>
                   <td className="px-6 py-4 font-medium flex items-center gap-3">
                     <Package className="size-4 text-muted-foreground" />
-                    {r.requestedPartName}
+                    {r.part_name}
                   </td>
-                  <td>{r.quantityNeeded}</td>
+                  <td>{r.quantity_requested}</td>
                   <td>
                     <Badge variant="outline" className={cn(
                       "text-[10px]",
@@ -224,7 +194,7 @@ export default function MechanicSparePartsPage() {
                     </div>
                   </td>
                   <td className="text-right px-6 text-xs text-muted-foreground">
-                    {new Date(r.createdAt).toLocaleDateString()}
+                    {new Date(r.created_at).toLocaleDateString()}
                   </td>
                 </TableRow>
               ))}

@@ -15,18 +15,15 @@ import { cn, formatDate } from '@/lib/utils';
 // Type definitions
 interface MaintenanceRequest {
   id: string;
-  mechanicId: string;
-  requestedPartName: string;
-  quantityNeeded: number;
+  requested_by: string | null;
+  part_name: string;
+  quantity_requested: number;
   urgency: string;
   status: string;
-  createdAt: string;
-  vehicleId: string;
+  created_at: string;
+  vehicle_id: string | null;
   reason: string;
-  mechanicName: string;
-  vehiclePlate: string;
-  vehicleMake: string;
-  vehicleModel: string;
+  requester?: { name: string } | null;
 }
 
 interface InventoryItem {
@@ -69,7 +66,7 @@ export default function PartsRequestsPage() {
         // Load real parts requests from database
         const { data: requestsData, error: requestsError } = await supabase
           .from('parts_requests')
-          .select('*')
+          .select('*, requester:user_profiles(name)')
           .order('created_at', { ascending: false });
 
         if (requestsError) {
@@ -222,15 +219,15 @@ export default function PartsRequestsPage() {
                 <TableRow key={r.id}>
                   <TableCell className="px-6 py-4 font-medium flex items-center gap-3">
                     <Wrench className="size-4 text-primary" />
-                    {r.requestedPartName}
+                    {r.part_name}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-medium text-sm">{r.mechanicName || 'Unknown'}</span>
-                      <span className="text-xs text-muted-foreground">{r.mechanicId?.slice(0, 8)}</span>
+                      <span className="font-medium text-sm">{r.requester?.name || 'Unknown'}</span>
+                      <span className="text-xs text-muted-foreground">{r.requested_by?.slice(0, 8)}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{r.quantityNeeded}</TableCell>
+                  <TableCell>{r.quantity_requested}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn(
                       "text-[10px] font-bold",
@@ -240,7 +237,7 @@ export default function PartsRequestsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{r.reason}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{r.createdAt ? formatDate(r.createdAt) : '—'}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{r.created_at ? formatDate(r.created_at) : '—'}</TableCell>
                   <TableCell>
                     <Badge className={cn(
                       "text-[10px]",
