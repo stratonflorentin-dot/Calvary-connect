@@ -179,6 +179,7 @@ function SalesModuleContent() {
   const [rateSheets, setRateSheets] = useState<RateSheetEntry[]>([]);
   const [opportunities, setOpportunities] = useState<SalesOpportunity[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
+  const [salesOrders, setSalesOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Dialog states
@@ -251,6 +252,7 @@ function SalesModuleContent() {
     fetchJsonbRateSheets();
     fetchOpportunities();
     fetchLeads();
+    fetchSalesOrders();
   }, []);
 
   useEffect(() => {
@@ -281,6 +283,21 @@ function SalesModuleContent() {
       })) || [];
       setQuotations(processedData);
     }
+  }
+
+  // Sales Orders = bookings (this page's "New Sales Order" button already
+  // links to /bookings, which is the real table — see interface Booking in
+  // src/app/bookings/page.tsx). Real fields only: bookings has one total
+  // `amount` + `currency`, not a base/onloading/offloading breakdown, and a
+  // real status enum (pending/confirmed/in_progress/completed/cancelled),
+  // not the "Pending Collection"/"Collected" labels the old mock data used.
+  async function fetchSalesOrders() {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (!error) setSalesOrders(data || []);
   }
 
   async function fetchContracts() {
@@ -646,9 +663,9 @@ function SalesModuleContent() {
   // Helper functions
   function getStatusColor(status: string) {
     switch (status) {
-      case 'active': case 'sent': case 'won': return 'bg-success';
-      case 'pending': case 'draft': return 'bg-warning';
-      case 'expired': case 'lost': return 'bg-destructive';
+      case 'active': case 'sent': case 'won': case 'completed': case 'confirmed': return 'bg-success';
+      case 'pending': case 'draft': case 'in_progress': return 'bg-warning';
+      case 'expired': case 'lost': case 'cancelled': return 'bg-destructive';
       default: return 'bg-muted';
     }
   }
@@ -880,85 +897,67 @@ function SalesModuleContent() {
                 </Button>
               </CardHeader>
               <CardContent>
+                {salesOrders.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Container className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">No sales orders yet</p>
+                    <p className="text-sm mt-1">Convert a quotation or contract into a booking, or start one from the button above.</p>
+                  </div>
+                ) : (
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
-                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Order #</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Customer</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Freight Details</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Logistics Cost</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Status</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-slate-500">Flags</TableHead>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Order #</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Customer</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Freight Details</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Amount</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Flags</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {/* Professional Mock Data for Sales Orders */}
-                      {[
-                        {
-                          id: 'SO-2023-1001',
-                          customer: 'Dangote Cement (Zambia)',
-                          freight: '2x 40ft Flatbed - 60MT Cement',
-                          base: 4500,
-                          onloading: 150,
-                          offloading: 150,
-                          status: 'Pending Collection',
-                          needsCorrection: false,
-                        },
-                        {
-                          id: 'SO-2023-1002',
-                          customer: 'Twiga Cement (Mbeya)',
-                          freight: '1x 20ft Box - 28MT Clinker',
-                          base: 1800,
-                          onloading: 100,
-                          offloading: 100,
-                          status: 'Pending Correction',
-                          needsCorrection: true,
-                          correctionNotes: 'Incorrect delivery address on waybill.'
-                        },
-                        {
-                          id: 'SO-2023-1003',
-                          customer: 'Simba Cement (Arusha)',
-                          freight: '3x Bulk Tanker - 90MT Bulk',
-                          base: 5200,
-                          onloading: 300,
-                          offloading: 250,
-                          status: 'Collected',
-                          needsCorrection: false,
-                        }
-                      ].map((order) => (
-                        <TableRow key={order.id} className="hover:bg-slate-50 transition-colors">
-                          <TableCell className="font-bold text-slate-800">{order.id}</TableCell>
-                          <TableCell className="font-semibold text-slate-700">{order.customer}</TableCell>
-                          <TableCell className="text-sm text-slate-600">{order.freight}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-bold text-slate-800">Total: ${(order.base + order.onloading + order.offloading).toLocaleString()}</span>
-                              <span className="text-[10px] text-slate-500 uppercase">Frt: ${order.base} | L: ${order.onloading} | D: ${order.offloading}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={
-                              order.status === 'Collected' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-0' :
-                                order.status === 'Pending Correction' ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 border-0' :
-                                  'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-0'
-                            }>
-                              {order.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {order.needsCorrection && (
-                              <div className="flex items-center gap-1 text-rose-600" title={order.correctionNotes}>
-                                <AlertCircle className="w-4 h-4" />
-                                <span className="text-xs font-bold">Review</span>
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {salesOrders.map((order) => {
+                        const freightBits = [
+                          order.container_size || order.vehicle_requirement,
+                          order.cargo_weight ? `${order.cargo_weight}MT` : null,
+                          order.cargo_description,
+                        ].filter(Boolean);
+                        const route = [order.origin || order.pickup_location, order.destination || order.delivery_location]
+                          .filter(Boolean)
+                          .join(' → ');
+                        return (
+                          <TableRow key={order.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-bold text-foreground">{order.booking_number || order.id}</TableCell>
+                            <TableCell className="font-semibold text-foreground">{order.clientName || '—'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {freightBits.length > 0 && <div>{freightBits.join(' - ')}</div>}
+                              {route && <div className="text-xs">{route}</div>}
+                              {freightBits.length === 0 && !route && '—'}
+                            </TableCell>
+                            <TableCell className="text-sm font-bold text-foreground">
+                              {order.currency || 'TZS'} {Number(order.amount || 0).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(order.status)}>
+                                {String(order.status || 'pending').replace('_', ' ')}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {order.operations_review_status === 'pending' && (
+                                <div className="flex items-center gap-1 text-destructive" title="Awaiting operations review">
+                                  <AlertCircle className="w-4 h-4" />
+                                  <span className="text-xs font-bold">Review</span>
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
