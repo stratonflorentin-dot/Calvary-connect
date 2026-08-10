@@ -153,10 +153,11 @@ function MeetingsPageInner() {
           await supabase.from("notifications").insert(
             attendees.map((uid) => ({
               user_id: uid,
-              type: "meeting_invite",
+              type: "info",
+              module: "hr",
               title: "Meeting invitation",
               message: `You are invited to "${form.title.trim()}" on ${format(new Date(when), "MMM d, yyyy HH:mm")}`,
-              is_read: false,
+              read: false,
             })),
           );
         }
