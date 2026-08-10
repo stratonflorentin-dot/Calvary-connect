@@ -273,11 +273,11 @@ export default function DispatchBoardPage() {
         status: (String(r.status ?? "pending").toLowerCase()) as TripStatus,
         driver_name: r.driver_name ?? undefined,
         vehicle_plate: r.vehicle_plate ?? undefined,
-        cargo_type: r.cargo,
+        cargo_type: r.cargo_type,
         client: r.client,
         created_at: r.created_at,
-        estimated_arrival: r.estimated_time,
-        revenue: r.salesAmount,
+        estimated_arrival: r.estimated_arrival,
+        revenue: r.revenue ?? r.price,
       }));
       setTrips(mapped);
     } else if (error) {
