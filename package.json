@@ -12,7 +12,12 @@
     "preview": "node scripts/run-next.cjs build && node scripts/run-next.cjs start -p 3000",
     "deploy": "node deploy.js",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.28.0",
@@ -51,7 +56,6 @@
     "docx-templates": "^4.15.0",
     "docxtemplater": "^3.68.7",
     "dompurify": "^3.4.12",
-    "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
     "firebase": "^11.9.1",
     "framer-motion": "^12.38.0",
@@ -85,11 +89,13 @@
     "@types/node": "^20",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
+    "dotenv": "^17.4.2",
     "eslint": "9.39.4",
     "eslint-config-next": "^15.5.18",
     "genkit-cli": "^1.28.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }
