@@ -140,14 +140,26 @@ export function AuthComponent() {
     <div className="min-h-screen w-full flex flex-col md:flex-row">
       {/* Left: brand panel */}
       <div className="relative md:w-[46%] bg-[#0B1F33] text-white flex flex-col justify-between p-10 md:p-14 overflow-hidden">
-        <div className="flex items-center gap-3">
+        <video
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+          src="/login-bg.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          aria-hidden="true"
+        />
+        {/* Darken/tint the video so the white text above it stays readable at any frame */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1F33]/90 via-[#0B1F33]/70 to-[#0B1F33]/95" />
+
+        <div className="relative flex items-center gap-3">
           <div className="w-9 h-9 rounded-md bg-primary/20 border border-primary/40 flex items-center justify-center">
             <span className="font-headline font-bold text-primary text-sm">CC</span>
           </div>
           <span className="font-headline font-semibold tracking-tight">Calvary Connect</span>
         </div>
 
-        <div className="space-y-8">
+        <div className="relative space-y-8">
           <div className="space-y-3 max-w-sm">
             <h1 className="font-headline text-3xl md:text-[2.25rem] leading-[1.1] font-bold tracking-tight">
               Fleet, freight, and finance — one system.
@@ -160,7 +172,7 @@ export function AuthComponent() {
           <RouteSignature />
         </div>
 
-        <p className="text-white/40 text-xs font-mono">
+        <p className="relative text-white/40 text-xs font-mono">
           Calvary Investment Company Ltd &copy; {new Date().getFullYear()}
         </p>
 
