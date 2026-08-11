@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { vehicleStatusBucket as statusBucket } from "@/lib/fleet/vehicle-status";
 
 interface Vehicle {
   id: string;
@@ -59,19 +60,9 @@ const STATUS_META: Record<string, { label: string; chip: string }> = {
   decommissioned: { label: "Decommissioned", chip: "bg-muted text-muted-foreground" },
 };
 
-// vehicles_status_check (supabase/migrations/026_recovery_consolidated_fixes.sql)
-// allows 7 values, but this page's stat cards and filter tabs only have 3
-// operational buckets. 'active' is a real, commonly-used status in this data
-// (confirmed live) that was previously counted in none of them — vehicles
-// with it just vanished from every stat card while still counting toward
-// the total, e.g. 36 total but only 22 across Available/In use/In
-// maintenance. Every one of the 7 values must land in exactly one bucket
-// so the cards always sum back to the total.
-function statusBucket(status?: string | null): "available" | "in_use" | "maintenance" {
-  if (status === "in_use") return "in_use";
-  if (status === "maintenance" || status === "out_of_service" || status === "sold" || status === "decommissioned") return "maintenance";
-  return "available"; // available, active, or any future/unrecognized value
-}
+// Shared with every other dashboard that shows a vehicle-availability count
+// — see src/lib/fleet/vehicle-status.ts for why this exists as one function
+// instead of N independent copies.
 
 export default function FleetPage() {
   const { role, isLoading: roleLoading, isAdmin } = useRole();

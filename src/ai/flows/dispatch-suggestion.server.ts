@@ -3,6 +3,7 @@
 // client-only imports, safe to import from an API route.
 
 import type { DispatchContext } from "@/lib/ai-database-context";
+import { isVehicleAvailable } from "@/lib/fleet/vehicle-status";
 
 export interface DispatchTripInput {
   origin: string;
@@ -13,7 +14,7 @@ export interface DispatchTripInput {
 
 export function buildDispatchPrompt(trip: DispatchTripInput, context: DispatchContext): string {
   const availableVehicles = context.vehicles.filter(
-    (v) => v.status === "available" && !context.busyVehicleIds.has(v.id),
+    (v) => isVehicleAvailable(v.status) && !context.busyVehicleIds.has(v.id),
   );
   const availableDrivers = context.drivers.filter((d) => !context.busyDriverIds.has(d.id));
 

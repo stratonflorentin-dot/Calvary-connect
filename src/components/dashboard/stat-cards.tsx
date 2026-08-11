@@ -24,6 +24,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { vehicleStatusBucket } from "@/lib/fleet/vehicle-status";
 
 export function StatCards() {
   const { user } = useSupabase();
@@ -68,7 +69,7 @@ export function StatCards() {
           .select("id, status");
         const activeVehicles =
           vehicles?.filter(
-            (v) => v.status === "available" || v.status === "in_use",
+            (v) => vehicleStatusBucket(v.status) !== "maintenance",
           ).length || 0;
         const totalVehicles = vehicles?.length || 0;
 

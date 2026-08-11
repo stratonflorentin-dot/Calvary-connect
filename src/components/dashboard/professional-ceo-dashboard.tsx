@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
+import { isVehicleAvailable, isVehicleInUse, isVehicleInMaintenance } from '@/lib/fleet/vehicle-status';
 import { 
   Truck, DollarSign, Users, Fuel, AlertTriangle, 
   TrendingUp, TrendingDown, Package, Calendar,
@@ -150,9 +151,9 @@ export function ProfessionalCEODashboard() {
         completedTrips: trips?.filter(t => t.status === 'COMPLETED').length || 0,
         activeTrips: trips?.filter(t => t.status === 'ACTIVE' || t.status === 'IN_PROGRESS').length || 0,
         totalVehicles: vehicles?.length || 0,
-        availableVehicles: vehicles?.filter(v => v.status === 'AVAILABLE' || v.status === 'available').length || 0,
-        inUseVehicles: vehicles?.filter(v => v.status === 'IN_USE' || v.status === 'in_progress').length || 0,
-        maintenanceVehicles: vehicles?.filter(v => v.status === 'MAINTENANCE' || v.status === 'maintenance').length || 0,
+        availableVehicles: vehicles?.filter(v => isVehicleAvailable(v.status)).length || 0,
+        inUseVehicles: vehicles?.filter(v => isVehicleInUse(v.status)).length || 0,
+        maintenanceVehicles: vehicles?.filter(v => isVehicleInMaintenance(v.status)).length || 0,
         totalDrivers: drivers?.length || 0,
         activeDrivers: drivers?.filter(d => d.status === 'active').length || 0,
         totalFuelCost,

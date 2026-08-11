@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/table';
 import { supabase } from '@/lib/supabase';
 import { useCurrency } from '@/hooks/use-currency';
+import { isVehicleAvailable, isVehicleInMaintenance, vehicleStatusBucket } from '@/lib/fleet/vehicle-status';
 
 const navItems = [
     { label: 'Overview', icon: Layers, active: true },
@@ -137,9 +138,9 @@ function PremiumDashboard() {
 
             const vehicles = vehiclesRes.data ?? [];
             setVehicleCount(vehicles.length);
-            setActiveVehicleCount(vehicles.filter((v: any) => v.status === 'available' || v.status === 'in_use').length);
-            setMaintenanceDueCount(vehicles.filter((v: any) => v.status === 'maintenance' || v.status === 'repair').length);
-            setIdleVehicleCount(vehicles.filter((v: any) => v.status === 'available').length);
+            setActiveVehicleCount(vehicles.filter((v: any) => vehicleStatusBucket(v.status) !== 'maintenance').length);
+            setMaintenanceDueCount(vehicles.filter((v: any) => isVehicleInMaintenance(v.status)).length);
+            setIdleVehicleCount(vehicles.filter((v: any) => isVehicleAvailable(v.status)).length);
 
             const driverIds = Array.from(new Set(vehicles.map((v: any) => v.current_driver_id).filter(Boolean)));
             const { data: drivers } = driverIds.length > 0

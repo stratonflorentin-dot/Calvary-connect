@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isVehicleAvailable } from '@/lib/fleet/vehicle-status';
 
 type DashboardMode = 'operations' | 'finance' | 'fleet';
 type PeriodRange = 'mtd' | '7d' | '30d' | 'qtd' | 'ytd' | 'custom';
@@ -221,7 +222,7 @@ export function useDashboard(
                     .select('id, status');
 
                 const totalVehicles = vehiclesData?.length || 0;
-                const availableCount = vehiclesData?.filter((v: any) => v.status === 'available').length || 0;
+                const availableCount = vehiclesData?.filter((v: any) => isVehicleAvailable(v.status)).length || 0;
                 const inTransitCount = vehiclesData?.filter((v: any) => v.status === 'in_transit').length || 0;
                 const maintenanceCount = vehiclesData?.filter((v: any) => v.status === 'maintenance').length || 0;
                 const repairCount = vehiclesData?.filter((v: any) => v.status === 'repair').length || 0;

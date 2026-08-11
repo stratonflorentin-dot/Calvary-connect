@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { isVehicleAvailable } from "@/lib/fleet/vehicle-status";
 import { useCurrency } from "@/hooks/use-currency";
 import { StatCard, SectionCard, EmptyState, RefreshControl } from "@/components/shell";
 import {
@@ -115,7 +116,7 @@ export function CeoView() {
     const activeTrips = trips.filter((t) => ["pending", "loading", "in_transit"].includes(String(t.status).toLowerCase())).length;
     const overdueTrips = trips.filter((t) => !["delivered", "cancelled"].includes(String(t.status).toLowerCase()) && t.created_at && isOverdue("trip", t.created_at)).length;
     const inUseVehicles = vehicles.filter((v) => v.status === "in_use").length;
-    const availableVehicles = vehicles.filter((v) => v.status === "available").length;
+    const availableVehicles = vehicles.filter((v) => isVehicleAvailable(v.status)).length;
     const maintenanceVehicles = vehicles.filter((v) => v.status === "maintenance").length;
     const outOfServiceVehicles = vehicles.filter((v) => v.status === "out_of_service").length;
 

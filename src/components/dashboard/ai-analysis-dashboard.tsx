@@ -52,6 +52,7 @@ import {
   Bar,
 } from 'recharts';
 import { askCompanyAI } from '@/ai/flows/company-chat';
+import { vehicleStatusBucket } from '@/lib/fleet/vehicle-status';
 
 export default function AIAnalysisDashboard() {
   const { format } = useCurrency();
@@ -261,9 +262,9 @@ export default function AIAnalysisDashboard() {
   };
 
   const getSampleCeoInsightsPayload = () => {
-    const available = vehicles.filter((v) => v.status === 'available').length;
-    const inUse = vehicles.filter((v) => v.status === 'in_use').length;
-    const maintenance = vehicles.filter((v) => v.status === 'maintenance').length;
+    const available = vehicles.filter((v) => vehicleStatusBucket(v.status) === 'available').length;
+    const inUse = vehicles.filter((v) => vehicleStatusBucket(v.status) === 'in_use').length;
+    const maintenance = vehicles.filter((v) => vehicleStatusBucket(v.status) === 'maintenance').length;
     const pendingMaintenanceCount = (dbContext?.maintenance || []).filter((m: any) => m.status === 'pending').length;
     const completedDeliveriesThisMonth = (dbContext?.trips || []).filter((t: any) => {
       const d = new Date(t.created_at);
@@ -787,9 +788,9 @@ export default function AIAnalysisDashboard() {
                           <Badge
                             className={cn(
                               "font-bold uppercase tracking-wider text-[10px] px-2 py-0.5",
-                              row.status === "available"
+                              vehicleStatusBucket(row.status) === "available"
                                 ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                : row.status === "in_use"
+                                : vehicleStatusBucket(row.status) === "in_use"
                                   ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
                                   : "bg-red-100 text-red-700 hover:bg-red-200"
                             )}

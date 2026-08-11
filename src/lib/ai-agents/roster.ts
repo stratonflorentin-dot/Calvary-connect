@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import { generateAI } from '@/lib/ai-provider';
+import { isVehicleAvailable } from '@/lib/fleet/vehicle-status';
 import {
   getFleetContext,
   getDispatchContext,
@@ -183,7 +184,7 @@ async function runCeoInsights(): Promise<AgentRunResult> {
   const context = await getFleetContext();
   const metrics = computeBusinessMetrics(context);
 
-  const available = context.vehicles.filter((v: any) => v.status === 'available').length;
+  const available = context.vehicles.filter((v: any) => isVehicleAvailable(v.status)).length;
   const inUse = context.vehicles.filter((v: any) => v.status === 'in_use').length;
   const maintenance = context.vehicles.filter((v: any) => v.status === 'maintenance').length;
   const pendingMaintenanceCount = context.maintenance.filter((m: any) => m.status === 'pending').length;

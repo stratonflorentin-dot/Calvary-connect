@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { isVehicleAvailable, isVehicleInUse, isVehicleInMaintenance } from "@/lib/fleet/vehicle-status";
 
 export default function OperationsDashboard() {
   const { toast } = useToast();
@@ -73,9 +74,9 @@ export default function OperationsDashboard() {
         inProgressTrips: allTrips.data?.filter((t: any) => t.status === "IN_PROGRESS" || t.status === "in_transit").length || 0,
         completedTrips: allTrips.data?.filter((t: any) => t.status === "COMPLETED").length || 0,
         totalVehicles: vehiclesData.data?.length || 0,
-        availableVehicles: vehiclesData.data?.filter((v: any) => v.status === "available").length || 0,
-        inUseVehicles: vehiclesData.data?.filter((v: any) => v.status === "in_use").length || 0,
-        maintenanceVehicles: vehiclesData.data?.filter((v: any) => v.status === "maintenance").length || 0,
+        availableVehicles: vehiclesData.data?.filter((v: any) => isVehicleAvailable(v.status)).length || 0,
+        inUseVehicles: vehiclesData.data?.filter((v: any) => isVehicleInUse(v.status)).length || 0,
+        maintenanceVehicles: vehiclesData.data?.filter((v: any) => isVehicleInMaintenance(v.status)).length || 0,
         totalDrivers: usersData.data?.length || 0,
         availableDrivers: usersData.data?.filter((u: any) => u.status === "active").length || 0,
         onTripDrivers: allTrips.data?.filter((t: any) => t.status === "IN_PROGRESS" || t.status === "in_transit").length || 0,

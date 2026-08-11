@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { isVehicleAvailable } from "@/lib/fleet/vehicle-status";
 import { RoleDashboard } from "./shared/role-dashboard";
 import { EmptyState } from "@/components/shell";
 import { isOverdue } from "@/lib/workflow/approvals";
@@ -44,7 +45,7 @@ export function OperatorView() {
     const loading = trips.filter((t) => String(t.status).toLowerCase() === "loading").length;
     const inTransit = trips.filter((t) => String(t.status).toLowerCase() === "in_transit").length;
     const overdue = trips.filter((t) => !["delivered", "cancelled"].includes(String(t.status).toLowerCase()) && t.created_at && isOverdue("trip", t.created_at)).length;
-    const available = vehicles.filter((v) => v.status === "available").length;
+    const available = vehicles.filter((v) => isVehicleAvailable(v.status)).length;
     return { pending, loading, inTransit, overdue, available, fuel: fuel.length };
   }, [trips, vehicles, fuel]);
 

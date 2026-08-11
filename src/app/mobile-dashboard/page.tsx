@@ -11,6 +11,7 @@ import { useCurrency } from '@/hooks/use-currency';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { hydrateTrips } from '@/lib/trips/hydrate';
+import { vehicleStatusBucket } from '@/lib/fleet/vehicle-status';
 
 const quickActions = [
     { label: 'New Trip', icon: MapPin, color: 'bg-primary/15 text-primary' },
@@ -21,11 +22,10 @@ const quickActions = [
     { label: 'AI Chat', icon: Sparkles, color: 'bg-info/15 text-info' },
 ];
 
-const VEHICLE_STATUS_STYLE: Record<string, { color: string; label: string }> = {
+const BUCKET_STYLE: Record<string, { color: string; label: string }> = {
     available: { color: 'bg-success', label: 'Available' },
     in_use: { color: 'bg-primary', label: 'In Use' },
     maintenance: { color: 'bg-warning', label: 'Maintenance' },
-    repair: { color: 'bg-destructive', label: 'Repair' },
 };
 
 interface LiveVehicle {
@@ -215,7 +215,7 @@ export default function MobileDashboardPage() {
                     ) : (
                         <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
                             {liveVehicles.map(vehicle => {
-                                const meta = VEHICLE_STATUS_STYLE[vehicle.status] ?? { color: 'bg-muted', label: vehicle.status };
+                                const meta = BUCKET_STYLE[vehicleStatusBucket(vehicle.status)];
                                 return (
                                     <div key={vehicle.id} className="min-w-[220px] rounded-3xl border border-slate-800 bg-slate-900 p-4 shadow-sm shadow-slate-950/20">
                                         <div className="flex items-center justify-between gap-3">
