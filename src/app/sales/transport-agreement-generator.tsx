@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -517,10 +518,10 @@ export function RateSheetPreview() {
             New {viewType === 'freight' ? 'Freight Sheet' : 'Route Sheet'}
           </Button>
           <Button variant="outline" size="sm" className="gap-2" asChild>
-            <a href="/admin/settings">
+            <Link href="/admin/settings">
               <Settings className="h-4 w-4" />
               Settings
-            </a>
+            </Link>
           </Button>
         </div>
       </CardHeader>

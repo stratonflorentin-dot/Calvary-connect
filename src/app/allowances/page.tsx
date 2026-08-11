@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useSupabase } from '@/components/supabase-provider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -357,22 +358,22 @@ export default function AllowancesPage() {
                 Sync System
               </Button>
               <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
-                <a href="/admin/hr/payroll/overtime">
+                <Link href="/admin/hr/payroll/overtime">
                   <Clock className="w-4 h-4 mr-2" />
                   Overtime
-                </a>
+                </Link>
               </Button>
               <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
-                <a href="/admin/hr/payroll/loans">
+                <Link href="/admin/hr/payroll/loans">
                   <HandCoins className="w-4 h-4 mr-2" />
                   Loans
-                </a>
+                </Link>
               </Button>
               <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <a href="/admin/hr/payroll/statutory">
+                <Link href="/admin/hr/payroll/statutory">
                   <FileText className="w-4 h-4 mr-2" />
                   Statutory Reports
-                </a>
+                </Link>
               </Button>
             </div>
           </div>

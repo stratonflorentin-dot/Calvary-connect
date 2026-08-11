@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
     Bell,
     ChartPie,
@@ -543,7 +544,7 @@ function PremiumDashboard() {
                                         </CardDescription>
                                     </div>
                                     <Button variant="outline" className="h-11 rounded-[14px] px-4 text-[#1976D2] border-[#DCE2EE] hover:bg-[#F3F5F9]" asChild>
-                                        <a href="/sales?tab=contracts">View all</a>
+                                        <Link href="/sales?tab=contracts">View all</Link>
                                     </Button>
                                 </div>
                             </CardHeader>
@@ -625,7 +626,7 @@ function PremiumDashboard() {
                                         <p className="text-sm text-[#6B778C]">{maintenanceDueCount} vehicle{maintenanceDueCount === 1 ? '' : 's'} in maintenance or repair.</p>
                                     </div>
                                     <Button size="sm" variant="outline" className="rounded-[14px] border-[#DCE2EE] text-[#243041] hover:bg-[#F3F5F9]" asChild>
-                                        <a href="/maintenance">Review</a>
+                                        <Link href="/maintenance">Review</Link>
                                     </Button>
                                 </div>
                                 <div className="flex items-center justify-between gap-4 rounded-[16px] border border-[#DCE2EE] bg-[#F3F5F9] p-4">
@@ -634,7 +635,7 @@ function PremiumDashboard() {
                                         <p className="text-sm text-[#6B778C]">{idleVehicleCount} vehicle{idleVehicleCount === 1 ? '' : 's'} available for dispatch.</p>
                                     </div>
                                     <Button size="sm" variant="outline" className="rounded-[14px] border-[#DCE2EE] text-[#243041] hover:bg-[#F3F5F9]" asChild>
-                                        <a href="/dispatch">Dispatch</a>
+                                        <Link href="/dispatch">Dispatch</Link>
                                     </Button>
                                 </div>
                             </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Bell, Menu, Sparkles, Truck, DollarSign, ClipboardList, AlertTriangle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -206,7 +207,7 @@ export default function MobileDashboardPage() {
                             <h3 className="text-lg font-semibold text-white">Live vehicle status</h3>
                         </div>
                         <Button variant="ghost" className="text-slate-300" asChild>
-                            <a href="/fleet">See All</a>
+                            <Link href="/fleet">See All</Link>
                         </Button>
                     </div>
                     {liveVehicles.length === 0 ? (
@@ -293,7 +294,7 @@ export default function MobileDashboardPage() {
                             ))}
                         </div>
                         <Button size="sm" className="mt-4 w-full bg-warning text-warning-foreground hover:bg-warning/90" asChild>
-                            <a href="/maintenance">Review Now</a>
+                            <Link href="/maintenance">Review Now</Link>
                         </Button>
                     </Card>
                 )}
@@ -315,7 +316,7 @@ export default function MobileDashboardPage() {
                         </div>
                     </div>
                     <Button className="mt-4 w-full bg-white/10 text-white hover:bg-white/15" asChild>
-                        <a href="/ai-assistant">Open AI Console →</a>
+                        <Link href="/ai-assistant">Open AI Console →</Link>
                     </Button>
                 </Card>
             </div>
