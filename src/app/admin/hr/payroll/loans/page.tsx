@@ -65,7 +65,7 @@ export default function EmployeeLoansPage() {
     const [loanRes, empRes] = await Promise.all([
       supabase
         .from("employee_loans")
-        .select("id, employee_id, principal_amount, outstanding_balance, installment_amount, currency, reason, status, issued_date, employee:user_profiles(name)")
+        .select("id, employee_id, principal_amount, outstanding_balance, installment_amount, currency, reason, status, issued_date, employee:user_profiles!employee_id(name)")
         .order("created_at", { ascending: false }),
       supabase.from("user_profiles").select("id, name").eq("status", "active").order("name"),
     ]);

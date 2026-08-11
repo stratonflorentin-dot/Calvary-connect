@@ -76,7 +76,7 @@ export default function OvertimePage() {
     setLoading(true);
     const query = supabase
       .from("overtime_entries")
-      .select("id, employee_id, year, month, hours, computed_amount, status, note, employee:user_profiles(name)")
+      .select("id, employee_id, year, month, hours, computed_amount, status, note, employee:user_profiles!employee_id(name)")
       .order("year", { ascending: false })
       .order("month", { ascending: false });
     const res = isHr ? await query.limit(200) : await query.eq("employee_id", user.id);
