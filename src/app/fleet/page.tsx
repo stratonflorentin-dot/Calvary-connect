@@ -51,10 +51,27 @@ function daysUntil(date?: string | null): number | null {
 
 const STATUS_META: Record<string, { label: string; chip: string }> = {
   available:      { label: "Available",      chip: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" },
+  active:         { label: "Available",      chip: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" },
   in_use:         { label: "In Use",         chip: "bg-primary/10 text-primary" },
   maintenance:    { label: "In Maintenance", chip: "bg-warning/10 text-warning" },
   out_of_service: { label: "Out of Service", chip: "bg-destructive/10 text-destructive" },
+  sold:           { label: "Sold",           chip: "bg-muted text-muted-foreground" },
+  decommissioned: { label: "Decommissioned", chip: "bg-muted text-muted-foreground" },
 };
+
+// vehicles_status_check (supabase/migrations/026_recovery_consolidated_fixes.sql)
+// allows 7 values, but this page's stat cards and filter tabs only have 3
+// operational buckets. 'active' is a real, commonly-used status in this data
+// (confirmed live) that was previously counted in none of them — vehicles
+// with it just vanished from every stat card while still counting toward
+// the total, e.g. 36 total but only 22 across Available/In use/In
+// maintenance. Every one of the 7 values must land in exactly one bucket
+// so the cards always sum back to the total.
+function statusBucket(status?: string | null): "available" | "in_use" | "maintenance" {
+  if (status === "in_use") return "in_use";
+  if (status === "maintenance" || status === "out_of_service" || status === "sold" || status === "decommissioned") return "maintenance";
+  return "available"; // available, active, or any future/unrecognized value
+}
 
 export default function FleetPage() {
   const { role, isLoading: roleLoading, isAdmin } = useRole();
@@ -76,9 +93,9 @@ export default function FleetPage() {
 
   const stats = useMemo(() => {
     const total = vehicles.length;
-    const inUse = vehicles.filter((v) => v.status === "in_use").length;
-    const maint = vehicles.filter((v) => v.status === "maintenance").length;
-    const available = vehicles.filter((v) => v.status === "available").length;
+    const inUse = vehicles.filter((v) => statusBucket(v.status) === "in_use").length;
+    const maint = vehicles.filter((v) => statusBucket(v.status) === "maintenance").length;
+    const available = vehicles.filter((v) => statusBucket(v.status) === "available").length;
     const attention = vehicles.filter((v) => {
       const doc = Math.min(
         daysUntil(v.insuranceExpiry ?? v.insurance_expiry) ?? 9999,
@@ -105,7 +122,7 @@ export default function FleetPage() {
         );
         return doc <= 14;
       }
-      if (filter !== "all") return v.status === filter;
+      if (filter !== "all") return statusBucket(v.status) === filter;
       return true;
     });
   }, [vehicles, search, filter]);
