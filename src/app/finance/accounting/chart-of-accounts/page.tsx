@@ -79,7 +79,8 @@ const DEFAULT_ACCOUNTS = [
   { code: '1106', name: 'Fuel Inventory', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
   { code: '1107', name: 'Spare Parts Inventory', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
   { code: '1108', name: 'VAT Receivable', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Current Assets' },
-  
+  { code: '1109', name: 'Bank Account (USD)', category: 'ASSETS', type: 'debit', currency: 'USD', sub_category: 'Current Assets' },
+
   { code: '1201', name: 'Trucks and Trailers', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
   { code: '1202', name: 'Motor Vehicles', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
   { code: '1203', name: 'Office Equipment', category: 'ASSETS', type: 'debit', currency: 'TZS', sub_category: 'Fixed Assets' },
@@ -282,16 +283,23 @@ export default function ChartOfAccountsPage() {
     }
   };
 
-  // Calculate the effective balance for a COA account, including linked bank accounts
+  // Calculate the effective balance for a COA account, including linked bank accounts.
+  // Only sums a bank account whose own currency matches this COA account's
+  // currency — matching by coa_account_code alone let a USD bank account's
+  // raw balance get added straight onto a TZS-tagged COA line (and
+  // displayed with the TZS "Tsh" symbol via formatCurrency below), which
+  // is exactly how a real $50 USD deduction ended up rendering as "50
+  // Tsh" here instead of "$50".
   const getAccountEffectiveBalance = (account: Account) => {
     let balance = account.current_balance || 0;
-    
-    // Add linked bank account balances if this is a bank asset account
-    const linkedBankAccounts = bankAccounts.filter(b => b.coa_account_code === account.code);
+
+    const linkedBankAccounts = bankAccounts.filter(
+      b => b.coa_account_code === account.code && (b.currency ?? 'TZS') === account.currency,
+    );
     linkedBankAccounts.forEach(bank => {
       balance += bank.current_balance;
     });
-    
+
     return balance;
   };
 
