@@ -8,32 +8,39 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, ArrowLeft, RefreshCw, Plus, Trash2, Edit2, Receipt } from "lucide-react";
+import { FileText, ArrowLeft, RefreshCw, Plus, Receipt, Send } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
 
+const VAT_RATE = 0.18;
+
 type CreditNote = {
-  id?: string;
-  credit_note_number: string;
+  id: string;
+  credit_note_number: string | null;
+  customer_id: string | null;
   customer_name: string;
-  original_invoice_id?: string;
+  original_invoice_id: string | null;
   amount: number;
+  vat_amount: number;
+  total_amount: number;
   currency: string;
   issue_date: string;
-  reason: string;
-  status: "draft" | "issued" | "applied";
-  description: string;
+  reason: string | null;
+  status: "draft" | "issued" | "voided";
+  description: string | null;
 };
 
 type Invoice = {
   id: string;
   invoice_number: string;
+  customer_id: string | null;
   customer_name: string;
-  amount: number;
+  total_amount: number;
   currency: string;
   status: string;
 };
@@ -43,182 +50,121 @@ export default function CreditNotesPage() {
   const [loading, setLoading] = useState(true);
   const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [modal, setModal] = useState<string | null>(null);
+  const [modal, setModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [posting, setPosting] = useState<string | null>(null);
 
-  const [creditNoteForm, setCreditNoteForm] = useState({
-    credit_note_number: "",
+  const [form, setForm] = useState({
     customer_name: "",
     original_invoice_id: "",
     amount: "",
+    vat_applicable: true,
     currency: "TZS",
-    issue_date: "",
-    reason: "",
-    status: "draft" as CreditNote['status'],
+    issue_date: new Date().toISOString().split("T")[0],
+    reason: "correction",
     description: "",
   });
 
-  const [editingCreditNote, setEditingCreditNote] = useState<CreditNote | null>(null);
-
-  const loadCreditNotes = async () => {
+  const load = async () => {
     setLoading(true);
     try {
-      // Try credit_notes table, fallback to invoices with CN- prefix
-      let notesData: any[] = [];
-      let invoicesData: any[] = [];
-
-      const cnResult = await supabase
-        .from("invoices")
-        .select("*")
-        .ilike("invoice_number", "CN-%")
-        .order("created_at", { ascending: false });
-
-      const invResult = await supabase
-        .from("invoices")
-        .select("id, invoice_number, customer_name, client_name, amount, currency, status")
-        .eq("status", "paid");
-
-      notesData = cnResult.data || [];
-      invoicesData = invResult.data || [];
-
-      // Map invoices data to match CreditNote type
-      const mappedNotes: CreditNote[] = notesData.map((n: any) => ({
-        id: n.id,
-        credit_note_number: n.invoice_number,
-        customer_name: n.customer_name || n.client_name,
-        original_invoice_id: n.original_invoice_id,
-        amount: Math.abs(n.amount || 0),
-        currency: n.currency || "TZS",
-        issue_date: n.issue_date || n.created_at,
-        reason: n.description || "Credit note",
-        status: (n.status as any) || "draft",
-        description: n.description || "",
-      }));
-
-      const mappedInvoices: Invoice[] = invoicesData.map((i: any) => ({
-        id: i.id,
-        invoice_number: i.invoice_number,
-        customer_name: i.customer_name || i.client_name,
-        amount: i.amount || 0,
-        currency: i.currency || "TZS",
-        status: i.status || "paid",
-      }));
-
-      setCreditNotes(mappedNotes);
-      setInvoices(mappedInvoices);
-    } catch (err) {
-      console.error("Error loading credit notes:", err);
-      setCreditNotes([]);
+      const [notesRes, invoicesRes] = await Promise.all([
+        supabase.from("credit_notes").select("*").order("created_at", { ascending: false }),
+        supabase.from("invoices").select("id, invoice_number, customer_id, customer_name, total_amount, currency, status")
+          .not("invoice_number", "ilike", "CN-%")
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
+      if (notesRes.error) throw notesRes.error;
+      if (invoicesRes.error) throw invoicesRes.error;
+      setCreditNotes((notesRes.data as any) ?? []);
+      setInvoices((invoicesRes.data as any) ?? []);
+    } catch (err: any) {
+      toast({ title: "Error loading credit notes", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadCreditNotes();
+    load();
   }, []);
 
+  const pickInvoice = (invoiceId: string) => {
+    const inv = invoices.find((i) => i.id === invoiceId);
+    setForm((f) => ({
+      ...f,
+      original_invoice_id: invoiceId,
+      customer_name: inv?.customer_name || f.customer_name,
+      currency: inv?.currency || f.currency,
+    }));
+  };
+
   const saveCreditNote = async () => {
-    if (!creditNoteForm.customer_name || !creditNoteForm.amount) {
-      toast({ title: "Validation Error", description: "Please fill in all required fields", variant: "destructive" });
+    const amount = parseFloat(form.amount);
+    if (!form.customer_name || !amount || amount <= 0) {
+      toast({ title: "Validation error", description: "Customer name and a positive amount are required", variant: "destructive" });
       return;
     }
-
     setSubmitting(true);
     try {
-      const cnNum = creditNoteForm.credit_note_number || `CN-${Date.now().toString().slice(-8)}`;
-      const amount = parseFloat(creditNoteForm.amount) || 0;
-
-      let error;
-      if (editingCreditNote?.id) {
-        error = (await supabase.from("invoices").update({
-          customer_name: creditNoteForm.customer_name,
-          client_name: creditNoteForm.customer_name,
-          amount: -amount,
-          total_amount: -amount,
-          issue_date: creditNoteForm.issue_date || new Date().toISOString().split("T")[0],
-          description: creditNoteForm.reason || creditNoteForm.description,
-          status: creditNoteForm.status,
-        }).eq("id", editingCreditNote.id)).error;
-      } else {
-        error = (await supabase.from("invoices").insert({
-          invoice_number: cnNum,
-          customer_name: creditNoteForm.customer_name,
-          client_name: creditNoteForm.customer_name,
-          amount: -amount,
-          vat_amount: 0,
-          total_amount: -amount,
-          currency: creditNoteForm.currency,
-          issue_date: creditNoteForm.issue_date || new Date().toISOString().split("T")[0],
-          due_date: creditNoteForm.issue_date || new Date().toISOString().split("T")[0],
-          description: creditNoteForm.reason || creditNoteForm.description,
-          status: creditNoteForm.status || "issued",
-          payment_terms: "immediate",
-        })).error;
-      }
-
+      const vatAmount = form.vat_applicable ? Math.round(amount * VAT_RATE) : 0;
+      const { error } = await supabase.from("credit_notes").insert({
+        customer_name: form.customer_name,
+        original_invoice_id: form.original_invoice_id || null,
+        amount,
+        vat_amount: vatAmount,
+        total_amount: amount + vatAmount,
+        currency: form.currency,
+        issue_date: form.issue_date,
+        reason: form.reason,
+        description: form.description || null,
+        status: "draft",
+      });
       if (error) throw error;
 
-      await loadCreditNotes();
-      setModal(null);
-      setCreditNoteForm({
-        credit_note_number: "", customer_name: "", original_invoice_id: "",
-        amount: "", currency: "TZS", issue_date: "", reason: "", status: "draft", description: "",
+      toast({ title: "Draft credit note saved", description: "Post it to the ledger when ready." });
+      setModal(false);
+      setForm({
+        customer_name: "", original_invoice_id: "", amount: "", vat_applicable: true,
+        currency: "TZS", issue_date: new Date().toISOString().split("T")[0], reason: "correction", description: "",
       });
-      setEditingCreditNote(null);
-      toast({ title: "Success", description: editingCreditNote ? "Credit note updated" : "Credit note created" });
+      load();
     } catch (err: any) {
-      console.error("Error saving credit note:", err);
-      toast({ title: "Error", description: err?.message || "Failed to save credit note", variant: "destructive" });
+      toast({ title: "Failed to save", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const deleteCreditNote = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this credit note?")) return;
+  const postCreditNote = async (note: CreditNote) => {
+    setPosting(note.id);
     try {
-      const { error } = await supabase.from("invoices").delete().eq("id", id);
+      const { error } = await supabase.rpc("post_credit_note", { p_id: note.id });
       if (error) throw error;
-      await loadCreditNotes();
-      toast({ title: "Success", description: "Credit note deleted" });
+      toast({ title: "Posted to ledger", description: `${note.credit_note_number ?? "Credit note"} reduced Accounts Receivable.` });
+      load();
     } catch (err: any) {
-      toast({ title: "Error", description: err?.message || "Failed to delete", variant: "destructive" });
+      toast({ title: "Failed to post", description: err.message, variant: "destructive" });
+    } finally {
+      setPosting(null);
     }
-  };
-
-  const editCreditNote = (note: CreditNote) => {
-    setEditingCreditNote(note);
-    setCreditNoteForm({
-      credit_note_number: note.credit_note_number,
-      customer_name: note.customer_name,
-      original_invoice_id: note.original_invoice_id || "",
-      amount: String(note.amount),
-      currency: note.currency,
-      issue_date: note.issue_date,
-      reason: note.reason,
-      status: note.status,
-      description: note.description,
-    });
-    setModal("creditNote");
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "issued":
         return <Badge className="bg-success/10 text-success border-success/20">Issued</Badge>;
-      case "applied":
-        return <Badge className="bg-primary/10 text-primary border-primary/20">Applied</Badge>;
-      case "draft":
-        return <Badge className="bg-muted/10 text-muted-foreground border-muted/20">Draft</Badge>;
+      case "voided":
+        return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Voided</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge className="bg-muted text-muted-foreground border-muted">Draft</Badge>;
     }
   };
 
-  const totalCreditAmount = creditNotes.reduce((sum, n) => sum + n.amount, 0);
-  const appliedCredit = creditNotes.filter((n) => n.status === "applied").reduce((sum, n) => sum + n.amount, 0);
-  const pendingCredit = creditNotes.filter((n) => n.status === "draft").reduce((sum, n) => sum + n.amount, 0);
+  const totalCreditAmount = creditNotes.reduce((sum, n) => sum + n.total_amount, 0);
+  const issuedCredit = creditNotes.filter((n) => n.status === "issued").reduce((sum, n) => sum + n.total_amount, 0);
+  const draftCredit = creditNotes.filter((n) => n.status === "draft").reduce((sum, n) => sum + n.total_amount, 0);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -228,18 +174,18 @@ export default function CreditNotesPage() {
             <ArrowLeft className="size-4 mr-2" /> Back to Dashboard
           </Link>
         </Button>
-        <Button onClick={loadCreditNotes} disabled={loading}>
+        <Button onClick={load} disabled={loading}>
           <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
         </Button>
       </div>
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground mb-2">Credit Notes</h1>
-        <p className="text-muted-foreground">Manage credit notes for refunds and invoice adjustments</p>
+        <p className="text-muted-foreground">Issue credit notes against invoices — posts Dr Sales Returns / Dr VAT Payable / Cr Accounts Receivable when posted to the ledger.</p>
       </div>
 
       <div className="flex items-center gap-4 mb-6">
-        <Dialog open={modal === "creditNote"} onOpenChange={(open) => setModal(open ? "creditNote" : null)}>
+        <Dialog open={modal} onOpenChange={setModal}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="size-4" /> New Credit Note
@@ -247,60 +193,50 @@ export default function CreditNotesPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>{editingCreditNote ? "Edit Credit Note" : "New Credit Note"}</DialogTitle>
+              <DialogTitle>New Credit Note</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Credit Note #</Label>
-                  <Input value={creditNoteForm.credit_note_number} onChange={(e) => setCreditNoteForm({ ...creditNoteForm, credit_note_number: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={creditNoteForm.status} onValueChange={(value: any) => setCreditNoteForm({ ...creditNoteForm, status: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="issued">Issued</SelectItem>
-                      <SelectItem value="applied">Applied</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
               <div className="space-y-2">
-                <Label>Customer Name</Label>
-                <Input value={creditNoteForm.customer_name} onChange={(e) => setCreditNoteForm({ ...creditNoteForm, customer_name: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label>Original Invoice (Optional)</Label>
-                <Select value={creditNoteForm.original_invoice_id} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, original_invoice_id: value })}>
+                <Label>Original Invoice (optional)</Label>
+                <Select value={form.original_invoice_id} onValueChange={pickInvoice}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select invoice" />
                   </SelectTrigger>
                   <SelectContent>
                     {invoices.map((invoice) => (
                       <SelectItem key={invoice.id} value={invoice.id}>
-                        {invoice.invoice_number} - {invoice.customer_name} ({formatAmount(invoice.amount)})
+                        {invoice.invoice_number} — {invoice.customer_name} ({formatAmount(invoice.total_amount)})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label>Customer Name *</Label>
+                <Input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Amount</Label>
-                  <Input type="number" value={creditNoteForm.amount} onChange={(e) => setCreditNoteForm({ ...creditNoteForm, amount: e.target.value })} />
+                  <Label>Amount (excl. VAT) *</Label>
+                  <Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Issue Date</Label>
-                  <Input type="date" value={creditNoteForm.issue_date} onChange={(e) => setCreditNoteForm({ ...creditNoteForm, issue_date: e.target.value })} />
+                  <Input type="date" value={form.issue_date} onChange={(e) => setForm({ ...form, issue_date: e.target.value })} />
                 </div>
               </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="vat" checked={form.vat_applicable} onCheckedChange={(v) => setForm({ ...form, vat_applicable: !!v })} />
+                <Label htmlFor="vat" className="cursor-pointer">VAT applicable (18%)</Label>
+              </div>
+              {form.amount && (
+                <p className="text-xs text-muted-foreground">
+                  Total credit: {formatAmount(parseFloat(form.amount) * (form.vat_applicable ? 1 + VAT_RATE : 1))}
+                </p>
+              )}
               <div className="space-y-2">
                 <Label>Reason</Label>
-                <Select value={creditNoteForm.reason} onValueChange={(value) => setCreditNoteForm({ ...creditNoteForm, reason: value })}>
+                <Select value={form.reason} onValueChange={(value) => setForm({ ...form, reason: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -315,12 +251,12 @@ export default function CreditNotesPage() {
               </div>
               <div className="space-y-2">
                 <Label>Description</Label>
-                <Input value={creditNoteForm.description} onChange={(e) => setCreditNoteForm({ ...creditNoteForm, description: e.target.value })} />
+                <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => { setModal(null); setEditingCreditNote(null); }}>Cancel</Button>
+                <Button variant="outline" onClick={() => setModal(false)}>Cancel</Button>
                 <Button onClick={saveCreditNote} disabled={submitting}>
-                  {submitting ? "Saving..." : editingCreditNote ? "Update" : "Save"}
+                  {submitting ? "Saving…" : "Save draft"}
                 </Button>
               </div>
             </div>
@@ -328,7 +264,6 @@ export default function CreditNotesPage() {
         </Dialog>
       </div>
 
-      {/* Summary Cards */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
@@ -343,23 +278,22 @@ export default function CreditNotesPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <FileText className="size-4 text-success" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Applied Credit</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase">Posted to Ledger</p>
             </div>
-            <p className="text-2xl font-bold text-success">{formatAmount(appliedCredit)}</p>
+            <p className="text-2xl font-bold text-success">{formatAmount(issuedCredit)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Receipt className="size-4 text-warning" />
-              <p className="text-xs font-medium text-muted-foreground uppercase">Pending Credit</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase">Draft (not yet posted)</p>
             </div>
-            <p className="text-2xl font-bold text-warning">{formatAmount(pendingCredit)}</p>
+            <p className="text-2xl font-bold text-warning">{formatAmount(draftCredit)}</p>
           </CardContent>
         </Card>
       </section>
 
-      {/* Credit Notes Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -377,7 +311,7 @@ export default function CreditNotesPage() {
                   <TableHead>Issue Date</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Total</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -393,7 +327,7 @@ export default function CreditNotesPage() {
                     const originalInvoice = invoices.find((i) => i.id === note.original_invoice_id);
                     return (
                       <TableRow key={note.id}>
-                        <TableCell className="font-medium">{note.credit_note_number}</TableCell>
+                        <TableCell className="font-medium">{note.credit_note_number ?? "—"}</TableCell>
                         <TableCell>{note.customer_name}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {originalInvoice ? originalInvoice.invoice_number : "-"}
@@ -401,16 +335,14 @@ export default function CreditNotesPage() {
                         <TableCell>{formatDate(note.issue_date)}</TableCell>
                         <TableCell className="capitalize">{note.reason}</TableCell>
                         <TableCell>{getStatusBadge(note.status)}</TableCell>
-                        <TableCell className="font-medium text-primary">{formatAmount(note.amount)}</TableCell>
+                        <TableCell className="font-medium text-primary">{formatAmount(note.total_amount)}</TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => editCreditNote(note)}>
-                              <Edit2 className="size-4" />
+                          {note.status === "draft" && (
+                            <Button variant="outline" size="sm" onClick={() => postCreditNote(note)} disabled={posting === note.id}>
+                              <Send className="size-3.5 mr-1.5" />
+                              {posting === note.id ? "Posting…" : "Post to ledger"}
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => deleteCreditNote(note.id!)}>
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
-                          </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
