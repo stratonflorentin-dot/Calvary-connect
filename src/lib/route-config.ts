@@ -92,6 +92,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
     showInNavigation: false,
   },
+  {
+    path: "/email",
+    label: "Client Email",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    category: "sales",
+  },
   // --- Shipments ---
   {
     path: "/trips",
@@ -109,12 +115,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     path: "/chat",
     label: "Internal Chat",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER", "MECHANIC", "ACCOUNTANT", "HR"],
-    category: "logistics",
-  },
-  {
-    path: "/chat/instagram",
-    label: "Instagram",
-    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "OPERATOR"],
     category: "logistics",
   },
   {

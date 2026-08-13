@@ -39,7 +39,7 @@ const STATUTORY_ROLES = ['CEO', 'ADMIN', 'ACCOUNTANT'];
 
 // These routes use the service-role client (bypasses RLS) to build payroll/
 // statutory reports, so they must verify the caller themselves rather than
-// relying on RLS. Mirrors verifyInboxAccess() in src/app/chat/instagram/actions.ts.
+// relying on RLS.
 export async function requireStatutoryAccess(request: Request) {
     const accessToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
     if (!accessToken) {
