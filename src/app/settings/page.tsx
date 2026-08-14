@@ -43,7 +43,20 @@ interface CompanySettings {
   reporting_currency: string;
   timezone: string;
   logo_url?: string;
+  business_type?: string;
+  year_established?: string;
+  business_registration_no?: string;
+  business_license_number?: string;
 }
+
+const BUSINESS_TYPES = [
+  "Limited Company (Ltd)",
+  "Sole Proprietorship",
+  "Partnership",
+  "Public Limited Company (PLC)",
+  "Cooperative",
+  "Branch of Foreign Company",
+];
 
 const TIMEZONES = ["Africa/Dar_es_Salaam", "Africa/Nairobi", "Africa/Lusaka", "Africa/Johannesburg", "UTC"];
 
@@ -91,6 +104,10 @@ export default function SettingsPage() {
         reporting_currency: data.base_currency ?? REPORTING_CURRENCY,
         timezone: data.timezone ?? "Africa/Dar_es_Salaam",
         logo_url: data.logo_url ?? "",
+        business_type: data.business_type ?? "",
+        year_established: data.year_established ? String(data.year_established) : "",
+        business_registration_no: data.business_registration_no ?? "",
+        business_license_number: data.business_license_number ?? "",
       });
     }
     setLoading(false);
@@ -113,6 +130,10 @@ export default function SettingsPage() {
         base_currency: company.reporting_currency,
         timezone: company.timezone,
         logo_url: company.logo_url || null,
+        business_type: company.business_type || null,
+        year_established: company.year_established ? parseInt(company.year_established, 10) : null,
+        business_registration_no: company.business_registration_no || null,
+        business_license_number: company.business_license_number || null,
         updated_at: new Date().toISOString(),
       };
       let error;
@@ -273,6 +294,51 @@ export default function SettingsPage() {
                 <div className="space-y-1 md:col-span-2">
                   <Label className="text-xs">Address</Label>
                   <Textarea value={company.address ?? ""} onChange={(e) => setCompany({ ...company, address: e.target.value })} rows={3} />
+                </div>
+              </div>
+            </SectionCard>
+          )}
+
+          {tab === "company" && (
+            <SectionCard
+              title="Business Registration"
+              subtitle="Shown on contracts and statutory filings"
+              icon={Shield}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs">Business type</Label>
+                  <Select value={company.business_type || undefined} onValueChange={(v) => setCompany({ ...company, business_type: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select business type" /></SelectTrigger>
+                    <SelectContent>
+                      {BUSINESS_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Year established</Label>
+                  <Input
+                    type="number"
+                    value={company.year_established ?? ""}
+                    onChange={(e) => setCompany({ ...company, year_established: e.target.value })}
+                    placeholder="2021"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Business Registration No. (BRELA / TZ)</Label>
+                  <Input
+                    value={company.business_registration_no ?? ""}
+                    onChange={(e) => setCompany({ ...company, business_registration_no: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Business License Number</Label>
+                  <Input
+                    value={company.business_license_number ?? ""}
+                    onChange={(e) => setCompany({ ...company, business_license_number: e.target.value })}
+                  />
                 </div>
               </div>
             </SectionCard>
