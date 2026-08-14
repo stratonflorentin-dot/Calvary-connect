@@ -106,7 +106,11 @@ export function PWAInstallPrompt() {
   if (isInstalled || !showPrompt) return null;
 
   return (
-    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[60]">
+    // z-40, deliberately below dialog/sheet overlays (z-50, see
+    // components/ui/dialog.tsx) — this banner must never sit on top of a
+    // modal's action buttons. It previously used z-[60], which put it above
+    // every dialog in the app and blocked submit buttons underneath it.
+    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-40">
       <Card className="shadow-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50">
         <CardHeader className="pb-2 pt-4">
           <div className="flex items-center justify-between">
