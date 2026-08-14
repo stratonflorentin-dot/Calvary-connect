@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { PageShell, PageHeader, SectionCard, StatCard } from "@/components/shell";
+import { PageHeader, SectionCard, StatCard } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -309,7 +309,7 @@ export default function CustomerInvoicesPage() {
   ];
 
   return (
-    <PageShell width="wide">
+    <div className="space-y-6 pb-8 pb-safe-bottom">
       <PageHeader
         eyebrow="Accounts Receivable"
         title="Customer Invoices"
@@ -776,6 +776,6 @@ export default function CustomerInvoicesPage() {
           onSaved={() => { setPrinting(null); loadInvoices(); }}
         />
       )}
-    </PageShell>
+    </div>
   );
 }
