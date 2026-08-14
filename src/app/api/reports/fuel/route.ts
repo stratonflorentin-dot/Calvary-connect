@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { requireFleetReportAccess } from '../helpers';
 
 export async function GET(request: NextRequest) {
+  let supabase;
+  try {
+    supabase = await requireFleetReportAccess(request);
+  } catch (err: any) {
+    const status = String(err.message).startsWith('FORBIDDEN') ? 403 : 401;
+    return NextResponse.json({ success: false, error: err.message }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const fromDate = searchParams.get('from') || new Date(new Date().getFullYear(), 0, 1).toISOString();

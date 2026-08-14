@@ -3,6 +3,7 @@
 import React, { useState, useEffect, startTransition } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Users, 
@@ -118,7 +119,10 @@ export default function DriverPerformancePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/reports/driver-performance?from=${fromStr}&to=${toStr}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/reports/driver-performance?from=${fromStr}&to=${toStr}`, {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+      });
       const result = await res.json();
       if (result.success) {
         setSummary(result.summary);

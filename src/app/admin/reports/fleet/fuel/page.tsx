@@ -3,6 +3,7 @@
 import React, { useState, useEffect, startTransition } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
+import { supabase } from '@/lib/supabase';
 import { 
   Fuel, 
   DollarSign, 
@@ -81,7 +82,10 @@ export default function FuelConsumptionPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/reports/fuel?from=${fromStr}&to=${toStr}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/reports/fuel?from=${fromStr}&to=${toStr}`, {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+      });
       const result = await res.json();
       if (result.success) {
         setSummary(result.summary);
