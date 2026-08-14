@@ -258,18 +258,18 @@ async function runDriverScan(): Promise<AgentRunResult> {
 
 async function runCustomerScan(): Promise<AgentRunResult> {
   const context = await getFleetContext();
-  if (context.clients.length === 0) {
+  if (context.customers.length === 0) {
     return { status: 'ok', summary: 'No customers on file.' };
   }
 
   const expiring = context.contracts.filter((c: any) => {
-    if (!c.expiry_date) return false;
-    const days = Math.ceil((new Date(c.expiry_date).getTime() - Date.now()) / 86400000);
+    if (!c.end_date) return false;
+    const days = Math.ceil((new Date(c.end_date).getTime() - Date.now()) / 86400000);
     return days <= 30 && days >= 0;
   });
 
-  const rows = context.clients.slice(0, 30).map((c: any) => `${c.name}: contact ${c.contact_person || 'unknown'}`);
-  const expiringLines = expiring.map((c: any) => `${c.contract_number} (client ${c.client_id}, expires ${c.expiry_date})`);
+  const rows = context.customers.slice(0, 30).map((c: any) => `${c.company_name}: contact ${c.contact_person || 'unknown'}`);
+  const expiringLines = expiring.map((c: any) => `${c.contract_number} (customer ${c.customers?.company_name ?? c.customer_id}, expires ${c.end_date})`);
 
   const result = await generateAI({
     system: `${baseIntro('Customer Relationship Agent')} Based ONLY on this real data, flag which customer relationships need attention this week. Do not invent facts not given here.\n\nCustomers:\n${rows.join('\n')}\n\nContracts expiring within 30 days: ${expiringLines.join('; ') || 'none'}`,
@@ -279,7 +279,7 @@ async function runCustomerScan(): Promise<AgentRunResult> {
   return {
     status: 'ok',
     summary: result.text.trim(),
-    data: { customerCount: context.clients.length, expiringContracts: expiring.length },
+    data: { customerCount: context.customers.length, expiringContracts: expiring.length },
   };
 }
 
@@ -314,7 +314,7 @@ const AGENT_BEHAVIOR: Record<string, Pick<AiAgent, 'run' | 'chatSystemPrompt'>> 
   'customer-relationship': {
     run: runCustomerScan,
     chatSystemPrompt: (ctx) =>
-      `${baseIntro('Customer Relationship Agent')}\n\nCustomers: ${JSON.stringify(ctx.clients.slice(0, 20).map((c: any) => ({ name: c.name })))}\n\nContracts: ${JSON.stringify(ctx.contracts.slice(0, 20).map((c: any) => ({ number: c.contract_number, status: c.status, expires: c.expiry_date })))}`,
+      `${baseIntro('Customer Relationship Agent')}\n\nCustomers: ${JSON.stringify(ctx.customers.slice(0, 20).map((c: any) => ({ name: c.company_name })))}\n\nContracts: ${JSON.stringify(ctx.contracts.slice(0, 20).map((c: any) => ({ number: c.contract_number, status: c.status, expires: c.end_date })))}`,
   },
 };
 

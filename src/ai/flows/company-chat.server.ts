@@ -95,7 +95,7 @@ Recent trips (10): ${JSON.stringify(dbContext.trips.slice(0, 10).map((t: any) =>
     })))}
 Active contracts: ${JSON.stringify(dbContext.contracts
         .filter((c: any) => c.status === 'active')
-        .map((c: any) => ({ number: c.contract_number, client: c.clients?.name, expires: c.expiry_date })))}
+        .map((c: any) => ({ number: c.contract_number, client: c.customers?.company_name, expires: c.end_date })))}
 Fuel logs (5): ${JSON.stringify(dbContext.fuelLogs.slice(0, 5).map((f: any) => ({
             vehicle: f.vehicles?.plate_number, litres: f.litres,
             cost: f.total_cost, date: f.date

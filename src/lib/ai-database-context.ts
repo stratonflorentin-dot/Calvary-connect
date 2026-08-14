@@ -68,31 +68,45 @@ export const FLEET_SCHEMA: DatabaseSchema = {
 // Extend schema with additional tables used by AI
 FLEET_SCHEMA.tables.push(
   {
-    name: 'contracts',
+    // NOT the legacy `contracts` table — that one is abandoned (see
+    // migration 041's era investigation this session: real contract data
+    // lives in transport_contracts, created from src/app/sales/page.tsx's
+    // Contracts tab; `contracts`/`clients` are dead duplicates that were
+    // silently making Contract Health and CEO Insights report zero data).
+    name: 'transport_contracts',
     columns: [
       { name: 'id', type: 'UUID' },
       { name: 'contract_number', type: 'TEXT' },
-      { name: 'client_id', type: 'UUID' },
-      { name: 'status', type: "TEXT /* draft/sent/active/expired/terminated */" },
-      { name: 'effective_date', type: 'DATE' },
-      { name: 'expiry_date', type: 'DATE' },
-      { name: 'term_months', type: 'INTEGER' },
-      { name: 'transporter_name', type: 'TEXT' },
-      { name: 'client_signed_at', type: 'TIMESTAMP' },
-      { name: 'transporter_signed_at', type: 'TIMESTAMP' },
-      { name: 'terminated_at', type: 'TIMESTAMP' },
+      { name: 'customer_id', type: 'UUID' },
+      { name: 'contract_type', type: 'TEXT' },
+      { name: 'status', type: "TEXT /* draft/active/expired/terminated */" },
+      { name: 'start_date', type: 'DATE' },
+      { name: 'end_date', type: 'DATE' },
+      { name: 'contract_value', type: 'DECIMAL' },
+      { name: 'currency', type: 'TEXT' },
       { name: 'created_at', type: 'TIMESTAMP' }
     ]
   },
   {
-    name: 'clients',
+    name: 'customers',
     columns: [
       { name: 'id', type: 'UUID' },
-      { name: 'name', type: 'TEXT' },
+      { name: 'company_name', type: 'TEXT' },
       { name: 'address', type: 'TEXT' },
       { name: 'contact_person', type: 'TEXT' },
       { name: 'email', type: 'TEXT' },
       { name: 'phone', type: 'TEXT' }
+    ]
+  },
+  {
+    name: 'inventory',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'item_name', type: 'TEXT' },
+      { name: 'category', type: 'TEXT' },
+      { name: 'quantity_available', type: 'INTEGER' },
+      { name: 'min_stock_level', type: 'INTEGER' },
+      { name: 'unit_cost', type: 'DECIMAL' },
     ]
   },
   {
@@ -149,17 +163,17 @@ async function safeQuery(queryFn: () => any, fallbackKey = 'data') {
 }
 
 export async function getFleetContext() {
-  const [vehicles, trips, expenses, users, contracts, clients, fuelLogs, maintenance, rateSheets] = await Promise.all([
+  const [vehicles, trips, expenses, users, contracts, customers, fuelLogs, maintenance, rateSheets, inventory] = await Promise.all([
     safeQuery(() => supabase.from('vehicles').select('*').limit(200)),
     safeQuery(() => supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(200)),
     safeQuery(() => supabase.from('expenses').select('*').order('date', { ascending: false }).limit(200)),
     safeQuery(() => supabase.from('user_profiles').select('*').limit(200)),
     safeQuery(async () => {
-      let r = await supabase.from('contracts').select('*').limit(200);
+      let r = await supabase.from('transport_contracts').select('*, customers(company_name)').order('created_at', { ascending: false }).limit(200);
       if (r.error) return { data: [] };
       return r;
     }),
-    safeQuery(() => supabase.from('clients').select('*').limit(200)),
+    safeQuery(() => supabase.from('customers').select('*').limit(200)),
     // Relationship selects can fail if FK relationship missing; try vehicles(plate_number) then fallback to '*'
     safeQuery(async () => {
       try {
@@ -183,7 +197,8 @@ export async function getFleetContext() {
         return { data: [] };
       }
     }),
-    safeQuery(() => supabase.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50))
+    safeQuery(() => supabase.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50)),
+    safeQuery(() => supabase.from('inventory').select('*').limit(500)),
   ]);
 
   return {
@@ -192,10 +207,11 @@ export async function getFleetContext() {
     expenses: expenses.data || [],
     users: users.data || [],
     contracts: contracts.data || [],
-    clients: clients.data || [],
+    customers: customers.data || [],
     fuelLogs: (fuelLogs.data || []).map((f: any) => ({ ...f, vehicle: f.vehicles })),
     maintenance: (maintenance.data || []).map((m: any) => ({ ...m, vehicle: m.vehicles })),
-    rateSheets: rateSheets.data || []
+    rateSheets: rateSheets.data || [],
+    inventory: inventory.data || [],
   };
 }
 
@@ -293,31 +309,58 @@ export async function getDispatchContext(): Promise<DispatchContext> {
 }
 
 export function computeBusinessMetrics(ctx: any) {
+  const now = new Date();
+  const isThisMonth = (dateStr: string | null | undefined) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  };
+
   const completedTrips = (ctx.trips || []).filter((t: any) => t.status === 'completed');
   const totalRevenue = completedTrips.reduce((s: number, t: any) => s + (Number(t.revenue) || 0), 0);
   const totalExpenses = (ctx.expenses || []).reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+  const revenueThisMonth = completedTrips.filter((t: any) => isThisMonth(t.created_at)).reduce((s: number, t: any) => s + (Number(t.revenue) || 0), 0);
+  const expensesThisMonth = (ctx.expenses || []).filter((e: any) => isThisMonth(e.date)).reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
   const totalFuelCost = (ctx.fuelLogs || []).reduce((s: number, f: any) => s + (Number(f.total_cost) || 0), 0);
+  const totalFuelLiters = (ctx.fuelLogs || []).reduce((s: number, f: any) => s + (Number(f.litres) || 0), 0);
+  const fuelLitersThisMonth = (ctx.fuelLogs || []).filter((f: any) => isThisMonth(f.date)).reduce((s: number, f: any) => s + (Number(f.litres) || 0), 0);
   const totalMaintenanceCost = (ctx.maintenance || []).filter((m: any) => m.status === 'completed').reduce((s: number, m: any) => s + (Number(m.cost) || 0), 0);
   const inUseVehicles = (ctx.vehicles || []).filter((v: any) => v.status === 'in_use').length;
   const expiringContracts = (ctx.contracts || []).filter((c: any) => {
-    if (!c.expiry_date) return false;
-    const days = Math.ceil((new Date(c.expiry_date).getTime() - Date.now()) / 86400000);
+    if (!c.end_date) return false;
+    const days = Math.ceil((new Date(c.end_date).getTime() - Date.now()) / 86400000);
     return days <= 30 && days >= 0;
   });
+  const lowStockCount = (ctx.inventory || []).filter((i: any) =>
+    Number(i.quantity_available) <= Number(i.min_stock_level ?? 0),
+  ).length;
+  const onlineDrivers = (ctx.users || []).filter((u: any) =>
+    u.role === 'DRIVER' && u.presence_status === 'online',
+  ).length;
+  const completedDeliveriesThisMonth = completedTrips.filter((t: any) => isThisMonth(t.created_at)).length;
 
   return {
     totalRevenue,
     totalExpenses,
+    revenueThisMonth,
+    expensesThisMonth,
     netProfit: totalRevenue - totalExpenses,
+    netProfitThisMonth: revenueThisMonth - expensesThisMonth,
     profitMargin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue * 100).toFixed(1) : '0',
     fleetUtilization: (ctx.vehicles || []).length > 0 ? (inUseVehicles / (ctx.vehicles || []).length * 100).toFixed(1) : '0',
     activeTripsCount: (ctx.trips || []).filter((t: any) => ['in_transit', 'loading', 'pending'].includes(t.status)).length,
     completedTripsCount: completedTrips.length,
+    completedDeliveriesThisMonth,
     totalFuelCost,
+    totalFuelLiters,
+    fuelLitersThisMonth,
     totalMaintenanceCost,
     activeContracts: (ctx.contracts || []).filter((c: any) => c.status === 'active').length,
     expiringContracts: expiringContracts.length,
     overdueMaintenanceCount: (ctx.maintenance || []).filter((m: any) => m.status === 'overdue').length,
+    pendingMaintenanceCount: (ctx.maintenance || []).filter((m: any) => m.status === 'pending').length,
+    lowStockCount,
+    onlineDriverCount: onlineDrivers,
     costPerTrip: completedTrips.length > 0 ? totalExpenses / completedTrips.length : 0
   };
 }

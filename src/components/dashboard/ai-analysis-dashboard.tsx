@@ -16,6 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sparkles,
@@ -32,7 +34,13 @@ import {
   Activity,
   Bot,
   BarChart2,
-  RefreshCw
+  RefreshCw,
+  Wrench,
+  Fuel,
+  AlertTriangle,
+  CheckCircle2,
+  Lightbulb,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -224,69 +232,107 @@ export default function AIAnalysisDashboard() {
     ceoInsights: false,
   });
 
-  const getSamplePredictiveMaintenancePayload = () => {
-    const vehicle = (vehicles[0] || {}) as any;
-    const currentOdometerKm = Number(vehicle?.mileage || 120000);
+  // Picker state — these tools analyze a REAL vehicle/trip the user chooses,
+  // not always vehicles[0]/trips[0] regardless of fleet composition.
+  const [maintenanceVehicleId, setMaintenanceVehicleId] = useState<string>("");
+  const [maintenanceDaysAhead, setMaintenanceDaysAhead] = useState<number>(30);
+  const [fuelVehicleId, setFuelVehicleId] = useState<string>("");
+  const [fuelTripId, setFuelTripId] = useState<string>("");
+  const [fuelOrigin, setFuelOrigin] = useState<string>("");
+  const [fuelDestination, setFuelDestination] = useState<string>("");
+  const [fuelDistanceKm, setFuelDistanceKm] = useState<number>(0);
+  const [fuelLoadTons, setFuelLoadTons] = useState<number>(8);
+  const [fuelPricePerLiter, setFuelPricePerLiter] = useState<number>(3200);
+  const [fuelTerrain, setFuelTerrain] = useState<'flat' | 'hilly' | 'mountainous' | 'mixed'>('mixed');
+
+  useEffect(() => {
+    if (!maintenanceVehicleId && vehicles.length > 0) setMaintenanceVehicleId(vehicles[0].id);
+    if (!fuelVehicleId && vehicles.length > 0) setFuelVehicleId(vehicles[0].id);
+  }, [vehicles, maintenanceVehicleId, fuelVehicleId]);
+
+  const applyTripToFuelForm = (tripId: string) => {
+    setFuelTripId(tripId);
+    const trip = trips.find((t: any) => t.id === tripId) as any;
+    if (!trip) return;
+    setFuelOrigin(trip.origin || "");
+    setFuelDestination(trip.destination || "");
+    setFuelDistanceKm(Number(trip.distance_km || trip.estimated_distance || 0));
+    if (trip.vehicle_id || trip.truck_id) setFuelVehicleId(trip.vehicle_id || trip.truck_id);
+  };
+
+  const buildPredictiveMaintenancePayload = () => {
+    const vehicle = (vehicles.find((v: any) => v.id === maintenanceVehicleId) || {}) as any;
+    const currentOdometerKm = Number(vehicle?.mileage || vehicle?.odometer_km || 0);
+    const serviceInterval = Number(vehicle?.service_interval_km || 10000);
+    const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+
+    const vehicleMaintenance = (dbContext?.maintenance || []).filter((m: any) => m.vehicle_id === maintenanceVehicleId);
+    const recentMaintenanceCount = vehicleMaintenance.filter((m: any) => new Date(m.date || m.created_at).getTime() >= ninetyDaysAgo).length;
+    const openIssuesCount = vehicleMaintenance.filter((m: any) => ['pending', 'open', 'in_progress'].includes(m.status)).length;
+
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const vehicleTrips = trips.filter((t: any) => (t.vehicle_id === maintenanceVehicleId || t.truck_id === maintenanceVehicleId) && new Date(t.created_at).getTime() >= thirtyDaysAgo);
+    const kmLast30Days = vehicleTrips.reduce((s: number, t: any) => s + (Number(t.distance_km || t.actual_distance || t.estimated_distance) || 0), 0);
+    const averageDailyKm = kmLast30Days > 0 ? Math.round(kmLast30Days / 30) : 300;
+
+    const healthScore = Number(vehicle?.health_score ?? 70);
+    const currentCondition = healthScore >= 80 ? 'Good' : healthScore >= 50 ? 'Fair' : 'Poor';
+
     return {
-      truckId: vehicle?.id || 'TRUCK-0001',
+      truckId: vehicle?.id || maintenanceVehicleId,
       truckName: vehicle?.plate_number || vehicle?.model || 'Fleet Truck',
       currentOdometerKm,
-      lastServiceOdometerKm: Number(vehicle?.mileage ? Math.max(0, vehicle.mileage - 12000) : 108000),
-      lastServiceDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      fuelType: vehicle?.fuel_type || vehicle?.fuelType || 'Diesel',
-      recentMaintenanceCount: 2,
-      averageDailyKm: 400,
-      currentCondition: 'Fair',
-      openIssuesCount: 1,
-      daysAhead: 30,
+      lastServiceOdometerKm: Math.max(0, currentOdometerKm - serviceInterval),
+      lastServiceDate: vehicle?.last_service_date || new Date(ninetyDaysAgo).toISOString().split('T')[0],
+      fuelType: vehicle?.fuel_type || 'Diesel',
+      recentMaintenanceCount,
+      averageDailyKm,
+      currentCondition,
+      openIssuesCount,
+      daysAhead: maintenanceDaysAhead,
     };
   };
 
-  const getSampleFuelPredictionPayload = () => {
-    const trip = (trips[0] || {}) as any;
-    const vehicle = (vehicles.find((v: any) => v.id === trip.vehicle_id) || vehicles[0] || {}) as any;
+  const fleetAvgFuelEfficiency = useMemo(() => {
+    const totalLiters = (dbContext?.fuelLogs || []).reduce((s: number, f: any) => s + (Number(f.litres) || 0), 0);
+    const totalKm = trips.reduce((s: number, t: any) => s + (Number(t.distance_km || t.actual_distance) || 0), 0);
+    return totalLiters > 0 && totalKm > 0 ? totalKm / totalLiters : 3.5;
+  }, [dbContext, trips]);
+
+  const buildFuelPredictionPayload = () => {
+    const vehicle = (vehicles.find((v: any) => v.id === fuelVehicleId) || {}) as any;
     return {
-      tripId: trip?.id,
-      origin: trip?.origin || 'Nairobi',
-      destination: trip?.destination || 'Mombasa',
-      distanceKm: Number(trip?.distance_km || trip?.distanceKm || 480),
+      tripId: fuelTripId || undefined,
+      origin: fuelOrigin || 'Origin',
+      destination: fuelDestination || 'Destination',
+      distanceKm: Number(fuelDistanceKm) || 1,
       vehicleType: `${vehicle?.make || 'Heavy Truck'} ${vehicle?.model || ''}`.trim(),
-      vehicleFuelType: vehicle?.fuel_type || vehicle?.fuelType || 'Diesel',
-      avgFuelEfficiencyKmPerLiter: 4.5,
-      loadWeightTons: 8,
-      driverBehaviourScore: 82,
-      currentFuelPricePerLiter: 1.25,
-      terrainType: 'mixed',
-      weatherCondition: 'clear',
+      vehicleFuelType: vehicle?.fuel_type || 'Diesel',
+      avgFuelEfficiencyKmPerLiter: Number(fleetAvgFuelEfficiency.toFixed(2)),
+      loadWeightTons: Number(fuelLoadTons) || 0,
+      driverBehaviourScore: 75,
+      currentFuelPricePerLiter: Number(fuelPricePerLiter) || 1,
+      terrainType: fuelTerrain,
+      weatherCondition: 'clear' as const,
     };
   };
 
-  const getSampleCeoInsightsPayload = () => {
+  const getCeoInsightsPayload = () => {
     const available = vehicles.filter((v) => vehicleStatusBucket(v.status) === 'available').length;
     const inUse = vehicles.filter((v) => vehicleStatusBucket(v.status) === 'in_use').length;
     const maintenance = vehicles.filter((v) => vehicleStatusBucket(v.status) === 'maintenance').length;
-    const pendingMaintenanceCount = (dbContext?.maintenance || []).filter((m: any) => m.status === 'pending').length;
-    const completedDeliveriesThisMonth = (dbContext?.trips || []).filter((t: any) => {
-      const d = new Date(t.created_at);
-      const now = new Date();
-      return (
-        d.getMonth() === now.getMonth() &&
-        d.getFullYear() === now.getFullYear() &&
-        t.status === 'completed'
-      );
-    }).length;
 
     return {
       activeTripsCount: activeTrips.length,
       fleetBreakdown: { available, inUse, maintenance },
-      revenueThisMonth: totalRevenue,
-      expensesThisMonth: totalExpenses,
-      netProfit,
-      fuelConsumptionLiters: Number(businessMetrics?.totalFuelCost || 0),
-      pendingMaintenanceCount,
-      lowStockCount: 12,
-      onlineDriverCount: dbContext?.users?.length || 0,
-      completedDeliveriesThisMonth,
+      revenueThisMonth: Number(businessMetrics?.revenueThisMonth || 0),
+      expensesThisMonth: Number(businessMetrics?.expensesThisMonth || 0),
+      netProfit: Number(businessMetrics?.netProfitThisMonth || 0),
+      fuelConsumptionLiters: Number(businessMetrics?.fuelLitersThisMonth || 0),
+      pendingMaintenanceCount: Number(businessMetrics?.pendingMaintenanceCount || 0),
+      lowStockCount: Number(businessMetrics?.lowStockCount || 0),
+      onlineDriverCount: Number(businessMetrics?.onlineDriverCount || 0),
+      completedDeliveriesThisMonth: Number(businessMetrics?.completedDeliveriesThisMonth || 0),
     };
   };
 
@@ -316,17 +362,17 @@ export default function AIAnalysisDashboard() {
   };
 
   const runPredictiveMaintenance = async () => {
-    const payload = getSamplePredictiveMaintenancePayload();
+    const payload = buildPredictiveMaintenancePayload();
     await callAiRoute('/api/ai/predictive-maintenance', payload, setPredictiveMaintenanceResult, 'predictiveMaintenance');
   };
 
   const runFuelPrediction = async () => {
-    const payload = getSampleFuelPredictionPayload();
+    const payload = buildFuelPredictionPayload();
     await callAiRoute('/api/ai/fuel-prediction', payload, setFuelPredictionResult, 'fuelPrediction');
   };
 
   const runCeoInsights = async () => {
-    const payload = getSampleCeoInsightsPayload();
+    const payload = getCeoInsightsPayload();
     await callAiRoute('/api/ai/ceo-insights', payload, setCeoInsightsResult, 'ceoInsights');
   };
 
@@ -599,64 +645,256 @@ export default function AIAnalysisDashboard() {
             </CardContent>
           </Card>
 
-          {/* AI Route Diagnostics */}
+          {/* Predictive Maintenance */}
           <Card className="bg-card shadow-sm border-border">
             <CardHeader className="bg-muted/30 border-b pb-4">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Activity className="size-5 text-slate-500" />
-                AI Route Diagnostics
+                <Wrench className="size-5 text-slate-500" />
+                Predictive Maintenance
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Test the new server-side AI endpoints and inspect the returned data.
-                </p>
-
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <Button
-                    onClick={runPredictiveMaintenance}
-                    disabled={apiLoading.predictiveMaintenance || vehicles.length === 0}
-                  >
-                    {apiLoading.predictiveMaintenance ? 'Running...' : 'Predictive Maintenance'}
-                  </Button>
-                  <Button
-                    onClick={runFuelPrediction}
-                    disabled={apiLoading.fuelPrediction || trips.length === 0}
-                  >
-                    {apiLoading.fuelPrediction ? 'Running...' : 'Fuel Prediction'}
-                  </Button>
-                  <Button
-                    onClick={runCeoInsights}
-                    disabled={apiLoading.ceoInsights || vehicles.length === 0}
-                  >
-                    {apiLoading.ceoInsights ? 'Running...' : 'CEO Insights'}
-                  </Button>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] items-end">
+                <div className="space-y-1">
+                  <Label className="text-xs">Vehicle</Label>
+                  <Select value={maintenanceVehicleId} onValueChange={setMaintenanceVehicleId}>
+                    <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                    <SelectContent>
+                      {vehicles.map((v: any) => (
+                        <SelectItem key={v.id} value={v.id}>{v.plate_number || v.model || v.id}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div className="space-y-1 w-28">
+                  <Label className="text-xs">Days ahead</Label>
+                  <Input type="number" min={7} max={180} value={maintenanceDaysAhead} onChange={(e) => setMaintenanceDaysAhead(Number(e.target.value) || 30)} />
+                </div>
+                <Button onClick={runPredictiveMaintenance} disabled={apiLoading.predictiveMaintenance || !maintenanceVehicleId}>
+                  {apiLoading.predictiveMaintenance ? <Loader2 className="size-4 animate-spin mr-1" /> : null}
+                  {apiLoading.predictiveMaintenance ? 'Analyzing…' : 'Run Prediction'}
+                </Button>
+              </div>
 
-                <div className="grid gap-4">
-                  {predictiveMaintenanceResult && (
-                    <div className="rounded-xl border p-4 bg-white">
-                      <p className="text-sm font-semibold mb-2">Predictive Maintenance Result</p>
-                      <pre className="text-xs text-slate-700 overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(predictiveMaintenanceResult, null, 2)}</pre>
+              {predictiveMaintenanceResult && (
+                predictiveMaintenanceResult.error ? (
+                  <p className="text-sm text-destructive">{predictiveMaintenanceResult.error}</p>
+                ) : (
+                  <div className="rounded-xl border border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <Badge className={cn(
+                        "font-bold uppercase tracking-wider",
+                        predictiveMaintenanceResult.riskLevel === 'CRITICAL' ? "bg-red-100 text-red-700" :
+                        predictiveMaintenanceResult.riskLevel === 'HIGH' ? "bg-orange-100 text-orange-700" :
+                        predictiveMaintenanceResult.riskLevel === 'MEDIUM' ? "bg-amber-100 text-amber-700" :
+                        "bg-emerald-100 text-emerald-700"
+                      )}>
+                        {predictiveMaintenanceResult.riskLevel} risk
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">Recommended service: <strong className="text-foreground">{predictiveMaintenanceResult.recommendedServiceDate}</strong></span>
                     </div>
-                  )}
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-muted-foreground">Failure probability</span>
+                        <span className="font-bold">{Math.round((predictiveMaintenanceResult.failureProbability || 0) * 100)}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${Math.round((predictiveMaintenanceResult.failureProbability || 0) * 100)}%` }} />
+                      </div>
+                    </div>
+                    <p className="text-sm text-foreground">{predictiveMaintenanceResult.reasoning}</p>
+                    {predictiveMaintenanceResult.predictedIssues?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Predicted issues</p>
+                        <ul className="text-sm space-y-1">
+                          {predictiveMaintenanceResult.predictedIssues.map((issue: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2"><AlertTriangle className="size-3.5 text-amber-600 mt-0.5 shrink-0" />{issue}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {predictiveMaintenanceResult.preventiveActions?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Preventive actions</p>
+                        <ul className="text-sm space-y-1">
+                          {predictiveMaintenanceResult.preventiveActions.map((action: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2"><CheckCircle2 className="size-3.5 text-emerald-600 mt-0.5 shrink-0" />{action}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground pt-1 border-t border-border">Estimated repair cost: <strong className="text-foreground">{format(predictiveMaintenanceResult.estimatedRepairCostUSD || 0)}</strong></p>
+                  </div>
+                )
+              )}
+            </CardContent>
+          </Card>
 
-                  {fuelPredictionResult && (
-                    <div className="rounded-xl border p-4 bg-white">
-                      <p className="text-sm font-semibold mb-2">Fuel Prediction Result</p>
-                      <pre className="text-xs text-slate-700 overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(fuelPredictionResult, null, 2)}</pre>
-                    </div>
-                  )}
-
-                  {ceoInsightsResult && (
-                    <div className="rounded-xl border p-4 bg-white">
-                      <p className="text-sm font-semibold mb-2">CEO Insights Result</p>
-                      <pre className="text-xs text-slate-700 overflow-auto max-h-40 whitespace-pre-wrap">{JSON.stringify(ceoInsightsResult, null, 2)}</pre>
-                    </div>
-                  )}
+          {/* Fuel Consumption Prediction */}
+          <Card className="bg-card shadow-sm border-border">
+            <CardHeader className="bg-muted/30 border-b pb-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Fuel className="size-5 text-slate-500" />
+                Fuel Consumption Prediction
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Vehicle</Label>
+                  <Select value={fuelVehicleId} onValueChange={setFuelVehicleId}>
+                    <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                    <SelectContent>
+                      {vehicles.map((v: any) => (
+                        <SelectItem key={v.id} value={v.id}>{v.plate_number || v.model || v.id}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Prefill from a recent trip (optional)</Label>
+                  <Select value={fuelTripId} onValueChange={applyTripToFuelForm}>
+                    <SelectTrigger><SelectValue placeholder="Select trip" /></SelectTrigger>
+                    <SelectContent>
+                      {trips.slice(0, 30).map((t: any) => (
+                        <SelectItem key={t.id} value={t.id}>{t.origin} → {t.destination}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Origin</Label>
+                  <Input value={fuelOrigin} onChange={(e) => setFuelOrigin(e.target.value)} placeholder="Dar es Salaam" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Destination</Label>
+                  <Input value={fuelDestination} onChange={(e) => setFuelDestination(e.target.value)} placeholder="Mwanza" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Distance (km)</Label>
+                  <Input type="number" value={fuelDistanceKm} onChange={(e) => setFuelDistanceKm(Number(e.target.value) || 0)} />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Load (tons)</Label>
+                  <Input type="number" value={fuelLoadTons} onChange={(e) => setFuelLoadTons(Number(e.target.value) || 0)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Fuel price (TZS/L)</Label>
+                  <Input type="number" value={fuelPricePerLiter} onChange={(e) => setFuelPricePerLiter(Number(e.target.value) || 0)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Terrain</Label>
+                  <Select value={fuelTerrain} onValueChange={(v) => setFuelTerrain(v as typeof fuelTerrain)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="flat">Flat</SelectItem>
+                      <SelectItem value="hilly">Hilly</SelectItem>
+                      <SelectItem value="mountainous">Mountainous</SelectItem>
+                      <SelectItem value="mixed">Mixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={runFuelPrediction} disabled={apiLoading.fuelPrediction || !fuelVehicleId || !fuelOrigin || !fuelDestination || !fuelDistanceKm}>
+                {apiLoading.fuelPrediction ? <Loader2 className="size-4 animate-spin mr-1" /> : null}
+                {apiLoading.fuelPrediction ? 'Predicting…' : 'Predict Fuel Consumption'}
+              </Button>
+
+              {fuelPredictionResult && (
+                fuelPredictionResult.error ? (
+                  <p className="text-sm text-destructive">{fuelPredictionResult.error}</p>
+                ) : (
+                  <div className="rounded-xl border border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <Badge className={cn(
+                        "font-bold uppercase tracking-wider",
+                        fuelPredictionResult.efficiencyRating === 'EXCELLENT' ? "bg-emerald-100 text-emerald-700" :
+                        fuelPredictionResult.efficiencyRating === 'GOOD' ? "bg-sky-100 text-sky-700" :
+                        fuelPredictionResult.efficiencyRating === 'AVERAGE' ? "bg-amber-100 text-amber-700" :
+                        "bg-red-100 text-red-700"
+                      )}>
+                        {fuelPredictionResult.efficiencyRating} efficiency
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">{fuelPredictionResult.confidenceLevel} confidence</Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div>
+                        <p className="text-lg font-bold text-foreground">{Number(fuelPredictionResult.estimatedFuelLiters || 0).toFixed(1)} L</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">Fuel needed</p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-foreground">TZS {Number(fuelPredictionResult.estimatedFuelCost || 0).toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">Est. cost</p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-foreground">{Number(fuelPredictionResult.carbonEmissionKg || 0).toFixed(0)} kg</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">CO₂</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{fuelPredictionResult.comparisonToFleetAverage}</p>
+                    {fuelPredictionResult.optimisationTips?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Optimisation tips</p>
+                        <ul className="text-sm space-y-1">
+                          {fuelPredictionResult.optimisationTips.map((tip: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2"><Lightbulb className="size-3.5 text-amber-600 mt-0.5 shrink-0" />{tip}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
+            </CardContent>
+          </Card>
+
+          {/* CEO Insights */}
+          <Card className="bg-card shadow-sm border-border">
+            <CardHeader className="bg-muted/30 border-b pb-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Gauge className="size-5 text-slate-500" />
+                Executive Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                A snapshot analysis of this month's live fleet, revenue, and maintenance data.
+              </p>
+              <Button onClick={runCeoInsights} disabled={apiLoading.ceoInsights}>
+                {apiLoading.ceoInsights ? <Loader2 className="size-4 animate-spin mr-1" /> : null}
+                {apiLoading.ceoInsights ? 'Generating…' : 'Generate Insights'}
+              </Button>
+
+              {ceoInsightsResult && (
+                ceoInsightsResult.error ? (
+                  <p className="text-sm text-destructive">{ceoInsightsResult.error}</p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                      <p className="text-xs font-bold uppercase text-emerald-700 mb-2 flex items-center gap-1"><TrendingUp className="size-3.5" /> Highlights</p>
+                      <ul className="text-xs space-y-1.5 text-emerald-900">
+                        {(ceoInsightsResult.keyHighlights || []).map((h: string, i: number) => <li key={i}>• {h}</li>)}
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                      <p className="text-xs font-bold uppercase text-amber-700 mb-2 flex items-center gap-1"><AlertTriangle className="size-3.5" /> Concerns</p>
+                      <ul className="text-xs space-y-1.5 text-amber-900">
+                        {(ceoInsightsResult.areasOfConcern || []).map((c: string, i: number) => <li key={i}>• {c}</li>)}
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
+                      <p className="text-xs font-bold uppercase text-sky-700 mb-2 flex items-center gap-1"><Lightbulb className="size-3.5" /> Recommendations</p>
+                      <ul className="text-xs space-y-1.5 text-sky-900">
+                        {(ceoInsightsResult.actionableRecommendations || []).map((r: string, i: number) => <li key={i}>• {r}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                )
+              )}
             </CardContent>
           </Card>
 
@@ -742,14 +980,14 @@ export default function AIAnalysisDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {(dbContext?.contracts || []).filter((c: any) => c.expiry_date).slice(0, 6).map((c: any) => {
-                  const days = Math.ceil((new Date(c.expiry_date).getTime() - Date.now()) / 86400000);
+                {(dbContext?.contracts || []).filter((c: any) => c.end_date).slice(0, 6).map((c: any) => {
+                  const days = Math.ceil((new Date(c.end_date).getTime() - Date.now()) / 86400000);
                   const color = days <= 7 ? 'bg-red-100 text-red-700' : days <= 30 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
                   return (
                     <div key={c.id} className="flex items-center justify-between p-2 rounded-md border border-border">
                       <div className="flex flex-col">
                         <div className="font-semibold">{c.contract_number}</div>
-                        <div className="text-xs text-muted-foreground">{c.clients?.name || c.client_name || 'Unknown'}</div>
+                        <div className="text-xs text-muted-foreground">{c.customers?.company_name || 'Unknown'}</div>
                       </div>
                       <div className={`px-3 py-1 rounded-full text-xs font-bold ${color}`}>{days}d</div>
                     </div>
@@ -807,9 +1045,9 @@ export default function AIAnalysisDashboard() {
                   <DataTable
                     columns={[
                       { key: "contract_number", label: "Contract #" },
-                      { key: "client", label: "Client", render: (row) => row.clients?.name || row.client_name },
+                      { key: "customer", label: "Customer", render: (row) => row.customers?.company_name || "—" },
                       { key: "status", label: "Status" },
-                      { key: "expiry_date", label: "Expires", render: (row) => row.expiry_date ? new Date(row.expiry_date).toLocaleDateString() : '-' }
+                      { key: "end_date", label: "Expires", render: (row) => row.end_date ? new Date(row.end_date).toLocaleDateString() : '-' }
                     ]}
                     data={(dbContext?.contracts || []).slice(0, 20)}
                   />
