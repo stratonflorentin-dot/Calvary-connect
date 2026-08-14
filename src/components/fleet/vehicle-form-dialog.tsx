@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/components/supabase-provider";
+import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/hooks/use-toast";
 import { AuditTrailService } from "@/services/audit-trail-service";
 import { uploadToBucket } from "@/lib/storage-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Camera, Loader2, Save, Truck } from "lucide-react";
@@ -44,6 +46,14 @@ interface VehicleFormState {
   insurance_expiry: string;
   registration_expiry: string;
   next_inspection_due: string;
+  purchase_price: number | "";
+  purchase_date: string;
+  financed: boolean;
+  lender: string;
+  down_payment: number | "";
+  interest_rate: number | "";
+  installment_amount: number | "";
+  down_payment_bank_account_id: string;
 }
 
 const empty = (): VehicleFormState => ({
@@ -61,7 +71,24 @@ const empty = (): VehicleFormState => ({
   insurance_expiry: "",
   registration_expiry: "",
   next_inspection_due: "",
+  purchase_price: "",
+  purchase_date: "",
+  financed: false,
+  lender: "",
+  down_payment: "",
+  interest_rate: "",
+  installment_amount: "",
+  down_payment_bank_account_id: "",
 });
+
+/** Fixed-asset / loan-payable account codes for a financed vehicle
+ *  acquisition — mirrors the seeded Chart of Accounts split between
+ *  Trucks and Trailers (1201/2201) and Motor Vehicles (1202/2202). */
+function vehicleLoanAccountCodes(type: FleetType) {
+  return type === "ESCORT_CAR"
+    ? { fixedAssetCode: "1202", loanPayableCode: "2202" }
+    : { fixedAssetCode: "1201", loanPayableCode: "2201" }; // DUMP_TRUCK, TRUCK_HEAD, TRAILER
+}
 
 /** Rows written before the status vocabulary was unified may carry legacy
  *  values; normalize them for display when editing. Writes always use the
@@ -101,6 +128,8 @@ interface VehicleWritePayload {
   registration_expiry?: string | null;
   next_inspection_due?: string | null;
   photo_url?: string | null;
+  purchase_price?: number | null;
+  purchase_date?: string | null;
   updated_at: string;
   created_at?: string;
 }
@@ -115,6 +144,12 @@ const MIGRATION_026_DATE_COLUMNS = [
   "registration_expiry",
 ] as const;
 
+/** purchase_price/purchase_date (from 20240620_vehicle_details.sql) — same
+ *  defensive send-only-when-filled treatment as the migration-026 columns
+ *  above, since this UI can't confirm live schema state and a save
+ *  shouldn't fail outright over an optional financial field. */
+const VEHICLE_PURCHASE_COLUMNS = ["purchase_price", "purchase_date"] as const;
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -125,13 +160,20 @@ interface Props {
 
 export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Props) {
   const { user } = useSupabase();
+  const { role } = useRole();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<VehicleFormState>(empty);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(vehicle?.id);
+  // Purchase price/financing are finance-sensitive fields — hidden entirely
+  // for roles other than CEO/ADMIN/ACCOUNTANT. Note RLS on `vehicles` is
+  // table-level, not column-level, so this is a UI-only gate; that matches
+  // every other table in this app, none of which has column-level RLS.
+  const canFinance = role === "CEO" || role === "ADMIN" || role === "ACCOUNTANT";
 
   const pickPhoto = () => photoInputRef.current?.click();
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,6 +182,11 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   };
+
+  useEffect(() => {
+    if (!open || !canFinance) return;
+    supabase.from("bank_accounts").select("*").then(({ data }) => setBankAccounts(data ?? []));
+  }, [open, canFinance]);
 
   useEffect(() => {
     if (!open) return;
@@ -161,6 +208,16 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         insurance_expiry: (vehicle.insurance_expiry ?? vehicle.insuranceExpiry ?? "").slice(0, 10),
         registration_expiry: (vehicle.registration_expiry ?? vehicle.registrationExpiry ?? "").slice(0, 10),
         next_inspection_due: (vehicle.next_inspection_due ?? "").slice(0, 10),
+        purchase_price: vehicle.purchase_price ?? "",
+        purchase_date: (vehicle.purchase_date ?? "").slice(0, 10),
+        // Financing is add-only from this dialog — editing a vehicle never
+        // shows or touches vehicle_loans, so these always start blank.
+        financed: false,
+        lender: "",
+        down_payment: "",
+        interest_rate: "",
+        installment_amount: "",
+        down_payment_bank_account_id: "",
       });
     } else {
       setForm(empty());
@@ -178,6 +235,26 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
     if (form.type === "TRAILER" && !form.trailer_sub_type) {
       toast({ title: "Trailer sub-type required", variant: "destructive" });
       return;
+    }
+    if (!isEdit && canFinance && form.financed) {
+      if (!form.lender.trim()) {
+        toast({ title: "Lender required", description: "Enter who financed this vehicle.", variant: "destructive" });
+        return;
+      }
+      const price = form.purchase_price === "" ? 0 : Number(form.purchase_price);
+      const down = form.down_payment === "" ? 0 : Number(form.down_payment);
+      if (price <= 0) {
+        toast({ title: "Purchase price required", description: "Enter a purchase price to record financing.", variant: "destructive" });
+        return;
+      }
+      if (down >= price) {
+        toast({ title: "Down payment too large", description: "Down payment must be less than the purchase price.", variant: "destructive" });
+        return;
+      }
+      if (down > 0 && !form.down_payment_bank_account_id) {
+        toast({ title: "Bank account required", description: "Select which account the down payment came from.", variant: "destructive" });
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -219,6 +296,16 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         }
       }
 
+      // purchase_price/purchase_date — same conditional-send treatment.
+      for (const col of VEHICLE_PURCHASE_COLUMNS) {
+        const value = form[col];
+        if (value !== "" && value != null) {
+          payload[col] = value as any;
+        } else if (isEdit && vehicle?.[col]) {
+          payload[col] = null;
+        }
+      }
+
       // `photo_url` (migration 028) is only sent when the user actually
       // uploaded a photo — omitting it otherwise keeps this save working
       // even before that migration has been applied.
@@ -239,6 +326,49 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
           await AuditTrailService.logCreate("management", "vehicle", data.id, data, user?.id, `Added vehicle ${payload.plate_number}`);
         }
         toast({ title: "Vehicle added", description: payload.plate_number });
+
+        if (canFinance && form.financed && data?.id) {
+          const price = Number(form.purchase_price) || 0;
+          const down = form.down_payment === "" ? 0 : Number(form.down_payment);
+          const { fixedAssetCode, loanPayableCode } = vehicleLoanAccountCodes(form.type);
+          const { data: loanRow, error: loanError } = await supabase
+            .from("vehicle_loans")
+            .insert({
+              vehicle_id: data.id,
+              lender: form.lender.trim(),
+              purchase_price: price,
+              down_payment: down,
+              principal_amount: price - down,
+              outstanding_balance: price - down,
+              interest_rate: form.interest_rate === "" ? null : Number(form.interest_rate),
+              installment_amount: form.installment_amount === "" ? null : Number(form.installment_amount),
+              currency: "TZS",
+              down_payment_bank_account_id: down > 0 ? form.down_payment_bank_account_id : null,
+              purchase_date: form.purchase_date || new Date().toISOString().slice(0, 10),
+              status: "active",
+              fixed_asset_account_code: fixedAssetCode,
+              loan_payable_account_code: loanPayableCode,
+              created_by: user?.id,
+            })
+            .select()
+            .single();
+
+          if (loanError) {
+            toast({ title: "Vehicle saved, financing not recorded", description: loanError.message, variant: "destructive" });
+          } else {
+            await AuditTrailService.logCreate("management", "vehicle_loan", loanRow.id, loanRow, user?.id, `Financed vehicle ${payload.plate_number} via ${form.lender}`);
+            const { error: postError } = await supabase.rpc("post_vehicle_acquisition", { p_vehicle_loan_id: loanRow.id });
+            if (postError) {
+              toast({
+                title: "Vehicle and loan saved, but posting to the ledger failed",
+                description: `${postError.message} — retry from the Vehicle Loans page.`,
+                variant: "destructive",
+              });
+            } else {
+              toast({ title: "Financing posted to the ledger", description: `${form.lender} — ${loanRow.loan_number ?? "loan recorded"}` });
+            }
+          }
+        }
       }
 
       onOpenChange(false);
@@ -406,6 +536,79 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
               </div>
             </div>
           </fieldset>
+
+          {/* Purchase & financing — finance-sensitive, hidden for other roles */}
+          {canFinance && (
+            <>
+              <fieldset className="space-y-3">
+                <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Purchase</legend>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Purchase price</Label>
+                    <Input type="number" value={form.purchase_price} onChange={(e) => patch({ purchase_price: e.target.value === "" ? "" : Number(e.target.value) })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Purchase date</Label>
+                    <Input type="date" value={form.purchase_date} onChange={(e) => patch({ purchase_date: e.target.value })} />
+                  </div>
+                </div>
+              </fieldset>
+
+              {!isEdit && (
+                <fieldset className="space-y-3">
+                  <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Financing</legend>
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="financed" checked={form.financed} onCheckedChange={(v) => patch({ financed: !!v })} />
+                    <Label htmlFor="financed" className="cursor-pointer text-xs">Financed with a loan</Label>
+                  </div>
+                  {form.financed && (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Lender</Label>
+                          <Input value={form.lender} onChange={(e) => patch({ lender: e.target.value })} placeholder="Bank name" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Down payment</Label>
+                          <Input type="number" value={form.down_payment} onChange={(e) => patch({ down_payment: e.target.value === "" ? "" : Number(e.target.value) })} placeholder="0" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Interest rate % (optional)</Label>
+                          <Input type="number" value={form.interest_rate} onChange={(e) => patch({ interest_rate: e.target.value === "" ? "" : Number(e.target.value) })} placeholder="0" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Installment amount (optional)</Label>
+                          <Input type="number" value={form.installment_amount} onChange={(e) => patch({ installment_amount: e.target.value === "" ? "" : Number(e.target.value) })} placeholder="0" />
+                        </div>
+                        {Number(form.down_payment) > 0 && (
+                          <div className="space-y-1">
+                            <Label className="text-xs">Down payment from</Label>
+                            <Select value={form.down_payment_bank_account_id} onValueChange={(v) => patch({ down_payment_bank_account_id: v })}>
+                              <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                              <SelectContent>
+                                {bankAccounts.map((b) => (
+                                  <SelectItem key={b.id} value={b.id}>
+                                    {b.account_name ?? b.id}{b.bank_name ? ` — ${b.bank_name}` : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                      {form.purchase_price !== "" && (
+                        <p className="text-xs text-muted-foreground">
+                          Principal financed: {(Number(form.purchase_price) - (form.down_payment === "" ? 0 : Number(form.down_payment))).toLocaleString()}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </fieldset>
+              )}
+            </>
+          )}
 
           {/* Compliance dates */}
           <fieldset className="space-y-3">

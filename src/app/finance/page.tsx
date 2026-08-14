@@ -29,6 +29,7 @@ import {
   Sparkles,
   TrendingDown,
   TrendingUp,
+  Truck,
   Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -145,6 +146,7 @@ export default function FinanceOverviewPage() {
     { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-warning bg-warning/10" },
     { href: "/finance/reports/trial-balance", icon: Calculator, label: "Trial Balance", color: "text-muted-foreground bg-muted" },
     { href: "/finance/accounting/chart-of-accounts", icon: BookOpen, label: "Chart of Accounts", color: "text-primary bg-primary/10", module: 'finance_chart_of_accounts' as const },
+    { href: "/finance/accounting/vehicle-loans", icon: Truck, label: "Vehicle Loans", color: "text-info bg-info/10" },
     { href: "/fleet/fuel-anomalies", icon: Fuel, label: "Fuel Anomalies", color: "text-warning bg-warning/10" },
   ];
 

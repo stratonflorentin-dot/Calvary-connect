@@ -254,6 +254,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     showInNavigation: false,
   },
   {
+    path: "/finance/accounting/vehicle-loans",
+    label: "Vehicle Loans",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false, // shown in finance quick-links, like chart-of-accounts
+  },
+  {
     path: "/finance/reports/trial-balance",
     label: "Trial Balance",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
