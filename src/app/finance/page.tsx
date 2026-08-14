@@ -433,7 +433,7 @@ export default function FinanceOverviewPage() {
                 {" · other currencies: "}
                 {Object.entries(cashByCurrency)
                   .filter(([c]) => c !== REPORTING_CURRENCY)
-                  .map(([c, v]) => `${c} ${formatCurrencyShort(v, c)}`)
+                  .map(([c, v]) => formatCurrencyShort(v, c))
                   .join(", ")}
               </>
             )}
