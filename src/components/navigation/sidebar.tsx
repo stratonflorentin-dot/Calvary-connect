@@ -36,6 +36,7 @@ import {
   ArrowUpCircle,
   MessageSquare,
   Mail,
+  FileText,
   Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ const routeIconMap: Record<string, any> = {
   "/map": MapPin,
   "/customers": Building2,
   "/email": Mail,
+  "/admin/contracts": FileText,
   "/sales": Briefcase,
   "/fleet": Truck,
   "/fleet/compliance": Shield,

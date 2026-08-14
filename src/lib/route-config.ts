@@ -98,6 +98,24 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
     category: "sales",
   },
+  {
+    path: "/admin/contracts",
+    label: "Contracts",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    category: "sales",
+  },
+  {
+    path: "/admin/contracts/new",
+    label: "New Contract",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/contracts/[id]",
+    label: "Contract Details",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
   // --- Shipments ---
   {
     path: "/trips",
