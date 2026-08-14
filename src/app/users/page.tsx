@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { RoleSelector } from '@/components/dashboard/role-selector';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
@@ -861,7 +860,7 @@ export default function UsersPage() {
           </Table>
           </div>
         </div>
-      </main>      <RoleSelector />
+      </main>
     </div>
   );
 }

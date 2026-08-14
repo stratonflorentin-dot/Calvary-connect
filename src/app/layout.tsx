@@ -14,7 +14,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { PageLoader } from "@/components/page-loader";
 import { SupabaseProvider } from '@/components/supabase-provider';
-import { RoleSelectorWrapper } from '@/components/dashboard/role-selector-wrapper';
 import { PWAProvider } from '@/components/pwa/pwa-provider';
 import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
 import { DriverSilentTrackingRoot } from '@/components/tracking/driver-silent-tracking-root';
@@ -98,7 +97,6 @@ export default function RootLayout({
                     <FinancialSalesProvider>{children}</FinancialSalesProvider>
                   </RouteOverridesProvider>
                   <Toaster />
-                  <RoleSelectorWrapper />
                   <PWAInstallPrompt />
                 </SupabaseProvider>
               </SidebarProvider>
