@@ -28,7 +28,6 @@ import {
   Navigation,
   Menu,
   X,
-  Zap,
   ClipboardList,
   Fuel,
   ChevronLeft,
@@ -265,8 +264,9 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
               {isOpen ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>
             <div className="flex items-center gap-2 min-w-0">
-              <div className="bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] p-1 rounded-lg shrink-0">
-                <Zap className="size-4" />
+              <div className="bg-white p-0.5 rounded-lg shrink-0 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-mark.png" alt="Calvary" className="size-4 object-contain" />
               </div>
               <span className="font-headline text-base font-extrabold tracking-tighter text-white uppercase truncate">
                 Calvary
@@ -357,8 +357,9 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
           {!isCollapsed ? (
             <>
               <div className="flex items-center gap-2">
-                <div className="bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] p-1.5 rounded-xl shadow-[0_0_12px_hsl(var(--sidebar-primary)/0.5)]">
-                  <Zap className="size-5" />
+                <div className="bg-white p-1 rounded-xl shadow-[0_0_12px_hsl(var(--sidebar-primary)/0.5)] overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo-mark.png" alt="Calvary" className="size-5 object-contain" />
                 </div>
                 <h1 className="font-headline text-xl font-extrabold tracking-tighter text-white uppercase">
                   Calvary
