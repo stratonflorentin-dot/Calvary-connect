@@ -19,10 +19,13 @@
 -- Not called via post_journal_entry: that function's role check
 -- (current_user_role() IN ('CEO','ADMIN','ACCOUNTANT')) reads the actual
 -- invoking user's role, which SECURITY DEFINER on a trigger function does
--- NOT change — a SALESMAN creating an invoice would still fail that check.
--- So this trigger does the same balance-check-and-post steps inline,
--- trusted because the three amounts are computed here, not user-supplied
--- lines. Unlike post_bank_transaction's journal mirror (which swallows a
+-- NOT change. invoices_write happens to restrict invoice creation to the
+-- same CEO/ADMIN/ACCOUNTANT set, so that check would pass here too — but
+-- relying on two separately-maintained role lists staying in sync forever
+-- is exactly the kind of thing that quietly breaks later, so this trigger
+-- does the same balance-check-and-post steps inline regardless, trusted
+-- because the three amounts are computed here, not user-supplied lines.
+-- Unlike post_bank_transaction's journal mirror (which swallows a
 -- failure into a NOTICE), this does NOT catch its own errors — an invoice
 -- and its ledger posting stay atomic, in the same transaction.
 --
