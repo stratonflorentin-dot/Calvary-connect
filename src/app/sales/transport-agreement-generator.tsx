@@ -638,7 +638,7 @@ export function RateSheetPreview() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>20ft Rate</Label>
                     <Input
@@ -1198,7 +1198,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
         </div>
         <div className="space-y-2">
           {agreementData.rates.map((item) => (
-            <div key={item.id} className="grid grid-cols-4 gap-2 items-end">
+            <div key={item.id} className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
               <Input placeholder="Description" value={item.description} onChange={(e) => updateRateLine(item.id, 'description', e.target.value)} />
               <Input type="number" placeholder="Rate" value={item.rate} onChange={(e) => updateRateLine(item.id, 'rate', Number(e.target.value))} />
               <Input type="number" placeholder="Amount" value={item.amount} onChange={(e) => updateRateLine(item.id, 'amount', Number(e.target.value))} />
@@ -1300,6 +1300,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
             {/* Rental Fees */}
             <div>
               <h4 className="text-xs font-bold text-red-600">3. RENTAL FEES</h4>
+              <div className="overflow-x-auto">
               <table className="w-full text-xs mt-2">
                 <thead>
                   <tr className="bg-red-600 text-white">
@@ -1322,6 +1323,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Payment Terms */}

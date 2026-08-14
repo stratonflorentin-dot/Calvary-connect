@@ -316,6 +316,7 @@ export default function TrialBalancePage() {
                           </div>
                         </div>
                       </div>
+                      <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-muted/70">
                           <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -340,6 +341,7 @@ export default function TrialBalancePage() {
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   );
                 })}

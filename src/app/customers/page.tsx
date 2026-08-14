@@ -226,14 +226,14 @@ export default function CustomersPage() {
           </div>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-4">
+            <CardHeader className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <CardTitle>Customer List</CardTitle>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search customers..." 
-                    className="pl-10 w-64"
+                  <Input
+                    placeholder="Search customers..."
+                    className="pl-10 w-full sm:w-64"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />

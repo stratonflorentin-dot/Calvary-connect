@@ -210,7 +210,7 @@ export function VehicleDetailsDialog({ vehicle, open, onOpenChange, role, onVehi
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="service">Service History</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>

@@ -707,6 +707,7 @@ export default function JournalEntriesPage() {
                   <p className="text-foreground">{detail.description}</p>
                 </div>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm border border-border rounded-xl overflow-hidden">
                 <thead className="bg-muted">
                   <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -730,6 +731,7 @@ export default function JournalEntriesPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-border bg-muted">
               <Button variant="outline" onClick={() => setDetail(null)}>Close</Button>

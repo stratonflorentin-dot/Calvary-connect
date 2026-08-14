@@ -820,7 +820,8 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
               <DialogTitle>Edit Annexure A - Rates</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <table className="w-full table-fixed border-collapse">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] border-collapse">
                 <thead>
                   <tr className="text-left">
                     <th>From</th>
@@ -880,6 +881,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
                   ))}
                 </tbody>
               </table>
+              </div>
 
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => { setEditingModalOpen(false); setEditingRates(null); }}>Cancel</Button>

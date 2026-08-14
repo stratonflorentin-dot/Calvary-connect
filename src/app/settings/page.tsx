@@ -394,6 +394,7 @@ export default function SettingsPage() {
 
           {tab === "workflow" && (
             <SectionCard title="SLA hours per workflow" subtitle="Requests older than these thresholds appear as overdue">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/40">
                   <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -417,6 +418,7 @@ export default function SettingsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
               <p className="text-xs text-muted-foreground mt-4">
                 SLA thresholds live in <span className="font-mono">src/lib/workflow/approvals.ts</span> — edit and redeploy to change them.
               </p>
@@ -428,6 +430,7 @@ export default function SettingsPage() {
               {Object.entries(approvalRules).map(([kind, tiers]) => (
                 <div key={kind} className="mb-6 last:mb-0">
                   <h4 className="text-sm font-black uppercase tracking-wider text-muted-foreground mb-2 capitalize">{kind.replace(/_/g, " ")}</h4>
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40">
                       <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -450,6 +453,7 @@ export default function SettingsPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               ))}
               <p className="text-xs text-muted-foreground">

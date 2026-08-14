@@ -240,6 +240,7 @@ export default function AgingReportPage() {
                   <p className="text-xs text-muted-foreground">Aggregated open balances in {cur}</p>
                 </div>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted border-b border-border">
                   <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -271,6 +272,7 @@ export default function AgingReportPage() {
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           );
         })

@@ -197,7 +197,7 @@ function ExecutiveDashboardContent() {
                 iconBg="bg-success"
                 headerGradient="bg-gradient-to-r from-success to-success/80"
             >
-                <div className="grid grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                     <div className="bg-muted/50 p-4 rounded-xl text-center hover:bg-muted/70 transition-colors">
                         <p className="text-xs text-muted-foreground mb-2 font-medium">Requested</p>
                         <p className="text-base font-bold text-foreground">{format(shipmentFinance.requested)}</p>
@@ -263,7 +263,7 @@ function ExecutiveDashboardContent() {
                     headerGradient="bg-gradient-to-r from-info/80 to-info/60"
                 >
                     <div className="space-y-6">
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="bg-info/10 p-4 rounded-xl text-center hover:bg-info/20 transition-colors">
                                 <p className="text-xs text-info mb-2 font-medium">In Transit</p>
                                 <p className="text-base font-bold text-info">{tripPerformance.inTransit}</p>

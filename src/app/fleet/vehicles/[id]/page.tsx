@@ -281,7 +281,7 @@ export default function VehicleDetailPage() {
                 iconBg="bg-accent"
                 headerGradient="bg-gradient-to-r from-info to-info/80"
             >
-                <div className="grid grid-cols-6 gap-3 text-xs text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs text-center">
                     {utilizationByMonth.map((month, idx) => {
                         const utilizationColor = month.percent > 70 ? 'text-success' : month.percent > 40 ? 'text-warning' : 'text-muted-foreground';
                         return (
@@ -298,7 +298,7 @@ export default function VehicleDetailPage() {
 
             {/* SECTION 5: TAB NAVIGATION */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-7">
+                <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-7">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="trips">Trips & Costs</TabsTrigger>
                     <TabsTrigger value="maintenance">Maintenance</TabsTrigger>

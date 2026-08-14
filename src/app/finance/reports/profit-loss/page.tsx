@@ -456,6 +456,7 @@ export default function ProfitLossPage() {
                           </div>
                         </div>
                       </div>
+                      <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-slate-50/70">
                           <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
@@ -484,6 +485,7 @@ export default function ProfitLossPage() {
                           })}
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   );
                 })}

@@ -59,7 +59,7 @@ export default function DriverTripsPage() {
       description="Only trips assigned to you. You cannot create or assign trips."
     >
       <Tabs value={tab} onValueChange={(v) => setTab(v as TripTab)} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-2 xs:grid-cols-4 h-auto">
           <TabsTrigger value="all" className="text-xs py-3">All</TabsTrigger>
           <TabsTrigger value="pending" className="text-xs py-3">Pending</TabsTrigger>
           <TabsTrigger value="transit" className="text-xs py-3">In transit</TabsTrigger>
