@@ -391,7 +391,7 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
           {/* Odometer & fuel */}
           <fieldset className="space-y-3">
             <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Odometer &amp; fuel</legend>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Mileage (km)</Label>
                 <Input type="number" value={form.mileage} onChange={(e) => patch({ mileage: e.target.value === "" ? "" : Number(e.target.value) })} placeholder="0" />

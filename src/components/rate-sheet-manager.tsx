@@ -170,7 +170,7 @@ export function RateSheetManager() {
 
                                 <div className="space-y-2">
                                     <Label>Pricing</Label>
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div className="space-y-1">
                                             <Label htmlFor="container20ft" className="text-xs text-gray-600">20ft Container</Label>
                                             <Input

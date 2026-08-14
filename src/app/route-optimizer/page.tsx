@@ -335,7 +335,7 @@ export default function RouteOptimizerPage() {
 
           {result && (
             <>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="cv-kpi">
                   <span className="cv-kpi-label">Total distance</span>
                   <p className="cv-kpi-value mt-1">{result.distance_km.toLocaleString()} km</p>

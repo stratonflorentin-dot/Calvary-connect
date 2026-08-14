@@ -350,7 +350,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
                 )}
               </div>
             )}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Driver</Label>
                 <Select value={form.driverId || "__none"} onValueChange={(v) => patch({ driverId: v === "__none" ? "" : v })}>
@@ -382,7 +382,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Trip type</Label>
                 <Select value={form.tripType} onValueChange={(v) => patch({ tripType: v as "local" | "transit" })}>
@@ -415,7 +415,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
 
           <fieldset className="space-y-3">
             <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Estimates &amp; pricing</legend>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Distance (km)</Label>
                 <Input type="number" value={form.estimatedDistance} onChange={(e) => patch({ estimatedDistance: e.target.value === "" ? "" : Number(e.target.value) })} />
@@ -441,7 +441,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="space-y-1">
                 <Label className="text-xs">VAT rate (%)</Label>
                 {form.tripType === "transit" ? (

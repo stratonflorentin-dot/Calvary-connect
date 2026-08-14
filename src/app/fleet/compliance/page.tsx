@@ -685,7 +685,7 @@ export default function CompliancePage() {
                 <Input value={form.provider} onChange={(e) => setForm((p) => ({ ...p, provider: e.target.value }))} placeholder="Jubilee, TRA, LATRA…" />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Issue date</Label>
                 <Input type="date" value={form.issue_date} onChange={(e) => setForm((p) => ({ ...p, issue_date: e.target.value }))} />
@@ -699,7 +699,7 @@ export default function CompliancePage() {
                 <Input type="number" min={1} value={form.reminder_days} onChange={(e) => setForm((p) => ({ ...p, reminder_days: Number(e.target.value) || 30 }))} />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="space-y-1">
                 <Label className="text-xs">Cost</Label>
                 <Input type="number" min={0} value={form.cost} onChange={(e) => setForm((p) => ({ ...p, cost: e.target.value === "" ? "" : Number(e.target.value) }))} placeholder="0" />

@@ -234,7 +234,7 @@ export default function OperationsDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="text-center p-4 rounded-lg bg-muted/50">
                     <div className="text-2xl font-bold">{stats.totalDrivers}</div>
                     <div className="text-xs text-muted-foreground">Total</div>
@@ -259,7 +259,7 @@ export default function OperationsDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="text-center p-4 rounded-lg bg-muted/50">
                     <div className="text-2xl font-bold">{stats.totalPODs}</div>
                     <div className="text-xs text-muted-foreground">Total</div>

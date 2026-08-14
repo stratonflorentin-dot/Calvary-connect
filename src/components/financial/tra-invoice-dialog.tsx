@@ -478,7 +478,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
             {initialInvoice?.id && (
               <Button onClick={saveInvoice} variant="outline" disabled={saving}>
                 {saving ? <RefreshCw className="size-4 mr-1 animate-spin" /> : <CheckCircle2 className="size-4 mr-1" />}

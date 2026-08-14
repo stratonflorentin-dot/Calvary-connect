@@ -148,7 +148,7 @@ export default function NewMaintenancePage() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="type">Type</Label>
                                 <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
@@ -202,7 +202,7 @@ export default function NewMaintenancePage() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="technician">Technician</Label>
                                 <Input

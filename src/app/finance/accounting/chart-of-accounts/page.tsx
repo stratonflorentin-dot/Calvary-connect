@@ -932,7 +932,7 @@ export default function ChartOfAccountsPage() {
                         <p className="font-semibold">{selectedAccount.description}</p>
                       </div>
                     )}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <Label className="text-muted-foreground">Current Balance</Label>
                         <p className="font-semibold text-lg">{formatCurrency(selectedAccount.current_balance, selectedAccount.currency)}</p>
@@ -1121,7 +1121,7 @@ export default function ChartOfAccountsPage() {
             {/* Account Details Card */}
             {ledgerAccount && (
               <div className="px-6 py-4 bg-muted/50 border-b">
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-card p-4 rounded-lg shadow-sm border">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Code</p>
                     <p className="text-xl font-mono font-bold text-foreground">{ledgerAccount.code}</p>
@@ -1300,10 +1300,10 @@ export default function ChartOfAccountsPage() {
             
             <form onSubmit={handleCreateLedgerEntry} className="space-y-4 pt-4">
               {/* Header Fields */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Entry Date</Label>
-                  <Input 
+                  <Input
                     type="date"
                     value={entryLines[0]?.date || new Date().toISOString().split('T')[0]}
                     onChange={(e) => {

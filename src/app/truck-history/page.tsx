@@ -499,7 +499,7 @@ export default function TruckHistoryPage() {
                         <TrendingUp className="size-4 text-emerald-600" />
                         <span className="text-sm font-medium text-emerald-700">Income from Trips ({vehicleTripRecords?.length || 0} records)</span>
                       </div>
-                      <div className="max-h-[200px] overflow-y-auto">
+                      <div className="max-h-[200px] overflow-y-auto overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead className="bg-slate-50 sticky top-0">
                             <tr>
@@ -544,7 +544,7 @@ export default function TruckHistoryPage() {
                         <TrendingDown className="size-4 text-red-600" />
                         <span className="text-sm font-medium text-red-700">Expenses ({vehicleExpenseRecords?.length || 0} records)</span>
                       </div>
-                      <div className="max-h-[200px] overflow-y-auto">
+                      <div className="max-h-[200px] overflow-y-auto overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead className="bg-slate-50 sticky top-0">
                             <tr>
@@ -588,7 +588,7 @@ export default function TruckHistoryPage() {
                         <Fuel className="size-4 text-amber-600" />
                         <span className="text-sm font-medium text-amber-700">Fuel Records ({vehicleFuelRecords?.length || 0} records)</span>
                       </div>
-                      <div className="max-h-[200px] overflow-y-auto">
+                      <div className="max-h-[200px] overflow-y-auto overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead className="bg-slate-50 sticky top-0">
                             <tr>
