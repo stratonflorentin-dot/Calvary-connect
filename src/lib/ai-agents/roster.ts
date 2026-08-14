@@ -121,19 +121,27 @@ async function runMaintenance(): Promise<AgentRunResult> {
   }).length;
   const openIssuesCount = vehicleMaintenance.filter((m: any) => m.status === 'pending' || m.status === 'overdue').length;
   const currentOdometerKm = Number(target.mileage) || 0;
+  const serviceInterval = Number(target.service_interval_km) || 10000;
+
+  const thirtyDaysAgo = Date.now() - 30 * 86400000;
+  const vehicleTrips = context.trips.filter((t: any) =>
+    (t.vehicle_id === target.id || t.truck_id === target.id) && new Date(t.created_at).getTime() >= thirtyDaysAgo,
+  );
+  const kmLast30Days = vehicleTrips.reduce((s: number, t: any) => s + (Number(t.distance_km || t.actual_distance || t.estimated_distance) || 0), 0);
+  const averageDailyKm = kmLast30Days > 0 ? Math.round(kmLast30Days / 30) : 300;
 
   const result = await getPredictiveMaintenance({
     truckId: target.id,
     truckName: target.plate_number || target.model || 'Fleet Truck',
     currentOdometerKm,
     // No odometer-at-service column exists on maintenance_records — same
-    // 12,000km-back estimate the existing AI dashboard uses when real data
-    // isn't available (src/components/dashboard/ai-analysis-dashboard.tsx).
-    lastServiceOdometerKm: Math.max(0, currentOdometerKm - 12000),
+    // per-vehicle service-interval estimate the AI dashboard uses when
+    // real data isn't available (src/components/dashboard/ai-analysis-dashboard.tsx).
+    lastServiceOdometerKm: Math.max(0, currentOdometerKm - serviceInterval),
     lastServiceDate: lastCompleted?.date || new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0],
     fuelType: target.fuel_type || 'Diesel',
     recentMaintenanceCount,
-    averageDailyKm: 400,
+    averageDailyKm,
     currentCondition: target.status === 'maintenance' ? 'Poor' : openIssuesCount > 0 ? 'Fair' : 'Good',
     openIssuesCount,
     daysAhead: 30,
@@ -156,6 +164,18 @@ async function runFuel(): Promise<AgentRunResult> {
   }
   const vehicle = context.vehicles.find((v: any) => v.id === trip.vehicle_id) || context.vehicles[0];
 
+  // Fleet-wide averages from real fuel logs/trips, same computation the AI
+  // dashboard uses (src/components/dashboard/ai-analysis-dashboard.tsx) —
+  // fallbacks only apply when there's no fuel history yet.
+  const totalLiters = context.fuelLogs.reduce((s: number, f: any) => s + (Number(f.litres) || 0), 0);
+  const totalKm = context.trips.reduce((s: number, t: any) => s + (Number(t.distance_km || t.actual_distance) || 0), 0);
+  const avgFuelEfficiencyKmPerLiter = totalLiters > 0 && totalKm > 0 ? totalKm / totalLiters : 3.5;
+
+  const pricedLogs = context.fuelLogs.filter((f: any) => Number(f.cost_per_litre) > 0);
+  const currentFuelPricePerLiter = pricedLogs.length > 0
+    ? pricedLogs.reduce((s: number, f: any) => s + Number(f.cost_per_litre), 0) / pricedLogs.length
+    : 3200;
+
   const result = await getFuelPrediction({
     tripId: trip.id,
     origin: trip.origin || 'Unknown origin',
@@ -163,10 +183,10 @@ async function runFuel(): Promise<AgentRunResult> {
     distanceKm: Number(trip.distance_km) || 480,
     vehicleType: `${vehicle?.make || 'Heavy Truck'} ${vehicle?.model || ''}`.trim(),
     vehicleFuelType: vehicle?.fuel_type || 'Diesel',
-    avgFuelEfficiencyKmPerLiter: 4.5,
-    loadWeightTons: 8,
+    avgFuelEfficiencyKmPerLiter,
+    loadWeightTons: Number(trip.cargo_weight_tons) || 8,
     driverBehaviourScore: 82,
-    currentFuelPricePerLiter: 1.25,
+    currentFuelPricePerLiter,
     terrainType: 'mixed',
     weatherCondition: 'clear',
   });
@@ -187,32 +207,21 @@ async function runCeoInsights(): Promise<AgentRunResult> {
   const available = context.vehicles.filter((v: any) => isVehicleAvailable(v.status)).length;
   const inUse = context.vehicles.filter((v: any) => v.status === 'in_use').length;
   const maintenance = context.vehicles.filter((v: any) => v.status === 'maintenance').length;
-  const pendingMaintenanceCount = context.maintenance.filter((m: any) => m.status === 'pending').length;
-  const fuelConsumptionLiters = context.fuelLogs.reduce((s: number, f: any) => s + (Number(f.litres) || 0), 0);
-  const onlineDriverCount = context.users.filter((u: any) => u.role === 'DRIVER').length;
 
-  const now = new Date();
-  const completedDeliveriesThisMonth = context.trips.filter((t: any) => {
-    const d = new Date(t.created_at);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && t.status === 'completed';
-  }).length;
-
-  const { data: inventoryRows } = await supabase.from('inventory').select('quantity_available, min_stock_level');
-  const lowStockCount = (inventoryRows || []).filter(
-    (i: any) => (i.quantity_available ?? 0) <= (i.min_stock_level ?? 0),
-  ).length;
-
+  // Reuse computeBusinessMetrics() rather than recomputing locally — it's
+  // the single source of truth also used by the AI dashboard and already
+  // filters onlineDriverCount by presence_status, not just role.
   const insights = await getCeoAiInsights({
     activeTripsCount: metrics.activeTripsCount,
     fleetBreakdown: { available, inUse, maintenance },
-    revenueThisMonth: metrics.totalRevenue,
-    expensesThisMonth: metrics.totalExpenses,
-    netProfit: metrics.netProfit,
-    fuelConsumptionLiters,
-    pendingMaintenanceCount,
-    lowStockCount,
-    onlineDriverCount,
-    completedDeliveriesThisMonth,
+    revenueThisMonth: metrics.revenueThisMonth,
+    expensesThisMonth: metrics.expensesThisMonth,
+    netProfit: metrics.netProfitThisMonth,
+    fuelConsumptionLiters: metrics.fuelLitersThisMonth,
+    pendingMaintenanceCount: metrics.pendingMaintenanceCount,
+    lowStockCount: metrics.lowStockCount,
+    onlineDriverCount: metrics.onlineDriverCount,
+    completedDeliveriesThisMonth: metrics.completedDeliveriesThisMonth,
   });
 
   return {
