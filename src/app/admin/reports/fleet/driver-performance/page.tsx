@@ -183,7 +183,7 @@ export default function DriverPerformancePage() {
     <div id="report-root" className="flex min-h-screen bg-background" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
       <Sidebar role={role} />
       
-      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-auto">
+      <main className="flex-1 min-w-0 md:ml-64 p-4 md:p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-6">
           
           {/* Breadcrumb / Back button */}

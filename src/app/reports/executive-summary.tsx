@@ -563,7 +563,7 @@ export default function ExecutiveSummaryPage() {
           <CardHeader>
             <CardTitle className="text-foreground">Top Customers by Revenue</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -600,7 +600,7 @@ export default function ExecutiveSummaryPage() {
           <CardHeader>
             <CardTitle className="text-foreground">Top Expense Categories</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

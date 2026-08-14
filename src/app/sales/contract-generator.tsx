@@ -681,7 +681,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
               </div>
             )}
           </CardHeader>
-          <CardContent className="max-h-[400px] overflow-y-auto">
+          <CardContent className="max-h-[400px] overflow-y-auto overflow-x-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
@@ -710,7 +710,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
 
       {/* New Rate Sheet Dialog */}
       <Dialog open={newRateSheetModalOpen} onOpenChange={setNewRateSheetModalOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Rate Sheet</DialogTitle>
           </DialogHeader>
@@ -815,7 +815,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
       {/* Edit Rates Modal */}
       {canEditRates && selectedRateSheetData && (
         <Dialog open={editingModalOpen} onOpenChange={setEditingModalOpen}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Annexure A - Rates</DialogTitle>
             </DialogHeader>

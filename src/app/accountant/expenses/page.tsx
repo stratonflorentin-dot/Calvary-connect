@@ -168,7 +168,7 @@ export default function AccountantExpensesPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row justify-between gap-4">
             <div>
@@ -254,6 +254,7 @@ export default function AccountantExpensesPage() {
               ) : filtered.length === 0 ? (
                 <p className="p-8 text-center text-muted-foreground">No expenses found.</p>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -353,6 +354,7 @@ export default function AccountantExpensesPage() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>

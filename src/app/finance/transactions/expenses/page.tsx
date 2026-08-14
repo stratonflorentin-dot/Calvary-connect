@@ -340,7 +340,7 @@ export default function ExpensesPage() {
               <Plus className="size-4" /> Add Expense
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingExpense ? "Edit Expense" : "Add Expense"}</DialogTitle>
             </DialogHeader>
@@ -434,7 +434,7 @@ export default function ExpensesPage() {
 
         {/* Payment Modal */}
         <Dialog open={!!paymentModal} onOpenChange={(open) => setPaymentModal(open ? paymentModal : null)}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Record Payment for Vendor Bill</DialogTitle>
             </DialogHeader>

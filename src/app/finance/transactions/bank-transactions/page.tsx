@@ -289,8 +289,8 @@ export default function BankTransactionsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            <div className="flex-1 min-w-[160px]">
               <Label>Select Bank Account</Label>
               <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
                 <SelectTrigger>
@@ -311,7 +311,7 @@ export default function BankTransactionsPage() {
                   <Plus className="size-4" /> New Transaction
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
+              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingTransaction ? "Edit Transaction" : "New Transaction"}</DialogTitle>
                 </DialogHeader>

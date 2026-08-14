@@ -153,7 +153,7 @@ export default function CashFlowPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Calendar className="size-4 text-muted-foreground" />
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-auto" />
                 <span className="text-muted-foreground">to</span>
@@ -246,7 +246,7 @@ export default function CashFlowPage() {
                   <CardHeader>
                     <CardTitle className="text-lg">Cash Flow Summary</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -301,7 +301,7 @@ export default function CashFlowPage() {
                     <CardHeader>
                       <CardTitle className="text-lg">Cash Inflows</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -343,7 +343,7 @@ export default function CashFlowPage() {
                     <CardHeader>
                       <CardTitle className="text-lg">Cash Outflows</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>

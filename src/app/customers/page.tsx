@@ -163,7 +163,7 @@ export default function CustomersPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <div>
             <h1 className="text-3xl font-bold">Customers</h1>
@@ -243,7 +243,7 @@ export default function CustomersPage() {
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Add New Customer</DialogTitle>
                   </DialogHeader>
@@ -319,7 +319,7 @@ export default function CustomersPage() {
                 </DialogContent>
               </Dialog>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

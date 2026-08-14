@@ -238,6 +238,7 @@ export default function OvertimePage() {
         ) : rows.length === 0 ? (
           <EmptyState icon={Clock} title="No overtime entries yet" description="Submit one above." />
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -274,6 +275,7 @@ export default function OvertimePage() {
               })}
             </TableBody>
           </Table>
+          </div>
         )}
       </SectionCard>
     </PageShell>

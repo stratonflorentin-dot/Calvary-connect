@@ -243,6 +243,7 @@ export default function PayrollRunPage() {
           />
         ) : (
           <>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -274,6 +275,7 @@ export default function PayrollRunPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
             {period?.status === "draft" && (
               <p className="text-xs text-muted-foreground mt-3">
                 Approve this period to unlock the bank disbursement file.

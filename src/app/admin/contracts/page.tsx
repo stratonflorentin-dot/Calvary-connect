@@ -147,7 +147,7 @@ export default function ContractsPage() {
                     No contracts found
                 </div>
             ) : (
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border rounded-lg overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>

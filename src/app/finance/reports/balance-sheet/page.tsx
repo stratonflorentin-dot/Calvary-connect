@@ -228,7 +228,7 @@ export default function BalanceSheetPage() {
                         Assets
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -267,7 +267,7 @@ export default function BalanceSheetPage() {
                         Liabilities & Equity
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>

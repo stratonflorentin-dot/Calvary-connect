@@ -15,7 +15,7 @@ export default function AdminSettingsPage() {
         return (
             <div className="flex min-h-screen bg-background">
                 <Sidebar role={effectiveRole} />
-                <main className="flex-1 md:ml-60 p-8">
+                <main className="flex-1 min-w-0 md:ml-60 p-8">
                     <Card className="border-destructive/20 bg-destructive/10 shadow-lg">
                         <CardContent className="flex items-center gap-3 p-6">
                             <IconFallback name="AlertCircle" className="size-6 text-destructive" />
@@ -33,7 +33,7 @@ export default function AdminSettingsPage() {
     return (
         <div className="flex min-h-screen bg-background">
             <Sidebar role={effectiveRole} />
-            <main className="flex-1 md:ml-60 p-4 md:p-8 overflow-auto">
+            <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 overflow-auto">
                 <div className="max-w-7xl mx-auto space-y-8">
                     {/* Header */}
                     <div>

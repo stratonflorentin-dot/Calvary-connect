@@ -191,7 +191,7 @@ export default function CreditNotesPage() {
               <Plus className="size-4" /> New Credit Note
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>New Credit Note</DialogTitle>
             </DialogHeader>
@@ -301,7 +301,7 @@ export default function CreditNotesPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

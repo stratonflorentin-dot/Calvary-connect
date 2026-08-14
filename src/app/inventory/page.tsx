@@ -118,7 +118,7 @@ export default function InventoryPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar role={role!} />
-        <main className="flex-1 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
           <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
             <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
             <p className="text-muted-foreground text-sm">You do not have permission to access the warehouse inventory.</p>
@@ -131,7 +131,7 @@ export default function InventoryPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role!} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-headline tracking-tighter">Warehouse Inventory</h1>
@@ -195,7 +195,7 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-hidden">
+        <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-x-auto">
           <div className="p-4 border-b border-border">
             <Input
               placeholder="Search item name..."

@@ -228,8 +228,8 @@ export default function MaintenanceCostsPage() {
         <p className="text-muted-foreground">Track vehicle maintenance and repair expenses</p>
       </div>
 
-      <div className="flex items-center gap-4 mb-6">
-        <div className="flex-1">
+      <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex-1 min-w-[160px]">
           <Label>Filter by Vehicle</Label>
           <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
             <SelectTrigger>
@@ -251,7 +251,7 @@ export default function MaintenanceCostsPage() {
               <Plus className="size-4" /> Add Maintenance Cost
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingMaintenance ? "Edit Maintenance Cost" : "Add Maintenance Cost"}</DialogTitle>
             </DialogHeader>

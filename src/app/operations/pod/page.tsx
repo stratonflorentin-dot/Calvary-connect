@@ -260,7 +260,7 @@ export default function PODPage() {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar role={role} />
-        <main className="flex-1 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
           <div className="text-center">
             <p className="text-muted-foreground">Access denied. Drivers cannot access POD management.</p>
           </div>
@@ -272,7 +272,7 @@ export default function PODPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role || "CEO"} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-4 flex items-center justify-between">
             <Button variant="ghost" asChild>
@@ -331,7 +331,7 @@ export default function PODPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-4 mb-6">
             <Dialog open={showDialog} onOpenChange={setShowDialog}>
               <DialogTrigger asChild>
                 <Button className="gap-2" disabled={availableTrips.length === 0}>
@@ -447,7 +447,7 @@ export default function PODPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

@@ -163,7 +163,7 @@ export function AuditView() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Recent Activity ({filteredLogs.length} entries)</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

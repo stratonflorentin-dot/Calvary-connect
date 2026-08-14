@@ -648,7 +648,7 @@ export function CalvaryFinancialManagement() {
           </div>
 
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -747,7 +747,7 @@ export function CalvaryFinancialManagement() {
           </div>
 
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -829,6 +829,7 @@ export function CalvaryFinancialManagement() {
           </div>
 
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -868,6 +869,7 @@ export function CalvaryFinancialManagement() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 
@@ -917,6 +919,7 @@ export function CalvaryFinancialManagement() {
           </div>
 
           <Card>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -955,6 +958,7 @@ export function CalvaryFinancialManagement() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 

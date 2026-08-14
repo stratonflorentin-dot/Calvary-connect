@@ -47,7 +47,7 @@ export default function MaintenanceReportPage() {
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">
       <Sidebar role={role} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
         <div className="max-w-2xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-headline tracking-tighter">Maintenance Report</h1>

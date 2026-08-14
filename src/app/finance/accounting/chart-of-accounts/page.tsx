@@ -1164,7 +1164,7 @@ export default function ChartOfAccountsPage() {
               ) : (
                 <div className="space-y-4">
                   {/* Ledger Table */}
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg overflow-x-auto">
                     <Table>
                       <TableHeader className="bg-muted/50">
                         <TableRow className="hover:bg-muted/50">

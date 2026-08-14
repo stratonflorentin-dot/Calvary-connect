@@ -328,13 +328,13 @@ export default function RevenueAnalysisPage() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <Button variant="ghost" asChild>
           <Link href="/finance/dashboard">
             <ArrowLeft className="size-4 mr-2" /> Back to Dashboard
           </Link>
         </Button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button onClick={loadRevenue} disabled={loading}>
             <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
           </Button>
@@ -355,8 +355,8 @@ export default function RevenueAnalysisPage() {
         <p className="text-muted-foreground">Comprehensive breakdown of revenue by customer, status, and time period</p>
       </div>
 
-      <div className="flex items-center gap-4 mb-6">
-        <div className="flex-1">
+      <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex-1 min-w-[160px]">
           <Label>Status Filter</Label>
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
             <SelectTrigger>
@@ -523,7 +523,7 @@ export default function RevenueAnalysisPage() {
           <CardTitle>Customer Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -566,7 +566,7 @@ export default function RevenueAnalysisPage() {
           <CardTitle>Invoice Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

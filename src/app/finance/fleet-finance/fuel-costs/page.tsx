@@ -208,8 +208,8 @@ export default function FuelCostsPage() {
         <p className="text-muted-foreground">Track fuel expenses and consumption across your fleet</p>
       </div>
 
-      <div className="flex items-center gap-4 mb-6">
-        <div className="flex-1">
+      <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex-1 min-w-[160px]">
           <Label>Filter by Vehicle</Label>
           <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
             <SelectTrigger>
@@ -231,7 +231,7 @@ export default function FuelCostsPage() {
               <Plus className="size-4" /> Add Fuel Cost
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingFuel ? "Edit Fuel Cost" : "Add Fuel Cost"}</DialogTitle>
             </DialogHeader>

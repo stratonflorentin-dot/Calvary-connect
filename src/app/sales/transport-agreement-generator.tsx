@@ -526,7 +526,7 @@ export function RateSheetPreview() {
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -599,7 +599,7 @@ export function RateSheetPreview() {
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingRate ? 'Edit' : 'New'} {sheetForm.sheetType === 'freight' ? 'Freight Rate Sheet' : 'Route Rate Sheet'}</DialogTitle>
           </DialogHeader>

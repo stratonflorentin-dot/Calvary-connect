@@ -793,7 +793,7 @@ function SalesModuleContent() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 h-11 bg-muted/50 p-1 rounded-xl">
+          <TabsList className="mb-6 h-11 bg-muted/50 p-1 rounded-xl flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-7">
             <TabsTrigger value="leads" className="h-9 rounded-lg">Leads</TabsTrigger>
             <TabsTrigger value="customers" className="h-9 rounded-lg">Customers</TabsTrigger>
             <TabsTrigger value="quotations" className="h-9 rounded-lg">Quotations</TabsTrigger>
@@ -818,7 +818,7 @@ function SalesModuleContent() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -904,7 +904,7 @@ function SalesModuleContent() {
                     <p className="text-sm mt-1">Convert a quotation or contract into a booking, or start one from the button above.</p>
                   </div>
                 ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
@@ -975,7 +975,7 @@ function SalesModuleContent() {
                     <DialogTrigger asChild>
                       <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl shadow-xl">
+                    <DialogContent className="max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle className="text-xl font-semibold">Add New Customer</DialogTitle>
                       </DialogHeader>
@@ -1454,7 +1454,7 @@ function SalesModuleContent() {
                         <Plus className="h-4 w-4" /> New Rate Sheet
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl shadow-xl">
+                    <DialogContent className="max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle className="text-xl font-semibold">{editingRateSheet ? 'Edit Route Rate Sheet' : 'New Route Rate Sheet'}</DialogTitle>
                       </DialogHeader>
@@ -1716,7 +1716,7 @@ function SalesModuleContent() {
                     <DialogTrigger asChild>
                       <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"><Plus className="h-4 w-4 mr-2" /> Add Opportunity</Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl shadow-xl">
+                    <DialogContent className="max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle className="text-xl font-semibold">Add Sales Opportunity</DialogTitle>
                       </DialogHeader>

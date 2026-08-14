@@ -120,7 +120,7 @@ export function RateSheetManager() {
                                     Add Route
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>{editingId ? 'Edit Route' : 'Add New Route'}</DialogTitle>
                             </DialogHeader>
@@ -240,7 +240,7 @@ export function RateSheetManager() {
                         </Dialog>
                     )}
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>

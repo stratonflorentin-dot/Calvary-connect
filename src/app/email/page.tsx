@@ -181,6 +181,7 @@ export default function ClientEmailPage() {
           ) : history.length === 0 ? (
             <EmptyState icon={Mail} title="No emails sent yet" description="Emails you send to clients will show up here." />
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -216,6 +217,7 @@ export default function ClientEmailPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </SectionCard>
       </div>

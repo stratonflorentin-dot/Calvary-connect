@@ -436,7 +436,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8 overflow-auto">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -639,7 +639,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-semibold text-foreground">All Bookings ({filteredBookings.length})</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -770,7 +770,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
             </div>
 
             {/* Parties */}
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               <div>
                 <h3 className="font-bold border-b border-border mb-2 text-foreground">SERVICE PROVIDER</h3>
                 <p className="font-medium text-foreground">Calvary Connect Limited</p>
@@ -789,6 +789,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
             {/* Service Details */}
             <div>
               <h3 className="font-bold border-b border-border mb-4 text-foreground">SERVICE DETAILS</h3>
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <tbody>
                   <tr className="border-b border-border">
@@ -819,6 +820,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Financial Terms */}
@@ -905,7 +907,7 @@ export default function BookingsPage() {
 function BookingsLoading() {
   return (
     <div className="flex min-h-screen bg-background">
-      <div className="flex-1 md:ml-60 p-4 md:p-8">
+      <div className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-8">
             <div className="h-12 bg-muted rounded-xl w-64" />

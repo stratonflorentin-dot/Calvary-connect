@@ -14,7 +14,7 @@ export function DriverShell({ title, description, children, action }: DriverShel
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">
       <Sidebar role="DRIVER" />
-      <main className="flex-1 md:ml-60 p-4 md:p-6 max-w-3xl mx-auto w-full">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-6 max-w-3xl mx-auto w-full">
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-headline tracking-tight text-foreground">

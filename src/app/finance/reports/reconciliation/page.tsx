@@ -198,7 +198,7 @@ export default function ReconciliationReport() {
                   <CardTitle>Chart of Accounts Summary</CardTitle>
                   <CardDescription>Transaction breakdown by COA account</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -241,7 +241,7 @@ export default function ReconciliationReport() {
                     These entries are not aligned with Chart of Accounts and need attention
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6 overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>

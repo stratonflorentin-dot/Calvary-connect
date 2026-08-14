@@ -320,7 +320,7 @@ export default function VehicleDetailPage() {
                                 iconBg="bg-primary"
                                 headerGradient="bg-gradient-to-r from-primary to-primary/80"
                             >
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                     {[
                                         { label: 'Type', value: vehicle.type },
                                         { label: 'Plate', value: vehicle.registration_number },
@@ -349,7 +349,7 @@ export default function VehicleDetailPage() {
                                 headerGradient="bg-gradient-to-r from-warning to-warning/80"
                             >
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="bg-primary/10 p-3 rounded-lg text-center">
                                             <p className="text-xs text-primary">Daily Rate</p>
                                             <p className="text-sm font-bold text-primary">

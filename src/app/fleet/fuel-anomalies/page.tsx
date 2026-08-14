@@ -191,7 +191,7 @@ export default function FuelAnomaliesPage() {
             </SelectContent>
           </Select>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

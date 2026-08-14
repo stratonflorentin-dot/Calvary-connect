@@ -204,6 +204,7 @@ export default function EmployeeLoansPage() {
         ) : loans.length === 0 ? (
           <EmptyState icon={HandCoins} title="No loans issued yet" description="Issue one above." />
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -237,6 +238,7 @@ export default function EmployeeLoansPage() {
               })}
             </TableBody>
           </Table>
+          </div>
         )}
       </SectionCard>
     </PageShell>

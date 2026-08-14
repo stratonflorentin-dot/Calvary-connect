@@ -165,7 +165,7 @@ export default function ProfilePage() {
   return (
     <div className="flex min-h-screen bg-background pb-20 md:pb-0">
       <Sidebar role={role} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
         <Card className="w-full max-w-md shadow-lg border-primary/10">
           <CardHeader className="text-center pb-2">
             <div className="mx-auto bg-primary/10 w-24 h-24 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-sm">

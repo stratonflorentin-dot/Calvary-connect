@@ -333,7 +333,7 @@ export default function AllowancesPage() {
     <div className="flex min-h-screen bg-background text-foreground font-sans">
       <Sidebar role={role || 'DRIVER'} />
 
-      <main className="flex-1 md:ml-60 p-6 md:p-8 overflow-auto">
+      <main className="flex-1 min-w-0 md:ml-60 p-6 md:p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-8">
 
           {/* Header */}

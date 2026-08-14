@@ -275,8 +275,8 @@ function PremiumDashboard() {
 
     return (
         <div className="min-h-screen bg-[#F3F5F9] text-[#243041]">
-            <div className="grid min-h-screen grid-cols-[280px_minmax(0,1fr)]">
-                <aside className="sticky top-0 h-screen border-r border-[#DCE2EE] bg-[#16213E] px-6 py-8 text-white">
+            <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]">
+                <aside className="hidden lg:block sticky top-0 h-screen border-r border-[#DCE2EE] bg-[#16213E] px-6 py-8 text-white">
                     <div className="mb-10">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[#F3F5F9] shadow-lg shadow-black/10">
@@ -312,7 +312,7 @@ function PremiumDashboard() {
                     </nav>
                 </aside>
 
-                <main className="p-6">
+                <main className="p-6 min-w-0">
                     <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <p className="text-sm uppercase tracking-[0.32em] text-[#6B778C]">Executive overview</p>
@@ -346,8 +346,8 @@ function PremiumDashboard() {
                         </div>
                     </header>
 
-                    <section className="grid gap-6 xl:grid-cols-[1.6fr_0.95fr]">
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                    <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr_0.95fr]">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                             {kpis.map((item) => {
                                 const Icon = item.icon;
                                 return (
@@ -404,7 +404,7 @@ function PremiumDashboard() {
                         </Card>
                     </section>
 
-                    <section className="grid gap-6 xl:grid-cols-[1.5fr_1fr] mt-6">
+                    <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr] mt-6">
                         <Card className="rounded-[16px] border border-[#DCE2EE] bg-white shadow-[0_18px_40px_rgba(21,34,64,0.08)]">
                             <CardHeader className="p-6">
                                 <div className="flex items-center justify-between gap-4">
@@ -534,7 +534,7 @@ function PremiumDashboard() {
                         </div>
                     </section>
 
-                    <section className="grid gap-6 xl:grid-cols-2 mt-6">
+                    <section className="grid grid-cols-1 gap-6 xl:grid-cols-2 mt-6">
                         <Card className="rounded-[16px] border border-[#DCE2EE] bg-white shadow-[0_18px_40px_rgba(21,34,64,0.08)]">
                             <CardHeader className="p-6">
                                 <div className="flex items-center justify-between gap-4">
@@ -549,7 +549,7 @@ function PremiumDashboard() {
                                     </Button>
                                 </div>
                             </CardHeader>
-                            <CardContent className="p-6 pt-0">
+                            <CardContent className="p-6 pt-0 overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -611,7 +611,7 @@ function PremiumDashboard() {
                         </Card>
                     </section>
 
-                    <section className="mt-6 grid gap-6 sm:grid-cols-2">
+                    <section className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <Card className="rounded-[16px] border border-[#DCE2EE] bg-white p-6 shadow-[0_18px_40px_rgba(21,34,64,0.08)]">
                             <div className="flex items-start justify-between gap-4">
                                 <div>

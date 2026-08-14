@@ -211,7 +211,7 @@ export default function CustomerDetailPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role} />
-      <main className="flex-1 md:ml-60 p-4 md:p-8">
+      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
         <div className="max-w-6xl mx-auto space-y-6">
           <Button variant="ghost" onClick={() => router.push("/customers")}>
             <ArrowLeft className="size-4 mr-2" /> Back to Customers
