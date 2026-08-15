@@ -231,7 +231,7 @@ export default function RevenueAnalysisPage() {
     a.href = url;
     a.download = `revenue-analysis-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
-    toast({ title: "Success", description: "Revenue data exported" });
+    toast({ variant: "success", title: "Success", description: "Revenue data exported" });
   };
 
   const exportPDF = () => {
@@ -279,7 +279,7 @@ export default function RevenueAnalysisPage() {
     });
 
     doc.save(`revenue-analysis-${new Date().toISOString().split("T")[0]}.pdf`);
-    toast({ title: "Success", description: "PDF exported successfully" });
+    toast({ variant: "success", title: "Success", description: "PDF exported successfully" });
   };
 
   const exportExcel = () => {
@@ -323,7 +323,7 @@ export default function RevenueAnalysisPage() {
     XLSX.utils.book_append_sheet(workbook, incomeSheet, "Income");
 
     XLSX.writeFile(workbook, `revenue-analysis-${new Date().toISOString().split("T")[0]}.xlsx`);
-    toast({ title: "Success", description: "Excel exported successfully" });
+    toast({ variant: "success", title: "Success", description: "Excel exported successfully" });
   };
 
   return (

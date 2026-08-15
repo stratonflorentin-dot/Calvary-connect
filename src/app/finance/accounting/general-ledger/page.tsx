@@ -130,7 +130,7 @@ export default function GeneralLedgerPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: "Success", description: "General ledger exported successfully" });
+    toast({ variant: "success", title: "Success", description: "General ledger exported successfully" });
   };
 
   return (

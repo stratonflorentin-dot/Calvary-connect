@@ -144,12 +144,12 @@ export default function ExpensesPage() {
         if (!billError && bill) {
           // Link expense to vendor bill
           await supabase.from("expenses").update({ vendor_bill_id: bill.id }).eq("id", savedExpense.id);
-          toast({ title: "Success", description: "Expense saved and vendor bill created automatically" });
+          toast({ variant: "success", title: "Success", description: "Expense saved and vendor bill created automatically" });
         } else {
-          toast({ title: "Success", description: "Expense saved (vendor bill creation failed)" });
+          toast({ variant: "success", title: "Success", description: "Expense saved (vendor bill creation failed)" });
         }
       } else {
-        toast({ title: "Success", description: editingExpense ? "Expense updated" : "Expense saved" });
+        toast({ variant: "success", title: "Success", description: editingExpense ? "Expense updated" : "Expense saved" });
       }
 
       await loadExpenses();
@@ -180,7 +180,7 @@ export default function ExpensesPage() {
       const { error } = await supabase.from("expenses").delete().eq("id", id);
       if (error) throw error;
       await loadExpenses();
-      toast({ title: "Success", description: "Expense deleted" });
+      toast({ variant: "success", title: "Success", description: "Expense deleted" });
     } catch (err) {
       console.error("Error deleting expense:", err);
       toast({ title: "Error", description: "Failed to delete expense", variant: "destructive" });
@@ -227,7 +227,7 @@ export default function ExpensesPage() {
       await supabase.from("expenses").update({ vendor_bill_id: bill.id }).eq("id", expense.id);
 
       await loadExpenses();
-      toast({ title: "Success", description: "Vendor bill created" });
+      toast({ variant: "success", title: "Success", description: "Vendor bill created" });
     } catch (err) {
       console.error("Error creating vendor bill:", err);
       toast({ title: "Error", description: "Failed to create vendor bill", variant: "destructive" });
@@ -288,7 +288,7 @@ export default function ExpensesPage() {
         bank_account_id: "",
         reference: "",
       });
-      toast({ title: "Success", description: "Payment recorded successfully" });
+      toast({ variant: "success", title: "Success", description: "Payment recorded successfully" });
     } catch (err) {
       console.error("Error recording payment:", err);
       toast({ title: "Error", description: "Failed to record payment", variant: "destructive" });

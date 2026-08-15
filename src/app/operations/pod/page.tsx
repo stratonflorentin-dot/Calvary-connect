@@ -145,7 +145,7 @@ export default function PODPage() {
         verified: false,
       });
       setSelectedTrip(null);
-      toast({ title: "Success", description: "Proof of Delivery uploaded" });
+      toast({ variant: "success", title: "Success", description: "Proof of Delivery uploaded" });
     } catch (err) {
       console.error("Error saving POD:", err);
       toast({ title: "Error", description: "Failed to save POD", variant: "destructive" });
@@ -211,7 +211,7 @@ export default function PODPage() {
             console.error("Error creating journal entry:", journalError);
           }
 
-          toast({ title: "Success", description: `POD verified and invoice ${invoiceNumber} generated` });
+          toast({ variant: "success", title: "Success", description: `POD verified and invoice ${invoiceNumber} generated` });
         }
       }
 
@@ -240,7 +240,7 @@ export default function PODPage() {
       if (error) throw error;
 
       await loadPODs();
-      toast({ title: "Success", description: "POD rejected" });
+      toast({ variant: "success", title: "Success", description: "POD rejected" });
     } catch (err) {
       console.error("Error rejecting POD:", err);
       toast({ title: "Error", description: "Failed to reject POD", variant: "destructive" });

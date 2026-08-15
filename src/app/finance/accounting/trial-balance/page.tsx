@@ -131,7 +131,7 @@ export default function TrialBalancePage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: "Success", description: "Trial balance exported successfully" });
+    toast({ variant: "success", title: "Success", description: "Trial balance exported successfully" });
   };
 
   return (

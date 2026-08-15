@@ -126,7 +126,7 @@ export default function FuelCostsPage() {
         odometer_reading: "",
       });
       setEditingFuel(null);
-      toast({ title: "Success", description: editingFuel ? "Fuel cost updated" : "Fuel cost recorded" });
+      toast({ variant: "success", title: "Success", description: editingFuel ? "Fuel cost updated" : "Fuel cost recorded" });
     } catch (err) {
       console.error("Error saving fuel cost:", err);
       toast({ title: "Error", description: "Failed to save fuel cost", variant: "destructive" });
@@ -142,7 +142,7 @@ export default function FuelCostsPage() {
       const { error } = await supabase.from("vehicle_costs").delete().eq("id", id);
       if (error) throw error;
       await loadFuelCosts();
-      toast({ title: "Success", description: "Fuel cost deleted" });
+      toast({ variant: "success", title: "Success", description: "Fuel cost deleted" });
     } catch (err) {
       console.error("Error deleting fuel cost:", err);
       toast({ title: "Error", description: "Failed to delete fuel cost", variant: "destructive" });

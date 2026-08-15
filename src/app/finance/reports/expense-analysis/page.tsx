@@ -174,7 +174,7 @@ export default function ExpenseAnalysisPage() {
     a.href = url;
     a.download = `expense-analysis-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
-    toast({ title: "Success", description: "Expense data exported" });
+    toast({ variant: "success", title: "Success", description: "Expense data exported" });
   };
 
   const exportPDF = () => {
@@ -224,7 +224,7 @@ export default function ExpenseAnalysisPage() {
     });
 
     doc.save(`expense-analysis-${new Date().toISOString().split("T")[0]}.pdf`);
-    toast({ title: "Success", description: "PDF exported successfully" });
+    toast({ variant: "success", title: "Success", description: "PDF exported successfully" });
   };
 
   const exportExcel = () => {
@@ -256,7 +256,7 @@ export default function ExpenseAnalysisPage() {
     XLSX.utils.book_append_sheet(workbook, expenseSheet, "Expenses");
 
     XLSX.writeFile(workbook, `expense-analysis-${new Date().toISOString().split("T")[0]}.xlsx`);
-    toast({ title: "Success", description: "Excel exported successfully" });
+    toast({ variant: "success", title: "Success", description: "Excel exported successfully" });
   };
 
   return (

@@ -133,7 +133,7 @@ export default function CashFlowPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: "Success", description: "Cash flow report exported successfully" });
+    toast({ variant: "success", title: "Success", description: "Cash flow report exported successfully" });
   };
 
   return (

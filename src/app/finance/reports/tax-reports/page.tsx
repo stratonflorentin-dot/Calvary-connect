@@ -152,7 +152,7 @@ export default function TaxReportsPage() {
     a.href = url;
     a.download = `tax-report-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
-    toast({ title: "Success", description: "Tax report exported" });
+    toast({ variant: "success", title: "Success", description: "Tax report exported" });
   };
 
   const exportPDF = () => {
@@ -189,7 +189,7 @@ export default function TaxReportsPage() {
     });
 
     doc.save(`tax-report-${new Date().toISOString().split("T")[0]}.pdf`);
-    toast({ title: "Success", description: "PDF exported successfully" });
+    toast({ variant: "success", title: "Success", description: "PDF exported successfully" });
   };
 
   const exportExcel = () => {
@@ -221,7 +221,7 @@ export default function TaxReportsPage() {
     XLSX.utils.book_append_sheet(workbook, taxSheet, "Tax Records");
 
     XLSX.writeFile(workbook, `tax-report-${new Date().toISOString().split("T")[0]}.xlsx`);
-    toast({ title: "Success", description: "Excel exported successfully" });
+    toast({ variant: "success", title: "Success", description: "Excel exported successfully" });
   };
 
   const getTaxStatusBadge = (status: string) => {

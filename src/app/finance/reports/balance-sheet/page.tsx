@@ -128,7 +128,7 @@ export default function BalanceSheetPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: "Success", description: "Balance sheet exported successfully" });
+    toast({ variant: "success", title: "Success", description: "Balance sheet exported successfully" });
   };
 
   return (

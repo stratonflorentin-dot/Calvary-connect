@@ -162,7 +162,7 @@ export default function SettingsPage() {
         new_value: company,
         description: "Company settings updated",
       });
-      toast({ title: "Saved", description: "Company settings updated." });
+      toast({ variant: "success", title: "Saved", description: "Company settings updated." });
     } catch (err: any) {
       toast({ title: "Save failed", description: err?.message, variant: "destructive" });
     } finally {

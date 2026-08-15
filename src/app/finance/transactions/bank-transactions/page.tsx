@@ -185,7 +185,7 @@ export default function BankTransactionsPage() {
         to_account_id: "",
       });
       setEditingTransaction(null);
-      toast({ title: "Success", description: editingTransaction ? "Transaction updated" : "Transaction saved" });
+      toast({ variant: "success", title: "Success", description: editingTransaction ? "Transaction updated" : "Transaction saved" });
     } catch (err) {
       console.error("Error saving transaction:", err);
       toast({ title: "Error", description: "Failed to save transaction", variant: "destructive" });
@@ -219,7 +219,7 @@ export default function BankTransactionsPage() {
       const { error } = await supabase.from("bank_transactions").delete().eq("id", id);
       if (error) throw error;
       await loadTransactions();
-      toast({ title: "Success", description: "Transaction deleted and balance reversed" });
+      toast({ variant: "success", title: "Success", description: "Transaction deleted and balance reversed" });
     } catch (err) {
       console.error("Error deleting transaction:", err);
       toast({ title: "Error", description: "Failed to delete transaction", variant: "destructive" });

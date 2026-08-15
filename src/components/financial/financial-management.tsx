@@ -233,7 +233,7 @@ export function CalvaryFinancialManagement() {
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Expense recorded successfully" });
+      toast({ variant: "success", title: "Success", description: "Expense recorded successfully" });
 
       setExpenseForm({
         category: '', vehicle_id: '', amount: '', description: '',
@@ -261,7 +261,7 @@ export function CalvaryFinancialManagement() {
 
       if (error) throw error;
 
-      toast({ title: "Success", description: "Trip revenue recorded" });
+      toast({ variant: "success", title: "Success", description: "Trip revenue recorded" });
 
       setRevenueForm({
         trip_id: '', vehicle_id: '', amount: '', description: '',

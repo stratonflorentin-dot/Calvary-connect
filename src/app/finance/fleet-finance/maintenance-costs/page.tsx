@@ -127,7 +127,7 @@ export default function MaintenanceCostsPage() {
         vendor: "",
       });
       setEditingMaintenance(null);
-      toast({ title: "Success", description: editingMaintenance ? "Maintenance cost updated" : "Maintenance cost recorded" });
+      toast({ variant: "success", title: "Success", description: editingMaintenance ? "Maintenance cost updated" : "Maintenance cost recorded" });
     } catch (err) {
       console.error("Error saving maintenance cost:", err);
       toast({ title: "Error", description: "Failed to save maintenance cost", variant: "destructive" });
@@ -143,7 +143,7 @@ export default function MaintenanceCostsPage() {
       const { error } = await supabase.from("vehicle_costs").delete().eq("id", id);
       if (error) throw error;
       await loadMaintenanceCosts();
-      toast({ title: "Success", description: "Maintenance cost deleted" });
+      toast({ variant: "success", title: "Success", description: "Maintenance cost deleted" });
     } catch (err) {
       console.error("Error deleting maintenance cost:", err);
       toast({ title: "Error", description: "Failed to delete maintenance cost", variant: "destructive" });

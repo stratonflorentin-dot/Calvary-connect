@@ -174,7 +174,7 @@ export default function LeadsPage() {
         notes: "",
       });
       setEditingLead(null);
-      toast({ title: "Success", description: editingLead ? "Lead updated" : "Lead created" });
+      toast({ variant: "success", title: "Success", description: editingLead ? "Lead updated" : "Lead created" });
     } catch (err) {
       console.error("Error saving lead:", err);
       toast({ title: "Error", description: "Failed to save lead", variant: "destructive" });
@@ -246,7 +246,7 @@ export default function LeadsPage() {
       const { error } = await supabase.from("leads").delete().eq("id", id);
       if (error) throw error;
       await loadLeads();
-      toast({ title: "Success", description: "Lead deleted" });
+      toast({ variant: "success", title: "Success", description: "Lead deleted" });
     } catch (err) {
       console.error("Error deleting lead:", err);
       toast({ title: "Error", description: "Failed to delete lead", variant: "destructive" });

@@ -174,7 +174,7 @@ export default function PaymentsPage() {
         payment_date: new Date().toISOString().split("T")[0],
         notes: "",
       });
-      toast({ title: "Success", description: "Payment recorded successfully" });
+      toast({ variant: "success", title: "Success", description: "Payment recorded successfully" });
     } catch (err: any) {
       console.error("Error saving payment:", err);
       toast({ title: "Error", description: err.message || "Failed to record payment", variant: "destructive" });
@@ -189,7 +189,7 @@ export default function PaymentsPage() {
       const { error } = await supabase.from("payments").delete().eq("id", id);
       if (error) throw error;
       await loadPayments();
-      toast({ title: "Success", description: "Payment deleted successfully" });
+      toast({ variant: "success", title: "Success", description: "Payment deleted successfully" });
     } catch (err) {
       console.error("Error deleting payment:", err);
       toast({ title: "Error", description: "Failed to delete payment", variant: "destructive" });
