@@ -336,6 +336,23 @@ export function useDashboard(
                     setExpiringDocs(docsData as any);
                 }
 
+                // Pending cash requests — mirrors the query already used on
+                // premium-dashboard/page.tsx. This hook declared the state
+                // for it (cashRequests/pendingCashRequestsCount, both
+                // exported and consumed by dashboard/page.tsx's banner) but
+                // never actually fetched anything, so the count was always 0
+                // and that banner could never show even with real pending
+                // requests.
+                const { data: cashRequestsData } = await supabase
+                    .from('cash_requests')
+                    .select('id, reference:request_number, purpose, amount, status, created_at')
+                    .eq('status', 'pending');
+
+                if (cashRequestsData) {
+                    setCashRequests(cashRequestsData as any);
+                    setPendingCashRequestsCount(cashRequestsData.length);
+                }
+
                 // Fetch revenue trend (last 6 months)
                 const trendData: RevenueTrendPoint[] = [];
                 for (let i = 5; i >= 0; i--) {
@@ -363,24 +380,34 @@ export function useDashboard(
                 // Set up action center alerts
                 const alerts: ActionCenterItem[] = [];
 
-                if (expiringDocs.length > 0) {
+                // FIX: read the values just fetched this cycle (docsData,
+                // cashRequestsData), not the expiringDocs/pendingCashRequestsCount
+                // state variables — those are captured in this effect's closure
+                // from whenever it was created and never update between the
+                // 90-second setInterval ticks, since the effect's own deps
+                // don't change on a timer. Reading state instead of the fresh
+                // fetch result meant these alerts used a permanently-stale
+                // (pre-first-fetch, i.e. always empty) snapshot.
+                const expiringDocsCount = docsData?.length ?? 0;
+                if (expiringDocsCount > 0) {
                     alerts.push({
                         id: 'expired-docs',
                         severity: 'CRITICAL',
                         title: 'Expired Compliance Docs',
-                        description: `${expiringDocs.length} vehicle documents are expired`,
-                        count: expiringDocs.length,
+                        description: `${expiringDocsCount} vehicle documents are expired`,
+                        count: expiringDocsCount,
                         action_url: '/fleet/vehicles?filter=expired_docs',
                     });
                 }
 
-                if (pendingCashRequestsCount > 0) {
+                const pendingCashCount = cashRequestsData?.length ?? 0;
+                if (pendingCashCount > 0) {
                     alerts.push({
                         id: 'pending-cash',
                         severity: 'WARNING',
                         title: 'Pending Cash Requests',
-                        description: `${pendingCashRequestsCount} cash requests awaiting approval`,
-                        count: pendingCashRequestsCount,
+                        description: `${pendingCashCount} cash requests awaiting approval`,
+                        count: pendingCashCount,
                         action_url: '/accountant/expenses',
                     });
                 }

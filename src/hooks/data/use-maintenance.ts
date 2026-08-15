@@ -124,7 +124,7 @@ export function useMaintenance(filters?: {
                 supabase.removeChannel(channel);
             }
         };
-    }, [filters?.status, filters?.priority, filters?.vehicle_id, filters?.type, filters?.search]);
+    }, [filters?.status, filters?.priority, filters?.vehicle_id, filters?.type, filters?.search, filters?.sort]);
 
     // Calculate stats
     const stats = {
