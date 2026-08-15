@@ -316,7 +316,7 @@ export default function TruckHistoryPage() {
         <Sidebar role={role!} />
         <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
           <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
-            <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
+            <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
             <p className="text-muted-foreground text-sm">You do not have permission to view truck history.</p>
           </div>
         </main>
@@ -336,7 +336,7 @@ export default function TruckHistoryPage() {
           
           <div className="w-full md:w-64">
             <Select onValueChange={(val) => setSelectedVehicleId(val)}>
-              <SelectTrigger className="bg-white rounded-xl shadow-sm border-none h-12">
+              <SelectTrigger className="bg-card rounded-xl shadow-sm border-none h-12">
                 <SelectValue placeholder="Select a Vehicle" />
               </SelectTrigger>
               <SelectContent>
@@ -362,7 +362,7 @@ export default function TruckHistoryPage() {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             {/* Sidebar Stats */}
             <div className="space-y-6">
-              <Card className="rounded-3xl border-none shadow-sm bg-primary text-white">
+              <Card className="rounded-3xl border-none shadow-sm bg-primary text-primary-foreground">
                 <CardHeader>
                   <CardTitle className="text-sm uppercase tracking-widest opacity-70">Asset Status</CardTitle>
                 </CardHeader>
@@ -371,20 +371,20 @@ export default function TruckHistoryPage() {
                     <h2 className="text-2xl font-headline">{selectedVehicle?.name}</h2>
                     <p className="font-mono text-sm opacity-80">{selectedVehicle?.plateNumber}</p>
                   </div>
-                  <div className="pt-4 border-t border-white/10 flex justify-between items-center">
+                  <div className="pt-4 border-t border-primary-foreground/10 flex justify-between items-center">
                     <span className="text-xs">Current Condition</span>
-                    <Badge className="bg-white text-primary font-bold">{selectedVehicle?.condition}</Badge>
+                    <Badge className="bg-primary-foreground text-primary font-bold">{selectedVehicle?.condition}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs">Operational Status</span>
-                    <Badge variant="outline" className="border-white text-white">{selectedVehicle?.status}</Badge>
+                    <Badge variant="outline" className="border-primary-foreground text-primary-foreground">{selectedVehicle?.status}</Badge>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Financial Summary Card */}
               <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
-                <div className={`p-4 ${netProfit >= 0 ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white' : 'bg-gradient-to-br from-red-500 to-red-600 text-white'}`}>
+                <div className={`p-4 ${netProfit >= 0 ? 'bg-gradient-to-br from-success to-success/80 text-success-foreground' : 'bg-gradient-to-br from-destructive to-destructive/80 text-destructive-foreground'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <Wallet className="size-5" />
                     <Badge className="bg-white/20 text-white border-0 text-[10px]">
@@ -394,39 +394,39 @@ export default function TruckHistoryPage() {
                   <p className="text-[10px] uppercase opacity-80">Net Profit</p>
                   <p className="text-2xl font-headline">{formatCurrency(netProfit)}</p>
                 </div>
-                <div className="p-3 space-y-2 bg-white">
+                <div className="p-3 space-y-2 bg-card">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Income</span>
-                    <span className="font-medium text-emerald-600">{formatCurrency(totalIncome)}</span>
+                    <span className="font-medium text-success">{formatCurrency(totalIncome)}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Costs</span>
-                    <span className="font-medium text-red-600">{formatCurrency(totalCosts)}</span>
+                    <span className="font-medium text-destructive">{formatCurrency(totalCosts)}</span>
                   </div>
                 </div>
               </Card>
 
               <div className="grid grid-cols-2 gap-4">
-                <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
-                  <DollarSign className="size-5 text-emerald-500 mb-2" />
+                <Card className="rounded-2xl border-none shadow-sm bg-card p-4">
+                  <DollarSign className="size-5 text-success mb-2" />
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Income</p>
                   <p className="text-lg font-headline">{formatCurrency(totalIncome)}</p>
                 </Card>
-                <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
-                  <Route className="size-5 text-blue-500 mb-2" />
+                <Card className="rounded-2xl border-none shadow-sm bg-card p-4">
+                  <Route className="size-5 text-info mb-2" />
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Trips</p>
                   <p className="text-lg font-headline">{tripsCount}</p>
                 </Card>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
+                <Card className="rounded-2xl border-none shadow-sm bg-card p-4">
                   <Wrench className="size-5 text-primary mb-2" />
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Services</p>
                   <p className="text-lg font-headline">{vehicleServices?.length || 0}</p>
                 </Card>
-                <Card className="rounded-2xl border-none shadow-sm bg-white p-4">
-                  <Fuel className="size-5 text-amber-500 mb-2" />
+                <Card className="rounded-2xl border-none shadow-sm bg-card p-4">
+                  <Fuel className="size-5 text-warning mb-2" />
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">Fuel</p>
                   <p className="text-lg font-headline">{totalFuelLiters.toFixed(0)}L</p>
                 </Card>
@@ -449,7 +449,7 @@ export default function TruckHistoryPage() {
                 <History className="size-5 text-primary" /> Operational Timeline
               </h2>
 
-              <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
+              <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
                 {/* Combined Logs Sorted by Date (Simplified implementation: Maintenance followed by Trips) */}
                 <div className="space-y-8">
                   <section className="space-y-4">
@@ -472,7 +472,7 @@ export default function TruckHistoryPage() {
                           description={service.service_description}
                           tag={`$${service.total_cost || 0}`}
                           icon={<Wrench className="size-4" />}
-                          color="blue"
+                          color="info"
                         />
                       ))
                     ) : (
@@ -495,13 +495,13 @@ export default function TruckHistoryPage() {
                     
                     {/* Income Table */}
                     <Card className="ml-12 md:ml-0 overflow-hidden">
-                      <div className="bg-emerald-50 px-4 py-2 border-b flex items-center gap-2">
-                        <TrendingUp className="size-4 text-emerald-600" />
-                        <span className="text-sm font-medium text-emerald-700">Income from Trips ({vehicleTripRecords?.length || 0} records)</span>
+                      <div className="bg-success/10 px-4 py-2 border-b flex items-center gap-2">
+                        <TrendingUp className="size-4 text-success" />
+                        <span className="text-sm font-medium text-success">Income from Trips ({vehicleTripRecords?.length || 0} records)</span>
                       </div>
                       <div className="max-h-[200px] overflow-y-auto overflow-x-auto">
                         <table className="w-full text-xs">
-                          <thead className="bg-slate-50 sticky top-0">
+                          <thead className="bg-muted/50 sticky top-0">
                             <tr>
                               <th className="px-3 py-2 text-left font-medium text-muted-foreground">Date</th>
                               <th className="px-3 py-2 text-left font-medium text-muted-foreground">Route</th>
@@ -512,10 +512,10 @@ export default function TruckHistoryPage() {
                           <tbody>
                             {vehicleTripRecords?.length > 0 ? (
                               vehicleTripRecords.map((trip: any) => (
-                                <tr key={trip.id} className="border-t hover:bg-slate-50">
+                                <tr key={trip.id} className="border-t hover:bg-muted/50">
                                   <td className="px-3 py-2">{new Date(trip.created_at || trip.startDate).toLocaleDateString()}</td>
                                   <td className="px-3 py-2">{trip.origin || 'N/A'} → {trip.destination || 'N/A'}</td>
-                                  <td className="px-3 py-2 text-right font-medium text-emerald-600">
+                                  <td className="px-3 py-2 text-right font-medium text-success">
                                     {formatCurrency(trip.salesAmount || trip.revenue || trip.price || trip.totalAmount || 0)}
                                   </td>
                                   <td className="px-3 py-2 text-center">
@@ -528,9 +528,9 @@ export default function TruckHistoryPage() {
                                 <td colSpan={4} className="px-3 py-4 text-center text-muted-foreground italic">No trip records found</td>
                               </tr>
                             )}
-                            <tr className="bg-emerald-50 font-medium">
+                            <tr className="bg-success/10 font-medium">
                               <td colSpan={2} className="px-3 py-2 text-right">Total Income:</td>
-                              <td className="px-3 py-2 text-right text-emerald-700">{formatCurrency(totalIncome)}</td>
+                              <td className="px-3 py-2 text-right text-success">{formatCurrency(totalIncome)}</td>
                               <td></td>
                             </tr>
                           </tbody>
@@ -540,13 +540,13 @@ export default function TruckHistoryPage() {
 
                     {/* Expenses Table */}
                     <Card className="ml-12 md:ml-0 overflow-hidden">
-                      <div className="bg-red-50 px-4 py-2 border-b flex items-center gap-2">
-                        <TrendingDown className="size-4 text-red-600" />
-                        <span className="text-sm font-medium text-red-700">Expenses ({vehicleExpenseRecords?.length || 0} records)</span>
+                      <div className="bg-destructive/10 px-4 py-2 border-b flex items-center gap-2">
+                        <TrendingDown className="size-4 text-destructive" />
+                        <span className="text-sm font-medium text-destructive">Expenses ({vehicleExpenseRecords?.length || 0} records)</span>
                       </div>
                       <div className="max-h-[200px] overflow-y-auto overflow-x-auto">
                         <table className="w-full text-xs">
-                          <thead className="bg-slate-50 sticky top-0">
+                          <thead className="bg-muted/50 sticky top-0">
                             <tr>
                               <th className="px-3 py-2 text-left font-medium text-muted-foreground">Date</th>
                               <th className="px-3 py-2 text-left font-medium text-muted-foreground">Category</th>
@@ -557,13 +557,13 @@ export default function TruckHistoryPage() {
                           <tbody>
                             {vehicleExpenseRecords?.length > 0 ? (
                               vehicleExpenseRecords.map((expense: any) => (
-                                <tr key={expense.id} className="border-t hover:bg-slate-50">
+                                <tr key={expense.id} className="border-t hover:bg-muted/50">
                                   <td className="px-3 py-2">{new Date(expense.created_at || expense.date).toLocaleDateString()}</td>
                                   <td className="px-3 py-2">
                                     <Badge variant="outline" className="text-[9px]">{expense.category || 'General'}</Badge>
                                   </td>
                                   <td className="px-3 py-2 text-muted-foreground">{expense.description || '-'}</td>
-                                  <td className="px-3 py-2 text-right font-medium text-red-600">
+                                  <td className="px-3 py-2 text-right font-medium text-destructive">
                                     {formatCurrency(expense.amount || expense.total || 0)}
                                   </td>
                                 </tr>
@@ -573,9 +573,9 @@ export default function TruckHistoryPage() {
                                 <td colSpan={4} className="px-3 py-4 text-center text-muted-foreground italic">No expense records found</td>
                               </tr>
                             )}
-                            <tr className="bg-red-50 font-medium">
+                            <tr className="bg-destructive/10 font-medium">
                               <td colSpan={3} className="px-3 py-2 text-right">Total Expenses:</td>
-                              <td className="px-3 py-2 text-right text-red-700">{formatCurrency(totalExpenses)}</td>
+                              <td className="px-3 py-2 text-right text-destructive">{formatCurrency(totalExpenses)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -584,13 +584,13 @@ export default function TruckHistoryPage() {
 
                     {/* Fuel Records Table */}
                     <Card className="ml-12 md:ml-0 overflow-hidden">
-                      <div className="bg-amber-50 px-4 py-2 border-b flex items-center gap-2">
-                        <Fuel className="size-4 text-amber-600" />
-                        <span className="text-sm font-medium text-amber-700">Fuel Records ({vehicleFuelRecords?.length || 0} records)</span>
+                      <div className="bg-warning/10 px-4 py-2 border-b flex items-center gap-2">
+                        <Fuel className="size-4 text-warning" />
+                        <span className="text-sm font-medium text-warning">Fuel Records ({vehicleFuelRecords?.length || 0} records)</span>
                       </div>
                       <div className="max-h-[200px] overflow-y-auto overflow-x-auto">
                         <table className="w-full text-xs">
-                          <thead className="bg-slate-50 sticky top-0">
+                          <thead className="bg-muted/50 sticky top-0">
                             <tr>
                               <th className="px-3 py-2 text-left font-medium text-muted-foreground">Date</th>
                               <th className="px-3 py-2 text-right font-medium text-muted-foreground">Liters</th>
@@ -600,10 +600,10 @@ export default function TruckHistoryPage() {
                           <tbody>
                             {vehicleFuelRecords?.length > 0 ? (
                               vehicleFuelRecords.map((fuel: any) => (
-                                <tr key={fuel.id} className="border-t hover:bg-slate-50">
+                                <tr key={fuel.id} className="border-t hover:bg-muted/50">
                                   <td className="px-3 py-2">{new Date(fuel.created_at || fuel.date).toLocaleDateString()}</td>
                                   <td className="px-3 py-2 text-right">{fuel.liters || fuel.quantity || 0} L</td>
-                                  <td className="px-3 py-2 text-right font-medium text-amber-600">
+                                  <td className="px-3 py-2 text-right font-medium text-warning">
                                     {formatCurrency(fuel.cost || fuel.totalCost || fuel.amount || 0)}
                                   </td>
                                 </tr>
@@ -613,10 +613,10 @@ export default function TruckHistoryPage() {
                                 <td colSpan={3} className="px-3 py-4 text-center text-muted-foreground italic">No fuel records found</td>
                               </tr>
                             )}
-                            <tr className="bg-amber-50 font-medium">
+                            <tr className="bg-warning/10 font-medium">
                               <td className="px-3 py-2 text-right">Total Fuel:</td>
-                              <td className="px-3 py-2 text-right text-amber-700">{totalFuelLiters.toFixed(0)} L</td>
-                              <td className="px-3 py-2 text-right text-amber-700">{formatCurrency(totalFuelCosts)}</td>
+                              <td className="px-3 py-2 text-right text-warning">{totalFuelLiters.toFixed(0)} L</td>
+                              <td className="px-3 py-2 text-right text-warning">{formatCurrency(totalFuelCosts)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -624,26 +624,26 @@ export default function TruckHistoryPage() {
                     </Card>
 
                     {/* Summary Card */}
-                    <Card className="ml-12 md:ml-0 bg-gradient-to-r from-slate-50 to-slate-100">
+                    <Card className="ml-12 md:ml-0 bg-muted/40">
                       <CardContent className="p-4">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <p className="text-xs text-muted-foreground">Total Income</p>
-                            <p className="text-lg font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+                            <p className="text-lg font-bold text-success">{formatCurrency(totalIncome)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Total Costs</p>
-                            <p className="text-lg font-bold text-red-600">{formatCurrency(totalCosts)}</p>
+                            <p className="text-lg font-bold text-destructive">{formatCurrency(totalCosts)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Net Profit</p>
-                            <p className={`text-lg font-bold ${netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            <p className={`text-lg font-bold ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
                               {formatCurrency(netProfit)}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Avg/Trip</p>
-                            <p className="text-lg font-bold text-blue-600">{formatCurrency(avgRevenuePerTrip)}</p>
+                            <p className="text-lg font-bold text-info">{formatCurrency(avgRevenuePerTrip)}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -695,18 +695,18 @@ export default function TruckHistoryPage() {
                             }}
                           >
                             {/* Icon Circle */}
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 bg-emerald-500 text-white">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-background shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 bg-success text-success-foreground">
                               <Shield className="size-4" />
                             </div>
                             {/* Card Content */}
-                            <div className="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-2xl border bg-white shadow-sm">
+                            <div className="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-2xl border bg-card shadow-sm">
                               <div className="flex items-center justify-between mb-1">
-                                <time className="font-mono text-[10px] font-bold text-slate-500">{new Date(doc.created_at).toLocaleDateString()}</time>
+                                <time className="font-mono text-[10px] font-bold text-muted-foreground">{new Date(doc.created_at).toLocaleDateString()}</time>
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline" className="text-[9px] uppercase tracking-tighter">{doc.status || 'Active'}</Badge>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-6 px-2"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -718,8 +718,8 @@ export default function TruckHistoryPage() {
                                   </Button>
                                 </div>
                               </div>
-                              <div className="text-sm font-headline text-slate-900 mb-1">{doc.document_name || 'Insurance Document'}</div>
-                              <div className="text-xs text-slate-500 line-clamp-2 italic">{doc.insurance_type?.replace('_', ' ') || 'Motor Vehicle'} - {doc.insurance_company || 'Unknown Provider'}</div>
+                              <div className="text-sm font-headline text-foreground mb-1">{doc.document_name || 'Insurance Document'}</div>
+                              <div className="text-xs text-muted-foreground line-clamp-2 italic">{doc.insurance_type?.replace('_', ' ') || 'Motor Vehicle'} - {doc.insurance_company || 'Unknown Provider'}</div>
                             </div>
                           </div>
                         ))}
@@ -1040,7 +1040,7 @@ export default function TruckHistoryPage() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Expiry Date</Label>
-                  <p className={`font-medium ${selectedDoc.expiry_date && new Date(selectedDoc.expiry_date) < new Date() ? 'text-red-500' : ''}`}>
+                  <p className={`font-medium ${selectedDoc.expiry_date && new Date(selectedDoc.expiry_date) < new Date() ? 'text-destructive' : ''}`}>
                     {selectedDoc.expiry_date ? new Date(selectedDoc.expiry_date).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
@@ -1108,21 +1108,21 @@ function TimelineItem({ type, title, date, description, tag, icon, color }: any)
     <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
       {/* Icon Circle */}
       <div className={cn(
-        "flex items-center justify-center w-10 h-10 rounded-full border border-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10",
-        color === 'primary' ? 'bg-primary text-white' : 
-        color === 'blue' ? 'bg-blue-500 text-white' :
-        color === 'emerald' ? 'bg-emerald-500 text-white' : 'bg-gray-500 text-white'
+        "flex items-center justify-center w-10 h-10 rounded-full border border-background shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10",
+        color === 'primary' ? 'bg-primary text-primary-foreground' :
+        color === 'info' ? 'bg-info text-info-foreground' :
+        color === 'emerald' ? 'bg-success text-success-foreground' : 'bg-muted-foreground text-background'
       )}>
         {icon}
       </div>
       {/* Card Content */}
-      <div className="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-2xl border bg-white shadow-sm">
+      <div className="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-2xl border bg-card shadow-sm">
         <div className="flex items-center justify-between mb-1">
-          <time className="font-mono text-[10px] font-bold text-slate-500">{date}</time>
+          <time className="font-mono text-[10px] font-bold text-muted-foreground">{date}</time>
           <Badge variant="outline" className="text-[9px] uppercase tracking-tighter">{tag}</Badge>
         </div>
-        <div className="text-sm font-headline text-slate-900 mb-1">{title}</div>
-        <div className="text-xs text-slate-500 line-clamp-2 italic">{description}</div>
+        <div className="text-sm font-headline text-foreground mb-1">{title}</div>
+        <div className="text-xs text-muted-foreground line-clamp-2 italic">{description}</div>
       </div>
     </div>
   );

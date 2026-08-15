@@ -49,11 +49,11 @@ const SECTION_LABEL: Record<Section, string> = {
   unknown: "Unclassified",
 };
 const SECTION_ACCENT: Record<Section, string> = {
-  revenue: "border-l-emerald-500 bg-emerald-50/40",
-  cogs: "border-l-orange-500 bg-orange-50/40",
-  opex: "border-l-rose-500 bg-rose-50/40",
-  other_expense: "border-l-amber-500 bg-amber-50/40",
-  unknown: "border-l-slate-400 bg-slate-50/40",
+  revenue: "border-l-success bg-success/10",
+  cogs: "border-l-accent bg-accent/10",
+  opex: "border-l-destructive bg-destructive/10",
+  other_expense: "border-l-warning bg-warning/10",
+  unknown: "border-l-muted-foreground bg-muted/40",
 };
 
 function classify(category?: string | null, accountType?: string | null): Section {
@@ -260,18 +260,18 @@ export default function ProfitLossPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
-          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-indigo-600" /> Profit & Loss
+          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
+            <TrendingUp className="w-6 h-6 text-primary" /> Profit & Loss
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             {from} → {to} · vs prior-period baseline · {currencies.length} currenc{currencies.length === 1 ? "y" : "ies"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 py-1">
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-card px-2 py-1">
             <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">From</span>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 border-0 focus-visible:ring-0 px-1" />
             <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">To</span>
@@ -282,8 +282,8 @@ export default function ProfitLossPage() {
             className={cn(
               "h-9 px-3 rounded-lg border text-xs font-bold flex items-center gap-2 transition-colors",
               consolidated
-                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-foreground hover:bg-muted",
             )}
             title={`Consolidate all currencies into ${REPORTING_CURRENCY} using FX rates as-of the ‘To’ date`}
           >
@@ -292,7 +292,7 @@ export default function ProfitLossPage() {
           <Button variant="outline" size="sm" onClick={load} className="h-9 gap-2">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </Button>
-          <Button size="sm" onClick={exportCsv} className="h-9 gap-2 bg-indigo-600 hover:bg-indigo-700">
+          <Button size="sm" onClick={exportCsv} className="h-9 gap-2 bg-primary hover:bg-primary/90">
             <Download className="w-3.5 h-3.5" /> Export CSV
           </Button>
         </div>
@@ -300,21 +300,21 @@ export default function ProfitLossPage() {
 
       {/* Consolidated view */}
       {consolidated && (
-        <div className="bg-white border border-indigo-200 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-indigo-100 bg-indigo-50/50 flex items-baseline justify-between">
+        <div className="bg-card border border-primary/20 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-primary/20 bg-primary/5 flex items-baseline justify-between">
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">Consolidated</span>
-                <h2 className="text-sm font-black text-slate-800">P&L in {REPORTING_CURRENCY}</h2>
+                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/15 text-primary">Consolidated</span>
+                <h2 className="text-sm font-black text-foreground">P&L in {REPORTING_CURRENCY}</h2>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Non-{REPORTING_CURRENCY} amounts converted using rates effective on or before {to}
               </p>
             </div>
-            {rateLoading && <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />}
+            {rateLoading && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
           </div>
           {missingRates.length > 0 && (
-            <div className="px-5 py-3 bg-amber-50 border-b border-amber-100 text-xs text-amber-800 flex items-baseline justify-between gap-3">
+            <div className="px-5 py-3 bg-warning/10 border-b border-warning/20 text-xs text-warning flex items-baseline justify-between gap-3">
               <p>
                 <strong>Missing FX rates:</strong> {missingRates.join(", ")}. Those currencies are excluded from the consolidated totals.
               </p>
@@ -333,21 +333,21 @@ export default function ProfitLossPage() {
               ].map((k) => {
                 const d = pctDelta(k.value, k.prev);
                 return (
-                  <div key={k.label} className="rounded-xl border border-slate-200 p-4">
+                  <div key={k.label} className="rounded-xl border border-border p-4">
                     <div className="flex items-baseline justify-between">
-                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{k.label}</p>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{k.label}</p>
                       <span className={cn(
                         "text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5",
-                        d >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+                        d >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
                       )}>
                         {d >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                         {Math.abs(d).toFixed(1)}%
                       </span>
                     </div>
-                    <p className={cn("text-xl font-black mt-1", k.value >= 0 ? "text-slate-900" : "text-rose-700")}>
+                    <p className={cn("text-xl font-black mt-1", k.value >= 0 ? "text-foreground" : "text-destructive")}>
                       {fmt(k.value, REPORTING_CURRENCY)}
                     </p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">{k.sub ?? `Prior ${fmt(k.prev, REPORTING_CURRENCY)}`}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{k.sub ?? `Prior ${fmt(k.prev, REPORTING_CURRENCY)}`}</p>
                   </div>
                 );
               })}
@@ -360,7 +360,7 @@ export default function ProfitLossPage() {
       {loading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin" /></div>
       ) : currencies.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-muted-foreground italic">
+        <div className="bg-card border border-border rounded-2xl p-8 text-center text-sm text-muted-foreground italic">
           No posted journal entries in this period.
         </div>
       ) : (
@@ -396,11 +396,11 @@ export default function ProfitLossPage() {
           return (
             <section key={`pnl-${cur}`} className="space-y-4">
               <div className="flex items-baseline justify-between">
-                <h2 className="text-base font-black text-slate-800 flex items-baseline gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">{cur}</span>
+                <h2 className="text-base font-black text-foreground flex items-baseline gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-muted text-foreground">{cur}</span>
                   P&L
                 </h2>
-                <p className="text-xs text-slate-500">All amounts native {cur} · no FX applied</p>
+                <p className="text-xs text-muted-foreground">All amounts native {cur} · no FX applied</p>
               </div>
 
               {/* KPI strip */}
@@ -409,21 +409,21 @@ export default function ProfitLossPage() {
                   const delta = pctDelta(k.value, k.prev);
                   const positive = k.value >= 0;
                   return (
-                    <div key={k.label} className="bg-white border border-slate-200 rounded-2xl p-5">
+                    <div key={k.label} className="bg-card border border-border rounded-2xl p-5">
                       <div className="flex items-baseline justify-between">
-                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{k.label}</p>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{k.label}</p>
                         <span className={cn(
                           "text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5",
-                          delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+                          delta >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
                         )}>
                           {delta >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                           {Math.abs(delta).toFixed(1)}%
                         </span>
                       </div>
-                      <p className={cn("text-2xl font-black tracking-tight mt-1", positive ? "text-slate-900" : "text-rose-700")}>
+                      <p className={cn("text-2xl font-black tracking-tight mt-1", positive ? "text-foreground" : "text-destructive")}>
                         {fmt(k.value, cur)}
                       </p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         {k.sub ?? `Prior ${fmt(k.prev, cur)}`}
                       </p>
                     </div>
@@ -442,24 +442,24 @@ export default function ProfitLossPage() {
                   const prevByCode = new Map(prevRows.map((r) => [r.code, r.amount]));
 
                   return (
-                    <div key={section} className={cn("bg-white rounded-2xl border border-slate-200 border-l-4 overflow-hidden", SECTION_ACCENT[section])}>
-                      <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">{SECTION_LABEL[section]}</h3>
+                    <div key={section} className={cn("bg-card rounded-2xl border border-border border-l-4 overflow-hidden", SECTION_ACCENT[section])}>
+                      <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+                        <h3 className="text-sm font-black text-foreground uppercase tracking-wide">{SECTION_LABEL[section]}</h3>
                         <div className="flex items-center gap-6 text-right">
                           <div>
                             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Prior</p>
-                            <p className="text-sm text-slate-500">{fmt(prevSectionTotal, cur)}</p>
+                            <p className="text-sm text-muted-foreground">{fmt(prevSectionTotal, cur)}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Current</p>
-                            <p className="text-sm font-black text-slate-800">{fmt(total, cur)}</p>
+                            <p className="text-sm font-black text-foreground">{fmt(total, cur)}</p>
                           </div>
                         </div>
                       </div>
                       <div className="overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-slate-50/70">
-                          <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <thead className="bg-muted/40">
+                          <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                             <th className="px-5 py-2 w-24">Code</th>
                             <th className="px-4 py-2">Account</th>
                             <th className="px-4 py-2 text-right">Prior</th>
@@ -472,12 +472,12 @@ export default function ProfitLossPage() {
                             const prev = prevByCode.get(r.code) ?? 0;
                             const d = pctDelta(r.amount, prev);
                             return (
-                              <tr key={r.code} className="border-t border-slate-100 hover:bg-slate-50">
-                                <td className="px-5 py-2 font-mono text-xs font-black text-slate-800">{r.code}</td>
-                                <td className="px-4 py-2 text-slate-700">{r.name}</td>
-                                <td className="px-4 py-2 text-right text-slate-500 text-xs">{fmt(prev, cur)}</td>
-                                <td className="px-4 py-2 text-right font-bold text-slate-800">{fmt(r.amount, cur)}</td>
-                                <td className={cn("px-5 py-2 text-right text-xs font-bold", d >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                              <tr key={r.code} className="border-t border-border hover:bg-muted/40">
+                                <td className="px-5 py-2 font-mono text-xs font-black text-foreground">{r.code}</td>
+                                <td className="px-4 py-2 text-foreground">{r.name}</td>
+                                <td className="px-4 py-2 text-right text-muted-foreground text-xs">{fmt(prev, cur)}</td>
+                                <td className="px-4 py-2 text-right font-bold text-foreground">{fmt(r.amount, cur)}</td>
+                                <td className={cn("px-5 py-2 text-right text-xs font-bold", d >= 0 ? "text-success" : "text-destructive")}>
                                   {d >= 0 ? "+" : ""}{d.toFixed(1)}%
                                 </td>
                               </tr>
@@ -490,17 +490,17 @@ export default function ProfitLossPage() {
                   );
                 })}
 
-                <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide mb-3">Summary ({cur})</h3>
+                <div className="bg-card rounded-2xl border border-border p-5">
+                  <h3 className="text-sm font-black text-foreground uppercase tracking-wide mb-3">Summary ({cur})</h3>
                   <div className="space-y-2 text-sm">
                     {[
-                      { label: "Revenue", val: revenue, tone: "text-slate-800" },
-                      { label: "− Cost of Sales", val: cogs, tone: "text-slate-500" },
-                      { label: "= Gross Profit", val: gross, tone: "font-black text-emerald-700 border-t border-slate-100 pt-2 mt-1" },
-                      { label: "− Operating Expenses", val: opex, tone: "text-slate-500" },
-                      { label: "= Operating Profit", val: operating, tone: "font-black text-slate-800 border-t border-slate-100 pt-2 mt-1" },
-                      { label: "− Other Expenses", val: other, tone: "text-slate-500" },
-                      { label: "= Net Profit", val: net, tone: cn("font-black text-lg border-t-2 border-slate-200 pt-2 mt-1", net >= 0 ? "text-emerald-700" : "text-rose-700") },
+                      { label: "Revenue", val: revenue, tone: "text-foreground" },
+                      { label: "− Cost of Sales", val: cogs, tone: "text-muted-foreground" },
+                      { label: "= Gross Profit", val: gross, tone: "font-black text-success border-t border-border pt-2 mt-1" },
+                      { label: "− Operating Expenses", val: opex, tone: "text-muted-foreground" },
+                      { label: "= Operating Profit", val: operating, tone: "font-black text-foreground border-t border-border pt-2 mt-1" },
+                      { label: "− Other Expenses", val: other, tone: "text-muted-foreground" },
+                      { label: "= Net Profit", val: net, tone: cn("font-black text-lg border-t-2 border-border pt-2 mt-1", net >= 0 ? "text-success" : "text-destructive") },
                     ].map((r) => (
                       <div key={r.label} className={cn("flex items-center justify-between", r.tone)}>
                         <span>{r.label}</span>
