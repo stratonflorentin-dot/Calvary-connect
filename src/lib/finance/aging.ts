@@ -49,11 +49,16 @@ interface AgingInput {
   currency?: string | null;
 }
 
+/** Window used for the "due soon" / "due within next month" stat. */
+export const DUE_SOON_WINDOW_DAYS = 30;
+
 export interface AgingSummary {
   totals: Record<AgingBucketKey, number>;
   counts: Record<AgingBucketKey, number>;
   totalOutstanding: number;
   totalOverdue: number;
+  /** Open, not-yet-overdue balance falling due within DUE_SOON_WINDOW_DAYS. */
+  totalDueSoon: number;
   worstDays: number;
 }
 
@@ -77,6 +82,7 @@ export function summarize(items: AgingInput[]): AgingSummary {
   };
   let totalOutstanding = 0;
   let totalOverdue = 0;
+  let totalDueSoon = 0;
   let worstDays = 0;
 
   for (const it of items) {
@@ -89,9 +95,10 @@ export function summarize(items: AgingInput[]): AgingSummary {
     counts[bucket] += 1;
     totalOutstanding += amt;
     if (d > 0) totalOverdue += amt;
+    else if (d >= -DUE_SOON_WINDOW_DAYS) totalDueSoon += amt;
     if (d > worstDays) worstDays = d;
   }
-  return { totals, counts, totalOutstanding, totalOverdue, worstDays };
+  return { totals, counts, totalOutstanding, totalOverdue, totalDueSoon, worstDays };
 }
 
 export function topOverdue(items: AgingInput[], limit = 5): AgingInput[] {

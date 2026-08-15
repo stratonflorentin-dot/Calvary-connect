@@ -26,16 +26,21 @@ import { AuditTrailService } from "@/services/audit-trail-service";
 import { useSupabase } from "@/components/supabase-provider";
 import {
   ArrowUpRight,
+  CalendarClock,
   CheckCircle2,
   ChevronRight,
   Clock,
+  Columns3,
   FileText,
   Flame,
+  Landmark,
   Loader2,
   Plus,
   Receipt,
   RefreshCw,
   Search,
+  Table2,
+  Timer,
   Wallet,
   X,
 } from "lucide-react";
@@ -43,6 +48,8 @@ import { cn } from "@/lib/utils";
 
 const CURRENCIES = ["TZS", "USD", "EUR", "KES"];
 const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
+/** Operating currency headline stat cards lead with; other currencies show as a note underneath. */
+const PRIMARY_CCY = "TZS";
 
 const STATUS_BADGES: Record<string, string> = {
   paid: "bg-success/10 text-success border-success/20",
@@ -70,6 +77,9 @@ export default function CustomerInvoicesPage() {
   const [payMethod, setPayMethod] = useState("bank_transfer");
   const [customers, setCustomers] = useState<any[]>([]);
   const [printing, setPrinting] = useState<any | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [view, setView] = useState<"table" | "split">("table");
+  const [splitSelectedId, setSplitSelectedId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     customer_id: "",
@@ -91,6 +101,12 @@ export default function CustomerInvoicesPage() {
       .select("id, company_name, tax_id")
       .order("company_name")
       .then(({ data }) => setCustomers(data ?? []));
+
+    supabase
+      .from("bank_accounts")
+      .select("id, currency, current_balance, is_active")
+      .eq("is_active", true)
+      .then(({ data }) => setBankAccounts(data ?? []));
   }, []);
 
   const selectedCustomer = useMemo(
@@ -125,7 +141,9 @@ export default function CustomerInvoicesPage() {
   const inputs = useMemo(
     () =>
       invoices.map((i) => ({
-        amount: i.total_amount ?? i.amount,
+        // Aging is about what's still owed, not the original invoice total —
+        // a partially-paid invoice should only age its remaining balance.
+        amount: Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0),
         due_date: i.due_date,
         status: i.status,
         customer_name: i.customer_name ?? i.client_name,
@@ -138,6 +156,18 @@ export default function CustomerInvoicesPage() {
 
   const summaryByCcy = useMemo(() => summarizeByCurrency(inputs), [inputs]);
   const currencies = useMemo(() => sortCurrencyKeys(Object.keys(summaryByCcy)), [summaryByCcy]);
+
+  const overdueByCcy = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const c of currencies) out[c] = summaryByCcy[c]?.totalOverdue ?? 0;
+    return out;
+  }, [currencies, summaryByCcy]);
+
+  const dueSoonByCcy = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const c of currencies) out[c] = summaryByCcy[c]?.totalDueSoon ?? 0;
+    return out;
+  }, [currencies, summaryByCcy]);
 
   const kpis = useMemo(() => {
     const openInv = invoices.filter((i) => isOpenForAging(i.status));
@@ -170,6 +200,37 @@ export default function CustomerInvoicesPage() {
     return byCcy;
   }, [invoices]);
 
+  // Real average — mean of (paid_at - issue_date) across fully-paid invoices.
+  // null (not 0) when there's no paid invoice yet, so the UI can say so
+  // instead of showing a fake "0 days".
+  const avgDaysToGetPaid = useMemo(() => {
+    const samples: number[] = [];
+    for (const inv of invoices) {
+      if (inv.status !== "paid" || !inv.paid_at || !inv.issue_date) continue;
+      const days = (new Date(inv.paid_at).getTime() - new Date(inv.issue_date).getTime()) / 86_400_000;
+      if (Number.isFinite(days) && days >= 0) samples.push(days);
+    }
+    if (samples.length === 0) return null;
+    return samples.reduce((a, b) => a + b, 0) / samples.length;
+  }, [invoices]);
+
+  // Real cash on hand — sum of active bank_accounts.current_balance, per currency.
+  const cashByCcy = useMemo(() => {
+    const byCcy: Record<string, number> = {};
+    for (const acc of bankAccounts) {
+      const cur = normalizeCurrency(acc.currency);
+      byCcy[cur] = (byCcy[cur] ?? 0) + Number(acc.current_balance ?? 0);
+    }
+    return byCcy;
+  }, [bankAccounts]);
+
+  /** e.g. "+ USD 1,200 · EUR 300 elsewhere" for a stat card's sub line, or undefined if nothing else to show. */
+  const otherCurrencyNote = (byCcy: Record<string, number>, primary = PRIMARY_CCY) => {
+    const others = sortCurrencyKeys(Object.keys(byCcy)).filter((c) => c !== primary && byCcy[c] > 0);
+    if (others.length === 0) return undefined;
+    return `+ ${others.map((c) => fmt(byCcy[c], c)).join(" · ")} in other currencies`;
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return invoices.filter((inv) => {
@@ -188,6 +249,11 @@ export default function CustomerInvoicesPage() {
       return true;
     });
   }, [invoices, search, filter]);
+
+  const splitSelected = useMemo(
+    () => filtered.find((i) => i.id === splitSelectedId) ?? filtered[0] ?? null,
+    [filtered, splitSelectedId],
+  );
 
   const saveInvoice = async () => {
     if (!form.customer_name || !form.amount || !form.due_date) {
@@ -329,6 +395,38 @@ export default function CustomerInvoicesPage() {
       />
 
       <div className="space-y-6">
+        {/* Cash-flow headline row — real figures, {PRIMARY_CCY} leads, other currencies noted below */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            label="Overdue"
+            value={fmt(overdueByCcy[PRIMARY_CCY] ?? 0, PRIMARY_CCY)}
+            sub={otherCurrencyNote(overdueByCcy) ?? "Past due date, unpaid"}
+            icon={Flame}
+            accent="bg-destructive/10 text-destructive"
+          />
+          <StatCard
+            label="Due within 30 days"
+            value={fmt(dueSoonByCcy[PRIMARY_CCY] ?? 0, PRIMARY_CCY)}
+            sub={otherCurrencyNote(dueSoonByCcy) ?? "Not yet overdue"}
+            icon={CalendarClock}
+            accent="bg-warning/10 text-warning"
+          />
+          <StatCard
+            label="Avg. time to get paid"
+            value={avgDaysToGetPaid == null ? "—" : `${avgDaysToGetPaid.toFixed(0)} days`}
+            sub={avgDaysToGetPaid == null ? "No paid invoices yet" : "Issue date → payment date"}
+            icon={Timer}
+            accent="bg-info/10 text-info"
+          />
+          <StatCard
+            label="Cash & bank balance"
+            value={fmt(cashByCcy[PRIMARY_CCY] ?? 0, PRIMARY_CCY)}
+            sub={otherCurrencyNote(cashByCcy) ?? "Across active bank accounts"}
+            icon={Landmark}
+            accent="bg-success/10 text-success"
+          />
+        </div>
+
         {/* KPI tiles */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="All Invoices" value={invoices.length} sub="Draft + Open + Paid" icon={FileText} />
@@ -436,9 +534,32 @@ export default function CustomerInvoicesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Search invoice #, customer…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
           </div>
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-1 shrink-0">
+            <button
+              onClick={() => setView("table")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-bold transition-colors",
+                view === "table" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Table view"
+            >
+              <Table2 className="w-3.5 h-3.5" /> Table
+            </button>
+            <button
+              onClick={() => setView("split")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-bold transition-colors",
+                view === "split" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+              )}
+              title="List + detail view"
+            >
+              <Columns3 className="w-3.5 h-3.5" /> List + Detail
+            </button>
+          </div>
         </div>
 
         {/* Table */}
+        {view === "table" && (
         <div className="cv-surface overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -532,6 +653,164 @@ export default function CustomerInvoicesPage() {
             </table>
           </div>
         </div>
+        )}
+
+        {/* List + Detail — Finnova-style split layout, same data/actions as the table above */}
+        {view === "split" && (
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_1fr] gap-4 items-start">
+            <div className="cv-surface overflow-hidden">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  {filter === "all" ? "All Invoices" : filterChips.find((c) => c.key === filter)?.label} · {filtered.length}
+                </p>
+              </div>
+              <div className="max-h-[36rem] overflow-y-auto divide-y divide-border">
+                {loading ? (
+                  <div className="text-center py-16 text-muted-foreground">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="text-center py-16 text-muted-foreground">
+                    <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                    No invoices match the current filter.
+                  </div>
+                ) : (
+                  filtered.map((inv) => {
+                    const total = Number(inv.total_amount ?? inv.amount ?? 0);
+                    const paid = Number(inv.paid_amount ?? 0);
+                    const balance = total - paid;
+                    const overdue = isOpenForAging(inv.status) && daysOverdue(inv.due_date) > 0;
+                    const d = daysOverdue(inv.due_date);
+                    const badgeStatus = overdue ? "overdue" : inv.status ?? "pending";
+                    const selected = splitSelected?.id === inv.id;
+                    return (
+                      <button
+                        key={inv.id}
+                        onClick={() => setSplitSelectedId(inv.id)}
+                        className={cn(
+                          "w-full text-left px-4 py-3 flex items-center gap-3 transition-colors",
+                          selected ? "bg-primary/10" : "hover:bg-muted/40",
+                        )}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-black text-muted-foreground uppercase">
+                          {(inv.customer_name ?? inv.client_name ?? "?").slice(0, 2)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-black font-mono text-foreground truncate">{inv.invoice_number}</p>
+                            <Badge className={cn("text-[9px] uppercase font-black tracking-wider border shrink-0", STATUS_BADGES[badgeStatus] ?? STATUS_BADGES.pending)}>
+                              {badgeStatus}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{inv.customer_name ?? inv.client_name ?? "—"}</p>
+                          <p className={cn("text-[10px] mt-0.5", overdue ? "text-destructive font-bold" : "text-muted-foreground")}>
+                            {isOpenForAging(inv.status)
+                              ? overdue
+                                ? `${d} day${d === 1 ? "" : "s"} overdue`
+                                : inv.due_date
+                                  ? `Due in ${Math.abs(d)} day${Math.abs(d) === 1 ? "" : "s"}`
+                                  : "No due date"
+                              : badgeStatus}
+                          </p>
+                        </div>
+                        <p className="text-sm font-black text-foreground shrink-0">{fmt(balance, inv.currency)}</p>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="cv-surface overflow-hidden">
+              {!splitSelected ? (
+                <div className="text-center py-24 text-muted-foreground">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  Select an invoice to see its details.
+                </div>
+              ) : (() => {
+                const total = Number(splitSelected.total_amount ?? splitSelected.amount ?? 0);
+                const paid = Number(splitSelected.paid_amount ?? 0);
+                const balance = total - paid;
+                const badgeStatus = isOpenForAging(splitSelected.status) && daysOverdue(splitSelected.due_date) > 0 ? "overdue" : splitSelected.status ?? "pending";
+                const lineItems: { description?: string; qty?: number; unit_price?: number }[] = Array.isArray(splitSelected.line_items) ? splitSelected.line_items : [];
+                return (
+                  <>
+                    <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">Invoice details</p>
+                        <h3 className="text-lg font-black text-foreground font-mono">{splitSelected.invoice_number}</h3>
+                        <Badge className={cn("mt-1 text-[10px] uppercase font-black tracking-wider border", STATUS_BADGES[badgeStatus] ?? STATUS_BADGES.pending)}>
+                          {badgeStatus}
+                        </Badge>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Customer</p>
+                        <p className="text-sm font-black text-foreground">{splitSelected.customer_name ?? splitSelected.client_name ?? "—"}</p>
+                      </div>
+                    </div>
+
+                    <div className="p-5 space-y-4">
+                      {lineItems.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {lineItems.map((li, idx) => (
+                            <div key={idx} className="rounded-xl border border-border bg-muted/30 p-3">
+                              <p className="text-sm font-black text-foreground">{fmt((li.qty ?? 1) * (li.unit_price ?? 0), splitSelected.currency)}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{li.description ?? "Line item"}</p>
+                              {li.qty != null && li.unit_price != null && (
+                                <p className="text-[10px] text-muted-foreground/70 mt-0.5">{li.qty} × {fmt(li.unit_price, splitSelected.currency)}</p>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => setPrinting(splitSelected)}
+                            className="rounded-xl border border-dashed border-border p-3 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                          >
+                            <FileText className="w-4 h-4" />
+                            <span className="text-[10px] font-bold">View / edit items</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          No itemized line items on this invoice —{" "}
+                          <button className="text-primary font-bold hover:underline" onClick={() => setPrinting(splitSelected)}>add some</button>.
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-3 gap-3 text-sm">
+                        <div className="rounded-xl border border-border bg-muted/30 p-3">
+                          <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Sub Total</p>
+                          <p className="font-black text-foreground mt-0.5">{fmt(Number(splitSelected.amount) || total, splitSelected.currency)}</p>
+                        </div>
+                        <div className="rounded-xl border border-border bg-muted/30 p-3">
+                          <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Total</p>
+                          <p className="font-black text-foreground mt-0.5">{fmt(total, splitSelected.currency)}</p>
+                        </div>
+                        <div className="rounded-xl border border-border bg-muted/30 p-3">
+                          <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Balance Due</p>
+                          <p className="font-black text-destructive mt-0.5">{fmt(balance, splitSelected.currency)}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 px-5 py-4 border-t border-border bg-muted/20">
+                      <Button variant="outline" onClick={() => setPrinting(splitSelected)} className="gap-2">
+                        <FileText className="w-4 h-4" /> Print / Download TRA Invoice
+                      </Button>
+                      {splitSelected.status !== "paid" && splitSelected.status !== "cancelled" && (
+                        <Button
+                          onClick={() => { setPaying(splitSelected); setPayAmount(String(balance)); }}
+                          className="bg-success hover:bg-success/90 text-success-foreground gap-2"
+                        >
+                          <CheckCircle2 className="w-4 h-4" /> Record Payment
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create modal */}
