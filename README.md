@@ -213,6 +213,7 @@ The platform uses modern web technologies.
 * React
 * TypeScript
 * Tailwind CSS
+* Framer Motion — shared animation system (`src/lib/animations.ts`), respects `prefers-reduced-motion`
 
 ### Backend and Database
 
