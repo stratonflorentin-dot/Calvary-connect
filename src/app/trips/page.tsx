@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
@@ -42,16 +43,41 @@ const STATUS_META: Record<string, { label: string; chip: string; dot: string }> 
 
 type FilterKey = "all" | "active" | "pending" | "delivered" | "overdue";
 
-export default function TripsPage() {
+function TripsContent() {
   const { role } = useRole();
   const { user } = useSupabase();
   const { format } = useCurrency();
+  const searchParams = useSearchParams();
   const [trips, setTrips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+
+  // Route Optimizer hands off a computed route via query params (only a
+  // single origin/destination pair — trips has no stops/waypoints column,
+  // so any intermediate stops are folded into a "Via: ..." note instead of
+  // being dropped). No `id` on this object, so TripFormDialog stays in
+  // create mode.
+  useEffect(() => {
+    const origin = searchParams.get("origin");
+    const destination = searchParams.get("destination");
+    if (!origin || !destination) return;
+    const distance = searchParams.get("distance");
+    const duration = searchParams.get("duration");
+    const via = searchParams.get("via");
+    setEditing({
+      trip_number: `TRP-${Date.now().toString().slice(-6)}`,
+      origin,
+      destination,
+      estimated_distance: distance ? Number(distance) : "",
+      estimated_duration: duration ? Number(duration) : "",
+      notes: via ? `Via: ${via}` : "",
+    });
+    setFormOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const load = async () => {
     setLoading(true);
@@ -369,5 +395,13 @@ export default function TripsPage() {
         </>
       )}
     </PageShell>
+  );
+}
+
+export default function TripsPage() {
+  return (
+    <Suspense fallback={<PageShell width="wide"><PageSkeleton kpiCount={5} /></PageShell>}>
+      <TripsContent />
+    </Suspense>
   );
 }

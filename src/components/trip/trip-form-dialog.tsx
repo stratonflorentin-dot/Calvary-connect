@@ -297,11 +297,20 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
               origin={form.origin}
               destination={form.destination}
               onRoute={({ distanceKm, durationHrs }) =>
-                setForm((prev) => ({
-                  ...prev,
-                  estimatedDistance: Math.round(distanceKm),
-                  estimatedDuration: Math.round(durationHrs * 10) / 10,
-                }))
+                // Only auto-fill when empty — a value already present means
+                // it came from a prefill (e.g. the Route Optimizer's
+                // multi-stop distance, which this point-to-point preview
+                // can't reproduce) or the user already edited it, and
+                // either way it shouldn't be silently clobbered.
+                setForm((prev) =>
+                  prev.estimatedDistance !== ""
+                    ? prev
+                    : {
+                        ...prev,
+                        estimatedDistance: Math.round(distanceKm),
+                        estimatedDuration: Math.round(durationHrs * 10) / 10,
+                      },
+                )
               }
             />
             <div className="space-y-1">

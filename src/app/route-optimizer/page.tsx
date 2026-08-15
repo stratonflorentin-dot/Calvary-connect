@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageShell, PageHeader, SectionCard, EmptyState } from "@/components/shell";
 import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   Route as RouteIcon,
   Sparkles,
   Trash2,
+  Truck,
   Zap,
 } from "lucide-react";
 
@@ -184,6 +186,7 @@ function RouteMap({ route }: { route: OptimizedRoute }) {
 }
 
 export default function RouteOptimizerPage() {
+  const router = useRouter();
   const [waypoints, setWaypoints] = useState<Waypoint[]>([
     { id: uid(), address: "" },
     { id: uid(), address: "" },
@@ -219,6 +222,23 @@ export default function RouteOptimizerPage() {
     navigator.clipboard.writeText(result.ordered.map((s) => s.address).join(" → "));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Trips only have a single origin/destination pair (no stops/waypoints
+  // column on the trips table) — intermediate stops are carried over as a
+  // "Via: ..." note instead of being dropped silently.
+  const createTrip = () => {
+    if (!result) return;
+    const stops = result.ordered.map((s) => s.address);
+    const via = stops.slice(1, -1);
+    const params = new URLSearchParams({
+      origin: stops[0],
+      destination: stops[stops.length - 1],
+      distance: String(result.distance_km),
+      duration: String(Math.round((result.duration_min / 60) * 10) / 10),
+    });
+    if (via.length > 0) params.set("via", via.join(", "));
+    router.push(`/trips?${params.toString()}`);
   };
 
   return (
@@ -359,10 +379,15 @@ export default function RouteOptimizerPage() {
               <SectionCard
                 title="Optimized route"
                 actions={
-                  <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={copyRoute}>
-                    {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-[hsl(var(--success))]" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? "Copied" : "Copy"}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={copyRoute}>
+                      {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-[hsl(var(--success))]" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? "Copied" : "Copy"}
+                    </Button>
+                    <Button size="sm" className="h-8 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={createTrip}>
+                      <Truck className="w-3.5 h-3.5" /> Create Trip
+                    </Button>
+                  </div>
                 }
               >
                 <RouteMap route={result} />
