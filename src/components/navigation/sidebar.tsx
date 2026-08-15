@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard,
   Truck,
@@ -55,6 +56,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { useRouteOverridesSnapshot } from "@/lib/route-overrides-store";
+import { TRANSITION } from "@/lib/animations";
 
 // ✅ Move icon map OUTSIDE the component so it's always available
 const routeIconMap: Record<string, any> = {
@@ -310,11 +312,17 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                     : "text-[hsl(var(--sidebar-muted))] hover:text-white",
                 )}
               >
-                <span className={cn(
-                  "flex items-center justify-center size-8 rounded-xl transition-colors",
-                  active && "bg-[hsl(var(--sidebar-primary))] shadow-md",
-                )}>
-                  <Icon className="size-4.5" />
+                <span className="relative flex items-center justify-center size-8 rounded-xl">
+                  {active && (
+                    <motion.span
+                      layoutId="mobile-nav-active"
+                      className="absolute inset-0 bg-[hsl(var(--sidebar-primary))] rounded-xl shadow-md"
+                      transition={TRANSITION.base}
+                    />
+                  )}
+                  <motion.span whileTap={{ scale: 0.85 }} className="relative z-10 flex items-center justify-center">
+                    <Icon className="size-4.5" />
+                  </motion.span>
                 </span>
                 <span className="truncate max-w-[64px]">{item.label}</span>
               </Link>
@@ -369,14 +377,22 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                 <div className="text-[hsl(var(--sidebar-foreground))] hover:text-white [&_button]:hover:bg-white/10 [&_svg]:size-4">
                   <NotificationBell />
                 </div>
-                <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[hsl(var(--sidebar-muted))] hover:text-white hover:bg-white/10 transition-colors">
-                  <ChevronLeft className="size-5" />
+                <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[hsl(var(--sidebar-muted))] hover:text-white hover:bg-white/10 transition-colors overflow-hidden">
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span key="left" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={TRANSITION.micro}>
+                      <ChevronLeft className="size-5" />
+                    </motion.span>
+                  </AnimatePresence>
                 </Button>
               </div>
             </>
           ) : (
-            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[hsl(var(--sidebar-primary))] hover:bg-white/10 transition-colors">
-              <ChevronRight className="size-5" />
+            <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[hsl(var(--sidebar-primary))] hover:bg-white/10 transition-colors overflow-hidden">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span key="right" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={TRANSITION.micro}>
+                  <ChevronRight className="size-5" />
+                </motion.span>
+              </AnimatePresence>
             </Button>
           )}
         </div>
@@ -393,6 +409,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                 <div className="space-y-1">
                   {items.map(item => {
                     const Icon = routeIconMap[item.path] || LayoutDashboard;
+                    const active = pathname === item.path;
                     return (
                       <Link
                         key={item.path}
@@ -403,42 +420,51 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                           if (window.innerWidth < 768) close();
                         }}
                         className={cn(
-                          "flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-all group",
-                          pathname === item.path
-                            ? "bg-[hsl(var(--sidebar-primary))] text-[hsl(var(--sidebar-primary-foreground))] shadow-md shadow-black/40"
+                          "relative flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-colors group",
+                          active
+                            ? "text-[hsl(var(--sidebar-primary-foreground))]"
                             : "text-[hsl(var(--sidebar-foreground))] hover:text-white hover:bg-[hsl(var(--sidebar-accent))]"
                         )}
                       >
-                        <Icon className={cn(
-                          "size-5 flex-shrink-0",
-                          pathname === item.path
-                            ? "text-white"
-                            : "text-[hsl(var(--sidebar-muted))] group-hover:text-white"
-                        )} />
-                        {!isCollapsed && <span className="truncate">{item.label}</span>}
+                        {active && (
+                          <motion.span
+                            layoutId="desktop-nav-active"
+                            className="absolute inset-0 bg-[hsl(var(--sidebar-primary))] rounded-xl shadow-md shadow-black/40"
+                            transition={TRANSITION.base}
+                          />
+                        )}
+                        <motion.span whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.92 }} className="relative z-10 shrink-0">
+                          <Icon className={cn(
+                            "size-5",
+                            active
+                              ? "text-white"
+                              : "text-[hsl(var(--sidebar-muted))] group-hover:text-white"
+                          )} />
+                        </motion.span>
+                        {!isCollapsed && <span className="relative z-10 truncate">{item.label}</span>}
                         {/* Badges only show when not collapsed */}
                         {!isCollapsed && item.path === "/notifications" && notificationCount > 0 && (
-                          <Badge className="ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-rose-500 text-white border-0">
+                          <Badge className="relative z-10 ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-rose-500 text-white border-0">
                             {notificationCount}
                           </Badge>
                         )}
                         {!isCollapsed && item.path === "/maintenance" && maintenanceCount > 0 && (
-                          <Badge className="ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-amber-500 text-white border-0">
+                          <Badge className="relative z-10 ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-amber-500 text-white border-0">
                             {maintenanceCount}
                           </Badge>
                         )}
                         {!isCollapsed && item.path === "/service-requests" && serviceRequestCount > 0 && (
-                          <Badge className="ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-amber-500 text-white border-0">
+                          <Badge className="relative z-10 ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-amber-500 text-white border-0">
                             {serviceRequestCount}
                           </Badge>
                         )}
                         {!isCollapsed && item.path === "/parts-requests" && partsRequestCount > 0 && (
-                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                          <Badge variant="secondary" className="relative z-10 ml-auto h-6 rounded-full text-xs px-2 py-0.5">
                             {partsRequestCount}
                           </Badge>
                         )}
                         {!isCollapsed && item.path === "/hr/meetings" && meetingCount > 0 && (
-                          <Badge variant="secondary" className="ml-auto h-6 rounded-full text-xs px-2 py-0.5">
+                          <Badge variant="secondary" className="relative z-10 ml-auto h-6 rounded-full text-xs px-2 py-0.5">
                             {meetingCount}
                           </Badge>
                         )}
