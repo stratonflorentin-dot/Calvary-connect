@@ -41,11 +41,11 @@ const CURRENCIES = ["TZS", "USD", "EUR", "KES"];
 const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
 
 const STATUS_BADGES: Record<string, string> = {
-  paid: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  pending: "bg-amber-100 text-amber-700 border-amber-200",
-  overdue: "bg-red-100 text-red-700 border-red-200",
-  partial: "bg-sky-100 text-sky-700 border-sky-200",
-  cancelled: "bg-slate-100 text-slate-500 border-slate-200",
+  paid: "bg-success/10 text-success border-success/20",
+  pending: "bg-warning/10 text-warning border-warning/20",
+  overdue: "bg-destructive/10 text-destructive border-destructive/20",
+  partial: "bg-info/10 text-info border-info/20",
+  cancelled: "bg-muted text-muted-foreground border-border",
 };
 
 type FilterKey = "all" | "open" | "overdue" | "due_this_week" | "paid";
@@ -286,6 +286,7 @@ export default function VendorBillsPage() {
     });
 
     toast({
+      variant: "success",
       title: newStatus === "paid" ? "Bill fully paid" : "Partial payment recorded",
       description: `${fmt(amt, paying.currency)} · balance ${fmt(total - newPaid, paying.currency)}`,
     });
@@ -348,6 +349,7 @@ export default function VendorBillsPage() {
       paidCount += 1;
     }
     toast({
+      variant: paidCount > 0 ? "success" : "default",
       title: "Pay run complete",
       description: `${paidCount} bill(s) settled.${skippedCount ? ` ${skippedCount} skipped — check console for errors.` : ""}`,
     });
@@ -364,11 +366,11 @@ export default function VendorBillsPage() {
   };
 
   const filterChips: { key: FilterKey; label: string; count: number; tone: string }[] = [
-    { key: "all", label: "All", count: bills.length, tone: "border-slate-200 bg-white text-slate-700" },
-    { key: "open", label: "Open", count: kpis.openCount, tone: "border-amber-200 bg-amber-50 text-amber-700" },
-    { key: "due_this_week", label: "Due ≤ 7d", count: kpis.dueThisWeekCount, tone: "border-sky-200 bg-sky-50 text-sky-700" },
-    { key: "overdue", label: "Overdue", count: kpis.overdueCount, tone: "border-red-200 bg-red-50 text-red-700" },
-    { key: "paid", label: "Paid", count: kpis.paidCount, tone: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+    { key: "all", label: "All", count: bills.length, tone: "border-border bg-card text-foreground" },
+    { key: "open", label: "Open", count: kpis.openCount, tone: "border-warning/20 bg-warning/10 text-warning" },
+    { key: "due_this_week", label: "Due ≤ 7d", count: kpis.dueThisWeekCount, tone: "border-info/20 bg-info/10 text-info" },
+    { key: "overdue", label: "Overdue", count: kpis.overdueCount, tone: "border-destructive/20 bg-destructive/10 text-destructive" },
+    { key: "paid", label: "Paid", count: kpis.paidCount, tone: "border-success/20 bg-success/10 text-success" },
   ];
 
   return (
@@ -377,13 +379,13 @@ export default function VendorBillsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest px-2 py-0.5 bg-orange-50 rounded-full">Accounts Payable</span>
-            <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5">
+            <span className="text-[10px] font-black text-warning uppercase tracking-widest px-2 py-0.5 bg-warning/10 rounded-full">Accounts Payable</span>
+            <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5">
               Finance <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900">Vendor Bills</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-black text-foreground">Vendor Bills</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {kpis.openCount} open · {kpis.overdueCount} overdue · {kpis.dueThisWeekCount} due ≤ 7d
             {currencies.length > 0 && (
               <>
@@ -397,7 +399,7 @@ export default function VendorBillsPage() {
           <Button variant="outline" size="sm" onClick={loadBills} className="h-9 gap-2">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </Button>
-          <Button size="sm" className="h-9 gap-2 bg-orange-600 hover:bg-orange-700" onClick={() => setCreating(true)}>
+          <Button size="sm" className="h-9 gap-2 bg-warning hover:bg-warning/90 text-warning-foreground" onClick={() => setCreating(true)}>
             <Plus className="w-3.5 h-3.5" /> Enter Bill
           </Button>
         </div>
@@ -408,14 +410,14 @@ export default function VendorBillsPage() {
         const s = summaryByCcy[cur];
         const dueWeek = dueThisWeekByCcy[cur] ?? 0;
         return (
-          <div key={`strip-${cur}`} className="bg-white border border-slate-200 rounded-2xl p-5">
+          <div key={`strip-${cur}`} className="bg-card border border-border rounded-2xl p-5">
             <div className="flex items-baseline justify-between mb-4">
               <div className="flex items-baseline gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">{cur}</span>
-                <h2 className="text-sm font-black text-slate-800">Payables aging</h2>
-                <span className="text-xs text-slate-500">{fmt(s.totalOutstanding, cur)} · {fmt(s.totalOverdue, cur)} overdue · {fmt(dueWeek, cur)} due ≤ 7d</span>
+                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-muted text-foreground">{cur}</span>
+                <h2 className="text-sm font-black text-foreground">Payables aging</h2>
+                <span className="text-xs text-muted-foreground">{fmt(s.totalOutstanding, cur)} · {fmt(s.totalOverdue, cur)} overdue · {fmt(dueWeek, cur)} due ≤ 7d</span>
               </div>
-              <Link href="/finance/reports/aging-report" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+              <Link href="/finance/reports/aging-report" className="text-xs font-bold text-primary hover:text-primary/70 flex items-center gap-1">
                 Full report <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -423,8 +425,8 @@ export default function VendorBillsPage() {
               {AGING_BUCKETS.map((b) => (
                 <div key={b.key} className={cn("rounded-xl border p-4", b.color)}>
                   <p className={cn("text-[10px] font-black uppercase tracking-widest", b.textColor)}>{b.label}</p>
-                  <p className="text-lg font-black text-slate-900 mt-1">{fmt(s.totals[b.key], cur)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{s.counts[b.key]} bill{s.counts[b.key] === 1 ? "" : "s"}</p>
+                  <p className="text-lg font-black text-foreground mt-1">{fmt(s.totals[b.key], cur)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{s.counts[b.key]} bill{s.counts[b.key] === 1 ? "" : "s"}</p>
                 </div>
               ))}
             </div>
@@ -441,17 +443,17 @@ export default function VendorBillsPage() {
               onClick={() => setFilter(c.key)}
               className={cn(
                 "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors",
-                filter === c.key ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm" : c.tone,
+                filter === c.key ? "border-primary bg-primary/10 text-primary shadow-sm" : c.tone,
               )}
             >
               {c.label}
-              <span className="text-[10px] font-black bg-white/60 rounded-full px-1.5">{c.count}</span>
+              <span className="text-[10px] font-black bg-background/60 rounded-full px-1.5">{c.count}</span>
             </button>
           ))}
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {selectedIds.size > 0 && (
-            <Button size="sm" onClick={runPayBatch} className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700">
+            <Button size="sm" onClick={runPayBatch} className="h-8 gap-1 bg-success hover:bg-success/90 text-success-foreground">
               <Wallet className="w-3.5 h-3.5" /> Pay {selectedIds.size} · {selectedTotalLabel}
             </Button>
           )}
@@ -463,11 +465,11 @@ export default function VendorBillsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <thead className="bg-muted/40 border-b border-border">
+              <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 <th className="px-4 py-3 w-8"></th>
                 <th className="px-4 py-3">Bill #</th>
                 <th className="px-4 py-3">Vendor</th>
@@ -495,19 +497,19 @@ export default function VendorBillsPage() {
                 const badgeStatus = overdue ? "overdue" : bill.status ?? "pending";
                 const selectable = isOpenForAging(bill.status);
                 return (
-                  <tr key={bill.id} className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
+                  <tr key={bill.id} className="border-b border-border hover:bg-muted/40 transition-colors">
                     <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         disabled={!selectable}
                         checked={selectedIds.has(bill.id)}
                         onChange={() => toggleSelect(bill.id)}
-                        className="rounded border-slate-300"
+                        className="rounded border-border accent-primary"
                       />
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs font-black text-slate-800">{bill.invoice_number}</td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{bill.customer_name ?? bill.vendor ?? "—"}</td>
-                    <td className={cn("px-4 py-3 text-xs", overdue ? "text-red-600 font-bold" : "text-slate-500")}>
+                    <td className="px-4 py-3 font-mono text-xs font-black text-foreground">{bill.invoice_number}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{bill.customer_name ?? bill.vendor ?? "—"}</td>
+                    <td className={cn("px-4 py-3 text-xs", overdue ? "text-destructive font-bold" : "text-muted-foreground")}>
                       {bill.due_date ? new Date(bill.due_date).toLocaleDateString() : "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -520,9 +522,9 @@ export default function VendorBillsPage() {
                         <span className="text-[10px] text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-800">{fmt(total, bill.currency)}</td>
-                    <td className="px-4 py-3 text-right text-emerald-600 text-xs font-semibold">{paid > 0 ? fmt(paid, bill.currency) : "—"}</td>
-                    <td className="px-4 py-3 text-right font-black text-slate-900">{fmt(balance, bill.currency)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-foreground">{fmt(total, bill.currency)}</td>
+                    <td className="px-4 py-3 text-right text-success text-xs font-semibold">{paid > 0 ? fmt(paid, bill.currency) : "—"}</td>
+                    <td className="px-4 py-3 text-right font-black text-foreground">{fmt(balance, bill.currency)}</td>
                     <td className="px-4 py-3">
                       <Badge className={cn("text-[10px] uppercase font-black tracking-wider border", STATUS_BADGES[badgeStatus] ?? STATUS_BADGES.pending)}>
                         {badgeStatus}
@@ -532,7 +534,7 @@ export default function VendorBillsPage() {
                       {bill.status !== "paid" && bill.status !== "cancelled" && (
                         <Button
                           size="sm"
-                          className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                          className="h-8 gap-1 bg-success hover:bg-success/90 text-success-foreground text-xs"
                           onClick={() => { setPaying(bill); setPayAmount(String(balance)); }}
                         >
                           <CircleDollarSign className="w-3.5 h-3.5" /> Pay
@@ -550,11 +552,11 @@ export default function VendorBillsPage() {
       {/* Create modal */}
       {creating && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
-                <h3 className="text-base font-black text-slate-800">Enter Vendor Bill</h3>
-                <p className="text-xs text-slate-500">Record a payable from a supplier</p>
+                <h3 className="text-base font-black text-foreground">Enter Vendor Bill</h3>
+                <p className="text-xs text-muted-foreground">Record a payable from a supplier</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setCreating(false)}><X className="w-4 h-4" /></Button>
             </div>
@@ -595,9 +597,9 @@ export default function VendorBillsPage() {
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Reference number, PO, notes…" />
               </div>
             </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50">
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border bg-muted/20">
               <Button variant="outline" onClick={() => setCreating(false)} disabled={submitting}>Cancel</Button>
-              <Button onClick={saveBill} disabled={submitting} className="bg-orange-600 hover:bg-orange-700">
+              <Button onClick={saveBill} disabled={submitting} className="bg-warning hover:bg-warning/90 text-warning-foreground">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />} Save Bill
               </Button>
             </div>
@@ -608,20 +610,20 @@ export default function VendorBillsPage() {
       {/* Payment modal */}
       {paying && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
-                <h3 className="text-base font-black text-slate-800">Pay Vendor</h3>
-                <p className="text-xs text-slate-500 font-mono">{paying.invoice_number}</p>
+                <h3 className="text-base font-black text-foreground">Pay Vendor</h3>
+                <p className="text-xs text-muted-foreground font-mono">{paying.invoice_number}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setPaying(null)}><X className="w-4 h-4" /></Button>
             </div>
             <div className="p-5 space-y-3">
-              <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-xs space-y-1">
-                <div className="flex justify-between"><span className="text-slate-500">Vendor</span><span className="font-bold">{paying.customer_name ?? paying.vendor}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Bill total</span><span>{fmt(Number(paying.total_amount ?? paying.amount ?? 0), paying.currency)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Paid so far</span><span>{fmt(Number(paying.paid_amount ?? 0), paying.currency)}</span></div>
-                <div className="flex justify-between font-black text-slate-900 pt-1 border-t border-slate-200"><span>Outstanding</span><span>{fmt(Number(paying.total_amount ?? paying.amount ?? 0) - Number(paying.paid_amount ?? 0), paying.currency)}</span></div>
+              <div className="rounded-xl bg-muted/30 border border-border p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Vendor</span><span className="font-bold text-foreground">{paying.customer_name ?? paying.vendor}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Bill total</span><span className="text-foreground">{fmt(Number(paying.total_amount ?? paying.amount ?? 0), paying.currency)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Paid so far</span><span className="text-foreground">{fmt(Number(paying.paid_amount ?? 0), paying.currency)}</span></div>
+                <div className="flex justify-between font-black text-foreground pt-1 border-t border-border"><span>Outstanding</span><span>{fmt(Number(paying.total_amount ?? paying.amount ?? 0) - Number(paying.paid_amount ?? 0), paying.currency)}</span></div>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Amount to pay</Label>
@@ -651,9 +653,9 @@ export default function VendorBillsPage() {
                 </Select>
               </div>
             </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-100 bg-slate-50">
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border bg-muted/20">
               <Button variant="outline" onClick={() => setPaying(null)}>Cancel</Button>
-              <Button onClick={recordPayment} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+              <Button onClick={recordPayment} className="bg-success hover:bg-success/90 text-success-foreground gap-2">
                 <CheckCircle2 className="w-4 h-4" /> Record Payment
               </Button>
             </div>

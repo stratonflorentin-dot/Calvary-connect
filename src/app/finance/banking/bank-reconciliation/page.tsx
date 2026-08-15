@@ -417,13 +417,13 @@ export default function BankReconciliationPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-slate-600 flex items-center gap-0.5 mb-1">
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 mb-1">
             <ArrowLeft className="w-3 h-3" /> Back to Finance
           </Link>
-          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-            <Landmark className="w-6 h-6 text-teal-600" /> Bank Reconciliation
+          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
+            <Landmark className="w-6 h-6 text-primary" /> Bank Reconciliation
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             Match bank statement lines against your books until the balances agree
           </p>
         </div>
@@ -451,7 +451,7 @@ export default function BankReconciliationPage() {
           <Button variant="outline" size="sm" className="h-9 gap-2" onClick={autoMatch} disabled={loading || !accountId}>
             <Link2 className="w-3.5 h-3.5" /> Auto-match
           </Button>
-          <Button size="sm" className="h-9 gap-2 bg-teal-600 hover:bg-teal-700" onClick={finalise} disabled={loading || !accountId}>
+          <Button size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90" onClick={finalise} disabled={loading || !accountId}>
             <ShieldCheck className="w-3.5 h-3.5" /> Finalise
           </Button>
         </div>
@@ -460,18 +460,18 @@ export default function BankReconciliationPage() {
       {/* Balance summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Statement Net", value: totals.bankNet, tone: "text-slate-800" },
-          { label: "Book Net", value: totals.bookNet, tone: "text-slate-800" },
-          { label: "Difference", value: totals.difference, tone: totals.difference === 0 ? "text-emerald-700" : "text-rose-700" },
-          { label: "Open Lines", value: totals.openLines, tone: "text-slate-800", raw: true },
+          { label: "Statement Net", value: totals.bankNet, tone: "text-foreground" },
+          { label: "Book Net", value: totals.bookNet, tone: "text-foreground" },
+          { label: "Difference", value: totals.difference, tone: totals.difference === 0 ? "text-success" : "text-destructive" },
+          { label: "Open Lines", value: totals.openLines, tone: "text-foreground", raw: true },
         ].map((k) => (
-          <div key={k.label} className="bg-white border border-slate-200 rounded-2xl p-5">
-            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{k.label}</p>
+          <div key={k.label} className="bg-card border border-border rounded-2xl p-5">
+            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{k.label}</p>
             <p className={cn("text-2xl font-black mt-1", k.tone)}>
               {k.raw ? k.value : fmt(Number(k.value), currency)}
             </p>
             {k.label === "Difference" && (
-              <p className="text-[10px] text-slate-500 mt-0.5">
+              <p className="text-[10px] text-muted-foreground mt-0.5">
                 {totals.difference === 0 ? "Balanced — safe to finalise" : "Match more lines to close the gap"}
               </p>
             )}
@@ -481,8 +481,8 @@ export default function BankReconciliationPage() {
 
       {/* Match action bar */}
       {(selectedLine || selectedEntry) && (
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50">
-          <div className="flex items-center gap-2 text-xs font-bold text-indigo-800">
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-primary/20 bg-primary/10">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary">
             <ArrowRight className="w-4 h-4" />
             {selectedLine && selectedEntry
               ? "Ready to match"
@@ -494,7 +494,7 @@ export default function BankReconciliationPage() {
             <Button variant="ghost" size="sm" onClick={() => { setSelectedLine(null); setSelectedEntry(null); }}>
               <X className="w-3.5 h-3.5 mr-1" /> Clear
             </Button>
-            <Button size="sm" onClick={matchPair} disabled={!selectedLine || !selectedEntry} className="bg-indigo-600 hover:bg-indigo-700 gap-2">
+            <Button size="sm" onClick={matchPair} disabled={!selectedLine || !selectedEntry} className="bg-primary hover:bg-primary/90 gap-2">
               <Link2 className="w-3.5 h-3.5" /> Match Pair
             </Button>
           </div>
@@ -504,14 +504,14 @@ export default function BankReconciliationPage() {
       {/* Two-column view */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bank side */}
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-black text-slate-800">Bank Statement Lines</h2>
-              <p className="text-xs text-slate-500">{lines.length} imported · {totals.openLines} open</p>
+              <h2 className="text-sm font-black text-foreground">Bank Statement Lines</h2>
+              <p className="text-xs text-muted-foreground">{lines.length} imported · {totals.openLines} open</p>
             </div>
           </div>
-          <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100">
+          <div className="max-h-[600px] overflow-y-auto divide-y divide-border">
             {loading ? (
               <div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
             ) : lines.length === 0 ? (
@@ -528,24 +528,24 @@ export default function BankReconciliationPage() {
                   disabled={l.reconciled}
                   className={cn(
                     "w-full text-left px-4 py-3 transition-colors flex items-center justify-between gap-3",
-                    active && "bg-indigo-50",
-                    l.reconciled ? "opacity-60" : "hover:bg-slate-50 cursor-pointer",
+                    active && "bg-primary/10",
+                    l.reconciled ? "opacity-60" : "hover:bg-muted cursor-pointer",
                   )}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-xs text-slate-500">{new Date(l.transaction_date).toLocaleDateString()}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(l.transaction_date).toLocaleDateString()}</p>
                       {l.reference && <span className="text-[10px] font-mono text-muted-foreground">{l.reference}</span>}
                       {l.reconciled && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 rounded-full px-2 py-0.5">
                           <CheckCircle2 className="w-3 h-3" /> Reconciled
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-800 truncate mt-0.5">{l.description}</p>
+                    <p className="text-sm text-foreground truncate mt-0.5">{l.description}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className={cn("text-sm font-black", net >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                    <p className={cn("text-sm font-black", net >= 0 ? "text-success" : "text-destructive")}>
                       {net >= 0 ? "+" : ""}{fmt(net, currency)}
                     </p>
                     {l.balance != null && <p className="text-[10px] text-muted-foreground">bal {fmt(l.balance, currency)}</p>}
@@ -553,7 +553,7 @@ export default function BankReconciliationPage() {
                   {l.reconciled && (
                     <span
                       onClick={(e) => { e.stopPropagation(); unmatch(l.id); }}
-                      className="text-[10px] text-muted-foreground hover:text-red-600 cursor-pointer flex items-center gap-0.5"
+                      className="text-[10px] text-muted-foreground hover:text-destructive cursor-pointer flex items-center gap-0.5"
                     >
                       <Undo2 className="w-3 h-3" /> undo
                     </span>
@@ -565,14 +565,14 @@ export default function BankReconciliationPage() {
         </div>
 
         {/* Book side */}
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-black text-slate-800">Book Entries</h2>
-              <p className="text-xs text-slate-500">{book.length} candidates · {totals.openBook} open</p>
+              <h2 className="text-sm font-black text-foreground">Book Entries</h2>
+              <p className="text-xs text-muted-foreground">{book.length} candidates · {totals.openBook} open</p>
             </div>
           </div>
-          <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100">
+          <div className="max-h-[600px] overflow-y-auto divide-y divide-border">
             {loading ? (
               <div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
             ) : book.length === 0 ? (
@@ -586,8 +586,8 @@ export default function BankReconciliationPage() {
                   disabled={e.reconciled}
                   className={cn(
                     "w-full text-left px-4 py-3 transition-colors flex items-center justify-between gap-3",
-                    active && "bg-indigo-50",
-                    e.reconciled ? "opacity-60" : "hover:bg-slate-50 cursor-pointer",
+                    active && "bg-primary/10",
+                    e.reconciled ? "opacity-60" : "hover:bg-muted cursor-pointer",
                   )}
                 >
                   <div className="min-w-0 flex-1">
@@ -595,17 +595,17 @@ export default function BankReconciliationPage() {
                       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         {e.kind.replace(/_/g, " ")}
                       </span>
-                      <p className="text-xs text-slate-500">{e.date}</p>
+                      <p className="text-xs text-muted-foreground">{e.date}</p>
                       {e.reconciled && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full px-2 py-0.5">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/15 rounded-full px-2 py-0.5">
                           <CheckCircle2 className="w-3 h-3" /> Reconciled
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-800 truncate mt-0.5">{e.description}</p>
+                    <p className="text-sm text-foreground truncate mt-0.5">{e.description}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className={cn("text-sm font-black", e.amount >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                    <p className={cn("text-sm font-black", e.amount >= 0 ? "text-success" : "text-destructive")}>
                       {e.amount >= 0 ? "+" : ""}{fmt(e.amount, currency)}
                     </p>
                   </div>
