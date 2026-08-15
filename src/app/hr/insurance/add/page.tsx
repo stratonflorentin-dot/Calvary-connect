@@ -198,9 +198,9 @@ export default function AddInsurancePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-        <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-lg lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
             <Link href="/hr/insurance">
               <Button variant="outline" size="icon" aria-label="Back to insurance">
@@ -209,16 +209,16 @@ export default function AddInsurancePage() {
             </Link>
             <div>
               <div className="flex flex-wrap gap-2">
-                <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">New Coverage</Badge>
-                <Badge className="border-sky-200 bg-sky-50 text-sky-700">Fleet Ready</Badge>
+                <Badge className="border-success/20 bg-success/10 text-success">New Coverage</Badge>
+                <Badge className="border-info/20 bg-info/10 text-info">Fleet Ready</Badge>
               </div>
-              <h1 className="mt-3 text-2xl font-semibold text-slate-950 sm:text-3xl">Register Insurance Policy</h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600">
+              <h1 className="mt-3 text-2xl font-semibold text-foreground sm:text-3xl">Register Insurance Policy</h1>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
                 Add verified coverage for dispatch, TIRA compliance, cross-border clearance, and finance tracking.
               </p>
             </div>
           </div>
-          <Button form="insurance-policy-form" type="submit" disabled={loading} className="gap-2 bg-slate-950 text-white hover:bg-slate-800">
+          <Button form="insurance-policy-form" type="submit" disabled={loading} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
             Save Policy
           </Button>
@@ -227,7 +227,7 @@ export default function AddInsurancePage() {
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <form id="insurance-policy-form" onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
                 {error}
               </div>
             )}
@@ -367,7 +367,7 @@ export default function AddInsurancePage() {
                   <button
                     key={country}
                     type="button"
-                    className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 hover:border-slate-400"
+                    className="rounded-md border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
                     onClick={() => {
                       setFormData((prev) => {
                         const current = prev.covered_countries.split(',').map((item) => item.trim()).filter(Boolean);
@@ -458,7 +458,7 @@ export default function AddInsurancePage() {
               <Link href="/hr/insurance">
                 <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
               </Link>
-              <Button type="submit" disabled={loading} className="w-full gap-2 bg-slate-950 text-white hover:bg-slate-800 sm:w-auto">
+              <Button type="submit" disabled={loading} className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 Save Policy
               </Button>
@@ -466,9 +466,9 @@ export default function AddInsurancePage() {
           </form>
 
           <aside className="space-y-4">
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-border shadow-lg">
               <CardHeader>
-                <CardTitle className="text-lg">Policy Preview</CardTitle>
+                <CardTitle className="text-lg text-foreground">Policy Preview</CardTitle>
                 <CardDescription>Live compliance snapshot before saving.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
@@ -480,9 +480,9 @@ export default function AddInsurancePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-border shadow-lg">
               <CardHeader>
-                <CardTitle className="text-lg">Compliance Checks</CardTitle>
+                <CardTitle className="text-lg text-foreground">Compliance Checks</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <CheckItem ok={!!formData.vehicle_id} label="Vehicle selected" />
@@ -499,8 +499,14 @@ export default function AddInsurancePage() {
   );
 }
 
+// Matches the shared Input component's recipe (border-input/bg-card/ring-offset-
+// background/focus-visible:ring-primary) so these native <input>/<select>/
+// <textarea> elements — kept native rather than swapped to the Select
+// component, which would need per-field onValueChange wiring instead of the
+// single generic handleChange this form already relies on — still render
+// exactly like every other themed form control in the app.
 const fieldClass =
-  'h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none ring-offset-white placeholder:text-muted-foreground focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-50';
+  'h-11 w-full rounded-lg border border-input bg-card px-4 py-2.5 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground/70 outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted transition-all duration-200';
 
 function FormSection({
   icon: Icon,
@@ -514,10 +520,10 @@ function FormSection({
   children: ReactNode;
 }) {
   return (
-    <Card className="border-slate-200 shadow-sm">
+    <Card className="border-border shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Icon className="h-5 w-5 text-slate-700" />
+        <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+          <Icon className="h-5 w-5 text-muted-foreground" />
           {title}
         </CardTitle>
         <CardDescription>{description}</CardDescription>
@@ -530,9 +536,9 @@ function FormSection({
 function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">
+      <span className="mb-2 block text-sm font-medium text-foreground">
         {label}
-        {required && <span className="text-rose-500"> *</span>}
+        {required && <span className="text-destructive"> *</span>}
       </span>
       {children}
     </label>
@@ -555,23 +561,23 @@ function ToggleRow({
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <label className={cn('flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-slate-200 p-4', disabled && 'cursor-not-allowed bg-slate-50 opacity-70')}>
+    <label className={cn('flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border p-4', disabled && 'cursor-not-allowed bg-muted opacity-70')}>
       <span>
-        <span className="block text-sm font-medium text-slate-800">{title}</span>
-        <span className="mt-1 block text-xs text-slate-500">{detail}</span>
+        <span className="block text-sm font-medium text-foreground">{title}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">{detail}</span>
       </span>
-      <input type="checkbox" name={name} checked={checked} disabled={disabled} onChange={onChange} className="h-5 w-5 rounded border-slate-300" />
+      <input type="checkbox" name={name} checked={checked} disabled={disabled} onChange={onChange} className="h-5 w-5 rounded border-border accent-primary" />
     </label>
   );
 }
 
 function PreviewRow({ icon: Icon, label, value }: { icon: ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border border-slate-200 p-3">
-      <Icon className="h-4 w-4 text-slate-500" />
+    <div className="flex items-center gap-3 rounded-md border border-border p-3">
+      <Icon className="h-4 w-4 text-muted-foreground" />
       <div>
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="font-medium capitalize text-slate-800">{value}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="font-medium capitalize text-foreground">{value}</p>
       </div>
     </div>
   );
@@ -580,10 +586,10 @@ function PreviewRow({ icon: Icon, label, value }: { icon: ElementType; label: st
 function CheckItem({ ok, label }: { ok: boolean; label: string }) {
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', ok ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')}>
+      <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', ok ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning')}>
         {ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
       </span>
-      <span className="text-slate-700">{label}</span>
+      <span className="text-foreground">{label}</span>
     </div>
   );
 }

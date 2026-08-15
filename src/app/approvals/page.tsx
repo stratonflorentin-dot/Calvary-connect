@@ -44,14 +44,14 @@ const KIND_META: Record<
   EntityKind,
   { label: string; icon: React.ElementType; accent: string }
 > = {
-  fuel_request: { label: "Fuel Request", icon: Fuel, accent: "text-amber-600 bg-amber-50" },
-  expense: { label: "Expense", icon: Receipt, accent: "text-indigo-600 bg-indigo-50" },
-  maintenance_request: { label: "Maintenance", icon: Wrench, accent: "text-sky-600 bg-sky-50" },
-  trip: { label: "Trip", icon: ClipboardCheck, accent: "text-emerald-600 bg-emerald-50" },
+  fuel_request: { label: "Fuel Request", icon: Fuel, accent: "text-warning bg-warning/10" },
+  expense: { label: "Expense", icon: Receipt, accent: "text-primary bg-primary/10" },
+  maintenance_request: { label: "Maintenance", icon: Wrench, accent: "text-info bg-info/10" },
+  trip: { label: "Trip", icon: ClipboardCheck, accent: "text-success bg-success/10" },
   // Leave has its own review surface at /hr/leave (no monetary amount to
   // tier by, unlike the others this inbox aggregates) — this entry only
   // satisfies EntityKind's exhaustiveness, this page doesn't fetch leave.
-  leave_request: { label: "Leave", icon: CalendarDays, accent: "text-violet-600 bg-violet-50" },
+  leave_request: { label: "Leave", icon: CalendarDays, accent: "text-muted-foreground bg-muted" },
 };
 
 export default function ApprovalsInboxPage() {
@@ -152,7 +152,7 @@ export default function ApprovalsInboxPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-background flex">
       <Sidebar role={(role as any) ?? "ADMIN"} />
       <div
         className={cn(
@@ -160,14 +160,14 @@ export default function ApprovalsInboxPage() {
           isCollapsed ? "md:ml-20" : "md:ml-64",
         )}
       >
-        <header className="bg-white border-b border-slate-100 px-6 py-4 sticky top-0 z-30 shadow-sm">
+        <header className="bg-card border-b border-border px-6 py-4 sticky top-0 z-30 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             <div className="flex items-center gap-3 flex-1">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 flex items-center justify-center shadow-md shadow-indigo-200">
-                <ClipboardCheck className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/20">
+                <ClipboardCheck className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-lg font-black text-slate-800 leading-tight">
+                <h1 className="text-lg font-black text-foreground leading-tight">
                   Approvals Inbox
                 </h1>
                 <p className="text-xs text-muted-foreground">
@@ -179,9 +179,9 @@ export default function ApprovalsInboxPage() {
             <div className="flex items-center gap-2 flex-wrap">
               {(
                 [
-                  { key: "mine", label: "For me", value: stats.mine, color: "text-indigo-600" },
-                  { key: "overdue", label: "Overdue", value: stats.overdue, color: "text-red-600" },
-                  { key: "all", label: "All open", value: stats.total, color: "text-slate-700" },
+                  { key: "mine", label: "For me", value: stats.mine, color: "text-primary" },
+                  { key: "overdue", label: "Overdue", value: stats.overdue, color: "text-destructive" },
+                  { key: "all", label: "All open", value: stats.total, color: "text-foreground" },
                 ] as const
               ).map((s) => (
                 <button
@@ -190,8 +190,8 @@ export default function ApprovalsInboxPage() {
                   className={cn(
                     "flex items-center gap-1.5 rounded-full px-3 py-1 border transition-colors",
                     filter === s.key
-                      ? "border-indigo-500 bg-indigo-50"
-                      : "border-slate-200 bg-white hover:bg-slate-50",
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card hover:bg-muted",
                   )}
                 >
                   <span className="text-[10px] text-muted-foreground font-medium">{s.label}</span>
@@ -200,7 +200,7 @@ export default function ApprovalsInboxPage() {
               ))}
               <button
                 onClick={load}
-                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500"
+                className="p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground"
                 title="Refresh"
               >
                 <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
@@ -212,11 +212,11 @@ export default function ApprovalsInboxPage() {
         <main className="flex-1 px-6 py-5 space-y-3">
           {loading ? (
             <div className="flex items-center justify-center py-24 text-muted-foreground">
-              <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : visible.length === 0 ? (
-            <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-slate-200">
-              <CheckCircle2 className="w-10 h-10 text-emerald-300 mx-auto mb-3" />
+            <div className="py-20 text-center bg-card rounded-2xl border border-dashed border-border">
+              <CheckCircle2 className="w-10 h-10 text-success/50 mx-auto mb-3" />
               <p className="text-muted-foreground font-bold uppercase text-xs tracking-widest">
                 Inbox zero. Nothing awaiting your decision.
               </p>
@@ -235,7 +235,7 @@ export default function ApprovalsInboxPage() {
               return (
                 <div
                   key={item.kind + ":" + item.id}
-                  className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                  className="bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                 >
                   <div className="flex flex-col lg:flex-row items-stretch">
                     <div className="flex items-center gap-4 p-5 flex-1">
@@ -253,26 +253,26 @@ export default function ApprovalsInboxPage() {
                             {meta.label}
                           </span>
                           {level && (
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                               {level.label} tier
                             </span>
                           )}
                           {overdue && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-50 text-red-600">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
                               <Flame className="w-3 h-3" /> Overdue by {(age - sla).toFixed(1)}h
                             </span>
                           )}
                           {!overdue && age > sla * 0.75 && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-warning/10 text-warning">
                               <AlertTriangle className="w-3 h-3" /> Nearing SLA
                             </span>
                           )}
                         </div>
-                        <p className="text-sm font-bold text-slate-800 truncate">{item.title}</p>
-                        <p className="text-xs text-slate-500 truncate">{item.subtitle}</p>
+                        <p className="text-sm font-bold text-foreground truncate">{item.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 p-5 lg:border-l border-slate-100 bg-slate-50/60">
+                    <div className="flex items-center gap-2 p-5 lg:border-l border-border bg-muted/40">
                       <TransitionButtons
                         kind={item.kind}
                         entity={{
