@@ -144,7 +144,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
     setIsUploading(true);
     try {
       await uploadAvatar(file);
-      toast({ title: "Photo Updated", description: "Your profile picture has been updated." });
+      toast({ variant: "success", title: "Photo Updated", description: "Your profile picture has been updated." });
     } catch (err) {
       console.error(err);
     } finally {

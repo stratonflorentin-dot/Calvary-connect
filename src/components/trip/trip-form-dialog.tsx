@@ -240,7 +240,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
         if (data?.id) {
           await AuditTrailService.logCreate("operations", "trip", data.id, data, user?.id, `Created trip ${payload.trip_number}`);
         }
-        toast({ title: "Trip created", description: payload.trip_number });
+        toast({ variant: "success", title: "Trip created", description: payload.trip_number });
       }
 
       onOpenChange(false);

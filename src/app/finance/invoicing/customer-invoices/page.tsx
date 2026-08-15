@@ -312,7 +312,7 @@ export default function CustomerInvoicesPage() {
         description: "",
         payment_terms: "30 days",
       });
-      toast({ title: "Invoice created", description: `${invoiceNum} for ${fmt(totalAmount, form.currency)}` });
+      toast({ variant: "success", title: "Invoice created", description: `${invoiceNum} for ${fmt(totalAmount, form.currency)}` });
     } catch (err: any) {
       toast({ title: "Failed to create", description: err?.message ?? "Unknown error", variant: "destructive" });
     } finally {
@@ -357,6 +357,7 @@ export default function CustomerInvoicesPage() {
     });
 
     toast({
+      variant: newStatus === "paid" ? "success" : "default",
       title: newStatus === "paid" ? "Fully paid" : "Partial payment recorded",
       description: `${fmt(amt, paying.currency)} · balance ${fmt(total - newPaid, paying.currency)}`,
     });

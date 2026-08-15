@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
+import { listItem, staggerContainer, TRANSITION } from "@/lib/animations";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,8 +84,14 @@ function KPICard({
   accent: string;
 }) {
   const positive = (delta ?? 0) >= 0;
+  // format is bound to this card's own currency (TZS, USD, ...) so the
+  // count-up animation shows real currency-formatted figures, not raw
+  // numbers — every KPI here is money, never a bare count.
   const inner = (
-    <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all group h-full">
+    <motion.div
+      whileTap={{ scale: 0.98 }}
+      className="bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all group h-full"
+    >
       <div className="flex items-start justify-between mb-4">
         <div className={cn("p-2.5 rounded-xl", accent)}>
           <Icon className="w-5 h-5" />
@@ -99,9 +108,11 @@ function KPICard({
           </span>
         )}
       </div>
-      <p className="text-2xl font-black text-foreground tracking-tight">{fmt(value, currency)}</p>
+      <p className="text-2xl font-black text-foreground tracking-tight">
+        <AnimatedCounter value={value} format={(v) => fmt(v, currency)} />
+      </p>
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{label}</p>
-    </div>
+    </motion.div>
   );
   return href ? <Link href={href}>{inner}</Link> : inner;
 }
@@ -491,9 +502,14 @@ export default function FinanceOverviewPage() {
       )}
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
-        {KPIS.map((k) => <KPICard key={k.label} {...k} />)}
-      </div>
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4"
+      >
+        {KPIS.map((k) => <motion.div key={k.label} variants={listItem}><KPICard {...k} /></motion.div>)}
+      </motion.div>
 
       {/* AR / AP aging strips — per currency */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -527,7 +543,12 @@ export default function FinanceOverviewPage() {
                       <div key={b.key} className="flex items-center gap-3">
                         <span className="text-xs font-bold text-muted-foreground w-24 shrink-0">{b.label}</span>
                         <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
-                          <div className={cn("h-full", b.color)} style={{ width: `${pct}%` }} />
+                          <motion.div
+                            className={cn("h-full", b.color)}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={TRANSITION.modal}
+                          />
                         </div>
                         <div className="text-right w-32 shrink-0">
                           <p className="text-xs font-black text-foreground">{fmt(amt, cur)}</p>
@@ -572,7 +593,12 @@ export default function FinanceOverviewPage() {
                       <div key={b.key} className="flex items-center gap-3">
                         <span className="text-xs font-bold text-muted-foreground w-24 shrink-0">{b.label}</span>
                         <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
-                          <div className={cn("h-full", b.color)} style={{ width: `${pct}%` }} />
+                          <motion.div
+                            className={cn("h-full", b.color)}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={TRANSITION.modal}
+                          />
                         </div>
                         <div className="text-right w-32 shrink-0">
                           <p className="text-xs font-black text-foreground">{fmt(amt, cur)}</p>
@@ -626,12 +652,12 @@ export default function FinanceOverviewPage() {
           <div className="px-5 py-4 border-b border-border">
             <SectionHeader title="Cash by Currency" sub="Consolidated bank balance" href="/finance/banking/bank-accounts" />
           </div>
-          <div className="p-5 space-y-2">
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="p-5 space-y-2">
             {Object.keys(cashByCurrency).length === 0 ? (
               <p className="text-sm text-muted-foreground italic">No bank accounts registered.</p>
             ) : (
               Object.entries(cashByCurrency).map(([cur, bal]) => (
-                <div key={cur} className="flex items-center justify-between p-3 rounded-xl bg-muted border border-border">
+                <motion.div key={cur} variants={listItem} className="flex items-center justify-between p-3 rounded-xl bg-muted border border-border">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-success/10 text-success flex items-center justify-center">
                       <CircleDollarSign className="w-4 h-4" />
@@ -641,11 +667,13 @@ export default function FinanceOverviewPage() {
                       <p className="text-xs text-muted-foreground">Available</p>
                     </div>
                   </div>
-                  <p className="text-sm font-black text-foreground">{fmt(bal, cur)}</p>
-                </div>
+                  <p className="text-sm font-black text-foreground">
+                    <AnimatedCounter value={bal} format={(v) => fmt(v, cur)} />
+                  </p>
+                </motion.div>
               ))
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
 
