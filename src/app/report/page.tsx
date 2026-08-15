@@ -54,15 +54,15 @@ export default function MaintenanceReportPage() {
             <p className="text-muted-foreground">Report vehicle breakdowns or request routine maintenance.</p>
           </div>
 
-          <Card className="border-amber-200 shadow-sm">
-            <CardHeader className="bg-amber-50/50 rounded-t-xl border-b border-amber-100 pb-4">
+          <Card className="border-warning/30 shadow-sm">
+            <CardHeader className="bg-warning/10 rounded-t-xl border-b border-warning/20 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 text-amber-700 rounded-lg">
+                <div className="p-2 bg-warning/15 text-warning rounded-lg">
                   <AlertCircle className="size-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg text-amber-900">Vehicle Issue</CardTitle>
-                  <CardDescription className="text-amber-700/70">Please provide detailed information</CardDescription>
+                  <CardTitle className="text-lg text-warning">Vehicle Issue</CardTitle>
+                  <CardDescription className="text-warning/80">Please provide detailed information</CardDescription>
                 </div>
               </div>
             </CardHeader>

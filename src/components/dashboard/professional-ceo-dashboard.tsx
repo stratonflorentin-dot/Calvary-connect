@@ -279,32 +279,32 @@ export function ProfessionalCEODashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-l-info">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">{formatCurrency(metrics.totalRevenue)}</div>
-              <TrendingUp className="h-5 w-5 text-green-500" />
+              <TrendingUp className="h-5 w-5 text-success" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">Year to date</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
+        <Card className={`border-l-4 ${metrics.netProfit >= 0 ? 'border-l-success' : 'border-l-destructive'}`}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Net Profit</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className={`text-2xl font-bold ${metrics.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`text-2xl font-bold ${metrics.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {formatCurrency(metrics.netProfit)}
               </div>
               {metrics.netProfit >= 0 ? (
-                <TrendingUp className="h-5 w-5 text-green-500" />
+                <TrendingUp className="h-5 w-5 text-success" />
               ) : (
-                <TrendingDown className="h-5 w-5 text-red-500" />
+                <TrendingDown className="h-5 w-5 text-destructive" />
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -313,14 +313,14 @@ export function ProfessionalCEODashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500">
+        <Card className="border-l-4 border-l-accent">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Trips</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">{formatNumber(metrics.totalTrips)}</div>
-              <Truck className="h-5 w-5 text-purple-500" />
+              <Truck className="h-5 w-5 text-accent-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {metrics.completedTrips} completed
@@ -328,14 +328,14 @@ export function ProfessionalCEODashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
+        <Card className="border-l-4 border-l-warning">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">{formatCurrency(metrics.outstandingAmount)}</div>
-              <DollarSign className="h-5 w-5 text-amber-500" />
+              <DollarSign className="h-5 w-5 text-warning" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {metrics.pendingInvoices} pending invoices
@@ -432,15 +432,15 @@ export function ProfessionalCEODashboard() {
             </div>
             <div className="grid grid-cols-3 gap-2 mt-4 text-center">
               <div>
-                <p className="text-lg font-bold text-green-600">{metrics.availableVehicles}</p>
+                <p className="text-lg font-bold text-success">{metrics.availableVehicles}</p>
                 <p className="text-xs text-muted-foreground">Available</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-blue-600">{metrics.inUseVehicles}</p>
+                <p className="text-lg font-bold text-info">{metrics.inUseVehicles}</p>
                 <p className="text-xs text-muted-foreground">In Use</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-amber-600">{metrics.maintenanceVehicles}</p>
+                <p className="text-lg font-bold text-warning">{metrics.maintenanceVehicles}</p>
                 <p className="text-xs text-muted-foreground">Maintenance</p>
               </div>
             </div>
@@ -452,9 +452,9 @@ export function ProfessionalCEODashboard() {
             <CardTitle>Operations Overview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-info/10 rounded-lg">
               <div className="flex items-center gap-3">
-                <Truck className="h-5 w-5 text-blue-600" />
+                <Truck className="h-5 w-5 text-info" />
                 <div>
                   <p className="text-sm font-medium">Total Vehicles</p>
                   <p className="text-xs text-muted-foreground">Fleet size</p>
@@ -463,9 +463,9 @@ export function ProfessionalCEODashboard() {
               <p className="text-xl font-bold">{metrics.totalVehicles}</p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg">
               <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-green-600" />
+                <Users className="h-5 w-5 text-success" />
                 <div>
                   <p className="text-sm font-medium">Active Drivers</p>
                   <p className="text-xs text-muted-foreground">Available for work</p>
@@ -474,9 +474,9 @@ export function ProfessionalCEODashboard() {
               <p className="text-xl font-bold">{metrics.activeDrivers}</p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-accent/10 rounded-lg">
               <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-purple-600" />
+                <Clock className="h-5 w-5 text-accent-foreground" />
                 <div>
                   <p className="text-sm font-medium">Active Trips</p>
                   <p className="text-xs text-muted-foreground">Currently in progress</p>
@@ -485,9 +485,9 @@ export function ProfessionalCEODashboard() {
               <p className="text-xl font-bold">{metrics.activeTrips}</p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-warning/10 rounded-lg">
               <div className="flex items-center gap-3">
-                <Fuel className="h-5 w-5 text-amber-600" />
+                <Fuel className="h-5 w-5 text-warning" />
                 <div>
                   <p className="text-sm font-medium">Fuel Cost</p>
                   <p className="text-xs text-muted-foreground">Total spent</p>
@@ -503,9 +503,9 @@ export function ProfessionalCEODashboard() {
             <CardTitle>Financial Health</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg">
               <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="h-5 w-5 text-success" />
                 <div>
                   <p className="text-sm font-medium">Paid Invoices</p>
                   <p className="text-xs text-muted-foreground">Collected payments</p>
@@ -514,9 +514,9 @@ export function ProfessionalCEODashboard() {
               <p className="text-xl font-bold">{metrics.paidInvoices}</p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg">
               <div className="flex items-center gap-3">
-                <XCircle className="h-5 w-5 text-red-600" />
+                <XCircle className="h-5 w-5 text-destructive" />
                 <div>
                   <p className="text-sm font-medium">Pending Invoices</p>
                   <p className="text-xs text-muted-foreground">Awaiting payment</p>
@@ -525,9 +525,9 @@ export function ProfessionalCEODashboard() {
               <p className="text-xl font-bold">{metrics.pendingInvoices}</p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-info/10 rounded-lg">
               <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-blue-600" />
+                <DollarSign className="h-5 w-5 text-info" />
                 <div>
                   <p className="text-sm font-medium">Outstanding</p>
                   <p className="text-xs text-muted-foreground">Receivables</p>
@@ -536,9 +536,9 @@ export function ProfessionalCEODashboard() {
               <p className="text-xl font-bold">{formatCurrency(metrics.outstandingAmount)}</p>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-accent/10 rounded-lg">
               <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 text-purple-600" />
+                <Package className="h-5 w-5 text-accent-foreground" />
                 <div>
                   <p className="text-sm font-medium">Total Expenses</p>
                   <p className="text-xs text-muted-foreground">Operating costs</p>

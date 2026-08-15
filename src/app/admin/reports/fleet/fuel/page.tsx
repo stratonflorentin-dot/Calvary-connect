@@ -215,13 +215,13 @@ export default function FuelConsumptionPage() {
 
           {/* Error State */}
           {!loading && error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center max-w-lg mx-auto">
-              <AlertTriangle className="size-8 text-red-600 mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-red-800">Unable to load report</h3>
-              <p className="text-sm text-red-600 mt-1 mb-4">{error}</p>
-              <button 
+            <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center max-w-lg mx-auto">
+              <AlertTriangle className="size-8 text-destructive mx-auto mb-3" />
+              <h3 className="text-lg font-bold text-destructive">Unable to load report</h3>
+              <p className="text-sm text-destructive/80 mt-1 mb-4">{error}</p>
+              <button
                 onClick={() => fetchData(appliedFrom, appliedTo)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors inline-flex items-center gap-2"
+                className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg text-sm font-semibold hover:bg-destructive/90 transition-colors inline-flex items-center gap-2"
               >
                 <RefreshCw className="size-4" />
                 Try Again
@@ -237,39 +237,39 @@ export default function FuelConsumptionPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 {/* Total Litres */}
-                <div className="bg-sky-50 border border-sky-100 rounded-xl p-4 text-center">
-                  <div className="mx-auto bg-sky-200/50 p-2 rounded-full w-fit mb-2">
-                    <Fuel className="size-5 text-primary" />
+                <div className="bg-info/10 border border-info/20 rounded-xl p-4 text-center">
+                  <div className="mx-auto bg-info/20 p-2 rounded-full w-fit mb-2">
+                    <Fuel className="size-5 text-info" />
                   </div>
-                  <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Total Liters Dispensed</p>
-                  <p className="text-2xl font-black text-sky-900 mt-1">{summary.totalLitresDispensed.toLocaleString()} L</p>
+                  <p className="text-xs font-bold text-info/80 uppercase tracking-wider">Total Liters Dispensed</p>
+                  <p className="text-2xl font-black text-info mt-1">{summary.totalLitresDispensed.toLocaleString()} L</p>
                 </div>
 
                 {/* Total Fuel Cost */}
-                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center">
-                  <div className="mx-auto bg-emerald-200/50 p-2 rounded-full w-fit mb-2">
-                    <DollarSign className="size-5 text-emerald-800" />
+                <div className="bg-success/10 border border-success/20 rounded-xl p-4 text-center">
+                  <div className="mx-auto bg-success/20 p-2 rounded-full w-fit mb-2">
+                    <DollarSign className="size-5 text-success" />
                   </div>
-                  <p className="text-xs font-bold text-emerald-800/80 uppercase tracking-wider">Total Fuel Costs</p>
-                  <p className="text-2xl font-black text-emerald-900 mt-1 truncate">{formatTZS(summary.totalFuelCostTZS)}</p>
+                  <p className="text-xs font-bold text-success/80 uppercase tracking-wider">Total Fuel Costs</p>
+                  <p className="text-2xl font-black text-success mt-1 truncate">{formatTZS(summary.totalFuelCostTZS)}</p>
                 </div>
 
                 {/* Total KM driven */}
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
-                  <div className="mx-auto bg-indigo-200/50 p-2 rounded-full w-fit mb-2">
-                    <Route className="size-5 text-indigo-800" />
+                <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+                  <div className="mx-auto bg-primary/20 p-2 rounded-full w-fit mb-2">
+                    <Route className="size-5 text-primary" />
                   </div>
-                  <p className="text-xs font-bold text-indigo-800/80 uppercase tracking-wider">Distance Covered</p>
-                  <p className="text-2xl font-black text-indigo-900 mt-1">{summary.totalKmDriven.toLocaleString()} km</p>
+                  <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Distance Covered</p>
+                  <p className="text-2xl font-black text-primary mt-1">{summary.totalKmDriven.toLocaleString()} km</p>
                 </div>
 
                 {/* Most Efficient */}
-                <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-center">
-                  <div className="mx-auto bg-purple-200/50 p-2 rounded-full w-fit mb-2">
-                    <Activity className="size-5 text-purple-800" />
+                <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 text-center">
+                  <div className="mx-auto bg-accent/20 p-2 rounded-full w-fit mb-2">
+                    <Activity className="size-5 text-accent-foreground" />
                   </div>
-                  <p className="text-xs font-bold text-purple-800/80 uppercase tracking-wider">Most Fuel Efficient</p>
-                  <p className="text-base font-black text-purple-900 mt-1 truncate">{summary.mostEfficientVehicle}</p>
+                  <p className="text-xs font-bold text-accent-foreground/80 uppercase tracking-wider">Most Fuel Efficient</p>
+                  <p className="text-base font-black text-accent-foreground mt-1 truncate">{summary.mostEfficientVehicle}</p>
                 </div>
 
               </div>
@@ -304,7 +304,7 @@ export default function FuelConsumptionPage() {
                             <tr 
                               key={vehicle.id}
                               className={`transition-colors hover:bg-muted/50 ${
-                                isTop ? 'bg-sky-50 border-l-2 border-sky-700' : ''
+                                isTop ? 'bg-info/10 border-l-2 border-info' : ''
                               }`}
                             >
                               <td className="px-6 py-4">

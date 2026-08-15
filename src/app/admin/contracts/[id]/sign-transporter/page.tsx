@@ -182,20 +182,20 @@ export default function SignTransporterPage() {
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-3xl font-bold">Countersign as Transporter</h1>
-                    <p className="text-gray-600 mt-1">{contract.contract_number}</p>
+                    <h1 className="text-3xl font-bold text-foreground">Countersign as Transporter</h1>
+                    <p className="text-muted-foreground mt-1">{contract.contract_number}</p>
                 </div>
             </div>
 
             {/* Client Signature Reference */}
-            <Card className="border-green-200 bg-green-50">
+            <Card className="border-success/30 bg-success/10">
                 <CardContent className="pt-6">
                     <div className="space-y-2">
-                        <p className="font-semibold text-green-900">✓ Client has signed</p>
-                        <p className="text-sm text-green-800">
+                        <p className="font-semibold text-success">✓ Client has signed</p>
+                        <p className="text-sm text-success/90">
                             {contract.client_signatory_name} ({contract.client_signatory_position})
                         </p>
-                        <p className="text-xs text-green-700">
+                        <p className="text-xs text-success/80">
                             Signed on{' '}
                             {contract.client_signed_at &&
                                 new Date(contract.client_signed_at).toLocaleDateString()}
@@ -209,22 +209,22 @@ export default function SignTransporterPage() {
                 <CardContent className="pt-6">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <p className="text-sm text-gray-600">Contract Number</p>
-                            <p className="font-semibold">{contract.contract_number}</p>
+                            <p className="text-sm text-muted-foreground">Contract Number</p>
+                            <p className="font-semibold text-foreground">{contract.contract_number}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-gray-600">Client</p>
-                            <p className="font-semibold">{contract.client?.name}</p>
+                            <p className="text-sm text-muted-foreground">Client</p>
+                            <p className="font-semibold text-foreground">{contract.client?.name}</p>
                         </div>
                         <div>
-                            <p className="text-sm text-gray-600">Effective Date</p>
-                            <p className="font-semibold">
+                            <p className="text-sm text-muted-foreground">Effective Date</p>
+                            <p className="font-semibold text-foreground">
                                 {new Date(contract.effective_date).toLocaleDateString()}
                             </p>
                         </div>
                         <div>
-                            <p className="text-sm text-gray-600">Expiry Date</p>
-                            <p className="font-semibold">
+                            <p className="text-sm text-muted-foreground">Expiry Date</p>
+                            <p className="font-semibold text-foreground">
                                 {new Date(contract.expiry_date).toLocaleDateString()}
                             </p>
                         </div>
@@ -264,7 +264,10 @@ export default function SignTransporterPage() {
                     {/* Signature Pad */}
                     <div className="space-y-2">
                         <Label>Signature</Label>
-                        <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-white">
+                        {/* bg-white is intentional here, not a theme bug — a signature drawn
+                            in dark ink needs a fixed light surface to stay legible/exportable,
+                            same reasoning as the printable-document components. */}
+                        <div className="border-2 border-border rounded-lg overflow-hidden bg-white">
                             <canvas
                                 ref={canvasRef}
                                 style={{
@@ -275,7 +278,7 @@ export default function SignTransporterPage() {
                                 }}
                             />
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                             Draw your signature in the box above
                         </div>
                     </div>
@@ -300,7 +303,7 @@ export default function SignTransporterPage() {
                 <Button
                     onClick={handleSign}
                     disabled={signing}
-                    className="border-sky-600 text-sky-600 hover:bg-sky-50 border-2 bg-white"
+                    className="border-primary text-primary hover:bg-primary/10 border-2 bg-card"
                 >
                     {signing ? 'Countersigning...' : 'Countersign Contract'}
                 </Button>

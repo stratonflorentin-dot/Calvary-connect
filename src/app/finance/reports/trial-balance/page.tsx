@@ -59,12 +59,12 @@ const TYPE_LABEL: Record<AccountType, string> = {
   unknown: "Unclassified",
 };
 const TYPE_ACCENT: Record<AccountType, string> = {
-  asset: "border-l-emerald-500 bg-emerald-50/40",
-  liability: "border-l-orange-500 bg-orange-50/40",
-  equity: "border-l-violet-500 bg-violet-50/40",
-  revenue: "border-l-indigo-500 bg-indigo-50/40",
-  expense: "border-l-rose-500 bg-rose-50/40",
-  unknown: "border-l-slate-400 bg-muted/40",
+  asset: "border-l-success bg-success/10",
+  liability: "border-l-warning bg-warning/10",
+  equity: "border-l-accent bg-accent/10",
+  revenue: "border-l-info bg-info/10",
+  expense: "border-l-destructive bg-destructive/10",
+  unknown: "border-l-muted-foreground bg-muted/40",
 };
 
 function classifyType(raw?: string | null): AccountType {
@@ -271,16 +271,16 @@ export default function TrialBalancePage() {
             <section key={`tb-${cur}`} className="space-y-4">
               <div className={cn(
                 "flex items-center justify-between rounded-2xl border p-4",
-                t.diff === 0 ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50",
+                t.diff === 0 ? "border-success/20 bg-success/10" : "border-destructive/20 bg-destructive/10",
               )}>
                 <div className="text-sm">
                   <div className="flex items-baseline gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-card border border-border text-foreground">{cur}</span>
-                    <p className={cn("font-black", t.diff === 0 ? "text-emerald-800" : "text-rose-800")}>
+                    <p className={cn("font-black", t.diff === 0 ? "text-success" : "text-destructive")}>
                       {t.diff === 0 ? "Balanced" : "Out of balance"}
                     </p>
                   </div>
-                  <p className={cn("text-xs mt-0.5", t.diff === 0 ? "text-emerald-700" : "text-rose-700")}>
+                  <p className={cn("text-xs mt-0.5", t.diff === 0 ? "text-success/80" : "text-destructive/80")}>
                     Debits {fmt(t.debit, cur)} · Credits {fmt(t.credit, cur)}
                     {t.diff !== 0 && ` · off by ${fmt(Math.abs(t.diff), cur)}`}
                   </p>
