@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
+import { motion } from "framer-motion";
 import { ArrowDownRight, ArrowUpRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
+import { hoverLift } from "@/lib/animations";
 
 interface StatCardProps {
   label: string;
@@ -36,6 +39,10 @@ export function StatCard({
   loading = false,
 }: StatCardProps) {
   const positive = invertDelta ? (delta ?? 0) < 0 : (delta ?? 0) >= 0;
+  // Plain numeric values count up on change; anything else (pre-formatted
+  // strings, currency, ReactNode) renders as-is — animating a raw number is
+  // the one case we can do honestly without guessing at a formatter.
+  const isPlainNumber = typeof value === "number" && Number.isFinite(value);
 
   const inner = (
     <div className="cv-kpi h-full flex flex-col justify-between gap-3">
@@ -60,6 +67,8 @@ export function StatCard({
       <div className="space-y-0.5">
         {loading ? (
           <div className="cv-skeleton h-7 w-24 rounded" />
+        ) : isPlainNumber ? (
+          <p className="cv-kpi-value"><AnimatedCounter value={value as number} /></p>
         ) : (
           <p className="cv-kpi-value">{value}</p>
         )}
@@ -70,8 +79,10 @@ export function StatCard({
   );
 
   return href ? (
-    <Link href={href} className="block hover-lift">
-      {inner}
+    <Link href={href} className="block">
+      <motion.div whileHover={hoverLift} whileTap={{ scale: 0.98 }} className="hover-lift h-full">
+        {inner}
+      </motion.div>
     </Link>
   ) : (
     inner

@@ -13,6 +13,7 @@ const spaceGrotesk = Space_Grotesk({
 import { Toaster } from "@/components/ui/toaster";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { PageLoader } from "@/components/page-loader";
+import { MotionProvider } from "@/components/motion-provider";
 import { SupabaseProvider } from '@/components/supabase-provider';
 import { PWAProvider } from '@/components/pwa/pwa-provider';
 import { PWAInstallPrompt } from '@/components/pwa/pwa-install-prompt';
@@ -88,19 +89,21 @@ export default function RootLayout({
         >
           <div className="bg-background text-foreground min-h-screen">
             <PageLoader />
-            <PWAProvider>
-              <SidebarProvider>
-                <SupabaseProvider>
-                  <ToastProvider />
-                  <DriverSilentTrackingRoot />
-                  <RouteOverridesProvider>
-                    <FinancialSalesProvider>{children}</FinancialSalesProvider>
-                  </RouteOverridesProvider>
-                  <Toaster />
-                  <PWAInstallPrompt />
-                </SupabaseProvider>
-              </SidebarProvider>
-            </PWAProvider>
+            <MotionProvider>
+              <PWAProvider>
+                <SidebarProvider>
+                  <SupabaseProvider>
+                    <ToastProvider />
+                    <DriverSilentTrackingRoot />
+                    <RouteOverridesProvider>
+                      <FinancialSalesProvider>{children}</FinancialSalesProvider>
+                    </RouteOverridesProvider>
+                    <Toaster />
+                    <PWAInstallPrompt />
+                  </SupabaseProvider>
+                </SidebarProvider>
+              </PWAProvider>
+            </MotionProvider>
           </div>
         </ThemeProvider>
       </body>

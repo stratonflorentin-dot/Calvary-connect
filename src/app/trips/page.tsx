@@ -3,7 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { getListStagger, listItem, statusChange } from "@/lib/animations";
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
 import { useCurrency } from "@/hooks/use-currency";
@@ -133,6 +135,13 @@ function TripsContent() {
     { key: "delivered", label: "Delivered", count: stats.delivered },
   ];
 
+  // Capped so a long trip list doesn't take ages to finish staggering in —
+  // see getListStagger in src/lib/animations.ts.
+  const rowStagger = useMemo(
+    () => ({ hidden: {}, visible: { transition: { staggerChildren: getListStagger(filtered.length) } } }),
+    [filtered.length],
+  );
+
   return (
     <PageShell width="wide">
       <PageHeader
@@ -172,13 +181,18 @@ function TripsContent() {
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-            <StatCard label="Total trips" value={stats.total} icon={ClipboardList} accent="bg-primary/10 text-primary" />
-            <StatCard label="Active" value={stats.active} icon={Truck} accent="bg-info/10 text-info" />
-            <StatCard label="Overdue" value={stats.overdue} icon={Flame} accent="bg-destructive/10 text-destructive" />
-            <StatCard label="Delivered" value={stats.delivered} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
-            <StatCard label="Revenue (delivered)" value={format(stats.revenue)} icon={Package} accent="bg-success/10 text-success" />
-          </div>
+          <motion.div
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6"
+          >
+            <motion.div variants={listItem}><StatCard label="Total trips" value={stats.total} icon={ClipboardList} accent="bg-primary/10 text-primary" /></motion.div>
+            <motion.div variants={listItem}><StatCard label="Active" value={stats.active} icon={Truck} accent="bg-info/10 text-info" /></motion.div>
+            <motion.div variants={listItem}><StatCard label="Overdue" value={stats.overdue} icon={Flame} accent="bg-destructive/10 text-destructive" /></motion.div>
+            <motion.div variants={listItem}><StatCard label="Delivered" value={stats.delivered} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" /></motion.div>
+            <motion.div variants={listItem}><StatCard label="Revenue (delivered)" value={format(stats.revenue)} icon={Package} accent="bg-success/10 text-success" /></motion.div>
+          </motion.div>
 
           {/* Filter chips */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
@@ -235,13 +249,13 @@ function TripsContent() {
                       <th className="px-4 py-3">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <motion.tbody variants={rowStagger} initial="hidden" animate="visible">
                     {filtered.map((t) => {
                       const meta = STATUS_META[t.status] ?? STATUS_META.pending;
                       const overdue = t.status !== "delivered" && t.status !== "cancelled" && t.created_at && isOverdue("trip", t.created_at);
                       const age = t.created_at ? hoursSince(t.created_at) : 0;
                       return (
-                        <tr key={t.id} className="border-b border-border/60 hover:bg-muted/40 transition-colors">
+                        <motion.tr key={t.id} variants={listItem} className="border-b border-border/60 hover:bg-muted/40 transition-colors">
                           <td className="px-4 py-3">
                             <button
                               type="button"
@@ -277,10 +291,19 @@ function TripsContent() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1">
-                              <span className={cn("cv-chip", meta.chip)}>
-                                <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
-                                {meta.label}
-                              </span>
+                              <AnimatePresence mode="wait">
+                                <motion.span
+                                  key={t.status}
+                                  variants={statusChange}
+                                  initial="hidden"
+                                  animate="visible"
+                                  exit="exit"
+                                  className={cn("cv-chip", meta.chip)}
+                                >
+                                  <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
+                                  {meta.label}
+                                </motion.span>
+                              </AnimatePresence>
                               {overdue && (
                                 <span className="cv-chip cv-chip-danger">
                                   <Flame className="w-2.5 h-2.5" /> {(age - slaHours.trip).toFixed(0)}h late
@@ -304,23 +327,25 @@ function TripsContent() {
                               size="sm"
                             />
                           </td>
-                        </tr>
+                        </motion.tr>
                       );
                     })}
-                  </tbody>
+                  </motion.tbody>
                 </table>
               </div>
             )}
 
             {/* Mobile card view */}
-            <div className="sm:hidden space-y-3">
+            <motion.div variants={rowStagger} initial="hidden" animate="visible" className="sm:hidden space-y-3">
               {filtered.map((t) => {
                 const meta = STATUS_META[t.status] ?? STATUS_META.pending;
                 const overdue = t.status !== "delivered" && t.status !== "cancelled" && t.created_at && isOverdue("trip", t.created_at);
                 const age = t.created_at ? hoursSince(t.created_at) : 0;
                 return (
-                  <div
+                  <motion.div
                     key={t.id}
+                    variants={listItem}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => { setEditing(t); setFormOpen(true); }}
                     className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-colors cursor-pointer"
                   >
@@ -340,10 +365,19 @@ function TripsContent() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-1 items-end">
-                        <span className={cn("cv-chip", meta.chip)}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
-                          {meta.label}
-                        </span>
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={t.status}
+                            variants={statusChange}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className={cn("cv-chip", meta.chip)}
+                          >
+                            <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
+                            {meta.label}
+                          </motion.span>
+                        </AnimatePresence>
                         {overdue && (
                           <span className="cv-chip cv-chip-danger">
                             <Flame className="w-2.5 h-2.5" /> {(age - slaHours.trip).toFixed(0)}h late
@@ -387,10 +421,10 @@ function TripsContent() {
                         size="sm"
                       />
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
           </SectionCard>
         </>
       )}

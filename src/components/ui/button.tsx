@@ -1,8 +1,10 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
+import { motion } from "framer-motion"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
+import { buttonTapTransition, hoverLift, pressScale } from "@/lib/animations"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -40,14 +42,39 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+// Framer Motion's HTMLMotionProps redefine a few event handlers (onDrag,
+// onDragStart/End, onAnimationStart/End) with its own signatures, which
+// collide with React.ButtonHTMLAttributes' DOM event types. Button doesn't
+// use any of those on a <button>, so it's safe to widen just at this call
+// site rather than narrow ButtonProps itself (asChild/Slot still needs the
+// full, unmodified DOM attribute types below).
+type MotionButtonSpreadProps = Omit<
+  ButtonProps,
+  "onDrag" | "onDragStart" | "onDragEnd" | "onAnimationStart" | "onAnimationEnd" | "asChild" | "variant" | "size"
+>
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
+    if (asChild) {
+      // Link-wrapped / custom-element buttons: motion props can't safely
+      // forward through Slot onto an arbitrary child (e.g. next/link),
+      // so these keep the existing CSS-only hover treatment.
+      return (
+        <Slot
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...props}
+        />
+      )
+    }
     return (
-      <Comp
+      <motion.button
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        {...props}
+        whileHover={{ ...hoverLift }}
+        whileTap={{ ...pressScale }}
+        transition={buttonTapTransition}
+        {...(props as MotionButtonSpreadProps)}
       />
     )
   }

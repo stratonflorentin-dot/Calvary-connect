@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { AlertCircle, Zap, FileText, Wallet, TrendingDown, Grid, Truck, Users, AlertTriangle, Clock, DollarSign } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import { DocumentStatusBadge } from '@/components/ui/document-status-badge';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useCurrency } from '@/hooks/use-currency';
 import { useSupabase } from '@/components/supabase-provider';
+import { barGrowIn, listItem, staggerContainer, TRANSITION } from '@/lib/animations';
 
 function ExecutiveDashboardContent() {
     const searchParams = useSearchParams();
@@ -46,9 +48,14 @@ function ExecutiveDashboardContent() {
     };
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-safe-bottom">
+        <motion.div
+            className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 pb-safe-bottom"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+        >
             {/* PAGE HEADER */}
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <motion.div variants={listItem} className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Welcome back, {user?.name || user?.email || 'User'}!</h1>
                     <p className="text-sm sm:text-base text-muted-foreground mt-2">
@@ -65,9 +72,10 @@ function ExecutiveDashboardContent() {
                         <Button size="sm" variant="ghost" className="ml-2 text-warning hover:text-warning-foreground">Open</Button>
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* FILTER BAR */}
+            <motion.div variants={listItem}>
             <Card className="p-4 sm:p-6 shadow-lg">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="min-w-56">
@@ -102,9 +110,10 @@ function ExecutiveDashboardContent() {
                     </div>
                 </div>
             </Card>
+            </motion.div>
 
             {/* STAT CARDS ROW */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <motion.div variants={listItem} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 <StatMiniCard
                     title="Active Shipments"
                     value={stats.activeShipments}
@@ -152,9 +161,10 @@ function ExecutiveDashboardContent() {
                     valueColor="text-foreground"
                     href="/fleet"
                 />
-            </div>
+            </motion.div>
 
             {/* FLEET STATUS BAR */}
+            <motion.div variants={listItem}>
             <Card className="p-4 sm:p-6 shadow-lg">
                 <h3 className="text-base sm:text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
                     <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-accent-foreground" />
@@ -189,8 +199,10 @@ function ExecutiveDashboardContent() {
                     </div>
                 </div>
             </Card>
+            </motion.div>
 
             {/* SHIPMENT OPERATIONAL FINANCE */}
+            <motion.div variants={listItem}>
             <GradientCard
                 title="Shipment Operational Finance"
                 icon={<Truck className="w-5 h-5 text-white" />}
@@ -220,9 +232,10 @@ function ExecutiveDashboardContent() {
                     </div>
                 </div>
             </GradientCard>
+            </motion.div>
 
             {/* 2-COLUMN CHARTS */}
-            <div className="grid lg:grid-cols-2 gap-8">
+            <motion.div variants={listItem} className="grid lg:grid-cols-2 gap-8">
                 {/* Revenue Trend */}
                 <GradientCard
                     title="Revenue Trend"
@@ -237,10 +250,15 @@ function ExecutiveDashboardContent() {
                                 const height = maxRevenue > 0 ? (month.revenue / maxRevenue) * 160 : 0;
                                 return (
                                     <div key={idx} className="flex flex-col items-center gap-2 flex-1">
-                                        <div
-                                            className="w-full bg-gradient-to-t from-success/80 to-success/60 rounded-t-lg transition-all hover:from-success hover:to-success/80 cursor-pointer"
-                                            style={{ height: `${height}px` }}
-                                        ></div>
+                                        <motion.div
+                                            className="w-full bg-gradient-to-t from-success/80 to-success/60 rounded-t-lg hover:from-success hover:to-success/80 cursor-pointer"
+                                            style={{ height: `${height}px`, transformOrigin: "bottom" }}
+                                            variants={barGrowIn}
+                                            initial="hidden"
+                                            animate="visible"
+                                            transition={{ ...TRANSITION.modal, delay: idx * 0.03 }}
+                                            whileHover={{ scaleY: 1.02 }}
+                                        />
                                         <span className="text-xs text-muted-foreground">{month.month}</span>
                                     </div>
                                 );
@@ -280,19 +298,21 @@ function ExecutiveDashboardContent() {
                         <div className="border-t border-border pt-4">
                             <p className="text-sm text-muted-foreground mb-3">Completion Rate</p>
                             <div className="w-full bg-muted rounded-xl h-3 overflow-hidden shadow-inner">
-                                <div
-                                    className="bg-gradient-to-r from-success/80 to-success h-full transition-all duration-500"
-                                    style={{ width: `${tripPerformance.completionRate}%` }}
-                                ></div>
+                                <motion.div
+                                    className="bg-gradient-to-r from-success/80 to-success h-full"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${tripPerformance.completionRate}%` }}
+                                    transition={TRANSITION.modal}
+                                />
                             </div>
                             <p className="text-lg font-bold mt-3 text-foreground">{tripPerformance.completionRate.toFixed(1)}%</p>
                         </div>
                     </div>
                 </GradientCard>
-            </div>
+            </motion.div>
 
             {/* BOTTOM 3-COLUMN GRID */}
-            <div className="grid lg:grid-cols-3 gap-8">
+            <motion.div variants={listItem} className="grid lg:grid-cols-3 gap-8">
                 {/* LEFT COLUMN (span 2) */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Shipments Needing Action */}
@@ -497,7 +517,12 @@ function ExecutiveDashboardContent() {
                                         </div>
                                         <span className="text-sm font-semibold flex-1 text-foreground">{client.name}</span>
                                         <div className="flex-1 bg-muted rounded-xl h-2.5 overflow-hidden shadow-inner">
-                                            <div className="bg-accent h-full transition-all duration-500" style={{ width: `${width}%` }}></div>
+                                            <motion.div
+                                                className="bg-accent h-full"
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${width}%` }}
+                                                transition={{ ...TRANSITION.modal, delay: client.rank * 0.04 }}
+                                            />
                                         </div>
                                         <span className="text-xs font-bold text-foreground">{format(client.revenue)}</span>
                                     </div>
@@ -506,8 +531,8 @@ function ExecutiveDashboardContent() {
                         </div>
                     </GradientCard>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 }
 
