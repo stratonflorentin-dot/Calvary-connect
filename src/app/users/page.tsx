@@ -412,7 +412,7 @@ export default function UsersPage() {
                   <UserPlus className="size-4" /> Invite User
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Invite New Team Member</DialogTitle>
               </DialogHeader>
@@ -571,7 +571,7 @@ export default function UsersPage() {
 
         {/* Edit User Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
             </DialogHeader>

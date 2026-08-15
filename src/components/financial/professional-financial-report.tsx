@@ -377,7 +377,7 @@ export function ProfessionalFinancialReport() {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
             <SelectTrigger className="w-[100px] border-primary/30 bg-primary/5">
               <SelectValue placeholder="Currency" />

@@ -310,7 +310,7 @@ export default function MaintenancePage() {
                             </div>
 
                             {/* Pagination */}
-                            <div className="mt-6 flex items-center justify-between">
+                            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div className="flex items-center gap-4">
                                     <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setCurrentPage(1); }}>
                                         <SelectTrigger className="w-32">

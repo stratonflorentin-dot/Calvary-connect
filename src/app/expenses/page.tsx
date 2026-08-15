@@ -259,7 +259,7 @@ export default function ExpensesPage() {
                                     Add Expense
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                     <DialogTitle>Add New Expense</DialogTitle>
                                 </DialogHeader>

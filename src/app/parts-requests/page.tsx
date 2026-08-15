@@ -179,7 +179,7 @@ export default function PartsRequestsPage() {
           </Card>
         </div>
 
-        <div className="flex items-center gap-1 mb-6 border-b border-border">
+        <div className="flex items-center gap-1 mb-6 border-b border-border overflow-x-auto no-scrollbar">
           {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
             <button
               key={tab}
