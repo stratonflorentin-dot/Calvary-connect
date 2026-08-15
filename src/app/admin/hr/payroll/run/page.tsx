@@ -74,7 +74,7 @@ export default function PayrollRunPage() {
           method: "POST",
           body: JSON.stringify({ action, year, month, payDate }),
         });
-        toast({ title: "Payroll generated", description: `Draft payslips created for ${monthNames[month - 1]} ${year}.` });
+        toast({ variant: "success", title: "Payroll generated", description: `Draft payslips created for ${monthNames[month - 1]} ${year}.` });
       } else {
         await authedFetch("/api/admin/hr/payroll/run", {
           method: "POST",

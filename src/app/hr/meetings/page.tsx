@@ -161,7 +161,7 @@ function MeetingsPageInner() {
             })),
           );
         }
-        toast({ title: "Meeting scheduled", description: `${attendees.length} invitation(s) sent` });
+        toast({ variant: "success", title: "Meeting scheduled", description: `${attendees.length} invitation(s) sent` });
       }
       setDialogOpen(false);
       load();

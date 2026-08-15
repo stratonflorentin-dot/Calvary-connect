@@ -110,7 +110,7 @@ export default function EmployeeLoansPage() {
       toast({ title: "Couldn't issue loan", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Loan issued", description: `${formatAmount(installmentNum, currency)} will be deducted each payroll run until repaid.` });
+    toast({ variant: "success", title: "Loan issued", description: `${formatAmount(installmentNum, currency)} will be deducted each payroll run until repaid.` });
     setEmployeeId("");
     setPrincipal("");
     setInstallment("");

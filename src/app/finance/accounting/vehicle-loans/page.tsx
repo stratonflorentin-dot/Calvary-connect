@@ -129,7 +129,7 @@ export default function VehicleLoansPage() {
         p_notes: form.notes || null,
       });
       if (error) throw error;
-      toast({ title: "Repayment posted", description: `${repayLoan.loan_number ?? "Loan"} balance reduced by ${formatAmount(principal)}.` });
+      toast({ variant: "success", title: "Repayment posted", description: `${repayLoan.loan_number ?? "Loan"} balance reduced by ${formatAmount(principal)}.` });
       setRepayLoan(null);
       load();
     } catch (err: any) {

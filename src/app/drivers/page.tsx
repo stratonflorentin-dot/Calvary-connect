@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
@@ -8,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getUsersAction } from "@/app/users/actions";
+import { getListStagger, listItem } from "@/lib/animations";
 
 export default function DriversPage() {
     const { role } = useRole();
@@ -43,21 +45,30 @@ export default function DriversPage() {
                         </CardHeader>
                         <CardContent>
                             {loading ? (
-                                <div className="text-center py-8">Loading drivers...</div>
+                                <div className="space-y-4">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i} className="cv-skeleton h-16 rounded-lg" />
+                                    ))}
+                                </div>
                             ) : drivers.length === 0 ? (
                                 <div className="text-center py-8">No drivers found.</div>
                             ) : (
-                                <div className="space-y-4">
+                                <motion.div
+                                    variants={{ hidden: {}, visible: { transition: { staggerChildren: getListStagger(drivers.length) } } }}
+                                    initial="hidden"
+                                    animate="visible"
+                                    className="space-y-4"
+                                >
                                     {drivers.map((driver) => (
-                                        <div key={driver.id} className="border rounded-lg p-4 flex items-center gap-4">
+                                        <motion.div key={driver.id} variants={listItem} whileHover={{ y: -1 }} className="border rounded-lg p-4 flex items-center gap-4">
                                             <div className="flex-1">
                                                 <div className="font-semibold">{driver.name}</div>
                                                 <div className="text-xs text-muted-foreground">{driver.email}</div>
                                             </div>
                                             <Badge variant="secondary">{driver.status || "Active"}</Badge>
-                                        </div>
+                                        </motion.div>
                                     ))}
-                                </div>
+                                </motion.div>
                             )}
                         </CardContent>
                     </Card>

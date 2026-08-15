@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useRole } from "@/hooks/use-role";
+import { getListStagger, listItem, TRANSITION } from "@/lib/animations";
 import { PageShell, PageHeader, StatCard, SectionCard, EmptyState, PageSkeleton, RefreshControl } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -239,7 +241,12 @@ export default function FleetPage() {
                     }
                   />
                 ) : (
-                  <ul className="divide-y divide-border">
+                  <motion.ul
+                    variants={{ hidden: {}, visible: { transition: { staggerChildren: getListStagger(filtered.length) } } }}
+                    initial="hidden"
+                    animate="visible"
+                    className="divide-y divide-border"
+                  >
                     {filtered.map((v) => {
                       const meta = STATUS_META[v.status ?? "available"] ?? STATUS_META.available;
                       const ins = v.insuranceExpiry ?? v.insurance_expiry;
@@ -248,7 +255,7 @@ export default function FleetPage() {
                       const regDays = daysUntil(reg);
                       const fuel = v.currentFuelLevel != null && v.fuelCapacity ? (Number(v.currentFuelLevel) / Number(v.fuelCapacity)) * 100 : null;
                       return (
-                        <li key={v.id} className="px-5 py-3 hover:bg-muted/40 transition-colors">
+                        <motion.li key={v.id} variants={listItem} className="px-5 py-3 hover:bg-muted/40 transition-colors">
                           <div className="flex items-center gap-4">
                             {v.photo_url ? (
                               <img
@@ -288,7 +295,13 @@ export default function FleetPage() {
                                     <Fuel className="w-3 h-3" /> {fuel.toFixed(0)}%
                                   </div>
                                   <div className="w-16 h-1.5 rounded-full bg-muted mt-0.5 overflow-hidden">
-                                    <div className={cn("h-full", fuel < 25 ? "bg-destructive" : fuel < 50 ? "bg-warning" : "bg-success")} style={{ width: `${fuel}%` }} />
+                                    <motion.div
+                                      className={cn("h-full w-full", fuel < 25 ? "bg-destructive" : fuel < 50 ? "bg-warning" : "bg-success")}
+                                      style={{ transformOrigin: "left" }}
+                                      initial={{ scaleX: 0 }}
+                                      animate={{ scaleX: fuel / 100 }}
+                                      transition={TRANSITION.modal}
+                                    />
                                   </div>
                                 </div>
                               )}
@@ -302,10 +315,10 @@ export default function FleetPage() {
                               </button>
                             </div>
                           </div>
-                        </li>
+                        </motion.li>
                       );
                     })}
-                  </ul>
+                  </motion.ul>
                 )}
               </SectionCard>
             </div>
@@ -315,9 +328,14 @@ export default function FleetPage() {
                 {expiringSoon.length === 0 ? (
                   <EmptyState icon={CheckCircle2} title="All up to date" description="No documents or services expire within 30 days." />
                 ) : (
-                  <ul className="divide-y divide-border">
+                  <motion.ul
+                    variants={{ hidden: {}, visible: { transition: { staggerChildren: getListStagger(expiringSoon.length) } } }}
+                    initial="hidden"
+                    animate="visible"
+                    className="divide-y divide-border"
+                  >
                     {expiringSoon.map((r, i) => (
-                      <li key={i} className="px-5 py-3 flex items-center gap-3 hover:bg-muted/40 transition-colors">
+                      <motion.li key={i} variants={listItem} className="px-5 py-3 flex items-center gap-3 hover:bg-muted/40 transition-colors">
                         <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", r.days <= 7 ? "bg-destructive/10 text-destructive" : r.days <= 14 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground")}>
                           <AlertTriangle className="w-4 h-4" />
                         </div>
@@ -329,9 +347,9 @@ export default function FleetPage() {
                             {formatDistanceToNow(new Date(r.date), { addSuffix: true })}
                           </p>
                         </div>
-                      </li>
+                      </motion.li>
                     ))}
-                  </ul>
+                  </motion.ul>
                 )}
               </SectionCard>
             </div>
