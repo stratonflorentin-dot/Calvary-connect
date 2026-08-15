@@ -4,14 +4,15 @@ import React, { useState, useEffect, startTransition } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
-import { 
-  Fuel, 
-  DollarSign, 
+import {
+  Fuel,
+  DollarSign,
   Route,
   Activity,
   Calendar,
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   RefreshCw,
   TrendingUp,
   Truck
@@ -152,6 +153,12 @@ export default function FuelConsumptionPage() {
               <h1 className="text-2xl font-bold text-foreground font-headline tracking-tighter">Fuel Consumption Report</h1>
               <p className="text-sm text-muted-foreground mt-1">Detailed analysis of fuel logging, mileage metrics, and efficiency ratios for active trucks.</p>
             </div>
+            <Link
+              href="/admin/reports/fleet/fuel-per-trip"
+              className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2 shrink-0"
+            >
+              Fuel Per Trip <ArrowRight className="size-4" />
+            </Link>
           </div>
 
           {/* Filter Bar */}

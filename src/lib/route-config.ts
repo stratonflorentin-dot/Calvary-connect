@@ -474,6 +474,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "reports",
   },
   {
+    path: "/admin/reports/fleet/fuel-per-trip",
+    label: "Fuel Per Trip",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    category: "reports",
+  },
+  {
     path: "/admin/reports/fleet/revenue-by-vehicle",
     label: "Vehicle Revenue",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
