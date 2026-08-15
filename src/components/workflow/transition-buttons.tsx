@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { applyTransition, availableTransitions } from "@/lib/workflow/engine";
 import type { EntityKind, Transition } from "@/lib/workflow/state-machines";
 import type { UserRole } from "@/types/roles";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { hoverLift, pressScale, TRANSITION } from "@/lib/animations";
 
 interface TransitionButtonsProps {
   kind: EntityKind;
@@ -76,6 +78,7 @@ export function TransitionButtons({
     }
 
     toast({
+      variant: "success",
       title: t.label,
       description:
         result.sideEffects.length > 0
@@ -87,25 +90,34 @@ export function TransitionButtons({
 
   return (
     <div className={cn(layout === "row" ? "flex flex-wrap gap-2" : "flex flex-col gap-2")}>
-      {list.map((t) => {
-        const cls = intentClasses[t.intent ?? "neutral"];
-        return (
-          <button
-            key={t.to + "|" + t.label}
-            onClick={() => trigger(t)}
-            disabled={busy !== null}
-            title={t.description}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg font-semibold transition-colors disabled:opacity-50",
-              size === "sm" ? "text-xs px-3 py-1.5" : "text-sm px-4 py-2",
-              cls,
-            )}
-          >
-            {busy === t.to && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {t.label}
-          </button>
-        );
-      })}
+      <AnimatePresence mode="popLayout">
+        {list.map((t) => {
+          const cls = intentClasses[t.intent ?? "neutral"];
+          return (
+            <motion.button
+              key={t.to + "|" + t.label}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={TRANSITION.micro}
+              whileHover={busy === null ? hoverLift : undefined}
+              whileTap={busy === null ? pressScale : undefined}
+              onClick={() => trigger(t)}
+              disabled={busy !== null}
+              title={t.description}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg font-semibold transition-colors disabled:opacity-50",
+                size === "sm" ? "text-xs px-3 py-1.5" : "text-sm px-4 py-2",
+                cls,
+              )}
+            >
+              {busy === t.to && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {t.label}
+            </motion.button>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 }

@@ -18,9 +18,12 @@ import {
     Wallet,
     AlertTriangle,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
+import { listItem, pathDrawIn, staggerContainer, TRANSITION } from '@/lib/animations';
 import {
     Table,
     TableBody,
@@ -30,6 +33,9 @@ import {
     TableRow,
     TableCaption,
 } from '@/components/ui/table';
+
+const MotionTableBody = motion(TableBody);
+const MotionTableRow = motion(TableRow);
 import { supabase } from '@/lib/supabase';
 import { useCurrency } from '@/hooks/use-currency';
 import { isVehicleAvailable, isVehicleInMaintenance, vehicleStatusBucket } from '@/lib/fleet/vehicle-status';
@@ -241,11 +247,11 @@ function PremiumDashboard() {
     const fuelTrendPct = prevMonthFuelCost > 0 ? Math.round(((monthFuelCost - prevMonthFuelCost) / prevMonthFuelCost) * 100) : 0;
     const utilizationPct = vehicleCount > 0 ? Math.round((activeVehicleCount / vehicleCount) * 100) : 0;
 
-    const kpis = [
-        { title: 'Active Vehicles', value: String(activeVehicleCount), metric: `${utilizationPct}% utilization`, accent: '#1976D2', icon: Truck },
-        { title: 'Monthly Revenue', value: format(monthRevenue), metric: 'This month, from trips', accent: '#17A2B8', icon: Wallet },
-        { title: 'Fuel Expenses', value: format(monthFuelCost), metric: fuelTrendPct === 0 ? 'Flat vs last month' : `${fuelTrendPct > 0 ? '+' : ''}${fuelTrendPct}% vs last month`, accent: '#F9A825', icon: Gauge },
-        { title: 'Active Contracts', value: String(activeContractCount), metric: `${newContractsThisWeek} new this week`, accent: '#2E7D32', icon: FileText },
+    const kpis: { title: string; value: number; format?: (v: number) => string; metric: string; accent: string; icon: React.ElementType }[] = [
+        { title: 'Active Vehicles', value: activeVehicleCount, metric: `${utilizationPct}% utilization`, accent: '#1976D2', icon: Truck },
+        { title: 'Monthly Revenue', value: monthRevenue, format, metric: 'This month, from trips', accent: '#17A2B8', icon: Wallet },
+        { title: 'Fuel Expenses', value: monthFuelCost, format, metric: fuelTrendPct === 0 ? 'Flat vs last month' : `${fuelTrendPct > 0 ? '+' : ''}${fuelTrendPct}% vs last month`, accent: '#F9A825', icon: Gauge },
+        { title: 'Active Contracts', value: activeContractCount, metric: `${newContractsThisWeek} new this week`, accent: '#2E7D32', icon: FileText },
     ];
 
     const insightCards = [
@@ -347,19 +353,26 @@ function PremiumDashboard() {
                     </header>
 
                     <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr_0.95fr]">
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <motion.div
+                            variants={staggerContainer}
+                            initial="hidden"
+                            animate="visible"
+                            className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
+                        >
                             {kpis.map((item) => {
                                 const Icon = item.icon;
                                 return (
+                                    <motion.div key={item.title} variants={listItem} whileHover={{ y: -2 }} whileTap={{ scale: 0.99 }}>
                                     <Card
-                                        key={item.title}
-                                        className="rounded-[16px] border border-[#DCE2EE] bg-white shadow-[0_18px_40px_rgba(21,34,64,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_60px_rgba(21,34,64,0.14)]"
+                                        className="rounded-[16px] border border-[#DCE2EE] bg-white shadow-[0_18px_40px_rgba(21,34,64,0.08)] transition-shadow hover:shadow-[0_18px_60px_rgba(21,34,64,0.14)]"
                                     >
                                         <CardContent className="space-y-4 p-6">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div className="space-y-1">
                                                     <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#6B778C]">{item.title}</p>
-                                                    <p className="text-3xl font-semibold text-[#243041]">{loading ? '—' : item.value}</p>
+                                                    <p className="text-3xl font-semibold text-[#243041]">
+                                                        {loading ? '—' : <AnimatedCounter value={item.value} format={item.format} />}
+                                                    </p>
                                                 </div>
                                                 <div className="flex h-12 w-12 items-center justify-center rounded-3xl" style={{ backgroundColor: `${item.accent}1A` }}>
                                                     <Icon className="h-5 w-5" style={{ color: item.accent }} />
@@ -368,9 +381,10 @@ function PremiumDashboard() {
                                             <p className="text-sm text-[#6B778C]">{item.metric}</p>
                                         </CardContent>
                                     </Card>
+                                    </motion.div>
                                 );
                             })}
-                        </div>
+                        </motion.div>
 
                         <Card className="rounded-[16px] border border-[#DCE2EE] bg-white shadow-[0_18px_40px_rgba(21,34,64,0.08)]">
                             <CardHeader className="p-6">
@@ -383,9 +397,9 @@ function PremiumDashboard() {
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent className="space-y-4 p-6 pt-0">
+                            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4 p-6 pt-0">
                                 {insightCards.map((item) => (
-                                    <div key={item.title} className="rounded-[16px] border border-[#DCE2EE] bg-[#F8FBFF] p-5">
+                                    <motion.div key={item.title} variants={listItem} className="rounded-[16px] border border-[#DCE2EE] bg-[#F8FBFF] p-5">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-sm font-semibold text-[#243041]">{item.title}</p>
@@ -398,9 +412,9 @@ function PremiumDashboard() {
                                                 {item.label}
                                             </span>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ))}
-                            </CardContent>
+                            </motion.div>
                         </Card>
                     </section>
 
@@ -427,7 +441,7 @@ function PremiumDashboard() {
                                         </defs>
                                         {routeTrend.length > 0 && (
                                             <>
-                                                <path
+                                                <motion.path
                                                     d={routeTrend
                                                         .map((point, index) => {
                                                             const x = 90 + index * 90;
@@ -439,8 +453,11 @@ function PremiumDashboard() {
                                                     stroke="#1976D2"
                                                     strokeWidth="4"
                                                     strokeLinecap="round"
+                                                    variants={pathDrawIn}
+                                                    initial="hidden"
+                                                    animate="visible"
                                                 />
-                                                <path
+                                                <motion.path
                                                     d={`${routeTrend
                                                         .map((point, index) => {
                                                             const x = 90 + index * 90;
@@ -449,13 +466,28 @@ function PremiumDashboard() {
                                                         })
                                                         .join(' ')} L 650 240 L 90 240 Z`}
                                                     fill="url(#route-gradient)"
-                                                    opacity="0.8"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 0.8 }}
+                                                    transition={{ duration: 0.4, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
                                                 />
                                                 {routeTrend.map((point, index) => {
                                                     const x = 90 + index * 90;
                                                     const y = 240 - (point.value / maxRoute) * 200;
+                                                    // Timed to pop in roughly as the line (pathDrawIn, 0.6s) reaches this point.
+                                                    const pointDelay = routeTrend.length > 1 ? (index / (routeTrend.length - 1)) * 0.6 : 0;
                                                     return (
-                                                        <circle key={point.label} cx={x} cy={y} r="7" fill="#1976D2" stroke="#ffffff" strokeWidth="3" />
+                                                        <motion.circle
+                                                            key={point.label}
+                                                            cx={x}
+                                                            cy={y}
+                                                            r="7"
+                                                            fill="#1976D2"
+                                                            stroke="#ffffff"
+                                                            strokeWidth="3"
+                                                            initial={{ opacity: 0, scale: 0 }}
+                                                            animate={{ opacity: 1, scale: 1 }}
+                                                            transition={{ duration: 0.2, delay: pointDelay, ease: [0.16, 1, 0.3, 1] }}
+                                                        />
                                                     );
                                                 })}
                                                 {routeTrend.map((point, index) => (
@@ -487,20 +519,23 @@ function PremiumDashboard() {
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4 p-6 pt-0">
-                                    <div className="space-y-4">
+                                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
                                         {fuelTrend.map((point) => (
-                                            <div key={point.label} className="flex items-center gap-4 text-sm">
+                                            <motion.div key={point.label} variants={listItem} className="flex items-center gap-4 text-sm">
                                                 <span className="w-12 text-[#6B778C]">{point.label}</span>
                                                 <div className="relative flex-1 overflow-hidden rounded-full bg-[#EAF4FF]">
-                                                    <div
-                                                        className="h-3 rounded-full bg-[#17A2B8]"
-                                                        style={{ width: `${(point.value / maxFuel) * 100}%` }}
+                                                    <motion.div
+                                                        className="h-3 w-full rounded-full bg-[#17A2B8]"
+                                                        style={{ transformOrigin: "left" }}
+                                                        initial={{ scaleX: 0 }}
+                                                        animate={{ scaleX: point.value / maxFuel }}
+                                                        transition={TRANSITION.modal}
                                                     />
                                                 </div>
                                                 <span className="w-24 text-right font-semibold text-[#243041]">{format(point.value)}</span>
-                                            </div>
+                                            </motion.div>
                                         ))}
-                                    </div>
+                                    </motion.div>
                                 </CardContent>
                             </Card>
 
@@ -517,17 +552,25 @@ function PremiumDashboard() {
                                     {expenseBreakdown.length === 0 ? (
                                         <p className="text-sm text-[#6B778C]">No vehicle costs recorded this month.</p>
                                     ) : (
-                                        expenseBreakdown.map((item) => (
-                                            <div key={item.label} className="space-y-2">
-                                                <div className="flex items-center justify-between text-sm text-[#243041] capitalize">
-                                                    <span>{item.label}</span>
-                                                    <span>{item.value}%</span>
-                                                </div>
-                                                <div className="h-3 overflow-hidden rounded-full bg-[#F3F5F9]">
-                                                    <div style={{ width: `${item.value}%`, backgroundColor: item.color }} className="h-full rounded-full" />
-                                                </div>
-                                            </div>
-                                        ))
+                                        <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
+                                            {expenseBreakdown.map((item) => (
+                                                <motion.div key={item.label} variants={listItem} className="space-y-2">
+                                                    <div className="flex items-center justify-between text-sm text-[#243041] capitalize">
+                                                        <span>{item.label}</span>
+                                                        <span>{item.value}%</span>
+                                                    </div>
+                                                    <div className="h-3 overflow-hidden rounded-full bg-[#F3F5F9]">
+                                                        <motion.div
+                                                            style={{ backgroundColor: item.color, transformOrigin: "left" }}
+                                                            className="h-full w-full rounded-full"
+                                                            initial={{ scaleX: 0 }}
+                                                            animate={{ scaleX: item.value / 100 }}
+                                                            transition={TRANSITION.modal}
+                                                        />
+                                                    </div>
+                                                </motion.div>
+                                            ))}
+                                        </motion.div>
                                     )}
                                 </CardContent>
                             </Card>
@@ -560,9 +603,9 @@ function PremiumDashboard() {
                                             <TableHead>Ends</TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody>
+                                    <MotionTableBody variants={staggerContainer} initial="hidden" animate="visible">
                                         {filteredContracts.map((contract) => (
-                                            <TableRow key={contract.id}>
+                                            <MotionTableRow key={contract.id} variants={listItem}>
                                                 <TableCell className="font-semibold">{contract.contract_number}</TableCell>
                                                 <TableCell>{contract.partner}</TableCell>
                                                 <TableCell>
@@ -572,9 +615,9 @@ function PremiumDashboard() {
                                                 </TableCell>
                                                 <TableCell>{format(contract.contract_value)}</TableCell>
                                                 <TableCell>{contract.end_date ?? '—'}</TableCell>
-                                            </TableRow>
+                                            </MotionTableRow>
                                         ))}
-                                    </TableBody>
+                                    </MotionTableBody>
                                     {filteredContracts.length === 0 && <TableCaption>No contracts found.</TableCaption>}
                                 </Table>
                             </CardContent>
@@ -593,19 +636,21 @@ function PremiumDashboard() {
                                 {fleetRows.length === 0 ? (
                                     <p className="text-sm text-[#6B778C]">No vehicles yet.</p>
                                 ) : (
-                                    fleetRows.map((row) => (
-                                        <div key={row.id} className="rounded-[16px] border border-[#E8EBF4] bg-[#F8FBFF] p-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-[#243041]">{row.plate_number}</p>
-                                                    <p className="text-xs text-[#6B778C]">{row.driver_name ?? 'Unassigned'}</p>
+                                    <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-5">
+                                        {fleetRows.map((row) => (
+                                            <motion.div key={row.id} variants={listItem} className="rounded-[16px] border border-[#E8EBF4] bg-[#F8FBFF] p-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-[#243041]">{row.plate_number}</p>
+                                                        <p className="text-xs text-[#6B778C]">{row.driver_name ?? 'Unassigned'}</p>
+                                                    </div>
+                                                    <Badge variant="outline" className={`${statusBadge(row.status)} text-xs font-semibold capitalize`}>
+                                                        {row.status}
+                                                    </Badge>
                                                 </div>
-                                                <Badge variant="outline" className={`${statusBadge(row.status)} text-xs font-semibold capitalize`}>
-                                                    {row.status}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    ))
+                                            </motion.div>
+                                        ))}
+                                    </motion.div>
                                 )}
                             </CardContent>
                         </Card>
