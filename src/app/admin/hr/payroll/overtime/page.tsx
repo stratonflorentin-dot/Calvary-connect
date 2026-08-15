@@ -148,7 +148,7 @@ export default function OvertimePage() {
       toast({ title: "Couldn't submit overtime", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Overtime submitted", description: "Awaiting approval before it's included in payroll." });
+    toast({ variant: "success", title: "Overtime submitted", description: "Awaiting approval before it's included in payroll." });
     setHours("");
     setAmount("");
     setNote("");

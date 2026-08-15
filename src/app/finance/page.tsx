@@ -544,9 +544,10 @@ export default function FinanceOverviewPage() {
                         <span className="text-xs font-bold text-muted-foreground w-24 shrink-0">{b.label}</span>
                         <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
                           <motion.div
-                            className={cn("h-full", b.color)}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
+                            className={cn("h-full w-full", b.color)}
+                            style={{ transformOrigin: "left" }}
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: pct / 100 }}
                             transition={TRANSITION.modal}
                           />
                         </div>
@@ -594,9 +595,10 @@ export default function FinanceOverviewPage() {
                         <span className="text-xs font-bold text-muted-foreground w-24 shrink-0">{b.label}</span>
                         <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
                           <motion.div
-                            className={cn("h-full", b.color)}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
+                            className={cn("h-full w-full", b.color)}
+                            style={{ transformOrigin: "left" }}
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: pct / 100 }}
                             transition={TRANSITION.modal}
                           />
                         </div>

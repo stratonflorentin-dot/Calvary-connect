@@ -75,7 +75,7 @@ export default function DriverProfilePage() {
         if (minimalErr) throw minimalErr;
       }
       await refreshUser();
-      toast({ title: "Profile updated" });
+      toast({ variant: "success", title: "Profile updated" });
       setEditing(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Update failed";

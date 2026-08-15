@@ -409,7 +409,7 @@ export default function BankReconciliationPage() {
       entity_id: accountId,
       description: `Reconciliation finalised for ${account?.account_name} · difference ${fmt(totals.difference, currency)}`,
     });
-    toast({ title: "Reconciliation saved", description: totals.difference === 0 ? "Balanced ✓" : `Off by ${fmt(totals.difference, currency)}` });
+    toast({ variant: totals.difference === 0 ? "success" : "default", title: "Reconciliation saved", description: totals.difference === 0 ? "Balanced ✓" : `Off by ${fmt(totals.difference, currency)}` });
   };
 
   return (

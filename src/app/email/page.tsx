@@ -113,7 +113,7 @@ export default function ClientEmailPage() {
           message,
         }),
       });
-      toast({ title: "Email sent", description: `Sent to ${to}` });
+      toast({ variant: "success", title: "Email sent", description: `Sent to ${to}` });
       setSubject("");
       setMessage("");
       load();

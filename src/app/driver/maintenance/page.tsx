@@ -131,7 +131,7 @@ export default function DriverMaintenancePage() {
       ),
     );
 
-    toast({ title: "Request submitted", description: "Mechanics have been notified." });
+    toast({ variant: "success", title: "Request submitted", description: "Mechanics have been notified." });
     (e.target as HTMLFormElement).reset();
     setPhotos([]);
     load();

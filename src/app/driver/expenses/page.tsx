@@ -86,7 +86,7 @@ export default function DriverExpensesPage() {
         parseFloat(String(form.get("amount") || "0")),
         accountantIds,
       );
-      toast({ title: "Expense submitted", description: "Pending approval." });
+      toast({ variant: "success", title: "Expense submitted", description: "Pending approval." });
       setOpen(false);
       (e.target as HTMLFormElement).reset();
       refresh();

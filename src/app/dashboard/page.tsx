@@ -299,9 +299,10 @@ function ExecutiveDashboardContent() {
                             <p className="text-sm text-muted-foreground mb-3">Completion Rate</p>
                             <div className="w-full bg-muted rounded-xl h-3 overflow-hidden shadow-inner">
                                 <motion.div
-                                    className="bg-gradient-to-r from-success/80 to-success h-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${tripPerformance.completionRate}%` }}
+                                    className="bg-gradient-to-r from-success/80 to-success h-full w-full"
+                                    style={{ transformOrigin: "left" }}
+                                    initial={{ scaleX: 0 }}
+                                    animate={{ scaleX: tripPerformance.completionRate / 100 }}
                                     transition={TRANSITION.modal}
                                 />
                             </div>
@@ -518,9 +519,10 @@ function ExecutiveDashboardContent() {
                                         <span className="text-sm font-semibold flex-1 text-foreground">{client.name}</span>
                                         <div className="flex-1 bg-muted rounded-xl h-2.5 overflow-hidden shadow-inner">
                                             <motion.div
-                                                className="bg-accent h-full"
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${width}%` }}
+                                                className="bg-accent h-full w-full"
+                                                style={{ transformOrigin: "left" }}
+                                                initial={{ scaleX: 0 }}
+                                                animate={{ scaleX: width / 100 }}
                                                 transition={{ ...TRANSITION.modal, delay: client.rank * 0.04 }}
                                             />
                                         </div>

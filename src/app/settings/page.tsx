@@ -250,7 +250,7 @@ export default function SettingsPage() {
                           const url = await uploadToBucket("avatars", "company", f, name);
                           if (!url) throw new Error("Logo upload failed");
                           setCompany((p) => ({ ...p, logo_url: url }));
-                          toast({ title: "Logo uploaded", description: "Hit Save to keep it." });
+                          toast({ variant: "success", title: "Logo uploaded", description: "Hit Save to keep it." });
                         } catch (err: any) {
                           toast({ title: "Upload failed", description: err.message, variant: "destructive" });
                         } finally {

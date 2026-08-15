@@ -137,7 +137,7 @@ function MeetingsPageInner() {
             attendees.map((uid) => ({ meeting_id: editing.id, user_id: uid, rsvp_status: "pending" })),
           );
         }
-        toast({ title: "Meeting updated" });
+        toast({ variant: "success", title: "Meeting updated" });
       } else {
         const { data, error } = await supabase
           .from("meetings")

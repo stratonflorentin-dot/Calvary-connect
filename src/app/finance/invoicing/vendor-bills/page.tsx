@@ -217,7 +217,7 @@ export default function VendorBillsPage() {
       await loadBills();
       setCreating(false);
       setForm({ vendor: "", invoice_number: "", amount: "", currency: "TZS", due_date: "", description: "", category: "" });
-      toast({ title: "Bill saved", description: `${billNum} for ${fmt(amount, form.currency)}` });
+      toast({ variant: "success", title: "Bill saved", description: `${billNum} for ${fmt(amount, form.currency)}` });
     } catch (err: any) {
       toast({ title: "Failed", description: err?.message, variant: "destructive" });
     } finally {

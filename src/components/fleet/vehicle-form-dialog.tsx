@@ -317,7 +317,7 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         const { error } = await supabase.from("vehicles").update(payload).eq("id", vehicle.id);
         if (error) throw error;
         await AuditTrailService.logUpdate("management", "vehicle", vehicle.id, vehicle, payload, user?.id, `Updated vehicle ${payload.plate_number}`);
-        toast({ title: "Vehicle updated", description: payload.plate_number });
+        toast({ variant: "success", title: "Vehicle updated", description: payload.plate_number });
       } else {
         payload.created_at = new Date().toISOString();
         const { data, error } = await supabase.from("vehicles").insert(payload).select().maybeSingle();
@@ -325,7 +325,7 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         if (data?.id) {
           await AuditTrailService.logCreate("management", "vehicle", data.id, data, user?.id, `Added vehicle ${payload.plate_number}`);
         }
-        toast({ title: "Vehicle added", description: payload.plate_number });
+        toast({ variant: "success", title: "Vehicle added", description: payload.plate_number });
 
         if (canFinance && form.financed && data?.id) {
           const price = Number(form.purchase_price) || 0;

@@ -107,7 +107,7 @@ export default function FxRatesPage() {
         });
       }
       await refreshRates();
-      toast({ title: "Rate saved", description: `1 ${payload.from_ccy} = ${rate} ${payload.to_ccy}` });
+      toast({ variant: "success", title: "Rate saved", description: `1 ${payload.from_ccy} = ${rate} ${payload.to_ccy}` });
       setAdding(false);
       setForm({ ...form, rate: "", source: "", note: "" });
       load();
@@ -137,7 +137,7 @@ export default function FxRatesPage() {
       toast({ title: "Seed failed", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Placeholders created", description: `${rows.length} pair(s). Edit each with the real rate.` });
+    toast({ variant: "success", title: "Placeholders created", description: `${rows.length} pair(s). Edit each with the real rate.` });
     load();
   };
 

@@ -158,7 +158,7 @@ export default function AccountantExpensesPage() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Comment saved" });
+    toast({ variant: "success", title: "Comment saved" });
     setCommentExpense(null);
     load();
   };

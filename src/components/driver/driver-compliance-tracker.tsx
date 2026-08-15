@@ -82,7 +82,7 @@ function EditDriverDocDialog({ driver, open, onClose, onSaved }: EditDriverDocDi
       if (!data || data.length === 0) {
         throw new Error("You don't have permission to edit this driver's compliance dates. Only CEO/ADMIN can edit another user's profile.");
       }
-      toast({ title: "Documents updated", description: "Driver compliance dates saved." });
+      toast({ variant: "success", title: "Documents updated", description: "Driver compliance dates saved." });
       onSaved();
       onClose();
     } catch (err: any) {
@@ -277,7 +277,7 @@ export function DriverComplianceDashboard() {
     setScanning(true);
     try {
       const result = await runDriverReminderScan();
-      toast({ title: "Reminders sent", description: `${result.sent} notification(s) created.` });
+      toast({ variant: "success", title: "Reminders sent", description: `${result.sent} notification(s) created.` });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
