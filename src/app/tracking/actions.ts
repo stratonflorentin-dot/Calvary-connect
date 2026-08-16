@@ -262,6 +262,64 @@ function buildLocationRows(
 }
 
 
+/**
+ * Vehicle-tracker positions (Cartrack/Wialon, synced into vehicle_locations
+ * by /api/telematics/sync) as map markers, in the same shape as driver-phone
+ * markers so FleetMapView needs no changes to render them.
+ *
+ * Not de-duplicated against a driver's phone GPS for the same truck —
+ * driver_locations has no vehicle_id to reliably cross-reference against
+ * (it's keyed by driver_id only), so if both a driver's phone and the
+ * truck's own tracker are reporting, both markers show. Tracker data is
+ * synthetic driverId `vehicle:<uuid>`, which can't collide with a real
+ * driver's user id.
+ */
+async function fetchVehicleTrackerLocations(
+  admin: ReturnType<typeof getAdminClient>,
+): Promise<MapDriverLocation[]> {
+  const { data, error } = await admin
+    .from("vehicle_locations")
+    .select("vehicle_id, latitude, longitude, speed, heading, updated_at, vehicles(plate_number)")
+    .not("latitude", "is", null)
+    .not("longitude", "is", null);
+
+  if (error || !data) return [];
+
+  const rows: MapDriverLocation[] = [];
+  for (const loc of data as any[]) {
+    const lat = Number(loc.latitude);
+    const lng = Number(loc.longitude);
+    if (!isValidCoordinate(lat, lng)) continue;
+
+    const staleMs = Date.now() - new Date(String(loc.updated_at || 0)).getTime();
+    let status: "LIVE" | "DELAYED" | "STALE" | "OFFLINE" = "OFFLINE";
+    if (staleMs <= 300000) status = "LIVE";
+    else if (staleMs <= 1800000) status = "DELAYED";
+    else if (staleMs <= 86400000) status = "STALE";
+
+    const plate = loc.vehicles?.plate_number || "Unknown vehicle";
+    rows.push({
+      id: `vehicle-tracker-${loc.vehicle_id}`,
+      driverId: `vehicle:${loc.vehicle_id}`,
+      driverName: `${plate} (tracker)`,
+      latitude: lat,
+      longitude: lng,
+      heading: Number(loc.heading) || 0,
+      speed: Number(loc.speed) || 0,
+      accuracy: null,
+      altitude: null,
+      altitudeAccuracy: null,
+      vehicleType: "truck",
+      isOnline: status === "LIVE" || status === "DELAYED",
+      status,
+      lastUpdate: String(loc.updated_at || ""),
+      vehiclePlate: plate,
+      hasGps: true,
+    });
+  }
+  return rows;
+}
+
 async function fetchMapLocationsInternal(
   admin: ReturnType<typeof getAdminClient>,
 ): Promise<{ locations: MapDriverLocation[]; driversWithoutGps: string[]; error?: string }> {
@@ -284,19 +342,22 @@ async function fetchMapLocationsInternal(
     if (au.email) authByEmail.set(au.email.toLowerCase().trim(), au.id);
   }
 
-  const { locations } = buildLocationRows(
+  const { locations: driverLocations } = buildLocationRows(
     admin,
     locationsData || [],
     driverProfiles,
     authByEmail,
   );
 
+  const trackerLocations = await fetchVehicleTrackerLocations(admin);
+  const locations = [...driverLocations, ...trackerLocations];
+
   const driversWithoutGps: string[] = [];
   for (const d of driverProfiles) {
     const authId = d.email
       ? authByEmail.get(String(d.email).toLowerCase().trim())
       : undefined;
-    const hasGps = locations.some(
+    const hasGps = driverLocations.some(
       (l) => l.driverId === d.id || (authId && l.driverId === authId),
     );
     if (!hasGps) {
