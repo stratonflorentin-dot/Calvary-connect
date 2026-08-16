@@ -245,6 +245,7 @@ export default function FleetMapView({
   const [listFilter, setListFilter] = useState<"all" | "online" | "trackers" | "drivers">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [desktopListOpen, setDesktopListOpen] = useState(true);
   const [cameraMode, setCameraMode] = useState<"overview" | "follow" | "follow-3d" | "north-up" | "heading-up">("follow-3d");
   const [mapEngine, setMapEngine] = useState<"3d" | "2d">("3d");
   const [engineNotice, setEngineNotice] = useState<string | null>(null);
@@ -561,18 +562,32 @@ export default function FleetMapView({
             />
           </button>
 
+          <button
+            type="button"
+            onClick={() => setDesktopListOpen((o) => !o)}
+            className="hidden md:flex w-full items-center justify-between px-4 py-2.5 border-b border-border/80"
+          >
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Active fleet
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{filtered.length} shown</span>
+              <ChevronUp
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform",
+                  !desktopListOpen && "rotate-180",
+                )}
+              />
+            </span>
+          </button>
+
           <div
             className={cn(
-              "transition-all md:block",
-              mobileSheetOpen ? "block" : "hidden md:block",
+              "transition-all",
+              mobileSheetOpen ? "block" : "hidden",
+              desktopListOpen ? "md:block" : "md:hidden",
             )}
           >
-            <div className="px-4 py-2.5 border-b border-border/80 hidden md:flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Active fleet
-              </span>
-              <span className="text-xs text-muted-foreground">{filtered.length} shown</span>
-            </div>
             <div className="hidden md:flex items-center gap-1 px-2 pt-2">
               {(
                 [
@@ -597,7 +612,7 @@ export default function FleetMapView({
                 </button>
               ))}
             </div>
-            <ScrollArea className="max-h-[140px] md:max-h-[min(480px,calc(100vh-360px))]">
+            <ScrollArea className="max-h-[140px] md:max-h-[420px]">
               <div className="flex gap-2 p-3 md:flex-col md:gap-1.5 md:p-2">
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground px-2 py-4 text-center w-full">
