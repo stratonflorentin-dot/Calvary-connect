@@ -41,6 +41,7 @@ import {
   CheckCircle2,
   Lightbulb,
   Gauge,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -121,9 +122,8 @@ export default function AIAnalysisDashboard() {
   const recentReports = reports.slice(0, 6);
 
   // Chat State
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([
-    { role: 'ai', text: "Welcome to Calvary Command Center AI. I have fully indexed our fleet logs, active transit pipelines, and financial reports. Ask me to run operational audits, summarize profitability, or outline logistics strategies." }
-  ]);
+  const WELCOME_MESSAGE = { role: 'ai' as const, text: "Welcome to Calvary Command Center AI. I have fully indexed our fleet logs, active transit pipelines, and financial reports. Ask me to run operational audits, summarize profitability, or outline logistics strategies." };
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([WELCOME_MESSAGE]);
   const [inputVal, setInputVal] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [dbContext, setDbContext] = useState<any | null>(null);
@@ -186,6 +186,12 @@ export default function AIAnalysisDashboard() {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const handleClearChat = () => {
+    if (aiLoading) return;
+    if (!window.confirm("Clear this conversation? This can't be undone.")) return;
+    setMessages([WELCOME_MESSAGE]);
   };
 
   const handleChip = async (preset: string) => {
@@ -1125,11 +1131,26 @@ export default function AIAnalysisDashboard() {
         {/* Right Column: Interactive AI Terminal Chat */}
         <div className="lg:col-span-2">
           <Card className="h-[580px] bg-card border-border shadow-md flex flex-col overflow-hidden rounded-2xl">
-            <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center gap-2">
-              <Bot className="size-5 text-primary" />
-              <CardTitle className="text-sm font-semibold tracking-wide text-foreground uppercase">
-                Interactive AI Agent Console
-              </CardTitle>
+            <CardHeader className="border-b bg-muted/50 py-4 flex flex-row items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Bot className="size-5 text-primary" />
+                <CardTitle className="text-sm font-semibold tracking-wide text-foreground uppercase">
+                  Interactive AI Agent Console
+                </CardTitle>
+              </div>
+              {messages.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={handleClearChat}
+                  disabled={aiLoading}
+                >
+                  <Trash2 className="size-3.5" />
+                  Clear
+                </Button>
+              )}
             </CardHeader>
 
             {/* Messages feed */}

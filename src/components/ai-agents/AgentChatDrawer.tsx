@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Send, Bot } from "lucide-react";
+import { Loader2, Send, Bot, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import type { AgentMetadata } from "@/lib/ai-agents/metadata";
@@ -33,6 +33,7 @@ export function AgentChatDrawer({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -91,14 +92,52 @@ export function AgentChatDrawer({
     }
   };
 
+  const handleClear = async () => {
+    if (clearing || messages.length === 0) return;
+    if (!window.confirm(`Clear the conversation with ${agent.name}? This can't be undone.`)) return;
+
+    setClearing(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not signed in");
+      const res = await fetch(`/api/ai-agents/${agent.id}/chat`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to clear chat");
+      setMessages([]);
+    } catch (err: any) {
+      setError(err.message || "Failed to clear chat");
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
         <SheetHeader className="p-4 border-b">
-          <SheetTitle className="flex items-center gap-2">
-            <Bot className="size-5 text-primary" />
-            {agent.name}
-          </SheetTitle>
+          <div className="flex items-center justify-between gap-2 pr-8">
+            <SheetTitle className="flex items-center gap-2">
+              <Bot className="size-5 text-primary" />
+              {agent.name}
+            </SheetTitle>
+            {messages.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive"
+                onClick={handleClear}
+                disabled={clearing}
+              >
+                {clearing ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                Clear
+              </Button>
+            )}
+          </div>
         </SheetHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 text-sm">

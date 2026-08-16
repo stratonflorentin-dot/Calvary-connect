@@ -28,6 +28,29 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  try {
+    const { admin, userId } = await requireAgentAccess(request);
+    const agent = getAgentById(id);
+    if (!agent) {
+      return NextResponse.json({ error: 'Unknown agent' }, { status: 404 });
+    }
+
+    const { error } = await admin
+      .from('ai_agent_messages')
+      .delete()
+      .eq('agent_id', agent.id)
+      .eq('user_id', userId);
+    if (error) throw error;
+
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    const { status, body } = authErrorResponse(err);
+    return NextResponse.json(body, { status });
+  }
+}
+
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
