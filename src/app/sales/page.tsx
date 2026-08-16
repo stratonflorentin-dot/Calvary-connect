@@ -211,6 +211,18 @@ function SalesModuleContent() {
     is_active: true,
   });
 
+  // Freight rate sheets (JSONB format — a named sheet holding multiple routes)
+  const [showFreightSheetDialog, setShowFreightSheetDialog] = useState(false);
+  const [editingFreightSheet, setEditingFreightSheet] = useState<any>(null);
+  const [freightSheetForm, setFreightSheetForm] = useState({
+    rate_sheet_name: '',
+    effective_date: format(new Date(), 'yyyy-MM-dd'),
+    expiry_date: '',
+    currency: 'USD',
+    special_conditions: '',
+    rates: [] as Array<{ from: string; destination: string; container_20ft: number; container_40ft: number; loose: number; truck_type: string; transit_days: number }>,
+  });
+
   // Form states
   const [customerForm, setCustomerForm] = useState({
     company_name: '', contact_person: '', email: '', phone: '',
@@ -658,6 +670,129 @@ function SalesModuleContent() {
       special_conditions: '',
       is_active: true,
     });
+  }
+
+  function resetFreightSheetForm() {
+    setFreightSheetForm({
+      rate_sheet_name: '',
+      effective_date: format(new Date(), 'yyyy-MM-dd'),
+      expiry_date: '',
+      currency: 'USD',
+      special_conditions: '',
+      rates: [],
+    });
+  }
+
+  function openFreightSheetDialog(sheet?: any) {
+    if (sheet) {
+      setEditingFreightSheet(sheet);
+      setFreightSheetForm({
+        rate_sheet_name: sheet.rate_sheet_name || '',
+        effective_date: sheet.effective_date ? String(sheet.effective_date).slice(0, 10) : format(new Date(), 'yyyy-MM-dd'),
+        expiry_date: sheet.expiry_date ? String(sheet.expiry_date).slice(0, 10) : '',
+        currency: sheet.currency || 'USD',
+        special_conditions: sheet.special_conditions || '',
+        rates: Array.isArray(sheet.rates)
+          ? sheet.rates.map((r: any) => ({
+              from: r.from || '',
+              destination: r.destination || '',
+              container_20ft: r.container_20ft || 0,
+              container_40ft: r.container_40ft || 0,
+              loose: r.loose || 0,
+              truck_type: r.truck_type || '',
+              transit_days: r.transit_days || 0,
+            }))
+          : [],
+      });
+    } else {
+      setEditingFreightSheet(null);
+      resetFreightSheetForm();
+    }
+    setShowFreightSheetDialog(true);
+  }
+
+  function addFreightRateRow() {
+    setFreightSheetForm(prev => ({
+      ...prev,
+      rates: [...prev.rates, { from: '', destination: '', container_20ft: 0, container_40ft: 0, loose: 0, truck_type: '', transit_days: 0 }],
+    }));
+  }
+
+  function updateFreightRateRow(idx: number, field: keyof typeof freightSheetForm.rates[number], value: string | number) {
+    setFreightSheetForm(prev => ({
+      ...prev,
+      rates: prev.rates.map((r, i) => (i === idx ? { ...r, [field]: value } : r)),
+    }));
+  }
+
+  function removeFreightRateRow(idx: number) {
+    setFreightSheetForm(prev => ({ ...prev, rates: prev.rates.filter((_, i) => i !== idx) }));
+  }
+
+  async function saveFreightRateSheet() {
+    if (!freightSheetForm.rate_sheet_name.trim()) {
+      toast({ title: 'Error', description: 'Rate sheet name is required', variant: 'destructive' });
+      return;
+    }
+    if (freightSheetForm.rates.length === 0) {
+      toast({ title: 'Error', description: 'Add at least one route to the rate sheet', variant: 'destructive' });
+      return;
+    }
+    if (freightSheetForm.rates.some(r => !r.from.trim() || !r.destination.trim())) {
+      toast({ title: 'Error', description: 'Every route needs a "From" and a destination', variant: 'destructive' });
+      return;
+    }
+
+    const payload = {
+      rate_sheet_name: freightSheetForm.rate_sheet_name.trim(),
+      effective_date: freightSheetForm.effective_date || null,
+      expiry_date: freightSheetForm.expiry_date || null,
+      currency: freightSheetForm.currency,
+      special_conditions: freightSheetForm.special_conditions || null,
+      rates: freightSheetForm.rates.map(r => ({
+        from: r.from.trim(),
+        destination: r.destination.trim(),
+        container_20ft: Number(r.container_20ft) || 0,
+        container_40ft: Number(r.container_40ft) || 0,
+        loose: Number(r.loose) || 0,
+        truck_type: r.truck_type.trim(),
+        transit_days: Number(r.transit_days) || 0,
+      })),
+      is_active: true,
+    } as any;
+
+    try {
+      if (editingFreightSheet?.id) {
+        const { error } = await supabase.from('rate_sheets').update(payload).eq('id', editingFreightSheet.id);
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Freight rate sheet updated' });
+      } else {
+        const { error } = await supabase.from('rate_sheets').insert([payload]);
+        if (error) throw error;
+        toast({ title: 'Success', description: 'Freight rate sheet created' });
+      }
+      setShowFreightSheetDialog(false);
+      setEditingFreightSheet(null);
+      resetFreightSheetForm();
+      fetchJsonbRateSheets();
+    } catch (error: any) {
+      console.error('Error saving freight rate sheet:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to save freight rate sheet', variant: 'destructive' });
+    }
+  }
+
+  async function deleteFreightRateSheet(id: string) {
+    if (!confirm('Are you sure you want to delete this freight rate sheet?')) return;
+    try {
+      const { error } = await supabase.from('rate_sheets').update({ is_active: false }).eq('id', id);
+      if (error) throw error;
+      toast({ title: 'Success', description: 'Freight rate sheet deleted' });
+      if (viewingRateSheet?.id === id) setViewingRateSheet(null);
+      fetchJsonbRateSheets();
+    } catch (error: any) {
+      console.error('Error deleting freight rate sheet:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to delete freight rate sheet', variant: 'destructive' });
+    }
   }
 
   // Helper functions
@@ -1529,32 +1664,58 @@ function SalesModuleContent() {
               )}
 
               {/* JSONB Rate Sheets (from contract system) */}
-              {jsonbRateSheets.length > 0 && (
-                <Card className="shadow-lg border-border">
-                  <CardHeader className="flex flex-row items-center justify-between pb-4">
-                    <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
-                      Freight Rate Sheets
-                      <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">{jsonbRateSheets.length}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+              <Card className="shadow-lg border-border">
+                <CardHeader className="flex flex-row items-center justify-between pb-4">
+                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Freight Rate Sheets
+                    <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">{jsonbRateSheets.length}</Badge>
+                  </CardTitle>
+                  {canCreate && (
+                    <Button onClick={() => openFreightSheetDialog()} className="h-10 px-4 gap-2">
+                      <Plus className="h-4 w-4" /> New Freight Rate Sheet
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {jsonbRateSheets.length === 0 ? (
+                    <div className="py-8 text-center text-sm text-muted-foreground">
+                      No freight rate sheets yet. {canCreate && 'Create one to get started.'}
+                    </div>
+                  ) : (
                     <div className="space-y-4">
                       {jsonbRateSheets.map(rs => (
                         <div key={rs.id} className="border border-border rounded-xl overflow-hidden">
-                          <div
-                            className="flex items-center justify-between p-4 bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
-                            onClick={() => setViewingRateSheet(viewingRateSheet?.id === rs.id ? null : rs)}
-                          >
-                            <div>
+                          <div className="flex items-center justify-between p-4 bg-muted/50">
+                            <div
+                              className="flex-1 min-w-0 cursor-pointer"
+                              onClick={() => setViewingRateSheet(viewingRateSheet?.id === rs.id ? null : rs)}
+                            >
                               <h3 className="font-semibold text-sm text-foreground">{rs.rate_sheet_name}</h3>
                               <p className="text-xs text-muted-foreground">
                                 Effective: {rs.effective_date ? new Date(rs.effective_date).toLocaleDateString() : '—'} · {rs.currency} · {rs.rates?.length || 0} routes
                               </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-success/10 text-success text-xs font-medium" variant="outline">Active</Badge>
-                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Badge className="bg-success/10 text-success text-xs font-medium mr-1" variant="outline">Active</Badge>
+                              {canCreate && (
+                                <>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary" onClick={() => openFreightSheetDialog(rs)}>
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteFreightRateSheet(rs.id)}>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => setViewingRateSheet(viewingRateSheet?.id === rs.id ? null : rs)}
+                              >
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                              </Button>
                             </div>
                           </div>
                           {viewingRateSheet?.id === rs.id && (
@@ -1597,9 +1758,114 @@ function SalesModuleContent() {
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </CardContent>
+
+                <Dialog open={showFreightSheetDialog} onOpenChange={(open) => {
+                  if (!open) {
+                    setEditingFreightSheet(null);
+                    resetFreightSheetForm();
+                  }
+                  setShowFreightSheetDialog(open);
+                }}>
+                  <DialogContent className="max-w-4xl shadow-xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-semibold">{editingFreightSheet ? 'Edit Freight Rate Sheet' : 'New Freight Rate Sheet'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div className="sm:col-span-2 space-y-2">
+                          <Label className="text-sm font-semibold text-foreground">Rate Sheet Name</Label>
+                          <Input value={freightSheetForm.rate_sheet_name} onChange={e => setFreightSheetForm({ ...freightSheetForm, rate_sheet_name: e.target.value })} placeholder="e.g., 2026 Regional Transport Rates" className="h-11" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-foreground">Currency</Label>
+                          <Select value={freightSheetForm.currency} onValueChange={v => setFreightSheetForm({ ...freightSheetForm, currency: v })}>
+                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="TZS">TZS</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                              <SelectItem value="KES">KES</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-foreground">Effective Date</Label>
+                          <Input type="date" value={freightSheetForm.effective_date} onChange={e => setFreightSheetForm({ ...freightSheetForm, effective_date: e.target.value })} className="h-11" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-foreground">Expiry Date</Label>
+                          <Input type="date" value={freightSheetForm.expiry_date} onChange={e => setFreightSheetForm({ ...freightSheetForm, expiry_date: e.target.value })} className="h-11" />
+                        </div>
+                        <div className="sm:col-span-3 space-y-2">
+                          <Label className="text-sm font-semibold text-foreground">Special Conditions</Label>
+                          <Input value={freightSheetForm.special_conditions} onChange={e => setFreightSheetForm({ ...freightSheetForm, special_conditions: e.target.value })} placeholder="Optional note shown with this rate sheet" className="h-11" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold text-foreground">Routes</Label>
+                          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addFreightRateRow}>
+                            <Plus className="h-3.5 w-3.5" /> Add Route
+                          </Button>
+                        </div>
+                        {freightSheetForm.rates.length === 0 ? (
+                          <div className="border border-dashed border-border rounded-lg p-6 text-center text-xs text-muted-foreground">
+                            No routes yet. Click "Add Route" to add one.
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto border border-border rounded-lg">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>From</TableHead>
+                                  <TableHead>Destination</TableHead>
+                                  <TableHead className="text-right">20ft</TableHead>
+                                  <TableHead className="text-right">40ft</TableHead>
+                                  <TableHead className="text-right">Loose</TableHead>
+                                  <TableHead>Truck</TableHead>
+                                  <TableHead className="text-right">Days</TableHead>
+                                  <TableHead className="w-10"></TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {freightSheetForm.rates.map((rate, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="p-1.5"><Input value={rate.from} onChange={e => updateFreightRateRow(idx, 'from', e.target.value)} placeholder="Dar es Salaam" className="h-9 min-w-[120px]" /></TableCell>
+                                    <TableCell className="p-1.5"><Input value={rate.destination} onChange={e => updateFreightRateRow(idx, 'destination', e.target.value)} placeholder="Kigali" className="h-9 min-w-[120px]" /></TableCell>
+                                    <TableCell className="p-1.5"><Input type="number" value={rate.container_20ft} onChange={e => updateFreightRateRow(idx, 'container_20ft', Number(e.target.value) || 0)} className="h-9 w-24 text-right" /></TableCell>
+                                    <TableCell className="p-1.5"><Input type="number" value={rate.container_40ft} onChange={e => updateFreightRateRow(idx, 'container_40ft', Number(e.target.value) || 0)} className="h-9 w-24 text-right" /></TableCell>
+                                    <TableCell className="p-1.5"><Input type="number" value={rate.loose} onChange={e => updateFreightRateRow(idx, 'loose', Number(e.target.value) || 0)} className="h-9 w-24 text-right" /></TableCell>
+                                    <TableCell className="p-1.5"><Input value={rate.truck_type} onChange={e => updateFreightRateRow(idx, 'truck_type', e.target.value)} placeholder="C28" className="h-9 w-20" /></TableCell>
+                                    <TableCell className="p-1.5"><Input type="number" value={rate.transit_days} onChange={e => updateFreightRateRow(idx, 'transit_days', Number(e.target.value) || 0)} className="h-9 w-16 text-right" /></TableCell>
+                                    <TableCell className="p-1.5">
+                                      <Button type="button" variant="ghost" size="sm" className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10" onClick={() => removeFreightRateRow(idx)}>
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <DialogFooter className="pt-6">
+                      <Button variant="outline" onClick={() => {
+                        setShowFreightSheetDialog(false);
+                        setEditingFreightSheet(null);
+                        resetFreightSheetForm();
+                      }} className="h-11 px-6">Cancel</Button>
+                      <Button onClick={saveFreightRateSheet} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">{editingFreightSheet ? 'Update Rate Sheet' : 'Create Rate Sheet'}</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </Card>
 
               {/* Legacy flat rate sheets */}
               {rateSheets.length > 0 && (
@@ -1669,10 +1935,7 @@ function SalesModuleContent() {
                                           if (error) throw error;
 
                                           toast({ title: 'Success', description: 'Rate sheet deleted successfully' });
-
-                                          // Refresh rate sheets
-                                          const { data: refreshed, error: fetchErr } = await supabase.from('rate_sheets').select('*').eq('is_active', true);
-                                          if (!fetchErr) setRateSheets(refreshed || []);
+                                          fetchRateSheets();
                                         } catch (e: any) {
                                           console.error('Error deleting rate sheet:', e);
                                           toast({ title: 'Error', description: e.message || 'Failed to delete rate sheet', variant: 'destructive' });
@@ -1689,14 +1952,6 @@ function SalesModuleContent() {
                         </TableBody>
                       </Table>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {rateSheets.length === 0 && jsonbRateSheets.length === 0 && (
-                <Card className="shadow-lg">
-                  <CardContent className="py-12 text-center text-muted-foreground">
-                    No rate sheets found. Run the SQL migration to seed default rates.
                   </CardContent>
                 </Card>
               )}
