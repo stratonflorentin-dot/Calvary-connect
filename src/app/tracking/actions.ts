@@ -146,6 +146,7 @@ export type MapDriverLocation = {
   lastUpdate: string;
   vehiclePlate: string;
   hasGps: boolean;
+  vehiclePhotoUrl: string | null;
 };
 
 /** Persist driver GPS using service role (avoids RLS / profile-id mismatches). */
@@ -255,6 +256,7 @@ function buildLocationRows(
       lastUpdate: String(loc.last_updated || ""),
       vehiclePlate: "—",
       hasGps: true,
+      vehiclePhotoUrl: null,
     });
   }
 
@@ -279,7 +281,7 @@ async function fetchVehicleTrackerLocations(
 ): Promise<MapDriverLocation[]> {
   const { data, error } = await admin
     .from("vehicle_locations")
-    .select("vehicle_id, latitude, longitude, speed, heading, updated_at, vehicles(plate_number)")
+    .select("vehicle_id, latitude, longitude, speed, heading, updated_at, vehicles(plate_number, photo_url)")
     .not("latitude", "is", null)
     .not("longitude", "is", null);
 
@@ -315,6 +317,7 @@ async function fetchVehicleTrackerLocations(
       lastUpdate: String(loc.updated_at || ""),
       vehiclePlate: plate,
       hasGps: true,
+      vehiclePhotoUrl: loc.vehicles?.photo_url || null,
     });
   }
   return rows;

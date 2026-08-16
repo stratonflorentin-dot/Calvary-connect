@@ -137,6 +137,11 @@ function gpsAge(lastUpdate: string): string {
   return `${Math.floor(s / 3600)}h ago`;
 }
 
+/** Minimal attribute-context escape for values interpolated into innerHTML. */
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
 /** Build the DOM element for a driver marker */
 function makeMarkerEl(driver: FleetMapDriver, isSelected: boolean): HTMLDivElement {
   const wrap = document.createElement("div");
@@ -158,14 +163,25 @@ function makeMarkerEl(driver: FleetMapDriver, isSelected: boolean): HTMLDivEleme
   const spd = Math.round(driver.speed ?? 0);
   const moving = spd > 2;
 
-  wrap.innerHTML = `
-    <div style="position:relative;width:50px;height:50px;border-radius:50%;
-      background:${color};border:3px solid #fff;${ring}
-      display:flex;align-items:center;justify-content:center;
-      color:#fff;transition:box-shadow 0.3s ease;">
-      <div style="transform:rotate(${hdg}deg);transition:transform 0.4s ease;
+  // A real vehicle photo (same field the Fleet page shows) replaces the
+  // generic SVG glyph when one exists — rotating a photo to show heading
+  // would look broken, so only the SVG fallback gets the heading rotation.
+  const photoUrl = driver.vehiclePhotoUrl ? escapeAttr(driver.vehiclePhotoUrl) : null;
+  const iconContent = photoUrl
+    ? `<img src="${photoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"
+        onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:${JSON.stringify(vehicleSvg(driver.vehicleType || "truck"))},style:'display:flex;align-items:center;justify-content:center;width:100%;height:100%;'}));" />`
+    : `<div style="transform:rotate(${hdg}deg);transition:transform 0.4s ease;
         display:flex;align-items:center;justify-content:center;">
         ${vehicleSvg(driver.vehicleType || "truck")}
+      </div>`;
+
+  wrap.innerHTML = `
+    <div style="position:relative;width:50px;height:50px;">
+      <div style="width:100%;height:100%;border-radius:50%;
+        background:${color};border:3px solid #fff;${ring}overflow:hidden;
+        display:flex;align-items:center;justify-content:center;
+        color:#fff;transition:box-shadow 0.3s ease;">
+        ${iconContent}
       </div>
       ${moving
         ? `<span style="position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;
@@ -249,11 +265,18 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     const mapReady      = useRef(false);
     const [loadErr, setLoadErr] = useState<string | null>(null);
     const [styleLoaded, setStyleLoaded] = useState(false);
+    // Set once the user drags/scrolls the map by hand — while true, the
+    // follow-camera effect below backs off instead of yanking the view back
+    // to the selected driver on every GPS poll, which otherwise made it
+    // impossible to pan away and look at the rest of the fleet. Cleared on
+    // a fresh selection or an explicit "Center on driver" / fitAll action.
+    const userPannedRef = useRef(false);
 
     // ── Camera helpers ─────────────────────────────────────────────────────
     const fitAll = () => {
       const map = mapRef.current;
       if (!map || locations.length === 0) return;
+      userPannedRef.current = false;
       const b = new maplibregl.LngLatBounds();
       locations.forEach((l) => b.extend([l.longitude, l.latitude]));
       map.fitBounds(b, { padding: 100, maxZoom: 13, duration: 1000 });
@@ -263,14 +286,16 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       zoomIn:  () => mapRef.current?.zoomIn(),
       zoomOut: () => mapRef.current?.zoomOut(),
       fitDrivers: fitAll,
-      flyToDriver: (lat, lng, zoom = 14.5) =>
+      flyToDriver: (lat, lng, zoom = 14.5) => {
+        userPannedRef.current = false;
         mapRef.current?.flyTo({
           center: [lng, lat], // MapLibre: [lng, lat]
           zoom,
           pitch: 52,
           essential: true,
           duration: 1400,
-        }),
+        });
+      },
     }));
 
     // ── Smooth marker animation ────────────────────────────────────────────
@@ -321,6 +346,18 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }),
           "top-left",
         );
+
+        // Only real, hands-on input counts — MapLibre's own programmatic
+        // easeTo()/flyTo() calls (the follow-camera below) also fire these
+        // events, but without `originalEvent` since nothing was physically
+        // dragged/scrolled/pinched.
+        const onUserInteraction = (e: { originalEvent?: unknown }) => {
+          if (e.originalEvent) userPannedRef.current = true;
+        };
+        map.on("dragstart", onUserInteraction);
+        map.on("zoomstart", onUserInteraction);
+        map.on("rotatestart", onUserInteraction);
+        map.on("pitchstart", onUserInteraction);
         map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
 
         map.on("error", (e: any) => {
@@ -562,9 +599,17 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     }, [locations, selectedId, onSelectDriver]);
 
     // ── Accuracy circle + smart camera ────────────────────────────────────
+    const prevSelectedIdRef = useRef<string | null>(null);
     useEffect(() => {
       const map = mapRef.current;
       if (!map || !mapReady.current) return;
+
+      // A fresh selection always earns one recenter, even if the user had
+      // panned away looking at a different truck.
+      if (prevSelectedIdRef.current !== selectedId) {
+        userPannedRef.current = false;
+        prevSelectedIdRef.current = selectedId;
+      }
 
       const sel    = locations.find((l) => l.id === selectedId);
       const source = map.getSource("accuracy-src") as maplibregl.GeoJSONSource | undefined;
@@ -575,6 +620,12 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         } else {
           source.setData({ type: "FeatureCollection", features: [] });
         }
+
+        // Once the user has manually panned/zoomed/rotated away, further GPS
+        // updates shouldn't yank the camera back — that made it impossible
+        // to look at the rest of the fleet. "Center on driver" or picking a
+        // new truck clears the flag and resumes following.
+        if (userPannedRef.current) return;
 
         const hdg = sel.heading ?? 0;
 

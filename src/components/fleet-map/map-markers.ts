@@ -7,6 +7,7 @@ export function driverMarkerHtml(
   driverName: string,
   isOnline: boolean,
   isSelected: boolean,
+  photoUrl?: string | null,
 ) {
   const bg = isOnline ? "#10b981" : "#64748b";
   const ring = isSelected
@@ -17,12 +18,20 @@ export function driverMarkerHtml(
     : "";
   const label = esc(driverName.split(" ")[0] || "Driver");
 
+  // A real vehicle photo (same field the Fleet page shows) replaces the
+  // generic truck glyph when one exists.
+  const iconContent = photoUrl
+    ? `<img src="${esc(photoUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+    : `<svg width="26" height="26" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true">
+          <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/>
+        </svg>`;
+
   return `
     <div style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
-      <div style="position:relative;width:52px;height:52px;border-radius:50%;background:${bg};border:3px solid #ffffff;${ring}display:flex;align-items:center;justify-content:center;">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true">
-          <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/>
-        </svg>
+      <div style="position:relative;width:52px;height:52px;">
+        <div style="width:100%;height:100%;border-radius:50%;background:${bg};border:3px solid #ffffff;${ring}overflow:hidden;display:flex;align-items:center;justify-content:center;">
+          ${iconContent}
+        </div>
         ${pulse}
       </div>
       <div style="margin-top:5px;padding:3px 10px;background:#0f172a;color:#fff;font-size:11px;font-weight:700;border-radius:8px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 10px rgba(0,0,0,0.25);font-family:system-ui,sans-serif;">

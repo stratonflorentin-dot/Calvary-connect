@@ -243,7 +243,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           const isSelected = selectedId === loc.id;
           const icon = L.divIcon({
             className: "fleet-driver-marker",
-            html: driverMarkerHtml(loc.driverName, loc.isOnline, isSelected),
+            html: driverMarkerHtml(loc.driverName, loc.isOnline, isSelected, loc.vehiclePhotoUrl),
             iconSize: DRIVER_MARKER_SIZE,
             iconAnchor: DRIVER_MARKER_ANCHOR,
           });
