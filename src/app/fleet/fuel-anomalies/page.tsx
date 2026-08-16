@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TransitionButtons } from "@/components/workflow/transition-buttons";
-import { ShieldAlert, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, Settings2, DollarSign } from "lucide-react";
+import { ShieldAlert, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, Settings2, DollarSign, Satellite } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
@@ -88,6 +88,7 @@ export default function FuelAnomaliesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [ruleFilter, setRuleFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [syncingGps, setSyncingGps] = useState(false);
 
   const canReview = ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT"].includes(role ?? "");
   const canManageRules = ["CEO", "ADMIN", "OPERATOR"].includes(role ?? "");
@@ -136,6 +137,28 @@ export default function FuelAnomaliesPage() {
     }
   };
 
+  const syncGps = async () => {
+    setSyncingGps(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not signed in");
+      const res = await fetch("/api/telematics/sync", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "GPS sync failed");
+      toast({
+        title: "GPS sync complete",
+        description: `${json.synced}/${json.totalMapped} tracked vehicles updated.${json.errors?.length ? ` ${json.errors.length} error(s).` : ""}`,
+      });
+    } catch (err: any) {
+      toast({ title: "GPS sync failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSyncingGps(false);
+    }
+  };
+
   const ruleCodes = useMemo(
     () => [...new Set(anomalies.map((a) => a.rule_code).filter(Boolean))] as string[],
     [anomalies],
@@ -170,6 +193,11 @@ export default function FuelAnomaliesPage() {
             <Button variant="outline" onClick={load} disabled={loading}>
               <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
             </Button>
+            {canReview && (
+              <Button variant="outline" onClick={syncGps} disabled={syncingGps} title="Pull live position/ignition data from Cartrack/Wialon for mapped vehicles">
+                <Satellite className={cn("size-4 mr-2", syncingGps && "animate-pulse")} /> {syncingGps ? "Syncing…" : "Sync GPS"}
+              </Button>
+            )}
             {canReview && (
               <Button onClick={runScan} disabled={scanning}>
                 <ShieldAlert className={cn("size-4 mr-2", scanning && "animate-spin")} /> {scanning ? "Scanning…" : "Scan Now"}

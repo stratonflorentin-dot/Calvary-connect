@@ -55,7 +55,7 @@ export interface RuleConfig {
 type DetectedAnomaly = {
   vehicle_id: string;
   driver_id: string | null;
-  fuel_log_id: string;
+  fuel_log_id: string | null;
   anomaly_type: string;
   rule_code: RuleCode;
   severity: "low" | "medium" | "high";
@@ -66,6 +66,7 @@ type DetectedAnomaly = {
   deviation_pct: number | null;
   description: string;
   evidence: Record<string, any>;
+  dedupe_key: string;
 };
 
 const LOOKBACK_DAYS = 180;
@@ -169,7 +170,7 @@ function confidenceFactor(confidence: "high" | "medium" | "low"): number {
 }
 
 function makeAnomaly(
-  base: { vehicle_id: string; driver_id: string | null; fuel_log_id: string },
+  base: { vehicle_id: string; driver_id: string | null; fuel_log_id: string | null },
   rule: RuleConfig,
   ruleCode: RuleCode,
   confidence: "high" | "medium" | "low",
@@ -180,14 +181,20 @@ function makeAnomaly(
     description: string;
     evidence: Record<string, any>;
   },
+  /** Override the default fuel_log_id-based dedupe key — required for
+   *  vehicle/time-window rules (idling, siphoning) that aren't tied to a
+   *  single fuel purchase. */
+  dedupeKeyOverride?: string,
 ): DetectedAnomaly {
+  const anomaly_type = LEGACY_ANOMALY_TYPE[ruleCode] ?? ruleCode;
   return {
     ...base,
-    anomaly_type: LEGACY_ANOMALY_TYPE[ruleCode] ?? ruleCode,
+    anomaly_type,
     rule_code: ruleCode,
     severity: rule.severity,
     risk_score: Number((rule.weight * confidenceFactor(confidence)).toFixed(2)),
     confidence,
+    dedupe_key: dedupeKeyOverride ?? `${base.fuel_log_id}:${anomaly_type}`,
     ...fields,
   };
 }
@@ -530,13 +537,14 @@ export async function detectFuelAnomaliesForVehicle(
       }
     }
 
-    // 11 & 12. POSSIBLE_SIPHONING / EXCESSIVE_IDLING require a time series of
-    // tank level / engine status per vehicle. Only a single current-state
-    // snapshot (vehicle_locations) exists in this database today — no
-    // history table to compute a "level 4 hours ago" or "engine on for how
-    // long" from. These rules are real and will fire the moment that
-    // telemetry history exists; until then they correctly produce nothing
-    // rather than guessing from a single snapshot.
+    // 11. POSSIBLE_SIPHONING requires a time series of *tank level*, which
+    // no connected telemetry provider currently supplies for this fleet —
+    // checked live against every Wialon unit's configured sensors (Speed,
+    // External Power, Engine ignition only; no fuel-level sensor on any of
+    // them). This rule stays a documented no-op rather than guessing at a
+    // proxy signal. It activates the moment fuel-level telemetry exists
+    // (e.g. once Cartrack's Fuel API — which does support tank/CAN-bus fuel
+    // readings — is enabled for this account).
   }
 
   return anomalies;
@@ -598,22 +606,114 @@ export async function detectDuplicateReceiptAnomalies(
   return anomalies;
 }
 
+const IDLING_LOOKBACK_DAYS = 7;
+const IDLING_MAX_GAP_MINUTES = 20; // a bigger gap than this between readings breaks a run — the vehicle could have moved/stopped/started in between and we didn't see it.
+
+/**
+ * Excessive idling — engine on, effectively stationary, for longer than the
+ * configured threshold — computed from vehicle_telemetry_history. Real data,
+ * not a proxy: only fires for vehicles whose provider actually reports
+ * ignition status (confirmed live for every mapped Wialon unit today via
+ * their "Engine ignition sensor"). Runs per-vehicle, one row per idle
+ * episode, deduped on (vehicle, hour bucket the episode started in) so a
+ * single long idle doesn't get re-flagged every scan while it's ongoing.
+ */
+export async function detectIdlingAnomalies(
+  supabase: SupabaseClient,
+  vehicleId: string,
+  ruleConfig?: Map<string, RuleConfig>,
+): Promise<DetectedAnomaly[]> {
+  const config = ruleConfig ?? (await loadRuleConfig(supabase));
+  const rule = ruleFor(config, "EXCESSIVE_IDLING");
+  if (!rule.enabled) return [];
+
+  const since = new Date(Date.now() - IDLING_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("vehicle_telemetry_history")
+    .select("recorded_at, speed_kmh, engine_on")
+    .eq("vehicle_id", vehicleId)
+    .not("engine_on", "is", null)
+    .gte("recorded_at", since)
+    .order("recorded_at", { ascending: true });
+
+  const rows = (data || []) as { recorded_at: string; speed_kmh: number | null; engine_on: boolean }[];
+  if (rows.length < 2) return [];
+
+  const minMinutes = rule.threshold?.min_minutes ?? 30;
+  const anomalies: DetectedAnomaly[] = [];
+
+  let runStart: string | null = null;
+  let runEnd: string | null = null;
+
+  const flushRun = () => {
+    if (!runStart || !runEnd) return;
+    const minutes = (new Date(runEnd).getTime() - new Date(runStart).getTime()) / 60000;
+    if (minutes < minMinutes) return;
+    const hourBucket = runStart.slice(0, 13); // yyyy-mm-ddThh — one flag per idle episode per hour it started in
+    anomalies.push(
+      makeAnomaly(
+        { vehicle_id: vehicleId, driver_id: null, fuel_log_id: null },
+        rule,
+        "EXCESSIVE_IDLING",
+        "high",
+        {
+          expected_value: minMinutes,
+          actual_value: Math.round(minutes),
+          deviation_pct: null,
+          description: `Engine idled for ${Math.round(minutes)} minutes (${new Date(runStart).toLocaleString()} → ${new Date(runEnd).toLocaleString()}).`,
+          evidence: { idle: { start: runStart, end: runEnd, duration_minutes: Math.round(minutes) } },
+        },
+        `${vehicleId}:EXCESSIVE_IDLING:${hourBucket}`,
+      ),
+    );
+  };
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const isIdling = row.engine_on === true && (row.speed_kmh ?? 0) <= 1;
+
+    if (!isIdling) {
+      flushRun();
+      runStart = null;
+      runEnd = null;
+      continue;
+    }
+
+    if (runStart && runEnd) {
+      const gapMinutes = (new Date(row.recorded_at).getTime() - new Date(runEnd).getTime()) / 60000;
+      if (gapMinutes > IDLING_MAX_GAP_MINUTES) {
+        flushRun();
+        runStart = row.recorded_at;
+      }
+    } else {
+      runStart = row.recorded_at;
+    }
+    runEnd = row.recorded_at;
+  }
+  flushRun();
+
+  return anomalies;
+}
+
 export async function detectFuelAnomaliesForAllVehicles(supabase: SupabaseClient): Promise<DetectedAnomaly[]> {
   const [ruleConfig, { data: vehicles }] = await Promise.all([
     loadRuleConfig(supabase),
     supabase.from("vehicles").select("id"),
   ]);
-  const [perVehicle, duplicates] = await Promise.all([
+  const [perVehicle, duplicates, idling] = await Promise.all([
     Promise.all((vehicles || []).map((v: any) => detectFuelAnomaliesForVehicle(supabase, v.id, ruleConfig))),
     detectDuplicateReceiptAnomalies(supabase, ruleConfig),
+    Promise.all((vehicles || []).map((v: any) => detectIdlingAnomalies(supabase, v.id, ruleConfig))),
   ]);
-  return [...perVehicle.flat(), ...duplicates];
+  return [...perVehicle.flat(), ...duplicates, ...idling.flat()];
 }
 
 /**
- * Inserts newly-detected anomalies, relying on the (fuel_log_id, anomaly_type)
- * unique constraint to silently skip ones already flagged from a prior scan.
- * Returns only the anomalies that were actually new.
+ * Inserts newly-detected anomalies, relying on the dedupe_key unique index
+ * to silently skip ones already flagged from a prior scan (fuel_log_id +
+ * rule for purchase-tied findings; vehicle + rule + hour-bucket for
+ * vehicle/time-window findings like idling). Returns only the anomalies
+ * that were actually new.
  */
 export async function persistFuelAnomalies(
   supabase: SupabaseClient,
@@ -622,9 +722,9 @@ export async function persistFuelAnomalies(
   if (anomalies.length === 0) return [];
   const { data, error } = await supabase
     .from("fuel_anomalies")
-    .upsert(anomalies, { onConflict: "fuel_log_id,anomaly_type", ignoreDuplicates: true })
-    .select("fuel_log_id, anomaly_type");
+    .upsert(anomalies, { onConflict: "dedupe_key", ignoreDuplicates: true })
+    .select("dedupe_key");
   if (error) throw error;
-  const inserted = new Set((data || []).map((d: any) => `${d.fuel_log_id}:${d.anomaly_type}`));
-  return anomalies.filter((a) => inserted.has(`${a.fuel_log_id}:${a.anomaly_type}`));
+  const inserted = new Set((data || []).map((d: any) => d.dedupe_key));
+  return anomalies.filter((a) => inserted.has(a.dedupe_key));
 }
