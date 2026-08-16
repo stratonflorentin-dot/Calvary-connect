@@ -583,6 +583,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "system",
   },
   {
+    path: "/admin/receipts",
+    label: "Receipts & Storage",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "system",
+  },
+  {
     path: "/ai-insights",
     label: "AI Operations",
     allowedRoles: ["CEO", "ADMIN"],
