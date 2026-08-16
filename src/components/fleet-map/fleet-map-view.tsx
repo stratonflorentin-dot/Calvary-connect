@@ -622,7 +622,10 @@ export default function FleetMapView({
               ))}
             </div>
             <ScrollArea className="flex-1 min-h-0">
-              <div className="flex gap-2 p-3 md:flex-col md:gap-1.5 md:p-2">
+              <div
+                className="flex gap-2 p-3 overflow-x-auto overscroll-x-contain md:flex-col md:gap-1.5 md:p-2 md:overflow-x-visible"
+                onWheel={(e) => e.stopPropagation()}
+              >
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground px-2 py-4 text-center w-full">
                     {search ? "No drivers match your search" : "No drivers to display"}
