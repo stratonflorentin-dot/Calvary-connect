@@ -54,6 +54,8 @@ interface VehicleFormState {
   interest_rate: number | "";
   installment_amount: number | "";
   down_payment_bank_account_id: string;
+  gps_provider: "" | "cartrack" | "wialon";
+  gps_device_id: string;
 }
 
 const empty = (): VehicleFormState => ({
@@ -79,6 +81,8 @@ const empty = (): VehicleFormState => ({
   interest_rate: "",
   installment_amount: "",
   down_payment_bank_account_id: "",
+  gps_provider: "",
+  gps_device_id: "",
 });
 
 /** Fixed-asset / loan-payable account codes for a financed vehicle
@@ -130,6 +134,8 @@ interface VehicleWritePayload {
   photo_url?: string | null;
   purchase_price?: number | null;
   purchase_date?: string | null;
+  gps_provider?: string | null;
+  gps_device_id?: string | null;
   updated_at: string;
   created_at?: string;
 }
@@ -218,6 +224,8 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         interest_rate: "",
         installment_amount: "",
         down_payment_bank_account_id: "",
+        gps_provider: (vehicle.gps_provider ?? "") as any,
+        gps_device_id: vehicle.gps_device_id ?? "",
       });
     } else {
       setForm(empty());
@@ -234,6 +242,10 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
     }
     if (form.type === "TRAILER" && !form.trailer_sub_type) {
       toast({ title: "Trailer sub-type required", variant: "destructive" });
+      return;
+    }
+    if (form.gps_provider && !form.gps_device_id.trim()) {
+      toast({ title: "Device ID required", description: "Enter the Cartrack/Wialon device ID for this vehicle, or clear the provider.", variant: "destructive" });
       return;
     }
     if (!isEdit && canFinance && form.financed) {
@@ -282,6 +294,8 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         service_interval_km: form.service_interval_km === "" ? null : Number(form.service_interval_km),
         insurance_expiry: form.insurance_expiry || null,
         next_inspection_due: form.next_inspection_due || null,
+        gps_provider: form.gps_provider || null,
+        gps_device_id: form.gps_provider ? form.gps_device_id.trim() : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -533,6 +547,34 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
               <div className="space-y-1">
                 <Label className="text-xs">Service every (km)</Label>
                 <Input type="number" value={form.service_interval_km} onChange={(e) => patch({ service_interval_km: e.target.value === "" ? "" : Number(e.target.value) })} placeholder="10000" />
+              </div>
+            </div>
+          </fieldset>
+
+          {/* GPS tracking — maps this vehicle to its live Cartrack/Wialon
+              device so location/fuel-telemetry sync can find it. */}
+          <fieldset className="space-y-3">
+            <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">GPS tracking</legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Provider</Label>
+                <Select value={form.gps_provider || "none"} onValueChange={(v) => patch({ gps_provider: v === "none" ? "" : (v as "cartrack" | "wialon") })}>
+                  <SelectTrigger><SelectValue placeholder="Not tracked" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not tracked</SelectItem>
+                    <SelectItem value="cartrack">Cartrack</SelectItem>
+                    <SelectItem value="wialon">Wialon</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Device / unit ID</Label>
+                <Input
+                  value={form.gps_device_id}
+                  onChange={(e) => patch({ gps_device_id: e.target.value })}
+                  placeholder={form.gps_provider === "wialon" ? "Wialon unit ID" : "Cartrack vehicle registration/ID"}
+                  disabled={!form.gps_provider}
+                />
               </div>
             </div>
           </fieldset>
