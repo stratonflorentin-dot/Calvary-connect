@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase';
 import { 
   Calendar, TrendingUp, TrendingDown, DollarSign, Truck, Fuel, Wrench,
-  ArrowUpRight, ArrowDownRight, Download, FileText, PieChart as PieChartIcon, BarChart3
+  ArrowUpRight, ArrowDownRight, Download, FileText, PieChart as PieChartIcon, BarChart3, Info
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -499,9 +499,9 @@ export function ProfessionalFinancialReport() {
         </Card>
       </div>
 
-      {/* Currency Warning */}
-      <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-warning text-sm flex items-center gap-2">
-        <PieChartIcon className="h-4 w-4" />
+      {/* Currency Scope Note */}
+      <div className="bg-info/10 border border-info/30 rounded-lg p-3 text-info text-sm flex items-center gap-2">
+        <Info className="h-4 w-4 shrink-0" />
         Note: This report is isolated to <strong>{selectedCurrency}</strong> transactions. Cross-currency data is excluded to maintain ledger integrity.
       </div>
 
