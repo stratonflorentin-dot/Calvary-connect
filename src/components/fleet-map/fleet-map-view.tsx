@@ -429,7 +429,7 @@ export default function FleetMapView({
       <div className="absolute top-4 right-4 z-[1000] pointer-events-none hidden md:block">
         <AnimatePresence mode="wait">
           {selected && (
-            <div className="pointer-events-auto">
+            <div className="pointer-events-auto" onWheel={(e) => e.stopPropagation()}>
               <DriverDetailPanel
                 driver={selected}
                 onClose={() => setSelectedId(null)}
@@ -532,6 +532,14 @@ export default function FleetMapView({
           "absolute bottom-4 left-4 right-4 z-[1000] gap-3 pointer-events-none md:pr-[340px] items-start",
           selected ? "hidden md:flex flex-col" : "flex flex-col"
         )}
+        // Leaflet's default scrollWheelZoom listens on the map container and
+        // preventDefault()s every wheel event it sees, including ones over
+        // this floating panel (which sits inside the same container) — that
+        // silently ate every attempt to scroll the Active Fleet list.
+        // Stopping propagation here keeps the event from ever reaching
+        // Leaflet's handler while leaving the browser's native scroll
+        // (triggered independently of propagation) fully intact.
+        onWheel={(e) => e.stopPropagation()}
       >
         <div className="lg:hidden pointer-events-auto">
           <div className={cn(glass, "rounded-xl px-3 py-2 inline-flex flex-wrap gap-3")}>
@@ -678,6 +686,7 @@ export default function FleetMapView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             className="md:hidden absolute inset-x-0 bottom-0 z-[1001] p-4 pointer-events-auto max-h-[70vh] overflow-y-auto"
+            onWheel={(e) => e.stopPropagation()}
           >
             <DriverDetailPanel
               driver={selected}
