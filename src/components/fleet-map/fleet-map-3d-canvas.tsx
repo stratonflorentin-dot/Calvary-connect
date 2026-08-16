@@ -248,6 +248,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     const prevPos       = useRef<Map<string, [number, number]>>(new Map());
     const mapReady      = useRef(false);
     const [loadErr, setLoadErr] = useState<string | null>(null);
+    const [styleLoaded, setStyleLoaded] = useState(false);
 
     // ── Camera helpers ─────────────────────────────────────────────────────
     const fitAll = () => {
@@ -352,6 +353,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
         map.on("load", () => {
           mapReady.current = true;
+          setStyleLoaded(true);
 
           // 3D building extrusions (only for primary style)
           if (!isFallback) {
@@ -599,6 +601,11 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     return (
       <div className="w-full h-full relative">
         <div ref={containerRef} className="w-full h-full" style={{ background: "hsl(var(--background))" }} />
+        {!styleLoaded && !loadErr && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 pointer-events-none">
+            <p className="text-sm font-medium text-muted-foreground">Loading map…</p>
+          </div>
+        )}
         {loadErr && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-none z-10">
             <p className="text-sm font-medium text-foreground bg-card/90 rounded-xl px-4 py-3 shadow-md">
