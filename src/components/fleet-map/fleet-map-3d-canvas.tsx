@@ -26,15 +26,31 @@ const MAJOR_CITIES = [
   { name: "Dodoma",        coords: [-6.163,  35.7516] as [number, number] },
 ];
 
-// CARTO Dark Matter — free, no API key, same underlying carto.streets vector
-// source as Voyager (so the "building" source-layer 3D extrusions below
-// still resolve), just styled dark to match this app's theme instead of
-// sitting as a light tan map inside a dark dashboard.
-const MAP_STYLE_URL =
+// MapTiler's "Dataviz Dark" vector style — richer basemap detail (buildings,
+// terrain-aware roads, POI labelling) than the free CARTO tiles, used when a
+// key is configured. CARTO Dark Matter (free, no key, same dark palette)
+// stays as the fallback so the map keeps working even if the MapTiler key is
+// ever missing, rate-limited, or the request fails.
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
+const CARTO_DARK_STYLE_URL =
   "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const MAP_STYLE_URL = MAPTILER_KEY
+  ? `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_KEY}`
+  : CARTO_DARK_STYLE_URL;
 
-// Fallback style if primary fails - OSM raster tiles via MapLibre
-const FALLBACK_STYLE_URL = "https://demotiles.maplibre.org/style.json";
+// Fallback style if primary fails. When MapTiler is primary, CARTO is a much
+// better fallback than MapLibre's blank demo tiles; when CARTO is already
+// primary (no MapTiler key), demo tiles remain the last resort.
+const FALLBACK_STYLE_URL = MAPTILER_KEY
+  ? CARTO_DARK_STYLE_URL
+  : "https://demotiles.maplibre.org/style.json";
+
+/** The vector source id carrying OpenMapTiles-schema `building` features
+ *  differs between providers — MapLibre needs the right one to resolve the
+ *  3D building extrusion layer added below. */
+function buildingSourceIdFor(styleUrl: string): string {
+  return styleUrl.includes("api.maptiler.com") ? "maptiler_planet" : "carto";
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type FleetMapCanvasHandle = {
@@ -351,7 +367,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               map.addLayer(
                 {
                   id: "3d-buildings",
-                  source: "carto",
+                  source: buildingSourceIdFor(styleUrl),
                   "source-layer": "building",
                   type: "fill-extrusion",
                   minzoom: 14,
@@ -500,10 +516,18 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         const exist = markersRef.current.get(key);
 
         if (exist) {
-          // Replace element to reflect new state
-          const newEl = makeMarkerEl(driver, isSel);
-          newEl.addEventListener("click", () => onSelectDriver(driver));
-          exist.getElement().replaceWith(newEl);
+          // Update in place — MapLibre's Marker keeps positioning the
+          // exact DOM element it was constructed with (it applies its
+          // translate transform to that node directly, not to whatever
+          // currently occupies its slot in the DOM). Swapping in a new
+          // element via replaceWith() left the new node with no transform
+          // at all, so it fell into normal document flow and every
+          // marker collapsed into a vertical stack in list order after
+          // its first update. Only the element's contents change here —
+          // the node MapLibre tracks stays the same.
+          const el = exist.getElement();
+          el.innerHTML = makeMarkerEl(driver, isSel).innerHTML;
+          el.onclick = () => onSelectDriver(driver);
           exist.getPopup()?.setHTML(popupHtml(driver));
 
           if (prev) {

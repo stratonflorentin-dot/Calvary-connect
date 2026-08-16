@@ -113,14 +113,14 @@ export function middleware(request: NextRequest) {
     // Supabase Storage serves vehicle photos, avatars, chat attachments, and
     // compliance docs — without it here, images upload fine but the browser
     // silently refuses to render them.
-    "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://placehold.co https://images.unsplash.com https://picsum.photos",
+    "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com https://placehold.co https://images.unsplash.com https://picsum.photos",
     // wss://*.supabase.co is required for realtime (chat, live dashboards);
     // nominatim/osrm serve geocoding and road routing.
     // MapLibre fetches its style.json, vector tiles, glyphs and sprites via
     // fetch() — all governed by connect-src. basemaps.cartocdn.com (apex)
     // hosts the Voyager GL style; demotiles.maplibre.org is the fallback style.
     // stun: entries are WebRTC ICE candidate gathering for voice/video calls.
-    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org stun:stun.l.google.com:19302 stun:stun1.l.google.com:19302",
+    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com stun:stun.l.google.com:19302 stun:stun1.l.google.com:19302",
     // MapLibre GL spawns its tile workers from blob: URLs; without worker-src
     // the default-src 'self' fallback blocks them and the canvas stays blank.
     "worker-src 'self' blob:",

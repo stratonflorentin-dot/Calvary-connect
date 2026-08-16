@@ -1,17 +1,33 @@
 import type { TileLayerOptions } from "leaflet";
 
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
+
 /**
- * Reliable basemap providers, all free/no API key. Dark Matter leads to
- * match this app's dark theme (the 3D view uses the same CARTO dark style —
- * see fleet-map-3d-canvas.tsx) instead of a light tan map sitting inside a
- * dark dashboard; plain OSM/CARTO Voyager stay as fallbacks purely for
- * uptime if CARTO's dark tiles are ever unavailable.
+ * Basemap providers, dark-first to match this app's theme (the 3D view uses
+ * the same dark palette — see fleet-map-3d-canvas.tsx) instead of a light
+ * tan map sitting inside a dark dashboard. MapTiler's "Dataviz Dark" raster
+ * tiles lead when a key is configured (richer detail than the free CARTO
+ * tiles); CARTO Dark Matter, then plain OSM, stay as no-key fallbacks purely
+ * for uptime if MapTiler is ever unavailable.
  */
 export const FLEET_MAP_TILE_LAYERS: {
   id: string;
   url: string;
   options: TileLayerOptions;
 }[] = [
+  ...(MAPTILER_KEY
+    ? [
+        {
+          id: "maptiler-dataviz-dark",
+          url: `https://api.maptiler.com/maps/dataviz-dark/256/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
+          options: {
+            attribution:
+              '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 19,
+          } satisfies TileLayerOptions,
+        },
+      ]
+    : []),
   {
     id: "carto-dark",
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
