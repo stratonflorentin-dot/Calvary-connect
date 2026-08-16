@@ -260,8 +260,8 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[640px] max-h-[90vh] p-0 sm:p-0 overflow-hidden flex flex-col">
+        <DialogHeader className="p-4 sm:p-6 pb-0 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
               <RouteIcon className="w-4 h-4" />
@@ -270,7 +270,8 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
           </div>
         </DialogHeader>
 
-        <form onSubmit={save} className="space-y-5">
+        <form onSubmit={save} className="flex flex-col flex-1 min-h-0">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
           <fieldset className="space-y-3">
             <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route</legend>
             <div className="grid grid-cols-2 gap-3">
@@ -476,14 +477,15 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
             <Label className="text-xs">Notes</Label>
             <Textarea value={form.notes} onChange={(e) => patch({ notes: e.target.value })} rows={3} placeholder="Any special instructions" />
           </div>
+        </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-border">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isEdit ? "Save trip" : "Create trip"}
-            </Button>
-          </div>
+        <div className="flex justify-end gap-2 p-4 sm:p-6 pt-3 border-t border-border shrink-0 bg-card">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button type="submit" disabled={saving} className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isEdit ? "Save trip" : "Create trip"}
+          </Button>
+        </div>
         </form>
       </DialogContent>
     </Dialog>
