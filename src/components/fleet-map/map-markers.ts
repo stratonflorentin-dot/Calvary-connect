@@ -20,16 +20,19 @@ export function driverMarkerHtml(
 
   // A real vehicle photo (same field the Fleet page shows) replaces the
   // generic truck glyph when one exists.
-  const iconContent = photoUrl
-    ? `<img src="${esc(photoUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-    : `<svg width="26" height="26" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true">
+  const truckSvg = `<svg width="26" height="26" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true">
           <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/>
         </svg>`;
+  const iconContent = photoUrl
+    ? `<img src="${esc(photoUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+      <div style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;">${truckSvg}</div>`
+    : truckSvg;
 
   return `
     <div style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
       <div style="position:relative;width:52px;height:52px;">
-        <div style="width:100%;height:100%;border-radius:50%;background:${bg};border:3px solid #ffffff;${ring}overflow:hidden;display:flex;align-items:center;justify-content:center;">
+        <div style="position:relative;width:100%;height:100%;border-radius:50%;background:${bg};border:3px solid #ffffff;${ring}overflow:hidden;display:flex;align-items:center;justify-content:center;">
           ${iconContent}
         </div>
         ${pulse}

@@ -167,9 +167,17 @@ function makeMarkerEl(driver: FleetMapDriver, isSelected: boolean): HTMLDivEleme
   // generic SVG glyph when one exists — rotating a photo to show heading
   // would look broken, so only the SVG fallback gets the heading rotation.
   const photoUrl = driver.vehiclePhotoUrl ? escapeAttr(driver.vehiclePhotoUrl) : null;
+  // Both the <img> and its SVG fallback are rendered up front (fallback
+  // hidden) — flipping which one is visible on error is a plain style
+  // toggle with no embedded markup, unlike an inline handler that tries to
+  // splice HTML into an HTML attribute (that broke HTML parsing on the
+  // first double-quote inside the SVG and leaked raw CSS text onto the map).
   const iconContent = photoUrl
     ? `<img src="${photoUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"
-        onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:${JSON.stringify(vehicleSvg(driver.vehicleType || "truck"))},style:'display:flex;align-items:center;justify-content:center;width:100%;height:100%;'}));" />`
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+      <div style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;">
+        ${vehicleSvg(driver.vehicleType || "truck")}
+      </div>`
     : `<div style="transform:rotate(${hdg}deg);transition:transform 0.4s ease;
         display:flex;align-items:center;justify-content:center;">
         ${vehicleSvg(driver.vehicleType || "truck")}
@@ -177,7 +185,7 @@ function makeMarkerEl(driver: FleetMapDriver, isSelected: boolean): HTMLDivEleme
 
   wrap.innerHTML = `
     <div style="position:relative;width:50px;height:50px;">
-      <div style="width:100%;height:100%;border-radius:50%;
+      <div style="position:relative;width:100%;height:100%;border-radius:50%;
         background:${color};border:3px solid #fff;${ring}overflow:hidden;
         display:flex;align-items:center;justify-content:center;
         color:#fff;transition:box-shadow 0.3s ease;">
