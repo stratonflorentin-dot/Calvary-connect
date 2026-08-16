@@ -131,6 +131,37 @@ async function runSideEffects(
       );
       effects.push("finance_notified");
     }
+    if (kind === "fuel_anomaly" && toState === "investigating" && entity.driver_id) {
+      await createNotification({
+        userId: entity.driver_id,
+        title: "Fuel transaction flagged for review",
+        message: entity.description || "One of your fuel transactions needs an explanation.",
+        type: "warning",
+        module: "fuel_fraud",
+        entityType: "fuel_anomaly",
+        entityId: entity.id,
+        actionUrl: "/driver/fuel",
+      });
+      effects.push("driver_notified");
+    }
+    if (kind === "fuel_anomaly" && toState === "confirmed_fraud") {
+      const reviewers = await fetchAccountantUserIds();
+      await Promise.all(
+        reviewers.map((id) =>
+          createNotification({
+            userId: id,
+            title: "Fuel fraud confirmed",
+            message: `${entity.description || "A fuel anomaly"} was confirmed as fraud — a finance adjustment may be needed.`,
+            type: "warning",
+            module: "fuel_fraud",
+            entityType: "fuel_anomaly",
+            entityId: entity.id,
+            actionUrl: "/fleet/fuel-anomalies",
+          }),
+        ),
+      );
+      effects.push("finance_notified");
+    }
   } catch (err: any) {
     console.warn(`[workflow] side effects failed for ${kind}:${toState}:`, err?.message ?? err);
   }

@@ -21,7 +21,8 @@ export type EntityKind =
   | "maintenance_request"
   | "fuel_request"
   | "expense"
-  | "leave_request";
+  | "leave_request"
+  | "fuel_anomaly";
 
 export interface TransitionContext {
   actorId: string;
@@ -355,12 +356,103 @@ export const leaveRequestMachine: StateMachine<LeaveRequestState> = {
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Fuel anomaly investigation
+// ─────────────────────────────────────────────────────────────────────────────
+export type FuelAnomalyState =
+  | "open"
+  | "under_review"
+  | "investigating"
+  | "resolved"
+  | "dismissed"
+  | "confirmed_fraud";
+
+const FRAUD_REVIEW_ROLES: UserRole[] = ["OPERATOR", "ACCOUNTANT", "ADMIN", "CEO"];
+
+export const fuelAnomalyMachine: StateMachine<FuelAnomalyState> = {
+  kind: "fuel_anomaly",
+  table: "fuel_anomalies",
+  auditModule: "operations",
+  auditEntityType: "fuel_anomaly",
+  states: ["open", "under_review", "investigating", "resolved", "dismissed", "confirmed_fraud"],
+  terminal: ["resolved", "dismissed", "confirmed_fraud"],
+  transitions: {
+    open: [
+      {
+        label: "Start Review",
+        to: "under_review",
+        intent: "primary",
+        roles: FRAUD_REVIEW_ROLES,
+      },
+      {
+        label: "Dismiss",
+        to: "dismissed",
+        intent: "neutral",
+        roles: FRAUD_REVIEW_ROLES,
+        requireReason: true,
+      },
+    ],
+    under_review: [
+      {
+        label: "Open Investigation",
+        to: "investigating",
+        intent: "primary",
+        description: "Escalates for deeper review — driver will be asked to explain.",
+        roles: FRAUD_REVIEW_ROLES,
+      },
+      {
+        label: "Resolve (No Issue)",
+        to: "resolved",
+        intent: "success",
+        roles: FRAUD_REVIEW_ROLES,
+        requireReason: true,
+      },
+      {
+        label: "Dismiss",
+        to: "dismissed",
+        intent: "neutral",
+        roles: FRAUD_REVIEW_ROLES,
+        requireReason: true,
+      },
+    ],
+    investigating: [
+      {
+        label: "Confirm Fraud",
+        to: "confirmed_fraud",
+        intent: "danger",
+        description: "Marks this as confirmed fraud. A finance adjustment can then be created.",
+        roles: ["ADMIN", "CEO"],
+        requireReason: true,
+      },
+      {
+        label: "Resolve (No Issue)",
+        to: "resolved",
+        intent: "success",
+        description: "Driver's explanation and evidence account for the anomaly.",
+        roles: FRAUD_REVIEW_ROLES,
+        requireReason: true,
+      },
+      {
+        label: "Dismiss",
+        to: "dismissed",
+        intent: "neutral",
+        roles: FRAUD_REVIEW_ROLES,
+        requireReason: true,
+      },
+    ],
+    resolved: [],
+    dismissed: [],
+    confirmed_fraud: [],
+  },
+};
+
 export const machines: Record<EntityKind, StateMachine<any>> = {
   trip: tripMachine,
   maintenance_request: maintenanceMachine,
   fuel_request: fuelRequestMachine,
   expense: expenseMachine,
   leave_request: leaveRequestMachine,
+  fuel_anomaly: fuelAnomalyMachine,
 };
 
 export function getMachine(kind: EntityKind): StateMachine<any> {

@@ -23,7 +23,8 @@ export type AuditEntityType =
   | 'maintenance_request'
   | 'part'
   | 'user'
-  | 'leave_request';
+  | 'leave_request'
+  | 'fuel_anomaly';
 
 export interface AuditLog {
   id?: string;

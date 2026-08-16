@@ -85,6 +85,7 @@ export const slaHours: Record<EntityKind, number> = {
   fuel_request: 4,
   expense: 24,
   leave_request: 72,
+  fuel_anomaly: 48,
 };
 
 export function isOverdue(kind: EntityKind, createdAt: string | Date): boolean {

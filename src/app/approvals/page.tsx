@@ -52,6 +52,11 @@ const KIND_META: Record<
   // tier by, unlike the others this inbox aggregates) — this entry only
   // satisfies EntityKind's exhaustiveness, this page doesn't fetch leave.
   leave_request: { label: "Leave", icon: CalendarDays, accent: "text-muted-foreground bg-muted" },
+  // Fuel anomaly investigations use plain role-gated transitions, not the
+  // amount-tiered requiresApproval routing this inbox aggregates — they
+  // have their own review surface at /fleet/fuel-anomalies. This entry
+  // only satisfies EntityKind's exhaustiveness.
+  fuel_anomaly: { label: "Fuel Anomaly", icon: AlertTriangle, accent: "text-destructive bg-destructive/10" },
 };
 
 export default function ApprovalsInboxPage() {
