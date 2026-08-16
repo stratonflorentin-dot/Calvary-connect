@@ -92,7 +92,7 @@ export function ContractPreviewModal({ contract, trigger }: ContractPreviewModal
 
                 {/* Preview Content */}
                 {html && (
-                    <div className="flex-1 overflow-auto bg-gray-100 p-4">
+                    <div className="flex-1 min-h-0 overflow-auto bg-gray-100 p-4">
                         <div className="bg-white mx-auto" style={{ width: '210mm' }}>
                             <iframe
                                 srcDoc={html}

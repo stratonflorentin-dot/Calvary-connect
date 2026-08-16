@@ -79,31 +79,38 @@ const DialogContent = React.forwardRef<
               exit="hidden"
             />
           </DialogPrimitive.Overlay>
-          <DialogPrimitive.Content ref={ref} forceMount asChild {...props}>
-            <motion.div
-              className={cn(
-                // w-[calc(100%-2rem)] (not mx-4): margins on a translate-centered
-                // fixed element shift it off-center on phones instead of insetting it.
-                "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] sm:w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-lg max-h-[90dvh] overflow-y-auto",
-                className
-              )}
-              variants={modalContent}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-            >
-              {children}
-              <DialogPrimitive.Close asChild>
-                <motion.button
-                  whileTap={{ scale: 0.92 }}
-                  className="absolute right-4 top-4 rounded-lg opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10"
-                >
-                  <X className="h-5 w-5 sm:h-4 sm:w-4" />
-                  <span className="sr-only">Close</span>
-                </motion.button>
-              </DialogPrimitive.Close>
-            </motion.div>
-          </DialogPrimitive.Content>
+          {/*
+            Centering via a flex wrapper (not the old fixed + top/left-50% +
+            translate-[-50%] trick) so the box centers on its actual final
+            height — translate-based centering silently breaks any time the
+            content's height interacts with max-height/overflow/flex in a
+            way the browser resolves before the transform is applied.
+          */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <DialogPrimitive.Content ref={ref} forceMount asChild {...props}>
+              <motion.div
+                className={cn(
+                  "pointer-events-auto relative grid w-full max-w-lg gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-lg max-h-[90vh] overflow-y-auto",
+                  className
+                )}
+                variants={modalContent}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+              >
+                {children}
+                <DialogPrimitive.Close asChild>
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    className="absolute right-4 top-4 rounded-lg opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10"
+                  >
+                    <X className="h-5 w-5 sm:h-4 sm:w-4" />
+                    <span className="sr-only">Close</span>
+                  </motion.button>
+                </DialogPrimitive.Close>
+              </motion.div>
+            </DialogPrimitive.Content>
+          </div>
         </DialogPortal>
       )}
     </AnimatePresence>

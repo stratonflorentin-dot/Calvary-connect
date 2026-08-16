@@ -101,7 +101,7 @@ export function AgentChatDrawer({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 text-sm">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 text-sm">
           {loadingHistory && (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               <Loader2 className="animate-spin size-5" />

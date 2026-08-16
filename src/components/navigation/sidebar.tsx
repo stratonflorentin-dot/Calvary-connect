@@ -398,7 +398,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
         </div>
         {!isCollapsed && <p className="text-[10px] uppercase tracking-[0.2em] text-[hsl(var(--sidebar-muted))] font-bold px-6 -mt-2 mb-4">Command Panel</p>}
 
-        <nav className="flex-1 px-2 space-y-6 overflow-y-auto no-scrollbar pb-10">
+        <nav className="flex-1 min-h-0 px-2 space-y-6 overflow-y-auto no-scrollbar pb-10">
           {NAVIGATION_CATEGORY_ORDER.map((key) => {
             const label = NAVIGATION_CATEGORY_LABELS[key];
             const items = groupedMenu[key];
