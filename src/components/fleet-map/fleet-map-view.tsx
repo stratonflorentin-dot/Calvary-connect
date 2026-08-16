@@ -613,7 +613,7 @@ export default function FleetMapView({
                 </button>
               ))}
             </div>
-            <ScrollArea className="flex-1 min-h-0 max-h-36 md:max-h-96">
+            <ScrollArea className="flex-1 min-h-0">
               <div className="flex gap-2 p-3 md:flex-col md:gap-1.5 md:p-2">
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground px-2 py-4 text-center w-full">
