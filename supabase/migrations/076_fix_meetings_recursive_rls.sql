@@ -18,9 +18,14 @@ DROP POLICY IF EXISTS "Users can view and update their own attendance" ON meetin
 -- ============================================================================
 -- STEP 2: NON-RECURSIVE HELPER FUNCTIONS
 -- ============================================================================
-
-DROP FUNCTION IF EXISTS public.is_meeting_attendee(UUID, UUID);
-DROP FUNCTION IF EXISTS public.is_meeting_creator(UUID, UUID);
+-- CREATE OR REPLACE updates the function body in place and preserves its
+-- identity, so anything that comes to depend on it later (a future policy,
+-- the way chat_typing_select ended up depending on is_chat_channel_member)
+-- keeps working if this migration is ever re-run. A preceding DROP FUNCTION
+-- would instead fail with "cannot drop function ... because other objects
+-- depend on it" the moment such a dependent exists — exactly what happened
+-- re-running 020_fix_42p17_recursive_rls.sql after 022_production_chat_and_calls.sql
+-- added chat_typing on top of it.
 
 CREATE OR REPLACE FUNCTION public.is_meeting_attendee(
     p_meeting_id UUID,

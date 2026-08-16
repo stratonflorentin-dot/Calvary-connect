@@ -98,10 +98,10 @@ DROP POLICY IF EXISTS "Chat reactions write" ON chat_reactions;
 -- STEP 3: CREATE SAFE MEMBERSHIP HELPER FUNCTION
 -- ============================================================================
 
--- Drop existing helper if exists
-DROP FUNCTION IF EXISTS public.is_chat_channel_member(UUID, UUID);
-
--- Create non-recursive helper with SECURITY DEFINER
+-- Update non-recursive helper with SECURITY DEFINER (CREATE OR REPLACE
+-- keeps the function's identity, so dependents like chat_typing_select
+-- keep working — no DROP needed, and DROP would require CASCADE here
+-- since chat_typing_select now depends on this function)
 CREATE OR REPLACE FUNCTION public.is_chat_channel_member(
     p_channel_id UUID,
     p_user_id UUID
