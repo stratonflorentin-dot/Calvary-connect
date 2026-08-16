@@ -562,24 +562,25 @@ export default function FleetMapView({
             />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setDesktopListOpen((o) => !o)}
-            className="hidden md:flex w-full items-center justify-between px-4 py-2.5 border-b border-border/80"
-          >
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Active fleet
+          <div className="hidden md:flex w-full items-center justify-between px-3 py-2 border-b border-border/80">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
+              Active fleet · {filtered.length}
             </span>
-            <span className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{filtered.length} shown</span>
+            <button
+              type="button"
+              onClick={() => setDesktopListOpen((o) => !o)}
+              title={desktopListOpen ? "Hide list" : "Show list"}
+              className="flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/70 active:scale-95 transition-all"
+            >
+              {desktopListOpen ? "Hide" : "Show"}
               <ChevronUp
                 className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform",
+                  "h-3.5 w-3.5 transition-transform",
                   !desktopListOpen && "rotate-180",
                 )}
               />
-            </span>
-          </button>
+            </button>
+          </div>
 
           <div
             className={cn(
