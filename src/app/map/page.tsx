@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
@@ -44,6 +44,18 @@ export default function LiveMapPage() {
     }
     await refresh();
   }, [canSyncGps, refresh]);
+
+  // Without this, the map's positions never change after the page loads —
+  // the existing 10s poll only re-reads whatever's already in the DB, and
+  // vehicle_locations only gets new data when something actually syncs it
+  // from Wialon/Cartrack. Pull fresh telemetry on an interval while the map
+  // is open so trucks actually appear to move and speed reflects reality,
+  // not just whenever someone happens to click Refresh.
+  useEffect(() => {
+    if (!canSyncGps) return;
+    const interval = setInterval(refreshWithGpsSync, 60000);
+    return () => clearInterval(interval);
+  }, [canSyncGps, refreshWithGpsSync]);
 
   if (roleLoading) {
     return (

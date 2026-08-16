@@ -242,6 +242,7 @@ export default function FleetMapView({
 }: FleetMapViewProps) {
   const canvasRef = useRef<FleetMapCanvasHandle>(null);
   const [search, setSearch] = useState("");
+  const [listFilter, setListFilter] = useState<"all" | "online" | "trackers" | "drivers">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [cameraMode, setCameraMode] = useState<"overview" | "follow" | "follow-3d" | "north-up" | "heading-up">("follow-3d");
@@ -260,14 +261,25 @@ export default function FleetMapView({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return locations;
-    return locations.filter(
-      (l) =>
-        l.driverName.toLowerCase().includes(q) ||
-        l.vehiclePlate.toLowerCase().includes(q) ||
-        l.id.toLowerCase().includes(q),
-    );
-  }, [locations, search]);
+    let list = locations;
+    if (q) {
+      list = list.filter(
+        (l) =>
+          l.driverName.toLowerCase().includes(q) ||
+          l.vehiclePlate.toLowerCase().includes(q) ||
+          l.id.toLowerCase().includes(q),
+      );
+    }
+    if (listFilter === "online") list = list.filter((l) => l.isOnline);
+    if (listFilter === "trackers") list = list.filter((l) => l.id.startsWith("vehicle-tracker-"));
+    if (listFilter === "drivers") list = list.filter((l) => !l.id.startsWith("vehicle-tracker-"));
+    // Online first, then alphabetically by name — makes a growing fleet
+    // actually scannable instead of showing whatever order the DB returned.
+    return [...list].sort((a, b) => {
+      if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+      return a.driverName.localeCompare(b.driverName);
+    });
+  }, [locations, search, listFilter]);
 
   const selected = useMemo(
     () => locations.find((l) => l.id === selectedId) ?? null,
@@ -559,9 +571,33 @@ export default function FleetMapView({
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Active fleet
               </span>
-              <span className="text-xs text-muted-foreground">{filtered.length} drivers</span>
+              <span className="text-xs text-muted-foreground">{filtered.length} shown</span>
             </div>
-            <ScrollArea className="max-h-[140px] md:max-h-[160px]">
+            <div className="hidden md:flex items-center gap-1 px-2 pt-2">
+              {(
+                [
+                  ["all", "All"],
+                  ["online", "Online"],
+                  ["trackers", "Trackers"],
+                  ["drivers", "Drivers"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setListFilter(key)}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                    listFilter === key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <ScrollArea className="max-h-[140px] md:max-h-[min(480px,calc(100vh-360px))]">
               <div className="flex gap-2 p-3 md:flex-col md:gap-1.5 md:p-2">
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground px-2 py-4 text-center w-full">
@@ -591,6 +627,9 @@ export default function FleetMapView({
                           )}
                         />
                       </span>
+                      {loc.id.startsWith("vehicle-tracker-") && (
+                        <Truck className="h-3.5 w-3.5 text-info shrink-0" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-foreground truncate">
                           {loc.driverName}
