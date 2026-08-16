@@ -54,7 +54,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/80", className)}
+    className={cn("fixed inset-0 z-50 bg-black/50", className)}
     {...props}
   />
 ))
@@ -72,7 +72,7 @@ const DialogContent = React.forwardRef<
         <DialogPortal forceMount>
           <DialogPrimitive.Overlay forceMount asChild>
             <motion.div
-              className="fixed inset-0 z-50 bg-black/80"
+              className="fixed inset-0 z-50 bg-black/50"
               variants={modalOverlay}
               initial="hidden"
               animate="visible"
