@@ -544,11 +544,11 @@ export default function FleetMapView({
 
         <motion.div
           layout
-          className={cn(glass, "rounded-2xl pointer-events-auto overflow-hidden")}
+          className={cn(glass, "rounded-2xl pointer-events-auto overflow-hidden flex flex-col max-h-[80vh]")}
         >
           <button
             type="button"
-            className="md:hidden w-full flex items-center justify-between px-4 py-2.5 border-b border-border/80"
+            className="md:hidden w-full flex items-center justify-between px-4 py-2.5 border-b border-border/80 shrink-0"
             onClick={() => setMobileSheetOpen((o) => !o)}
           >
             <span className="text-sm font-semibold text-foreground">
@@ -562,7 +562,7 @@ export default function FleetMapView({
             />
           </button>
 
-          <div className="hidden md:flex w-full items-center justify-between px-3 py-2 border-b border-border/80">
+          <div className="hidden md:flex w-full items-center justify-between px-3 py-2 border-b border-border/80 shrink-0">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
               Active fleet · {filtered.length}
             </span>
@@ -584,12 +584,12 @@ export default function FleetMapView({
 
           <div
             className={cn(
-              "transition-all",
-              mobileSheetOpen ? "block" : "hidden",
-              desktopListOpen ? "md:block" : "md:hidden",
+              "transition-all flex-col min-h-0",
+              mobileSheetOpen ? "flex" : "hidden",
+              desktopListOpen ? "md:flex" : "md:hidden",
             )}
           >
-            <div className="hidden md:flex items-center gap-1 px-2 pt-2">
+            <div className="hidden md:flex items-center gap-1 px-2 pt-2 shrink-0">
               {(
                 [
                   ["all", "All"],
@@ -613,7 +613,7 @@ export default function FleetMapView({
                 </button>
               ))}
             </div>
-            <ScrollArea className="max-h-[140px] md:max-h-[420px]">
+            <ScrollArea className="flex-1 min-h-0 max-h-36 md:max-h-96">
               <div className="flex gap-2 p-3 md:flex-col md:gap-1.5 md:p-2">
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground px-2 py-4 text-center w-full">
