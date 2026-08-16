@@ -271,7 +271,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
         </DialogHeader>
 
         <form onSubmit={save} className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-5">
           <fieldset className="space-y-3">
             <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route</legend>
             <div className="grid grid-cols-2 gap-3">
