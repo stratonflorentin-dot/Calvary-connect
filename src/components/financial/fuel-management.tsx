@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   Fuel, Plus, TrendingDown, TrendingUp, BarChart2,
-  Truck, RefreshCw, Download, ChevronRight, Droplets, Gauge
+  Truck, RefreshCw, Download, ChevronRight, Droplets, Gauge, MapPin, CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,9 +40,12 @@ export function FuelManagement() {
   const [logs, setLogs] = useState<FuelLog[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
+  const [stations, setStations] = useState<any[]>([]);
+  const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [filterVehicle, setFilterVehicle] = useState("all");
+  const [capturingGps, setCapturingGps] = useState(false);
 
   // Form state
   const [form, setForm] = useState({
@@ -54,14 +57,20 @@ export function FuelManagement() {
     odometer_before: "",
     odometer_after: "",
     fuel_station: "",
+    fuel_station_id: "",
+    fuel_card_id: "",
     fuel_card_used: false,
+    receipt_number: "",
     notes: "",
+    capture_latitude: null as number | null,
+    capture_longitude: null as number | null,
+    capture_gps_accuracy_m: null as number | null,
   });
   const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
-    const [{ data: logsData }, { data: vehiclesData }, { data: tripsData }] = await Promise.all([
+    const [{ data: logsData }, { data: vehiclesData }, { data: tripsData }, { data: stationsData }, { data: cardsData }] = await Promise.all([
       supabase
         .from("fuel_logs")
         .select("*, vehicles(plate_number, make, model)")
@@ -69,11 +78,68 @@ export function FuelManagement() {
         .limit(200),
       supabase.from("vehicles").select("id, plate_number, make, model").order("plate_number"),
       supabase.from("trips").select("id, trip_number, origin, destination").eq("status", "in_transit").limit(50),
+      supabase.from("fuel_stations").select("id, name").eq("is_active", true).order("name"),
+      supabase.from("fuel_cards").select("id, card_number, status").eq("status", "active").order("card_number"),
     ]);
     setLogs(logsData || []);
     setVehicles(vehiclesData || []);
     setTrips(tripsData || []);
+    setStations(stationsData || []);
+    setCards(cardsData || []);
     setLoading(false);
+  };
+
+  const addStation = async () => {
+    const name = window.prompt("New fuel station name:");
+    if (!name?.trim()) return;
+    const { data, error } = await supabase.from("fuel_stations").insert({ name: name.trim() }).select().maybeSingle();
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    setStations((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    setForm((p) => ({ ...p, fuel_station: data.name, fuel_station_id: data.id }));
+  };
+
+  const addCard = async () => {
+    const cardNumber = window.prompt("New fuel card number:");
+    if (!cardNumber?.trim()) return;
+    const { data, error } = await supabase
+      .from("fuel_cards")
+      .insert({ card_number: cardNumber.trim(), assigned_vehicle_id: form.vehicle_id || null })
+      .select()
+      .maybeSingle();
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    setCards((prev) => [...prev, data]);
+    setForm((p) => ({ ...p, fuel_card_id: data.id, fuel_card_used: true }));
+  };
+
+  const captureGps = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Not supported", description: "This device doesn't support GPS capture.", variant: "destructive" });
+      return;
+    }
+    setCapturingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((p) => ({
+          ...p,
+          capture_latitude: pos.coords.latitude,
+          capture_longitude: pos.coords.longitude,
+          capture_gps_accuracy_m: pos.coords.accuracy,
+        }));
+        setCapturingGps(false);
+        toast({ title: "GPS captured", description: `Accuracy ±${Math.round(pos.coords.accuracy)}m` });
+      },
+      (err) => {
+        setCapturingGps(false);
+        toast({ title: "GPS capture failed", description: err.message, variant: "destructive" });
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
   };
 
   useEffect(() => { loadData(); }, []);
@@ -113,7 +179,13 @@ export function FuelManagement() {
         odometer_before: odoBefore,
         odometer_after: odoAfter,
         fuel_station: form.fuel_station,
+        fuel_station_id: form.fuel_station_id || null,
+        fuel_card_id: form.fuel_card_id || null,
         fuel_card_used: form.fuel_card_used,
+        receipt_number: form.receipt_number || null,
+        capture_latitude: form.capture_latitude,
+        capture_longitude: form.capture_longitude,
+        capture_gps_accuracy_m: form.capture_gps_accuracy_m,
         notes: form.notes,
       });
 
@@ -138,7 +210,9 @@ export function FuelManagement() {
       setForm({
         vehicle_id: "", trip_id: "", fuel_date: format(new Date(), "yyyy-MM-dd"),
         litres: "", cost_per_litre: "", odometer_before: "", odometer_after: "",
-        fuel_station: "", fuel_card_used: false, notes: "",
+        fuel_station: "", fuel_station_id: "", fuel_card_id: "", fuel_card_used: false,
+        receipt_number: "", notes: "",
+        capture_latitude: null, capture_longitude: null, capture_gps_accuracy_m: null,
       });
       loadData();
     } catch (err: any) {
@@ -251,18 +325,69 @@ export function FuelManagement() {
 
                 <div className="space-y-1">
                   <Label>Fuel Station</Label>
-                  <Input value={form.fuel_station} onChange={e => setForm(p => ({ ...p, fuel_station: e.target.value }))} placeholder="e.g. Oryx Ubungo" />
+                  <div className="flex gap-2">
+                    <Select
+                      value={form.fuel_station_id || "none"}
+                      onValueChange={v => {
+                        if (v === "none") { setForm(p => ({ ...p, fuel_station_id: "", fuel_station: "" })); return; }
+                        const station = stations.find(s => s.id === v);
+                        setForm(p => ({ ...p, fuel_station_id: v, fuel_station: station?.name ?? p.fuel_station }));
+                      }}
+                    >
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select known station" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not listed / type below</SelectItem>
+                        {stations.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" onClick={addStation} title="Add new station">
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                  <Input
+                    className="mt-1"
+                    value={form.fuel_station}
+                    onChange={e => setForm(p => ({ ...p, fuel_station: e.target.value, fuel_station_id: p.fuel_station_id && stations.find(s => s.id === p.fuel_station_id)?.name === e.target.value ? p.fuel_station_id : "" }))}
+                    placeholder="Station name (e.g. Oryx Ubungo) — linking a known station above enables GPS/off-route checks"
+                  />
                 </div>
 
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.fuel_card_used}
-                    onChange={e => setForm(p => ({ ...p, fuel_card_used: e.target.checked }))}
-                    className="rounded"
-                  />
-                  Fuel Card Used
-                </label>
+                <div className="space-y-1">
+                  <Label>Fuel Card</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={form.fuel_card_id || "none"}
+                      onValueChange={v => setForm(p => ({ ...p, fuel_card_id: v === "none" ? "" : v, fuel_card_used: v !== "none" || p.fuel_card_used }))}
+                    >
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="No card / select card" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No card used</SelectItem>
+                        {cards.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.card_number}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" onClick={addCard} title="Register new card">
+                      <CreditCard className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>Receipt Number</Label>
+                    <Input value={form.receipt_number} onChange={e => setForm(p => ({ ...p, receipt_number: e.target.value }))} placeholder="e.g. FT-45892" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>GPS at fill-up</Label>
+                    <Button type="button" variant="outline" size="sm" className="w-full" onClick={captureGps} disabled={capturingGps}>
+                      <MapPin className={cn("size-3.5 mr-1.5", capturingGps && "animate-pulse")} />
+                      {form.capture_latitude != null ? "Captured ✓" : capturingGps ? "Locating…" : "Capture"}
+                    </Button>
+                  </div>
+                </div>
 
                 <div className="flex gap-2 pt-1">
                   <Button type="button" variant="outline" className="flex-1" onClick={() => setAddOpen(false)} disabled={saving}>Cancel</Button>

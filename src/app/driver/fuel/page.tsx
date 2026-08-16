@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DriverShell } from "@/components/driver/driver-shell";
 import { useDriverData } from "@/hooks/use-driver-data";
 import { useSupabase } from "@/components/supabase-provider";
@@ -18,14 +18,120 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Fuel, Plus, Upload } from "lucide-react";
+import { AlertTriangle, Fuel, Plus, Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 function fuelStatusBadge(status: string) {
   const s = (status || "pending").toLowerCase();
   if (s === "approved") return <Badge className="bg-success/10 text-success">Approved</Badge>;
   if (s === "rejected") return <Badge variant="destructive">Rejected</Badge>;
   return <Badge variant="secondary">Pending</Badge>;
+}
+
+type FlaggedAnomaly = {
+  id: string;
+  description: string;
+  severity: "low" | "medium" | "high";
+  status: string;
+  created_at: string;
+  driver_response: { explanation: string; submitted_at: string } | null;
+};
+
+function FlaggedTransactions() {
+  const { user } = useSupabase();
+  const [anomalies, setAnomalies] = useState<FlaggedAnomaly[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [explanation, setExplanation] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("fuel_anomalies")
+      .select("id, description, severity, status, created_at, driver_response")
+      .eq("driver_id", user.id)
+      .not("status", "in", "(resolved,dismissed,confirmed_fraud)")
+      .order("created_at", { ascending: false });
+    if (!error) setAnomalies(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const submitExplanation = async (anomalyId: string) => {
+    if (!explanation.trim()) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("submit_fuel_anomaly_explanation", {
+        p_anomaly_id: anomalyId,
+        p_explanation: explanation.trim(),
+        p_attachment_url: null,
+      });
+      if (error) throw error;
+      toast({ title: "Explanation sent", description: "Your fleet manager will review it." });
+      setReplyingTo(null);
+      setExplanation("");
+      load();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Could not submit explanation", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading || anomalies.length === 0) return null;
+
+  return (
+    <div className="space-y-3 mb-4">
+      <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+        <AlertTriangle className="size-3.5 text-warning" /> Flagged for review
+      </h3>
+      {anomalies.map((a) => (
+        <Card key={a.id} className="border-warning/30">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <Badge className={cn(a.severity === "high" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning", "capitalize")}>
+                {a.severity} severity
+              </Badge>
+              <span className="text-[10px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</span>
+            </div>
+            <p className="text-sm text-foreground">{a.description}</p>
+            {a.driver_response ? (
+              <div className="bg-muted/50 rounded-lg p-2.5 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground mb-0.5">Your explanation:</p>
+                {a.driver_response.explanation}
+              </div>
+            ) : replyingTo === a.id ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={explanation}
+                  onChange={(e) => setExplanation(e.target.value)}
+                  placeholder="Explain this fuel transaction…"
+                  rows={3}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => { setReplyingTo(null); setExplanation(""); }}>Cancel</Button>
+                  <Button size="sm" onClick={() => submitExplanation(a.id)} disabled={submitting || !explanation.trim()}>
+                    {submitting ? "Sending…" : "Send explanation"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setReplyingTo(a.id)}>
+                Explain this transaction
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 }
 
 export default function DriverFuelPage() {
@@ -101,6 +207,8 @@ export default function DriverFuelPage() {
         </Dialog>
       }
     >
+      <FlaggedTransactions />
+
       {loading ? (
         <p className="text-muted-foreground text-center py-8">Loading…</p>
       ) : fuelRequests.length === 0 ? (
