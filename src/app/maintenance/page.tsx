@@ -30,6 +30,9 @@ import {
     Filter,
     Sparkles,
     Loader2,
+    ListChecks,
+    Activity,
+    AlertOctagon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -133,28 +136,42 @@ export default function MaintenancePage() {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 overflow-x-auto pb-4">
-                {[
-                    { label: 'Total', value: stats.total, color: 'bg-muted/50 dark:bg-muted' },
-                    { label: 'Pending Review', value: stats.requested, color: 'bg-accent/10 dark:bg-accent/30', icon: AlertTriangle },
-                    { label: 'Scheduled', value: stats.scheduled, color: 'bg-primary/10 dark:bg-primary/30', icon: Clock },
-                    { label: 'In Progress', value: stats.in_progress, color: 'bg-warning/10 dark:bg-warning/30' },
-                    { label: 'Completed', value: `${stats.completed} (${format(stats.totalCompletedCost)})`, color: 'bg-success/10 dark:bg-success/30', icon: CheckCircle2 },
-                    { label: 'Postponed', value: stats.postponed, color: 'bg-warning/10 dark:bg-warning/30', icon: Pause },
-                    { label: 'Overdue', value: stats.overdue, color: 'bg-muted/50 dark:bg-muted' },
-                ].map((card) => (
-                    <div
-                        key={card.label}
-                        className={cn(
-                            'p-4 rounded-lg border cursor-pointer hover:shadow-md transition-all',
-                            card.color,
-                            statusFilter === card.label.toLowerCase().replace(' ', '_') ? 'border-primary' : 'border-transparent'
-                        )}
-                    >
-                        <div className="text-sm font-medium text-muted-foreground">{card.label}</div>
-                        <div className="text-2xl font-bold mt-1">{card.value}</div>
-                    </div>
-                ))}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                {([
+                    { label: 'Total', value: stats.total, icon: ListChecks, tone: 'text-muted-foreground', chip: 'bg-muted', filterValue: 'all' as const },
+                    { label: 'Pending Review', value: stats.requested, icon: AlertTriangle, tone: 'text-info', chip: 'bg-info/10', filterValue: 'requested' as const },
+                    { label: 'Scheduled', value: stats.scheduled, icon: Clock, tone: 'text-primary', chip: 'bg-primary/10', filterValue: 'scheduled' as const },
+                    { label: 'In Progress', value: stats.in_progress, icon: Activity, tone: 'text-warning', chip: 'bg-warning/10', filterValue: 'in_progress' as const },
+                    { label: 'Completed', value: `${stats.completed} (${format(stats.totalCompletedCost)})`, icon: CheckCircle2, tone: 'text-success', chip: 'bg-success/10', filterValue: 'completed' as const },
+                    { label: 'Postponed', value: stats.postponed, icon: Pause, tone: 'text-accent-foreground', chip: 'bg-accent/10', filterValue: 'postponed' as const },
+                    { label: 'Overdue', value: stats.overdue, icon: AlertOctagon, tone: 'text-destructive', chip: 'bg-destructive/10', filterValue: null },
+                ]).map((card) => {
+                    const isActive = card.filterValue !== null && statusFilter === card.filterValue;
+                    const Icon = card.icon;
+                    return (
+                        <Card
+                            key={card.label}
+                            onClick={card.filterValue !== null ? () => { setStatusFilter(card.filterValue); setCurrentPage(1); } : undefined}
+                            className={cn(
+                                'transition-all',
+                                card.filterValue !== null && 'cursor-pointer hover:shadow-md hover:border-primary/40',
+                                isActive && 'border-primary ring-1 ring-primary/30',
+                            )}
+                        >
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-medium text-muted-foreground truncate">{card.label}</p>
+                                        <p className="text-2xl font-bold mt-1 text-foreground">{card.value}</p>
+                                    </div>
+                                    <div className={cn('p-2 rounded-lg shrink-0', card.chip)}>
+                                        <Icon className={cn('h-5 w-5', card.tone)} />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
             </div>
 
             {/* Filter Bar */}
