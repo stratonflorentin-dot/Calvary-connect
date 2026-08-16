@@ -214,6 +214,7 @@ export default function JournalEntriesPage() {
     currency: "TZS",
   });
   const [lines, setLines] = useState<Line[]>([emptyLine(), emptyLine()]);
+  const [pendingFuelAnomalyId, setPendingFuelAnomalyId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -237,6 +238,22 @@ export default function JournalEntriesPage() {
 
   useEffect(() => {
     load();
+    // Deep link from a confirmed fuel fraud investigation
+    // (fleet/fuel-anomalies) — prefill a new draft, never post anything
+    // automatically.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") === "1") {
+      const anomalyId = params.get("fuel_anomaly_id");
+      setForm({
+        entry_date: new Date().toISOString().slice(0, 10),
+        reference: `JE-FRAUD-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`,
+        description: params.get("description") || "",
+        currency: "TZS",
+      });
+      setLines([emptyLine(), emptyLine()]);
+      setPendingFuelAnomalyId(anomalyId);
+      setCreating(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -368,6 +385,14 @@ export default function JournalEntriesPage() {
         new_value: { ...header, lines: linePayload },
         description: `${asDraft ? "Draft" : "Posted"} ${form.reference}: ${form.description}`,
       });
+
+      if (!asDraft && pendingFuelAnomalyId) {
+        await supabase
+          .from("fuel_anomalies")
+          .update({ finance_adjustment_journal_entry_id: header!.id })
+          .eq("id", pendingFuelAnomalyId);
+        setPendingFuelAnomalyId(null);
+      }
 
       toast({ title: asDraft ? "Draft saved" : "Journal posted", description: form.reference });
       setCreating(false);
