@@ -529,7 +529,7 @@ export default function FleetMapView({
       {/* Bottom — driver list + mobile legend */}
       <div
         className={cn(
-          "absolute bottom-4 left-4 right-4 z-[1000] gap-3 pointer-events-none md:pr-[340px]",
+          "absolute bottom-4 left-4 right-4 z-[1000] gap-3 pointer-events-none md:pr-[340px] items-start",
           selected ? "hidden md:flex flex-col" : "flex flex-col"
         )}
       >
@@ -544,7 +544,7 @@ export default function FleetMapView({
 
         <motion.div
           layout
-          className={cn(glass, "rounded-2xl pointer-events-auto overflow-hidden flex flex-col max-h-[80vh]")}
+          className={cn(glass, "rounded-2xl pointer-events-auto overflow-hidden flex flex-col max-h-[80vh] w-full md:w-[340px] md:self-start")}
         >
           <button
             type="button"
