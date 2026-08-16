@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { logCustomerActivity } from '@/lib/customer-activity';
+import { formatCurrency } from '@/components/ui/currency-badge';
 import Link from 'next/link';
 import { ContractGenerator } from './contract-generator';
 import { TransportAgreementGenerator } from './transport-agreement-generator';
@@ -44,6 +45,7 @@ interface Customer {
   city: string;
   tax_id: string;
   credit_limit: number;
+  credit_limit_currency?: 'TZS' | 'USD';
   status: string;
 }
 
@@ -226,7 +228,7 @@ function SalesModuleContent() {
   // Form states
   const [customerForm, setCustomerForm] = useState({
     company_name: '', contact_person: '', email: '', phone: '',
-    address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '',
+    address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '', credit_limit_currency: 'TZS',
     payment_terms: '30 days', status: 'prospect', notes: ''
   });
 
@@ -390,7 +392,7 @@ function SalesModuleContent() {
       setShowCustomerDialog(false);
       setCustomerForm({
         company_name: '', contact_person: '', email: '', phone: '',
-        address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '',
+        address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '', credit_limit_currency: 'TZS',
         payment_terms: '30 days', status: 'prospect', notes: ''
       });
       fetchCustomers();
@@ -1144,8 +1146,17 @@ function SalesModuleContent() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Credit Limit (TZS)</Label>
-                          <Input type="number" value={customerForm.credit_limit} onChange={e => setCustomerForm({ ...customerForm, credit_limit: e.target.value })} className="h-11" />
+                          <Label className="text-sm font-semibold text-foreground">Credit Limit</Label>
+                          <div className="flex gap-2">
+                            <Input type="number" value={customerForm.credit_limit} onChange={e => setCustomerForm({ ...customerForm, credit_limit: e.target.value })} className="h-11 flex-1" />
+                            <Select value={customerForm.credit_limit_currency} onValueChange={v => setCustomerForm({ ...customerForm, credit_limit_currency: v })}>
+                              <SelectTrigger className="h-11 w-24"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="TZS">TZS</SelectItem>
+                                <SelectItem value="USD">USD</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-foreground">Status</Label>
@@ -1202,7 +1213,7 @@ function SalesModuleContent() {
                               {customer.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>TZS {(customer.credit_limit || 0).toLocaleString()}</TableCell>
+                          <TableCell>{formatCurrency(customer.credit_limit || 0, customer.credit_limit_currency || 'TZS')}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

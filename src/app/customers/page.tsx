@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Plus, Search, Phone, Mail, MapPin, FileText, DollarSign, TrendingUp, Briefcase, Route, CalendarDays } from 'lucide-react';
+import { formatCurrency } from '@/components/ui/currency-badge';
 
 interface Customer {
   id: string;
@@ -30,6 +31,7 @@ interface Customer {
   country: string;
   tax_id: string;
   credit_limit: number;
+  credit_limit_currency?: 'TZS' | 'USD';
   current_balance?: number;
   risk_level?: 'low' | 'medium' | 'high' | null;
   payment_terms: string;
@@ -64,6 +66,7 @@ export default function CustomersPage() {
     country: 'Tanzania',
     tax_id: '',
     credit_limit: '',
+    credit_limit_currency: 'TZS',
     payment_terms: '30 days',
     notes: ''
   });
@@ -113,6 +116,7 @@ export default function CustomersPage() {
         country: 'Tanzania',
         tax_id: '',
         credit_limit: '',
+        credit_limit_currency: 'TZS',
         payment_terms: '30 days',
         notes: ''
       });
@@ -155,7 +159,12 @@ export default function CustomersPage() {
 
   const totalCustomers = customers.length;
   const activeCustomers = customers.filter(c => c.status === 'active').length;
-  const totalCreditLimit = customers.reduce((sum, c) => sum + (c.credit_limit || 0), 0);
+  const totalCreditLimitTZS = customers
+    .filter(c => (c.credit_limit_currency || 'TZS') === 'TZS')
+    .reduce((sum, c) => sum + (c.credit_limit || 0), 0);
+  const totalCreditLimitUSD = customers
+    .filter(c => c.credit_limit_currency === 'USD')
+    .reduce((sum, c) => sum + (c.credit_limit || 0), 0);
   const highRiskCustomers = customers.filter(c => c.risk_level === 'high').length;
 
   if (!role) return null;
@@ -202,7 +211,8 @@ export default function CustomersPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Credit Limit</p>
-                    <p className="text-2xl font-bold">Tsh {totalCreditLimit.toLocaleString()}</p>
+                    <p className="text-xl font-bold">{formatCurrency(totalCreditLimitTZS, 'TZS')}</p>
+                    <p className="text-sm font-semibold text-muted-foreground">{formatCurrency(totalCreditLimitUSD, 'USD')}</p>
                   </div>
                   <div className="p-2 rounded-lg bg-info/10">
                     <DollarSign className="h-6 w-6 text-info" />
@@ -289,11 +299,23 @@ export default function CustomersPage() {
                         <Input value={customerForm.tax_id} onChange={(e) => setCustomerForm({...customerForm, tax_id: e.target.value})} />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Credit Limit (Tsh)</Label>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="col-span-2 space-y-2">
+                        <Label>Credit Limit</Label>
                         <Input type="number" value={customerForm.credit_limit} onChange={(e) => setCustomerForm({...customerForm, credit_limit: e.target.value})} />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Currency</Label>
+                        <Select value={customerForm.credit_limit_currency} onValueChange={(v) => setCustomerForm({...customerForm, credit_limit_currency: v})}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="TZS">TZS</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Payment Terms</Label>
                         <Select value={customerForm.payment_terms} onValueChange={(v) => setCustomerForm({...customerForm, payment_terms: v})}>
@@ -350,7 +372,7 @@ export default function CustomersPage() {
                       </TableCell>
                       <TableCell>{getStatusBadge(customer.status)}</TableCell>
                       <TableCell>{getRiskBadge(customer.risk_level)}</TableCell>
-                      <TableCell>Tsh {customer.credit_limit?.toLocaleString()}</TableCell>
+                      <TableCell>{formatCurrency(customer.credit_limit || 0, customer.credit_limit_currency || 'TZS')}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           <Button variant="ghost" size="sm" onClick={() => window.location.href = `/customers/${customer.id}`}>View</Button>
