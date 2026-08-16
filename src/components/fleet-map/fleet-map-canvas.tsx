@@ -325,8 +325,8 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     return (
       <div className="absolute inset-0 z-[1] h-full w-full min-h-[400px]">
         {!mapReady && (
-          <div className="absolute inset-0 z-[2] flex items-center justify-center bg-slate-200/60 pointer-events-none">
-            <p className="text-sm font-medium text-slate-600">Starting map…</p>
+          <div className="absolute inset-0 z-[2] flex items-center justify-center bg-background/60 pointer-events-none">
+            <p className="text-sm font-medium text-muted-foreground">Starting map…</p>
           </div>
         )}
         <div ref={mapRef} className="h-full w-full min-h-[400px]" />
@@ -352,7 +352,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           }
           .fleet-map-root .leaflet-container {
             font-family: inherit;
-            background: #cbd5e1 !important;
+            background: hsl(var(--background)) !important;
             height: 100% !important;
             width: 100% !important;
             z-index: 1;

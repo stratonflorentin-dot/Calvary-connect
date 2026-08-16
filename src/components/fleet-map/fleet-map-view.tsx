@@ -735,7 +735,7 @@ export default function FleetMapView({
       <style jsx global>{`
         .leaflet-container {
           font-family: inherit;
-          background: #e8eef4;
+          background: hsl(var(--background));
         }
         .fleet-driver-marker,
         .fleet-static-marker {

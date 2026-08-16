@@ -26,9 +26,12 @@ const MAJOR_CITIES = [
   { name: "Dodoma",        coords: [-6.163,  35.7516] as [number, number] },
 ];
 
-// CARTO Voyager — free, no API key, vector tiles with building layer for 3D extrusions
+// CARTO Dark Matter — free, no API key, same underlying carto.streets vector
+// source as Voyager (so the "building" source-layer 3D extrusions below
+// still resolve), just styled dark to match this app's theme instead of
+// sitting as a light tan map inside a dark dashboard.
 const MAP_STYLE_URL =
-  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 // Fallback style if primary fails - OSM raster tiles via MapLibre
 const FALLBACK_STYLE_URL = "https://demotiles.maplibre.org/style.json";
@@ -348,7 +351,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               map.addLayer(
                 {
                   id: "3d-buildings",
-                  source: "openmaptiles",
+                  source: "carto",
                   "source-layer": "building",
                   type: "fill-extrusion",
                   minzoom: 14,
@@ -571,10 +574,10 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
     return (
       <div className="w-full h-full relative">
-        <div ref={containerRef} className="w-full h-full" style={{ background: "#cbd5e1" }} />
+        <div ref={containerRef} className="w-full h-full" style={{ background: "hsl(var(--background))" }} />
         {loadErr && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-200/80 backdrop-blur-sm pointer-events-none z-10">
-            <p className="text-sm font-medium text-slate-700 bg-white/90 rounded-xl px-4 py-3 shadow-md">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-none z-10">
+            <p className="text-sm font-medium text-foreground bg-card/90 rounded-xl px-4 py-3 shadow-md">
               ⚠️ {loadErr}
             </p>
           </div>
