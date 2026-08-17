@@ -14,6 +14,7 @@ export interface FleetMapDriver {
   altitudeAccuracy: number | null;
   vehicleType: string;
   vehiclePhotoUrl?: string | null;
+  engineOn?: boolean | null;
 }
 
 export interface FleetMapViewProps {

@@ -66,6 +66,7 @@ export function useFleetMapLocations() {
           altitudeAccuracy: loc.altitudeAccuracy,
           vehicleType: loc.vehicleType,
           vehiclePhotoUrl: loc.vehiclePhotoUrl,
+          engineOn: loc.engineOn,
         })),
       );
     } catch (err) {

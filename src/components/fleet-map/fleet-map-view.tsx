@@ -30,6 +30,10 @@ import {
   Gauge,
   Clock,
   Crosshair,
+  Key,
+  Square,
+  HelpCircle,
+  ArrowRight,
   // AlertCircle used via dynamic fallback to avoid runtime import errors
 } from "lucide-react";
 
@@ -243,6 +247,7 @@ export default function FleetMapView({
   const canvasRef = useRef<FleetMapCanvasHandle>(null);
   const [search, setSearch] = useState("");
   const [listFilter, setListFilter] = useState<"all" | "online" | "trackers" | "drivers">("all");
+  const [panelView, setPanelView] = useState<"units" | "summary">("units");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [desktopListOpen, setDesktopListOpen] = useState(true);
@@ -286,6 +291,24 @@ export default function FleetMapView({
     () => locations.find((l) => l.id === selectedId) ?? null,
     [locations, selectedId],
   );
+
+  // Wialon-style summary breakdown — same "moving" threshold (>2 km/h) the
+  // map markers already use, so a truck never reads as "moving" on one
+  // surface and "stationary" on another.
+  const summary = useMemo(() => {
+    let online = 0, offline = 0, moving = 0, stationary = 0, idleOn = 0, noData = 0;
+    for (const l of locations) {
+      if (l.isOnline) online++; else offline++;
+      if (l.speed > 2) {
+        moving++;
+      } else {
+        stationary++;
+        if (l.engineOn === true) idleOn++;
+      }
+      if (l.engineOn === null || l.engineOn === undefined) noData++;
+    }
+    return { total: locations.length, online, offline, moving, stationary, idleOn, noData };
+  }, [locations]);
 
   const onlineCount = locations.filter((l) => l.isOnline).length;
 
@@ -597,6 +620,58 @@ export default function FleetMapView({
               desktopListOpen ? "md:flex" : "md:hidden",
             )}
           >
+            <div className="flex items-center gap-1 px-2 pt-2 shrink-0">
+              {(
+                [
+                  ["units", "Units"],
+                  ["summary", "Summary"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPanelView(key)}
+                  className={cn(
+                    "flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors border",
+                    panelView === key
+                      ? "bg-card text-foreground border-border shadow-sm"
+                      : "text-muted-foreground border-transparent hover:bg-muted",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {panelView === "summary" ? (
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="flex flex-col p-2" onWheel={(e) => e.stopPropagation()}>
+                  {(
+                    [
+                      ["online", Wifi, "text-success", "Online", summary.online, "online" as const],
+                      ["offline", WifiOff, "text-muted-foreground", "Offline", summary.offline, "all" as const],
+                      ["moving", ArrowRight, "text-success", "Moving", summary.moving, "all" as const],
+                      ["stationary", Square, "text-warning", "Stationary", summary.stationary, "all" as const],
+                      ["idleOn", Key, "text-destructive", "Stationary, ignition on", summary.idleOn, "all" as const],
+                      ["noData", HelpCircle, "text-muted-foreground", "No ignition data", summary.noData, "all" as const],
+                    ] as const
+                  ).map(([key, Icon, color, label, count, mapsToFilter]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => { setListFilter(mapsToFilter); setPanelView("units"); }}
+                      className="flex items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-muted/70 transition-colors border-b border-border/60 last:border-b-0"
+                    >
+                      <Icon className={cn("h-5 w-5 shrink-0", color)} />
+                      <span className={cn("text-lg font-bold tabular-nums w-6 shrink-0", color)}>{count}</span>
+                      <span className="text-sm font-medium text-foreground flex-1">{label}</span>
+                      <ChevronUp className="h-4 w-4 text-muted-foreground rotate-90" />
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+            <>
             <div className="hidden md:flex items-center gap-1 px-2 pt-2 shrink-0">
               {(
                 [
@@ -657,6 +732,9 @@ export default function FleetMapView({
                       {loc.id.startsWith("vehicle-tracker-") && (
                         <Truck className="h-3.5 w-3.5 text-info shrink-0" />
                       )}
+                      {loc.engineOn === true && (
+                        <Key className="h-3.5 w-3.5 text-destructive shrink-0" aria-label="Ignition on" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-foreground truncate">
                           {loc.driverName}
@@ -665,7 +743,15 @@ export default function FleetMapView({
                           {loc.vehiclePlate} · {loc.speed} km/h
                         </p>
                       </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:block">
+                      <span
+                        className={cn(
+                          "text-[10px] font-semibold shrink-0 hidden sm:block rounded-full px-2 py-0.5",
+                          loc.status === "LIVE" && "bg-success/15 text-success",
+                          loc.status === "DELAYED" && "bg-warning/15 text-warning",
+                          loc.status === "STALE" && "bg-warning/15 text-warning",
+                          loc.status === "OFFLINE" && "bg-muted text-muted-foreground",
+                        )}
+                      >
                         {loc.lastUpdate
                           ? formatDistanceToNow(new Date(loc.lastUpdate), {
                             addSuffix: true,
@@ -677,6 +763,8 @@ export default function FleetMapView({
                 )}
               </div>
             </ScrollArea>
+            </>
+            )}
           </div>
         </motion.div>
       </div>

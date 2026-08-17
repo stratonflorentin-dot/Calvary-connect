@@ -147,6 +147,10 @@ export type MapDriverLocation = {
   vehiclePlate: string;
   hasGps: boolean;
   vehiclePhotoUrl: string | null;
+  /** Ignition sensor state (Wialon io_239) — null when the tracker has no
+   *  ignition sensor configured, or for driver-phone-based GPS which has
+   *  no such sensor at all. */
+  engineOn: boolean | null;
 };
 
 /** Persist driver GPS using service role (avoids RLS / profile-id mismatches). */
@@ -257,6 +261,7 @@ function buildLocationRows(
       vehiclePlate: "—",
       hasGps: true,
       vehiclePhotoUrl: null,
+      engineOn: null,
     });
   }
 
@@ -281,7 +286,7 @@ async function fetchVehicleTrackerLocations(
 ): Promise<MapDriverLocation[]> {
   const { data, error } = await admin
     .from("vehicle_locations")
-    .select("vehicle_id, latitude, longitude, speed, heading, updated_at, vehicles(plate_number, photo_url)")
+    .select("vehicle_id, latitude, longitude, speed, heading, updated_at, engine_on, vehicles(plate_number, photo_url)")
     .not("latitude", "is", null)
     .not("longitude", "is", null);
 
@@ -318,6 +323,7 @@ async function fetchVehicleTrackerLocations(
       vehiclePlate: plate,
       hasGps: true,
       vehiclePhotoUrl: loc.vehicles?.photo_url || null,
+      engineOn: loc.engine_on === null || loc.engine_on === undefined ? null : Boolean(loc.engine_on),
     });
   }
   return rows;
