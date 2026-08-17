@@ -24,10 +24,13 @@ import {
   ClipboardCheck,
   Flame,
   Fuel,
+  Gavel,
   Loader2,
+  LogOut,
   Receipt,
   RefreshCw,
   ShoppingCart,
+  Star,
   Wrench,
 } from "lucide-react";
 
@@ -62,6 +65,13 @@ const KIND_META: Record<
   // amount-tiered requiresApproval routing this inbox aggregates — they
   // have their own surface at /purchase-orders. Pass-through entry only.
   purchase_order: { label: "Purchase Order", icon: ShoppingCart, accent: "text-info bg-info/10" },
+  // The three HR case kinds below all use plain role-gated transitions, not
+  // amount-tiered requiresApproval routing — they have their own surfaces at
+  // /hr/disciplinary, /hr/separation and /hr/performance-reviews. Pass-
+  // through entries only, to satisfy EntityKind's exhaustiveness.
+  disciplinary_case: { label: "Disciplinary Case", icon: Gavel, accent: "text-destructive bg-destructive/10" },
+  separation_case: { label: "Separation Case", icon: LogOut, accent: "text-muted-foreground bg-muted" },
+  performance_review: { label: "Performance Review", icon: Star, accent: "text-warning bg-warning/10" },
 };
 
 export default function ApprovalsInboxPage() {

@@ -356,6 +356,14 @@ export async function fetchOperatorUserIds(): Promise<string[]> {
   return (data || []).map((u) => u.id);
 }
 
+export async function fetchHRUserIds(): Promise<string[]> {
+  const { data } = await supabase
+    .from("user_profiles")
+    .select("id, role")
+    .in("role", ["HR", "CEO", "ADMIN"]);
+  return (data || []).map((u) => u.id);
+}
+
 export async function fetchDriverUserIds(): Promise<string[]> {
   const { data } = await supabase
     .from("user_profiles")

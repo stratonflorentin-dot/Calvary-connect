@@ -162,6 +162,48 @@ async function runSideEffects(
       );
       effects.push("finance_notified");
     }
+    if (kind === "disciplinary_case" && (toState === "hearing" || toState === "resolved") && entity.employee_id) {
+      await createNotification({
+        userId: entity.employee_id,
+        title: toState === "hearing" ? "Disciplinary hearing scheduled" : "Disciplinary case resolved",
+        message:
+          toState === "hearing"
+            ? `A hearing has been scheduled for case ${entity.case_number}.`
+            : `Case ${entity.case_number} has been resolved${entity.outcome ? `: ${String(entity.outcome).replace(/_/g, " ")}` : ""}.`,
+        type: toState === "resolved" ? "info" : "warning",
+        module: "hr",
+        entityType: "disciplinary_case",
+        entityId: entity.id,
+        actionUrl: "/hr/my-hr",
+      });
+      effects.push("employee_notified");
+    }
+    if (kind === "separation_case" && toState === "completed" && entity.employee_id) {
+      // The one real integration point: separation completing actually
+      // deactivates the account, same status/status_reason columns every
+      // other active/inactive check in this app already reads.
+      await supabase
+        .from("user_profiles")
+        .update({
+          status: "inactive",
+          status_reason: `Separation (${entity.separation_type}) completed — last working day ${entity.last_working_day}`,
+        })
+        .eq("id", entity.employee_id);
+      effects.push("employee_deactivated");
+    }
+    if (kind === "performance_review" && toState === "submitted" && entity.employee_id) {
+      await createNotification({
+        userId: entity.employee_id,
+        title: "Performance review ready",
+        message: "A new performance review is ready for you to view and acknowledge.",
+        type: "info",
+        module: "hr",
+        entityType: "performance_review",
+        entityId: entity.id,
+        actionUrl: "/hr/my-hr",
+      });
+      effects.push("employee_notified");
+    }
   } catch (err: any) {
     console.warn(`[workflow] side effects failed for ${kind}:${toState}:`, err?.message ?? err);
   }
@@ -294,6 +336,44 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
   }
   if (args.kind === "leave_request" && args.toState === "rejected" && args.payload?.reason) {
     updatePayload.rejected_reason = args.payload.reason;
+  }
+  if (args.kind === "disciplinary_case") {
+    if (args.payload?.hearing_date) updatePayload.hearing_date = args.payload.hearing_date;
+    if (args.payload?.outcome) updatePayload.outcome = args.payload.outcome;
+    if (args.payload?.outcome_notes) updatePayload.outcome_notes = args.payload.outcome_notes;
+    if (args.payload?.suspension_days != null) updatePayload.suspension_days = args.payload.suspension_days;
+    if (args.toState === "resolved") {
+      updatePayload.resolved_by = args.actorId;
+      updatePayload.resolved_at = new Date().toISOString();
+    }
+  }
+
+  // Performance-review acknowledgement is not a plain status UPDATE — it has
+  // to run as the SECURITY DEFINER RPC so ownership is checked against the
+  // caller's real auth session, not the client-supplied actorId (see
+  // state-machines.ts). The RPC does its own status/ownership validation, so
+  // this bypasses the generic update below entirely.
+  if (args.kind === "performance_review" && args.toState === "acknowledged") {
+    const { data: rpcRow, error: rpcError } = await supabase.rpc("acknowledge_performance_review", {
+      p_review_id: args.entityId,
+      p_comments: args.payload?.comments ?? null,
+    });
+    if (rpcError) {
+      return { ok: false, code: "db_error", message: rpcError.message };
+    }
+
+    await AuditTrailService.log({
+      user_id: args.actorId,
+      module: machine.auditModule,
+      action: "approve",
+      entity_type: machine.auditEntityType,
+      entity_id: args.entityId,
+      old_value: { [statusColumn]: rawState },
+      new_value: { [statusColumn]: args.toState },
+      description: `${transition.label} (${rawState} → ${args.toState})`,
+    });
+
+    return { ok: true, entity: rpcRow ?? entity, sideEffects: [] };
   }
 
   const { data: updated, error: updateError } = await supabase

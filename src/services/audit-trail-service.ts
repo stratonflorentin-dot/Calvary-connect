@@ -26,7 +26,10 @@ export type AuditEntityType =
   | 'leave_request'
   | 'fuel_anomaly'
   | 'supplier'
-  | 'purchase_order';
+  | 'purchase_order'
+  | 'disciplinary_case'
+  | 'separation_case'
+  | 'performance_review';
 
 export interface AuditLog {
   id?: string;

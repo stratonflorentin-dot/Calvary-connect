@@ -23,7 +23,10 @@ export type EntityKind =
   | "expense"
   | "leave_request"
   | "fuel_anomaly"
-  | "purchase_order";
+  | "purchase_order"
+  | "disciplinary_case"
+  | "separation_case"
+  | "performance_review";
 
 export interface TransitionContext {
   actorId: string;
@@ -509,6 +512,170 @@ export const purchaseOrderMachine: StateMachine<PurchaseOrderState> = {
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Disciplinary case — Reported -> Investigating -> Hearing -> Resolved.
+// Minor cases can resolve straight from Investigating (no hearing needed);
+// Withdraw is a side-branch from either open state. Hearing/outcome fields
+// need a custom form (date picker, outcome dropdown), so the UI excludes
+// "hearing" and "resolved" from the generic TransitionButtons bar and drives
+// those two through dedicated modals, same pattern as maintenance's
+// actual_cost-gated "Complete" transition.
+// ─────────────────────────────────────────────────────────────────────────────
+export type DisciplinaryCaseState = "reported" | "investigating" | "hearing" | "resolved" | "withdrawn";
+
+const HR_CASE_ROLES: UserRole[] = ["HR", "ADMIN", "CEO"];
+
+export const disciplinaryCaseMachine: StateMachine<DisciplinaryCaseState> = {
+  kind: "disciplinary_case",
+  table: "disciplinary_cases",
+  auditModule: "hr",
+  auditEntityType: "disciplinary_case",
+  states: ["reported", "investigating", "hearing", "resolved", "withdrawn"],
+  terminal: ["resolved", "withdrawn"],
+  transitions: {
+    reported: [
+      { label: "Start Investigation", to: "investigating", intent: "primary", roles: HR_CASE_ROLES },
+      { label: "Withdraw", to: "withdrawn", intent: "neutral", roles: HR_CASE_ROLES, requireReason: true },
+    ],
+    investigating: [
+      {
+        label: "Schedule Hearing",
+        to: "hearing",
+        intent: "primary",
+        roles: HR_CASE_ROLES,
+        guard: ({ entity, payload }) => (payload?.hearing_date ?? entity.hearing_date ? true : "Set a hearing date first."),
+      },
+      {
+        label: "Resolve (No Hearing)",
+        to: "resolved",
+        intent: "success",
+        description: "For minor cases that don't need a formal hearing.",
+        roles: HR_CASE_ROLES,
+        guard: ({ entity, payload }) => (payload?.outcome ?? entity.outcome ? true : "Select an outcome first."),
+      },
+      { label: "Withdraw", to: "withdrawn", intent: "neutral", roles: HR_CASE_ROLES, requireReason: true },
+    ],
+    hearing: [
+      {
+        label: "Record Outcome",
+        to: "resolved",
+        intent: "success",
+        roles: HR_CASE_ROLES,
+        guard: ({ entity, payload }) => (payload?.outcome ?? entity.outcome ? true : "Select an outcome first."),
+      },
+    ],
+    resolved: [],
+    withdrawn: [],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Separation / exit case — Initiated -> Clearance in progress -> Pending
+// final pay -> Completed. Final pay itself is computed and raised as an
+// expense outside the workflow engine (see hr/separation page); the last
+// transition just requires that step to have happened.
+// ─────────────────────────────────────────────────────────────────────────────
+export type SeparationCaseState =
+  | "initiated"
+  | "clearance_in_progress"
+  | "pending_final_pay"
+  | "completed"
+  | "cancelled";
+
+export const separationCaseMachine: StateMachine<SeparationCaseState> = {
+  kind: "separation_case",
+  table: "separation_cases",
+  auditModule: "hr",
+  auditEntityType: "separation_case",
+  states: ["initiated", "clearance_in_progress", "pending_final_pay", "completed", "cancelled"],
+  terminal: ["completed", "cancelled"],
+  transitions: {
+    initiated: [
+      {
+        label: "Start Clearance",
+        to: "clearance_in_progress",
+        intent: "primary",
+        roles: HR_CASE_ROLES,
+        guard: ({ entity }) => (entity.last_working_day ? true : "Set a last working day first."),
+      },
+      { label: "Cancel", to: "cancelled", intent: "danger", roles: HR_CASE_ROLES, requireReason: true },
+    ],
+    clearance_in_progress: [
+      {
+        label: "Proceed to Final Pay",
+        to: "pending_final_pay",
+        intent: "primary",
+        description: "Requires IT, asset and finance clearance to be checked off.",
+        roles: HR_CASE_ROLES,
+        guard: ({ entity }) =>
+          entity.clearance_it && entity.clearance_assets && entity.clearance_finance
+            ? true
+            : "Complete the clearance checklist first.",
+      },
+      { label: "Cancel", to: "cancelled", intent: "danger", roles: HR_CASE_ROLES, requireReason: true },
+    ],
+    pending_final_pay: [
+      {
+        label: "Complete Separation",
+        to: "completed",
+        intent: "success",
+        description: "Marks the employee inactive. Final pay must already be raised as an expense.",
+        roles: HR_CASE_ROLES,
+        guard: ({ entity }) => (entity.final_pay_expense_id ? true : "Compute and raise the final pay expense first."),
+      },
+    ],
+    completed: [],
+    cancelled: [],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Performance review — Draft -> Submitted -> Acknowledged. Acknowledged is
+// reached by the reviewed employee, not an HR role, via a SECURITY DEFINER
+// RPC (see engine.ts) rather than a plain status UPDATE — RLS can't scope an
+// UPDATE to specific columns, and letting an employee UPDATE their own row
+// directly would let them also rewrite rating/kpi_scores.
+// ─────────────────────────────────────────────────────────────────────────────
+export type PerformanceReviewState = "draft" | "submitted" | "acknowledged";
+
+export const performanceReviewMachine: StateMachine<PerformanceReviewState> = {
+  kind: "performance_review",
+  table: "performance_reviews",
+  auditModule: "hr",
+  auditEntityType: "performance_review",
+  states: ["draft", "submitted", "acknowledged"],
+  terminal: ["acknowledged"],
+  transitions: {
+    draft: [
+      {
+        label: "Submit Review",
+        to: "submitted",
+        intent: "primary",
+        description: "Makes the review visible to the employee for acknowledgement.",
+        roles: HR_CASE_ROLES,
+        guard: ({ entity }) => (entity.rating ? true : "Set a rating before submitting."),
+      },
+    ],
+    submitted: [
+      {
+        label: "Revise",
+        to: "draft",
+        intent: "neutral",
+        description: "Pull back for corrections before the employee acknowledges it.",
+        roles: HR_CASE_ROLES,
+        requireReason: true,
+      },
+      {
+        label: "Acknowledge",
+        to: "acknowledged",
+        intent: "success",
+        description: "The reviewed employee confirms they've seen this review.",
+      },
+    ],
+    acknowledged: [],
+  },
+};
+
 export const machines: Record<EntityKind, StateMachine<any>> = {
   trip: tripMachine,
   maintenance_request: maintenanceMachine,
@@ -517,6 +684,9 @@ export const machines: Record<EntityKind, StateMachine<any>> = {
   leave_request: leaveRequestMachine,
   fuel_anomaly: fuelAnomalyMachine,
   purchase_order: purchaseOrderMachine,
+  disciplinary_case: disciplinaryCaseMachine,
+  separation_case: separationCaseMachine,
+  performance_review: performanceReviewMachine,
 };
 
 export function getMachine(kind: EntityKind): StateMachine<any> {

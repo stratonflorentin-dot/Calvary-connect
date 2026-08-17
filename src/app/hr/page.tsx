@@ -6,7 +6,10 @@ import {
   CalendarDays,
   Coins,
   FileSpreadsheet,
+  Gavel,
+  LogOut,
   Shield,
+  Star,
   Users,
   Wallet,
 } from "lucide-react";
@@ -18,6 +21,27 @@ const MODULES = [
     title: "Meetings",
     description: "Schedule, minutes and follow-ups for staff meetings.",
     tone: "bg-primary/10 text-primary",
+  },
+  {
+    href: "/hr/disciplinary",
+    icon: Gavel,
+    title: "Disciplinary cases",
+    description: "Report, investigate and resolve misconduct cases.",
+    tone: "bg-red-100 text-red-700",
+  },
+  {
+    href: "/hr/separation",
+    icon: LogOut,
+    title: "Separation & exit",
+    description: "Clearance checklist and final pay for departing staff.",
+    tone: "bg-slate-100 text-slate-700",
+  },
+  {
+    href: "/hr/performance-reviews",
+    icon: Star,
+    title: "Performance reviews",
+    description: "KPI reviews with a submit → acknowledge lifecycle.",
+    tone: "bg-yellow-100 text-yellow-700",
   },
   {
     href: "/hr/insurance",

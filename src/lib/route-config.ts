@@ -556,6 +556,30 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "people",
   },
   {
+    path: "/hr/disciplinary",
+    label: "Disciplinary Cases",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+    category: "people",
+  },
+  {
+    path: "/hr/separation",
+    label: "Separation & Exit",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+  },
+  {
+    path: "/hr/performance-reviews",
+    label: "Performance Reviews",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+    category: "people",
+  },
+  {
+    path: "/hr/my-hr",
+    label: "My HR Records",
+    allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR", "MECHANIC", "ACCOUNTANT", "DRIVER", "SALESMAN", "WAREHOUSE_STAFF"],
+    category: "people",
+  },
+  {
     path: "/admin/hr/driver-compliance",
     label: "Driver Compliance",
     allowedRoles: ["CEO", "ADMIN", "HR", "OPERATOR"],
