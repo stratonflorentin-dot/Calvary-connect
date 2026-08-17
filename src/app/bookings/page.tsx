@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
+import { checkCreditLimit } from '@/lib/finance/credit-check';
 import { supabase } from '@/lib/supabase';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -250,6 +251,15 @@ function BookingsContent() {
           .single();
         if (customerError) throw customerError;
         customerId = newCustomer.id;
+      }
+
+      const credit = await checkCreditLimit(customerId, formData.currency, Number(formData.amount) || 0, role);
+      if (credit.blocked) {
+        toast({ title: 'Credit limit exceeded', description: credit.message || 'This customer is over their credit limit.', variant: 'destructive' });
+        return;
+      }
+      if (credit.overridable && !window.confirm(`${credit.message}\n\nCreate this booking anyway?`)) {
+        return;
       }
 
       const bookingData = {

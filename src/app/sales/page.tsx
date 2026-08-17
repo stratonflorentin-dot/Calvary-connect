@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
+import { checkCreditLimit } from '@/lib/finance/credit-check';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import { toast } from '@/hooks/use-toast';
 import { Sidebar } from '@/components/navigation/sidebar';
@@ -485,6 +486,15 @@ function SalesModuleContent() {
   async function convertQuotationToBooking(quotationId: string) {
     const quotation = quotations.find(q => q.id === quotationId);
     if (!quotation) return;
+
+    const credit = await checkCreditLimit(quotation.customer_id, quotation.currency || 'TZS', Number(quotation.total_amount) || 0, role);
+    if (credit.blocked) {
+      toast({ title: 'Credit limit exceeded', description: credit.message || 'This customer is over their credit limit.', variant: 'destructive' });
+      return;
+    }
+    if (credit.overridable && !window.confirm(`${credit.message}\n\nConvert to a booking anyway?`)) {
+      return;
+    }
 
     const bookingNumber = `BK-${Date.now().toString().slice(-8)}`;
 

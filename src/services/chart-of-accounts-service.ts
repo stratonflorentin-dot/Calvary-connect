@@ -10,6 +10,7 @@ export interface COAAccount {
   parent_code?: string;
   current_balance: number;
   is_active: boolean;
+  is_postable?: boolean;
   description?: string;
   currency: 'TZS' | 'USD';
 }
@@ -56,9 +57,9 @@ export class ChartOfAccountsService {
     return REVENUE_CATEGORY_COA_MAP[revenueCategory] || REVENUE_CATEGORY_COA_MAP['other'];
   }
 
-  // Validate that account code is valid
+  // Validate that account code is valid and postable (not a section header)
   static validateAccountCode(code: string, accounts: COAAccount[]): boolean {
-    return accounts.some(a => a.code === code && a.is_active);
+    return accounts.some(a => a.code === code && a.is_active && a.is_postable !== false);
   }
 
   // Validate that category maps to a valid account

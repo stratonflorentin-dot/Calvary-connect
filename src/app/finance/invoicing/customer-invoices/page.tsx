@@ -20,10 +20,12 @@ import {
   summarizeByCurrency,
 } from "@/lib/finance/aging";
 import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
+import { checkCreditLimit } from "@/lib/finance/credit-check";
 import { calculateInvoiceTotals } from "@/lib/tanzania-tax-rules";
 import { TRAInvoiceDialog } from "@/components/financial/tra-invoice-dialog";
 import { AuditTrailService } from "@/services/audit-trail-service";
 import { useSupabase } from "@/components/supabase-provider";
+import { useRole } from "@/hooks/use-role";
 import {
   ArrowUpRight,
   CalendarClock,
@@ -65,6 +67,7 @@ type FilterKey = "all" | "open" | "overdue" | "paid" | "draft" | "cancelled";
 export default function CustomerInvoicesPage() {
   const { toast } = useToast();
   const { user } = useSupabase();
+  const { role } = useRole();
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -270,6 +273,17 @@ export default function CustomerInvoicesPage() {
       });
       const totalAmount = amount + vatAmount;
       const invoiceNum = form.invoice_number || `INV-${Date.now().toString().slice(-8)}`;
+
+      const credit = await checkCreditLimit(form.customer_id, form.currency, totalAmount, role);
+      if (credit.blocked) {
+        toast({ title: "Credit limit exceeded", description: credit.message || "This customer is over their credit limit.", variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
+      if (credit.overridable && !window.confirm(`${credit.message}\n\nRaise this invoice anyway?`)) {
+        setSubmitting(false);
+        return;
+      }
 
       const { data, error } = await supabase.from("invoices").insert({
         customer_id: form.customer_id || null,

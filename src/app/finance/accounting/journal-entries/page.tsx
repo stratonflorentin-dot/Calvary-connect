@@ -95,7 +95,7 @@ function AccountPicker({
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
     return accounts
-      .filter((a) => a.is_active !== false)
+      .filter((a) => a.is_active !== false && a.is_postable !== false)
       .filter((a) => !t || `${a.code} ${a.name}`.toLowerCase().includes(t))
       .slice(0, 40);
   }, [accounts, q]);

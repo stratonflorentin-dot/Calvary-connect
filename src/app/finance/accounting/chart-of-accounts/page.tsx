@@ -28,6 +28,7 @@ interface Account {
   parent_code?: string;
   current_balance: number;
   is_active: boolean;
+  is_postable?: boolean;
   description?: string;
   currency: 'TZS' | 'USD';
 }
@@ -210,6 +211,7 @@ export default function ChartOfAccountsPage() {
     type: 'debit' as 'debit' | 'credit',
     description: '',
     is_active: true,
+    is_postable: true,
     currency: 'TZS' as 'TZS' | 'USD'
   });
 
@@ -412,7 +414,8 @@ export default function ChartOfAccountsPage() {
       currency: account.currency,
       type: account.type,
       description: account.description || '',
-      is_active: account.is_active
+      is_active: account.is_active,
+      is_postable: account.is_postable !== false
     });
     setShowEditDialog(true);
   };
@@ -428,6 +431,7 @@ export default function ChartOfAccountsPage() {
         type: editAccount.type,
         description: editAccount.description,
         is_active: editAccount.is_active,
+        is_postable: editAccount.is_postable,
         updated_at: new Date().toISOString()
       }).eq('id', editAccount.id);
 
@@ -833,7 +837,14 @@ export default function ChartOfAccountsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">{account.type}</Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="capitalize">{account.type}</Badge>
+                          {account.is_postable === false && (
+                            <Badge variant="outline" className="text-muted-foreground" title="Section header — journal entries cannot post to it directly">
+                              Header
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {getParentName(account.parent_code)}
@@ -1073,14 +1084,27 @@ export default function ChartOfAccountsPage() {
           </div>
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select 
-              value={editAccount.is_active ? 'active' : 'inactive'} 
+            <Select
+              value={editAccount.is_active ? 'active' : 'inactive'}
               onValueChange={(v) => setEditAccount({...editAccount, is_active: v === 'active'})}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Posting</Label>
+            <Select
+              value={editAccount.is_postable ? 'postable' : 'header'}
+              onValueChange={(v) => setEditAccount({...editAccount, is_postable: v === 'postable'})}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="postable">Postable account</SelectItem>
+                <SelectItem value="header">Header (no direct postings)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1365,7 +1389,7 @@ export default function ChartOfAccountsPage() {
                               <SelectValue placeholder="Select..." />
                             </SelectTrigger>
                             <SelectContent className="max-h-60">
-                              {accounts.filter(a => a.is_active).map(acc => (
+                              {accounts.filter(a => a.is_active && a.is_postable !== false).map(acc => (
                                 <SelectItem key={acc.code} value={acc.code}>
                                   {acc.code} - {acc.name}
                                 </SelectItem>
