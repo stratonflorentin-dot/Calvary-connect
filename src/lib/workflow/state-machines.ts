@@ -27,7 +27,8 @@ export type EntityKind =
   | "disciplinary_case"
   | "separation_case"
   | "performance_review"
-  | "bank_statement_batch";
+  | "bank_statement_batch"
+  | "cash_request";
 
 export interface TransitionContext {
   actorId: string;
@@ -728,6 +729,74 @@ export const bankStatementBatchMachine: StateMachine<BankStatementBatchState> = 
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cash request — Draft -> Pending -> Approved -> Disbursed -> Retired, with
+// Reject as a branch from Pending. "Approve" reuses the same amount-tiered
+// requiresApproval routing as fuel_request/expense (spendTiers in
+// approvals.ts) instead of a separate "2nd approval" state — a larger
+// request just needs a more senior approver role, same mechanism already
+// trusted elsewhere. Disburse and Retire both post real ledger entries
+// (engine.ts), not a plain status flip — see the migration comment for the
+// posting rule.
+// ─────────────────────────────────────────────────────────────────────────────
+export type CashRequestState = "draft" | "pending" | "approved" | "rejected" | "disbursed" | "retired";
+
+export const cashRequestMachine: StateMachine<CashRequestState> = {
+  kind: "cash_request",
+  table: "cash_requests",
+  auditModule: "finance",
+  auditEntityType: "cash_request",
+  states: ["draft", "pending", "approved", "rejected", "disbursed", "retired"],
+  terminal: ["rejected", "retired"],
+  transitions: {
+    draft: [
+      {
+        label: "Submit",
+        to: "pending",
+        intent: "primary",
+        guard: ({ actorId, entity }) => (actorId === entity.requester_id ? true : "Only the requester can submit this."),
+      },
+    ],
+    pending: [
+      {
+        label: "Approve",
+        to: "approved",
+        intent: "success",
+        requiresApproval: true,
+      },
+      {
+        label: "Reject",
+        to: "rejected",
+        intent: "danger",
+        roles: ["OPERATOR", "ACCOUNTANT", "ADMIN", "CEO"],
+        requireReason: true,
+      },
+    ],
+    approved: [
+      {
+        label: "Disburse",
+        to: "disbursed",
+        intent: "primary",
+        description: "Pays out from the chosen account. Posts Dr Driver Float/Staff Advance / Cr Bank.",
+        roles: ["ACCOUNTANT", "ADMIN", "CEO"],
+        guard: ({ entity, payload }) => (payload?.disbursed_from_account_id ?? entity.disbursed_from_account_id ? true : "Choose the account to disburse from."),
+      },
+    ],
+    disbursed: [
+      {
+        label: "Retire",
+        to: "retired",
+        intent: "success",
+        description: "Reclassifies the advance into a real expense. Posts Dr Expense / Cr Driver Float/Staff Advance.",
+        roles: ["ACCOUNTANT", "ADMIN", "CEO"],
+        guard: ({ payload }) => (payload?.actual_spent != null ? true : "Enter the retirement breakdown first."),
+      },
+    ],
+    rejected: [],
+    retired: [],
+  },
+};
+
 export const machines: Record<EntityKind, StateMachine<any>> = {
   trip: tripMachine,
   maintenance_request: maintenanceMachine,
@@ -740,6 +809,7 @@ export const machines: Record<EntityKind, StateMachine<any>> = {
   separation_case: separationCaseMachine,
   performance_review: performanceReviewMachine,
   bank_statement_batch: bankStatementBatchMachine,
+  cash_request: cashRequestMachine,
 };
 
 export function getMachine(kind: EntityKind): StateMachine<any> {

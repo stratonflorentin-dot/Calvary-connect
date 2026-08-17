@@ -32,6 +32,7 @@ import {
   RefreshCw,
   ShoppingCart,
   Star,
+  Wallet,
   Wrench,
 } from "lucide-react";
 
@@ -77,6 +78,7 @@ const KIND_META: Record<
   // amount-tiered requiresApproval routing — their own surface is
   // /finance/banking/bank-statements. Pass-through entry only.
   bank_statement_batch: { label: "Bank Statement", icon: Landmark, accent: "text-info bg-info/10" },
+  cash_request: { label: "Cash Request", icon: Wallet, accent: "text-success bg-success/10" },
 };
 
 export default function ApprovalsInboxPage() {
@@ -89,7 +91,7 @@ export default function ApprovalsInboxPage() {
 
   const load = async () => {
     setLoading(true);
-    const [fuelRes, expenseRes, maintRes] = await Promise.all([
+    const [fuelRes, expenseRes, maintRes, cashRes] = await Promise.all([
       supabase
         .from("fuel_requests")
         .select("*")
@@ -104,6 +106,11 @@ export default function ApprovalsInboxPage() {
         .from("maintenance_records")
         .select("*")
         .eq("status", "requested")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("cash_requests")
+        .select("*")
+        .eq("status", "pending")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -137,6 +144,17 @@ export default function ApprovalsInboxPage() {
         amount: Number(r.estimated_cost) || 0,
         title: `${r.title ?? "Maintenance"} · ${r.priority ?? ""}`.trim(),
         subtitle: `Vehicle ${r.vehicle_id ?? "—"} • ${r.type ?? ""}`,
+        createdAt: r.created_at,
+        raw: r,
+      });
+    }
+    for (const r of cashRes.data ?? []) {
+      merged.push({
+        id: r.id,
+        kind: "cash_request",
+        amount: Number(r.amount) || 0,
+        title: `${r.currency ?? "TZS"} ${Number(r.amount).toLocaleString()} · Cash Request`,
+        subtitle: r.purpose ?? "",
         createdAt: r.created_at,
         raw: r,
       });
@@ -251,7 +269,7 @@ export default function ApprovalsInboxPage() {
               const meta = KIND_META[item.kind];
               const Icon = meta.icon;
               const overdue = isOverdue(item.kind, item.createdAt);
-              const level = ["fuel_request", "expense"].includes(item.kind)
+              const level = ["fuel_request", "expense", "cash_request"].includes(item.kind)
                 ? resolveApprovalLevel(item.kind, item.amount)
                 : null;
               const age = hoursSince(item.createdAt);

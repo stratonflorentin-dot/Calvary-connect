@@ -30,7 +30,8 @@ export type AuditEntityType =
   | 'disciplinary_case'
   | 'separation_case'
   | 'performance_review'
-  | 'bank_statement_batch';
+  | 'bank_statement_batch'
+  | 'cash_request';
 
 export interface AuditLog {
   id?: string;

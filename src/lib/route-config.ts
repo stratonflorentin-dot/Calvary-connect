@@ -273,6 +273,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     showInNavigation: false, // shown in finance quick-links, like chart-of-accounts
   },
   {
+    path: "/finance/cash-requests",
+    label: "Cash Requests",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "HR", "MECHANIC", "DRIVER", "SALESMAN", "WAREHOUSE_STAFF"],
+    category: "finance",
+    showInNavigation: false, // shown in finance quick-links; any employee can raise one, so allowedRoles is broad
+  },
+  {
     path: "/finance/accounting/vehicle-loans",
     label: "Vehicle Loans",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],

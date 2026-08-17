@@ -50,6 +50,7 @@ const spendTiers: ApprovalLevel[] = [
 export const approvalRules: Partial<Record<EntityKind, ApprovalLevel[]>> = {
   fuel_request: spendTiers,
   expense: spendTiers,
+  cash_request: spendTiers,
 };
 
 export function resolveApprovalLevel(
@@ -95,6 +96,7 @@ export const slaHours: Record<EntityKind, number> = {
   separation_case: 72,
   performance_review: 72,
   bank_statement_batch: 72,
+  cash_request: 24,
 };
 
 export function isOverdue(kind: EntityKind, createdAt: string | Date): boolean {

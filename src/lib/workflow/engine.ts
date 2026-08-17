@@ -29,6 +29,28 @@ import {
 } from "./state-machines";
 import { canRoleApprove, resolveApprovalLevel } from "./approvals";
 
+// "Driver Float / Staff Advance" (seeded chart of accounts) — the contra
+// account cash_request disbursement/retirement postings clear against, same
+// account the accounting spec's "Employee Advances" maps to in this
+// codebase's actual chart. Resolved by name + currency rather than a fixed
+// code: the seeded chart only has a TZS row (code 1110), and posting a
+// foreign-currency line against it fails post_journal_entry's currency
+// guard (verified directly — disbursing from the fleet's real USD account
+// hits exactly this). Looking it up live surfaces a clear, actionable error
+// instead of a confusing mid-transaction currency-mismatch exception, and
+// picks up a matching account automatically once someone adds one.
+async function resolveCashAdvanceAccountCode(currency: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("accounts")
+    .select("code")
+    .or("name.ilike.%driver float%,name.ilike.%staff advance%")
+    .eq("currency", currency)
+    .eq("is_postable", true)
+    .limit(1)
+    .maybeSingle();
+  return data?.code ?? null;
+}
+
 export interface ApplyTransitionArgs {
   kind: EntityKind;
   entityId: string;
@@ -324,6 +346,146 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
     }
   }
 
+  // Cash request disbursement/retirement — same "verify before the status
+  // flips" reasoning as the expense/paid block above. Disbursement debits a
+  // real bank account (Dr Driver Float/Staff Advance / Cr Bank); retirement
+  // reclassifies the advance into a real expense (Dr Expense / Cr Driver
+  // Float/Staff Advance) via a manually-balanced journal entry, since the
+  // cash already left the bank at disbursement — retiring it must NOT debit
+  // the bank a second time. Any unspent cash physically returned posts a
+  // third leg (Dr Bank / Cr Driver Float/Staff Advance).
+  let cashRequestDisbursementTxnId: string | undefined;
+  let cashRequestRetirementExpenseId: string | undefined;
+  let cashRequestRetirementJournalEntryId: string | undefined;
+  let cashRequestReturnTxnId: string | undefined;
+
+  if (args.kind === "cash_request" && args.toState === "disbursed") {
+    const accountId = args.payload?.disbursed_from_account_id;
+    if (!accountId) {
+      return { ok: false, code: "guard_failed", message: "Choose the account to disburse from." };
+    }
+    const currency = entity.currency || "TZS";
+    const contraCode = await resolveCashAdvanceAccountCode(currency);
+    if (!contraCode) {
+      return {
+        ok: false,
+        code: "guard_failed",
+        message: `No "Driver Float / Staff Advance" account exists in ${currency} — add one to the Chart of Accounts before disbursing a ${currency} cash request.`,
+      };
+    }
+    const { data: txn, error: txnErr } = await supabase.rpc("post_bank_transaction", {
+      p_bank_account_id: accountId,
+      p_amount: Number(entity.amount) || 0,
+      p_direction: "out",
+      p_transaction_type: "cash_advance",
+      p_currency: currency,
+      p_description: entity.purpose || `Cash advance (${entity.request_number ?? args.entityId})`,
+      p_reference_type: "cash_request",
+      p_reference_id: args.entityId,
+      p_contra_account_code: contraCode,
+      p_idempotency_key: crypto.randomUUID(),
+    });
+    if (txnErr) {
+      return { ok: false, code: "db_error", message: `Disbursement failed: ${txnErr.message}` };
+    }
+    cashRequestDisbursementTxnId = (txn as any)?.id;
+  }
+
+  if (args.kind === "cash_request" && args.toState === "retired") {
+    const actualSpent = Number(args.payload?.actual_spent) || 0;
+    const expenseAccountCode = args.payload?.expense_account_code;
+    if (actualSpent > 0 && !expenseAccountCode) {
+      return { ok: false, code: "guard_failed", message: "Choose which expense account the spend belongs to." };
+    }
+    if (actualSpent > 0) {
+      const currency = entity.currency || "TZS";
+      const contraCode = await resolveCashAdvanceAccountCode(currency);
+      if (!contraCode) {
+        return {
+          ok: false,
+          code: "guard_failed",
+          message: `No "Driver Float / Staff Advance" account exists in ${currency} — add one to the Chart of Accounts before retiring a ${currency} cash request.`,
+        };
+      }
+      const { data: je, error: jeErr } = await supabase
+        .from("journal_entries")
+        .insert({
+          entry_date: new Date().toISOString().slice(0, 10),
+          description: `Cash advance retirement — ${entity.purpose || entity.request_number || args.entityId}`,
+          is_posted: false,
+          status: "draft",
+          created_by: args.actorId,
+          reference_type: "cash_request",
+          reference_id: args.entityId,
+          currency,
+        })
+        .select("id")
+        .single();
+      if (jeErr) return { ok: false, code: "db_error", message: `Retirement posting failed: ${jeErr.message}` };
+
+      const { error: lineErr } = await supabase.from("journal_entry_lines").insert([
+        { journal_entry_id: je.id, account_code: expenseAccountCode, debit_amount: actualSpent, credit_amount: 0, description: entity.purpose, currency },
+        { journal_entry_id: je.id, account_code: contraCode, debit_amount: 0, credit_amount: actualSpent, description: entity.purpose, currency },
+      ]);
+      if (lineErr) return { ok: false, code: "db_error", message: `Retirement posting failed: ${lineErr.message}` };
+
+      const { error: postErr } = await supabase.rpc("post_journal_entry", { p_id: je.id });
+      if (postErr) return { ok: false, code: "db_error", message: `Retirement posting failed: ${postErr.message}` };
+      cashRequestRetirementJournalEntryId = je.id;
+
+      const { data: exp, error: expErr } = await supabase
+        .from("expenses")
+        .insert({
+          type: "other",
+          category: args.payload?.expense_category || null,
+          description: args.payload?.expense_description || entity.purpose || "Cash advance retirement",
+          amount: actualSpent,
+          currency,
+          status: "paid",
+          date: new Date().toISOString().slice(0, 10),
+          created_by: args.actorId,
+          cash_request_id: args.entityId,
+          journal_entry_id: je.id,
+          account_code: expenseAccountCode,
+        })
+        .select("id")
+        .single();
+      if (expErr) return { ok: false, code: "db_error", message: `Couldn't record the retirement expense: ${expErr.message}` };
+      cashRequestRetirementExpenseId = exp.id;
+    }
+
+    const returnedAmount = Number(args.payload?.returned_amount) || 0;
+    if (returnedAmount > 0) {
+      const returnAccountId = args.payload?.return_bank_account_id;
+      if (!returnAccountId) {
+        return { ok: false, code: "guard_failed", message: "Choose which account the unspent cash was returned to." };
+      }
+      const returnCurrency = entity.currency || "TZS";
+      const returnContraCode = await resolveCashAdvanceAccountCode(returnCurrency);
+      if (!returnContraCode) {
+        return {
+          ok: false,
+          code: "guard_failed",
+          message: `No "Driver Float / Staff Advance" account exists in ${returnCurrency} — add one to the Chart of Accounts before recording a returned ${returnCurrency} advance.`,
+        };
+      }
+      const { data: returnTxn, error: returnErr } = await supabase.rpc("post_bank_transaction", {
+        p_bank_account_id: returnAccountId,
+        p_amount: returnedAmount,
+        p_direction: "in",
+        p_transaction_type: "cash_advance_return",
+        p_currency: returnCurrency,
+        p_description: `Unspent cash advance returned (${entity.request_number ?? args.entityId})`,
+        p_reference_type: "cash_request",
+        p_reference_id: args.entityId,
+        p_contra_account_code: returnContraCode,
+        p_idempotency_key: crypto.randomUUID(),
+      });
+      if (returnErr) return { ok: false, code: "db_error", message: `Return posting failed: ${returnErr.message}` };
+      cashRequestReturnTxnId = (returnTxn as any)?.id;
+    }
+  }
+
   const updatePayload: Record<string, any> = {
     [statusColumn]: args.toState,
     updated_at: new Date().toISOString(),
@@ -336,6 +498,32 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
   }
   if (args.kind === "leave_request" && args.toState === "rejected" && args.payload?.reason) {
     updatePayload.rejected_reason = args.payload.reason;
+  }
+  if (args.kind === "cash_request") {
+    if (args.toState === "approved") {
+      updatePayload.approved_by = args.actorId;
+      updatePayload.approved_at = new Date().toISOString();
+    }
+    if (args.toState === "rejected" && args.payload?.reason) {
+      updatePayload.rejected_reason = args.payload.reason;
+    }
+    if (args.toState === "disbursed") {
+      updatePayload.disbursed_by = args.actorId;
+      updatePayload.disbursed_at = new Date().toISOString();
+      updatePayload.disbursed_from_account_id = args.payload?.disbursed_from_account_id;
+      if (cashRequestDisbursementTxnId) updatePayload.disbursement_bank_transaction_id = cashRequestDisbursementTxnId;
+    }
+    if (args.toState === "retired") {
+      updatePayload.retired_by = args.actorId;
+      updatePayload.retired_at = new Date().toISOString();
+      updatePayload.actual_spent = args.payload?.actual_spent ?? 0;
+      updatePayload.returned_amount = args.payload?.returned_amount ?? 0;
+      if (args.payload?.notes) updatePayload.retirement_notes = args.payload.notes;
+      if (args.payload?.return_bank_account_id) updatePayload.return_bank_account_id = args.payload.return_bank_account_id;
+      if (cashRequestRetirementExpenseId) updatePayload.retirement_expense_id = cashRequestRetirementExpenseId;
+      if (cashRequestRetirementJournalEntryId) updatePayload.retirement_journal_entry_id = cashRequestRetirementJournalEntryId;
+      if (cashRequestReturnTxnId) updatePayload.return_bank_transaction_id = cashRequestReturnTxnId;
+    }
   }
   if (args.kind === "disciplinary_case") {
     if (args.payload?.hearing_date) updatePayload.hearing_date = args.payload.hearing_date;
