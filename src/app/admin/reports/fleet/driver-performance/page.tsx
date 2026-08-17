@@ -97,6 +97,44 @@ export default function DriverPerformancePage() {
 
   const [summary, setSummary] = useState<SummaryStats | null>(null);
   const [drivers, setDrivers] = useState<DriverStat[]>([]);
+  // Persisted driver_scorecards, keyed by driver_id — a separate,
+  // deliberately-not-date-ranged snapshot (completion/on-time/compliance
+  // rates over each driver's full history), recomputed on demand rather
+  // than on every page load.
+  const [scorecards, setScorecards] = useState<Record<string, { overall_score: number | null; completion_rate: number | null; on_time_rate: number | null; compliance_rate: number | null; computed_at: string }>>({});
+  const [recomputing, setRecomputing] = useState(false);
+
+  const fetchScorecards = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const res = await fetch('/api/reports/driver-scorecards', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    const result = await res.json();
+    if (result.success) {
+      const byDriver: typeof scorecards = {};
+      for (const row of result.data) byDriver[row.driver_id] = row;
+      setScorecards(byDriver);
+    }
+  };
+
+  const recomputeScores = async () => {
+    setRecomputing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch('/api/reports/driver-scorecards', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const result = await res.json();
+      if (result.success) await fetchScorecards();
+    } finally {
+      setRecomputing(false);
+    }
+  };
+
+  useEffect(() => { fetchScorecards(); }, []);
 
   // DOM attribute hydration check for hybrid Blade environments
   useEffect(() => {
@@ -232,13 +270,22 @@ export default function DriverPerformancePage() {
                 </div>
               </div>
               <div className="flex gap-2 w-full md:w-auto">
-                <button 
+                <button
                   onClick={handleApplyFilters}
                   disabled={loading}
                   className="w-full md:w-auto px-5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loading && <RefreshCw className="size-4 animate-spin" />}
                   Apply Filters
+                </button>
+                <button
+                  onClick={recomputeScores}
+                  disabled={recomputing}
+                  title="Recalculate the persisted Score column from each driver's full trip/compliance history"
+                  className="w-full md:w-auto px-5 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <RefreshCw className={`size-4 ${recomputing ? 'animate-spin' : ''}`} />
+                  Recalculate Scores
                 </button>
               </div>
             </div>
@@ -339,6 +386,7 @@ export default function DriverPerformancePage() {
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Fuel Dispatched</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Revenue Generated</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">On-Time</th>
+                          <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center" title="Weighted: completion 40% + on-time 30% + compliance 30%. Blank when nothing about the driver is measurable yet — never a default floor.">Score</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Incidents</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">Rating</th>
                           <th className="px-6 py-3.5 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center">AI Summary</th>
@@ -396,6 +444,25 @@ export default function DriverPerformancePage() {
                                     {driver.onTimeDeliveryRate}% ({driver.onTimeSampleSize}/{driver.completedTripsCount})
                                   </span>
                                 )}
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                {(() => {
+                                  const card = scorecards[driver.id];
+                                  if (!card || card.overall_score === null) {
+                                    return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-muted text-muted-foreground">Not yet scored</span>;
+                                  }
+                                  const s = card.overall_score;
+                                  return (
+                                    <span
+                                      title={`Completion ${card.completion_rate ?? '—'}% · On-time ${card.on_time_rate ?? '—'}% · Compliance ${card.compliance_rate ?? '—'}%`}
+                                      className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                        s >= 80 ? 'bg-emerald-100 text-emerald-800' : s >= 60 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
+                                      }`}
+                                    >
+                                      {s}/100
+                                    </span>
+                                  );
+                                })()}
                               </td>
                               <td className="px-6 py-4 text-center text-xs text-muted-foreground">
                                 {driver.incidentsTracked ? driver.incidentsCount : "Not tracked"}
