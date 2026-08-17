@@ -44,6 +44,7 @@ interface Customer {
   address: string;
   city: string;
   tax_id: string;
+  vrn: string;
   credit_limit: number;
   credit_limit_currency?: 'TZS' | 'USD';
   status: string;
@@ -228,7 +229,7 @@ function SalesModuleContent() {
   // Form states
   const [customerForm, setCustomerForm] = useState({
     company_name: '', contact_person: '', email: '', phone: '',
-    address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '', credit_limit_currency: 'TZS',
+    address: '', city: 'Dar es Salaam', tax_id: '', vrn: '', credit_limit: '', credit_limit_currency: 'TZS',
     payment_terms: '30 days', status: 'prospect', notes: ''
   });
 
@@ -392,7 +393,7 @@ function SalesModuleContent() {
       setShowCustomerDialog(false);
       setCustomerForm({
         company_name: '', contact_person: '', email: '', phone: '',
-        address: '', city: 'Dar es Salaam', tax_id: '', credit_limit: '', credit_limit_currency: 'TZS',
+        address: '', city: 'Dar es Salaam', tax_id: '', vrn: '', credit_limit: '', credit_limit_currency: 'TZS',
         payment_terms: '30 days', status: 'prospect', notes: ''
       });
       fetchCustomers();
@@ -1168,6 +1169,14 @@ function SalesModuleContent() {
                               <SelectItem value="inactive">Inactive</SelectItem>
                             </SelectContent>
                           </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-foreground">Tax ID (TIN)</Label>
+                          <Input value={customerForm.tax_id} onChange={e => setCustomerForm({ ...customerForm, tax_id: e.target.value })} className="h-11" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-foreground">VRN</Label>
+                          <Input value={customerForm.vrn} onChange={e => setCustomerForm({ ...customerForm, vrn: e.target.value })} className="h-11" />
                         </div>
                         <div className="col-span-2 space-y-2">
                           <Label className="text-sm font-semibold text-foreground">Address</Label>

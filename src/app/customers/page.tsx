@@ -30,6 +30,7 @@ interface Customer {
   city: string;
   country: string;
   tax_id: string;
+  vrn: string;
   credit_limit: number;
   credit_limit_currency?: 'TZS' | 'USD';
   current_balance?: number;
@@ -65,6 +66,7 @@ export default function CustomersPage() {
     city: '',
     country: 'Tanzania',
     tax_id: '',
+    vrn: '',
     credit_limit: '',
     credit_limit_currency: 'TZS',
     payment_terms: '30 days',
@@ -115,6 +117,7 @@ export default function CustomersPage() {
         city: '',
         country: 'Tanzania',
         tax_id: '',
+        vrn: '',
         credit_limit: '',
         credit_limit_currency: 'TZS',
         payment_terms: '30 days',
@@ -289,7 +292,7 @@ export default function CustomersPage() {
                       <Label>Address</Label>
                       <Textarea value={customerForm.address} onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>City</Label>
                         <Input value={customerForm.city} onChange={(e) => setCustomerForm({...customerForm, city: e.target.value})} />
@@ -297,6 +300,10 @@ export default function CustomersPage() {
                       <div className="space-y-2">
                         <Label>Tax ID (TIN)</Label>
                         <Input value={customerForm.tax_id} onChange={(e) => setCustomerForm({...customerForm, tax_id: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>VRN</Label>
+                        <Input value={customerForm.vrn} onChange={(e) => setCustomerForm({...customerForm, vrn: e.target.value})} />
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
