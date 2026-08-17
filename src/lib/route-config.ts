@@ -199,6 +199,18 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "inventory",
   },
   {
+    path: "/suppliers",
+    label: "Suppliers",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT"],
+    category: "inventory",
+  },
+  {
+    path: "/purchase-orders",
+    label: "Purchase Orders",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "MECHANIC"],
+    category: "inventory",
+  },
+  {
     path: "/fuel-approvals",
     label: "Fuel Approvals",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],

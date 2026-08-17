@@ -22,7 +22,8 @@ export type EntityKind =
   | "fuel_request"
   | "expense"
   | "leave_request"
-  | "fuel_anomaly";
+  | "fuel_anomaly"
+  | "purchase_order";
 
 export interface TransitionContext {
   actorId: string;
@@ -446,6 +447,68 @@ export const fuelAnomalyMachine: StateMachine<FuelAnomalyState> = {
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Purchase Order — draft -> sent_to_supplier -> partially_received ->
+// fully_received; cancelled from any pre-received state. Matches LogiPRO's
+// documented PO state machine. partially_received and fully_received are
+// NOT reachable through these transitions — receive_purchase_order_items()
+// (081_purchase_orders.sql) sets those atomically alongside the item
+// quantity/stock-movement updates, the same way expense's "paid" transition
+// is special-cased in engine.ts rather than being a plain role-gated move.
+// ─────────────────────────────────────────────────────────────────────────────
+export type PurchaseOrderState =
+  | "draft"
+  | "sent_to_supplier"
+  | "partially_received"
+  | "fully_received"
+  | "cancelled";
+
+export const purchaseOrderMachine: StateMachine<PurchaseOrderState> = {
+  kind: "purchase_order",
+  table: "purchase_orders",
+  auditModule: "procurement",
+  auditEntityType: "purchase_order",
+  states: ["draft", "sent_to_supplier", "partially_received", "fully_received", "cancelled"],
+  terminal: ["fully_received", "cancelled"],
+  transitions: {
+    draft: [
+      {
+        label: "Send to Supplier",
+        to: "sent_to_supplier",
+        intent: "primary",
+        roles: ["CEO", "ADMIN", "OPERATOR"],
+      },
+      {
+        label: "Cancel",
+        to: "cancelled",
+        intent: "danger",
+        roles: ["CEO", "ADMIN", "OPERATOR"],
+        requireReason: true,
+      },
+    ],
+    sent_to_supplier: [
+      {
+        label: "Cancel",
+        to: "cancelled",
+        intent: "danger",
+        roles: ["CEO", "ADMIN", "OPERATOR"],
+        requireReason: true,
+      },
+    ],
+    partially_received: [
+      {
+        label: "Cancel",
+        to: "cancelled",
+        intent: "danger",
+        roles: ["CEO", "ADMIN"],
+        requireReason: true,
+      },
+    ],
+    fully_received: [],
+    cancelled: [],
+  },
+};
+
 export const machines: Record<EntityKind, StateMachine<any>> = {
   trip: tripMachine,
   maintenance_request: maintenanceMachine,
@@ -453,6 +516,7 @@ export const machines: Record<EntityKind, StateMachine<any>> = {
   expense: expenseMachine,
   leave_request: leaveRequestMachine,
   fuel_anomaly: fuelAnomalyMachine,
+  purchase_order: purchaseOrderMachine,
 };
 
 export function getMachine(kind: EntityKind): StateMachine<any> {

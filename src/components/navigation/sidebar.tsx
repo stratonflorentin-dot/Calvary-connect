@@ -37,6 +37,7 @@ import {
   MessageSquare,
   Mail,
   Bot,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
@@ -79,6 +80,8 @@ const routeIconMap: Record<string, any> = {
   "/maintenance": Wrench,
   "/inventory": Package,
   "/parts-requests": Wrench,
+  "/suppliers": Truck,
+  "/purchase-orders": ShoppingCart,
   "/fuel-approvals": Truck,
   "/finance": DollarSign,
   "/expenses": Receipt,

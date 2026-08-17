@@ -86,6 +86,10 @@ export const slaHours: Record<EntityKind, number> = {
   expense: 24,
   leave_request: 72,
   fuel_anomaly: 48,
+  // Purchase orders have no requiresApproval transitions (role-gated only),
+  // so this isn't consulted by the approvals-inbox flow — present only to
+  // satisfy the Record<EntityKind, number> shape.
+  purchase_order: 48,
 };
 
 export function isOverdue(kind: EntityKind, createdAt: string | Date): boolean {

@@ -27,6 +27,7 @@ import {
   Loader2,
   Receipt,
   RefreshCw,
+  ShoppingCart,
   Wrench,
 } from "lucide-react";
 
@@ -57,6 +58,10 @@ const KIND_META: Record<
   // have their own review surface at /fleet/fuel-anomalies. This entry
   // only satisfies EntityKind's exhaustiveness.
   fuel_anomaly: { label: "Fuel Anomaly", icon: AlertTriangle, accent: "text-destructive bg-destructive/10" },
+  // Purchase orders use plain role-gated transitions (send/cancel), not the
+  // amount-tiered requiresApproval routing this inbox aggregates — they
+  // have their own surface at /purchase-orders. Pass-through entry only.
+  purchase_order: { label: "Purchase Order", icon: ShoppingCart, accent: "text-info bg-info/10" },
 };
 
 export default function ApprovalsInboxPage() {

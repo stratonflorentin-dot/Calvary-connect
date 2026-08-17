@@ -1,30 +1,32 @@
 import { supabase } from '@/lib/supabase';
 
-export type AuditModule = 'sales' | 'operations' | 'finance' | 'management' | 'hr' | 'warehouse' | 'maintenance';
+export type AuditModule = 'sales' | 'operations' | 'finance' | 'management' | 'hr' | 'warehouse' | 'maintenance' | 'procurement';
 export type AuditAction = 'create' | 'update' | 'delete' | 'view' | 'approve' | 'reject' | 'convert' | 'verify' | 'reconcile';
-export type AuditEntityType = 
-  | 'lead' 
-  | 'customer' 
-  | 'quotation' 
-  | 'contract' 
-  | 'booking' 
-  | 'trip' 
-  | 'invoice' 
-  | 'payment' 
-  | 'journal_entry' 
-  | 'expense' 
-  | 'revenue' 
+export type AuditEntityType =
+  | 'lead'
+  | 'customer'
+  | 'quotation'
+  | 'contract'
+  | 'booking'
+  | 'trip'
+  | 'invoice'
+  | 'payment'
+  | 'journal_entry'
+  | 'expense'
+  | 'revenue'
   | 'pod'
   | 'vehicle'
   | 'vehicle_loan'
   | 'driver'
-  | 'employee' 
-  | 'allowance' 
+  | 'employee'
+  | 'allowance'
   | 'maintenance_request'
   | 'part'
   | 'user'
   | 'leave_request'
-  | 'fuel_anomaly';
+  | 'fuel_anomaly'
+  | 'supplier'
+  | 'purchase_order';
 
 export interface AuditLog {
   id?: string;
