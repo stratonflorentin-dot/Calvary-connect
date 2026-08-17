@@ -86,24 +86,15 @@ export async function savePayrollAction(payrollData: {
 
     if (errD) throw errD;
 
-    // 2. Try to insert into allowances table for backup/compatibility
-    try {
-      await supabaseAdmin
-        .from("allowances")
-        .insert({
-          id: driverAllowanceRecord.id, // Keep IDs identical
-          employee_id: employeeIdText || payrollData.employeeId,
-          worker_name: payrollData.employeeName,
-          amount: payrollData.netSalary,
-          type: "payroll",
-          status: "pending",
-          reason: reasonBreakdown,
-          created_at: now,
-          updated_at: now
-        });
-    } catch (err) {
-      console.log("Allowances table insertion bypassed (probably minor schema difference)");
-    }
+    // Note: this used to also attempt a "backup" insert into a legacy
+    // `allowances` table, but that table's own CHECK constraint only
+    // allows type IN ('DAILY_ALLOWANCE','TRIP_ALLOWANCE','MEAL_ALLOWANCE',
+    // 'ACCOMMODATION') — "payroll" was never a legal value there, so that
+    // insert failed on every single call (silently, via a swallowed
+    // catch). driver_allowances is the real, working table — used
+    // directly by getPayrollHistoryAction and everywhere else in this
+    // file — so the dead write was removed rather than "fixed" toward a
+    // table nothing in this codebase actually reads for payroll data.
 
     return { success: true, record: driverAllowanceRecord };
   } catch (error: any) {
@@ -195,17 +186,7 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
 
     if (updateErrD) throw updateErrD;
 
-    // 3. Try to update allowances table status
-    try {
-      await supabaseAdmin
-        .from("allowances")
-        .update({ status: "approved", updated_at: now })
-        .eq("id", id);
-    } catch (err) {
-      console.log("Allowances table update bypassed");
-    }
-
-    // 4. Create financial expense for payroll (Staff Costs)
+    // 3. Create financial expense for payroll (Staff Costs)
     const workerName = record.driver_name || "Employee";
     const desc = `Payroll (${period}): ${workerName} - Salary: TZS ${baseSalary.toLocaleString()}, Allowances: TZS ${allowances.toLocaleString()}, Deductions: TZS ${deductions.toLocaleString()}`;
 
@@ -342,15 +323,6 @@ export async function markPayrollPaidAction(id: string) {
       .eq("id", id);
     if (updateErrD) throw updateErrD;
 
-    try {
-      await supabaseAdmin
-        .from("allowances")
-        .update({ status: "paid", updated_at: now })
-        .eq("id", id);
-    } catch (err) {
-      console.log("Allowances table update bypassed");
-    }
-
     // Locate the payable invoice approvePayrollRecordAction created for this
     // record (deterministic number, so no stored foreign key needed).
     const invoiceNumber = `PAY-${id.substring(0, 8).toUpperCase()}`;
@@ -414,15 +386,6 @@ export async function rejectPayrollRecordAction(id: string) {
 
     if (errD) throw errD;
 
-    try {
-      await supabaseAdmin
-        .from("allowances")
-        .update({ status: "rejected", updated_at: now })
-        .eq("id", id);
-    } catch (err) {
-      console.log("Allowances table update bypassed");
-    }
-
     return { success: true };
   } catch (error: any) {
     console.error("Failed to reject payroll record:", error);
@@ -441,15 +404,6 @@ export async function deletePayrollRecordAction(id: string) {
       .eq("id", id);
 
     if (errD) throw errD;
-
-    try {
-      await supabaseAdmin
-        .from("allowances")
-        .delete()
-        .eq("id", id);
-    } catch (err) {
-      console.log("Allowances table deletion bypassed");
-    }
 
     return { success: true };
   } catch (error: any) {

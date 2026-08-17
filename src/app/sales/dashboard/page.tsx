@@ -54,7 +54,7 @@ export default function SalesDashboard() {
       ] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(10),
         supabase.from("customers").select("*"),
-        supabase.from("route_quotations").select("*").eq("status", "draft").limit(5),
+        supabase.from("route_quotations").select("*").eq("approval_status", "draft").limit(5),
         supabase.from("transport_contracts").select("*"),
         supabase.from("bookings").select("*"),
       ]);
@@ -74,10 +74,10 @@ export default function SalesDashboard() {
         convertedLeads: leads.filter((l: any) => l.status === "converted").length,
         totalCustomers: customers.length,
         totalQuotations: allQuotationRows.length,
-        draftQuotations: allQuotationRows.filter((q: any) => q.status === "draft").length,
-        approvedQuotations: allQuotationRows.filter((q: any) => q.status === "approved").length,
-        sentQuotations: allQuotationRows.filter((q: any) => q.status === "sent").length,
-        convertedQuotations: allQuotationRows.filter((q: any) => q.status === "converted").length,
+        draftQuotations: allQuotationRows.filter((q: any) => q.approval_status === "draft").length,
+        approvedQuotations: allQuotationRows.filter((q: any) => q.approval_status === "approved").length,
+        sentQuotations: allQuotationRows.filter((q: any) => q.approval_status === "sent").length,
+        convertedQuotations: allQuotationRows.filter((q: any) => q.approval_status === "converted").length,
         totalContracts: contractRows.length,
         totalBookings: bookingRows.length,
         pendingBookings: bookingRows.filter((b: any) => b.status === "pending").length,

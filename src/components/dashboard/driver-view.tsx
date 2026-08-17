@@ -48,7 +48,11 @@ export function DriverView() {
       supabase.from("trips").select("*").eq("driverId", user.id).order("created_at", { ascending: false }).limit(20),
       supabase.from("trips").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(20),
       supabase.from("fuel_requests").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(10),
-      supabase.from("allowances").select("*").eq("employee_id", user.id).order("created_at", { ascending: false }).limit(10),
+      // driver_allowances (not the legacy allowances table — nothing ever
+      // successfully writes to that one, see src/app/allowances/actions.ts)
+      // keys the driver by driver_id (uuid), not employee_id (a separate
+      // department-prefixed text code).
+      supabase.from("driver_allowances").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(10),
     ]);
     const raw = [...(byCamel.data ?? []), ...(byUnderscore.data ?? [])];
     const seen = new Set<string>();

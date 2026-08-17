@@ -25,7 +25,11 @@ export function HRView() {
   const load = async () => {
     const [u, a] = await Promise.all([
       supabase.from("user_profiles").select("*"),
-      supabase.from("allowances").select("*").order("created_at", { ascending: false }).limit(30),
+      // driver_allowances, not the legacy allowances table — see
+      // src/app/allowances/actions.ts: nothing has ever successfully
+      // written to `allowances` (its own CHECK constraint rejects every
+      // value this app actually uses), so it reads back empty.
+      supabase.from("driver_allowances").select("*").order("created_at", { ascending: false }).limit(30),
     ]);
     setStaff(u.data ?? []);
     setAllowances(a.data ?? []);

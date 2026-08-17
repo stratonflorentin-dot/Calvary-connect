@@ -44,10 +44,14 @@ const BOOKING_STATUS_STYLES: Record<string, string> = {
   cancelled: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
+// Keys must match route_quotations.approval_status exactly (draft/sent/
+// approved/converted — see src/app/sales/page.tsx, the only writer).
+// "accepted" here previously never matched a real row's value, so every
+// approved quotation silently fell through to the default muted style.
 const QUOTATION_STATUS_STYLES: Record<string, string> = {
   draft: "bg-muted text-muted-foreground border-border",
   sent: "bg-info/10 text-info border-info/20",
-  accepted: "bg-success/10 text-success border-success/20",
+  approved: "bg-success/10 text-success border-success/20",
   rejected: "bg-destructive/10 text-destructive border-destructive/20",
   expired: "bg-warning/10 text-warning border-warning/20",
   converted: "bg-primary/10 text-primary border-primary/20",
@@ -127,7 +131,7 @@ export default function CustomerDetailPage() {
 
   const stats = useMemo(() => {
     const totalBookingRevenue = bookings.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-    const convertedQuotations = quotations.filter((q) => q.status === "converted").length;
+    const convertedQuotations = quotations.filter((q) => q.approval_status === "converted").length;
     const conversionRate = quotations.length > 0 ? Math.round((convertedQuotations / quotations.length) * 100) : null;
 
     const paidInvoices = invoices.filter((i) => i.status === "paid");
@@ -360,8 +364,8 @@ export default function CustomerDetailPage() {
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="text-sm font-medium">Tsh {(Number(q.total_amount) || 0).toLocaleString()}</p>
-                                <Badge className={`${QUOTATION_STATUS_STYLES[q.status] || "bg-muted text-muted-foreground border-border"} capitalize`}>
-                                  {q.status}
+                                <Badge className={`${QUOTATION_STATUS_STYLES[q.approval_status] || "bg-muted text-muted-foreground border-border"} capitalize`}>
+                                  {q.approval_status}
                                 </Badge>
                               </div>
                             </li>
