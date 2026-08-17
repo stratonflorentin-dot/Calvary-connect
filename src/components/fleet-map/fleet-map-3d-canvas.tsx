@@ -26,16 +26,20 @@ const MAJOR_CITIES = [
   { name: "Dodoma",        coords: [-6.163,  35.7516] as [number, number] },
 ];
 
-// MapTiler's "Dataviz Dark" vector style — richer basemap detail (buildings,
-// terrain-aware roads, POI labelling) than the free CARTO tiles, used when a
-// key is configured. CARTO Dark Matter (free, no key, same dark palette)
-// stays as the fallback so the map keeps working even if the MapTiler key is
-// ever missing, rate-limited, or the request fails.
+// MapTiler's "Streets Dark" vector style — full-detail roads (hierarchy,
+// casings, labels), buildings, water, parks and POIs (90 style layers vs. 42
+// on "Dataviz Dark", which is an intentionally minimal analytics style, not
+// a realistic basemap), used when a key is configured. It also ships its
+// own "Building 3D" fill-extrusion layer, so the hand-rolled one below is
+// only needed for the CARTO fallback, which has no 3D buildings of its own.
+// CARTO Dark Matter (free, no key, same dark palette) stays as the fallback
+// so the map keeps working even if the MapTiler key is ever missing,
+// rate-limited, or the request fails.
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
 const CARTO_DARK_STYLE_URL =
   "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const MAP_STYLE_URL = MAPTILER_KEY
-  ? `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_KEY}`
+  ? `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`
   : CARTO_DARK_STYLE_URL;
 
 // Fallback style if primary fails. When MapTiler is primary, CARTO is a much
@@ -45,11 +49,12 @@ const FALLBACK_STYLE_URL = MAPTILER_KEY
   ? CARTO_DARK_STYLE_URL
   : "https://demotiles.maplibre.org/style.json";
 
-/** The vector source id carrying OpenMapTiles-schema `building` features
- *  differs between providers — MapLibre needs the right one to resolve the
- *  3D building extrusion layer added below. */
-function buildingSourceIdFor(styleUrl: string): string {
-  return styleUrl.includes("api.maptiler.com") ? "maptiler_planet" : "carto";
+/** True for styles that ship their own 3D building layer (MapTiler's
+ *  "Building 3D") — adding the hand-rolled extrusion layer on top of those
+ *  would just duplicate it with a mismatched color scheme. Only CARTO Dark
+ *  Matter, which has no building layer of its own, needs the custom one. */
+function styleHasNativeBuildings(styleUrl: string): boolean {
+  return styleUrl.includes("api.maptiler.com");
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -400,8 +405,11 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           mapReady.current = true;
           setStyleLoaded(true);
 
-          // 3D building extrusions (only for primary style)
-          if (!isFallback) {
+          // 3D building extrusions — only needed for styles without their
+          // own (CARTO Dark Matter); MapTiler's Streets Dark already ships
+          // a properly-colored "Building 3D" layer, so adding this one on
+          // top would just duplicate it with a mismatched color scheme.
+          if (!isFallback && !styleHasNativeBuildings(styleUrl)) {
             const layers = map.getStyle()?.layers ?? [];
             let labelId = "";
             for (const layer of layers) {
@@ -414,7 +422,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               map.addLayer(
                 {
                   id: "3d-buildings",
-                  source: buildingSourceIdFor(styleUrl),
+                  source: "carto",
                   "source-layer": "building",
                   type: "fill-extrusion",
                   minzoom: 14,
