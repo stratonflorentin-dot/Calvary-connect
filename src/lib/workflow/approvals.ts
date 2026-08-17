@@ -94,6 +94,7 @@ export const slaHours: Record<EntityKind, number> = {
   disciplinary_case: 72,
   separation_case: 72,
   performance_review: 72,
+  bank_statement_batch: 72,
 };
 
 export function isOverdue(kind: EntityKind, createdAt: string | Date): boolean {

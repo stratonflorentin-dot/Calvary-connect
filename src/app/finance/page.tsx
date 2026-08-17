@@ -153,7 +153,7 @@ export default function FinanceOverviewPage() {
     { href: "/expenses", icon: Receipt, label: "Record Expense", color: "text-destructive bg-destructive/10" },
     { href: "/income", icon: TrendingUp, label: "Record Revenue", color: "text-success bg-success/10" },
     { href: "/finance/accounting/journal-entries", icon: BookOpen, label: "Journal Entry", color: "text-info bg-info/10" },
-    { href: "/finance/banking/bank-reconciliation", icon: Landmark, label: "Bank Reconciliation", color: "text-primary bg-primary/10" },
+    { href: "/finance/banking/bank-statements", icon: Landmark, label: "Bank Statements", color: "text-primary bg-primary/10" },
     { href: "/approvals", icon: ClipboardList, label: "Approvals Inbox", color: "text-warning bg-warning/10" },
     { href: "/finance/reports/trial-balance", icon: Calculator, label: "Trial Balance", color: "text-muted-foreground bg-muted" },
     { href: "/finance/accounting/chart-of-accounts", icon: BookOpen, label: "Chart of Accounts", color: "text-primary bg-primary/10", module: 'finance_chart_of_accounts' as const },

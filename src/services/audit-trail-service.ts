@@ -29,7 +29,8 @@ export type AuditEntityType =
   | 'purchase_order'
   | 'disciplinary_case'
   | 'separation_case'
-  | 'performance_review';
+  | 'performance_review'
+  | 'bank_statement_batch';
 
 export interface AuditLog {
   id?: string;

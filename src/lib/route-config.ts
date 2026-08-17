@@ -369,6 +369,20 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     showInNavigation: false,
   },
   {
+    path: "/finance/banking/bank-statements/new",
+    label: "New Bank Statement",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/banking/bank-statements/[id]",
+    label: "Bank Statement Detail",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
     path: "/finance/banking/bank-reconciliation",
     label: "Bank Reconciliation",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],

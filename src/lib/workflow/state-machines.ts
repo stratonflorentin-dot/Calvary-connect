@@ -26,7 +26,8 @@ export type EntityKind =
   | "purchase_order"
   | "disciplinary_case"
   | "separation_case"
-  | "performance_review";
+  | "performance_review"
+  | "bank_statement_batch";
 
 export interface TransitionContext {
   actorId: string;
@@ -676,6 +677,57 @@ export const performanceReviewMachine: StateMachine<PerformanceReviewState> = {
   },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Bank statement batch — Draft -> Posted (locks matched lines), with Reopen
+// as a side-branch back to Draft. `open_line_count` is a denormalized count
+// kept in sync by the reconciliation page whenever a line's match_status
+// changes (guards here are synchronous and can't query lines themselves).
+// Posting with lines still open requires a reason — enforced by the guard
+// rather than the blanket `requireReason` flag, so a fully-matched batch
+// posts with one click while a partial one has to justify itself. The
+// reconciliation page drives "Post" through a custom modal for this reason,
+// same pattern as maintenance's actual_cost-gated "Complete".
+// ─────────────────────────────────────────────────────────────────────────────
+export type BankStatementBatchState = "draft" | "posted";
+
+const BANK_RECONCILIATION_ROLES: UserRole[] = ["CEO", "ADMIN", "ACCOUNTANT"];
+
+export const bankStatementBatchMachine: StateMachine<BankStatementBatchState> = {
+  kind: "bank_statement_batch",
+  table: "bank_statement_batches",
+  auditModule: "finance",
+  auditEntityType: "bank_statement_batch",
+  states: ["draft", "posted"],
+  transitions: {
+    draft: [
+      {
+        label: "Post",
+        to: "posted",
+        intent: "success",
+        description: "Locks matched lines against further changes.",
+        roles: BANK_RECONCILIATION_ROLES,
+        guard: ({ entity, payload }) => {
+          const openCount = Number(entity.open_line_count) || 0;
+          if (openCount > 0 && !payload?.reason) {
+            return `${openCount} line(s) still need matching. Provide a reason to post anyway.`;
+          }
+          return true;
+        },
+      },
+    ],
+    posted: [
+      {
+        label: "Reopen",
+        to: "draft",
+        intent: "neutral",
+        description: "Unlocks lines for further matching.",
+        roles: ["CEO", "ADMIN"],
+        requireReason: true,
+      },
+    ],
+  },
+};
+
 export const machines: Record<EntityKind, StateMachine<any>> = {
   trip: tripMachine,
   maintenance_request: maintenanceMachine,
@@ -687,6 +739,7 @@ export const machines: Record<EntityKind, StateMachine<any>> = {
   disciplinary_case: disciplinaryCaseMachine,
   separation_case: separationCaseMachine,
   performance_review: performanceReviewMachine,
+  bank_statement_batch: bankStatementBatchMachine,
 };
 
 export function getMachine(kind: EntityKind): StateMachine<any> {

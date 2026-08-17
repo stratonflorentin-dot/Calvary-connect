@@ -25,6 +25,7 @@ import {
   Flame,
   Fuel,
   Gavel,
+  Landmark,
   Loader2,
   LogOut,
   Receipt,
@@ -72,6 +73,10 @@ const KIND_META: Record<
   disciplinary_case: { label: "Disciplinary Case", icon: Gavel, accent: "text-destructive bg-destructive/10" },
   separation_case: { label: "Separation Case", icon: LogOut, accent: "text-muted-foreground bg-muted" },
   performance_review: { label: "Performance Review", icon: Star, accent: "text-warning bg-warning/10" },
+  // Bank statement batches use a plain draft/posted workflow, not
+  // amount-tiered requiresApproval routing — their own surface is
+  // /finance/banking/bank-statements. Pass-through entry only.
+  bank_statement_batch: { label: "Bank Statement", icon: Landmark, accent: "text-info bg-info/10" },
 };
 
 export default function ApprovalsInboxPage() {
