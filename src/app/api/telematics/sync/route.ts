@@ -4,9 +4,23 @@ import { wialonLogin, wialonFetchUnitsTelemetry } from "@/lib/telematics/wialon-
 
 const ALLOWED_ROLES = ["CEO", "ADMIN", "OPERATOR"];
 
+/**
+ * Two callers are allowed to trigger a sync:
+ *  1. A logged-in CEO/ADMIN/OPERATOR from the map page's manual refresh /
+ *     60s-while-open interval (existing behaviour, unchanged).
+ *  2. The scheduled GitHub Actions workflow (.github/workflows/gps-sync.yml)
+ *     presenting the shared CRON_SECRET as a bearer token — Vercel's Hobby
+ *     plan only allows once-daily Cron, too infrequent to keep the map
+ *     live, so this route is polled externally instead. There's no user
+ *     session in that case, so it can't go through the role check below.
+ */
 async function requireSyncAccess(request: NextRequest) {
   const accessToken = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!accessToken) throw new Error("UNAUTHORIZED: missing access token");
+
+  if (process.env.CRON_SECRET && accessToken === process.env.CRON_SECRET) {
+    return supabaseAdmin();
+  }
 
   const admin = supabaseAdmin();
   const { data: { user }, error } = await admin.auth.getUser(accessToken);
