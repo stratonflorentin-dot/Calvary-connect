@@ -4,7 +4,7 @@ import { PageShell, PageHeader } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, TrendingUp, PieChart, BarChart3, Users } from 'lucide-react';
+import { FileText, TrendingUp, PieChart, BarChart3, Users, Scale } from 'lucide-react';
 import Link from 'next/link';
 import ExecutiveSummary from './executive-summary';
 import { ProfessionalFinancialReport } from '@/components/financial/professional-financial-report';
@@ -101,6 +101,30 @@ export default function ReportsPage() {
                                             className="inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold transition-all shadow-md"
                                         >
                                             Analyze Route Profits
+                                        </Link>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Trip Cost Variance */}
+                                <Card className="hover:shadow-xl transition-all border-border shadow-lg">
+                                    <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                                        <div className="bg-destructive/10 dark:bg-destructive/10 p-3 rounded-2xl">
+                                            <Scale className="size-6 text-destructive" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg font-bold text-foreground">Trip Cost Variance</CardTitle>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Requested vs. approved vs. actually paid, per trip</p>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 pt-2">
+                                        <p className="text-sm text-muted-foreground">
+                                            Flags trips where what was actually paid drifted from what was approved — catches cost overruns before they show up in the P&L.
+                                        </p>
+                                        <Link
+                                            href="/admin/reports/fleet/trip-cost-variance"
+                                            className="inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold transition-all shadow-md"
+                                        >
+                                            View Cost Variance
                                         </Link>
                                     </CardContent>
                                 </Card>
