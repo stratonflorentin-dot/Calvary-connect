@@ -286,7 +286,7 @@ async function fetchVehicleTrackerLocations(
 ): Promise<MapDriverLocation[]> {
   const { data, error } = await admin
     .from("vehicle_locations")
-    .select("vehicle_id, latitude, longitude, speed, heading, updated_at, engine_on, vehicles(plate_number, photo_url)")
+    .select("vehicle_id, latitude, longitude, speed, heading, updated_at, engine_status, vehicles(plate_number, photo_url)")
     .not("latitude", "is", null)
     .not("longitude", "is", null);
 
@@ -323,7 +323,7 @@ async function fetchVehicleTrackerLocations(
       vehiclePlate: plate,
       hasGps: true,
       vehiclePhotoUrl: loc.vehicles?.photo_url || null,
-      engineOn: loc.engine_on === null || loc.engine_on === undefined ? null : Boolean(loc.engine_on),
+      engineOn: loc.engine_status === "on" ? true : loc.engine_status === "off" ? false : null,
     });
   }
   return rows;

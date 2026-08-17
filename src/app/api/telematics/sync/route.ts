@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
               latitude: reading.latitude,
               longitude: reading.longitude,
               speed: reading.speedKmh,
+              heading: reading.heading,
               engine_status: engineStatus,
               is_online: true,
               updated_at: new Date().toISOString(),

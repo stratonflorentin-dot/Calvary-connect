@@ -40,6 +40,10 @@ export interface WialonUnitTelemetry {
   latitude: number | null;
   longitude: number | null;
   speedKmh: number | null;
+  /** Compass heading 0-360, from pos.c ("course") — confirmed present on
+   *  every live position record checked. Without this the map has no way
+   *  to point a moving truck's icon in its direction of travel. */
+  heading: number | null;
   engineOn: boolean | null;
   raw: any;
 }
@@ -84,6 +88,7 @@ export async function wialonFetchUnitsTelemetry(sid: string, unitIds: string[]):
         latitude: pos?.y ?? null,
         longitude: pos?.x ?? null,
         speedKmh: pos?.s ?? null,
+        heading: pos?.c ?? null,
         engineOn: ignitionRaw === undefined ? null : Number(ignitionRaw) === 1,
         raw: item,
       };
