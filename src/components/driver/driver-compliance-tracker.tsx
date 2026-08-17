@@ -246,7 +246,7 @@ export function DriverComplianceCard({ driver, onUpdate, compact = false }: Driv
 export function DriverComplianceDashboard() {
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "critical" | "warning" | "good">("all");
+  const [filter, setFilter] = useState<"all" | "critical" | "warning" | "incomplete" | "good">("all");
   const [scanning, setScanning] = useState(false);
 
   const loadDrivers = async () => {
@@ -262,15 +262,22 @@ export function DriverComplianceDashboard() {
 
   useEffect(() => { loadDrivers(); }, []);
 
+  // Mirrors DriverComplianceCard's own overallHealth exactly — a driver
+  // with no critical/warning docs but a document missing entirely must not
+  // fall through to "good" (same trap the shared complianceStatus()
+  // primitive itself was just fixed for: a document that was never dated
+  // is not evidence it's fine).
   const getDriverHealth = (driver: any) => {
     const statuses = DRIVER_DOCUMENT_TYPES.map((doc) => docDisplay(driver[doc.key]).status);
     if (statuses.some((s) => s === "expired" || s === "due_today")) return "critical";
     if (statuses.some((s) => s === "due_7" || s === "due_30")) return "warning";
+    if (statuses.some((s) => s === "missing")) return "incomplete";
     return "good";
   };
 
   const criticalCount = drivers.filter((d) => getDriverHealth(d) === "critical").length;
   const warningCount = drivers.filter((d) => getDriverHealth(d) === "warning").length;
+  const incompleteCount = drivers.filter((d) => getDriverHealth(d) === "incomplete").length;
   const filteredDrivers = drivers.filter((d) => filter === "all" || getDriverHealth(d) === filter);
 
   const runReminders = async () => {
@@ -322,7 +329,8 @@ export function DriverComplianceDashboard() {
           { key: "all", label: `All Drivers (${drivers.length})` },
           { key: "critical", label: `Action Required (${criticalCount})`, className: criticalCount > 0 ? "!bg-destructive !text-destructive-foreground" : "" },
           { key: "warning", label: `Due Soon (${warningCount})`, className: warningCount > 0 ? "!bg-warning !text-warning-foreground" : "" },
-          { key: "good", label: `Compliant (${drivers.length - criticalCount - warningCount})` },
+          { key: "incomplete", label: `Incomplete (${incompleteCount})`, className: incompleteCount > 0 ? "!bg-muted-foreground/20" : "" },
+          { key: "good", label: `Compliant (${drivers.length - criticalCount - warningCount - incompleteCount})` },
         ].map((tab) => (
           <button
             key={tab.key}

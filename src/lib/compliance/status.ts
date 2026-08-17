@@ -2,14 +2,20 @@
 // expiry date — never user-selected — so it is correct every day without a
 // stored value going stale.
 
-export type ComplianceStatus = "expired" | "due_today" | "due_7" | "due_30" | "ok";
+export type ComplianceStatus = "expired" | "due_today" | "due_7" | "due_30" | "unknown" | "ok";
 
 export const STATUS_META: Record<ComplianceStatus, { label: string; chip: string; rank: number }> = {
   expired:   { label: "Expired",     chip: "cv-chip-danger",  rank: 0 },
   due_today: { label: "Due today",   chip: "cv-chip-danger",  rank: 1 },
   due_7:     { label: "≤ 7 days",    chip: "cv-chip-warning", rank: 2 },
   due_30:    { label: "8–30 days",   chip: "cv-chip-warning", rank: 3 },
-  ok:        { label: "Valid",       chip: "cv-chip-success", rank: 4 },
+  // A document that was never dated is not evidence it's fine — it's
+  // evidence nobody recorded it. Same defect independently confirmed in
+  // LogiPRO's own compliance screen (shows "Valid" for a null expiry date);
+  // this must never collapse into "ok" or a missing document silently
+  // passes every compliance check that reads this status.
+  unknown:   { label: "Not on file", chip: "cv-chip-neutral", rank: 4 },
+  ok:        { label: "Valid",       chip: "cv-chip-success", rank: 5 },
 };
 
 export function daysRemaining(expiry?: string | null): number | null {
@@ -21,7 +27,7 @@ export function daysRemaining(expiry?: string | null): number | null {
 
 export function complianceStatus(expiry?: string | null): ComplianceStatus {
   const d = daysRemaining(expiry);
-  if (d === null) return "ok";
+  if (d === null) return "unknown";
   if (d < 0) return "expired";
   if (d === 0) return "due_today";
   if (d <= 7) return "due_7";

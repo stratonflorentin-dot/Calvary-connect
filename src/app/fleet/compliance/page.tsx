@@ -176,11 +176,12 @@ export default function CompliancePage() {
   }, [docs, insurance, vehicleById]);
 
   const counts = useMemo(() => {
-    const c = { total: rows.length, expired: 0, due_7: 0, due_30: 0, ok: 0 };
+    const c = { total: rows.length, expired: 0, due_7: 0, due_30: 0, unknown: 0, ok: 0 };
     for (const r of rows) {
       if (r.status === "expired" || r.status === "due_today") c.expired += 1;
       else if (r.status === "due_7") c.due_7 += 1;
       else if (r.status === "due_30") c.due_30 += 1;
+      else if (r.status === "unknown") c.unknown += 1;
       else c.ok += 1;
     }
     return c;
@@ -480,6 +481,7 @@ export default function CompliancePage() {
     { key: "expired", label: "Expired / due today", value: counts.expired, chip: "bg-red-100 text-red-700" },
     { key: "due_7", label: "Due ≤ 7 days", value: counts.due_7, chip: "bg-[hsl(var(--warning-soft))] text-[hsl(var(--warning))]" },
     { key: "due_30", label: "Due 8–30 days", value: counts.due_30, chip: "bg-[hsl(var(--info-soft))] text-[hsl(var(--info))]" },
+    { key: "unknown", label: "No expiry on file", value: counts.unknown, chip: "bg-muted text-muted-foreground" },
     { key: "ok", label: "Valid", value: counts.ok, chip: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" },
   ];
 
