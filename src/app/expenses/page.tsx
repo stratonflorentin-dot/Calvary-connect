@@ -33,9 +33,9 @@ interface Expense {
     status: 'pending' | 'approved' | 'rejected' | 'paid';
     createdAt: string;
     approvedBy?: string;
-    clientReference?: string;
+    client_reference?: string;
     employee_id?: string;
-    coa_account_code?: string;
+    account_code?: string;
     currency?: string;
     vendor?: string;
     vehicle_id?: string | null;
@@ -115,11 +115,11 @@ export default function ExpensesPage() {
                 amount: parseFloat(formData.get('amount') as string),
                 category: category,
                 date: formData.get('date') as string,
-                clientReference: formData.get('clientReference') as string,
+                client_reference: formData.get('clientReference') as string,
                 vendor: formData.get('vendor') as string,
                 payment_method: formData.get('payment_method') as string,
                 currency: expenseCurrency,
-                coa_account_code: coaAccountCode,
+                account_code: coaAccountCode,
                 driver_id: user.id,
                 vehicle_id: vehicleId === 'none' ? null : vehicleId,
                 status: 'pending',
@@ -181,11 +181,11 @@ export default function ExpensesPage() {
                     amount: parseFloat(formData.get('amount') as string),
                     category: category,
                     date: formData.get('date') as string,
-                    clientReference: formData.get('clientReference') as string,
+                    client_reference: formData.get('clientReference') as string,
                     vendor: formData.get('vendor') as string,
                     payment_method: formData.get('payment_method') as string,
                     currency: formData.get('currency') as string,
-                    coa_account_code: coaAccountCode,
+                    account_code: coaAccountCode,
                     vehicle_id: vehicleId === 'none' ? null : vehicleId,
                     updated_at: new Date().toISOString(),
                 })
@@ -450,7 +450,7 @@ export default function ExpensesPage() {
                                                     <span className="text-muted-foreground text-xs">-</span>
                                                 )}
                                             </TableCell>
-                                            <TableCell>{expense.clientReference || '-'}</TableCell>
+                                            <TableCell>{expense.client_reference || '-'}</TableCell>
                                             <TableCell>
                                                 {(() => {
                                                     const vId = expense.vehicle_id || expense.vehicleId;
@@ -471,7 +471,7 @@ export default function ExpensesPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="font-mono">
-                                                    {expense.coa_account_code || EXPENSE_CATEGORY_COA_MAP[expense.category] || 'Unmapped'}
+                                                    {expense.account_code || EXPENSE_CATEGORY_COA_MAP[expense.category] || 'Unmapped'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
@@ -574,7 +574,7 @@ export default function ExpensesPage() {
                                                                     <Input
                                                                         id="edit-clientReference"
                                                                         name="clientReference"
-                                                                        defaultValue={editingExpense?.clientReference}
+                                                                        defaultValue={editingExpense?.client_reference}
                                                                         placeholder="e.g. TRP-123 or ABC Corp"
                                                                     />
                                                                 </div>
