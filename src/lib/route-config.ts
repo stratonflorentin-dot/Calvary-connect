@@ -475,6 +475,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "finance",
   },
   {
+    path: "/expenses/bulk",
+    label: "Bulk Expenses",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "OPERATOR", "HR"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
     path: "/accountant/expenses",
     label: "Expense Approval",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],

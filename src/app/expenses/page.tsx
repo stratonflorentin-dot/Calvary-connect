@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
@@ -17,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, DollarSign, BookOpen, CheckCircle2, XCircle, Flame, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, DollarSign, BookOpen, CheckCircle2, XCircle, Flame, AlertTriangle, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChartOfAccountsService, COAAccount, EXPENSE_CATEGORY_COA_MAP } from '@/services/chart-of-accounts-service';
 import { applyTransition } from '@/lib/workflow/engine';
@@ -252,6 +253,13 @@ export default function ExpensesPage() {
                             <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">Expenses Management</h1>
                             <p className="text-muted-foreground">Track and manage company expenses</p>
                         </div>
+                        <div className="flex items-center gap-2">
+                        <Button variant="outline" className="gap-2" asChild>
+                            <Link href="/expenses/bulk">
+                                <Upload className="size-4" />
+                                Bulk Expenses
+                            </Link>
+                        </Button>
                         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button className="gap-2">
@@ -373,6 +381,7 @@ export default function ExpensesPage() {
                                 </form>
                             </DialogContent>
                         </Dialog>
+                        </div>
                     </div>
 
                     {/* Stats Cards */}
