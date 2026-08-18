@@ -158,7 +158,7 @@ function AccountPicker({
                 setOpen(false);
                 setQ("");
               }}
-              className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center justify-between gap-4 border-b border-slate-50 last:border-0 transition-colors"
+              className="w-full text-left px-4 py-3 hover:bg-primary/10 flex items-center justify-between gap-4 border-b border-border last:border-0 transition-colors"
             >
               <span className="flex items-center gap-3 min-w-0">
                 <span className="font-mono text-sm font-black text-muted-foreground shrink-0 w-14">{a.code}</span>
@@ -447,7 +447,7 @@ export default function JournalEntriesPage() {
             className={cn(
               "px-3 py-1.5 text-xs font-bold rounded-full border transition-colors",
               statusFilter === s
-                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-card text-foreground hover:bg-muted/60",
             )}
           >
@@ -556,7 +556,7 @@ export default function JournalEntriesPage() {
                   <div />
                 </div>
                 {lines.map((l, i) => (
-                  <div key={l.id} className="p-3 border-b border-slate-50 last:border-0 space-y-3 sm:space-y-0">
+                  <div key={l.id} className="p-3 border-b border-border last:border-0 space-y-3 sm:space-y-0">
                     <div className="sm:hidden">
                       <Label className="text-xs mb-1 block">Account</Label>
                       <AccountPicker
