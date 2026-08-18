@@ -54,6 +54,8 @@ interface VehicleFormState {
   interest_rate: number | "";
   installment_amount: number | "";
   down_payment_bank_account_id: string;
+  fixed_asset_account_code: string;
+  loan_payable_account_code: string;
   gps_provider: "" | "cartrack" | "wialon";
   gps_device_id: string;
 }
@@ -81,6 +83,8 @@ const empty = (): VehicleFormState => ({
   interest_rate: "",
   installment_amount: "",
   down_payment_bank_account_id: "",
+  fixed_asset_account_code: "",
+  loan_payable_account_code: "",
   gps_provider: "",
   gps_device_id: "",
 });
@@ -173,6 +177,8 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [assetAccounts, setAssetAccounts] = useState<{ code: string; name: string }[]>([]);
+  const [liabilityAccounts, setLiabilityAccounts] = useState<{ code: string; name: string }[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(vehicle?.id);
   // Purchase price/financing are finance-sensitive fields — hidden entirely
@@ -192,6 +198,16 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
   useEffect(() => {
     if (!open || !canFinance) return;
     supabase.from("bank_accounts").select("*").then(({ data }) => setBankAccounts(data ?? []));
+    // This chart of accounts has more than one plausible account for a
+    // vehicle acquisition (e.g. "Trucks and Trailers" vs "Motor Vehicles"
+    // vs "Vehicles" on the asset side; "Truck Loan" vs "Bank Loan" vs
+    // "Vehicle Financing" on the liability side) — vehicleLoanAccountCodes()
+    // below only picks a sensible default by vehicle type, so both are
+    // exposed as pickers rather than silently locked to that default.
+    supabase.from("accounts").select("code, name").eq("category", "ASSETS").eq("is_postable", true).order("code")
+      .then(({ data }) => setAssetAccounts(data ?? []));
+    supabase.from("accounts").select("code, name").eq("category", "LIABILITIES").eq("is_postable", true).order("code")
+      .then(({ data }) => setLiabilityAccounts(data ?? []));
   }, [open, canFinance]);
 
   useEffect(() => {
@@ -224,6 +240,8 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         interest_rate: "",
         installment_amount: "",
         down_payment_bank_account_id: "",
+        fixed_asset_account_code: "",
+        loan_payable_account_code: "",
         gps_provider: (vehicle.gps_provider ?? "") as any,
         gps_device_id: vehicle.gps_device_id ?? "",
       });
@@ -344,7 +362,9 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
         if (canFinance && form.financed && data?.id) {
           const price = Number(form.purchase_price) || 0;
           const down = form.down_payment === "" ? 0 : Number(form.down_payment);
-          const { fixedAssetCode, loanPayableCode } = vehicleLoanAccountCodes(form.type);
+          const defaults = vehicleLoanAccountCodes(form.type);
+          const fixedAssetCode = form.fixed_asset_account_code || defaults.fixedAssetCode;
+          const loanPayableCode = form.loan_payable_account_code || defaults.loanPayableCode;
           const { data: loanRow, error: loanError } = await supabase
             .from("vehicle_loans")
             .insert({
@@ -480,7 +500,18 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Type *</Label>
-                <Select value={form.type} onValueChange={(v) => patch({ type: v as FleetType, trailer_sub_type: v === "TRAILER" ? form.trailer_sub_type : "" })}>
+                <Select value={form.type} onValueChange={(v) => {
+                  const next = v as FleetType;
+                  const patchValue: Partial<VehicleFormState> = { type: next, trailer_sub_type: next === "TRAILER" ? form.trailer_sub_type : "" };
+                  // Re-default the loan accounts to match the new type —
+                  // still fully overridable via the pickers below.
+                  if (form.financed) {
+                    const defaults = vehicleLoanAccountCodes(next);
+                    patchValue.fixed_asset_account_code = defaults.fixedAssetCode;
+                    patchValue.loan_payable_account_code = defaults.loanPayableCode;
+                  }
+                  patch(patchValue);
+                }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="DUMP_TRUCK">Dump truck</SelectItem>
@@ -600,7 +631,19 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
                 <fieldset className="space-y-3">
                   <legend className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Financing</legend>
                   <div className="flex items-center gap-2">
-                    <Checkbox id="financed" checked={form.financed} onCheckedChange={(v) => patch({ financed: !!v })} />
+                    <Checkbox
+                      id="financed"
+                      checked={form.financed}
+                      onCheckedChange={(v) => {
+                        const on = !!v;
+                        if (on && !form.fixed_asset_account_code) {
+                          const defaults = vehicleLoanAccountCodes(form.type);
+                          patch({ financed: on, fixed_asset_account_code: defaults.fixedAssetCode, loan_payable_account_code: defaults.loanPayableCode });
+                        } else {
+                          patch({ financed: on });
+                        }
+                      }}
+                    />
                     <Label htmlFor="financed" className="cursor-pointer text-xs">Financed with a loan</Label>
                   </div>
                   {form.financed && (
@@ -640,6 +683,33 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
                           </div>
                         )}
                       </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Fixed asset account</Label>
+                          <Select value={form.fixed_asset_account_code} onValueChange={(v) => patch({ fixed_asset_account_code: v })}>
+                            <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                            <SelectContent>
+                              {assetAccounts.map((a) => (
+                                <SelectItem key={a.code} value={a.code}>{a.code} · {a.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Loan payable account</Label>
+                          <Select value={form.loan_payable_account_code} onValueChange={(v) => patch({ loan_payable_account_code: v })}>
+                            <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                            <SelectContent>
+                              {liabilityAccounts.map((a) => (
+                                <SelectItem key={a.code} value={a.code}>{a.code} · {a.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This chart of accounts has more than one plausible option for each (e.g. "Truck Loan" vs "Bank Loan" vs "Vehicle Financing") — defaulted by vehicle type, but pick the ones that match this specific lender/loan.
+                      </p>
                       {form.purchase_price !== "" && (
                         <p className="text-xs text-muted-foreground">
                           Principal financed: {(Number(form.purchase_price) - (form.down_payment === "" ? 0 : Number(form.down_payment))).toLocaleString()}
