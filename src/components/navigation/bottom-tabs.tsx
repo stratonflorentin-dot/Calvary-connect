@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types/roles';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage, translateNavLabel } from '@/hooks/use-language';
 import { getNavigationMenuByRole } from '@/lib/route-config';
 import { useSupabase } from '@/components/supabase-provider';
 
@@ -45,7 +45,7 @@ const routeIconMap: Record<string, any> = {
 
 export function BottomTabs({ role }: { role: UserRole }) {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { user, signOut } = useSupabase();
 
   // Get menu items for the current role
@@ -75,7 +75,7 @@ export function BottomTabs({ role }: { role: UserRole }) {
               <span className={cn(
                 "max-w-[64px] truncate whitespace-nowrap text-[10px] transition-colors",
                 isActive ? "font-semibold text-primary-foreground" : "text-muted-foreground"
-              )}>{tab.label}</span>
+              )}>{translateNavLabel(tab.label, lang)}</span>
             </Link>
           );
         })}

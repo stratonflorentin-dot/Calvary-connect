@@ -18,7 +18,6 @@ import {
   Wrench,
   Calculator,
   LogOut,
-  Languages,
   Receipt,
   Shield,
   Camera,
@@ -44,7 +43,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
-import { useLanguage } from "@/hooks/use-language";
+import { useLanguage, translateNavLabel } from "@/hooks/use-language";
 import { useSupabase } from "@/components/supabase-provider";
 import {
   NAVIGATION_CATEGORY_LABELS,
@@ -121,7 +120,7 @@ const BOTTOM_NAV_PRIORITY = ["/", "/trips", "/driver/trips", "/fleet", "/chat", 
 
 export function Sidebar({ role }: { role?: UserRole | null }) {
   const pathname = usePathname();
-  const { t, toggleLanguage, lang } = useLanguage();
+  const { t, lang } = useLanguage();
   const { signOut, user, uploadAvatar } = useSupabase();
   const { isOpen, isCollapsed, toggle, close, toggleCollapse } = useSidebar();
 
@@ -287,15 +286,6 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <div className="text-[hsl(var(--sidebar-foreground))] hover:text-white [&_button]:hover:bg-white/10 [&_svg]:size-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleLanguage}
-                title={`Switch to ${lang === "en" ? "Swahili" : "English"}`}
-                className="text-[hsl(var(--sidebar-foreground))] hover:text-white hover:bg-white/10"
-              >
-                <Languages className="size-4" />
-              </Button>
               <NotificationBell />
             </div>
             <Link href="/profile" aria-label="Profile">
@@ -343,7 +333,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                     <Icon className="size-4.5" />
                   </motion.span>
                 </span>
-                <span className="truncate max-w-[64px]">{item.label}</span>
+                <span className="truncate max-w-[64px]">{translateNavLabel(item.label, lang)}</span>
               </Link>
             );
           })}
@@ -394,15 +384,6 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
               </div>
               <div className="flex items-center gap-1">
                 <div className="text-[hsl(var(--sidebar-foreground))] hover:text-white [&_button]:hover:bg-white/10 [&_svg]:size-4">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleLanguage}
-                    title={`Switch to ${lang === "en" ? "Swahili" : "English"}`}
-                    className="text-[hsl(var(--sidebar-foreground))] hover:text-white hover:bg-white/10"
-                  >
-                    <Languages className="size-4" />
-                  </Button>
                   <NotificationBell />
                 </div>
                 <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[hsl(var(--sidebar-muted))] hover:text-white hover:bg-white/10 transition-colors overflow-hidden">
@@ -469,7 +450,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                               : "text-[hsl(var(--sidebar-muted))] group-hover:text-white"
                           )} />
                         </motion.span>
-                        {!isCollapsed && <span className="relative z-10 truncate">{item.label}</span>}
+                        {!isCollapsed && <span className="relative z-10 truncate">{translateNavLabel(item.label, lang)}</span>}
                         {/* Badges only show when not collapsed */}
                         {!isCollapsed && item.path === "/notifications" && notificationCount > 0 && (
                           <Badge className="relative z-10 ml-auto h-5 rounded-full text-[10px] px-1.5 py-0 bg-rose-500 text-white border-0">
