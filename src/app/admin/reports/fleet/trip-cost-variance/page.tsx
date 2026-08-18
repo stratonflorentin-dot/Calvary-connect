@@ -16,6 +16,8 @@ interface VarianceRow {
   destination: string;
   status: string;
   expenseCount: number;
+  currency: string;
+  mixedCurrencies: boolean;
   requested: number;
   committed: number;
   actual: number;
@@ -26,9 +28,8 @@ interface VarianceRow {
 
 interface Summary {
   tripsWithExpenses: number;
-  totalRequested: number;
-  totalCommitted: number;
-  totalActual: number;
+  byCurrency: Record<string, { requested: number; committed: number; actual: number }>;
+  currencies: string[];
   criticalCount: number;
   warningCount: number;
 }
@@ -104,30 +105,39 @@ export default function TripCostVariancePage() {
           )}
 
           {summary && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <Card><CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Trips w/ expenses</p>
-                <p className="text-2xl font-bold">{summary.tripsWithExpenses}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Requested</p>
-                <p className="text-xl font-bold">{formatCurrency(summary.totalRequested, "TZS")}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Committed</p>
-                <p className="text-xl font-bold">{formatCurrency(summary.totalCommitted, "TZS")}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Actual</p>
-                <p className="text-xl font-bold">{formatCurrency(summary.totalActual, "TZS")}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="size-4 text-destructive" />
-                  <p className="text-xs text-muted-foreground">Critical / Warning</p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <Card><CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Trips w/ expenses</p>
+                  <p className="text-2xl font-bold">{summary.tripsWithExpenses}</p>
+                </CardContent></Card>
+                <Card><CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="size-4 text-destructive" />
+                    <p className="text-xs text-muted-foreground">Critical / Warning</p>
+                  </div>
+                  <p className="text-xl font-bold">{summary.criticalCount} / {summary.warningCount}</p>
+                </CardContent></Card>
+              </div>
+              {/* One requested/committed/actual set per currency — never
+                  summed together, same "Mixed currencies" convention as the
+                  rest of Finance. */}
+              {summary.currencies.map((cur) => (
+                <div key={cur} className="grid grid-cols-3 gap-4">
+                  <Card><CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground">Requested ({cur})</p>
+                    <p className="text-xl font-bold">{formatCurrency(summary.byCurrency[cur].requested, cur)}</p>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground">Committed ({cur})</p>
+                    <p className="text-xl font-bold">{formatCurrency(summary.byCurrency[cur].committed, cur)}</p>
+                  </CardContent></Card>
+                  <Card><CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground">Actual ({cur})</p>
+                    <p className="text-xl font-bold">{formatCurrency(summary.byCurrency[cur].actual, cur)}</p>
+                  </CardContent></Card>
                 </div>
-                <p className="text-xl font-bold">{summary.criticalCount} / {summary.warningCount}</p>
-              </CardContent></Card>
+              ))}
             </div>
           )}
 
@@ -162,10 +172,17 @@ export default function TripCostVariancePage() {
                     return (
                       <tr key={r.tripId} className="hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 font-semibold text-foreground">{r.tripNumber || r.tripId.slice(0, 8)}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{r.origin} → {r.destination}</td>
-                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(r.requested, "TZS")}</td>
-                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(r.committed, "TZS")}</td>
-                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(r.actual, "TZS")}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {r.origin} → {r.destination}
+                          {r.mixedCurrencies && (
+                            <span className="ml-1.5 text-[10px] font-bold text-warning" title="This trip's expenses span more than one currency — totals below are only the dominant one.">
+                              mixed currencies
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(r.requested, r.currency)}</td>
+                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(r.committed, r.currency)}</td>
+                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(r.actual, r.currency)}</td>
                         <td className={`px-4 py-3 text-right font-mono font-semibold ${r.variance > 0 ? "text-destructive" : r.variance < 0 ? "text-success" : ""}`}>
                           {r.variancePct === null ? "—" : `${r.variance > 0 ? "+" : ""}${r.variancePct}%`}
                         </td>

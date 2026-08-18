@@ -330,6 +330,32 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
       };
     }
 
+    // p_contra_account_code (the expense's own COA account, already set by
+    // both the single-expense form and Bulk Expenses) makes this mirror into
+    // the GL — Dr [expense account] / Cr [bank's linked COA account] —
+    // instead of only moving bank_accounts.current_balance. Without it, the
+    // bank account's ledger balance (accounts.current_balance) silently
+    // never reflects real expense payments while the operational balance
+    // does, which is exactly the drift found live: a bank account showing
+    // $20,000 operationally against a $-50 GL balance with zero backing
+    // transactions on either side.
+    //
+    // Only passed when the expense account's own currency matches the
+    // expense's currency — verified live that this chart of accounts is
+    // entirely TZS-denominated except the bank accounts themselves, so
+    // unconditionally passing it would hard-fail every non-TZS expense
+    // payment on post_journal_entry's currency guard instead of just
+    // quietly not mirroring, a regression worse than the gap it fixes.
+    let contraAccountCode: string | undefined;
+    if (entity.account_code) {
+      const { data: expenseAccount } = await supabase
+        .from("accounts")
+        .select("currency")
+        .eq("code", entity.account_code)
+        .maybeSingle();
+      if (expenseAccount?.currency === currency) contraAccountCode = entity.account_code;
+    }
+
     const { error: txError } = await supabase.rpc("post_bank_transaction", {
       p_bank_account_id: accounts[0].id,
       p_amount: Number(entity.amount) || 0,
@@ -339,6 +365,7 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
       p_description: entity.description || `Expense payment (${args.entityId})`,
       p_reference_type: "expense",
       p_reference_id: args.entityId,
+      p_contra_account_code: contraAccountCode,
       p_idempotency_key: crypto.randomUUID(),
     });
     if (txError) {

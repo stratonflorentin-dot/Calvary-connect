@@ -52,7 +52,7 @@ export async function GET(request: Request) {
     if (tripIds.length > 0) {
       const { data, error: expensesError } = await supabase
         .from("expenses")
-        .select("trip_id, amount, status")
+        .select("trip_id, amount, status, currency")
         .in("trip_id", tripIds)
         .is("deleted_at", null);
       if (expensesError) throw expensesError;
@@ -82,6 +82,13 @@ export async function GET(request: Request) {
           ? "warning"
           : "ok";
 
+      // A trip's expenses are expected to share one currency; flag it
+      // rather than silently blending amounts labeled with whichever
+      // currency happened to come first if that assumption is ever wrong.
+      const currencies = Array.from(new Set(tripExpenses.map((e: any) => (e.currency || "TZS").toUpperCase())));
+      const currency = currencies[0] ?? "TZS";
+      const mixedCurrencies = currencies.length > 1;
+
       return {
         tripId: trip.id,
         tripNumber: trip.trip_number,
@@ -89,6 +96,8 @@ export async function GET(request: Request) {
         destination: trip.destination,
         status: trip.status,
         expenseCount: tripExpenses.length,
+        currency,
+        mixedCurrencies,
         requested,
         committed,
         actual,
@@ -98,11 +107,19 @@ export async function GET(request: Request) {
       };
     }).filter((r) => r.expenseCount > 0); // trips with no expenses at all aren't a variance case
 
+    // Never summed across currencies — grouped per currency, same "Mixed
+    // currencies" convention as the rest of Finance.
+    const byCurrency: Record<string, { requested: number; committed: number; actual: number }> = {};
+    for (const r of rows) {
+      if (!byCurrency[r.currency]) byCurrency[r.currency] = { requested: 0, committed: 0, actual: 0 };
+      byCurrency[r.currency].requested += r.requested;
+      byCurrency[r.currency].committed += r.committed;
+      byCurrency[r.currency].actual += r.actual;
+    }
     const summary = {
       tripsWithExpenses: rows.length,
-      totalRequested: rows.reduce((s, r) => s + r.requested, 0),
-      totalCommitted: rows.reduce((s, r) => s + r.committed, 0),
-      totalActual: rows.reduce((s, r) => s + r.actual, 0),
+      byCurrency,
+      currencies: Object.keys(byCurrency).sort(),
       criticalCount: rows.filter((r) => r.band === "critical").length,
       warningCount: rows.filter((r) => r.band === "warning").length,
     };
