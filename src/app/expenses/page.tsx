@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
-import { AVAILABLE_CURRENCIES } from '@/components/ui/currency-badge';
+import { AVAILABLE_CURRENCIES, formatCurrency } from '@/components/ui/currency-badge';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -255,7 +255,15 @@ export default function ExpensesPage() {
         });
     };
 
-    const totalExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
+    // Never summed across currencies — a $20 expense and a TSh 2,000,000
+    // expense added together is a meaningless number. Grouped per currency,
+    // same "Mixed currencies" convention used elsewhere in Finance.
+    const totalsByCurrency = (expenses ?? []).reduce<Record<string, number>>((acc, expense) => {
+        const cur = (expense.currency || 'TZS').toUpperCase();
+        acc[cur] = (acc[cur] || 0) + (Number(expense.amount) || 0);
+        return acc;
+    }, {});
+    const expenseCurrencies = Object.keys(totalsByCurrency).sort();
     const pendingExpenses = expenses?.filter(e => e.status === 'pending').length || 0;
     const overdueExpenses = expenses?.filter(e => e.status === 'pending' && isOverdue('expense', e.created_at ?? e.createdAt ?? e.date)).length || 0;
 
@@ -427,7 +435,17 @@ export default function ExpensesPage() {
                                 <DollarSign className="size-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{format(totalExpenses)}</div>
+                                {expenseCurrencies.length === 0 ? (
+                                    <div className="text-2xl font-bold">{format(0)}</div>
+                                ) : expenseCurrencies.length === 1 ? (
+                                    <div className="text-2xl font-bold">{formatCurrency(totalsByCurrency[expenseCurrencies[0]], expenseCurrencies[0])}</div>
+                                ) : (
+                                    <div className="space-y-0.5">
+                                        {expenseCurrencies.map((cur) => (
+                                            <div key={cur} className="text-lg font-bold">{formatCurrency(totalsByCurrency[cur], cur)}</div>
+                                        ))}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                         <Card>
