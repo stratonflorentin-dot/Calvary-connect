@@ -310,24 +310,52 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
   // supabase/migrations/035_post_bank_transaction_function.sql.
   if (args.kind === "expense" && args.toState === "paid") {
     const currency = entity.currency || "TZS";
-    const { data: accounts, error: acctErr } = await supabase
-      .from("bank_accounts")
-      .select("id")
-      .eq("currency", currency)
-      .eq("is_active", true);
+    let payingAccountId: string;
 
-    if (acctErr) {
-      return { ok: false, code: "db_error", message: `Could not look up ${currency} bank accounts: ${acctErr.message}` };
-    }
-    if (!accounts || accounts.length !== 1) {
-      return {
-        ok: false,
-        code: "guard_failed",
-        message:
-          accounts && accounts.length > 1
-            ? `More than one active ${currency} bank account exists — use Finance → Expenses → Record Payment to choose which one.`
-            : `No active ${currency} bank account found to pay this expense from.`,
-      };
+    // The expense's own bank_account_id (set on the New/Edit Expense form)
+    // is authoritative when present — an explicit choice beats guessing.
+    // Falling back to "the one active account in this currency" only when
+    // the expense never specified one (older rows, or Bulk Expenses which
+    // doesn't collect this yet) — and that fallback is now genuinely
+    // ambiguous for TZS specifically, since this chart has two active TZS
+    // accounts (CRDB TZS and AIRTEL mobile money).
+    if (entity.bank_account_id) {
+      const { data: chosen, error: chosenErr } = await supabase
+        .from("bank_accounts")
+        .select("id, currency, is_active")
+        .eq("id", entity.bank_account_id)
+        .maybeSingle();
+      if (chosenErr) {
+        return { ok: false, code: "db_error", message: `Could not look up the chosen bank account: ${chosenErr.message}` };
+      }
+      if (!chosen || !chosen.is_active) {
+        return { ok: false, code: "guard_failed", message: "The account chosen to pay this expense is no longer active." };
+      }
+      if (chosen.currency !== currency) {
+        return { ok: false, code: "guard_failed", message: `The chosen account is ${chosen.currency}, but this expense is ${currency}.` };
+      }
+      payingAccountId = chosen.id;
+    } else {
+      const { data: accounts, error: acctErr } = await supabase
+        .from("bank_accounts")
+        .select("id")
+        .eq("currency", currency)
+        .eq("is_active", true);
+
+      if (acctErr) {
+        return { ok: false, code: "db_error", message: `Could not look up ${currency} bank accounts: ${acctErr.message}` };
+      }
+      if (!accounts || accounts.length !== 1) {
+        return {
+          ok: false,
+          code: "guard_failed",
+          message:
+            accounts && accounts.length > 1
+              ? `More than one active ${currency} bank account exists — edit this expense to choose which one paid it.`
+              : `No active ${currency} bank account found to pay this expense from.`,
+        };
+      }
+      payingAccountId = accounts[0].id;
     }
 
     // p_contra_account_code (the expense's own COA account, already set by
@@ -357,7 +385,7 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
     }
 
     const { error: txError } = await supabase.rpc("post_bank_transaction", {
-      p_bank_account_id: accounts[0].id,
+      p_bank_account_id: payingAccountId,
       p_amount: Number(entity.amount) || 0,
       p_direction: "out",
       p_transaction_type: "withdrawal",

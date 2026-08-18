@@ -40,6 +40,14 @@ interface Expense {
     vendor?: string;
     vehicle_id?: string | null;
     payment_method?: string;
+    bank_account_id?: string | null;
+}
+
+interface BankAccountOption {
+    id: string;
+    account_name: string;
+    bank_name: string;
+    currency: string;
 }
 
 export default function ExpensesPage() {
@@ -51,6 +59,7 @@ export default function ExpensesPage() {
     const [expenses, setExpenses] = useState<any[]>([]);
     const [vehicles, setVehicles] = useState<any[]>([]);
     const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
+    const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -70,15 +79,17 @@ export default function ExpensesPage() {
             try {
                 setLoading(true);
                 // Load expenses, vehicles, and COA in parallel
-                const [expensesRes, vehiclesRes, accounts] = await Promise.all([
+                const [expensesRes, vehiclesRes, accounts, bankAccountsRes] = await Promise.all([
                     supabase.from('expenses').select('*, vehicle_id').order('created_at', { ascending: false }),
                     supabase.from('vehicles').select('*'),
-                    ChartOfAccountsService.getAccounts()
+                    ChartOfAccountsService.getAccounts(),
+                    supabase.from('bank_accounts').select('id, account_name, bank_name, currency').eq('is_active', true).order('account_name'),
                 ]);
 
                 setExpenses(expensesRes.data || []);
                 setVehicles(vehiclesRes.data || []);
                 setCoaAccounts(accounts);
+                setBankAccounts(bankAccountsRes.data || []);
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -126,6 +137,7 @@ export default function ExpensesPage() {
                 payment_method: formData.get('payment_method') as string,
                 currency: expenseCurrency,
                 account_code: coaAccountCode,
+                bank_account_id: (formData.get('bank_account_id') as string) || null,
                 driver_id: user.id,
                 vehicle_id: vehicleId === 'none' ? null : vehicleId,
                 status: 'pending',
@@ -192,6 +204,7 @@ export default function ExpensesPage() {
                     payment_method: formData.get('payment_method') as string,
                     currency: formData.get('currency') as string,
                     account_code: coaAccountCode,
+                    bank_account_id: (formData.get('bank_account_id') as string) || null,
                     vehicle_id: vehicleId === 'none' ? null : vehicleId,
                     updated_at: new Date().toISOString(),
                 })
@@ -380,6 +393,22 @@ export default function ExpensesPage() {
                                         </div>
                                     </div>
                                     <div>
+                                        <Label htmlFor="bank_account_id">Paid From Account (Optional)</Label>
+                                        <Select name="bank_account_id">
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Which account paid this?" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {bankAccounts.map((b) => (
+                                                    <SelectItem key={b.id} value={b.id}>
+                                                        {b.bank_name} · {b.account_name} ({b.currency})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-xs text-muted-foreground mt-1">Match this to the expense's currency above — the account you pick here is what actually gets debited once this is marked paid.</p>
+                                    </div>
+                                    <div>
                                         <Label htmlFor="date">Date</Label>
                                         <Input id="date" name="date" type="date" required />
                                     </div>
@@ -437,6 +466,7 @@ export default function ExpensesPage() {
                                         <TableHead>Vehicle</TableHead>
                                         <TableHead>Category</TableHead>
                                         <TableHead>COA</TableHead>
+                                        <TableHead>Paid From</TableHead>
                                         <TableHead>Amount</TableHead>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Status</TableHead>
@@ -479,6 +509,11 @@ export default function ExpensesPage() {
                                                 <Badge variant="outline" className="font-mono">
                                                     {expense.account_code || EXPENSE_CATEGORY_COA_MAP[expense.category] || 'Unmapped'}
                                                 </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {expense.bank_account_id
+                                                    ? bankAccounts.find((b) => b.id === expense.bank_account_id)?.account_name ?? '—'
+                                                    : '—'}
                                             </TableCell>
                                             <TableCell>
                                                 {new Intl.NumberFormat('en-US', {
@@ -673,6 +708,21 @@ export default function ExpensesPage() {
                                                                             </SelectContent>
                                                                         </Select>
                                                                     </div>
+                                                                </div>
+                                                                <div>
+                                                                    <Label htmlFor="edit-bank_account_id">Paid From Account (Optional)</Label>
+                                                                    <Select name="bank_account_id" defaultValue={editingExpense?.bank_account_id ?? undefined}>
+                                                                        <SelectTrigger>
+                                                                            <SelectValue placeholder="Which account paid this?" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {bankAccounts.map((b) => (
+                                                                                <SelectItem key={b.id} value={b.id}>
+                                                                                    {b.bank_name} · {b.account_name} ({b.currency})
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
                                                                 </div>
                                                                 <div>
                                                                     <Label htmlFor="edit-date">Date</Label>
