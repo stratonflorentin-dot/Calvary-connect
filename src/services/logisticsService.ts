@@ -129,7 +129,9 @@ export async function fullLogisticsAnalysis(
   try {
     const ai = await createGenkit();
     const result = await ai.generate({
-      model: "groq/llama-3.3-70b-versatile",
+      // llama-3.3-70b-versatile was decommissioned by Groq (confirmed live
+      // via /v1/models — not in their catalog anymore).
+      model: "groq/openai/gpt-oss-120b",
       prompt,
       config: { temperature: 0.5 }, // Lower for factual, predictive output
     });

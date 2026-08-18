@@ -19,6 +19,10 @@ export async function createGenkit() {
 
   return genkit({
     plugins: [groq({ apiKey: process.env.GROQ_API_KEY })],
-    model: 'groq/llama-3.3-70b-versatile',
+    // llama-3.3-70b-versatile was decommissioned by Groq (confirmed via a
+    // live /v1/models call — no longer in their catalog at all, not a
+    // transient outage). gpt-oss-120b is the closest capability-tier
+    // general-purpose model Groq currently serves.
+    model: 'groq/openai/gpt-oss-120b',
   });
 }
