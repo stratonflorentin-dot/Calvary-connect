@@ -418,6 +418,7 @@ export default function FinanceOverviewPage() {
     { label: "Aging Report", sub: "AR & AP aging buckets", href: "/finance/reports/aging-report", color: "border-l-warning" },
     { label: "Trial Balance", sub: "GL debit / credit totals", href: "/finance/reports/trial-balance", color: "border-l-info" },
     { label: "VAT / Tax Report", sub: "Statutory obligations", href: "/finance/reports/tax-reports", color: "border-l-destructive" },
+    { label: "Day-End Closings", sub: "Lock a month's postings", href: "/finance/accounting/day-end-closings", color: "border-l-warning" },
   ];
 
   if (loading) return (
