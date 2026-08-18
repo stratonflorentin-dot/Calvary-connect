@@ -21,8 +21,8 @@ export const DEPARTMENT_PERMISSIONS = {
   },
   // Finance Department
   FINANCE: {
-    roles: ['CEO', 'ADMIN', 'ACCOUNTANT'],
-    modules: ['invoices', 'payments', 'journal_entries', 'expenses', 'revenue', 'tax_reports', 'general_ledger'],
+    roles: ['CEO', 'ADMIN', 'ACCOUNTANT', 'CASHIER'],
+    modules: ['invoices', 'payments', 'journal_entries', 'expenses', 'revenue', 'tax_reports', 'general_ledger', 'petty_cash'],
     actions: ['create', 'read', 'update', 'delete', 'approve', 'reconcile']
   },
   // HR Department

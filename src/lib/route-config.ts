@@ -27,6 +27,7 @@ const ALL_APP_ROLES: UserRole[] = [
   "HR",
   "SALESMAN",
   "WAREHOUSE_STAFF",
+  "CASHIER",
 ];
 
 export interface RouteConfig {
@@ -271,6 +272,16 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
     category: "finance",
     showInNavigation: false, // shown in finance quick-links, like chart-of-accounts
+  },
+  {
+    path: "/finance/petty-cash",
+    label: "Petty Cash",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "CASHIER"],
+    category: "finance",
+    // Visible directly in the sidebar (unlike the other finance sub-pages,
+    // which hide behind the Finance Overview quick-links grid) — CASHIER
+    // isn't in Finance Overview's allowedRoles, so that grid is never
+    // reachable for them; this is their only way to find this page.
   },
   {
     path: "/finance/cash-requests",
@@ -743,6 +754,8 @@ export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
   ACCOUNTANT: "/finance",
   HR: "/users",
   WAREHOUSE_STAFF: "/inventory",
+  // Not "/finance" — a Cashier isn't in Finance Overview's allowedRoles.
+  CASHIER: "/finance/petty-cash",
 };
 
 function routeDebug(level: "log" | "warn" | "error", ...args: unknown[]) {

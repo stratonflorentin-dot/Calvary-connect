@@ -7,7 +7,8 @@ export type UserRole =
   | "ACCOUNTANT"
   | "HR"
   | "SALESMAN"
-  | "WAREHOUSE_STAFF";
+  | "WAREHOUSE_STAFF"
+  | "CASHIER";
 
 export interface UserProfile {
   uid: string;

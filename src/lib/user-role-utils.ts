@@ -10,6 +10,7 @@ const KNOWN_ROLES: UserRole[] = [
   "HR",
   "SALESMAN",
   "WAREHOUSE_STAFF",
+  "CASHIER",
 ];
 
 export function isValidRole(role: string): role is UserRole {

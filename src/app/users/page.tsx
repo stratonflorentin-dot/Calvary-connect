@@ -73,6 +73,7 @@ export default function UsersPage() {
     MECHANIC: { label: 'Mechanic', color: 'text-warning', bgColor: 'bg-warning/10' },
     ACCOUNTANT: { label: 'Accountant', color: 'text-info', bgColor: 'bg-info/10' },
     SALESMAN: { label: 'Salesman', color: 'text-primary', bgColor: 'bg-primary/10' },
+    CASHIER: { label: 'Cashier', color: 'text-success', bgColor: 'bg-success/10' },
   };
 
   const getRoleBadgeClass = (roleName: string) => {
@@ -439,6 +440,7 @@ export default function UsersPage() {
                       <SelectItem value="MECHANIC">Mechanic</SelectItem>
                       <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
                       <SelectItem value="SALESMAN">Salesman</SelectItem>
+                      <SelectItem value="CASHIER">Cashier</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -613,6 +615,7 @@ export default function UsersPage() {
                     <SelectItem value="MECHANIC">Mechanic</SelectItem>
                     <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
                     <SelectItem value="SALESMAN">Salesman</SelectItem>
+                    <SelectItem value="CASHIER">Cashier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
