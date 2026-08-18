@@ -71,7 +71,7 @@ export default function ExpensesPage() {
                 setLoading(true);
                 // Load expenses, vehicles, and COA in parallel
                 const [expensesRes, vehiclesRes, accounts] = await Promise.all([
-                    supabase.from('expenses').select('*, vehicle_id, vehicleId').order('created_at', { ascending: false }),
+                    supabase.from('expenses').select('*, vehicle_id').order('created_at', { ascending: false }),
                     supabase.from('vehicles').select('*'),
                     ChartOfAccountsService.getAccounts()
                 ]);
@@ -94,8 +94,14 @@ export default function ExpensesPage() {
 
         if (!user) return;
 
+        // Captured synchronously, before any `await` below — React nulls out
+        // pooled SyntheticEvent fields (including currentTarget) once the
+        // handler's synchronous portion returns, so reading e.currentTarget
+        // after an await throws "Cannot read properties of null".
+        const form = e.currentTarget;
+
         try {
-            const formData = new FormData(e.currentTarget);
+            const formData = new FormData(form);
             const vehicleId = formData.get('vehicle_id') as string;
             const expenseCurrency = formData.get('currency') as string || 'TZS';
             const category = formData.get('category') as string;
@@ -147,7 +153,7 @@ export default function ExpensesPage() {
 
                 setExpenses(updatedExpenses || []);
                 setIsAddDialogOpen(false);
-                e.currentTarget.reset();
+                form.reset();
             }
         } catch (error) {
             console.error('Error adding expense:', error);
