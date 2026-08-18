@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { format } from "date-fns";
-import { ArrowDownCircle, ArrowLeft, ArrowUpCircle, Loader2, Plus, Wallet } from "lucide-react";
+import { ArrowDownCircle, ArrowLeft, ArrowUpCircle, Loader2, Plus, Smartphone, Wallet } from "lucide-react";
 
 // Petty Cash — a simple debit/credit ledger for a cash box a Cashier
 // operates directly (tolls, small purchases), distinct from Cash Requests'
@@ -35,6 +35,8 @@ interface TxnRow {
   contra_account_code: string | null;
   reference: string | null;
   running_balance: number;
+  payment_method: "cash" | "mobile_money";
+  mobile_money_account_id: string | null;
 }
 
 interface ExpenseAccountOption {
@@ -78,6 +80,8 @@ export default function PettyCashPage() {
   const [reference, setReference] = useState("");
   const [accountCode, setAccountCode] = useState("");
   const [fundingAccountId, setFundingAccountId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "mobile_money">("cash");
+  const [mobileMoneyAccountId, setMobileMoneyAccountId] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -167,6 +171,8 @@ export default function PettyCashPage() {
     setReference("");
     setAccountCode("");
     setFundingAccountId("");
+    setPaymentMethod("cash");
+    setMobileMoneyAccountId("");
   };
 
   const submit = async () => {
@@ -187,11 +193,15 @@ export default function PettyCashPage() {
       toast({ title: "Choose which expense account this belongs to", variant: "destructive" });
       return;
     }
+    if (type === "debit" && paymentMethod === "mobile_money" && !mobileMoneyAccountId) {
+      toast({ title: "Choose which mobile money account paid this", variant: "destructive" });
+      return;
+    }
     if (type === "credit" && !fundingAccountId) {
       toast({ title: "Choose which bank account funded this", variant: "destructive" });
       return;
     }
-    if (type === "debit" && amt > balance) {
+    if (type === "debit" && paymentMethod === "cash" && amt > balance) {
       toast({ title: "Insufficient petty cash balance", description: `Current balance is ${formatCurrency(balance, "TZS")}.`, variant: "destructive" });
       return;
     }
@@ -204,8 +214,8 @@ export default function PettyCashPage() {
       let journalEntryId: string | null = null;
       let bankTransactionId: string | null = null;
 
-      if (type === "debit") {
-        // Dr [expense account] / Cr Petty Cash
+      if (type === "debit" && paymentMethod === "cash") {
+        // Dr [expense account] / Cr Petty Cash — draws down the physical box.
         const { data: je, error: jeErr } = await supabase
           .from("journal_entries")
           .insert({
@@ -229,6 +239,26 @@ export default function PettyCashPage() {
         const { error: postErr } = await supabase.rpc("post_journal_entry", { p_id: je.id });
         if (postErr) throw postErr;
         journalEntryId = je.id;
+      } else if (type === "debit" && paymentMethod === "mobile_money") {
+        // Dr [expense account] / Cr the mobile money account — a real
+        // withdrawal against that account's own balance, same mechanism
+        // as a credit top-up below. Does NOT touch the cash box's
+        // running_balance: this money never passed through the box.
+        const { data: txn, error: txnErr } = await supabase.rpc("post_bank_transaction", {
+          p_bank_account_id: mobileMoneyAccountId,
+          p_amount: amt,
+          p_direction: "out",
+          p_transaction_type: "petty_cash_mobile_payment",
+          p_currency: "TZS",
+          p_description: `Petty cash (mobile money): ${description.trim()}`,
+          p_reference_type: "petty_cash",
+          p_transaction_date: date,
+          p_contra_account_code: accountCode,
+          p_idempotency_key: crypto.randomUUID(),
+        });
+        if (txnErr) throw txnErr;
+        journalEntryId = (txn as any)?.journal_entry_id ?? null;
+        bankTransactionId = (txn as any)?.id ?? null;
       } else {
         // Dr Petty Cash / Cr Bank — a real withdrawal, same mechanism as
         // Cash Requests' disbursement leg.
@@ -249,7 +279,9 @@ export default function PettyCashPage() {
         bankTransactionId = (txn as any)?.id ?? null;
       }
 
-      const newBalance = type === "credit" ? balance + amt : balance - amt;
+      // Only cash moves the box's own balance — a mobile money payment
+      // draws from a different pool of money entirely.
+      const newBalance = type === "credit" ? balance + amt : paymentMethod === "cash" ? balance - amt : balance;
       const { error: insertErr } = await supabase.from("petty_cash_transactions").insert({
         transaction_number: transactionNumber,
         transaction_date: date,
@@ -262,11 +294,19 @@ export default function PettyCashPage() {
         journal_entry_id: journalEntryId,
         funded_from_account_id: type === "credit" ? fundingAccountId : null,
         bank_transaction_id: bankTransactionId,
+        payment_method: type === "debit" ? paymentMethod : "cash",
+        mobile_money_account_id: type === "debit" && paymentMethod === "mobile_money" ? mobileMoneyAccountId : null,
         created_by: user?.id ?? null,
       });
       if (insertErr) throw insertErr;
 
-      toast({ variant: "success", title: `${transactionNumber} recorded`, description: `New balance: ${formatCurrency(newBalance, "TZS")}` });
+      toast({
+        variant: "success",
+        title: `${transactionNumber} recorded`,
+        description: paymentMethod === "mobile_money" && type === "debit"
+          ? "Paid via mobile money — cash box balance unchanged."
+          : `New balance: ${formatCurrency(newBalance, "TZS")}`,
+      });
       setEntryOpen(false);
       resetForm();
       load();
@@ -356,15 +396,24 @@ export default function PettyCashPage() {
                     <TableCell className="text-sm text-muted-foreground">{r.transaction_date}</TableCell>
                     <TableCell className="text-sm">{r.description}{r.reference ? ` · ${r.reference}` : ""}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={r.type === "credit" ? "default" : "secondary"} className="gap-1">
-                        {r.type === "credit" ? <ArrowUpCircle className="w-3 h-3" /> : <ArrowDownCircle className="w-3 h-3" />}
-                        {r.type}
-                      </Badge>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <Badge variant={r.type === "credit" ? "default" : "secondary"} className="gap-1">
+                          {r.type === "credit" ? <ArrowUpCircle className="w-3 h-3" /> : <ArrowDownCircle className="w-3 h-3" />}
+                          {r.type}
+                        </Badge>
+                        {r.type === "debit" && r.payment_method === "mobile_money" && (
+                          <Badge variant="outline" className="gap-1" title="Paid via mobile money — cash box unaffected">
+                            <Smartphone className="w-3 h-3" /> mobile
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className={`text-right font-mono ${r.type === "credit" ? "text-success" : "text-destructive"}`}>
                       {r.type === "credit" ? "+" : "-"}{formatCurrency(r.amount, "TZS")}
                     </TableCell>
-                    <TableCell className="text-right font-mono">{formatCurrency(r.running_balance, "TZS")}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {r.type === "debit" && r.payment_method === "mobile_money" ? "—" : formatCurrency(r.running_balance, "TZS")}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -417,15 +466,47 @@ export default function PettyCashPage() {
             </div>
 
             {type === "debit" ? (
-              <div className="space-y-1">
-                <Label className="text-xs">Expense account *</Label>
-                <Select value={accountCode} onValueChange={setAccountCode}>
-                  <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
-                  <SelectContent>
-                    {expenseAccounts.map((a) => <SelectItem key={a.code} value={a.code}>{a.code} · {a.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div className="space-y-1">
+                  <Label className="text-xs">Paid using</Label>
+                  <div className="flex items-center gap-2">
+                    {(["cash", "mobile_money"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setPaymentMethod(m)}
+                        className={`flex-1 h-9 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center gap-1.5 ${
+                          paymentMethod === m ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/40"
+                        }`}
+                      >
+                        {m === "cash" ? <Wallet className="w-3.5 h-3.5" /> : <Smartphone className="w-3.5 h-3.5" />}
+                        {m === "cash" ? "Cash (box)" : "Mobile money"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Expense account *</Label>
+                  <Select value={accountCode} onValueChange={setAccountCode}>
+                    <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                    <SelectContent>
+                      {expenseAccounts.map((a) => <SelectItem key={a.code} value={a.code}>{a.code} · {a.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {paymentMethod === "mobile_money" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Mobile money account *</Label>
+                    <Select value={mobileMoneyAccountId} onValueChange={setMobileMoneyAccountId}>
+                      <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                      <SelectContent>
+                        {tzsBankAccounts.map((b) => <SelectItem key={b.id} value={b.id}>{b.bank_name} · {b.account_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Withdraws directly from this account — the cash box balance won't change.</p>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="space-y-1">
                 <Label className="text-xs">Funded from *</Label>
