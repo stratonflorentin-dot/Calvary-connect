@@ -18,6 +18,7 @@ import {
   Wrench,
   Calculator,
   LogOut,
+  Languages,
   Receipt,
   Shield,
   Camera,
@@ -120,7 +121,7 @@ const BOTTOM_NAV_PRIORITY = ["/", "/trips", "/driver/trips", "/fleet", "/chat", 
 
 export function Sidebar({ role }: { role?: UserRole | null }) {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, toggleLanguage, lang } = useLanguage();
   const { signOut, user, uploadAvatar } = useSupabase();
   const { isOpen, isCollapsed, toggle, close, toggleCollapse } = useSidebar();
 
@@ -286,6 +287,15 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <div className="text-[hsl(var(--sidebar-foreground))] hover:text-white [&_button]:hover:bg-white/10 [&_svg]:size-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleLanguage}
+                title={`Switch to ${lang === "en" ? "Swahili" : "English"}`}
+                className="text-[hsl(var(--sidebar-foreground))] hover:text-white hover:bg-white/10"
+              >
+                <Languages className="size-4" />
+              </Button>
               <NotificationBell />
             </div>
             <Link href="/profile" aria-label="Profile">
@@ -384,6 +394,15 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
               </div>
               <div className="flex items-center gap-1">
                 <div className="text-[hsl(var(--sidebar-foreground))] hover:text-white [&_button]:hover:bg-white/10 [&_svg]:size-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleLanguage}
+                    title={`Switch to ${lang === "en" ? "Swahili" : "English"}`}
+                    className="text-[hsl(var(--sidebar-foreground))] hover:text-white hover:bg-white/10"
+                  >
+                    <Languages className="size-4" />
+                  </Button>
                   <NotificationBell />
                 </div>
                 <Button variant="ghost" size="icon" onClick={toggleCollapse} className="text-[hsl(var(--sidebar-muted))] hover:text-white hover:bg-white/10 transition-colors overflow-hidden">
