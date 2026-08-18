@@ -248,7 +248,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/finance/accounting/journal-entries",
     label: "Journal Entries",
-    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "CASHIER"],
     category: "finance",
     showInNavigation: false,
   },

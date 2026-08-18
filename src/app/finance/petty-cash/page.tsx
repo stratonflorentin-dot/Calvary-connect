@@ -63,6 +63,11 @@ export default function PettyCashPage() {
   // code, same as bank_accounts.coa_account_code links a bank account to
   // its COA row — shown on the page so the link is visible, not silent.
   const [pettyCashAccount, setPettyCashAccount] = useState<{ code: string; name: string } | null>(null);
+  const [assetAccounts, setAssetAccounts] = useState<ExpenseAccountOption[]>([]);
+  const [changeAccountOpen, setChangeAccountOpen] = useState(false);
+  const [newLinkedCode, setNewLinkedCode] = useState("");
+  const [savingLink, setSavingLink] = useState(false);
+  const canChangeLink = ["CEO", "ADMIN", "ACCOUNTANT"].includes(String(role || "").toUpperCase());
 
   const [entryOpen, setEntryOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -90,9 +95,51 @@ export default function PettyCashPage() {
     setLoading(false);
   };
 
+  const loadPettyCashAccount = async () => {
+    // Explicit, persisted link (petty_cash_settings.account_code) rather
+    // than resolving "Petty Cash" by name at runtime — same shape as
+    // bank_accounts.coa_account_code.
+    const { data: setting } = await supabase
+      .from("petty_cash_settings")
+      .select("account_code, accounts:account_code(code, name, currency)")
+      .eq("id", true)
+      .maybeSingle();
+    const acct = (setting as any)?.accounts ?? null;
+    if (acct) setPettyCashAccount({ code: acct.code, name: acct.name });
+    else setPettyCashAccount(null);
+
+    // Funding source is scoped to the linked account's own currency — a
+    // cross-currency replenishment would fail post_journal_entry's
+    // currency guard (verified live elsewhere in this session against the
+    // same chart of accounts).
+    const { data: banks } = await supabase
+      .from("bank_accounts")
+      .select("id, account_name, bank_name, currency")
+      .eq("currency", acct?.currency ?? "TZS");
+    setTzsBankAccounts(banks ?? []);
+  };
+
+  const saveLinkedAccount = async () => {
+    if (!newLinkedCode) return;
+    setSavingLink(true);
+    const { error } = await supabase
+      .from("petty_cash_settings")
+      .upsert({ id: true, account_code: newLinkedCode, updated_by: user?.id ?? null, updated_at: new Date().toISOString() });
+    setSavingLink(false);
+    if (error) {
+      toast({ title: "Couldn't update linked account", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ variant: "success", title: "Petty Cash linked account updated" });
+    setChangeAccountOpen(false);
+    setNewLinkedCode("");
+    loadPettyCashAccount();
+  };
+
   useEffect(() => {
     if (!canUse) return;
     load();
+    loadPettyCashAccount();
     supabase
       .from("accounts")
       .select("code, name")
@@ -100,25 +147,15 @@ export default function PettyCashPage() {
       .eq("is_postable", true)
       .order("code")
       .then(({ data }) => setExpenseAccounts(data ?? []));
-    supabase
-      .from("accounts")
-      .select("code, name, currency")
-      .ilike("name", "%petty cash%")
-      .eq("is_postable", true)
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setPettyCashAccount({ code: data.code, name: data.name });
-        // Funding source is scoped to the linked account's own currency —
-        // a cross-currency replenishment would fail post_journal_entry's
-        // currency guard (verified live elsewhere in this session against
-        // the same chart of accounts).
-        supabase
-          .from("bank_accounts")
-          .select("id, account_name, bank_name, currency")
-          .eq("currency", data?.currency ?? "TZS")
-          .then(({ data: banks }) => setTzsBankAccounts(banks ?? []));
-      });
+    if (canChangeLink) {
+      supabase
+        .from("accounts")
+        .select("code, name")
+        .eq("category", "ASSETS")
+        .eq("is_postable", true)
+        .order("code")
+        .then(({ data }) => setAssetAccounts(data ?? []));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canUse]);
 
@@ -273,12 +310,24 @@ export default function PettyCashPage() {
       </div>
 
       {pettyCashAccount ? (
-        <p className="text-xs text-muted-foreground -mt-2">
+        <p className="text-xs text-muted-foreground -mt-2 flex items-center gap-2">
           Linked to <span className="font-mono font-bold text-foreground">{pettyCashAccount.code}</span> · {pettyCashAccount.name} in the Chart of Accounts.
+          {canChangeLink && (
+            <button
+              type="button"
+              onClick={() => { setNewLinkedCode(pettyCashAccount.code); setChangeAccountOpen(true); }}
+              className="text-primary hover:underline font-semibold"
+            >
+              Change
+            </button>
+          )}
         </p>
       ) : !loading && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl p-3 text-sm">
-          No postable "Petty Cash" account found in the Chart of Accounts — add one before recording entries.
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl p-3 text-sm flex items-center justify-between gap-3">
+          <span>No Petty Cash account is linked yet.</span>
+          {canChangeLink && (
+            <Button size="sm" variant="outline" onClick={() => setChangeAccountOpen(true)}>Link an account</Button>
+          )}
         </div>
       )}
 
@@ -399,6 +448,33 @@ export default function PettyCashPage() {
               <Button onClick={submit} disabled={saving} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 Record entry
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={changeAccountOpen} onOpenChange={setChangeAccountOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader><DialogTitle>Change linked account</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Every petty cash entry posts against this Chart of Accounts row. Changing it only affects entries recorded from now on — past journal entries already posted keep their original account.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Petty Cash account</Label>
+              <Select value={newLinkedCode} onValueChange={setNewLinkedCode}>
+                <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                <SelectContent>
+                  {assetAccounts.map((a) => <SelectItem key={a.code} value={a.code}>{a.code} · {a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <Button type="button" variant="outline" onClick={() => setChangeAccountOpen(false)} disabled={savingLink}>Cancel</Button>
+              <Button onClick={saveLinkedAccount} disabled={savingLink || !newLinkedCode} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+                {savingLink ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Save
               </Button>
             </div>
           </div>
