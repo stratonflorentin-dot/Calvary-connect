@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireFleetReportAccess } from "../../reports/helpers";
+import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
 
 /**
  * Budget vs Actual. The `budgets` table already existed with real columns
@@ -56,6 +57,11 @@ export async function GET(request: NextRequest) {
       const matching = (expenses ?? []).filter((e: any) => {
         if (categoryName && String(e.category ?? "").toLowerCase() !== categoryName.toLowerCase()) return false;
         if (b.vehicle_id && e.vehicle_id !== b.vehicle_id) return false;
+        // Currency must match — a USD budget can't be measured against TZS
+        // spend without a conversion this route has no rate for, so an
+        // expense in a different currency simply never counts toward it
+        // rather than being silently added as if it were the same money.
+        if (normalizeCurrency(e.currency) !== normalizeCurrency(b.currency)) return false;
         if (!e.date) return false;
         return e.date >= b.start_date && e.date <= b.end_date;
       });
@@ -96,9 +102,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Never sum across currencies — a TZS total and a USD total added
+    // together is a meaningless number. Group per currency instead, same
+    // "Mixed currencies" convention as the rest of the finance module
+    // (src/lib/finance/multi-currency.ts).
+    const byCurrency: Record<string, { budgeted: number; actual: number }> = {};
+    for (const r of rows) {
+      const cur = normalizeCurrency(r.currency);
+      if (!byCurrency[cur]) byCurrency[cur] = { budgeted: 0, actual: 0 };
+      byCurrency[cur].budgeted += r.amount;
+      byCurrency[cur].actual += r.actual;
+    }
     const summary = {
-      totalBudgeted: rows.reduce((s, r) => s + r.amount, 0),
-      totalActual: rows.reduce((s, r) => s + r.actual, 0),
+      byCurrency,
+      currencies: sortCurrencyKeys(Object.keys(byCurrency)),
       overCount: rows.filter((r) => r.band === "over").length,
       warningCount: rows.filter((r) => r.band === "warning").length,
     };

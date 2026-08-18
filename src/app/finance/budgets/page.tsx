@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PageShell, PageHeader, SectionCard, StatCard, EmptyState } from "@/components/shell";
+import { PageHeader, SectionCard, StatCard, EmptyState } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -70,7 +70,12 @@ export default function BudgetsPage() {
   const canWrite = CAN_WRITE_ROLES.includes(String(role || "").toUpperCase());
 
   const [rows, setRows] = useState<BudgetRow[]>([]);
-  const [summary, setSummary] = useState<{ totalBudgeted: number; totalActual: number; overCount: number; warningCount: number } | null>(null);
+  const [summary, setSummary] = useState<{
+    byCurrency: Record<string, { budgeted: number; actual: number }>;
+    currencies: string[];
+    overCount: number;
+    warningCount: number;
+  } | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -184,14 +189,14 @@ export default function BudgetsPage() {
   if (roleLoading) return null;
   if (!canView) {
     return (
-      <PageShell>
+      <div className="space-y-6 pb-8">
         <EmptyState icon={Wallet} title="Access denied" description="You don't have permission to view budgets." />
-      </PageShell>
+      </div>
     );
   }
 
   return (
-    <PageShell width="wide">
+    <div className="space-y-6 pb-8">
       <PageHeader
         eyebrow="Finance"
         title="Budget vs Actual"
@@ -215,11 +220,29 @@ export default function BudgetsPage() {
       />
 
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard label="Total budgeted" value={formatCurrency(summary.totalBudgeted, "TZS")} icon={Wallet} accent="bg-primary/10 text-primary" />
-          <StatCard label="Total actual" value={formatCurrency(summary.totalActual, "TZS")} icon={Wallet} accent="bg-info/10 text-info" />
-          <StatCard label="Near limit" value={summary.warningCount} icon={Wallet} accent="bg-warning/10 text-warning" />
-          <StatCard label="Over budget" value={summary.overCount} icon={Wallet} accent="bg-destructive/10 text-destructive" />
+        <div className="space-y-4 mb-6">
+          {/* One budgeted/actual pair per currency — never summed together,
+              same "Mixed currencies" convention as the rest of Finance. */}
+          {summary.currencies.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {summary.currencies.map((cur) => (
+                <div key={cur} className="bg-card border border-border rounded-2xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{cur} budgeted</p>
+                    <p className="text-lg font-black text-foreground">{formatCurrency(summary.byCurrency[cur].budgeted, cur)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{cur} actual</p>
+                    <p className="text-lg font-black text-foreground">{formatCurrency(summary.byCurrency[cur].actual, cur)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <StatCard label="Near limit" value={summary.warningCount} icon={Wallet} accent="bg-warning/10 text-warning" />
+            <StatCard label="Over budget" value={summary.overCount} icon={Wallet} accent="bg-destructive/10 text-destructive" />
+          </div>
         </div>
       )}
 
@@ -375,6 +398,6 @@ export default function BudgetsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </PageShell>
+    </div>
   );
 }

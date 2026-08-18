@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PageShell, PageHeader, SectionCard, StatCard, EmptyState } from "@/components/shell";
+import { PageHeader, SectionCard, StatCard, EmptyState } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -215,10 +215,17 @@ export default function CashRequestsPage() {
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
   const disbursedCount = requests.filter((r) => r.status === "disbursed").length;
-  const openAdvance = requests.filter((r) => r.status === "disbursed").reduce((s, r) => s + Number(r.amount), 0);
+  // Never summed across currencies — grouped per currency, same "Mixed
+  // currencies" convention as the rest of Finance.
+  const openAdvanceByCurrency: Record<string, number> = {};
+  for (const r of requests.filter((r) => r.status === "disbursed")) {
+    const cur = (r.currency || "TZS").toUpperCase();
+    openAdvanceByCurrency[cur] = (openAdvanceByCurrency[cur] || 0) + Number(r.amount);
+  }
+  const openAdvanceCurrencies = Object.keys(openAdvanceByCurrency);
 
   return (
-    <PageShell width="wide">
+    <div className="space-y-6 pb-8">
       <PageHeader
         eyebrow="Finance"
         title="Cash Requests"
@@ -236,12 +243,21 @@ export default function CashRequestsPage() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <StatCard label="Total requests" value={requests.length} icon={Wallet} accent="bg-primary/10 text-primary" />
         <StatCard label="Pending approval" value={pendingCount} icon={Wallet} accent="bg-warning/10 text-warning" />
         <StatCard label="Awaiting retirement" value={disbursedCount} icon={Wallet} accent="bg-info/10 text-info" />
-        <StatCard label="Outstanding advances" value={fmt(openAdvance, "TZS")} icon={Wallet} accent="bg-destructive/10 text-destructive" />
       </div>
+      {openAdvanceCurrencies.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+          {openAdvanceCurrencies.map((cur) => (
+            <div key={cur} className="bg-card border border-destructive/20 rounded-2xl p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Outstanding advances ({cur})</p>
+              <p className="text-lg font-black text-destructive">{fmt(openAdvanceByCurrency[cur], cur)}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <SectionCard title="All requests">
         {loading ? (
@@ -446,6 +462,6 @@ export default function CashRequestsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </PageShell>
+    </div>
   );
 }
