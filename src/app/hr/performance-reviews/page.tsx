@@ -61,6 +61,7 @@ export default function PerformanceReviewsPage() {
   const [employeeId, setEmployeeId] = useState("");
   const [rating, setRating] = useState("3");
   const [reviewText, setReviewText] = useState("");
+  const [reviewTextMissing, setReviewTextMissing] = useState(false);
   const [goals, setGoals] = useState("");
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
@@ -101,9 +102,11 @@ export default function PerformanceReviewsPage() {
       return;
     }
     if (!reviewText.trim()) {
-      toast({ title: "Write a review summary", variant: "destructive" });
+      setReviewTextMissing(true);
+      toast({ title: "Write a review summary", description: "The Review field below is required before this can be saved.", variant: "destructive" });
       return;
     }
+    setReviewTextMissing(false);
     setSaving(true);
     const kpi_scores: Record<string, number> = {};
     for (const row of kpiRows) {
@@ -130,6 +133,7 @@ export default function PerformanceReviewsPage() {
     setCreateOpen(false);
     setEmployeeId("");
     setReviewText("");
+    setReviewTextMissing(false);
     setGoals("");
     setPeriodStart("");
     setPeriodEnd("");
@@ -277,7 +281,17 @@ export default function PerformanceReviewsPage() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Review *</Label>
-              <Textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)} rows={4} placeholder="Summary of performance for this period" />
+              <Textarea
+                value={reviewText}
+                onChange={(e) => {
+                  setReviewText(e.target.value);
+                  if (e.target.value.trim()) setReviewTextMissing(false);
+                }}
+                rows={4}
+                placeholder="Summary of performance for this period"
+                className={reviewTextMissing ? "border-destructive focus-visible:ring-destructive" : undefined}
+              />
+              {reviewTextMissing && <p className="text-xs text-destructive">Required before this review can be saved.</p>}
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Goals for next period</Label>
