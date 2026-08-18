@@ -157,7 +157,7 @@ export async function deleteUserAction(userId: string) {
   return true;
 }
 
-export async function updateUserAction(userId: string, updateData: any) {
+export async function updateUserAction(userId: string, updateData: any, actorId?: string) {
   const supabaseAdmin = getAdminClient();
 
   // Whitelist of columns that are safe to update on user_profiles
@@ -187,12 +187,40 @@ export async function updateUserAction(userId: string, updateData: any) {
     return true; // nothing to update
   }
 
+  // Fetch the prior row so role/status/etc. changes are traceable — this
+  // action previously wrote no audit trail at all for user edits (only
+  // vehicles, journal entries, compliance documents and company settings
+  // were ever logged), which is exactly why a role change couldn't be
+  // traced when investigating one live.
+  const { data: before } = await supabaseAdmin
+    .from("user_profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
   const { error } = await supabaseAdmin
     .from("user_profiles")
     .update(sanitized)
     .eq("id", userId);
 
   if (error) throw new Error(error.message);
+
+  const changedFields = Object.keys(sanitized).filter(
+    (k) => k !== "updated_at" && before && (before as Record<string, any>)[k] !== sanitized[k],
+  );
+  if (changedFields.length > 0) {
+    await supabaseAdmin.from("audit_trail").insert({
+      user_id: actorId ?? null,
+      module: "management",
+      action: "update",
+      entity_type: "user",
+      entity_id: userId,
+      old_value: before,
+      new_value: sanitized,
+      description: `Updated user ${before?.name ?? userId} (${changedFields.join(", ")})`,
+    });
+  }
+
   return true;
 }
 

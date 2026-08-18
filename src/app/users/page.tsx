@@ -216,7 +216,7 @@ export default function UsersPage() {
       if (data?.id && selectedPhoto) {
         avatarUrl = await uploadPhoto(data.id);
         if (avatarUrl) {
-          await updateUserAction(data.id, { avatar_url: avatarUrl });
+          await updateUserAction(data.id, { avatar_url: avatarUrl }, user?.id);
         }
       }
 
@@ -311,13 +311,13 @@ export default function UsersPage() {
         return;
       }
 
-      await updateUserAction(editingUser.id, updateData);
+      await updateUserAction(editingUser.id, updateData, user?.id);
 
       // Upload new photo if selected
       if (selectedPhoto) {
         const avatarUrl = await uploadPhoto(editingUser.id);
         if (avatarUrl) {
-          await updateUserAction(editingUser.id, { avatar_url: avatarUrl });
+          await updateUserAction(editingUser.id, { avatar_url: avatarUrl }, user?.id);
         }
       }
 
