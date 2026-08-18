@@ -94,10 +94,14 @@ function AccountPicker({
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
+    // No cap — the dropdown already scrolls (max-h-96) and has search, and
+    // this chart of accounts has ~130 postable accounts, well within what
+    // a plain scrollable list handles fine. A hard slice(0, 40) here meant
+    // over 90 accounts were simply unreachable without already knowing
+    // enough of the code/name to search for them.
     return accounts
       .filter((a) => a.is_active !== false && a.is_postable !== false)
-      .filter((a) => !t || `${a.code} ${a.name}`.toLowerCase().includes(t))
-      .slice(0, 40);
+      .filter((a) => !t || `${a.code} ${a.name}`.toLowerCase().includes(t));
   }, [accounts, q]);
 
   const handleOpen = () => {
