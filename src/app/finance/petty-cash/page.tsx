@@ -282,23 +282,49 @@ export default function PettyCashPage() {
       // Only cash moves the box's own balance — a mobile money payment
       // draws from a different pool of money entirely.
       const newBalance = type === "credit" ? balance + amt : paymentMethod === "cash" ? balance - amt : balance;
-      const { error: insertErr } = await supabase.from("petty_cash_transactions").insert({
-        transaction_number: transactionNumber,
-        transaction_date: date,
-        type,
-        amount: amt,
-        description: description.trim(),
-        contra_account_code: type === "debit" ? accountCode : null,
-        reference: reference.trim() || null,
-        running_balance: newBalance,
-        journal_entry_id: journalEntryId,
-        funded_from_account_id: type === "credit" ? fundingAccountId : null,
-        bank_transaction_id: bankTransactionId,
-        payment_method: type === "debit" ? paymentMethod : "cash",
-        mobile_money_account_id: type === "debit" && paymentMethod === "mobile_money" ? mobileMoneyAccountId : null,
-        created_by: user?.id ?? null,
-      });
+      const { data: pettyCashTxn, error: insertErr } = await supabase
+        .from("petty_cash_transactions")
+        .insert({
+          transaction_number: transactionNumber,
+          transaction_date: date,
+          type,
+          amount: amt,
+          description: description.trim(),
+          contra_account_code: type === "debit" ? accountCode : null,
+          reference: reference.trim() || null,
+          running_balance: newBalance,
+          journal_entry_id: journalEntryId,
+          funded_from_account_id: type === "credit" ? fundingAccountId : null,
+          bank_transaction_id: bankTransactionId,
+          payment_method: type === "debit" ? paymentMethod : "cash",
+          mobile_money_account_id: type === "debit" && paymentMethod === "mobile_money" ? mobileMoneyAccountId : null,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
       if (insertErr) throw insertErr;
+
+      // A debit is money a cashier already paid out — record it as a real
+      // (already-paid) expense too, linked back to this ledger entry, so
+      // it shows up on the main Expenses Management page like every other
+      // expense instead of only existing in this ledger and the GL.
+      if (type === "debit") {
+        const { error: expenseErr } = await supabase.from("expenses").insert({
+          description: description.trim(),
+          amount: amt,
+          category: "other",
+          account_code: accountCode,
+          date,
+          status: "paid",
+          currency: "TZS",
+          payment_method: paymentMethod,
+          client_reference: reference.trim() || null,
+          journal_entry_id: journalEntryId,
+          petty_cash_transaction_id: pettyCashTxn.id,
+          created_by: user?.id ?? null,
+        });
+        if (expenseErr) throw expenseErr;
+      }
 
       toast({
         variant: "success",
