@@ -91,7 +91,9 @@ export function useFleetMapLocations() {
       )
       .subscribe();
 
-    const poll = setInterval(loadLocations, 10000);
+    // The postgres_changes subscription above already delivers live updates;
+    // this is just a fallback in case a realtime event is missed/dropped.
+    const poll = setInterval(loadLocations, 60000);
 
     return () => {
       subscription.unsubscribe();

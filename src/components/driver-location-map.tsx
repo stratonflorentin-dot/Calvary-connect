@@ -73,7 +73,9 @@ export function DriverLocationMap() {
         () => fetchDriverLocations(),
       )
       .subscribe();
-    const poll = setInterval(fetchDriverLocations, 20000);
+    // The postgres_changes subscription above already delivers live updates;
+    // this is just a fallback in case a realtime event is missed/dropped.
+    const poll = setInterval(fetchDriverLocations, 60000);
     return () => {
       sub.unsubscribe();
       clearInterval(poll);

@@ -290,7 +290,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const interval = setInterval(validateUserExists, 30000);
+    // Runs app-wide for every open session, so this stays a rare safety-net
+    // check (deleted-mid-session is uncommon) — the visibilitychange handler
+    // below covers the common "came back to a stale tab" case immediately.
+    const interval = setInterval(validateUserExists, 5 * 60 * 1000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') validateUserExists();
     };
