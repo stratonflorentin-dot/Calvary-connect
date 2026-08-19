@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   ArrowRightLeft,
   ChevronRight,
+  CloudDownload,
   Loader2,
   Plus,
   RefreshCw,
@@ -31,6 +32,7 @@ export default function FxRatesPage() {
   const [rates, setRates] = useState<FxRate[]>([]);
   const [adding, setAdding] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [syncingCrdb, setSyncingCrdb] = useState(false);
 
   const [form, setForm] = useState({
     from_ccy: "USD",
@@ -118,6 +120,33 @@ export default function FxRatesPage() {
     }
   };
 
+  const syncFromCrdb = async () => {
+    setSyncingCrdb(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+
+      const res = await fetch("/api/finance/fx-rates/sync-crdb", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Sync failed");
+
+      toast({
+        variant: "success",
+        title: "Synced from CRDB Bank",
+        description: `${json.synced.length} rate(s) updated for ${json.asOf}`,
+      });
+      load();
+    } catch (err: any) {
+      toast({ title: "Couldn't sync CRDB rates", description: err.message, variant: "destructive" });
+    } finally {
+      setSyncingCrdb(false);
+    }
+  };
+
   const seedCommonPairs = async () => {
     const targets = KNOWN_CURRENCIES.filter((c) => c !== REPORTING_CURRENCY);
     const existing = new Set(latestPerPair.map((r) => `${r.from_ccy}->${r.to_ccy}`));
@@ -159,6 +188,10 @@ export default function FxRatesPage() {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={load} className="h-9 gap-2">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={syncFromCrdb} disabled={syncingCrdb} className="h-9 gap-2">
+            {syncingCrdb ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CloudDownload className="w-3.5 h-3.5" />}
+            Sync from CRDB
           </Button>
           <Button variant="outline" size="sm" onClick={seedCommonPairs} className="h-9 gap-2">
             <Sparkles className="w-3.5 h-3.5" /> Seed common pairs

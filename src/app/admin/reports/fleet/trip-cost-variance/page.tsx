@@ -7,7 +7,9 @@ import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { ArrowLeft, RefreshCw, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
+import { ArrowLeft, RefreshCw, TrendingUp, AlertTriangle, ShieldCheck, Globe2 } from "lucide-react";
+import { loadRateMap, convertSync } from "@/lib/finance/fx";
+import { REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 
 interface VarianceRow {
   tripId: string;
@@ -47,6 +49,8 @@ export default function TripCostVariancePage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<VarianceRow[]>([]);
   const [thresholds, setThresholds] = useState<{ warning: number; critical: number } | null>(null);
+  const [rateMap, setRateMap] = useState<Record<string, number>>({});
+  const [rateMapMissing, setRateMapMissing] = useState<string[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -72,6 +76,30 @@ export default function TripCostVariancePage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!summary || summary.currencies.length <= 1) return;
+    loadRateMap(summary.currencies, REPORTING_CURRENCY).then((map) => {
+      setRateMap(map);
+      setRateMapMissing(summary.currencies.filter((c) => c !== REPORTING_CURRENCY && map[`${c}->${REPORTING_CURRENCY}`] == null));
+    });
+  }, [summary]);
+
+  // Company-wide total across currencies — an explicit, rate-shown
+  // conversion for a "full picture" figure, never a silent blended sum.
+  const consolidated = summary && summary.currencies.length > 1
+    ? summary.currencies.reduce(
+        (acc, cur) => {
+          const b = summary.byCurrency[cur];
+          const requested = convertSync(b.requested, cur, REPORTING_CURRENCY, rateMap);
+          const committed = convertSync(b.committed, cur, REPORTING_CURRENCY, rateMap);
+          const actual = convertSync(b.actual, cur, REPORTING_CURRENCY, rateMap);
+          if (requested == null || committed == null || actual == null) return acc;
+          return { requested: acc.requested + requested, committed: acc.committed + committed, actual: acc.actual + actual };
+        },
+        { requested: 0, committed: 0, actual: 0 },
+      )
+    : null;
 
   if (!role) return null;
 
@@ -119,6 +147,42 @@ export default function TripCostVariancePage() {
                   <p className="text-xl font-bold">{summary.criticalCount} / {summary.warningCount}</p>
                 </CardContent></Card>
               </div>
+              {consolidated && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Globe2 className="size-4 text-primary" />
+                      <p className="text-xs font-bold text-foreground">
+                        Company-wide total ({REPORTING_CURRENCY} equivalent)
+                      </p>
+                    </div>
+                    {rateMapMissing.length > 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Missing an exchange rate for {rateMapMissing.join(", ")} —{" "}
+                        <Link href="/finance/accounting/fx-rates" className="text-primary hover:underline">record one</Link> to include it here.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Requested</p>
+                          <p className="text-lg font-bold">{formatCurrency(consolidated.requested, REPORTING_CURRENCY)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Committed</p>
+                          <p className="text-lg font-bold">{formatCurrency(consolidated.committed, REPORTING_CURRENCY)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Actual</p>
+                          <p className="text-lg font-bold">{formatCurrency(consolidated.actual, REPORTING_CURRENCY)}</p>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      Converted using today's rate on file — a translation for comparison, not a repost. Native-currency figures below remain the source of truth.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
               {/* One requested/committed/actual set per currency — never
                   summed together, same "Mixed currencies" convention as the
                   rest of Finance. */}
