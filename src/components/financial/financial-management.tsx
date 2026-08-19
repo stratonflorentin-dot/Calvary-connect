@@ -284,6 +284,7 @@ export function CalvaryFinancialManagement() {
       const { error } = await supabase.from('invoices').insert({
         ...invoiceForm,
         amount: parseFloat(invoiceForm.amount),
+        subtotal: parseFloat(invoiceForm.amount),
         status: 'pending',
         created_at: new Date().toISOString()
       });

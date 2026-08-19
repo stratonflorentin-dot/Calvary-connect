@@ -291,6 +291,7 @@ export default function CustomerInvoicesPage() {
         invoice_number: invoiceNum,
         client_name: form.customer_name,
         amount,
+        subtotal: amount,
         vat_applicable: form.vat_applicable,
         vat_amount: vatAmount,
         wht_applicable: form.wht_applicable,

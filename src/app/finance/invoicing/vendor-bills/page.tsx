@@ -199,6 +199,7 @@ export default function VendorBillsPage() {
         vendor: form.vendor,
         invoice_number: billNum,
         amount,
+        subtotal: amount,
         total_amount: amount,
         currency: form.currency,
         due_date: form.due_date,
