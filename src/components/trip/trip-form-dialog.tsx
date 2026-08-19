@@ -264,8 +264,8 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
       // "contact an admin" message, which is wrong (and confusing) for
       // an actual admin hitting a stale session.
       const hint =
-        raw.includes("row-level security policy") ? "Your role isn't allowed to create trips. Contact an admin." :
-        raw.includes("permission denied") ? "Your session has expired — log out and back in, then try again." :
+        raw.includes("row-level security policy") ? `Your role isn't allowed to create trips. Contact an admin. (${raw})` :
+        raw.includes("permission denied") ? `Permission error — likely a missing grant, not your login. (${raw})` :
         raw.includes("does not exist") ? "The trips table is missing a column. Run the latest migrations." :
         raw;
       toast({ title: isEdit ? "Update failed" : "Create failed", description: hint, variant: "destructive" });
