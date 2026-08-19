@@ -99,9 +99,16 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
     if (!open) return;
     (async () => {
       const [d, v] = await Promise.all([
-        supabase.from("user_profiles").select("id, uid, name, role").eq("role", "DRIVER").order("name"),
+        supabase.from("user_profiles").select("id, name, role").eq("role", "DRIVER").order("name"),
         supabase.from("vehicles").select("id, plate_number, make, model, type, trailer_sub_type, status").order("plate_number"),
       ]);
+      // user_profiles has no "uid" column — selecting it made this query
+      // fail outright, and the error was silently swallowed by `?? []`,
+      // so the Driver dropdown looked "empty" even with real drivers on
+      // file. Kept `d.id ?? d.uid` elsewhere as a no-op fallback since
+      // `.id` is what actually exists.
+      if (d.error) console.error("Failed to load drivers:", d.error);
+      if (v.error) console.error("Failed to load vehicles:", v.error);
       setDrivers(d.data ?? []);
       setVehicles(v.data ?? []);
     })();
