@@ -353,7 +353,7 @@ export default function CustomerInvoicesPage() {
         paid_amount: newPaid,
         status: newStatus,
         paid_at: newStatus === "paid" ? new Date().toISOString() : paying.paid_at,
-        last_payment_method: payMethod,
+        payment_method: payMethod,
       })
       .eq("id", paying.id);
     if (error) {

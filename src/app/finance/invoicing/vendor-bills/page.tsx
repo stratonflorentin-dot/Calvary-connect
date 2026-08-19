@@ -268,7 +268,7 @@ export default function VendorBillsPage() {
         paid_amount: newPaid,
         status: newStatus,
         paid_at: newStatus === "paid" ? new Date().toISOString() : paying.paid_at,
-        last_payment_method: payMethod,
+        payment_method: payMethod,
       })
       .eq("id", paying.id);
     if (error) {
@@ -336,7 +336,7 @@ export default function VendorBillsPage() {
         paid_amount: total,
         status: "paid",
         paid_at: new Date().toISOString(),
-        last_payment_method: method,
+        payment_method: method,
       }).eq("id", bill.id);
       await AuditTrailService.log({
         user_id: user?.id,
