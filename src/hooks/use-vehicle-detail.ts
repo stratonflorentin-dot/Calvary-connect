@@ -105,6 +105,41 @@ interface FuelRequest {
     created_at: string;
 }
 
+interface Invoice {
+    id: string;
+    invoice_number: string;
+    vehicle_id: string;
+    contract_id: string | null;
+    trip_id: string | null;
+    client_name: string;
+    status: string;
+    total_amount: number;
+    paid_amount: number;
+    currency: string;
+    issue_date: string;
+}
+
+interface Contract {
+    id: string;
+    contract_number: string;
+    customer_id: string | null;
+    client_id: string | null;
+    contract_type: string;
+    status: string;
+    contract_value: number;
+    currency: string;
+    start_date: string | null;
+    end_date: string | null;
+}
+
+interface DriverAssignment {
+    driverId: string;
+    driverName: string;
+    tripCount: number;
+    firstAssigned: string;
+    lastAssigned: string;
+}
+
 interface Stats {
     totalCost: number;
     fuelSpend: number;
@@ -115,8 +150,11 @@ interface Stats {
     fuelEfficiency: number;
     costPerKm: number;
     avgTripDistance: number;
-    uptimePercent: number;
+    activeDaysPercent: number;
+    /** Sum of invoice total_amount billed against this vehicle (not yet necessarily collected). */
     lifetimeRevenue: number;
+    /** Sum of invoice paid_amount — cash actually collected. */
+    collectedRevenue: number;
     profitability: number;
     profitMargin: number;
     roi: number;
@@ -139,6 +177,9 @@ interface UseVehicleDetailReturn {
     inspections: VehicleInspection[];
     fuelLogs: FuelLog[];
     fuelRequests: FuelRequest[];
+    invoices: Invoice[];
+    contracts: Contract[];
+    driverAssignments: DriverAssignment[];
     stats: Stats;
     utilizationByMonth: UtilizationMonth[];
     loading: boolean;
@@ -152,6 +193,9 @@ export function useVehicleDetail(vehicleId: string): UseVehicleDetailReturn {
     const [inspections, setInspections] = useState<VehicleInspection[]>([]);
     const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
     const [fuelRequests, setFuelRequests] = useState<FuelRequest[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [contracts, setContracts] = useState<Contract[]>([]);
+    const [driverAssignments, setDriverAssignments] = useState<DriverAssignment[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -181,6 +225,38 @@ export function useVehicleDetail(vehicleId: string): UseVehicleDetailReturn {
 
                 if (tripsData) {
                     setTrips(tripsData);
+
+                    // "Who was assigned" — there's no dedicated assignment
+                    // table, so this is derived from real trip history:
+                    // every distinct driver who's actually driven this
+                    // vehicle, with how many trips and over what span.
+                    const driverIds = [...new Set(tripsData.map((t) => t.driver_id).filter(Boolean))];
+                    if (driverIds.length > 0) {
+                        const { data: driverProfiles } = await supabase
+                            .from('user_profiles')
+                            .select('id, name')
+                            .in('id', driverIds);
+                        const nameById = new Map((driverProfiles ?? []).map((p) => [p.id, p.name]));
+                        const byDriver = new Map<string, { dates: string[] }>();
+                        for (const t of tripsData) {
+                            if (!t.driver_id) continue;
+                            const entry = byDriver.get(t.driver_id) ?? { dates: [] };
+                            entry.dates.push(t.created_at);
+                            byDriver.set(t.driver_id, entry);
+                        }
+                        const assignments: DriverAssignment[] = [...byDriver.entries()]
+                            .map(([driverId, { dates }]) => ({
+                                driverId,
+                                driverName: nameById.get(driverId) ?? 'Unknown driver',
+                                tripCount: dates.length,
+                                firstAssigned: dates.reduce((a, b) => (a < b ? a : b)),
+                                lastAssigned: dates.reduce((a, b) => (a > b ? a : b)),
+                            }))
+                            .sort((a, b) => b.lastAssigned.localeCompare(a.lastAssigned));
+                        setDriverAssignments(assignments);
+                    } else {
+                        setDriverAssignments([]);
+                    }
                 }
 
                 // Fetch maintenance records
@@ -237,6 +313,40 @@ export function useVehicleDetail(vehicleId: string): UseVehicleDetailReturn {
                 if (requestsData) {
                     setFuelRequests(requestsData);
                 }
+
+                // Fetch invoices billed against this vehicle — the real
+                // revenue record (Dr/Cr posted, not a free-text amount on
+                // the trip), excluding drafts/cancelled since those were
+                // never actually committed revenue.
+                const { data: invoiceData } = await supabase
+                    .from('invoices')
+                    .select('id, invoice_number, vehicle_id, contract_id, trip_id, client_name, status, total_amount, paid_amount, currency, issue_date')
+                    .eq('vehicle_id', vehicleId)
+                    .not('status', 'in', '(draft,cancelled)')
+                    .order('issue_date', { ascending: false });
+
+                if (invoiceData) {
+                    setInvoices(invoiceData);
+
+                    // Contracts aren't linked to a vehicle directly — they
+                    // cover a customer/route — but invoices billed for this
+                    // vehicle carry the contract_id that generated them, so
+                    // that's the real link back to "which contracts this
+                    // vehicle has actually been billed under."
+                    const contractIds = [...new Set(invoiceData.map((i) => i.contract_id).filter(Boolean))];
+                    if (contractIds.length > 0) {
+                        const { data: contractData } = await supabase
+                            .from('contracts')
+                            .select('id, contract_number, customer_id, client_id, contract_type, status, contract_value, currency, start_date, end_date')
+                            .in('id', contractIds);
+                        setContracts(contractData ?? []);
+                    } else {
+                        setContracts([]);
+                    }
+                } else {
+                    setInvoices([]);
+                    setContracts([]);
+                }
             } catch (error) {
                 console.error('Error fetching vehicle detail:', error);
             } finally {
@@ -284,8 +394,13 @@ export function useVehicleDetail(vehicleId: string): UseVehicleDetailReturn {
         fuelEfficiency: 0,
         costPerKm: 0,
         avgTripDistance: 0,
-        uptimePercent: 0,
-        lifetimeRevenue: 0,
+        activeDaysPercent: 0,
+        // Real revenue, from posted invoices — previously this was never
+        // assigned anywhere and silently stayed 0, so every figure derived
+        // from it (profitability, margin, ROI, revenue/trip) was always 0
+        // regardless of how much the vehicle actually earned.
+        lifetimeRevenue: invoices.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0),
+        collectedRevenue: invoices.reduce((sum, inv) => sum + (Number(inv.paid_amount) || 0), 0),
         profitability: 0,
         profitMargin: 0,
         roi: 0,
@@ -303,17 +418,24 @@ export function useVehicleDetail(vehicleId: string): UseVehicleDetailReturn {
         stats.revenuePerTrip = stats.lifetimeRevenue / stats.totalTrips;
     }
 
+    stats.profitability = stats.lifetimeRevenue - stats.totalCost;
+    if (stats.lifetimeRevenue > 0) {
+        stats.profitMargin = (stats.profitability / stats.lifetimeRevenue) * 100;
+    }
+    if (vehicle?.purchase_price) {
+        stats.roi = (stats.profitability / vehicle.purchase_price) * 100;
+    }
+
     if (vehicle && vehicle.purchase_date) {
         const daysOwned = Math.floor(
             (Date.now() - new Date(vehicle.purchase_date).getTime()) / (1000 * 60 * 60 * 24)
         );
-        const daysActive = daysOwned; // Simplified
-        stats.uptimePercent = daysOwned > 0 ? (daysActive / daysOwned) * 100 : 0;
-
-        if (vehicle.purchase_price && stats.lifetimeRevenue > 0) {
-            stats.roi = ((stats.lifetimeRevenue - vehicle.purchase_price) / vehicle.purchase_price) * 100;
-            stats.profitMargin = ((stats.lifetimeRevenue - stats.totalCost) / stats.lifetimeRevenue) * 100;
-        }
+        // No status-history table exists to track real downtime, so this
+        // is an honest proxy — the share of owned days that had at least
+        // one trip — rather than the previous version, which set
+        // daysActive = daysOwned and so always showed exactly 100%.
+        const activeDates = new Set(trips.map((t) => t.created_at?.slice(0, 10)).filter(Boolean));
+        stats.activeDaysPercent = daysOwned > 0 ? (activeDates.size / daysOwned) * 100 : 0;
     }
 
     // Calculate utilization by month (last 6 months)
@@ -345,6 +467,9 @@ export function useVehicleDetail(vehicleId: string): UseVehicleDetailReturn {
         inspections,
         fuelLogs,
         fuelRequests,
+        invoices,
+        contracts,
+        driverAssignments,
         stats,
         utilizationByMonth,
         loading,

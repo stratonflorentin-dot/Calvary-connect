@@ -29,6 +29,9 @@ export default function VehicleDetailPage() {
         inspections,
         fuelLogs,
         fuelRequests,
+        invoices,
+        contracts,
+        driverAssignments,
         stats,
         utilizationByMonth,
         loading,
@@ -78,6 +81,17 @@ export default function VehicleDetailPage() {
 
     // Check docs validity
     const docsValid = documents.every(d => d.status === 'valid' || d.status === 'no_expiry');
+
+    // Real split of stats.totalCost — previously this chart showed a
+    // fixed 40/35/25 regardless of the vehicle's actual numbers.
+    const otherCost = Math.max(0, stats.totalCost - stats.fuelSpend - stats.maintenanceCost);
+    const costBreakdown = stats.totalCost > 0
+        ? [
+            { label: 'Fuel', value: stats.fuelSpend, pct: (stats.fuelSpend / stats.totalCost) * 100, color: 'bg-primary' },
+            { label: 'Maintenance', value: stats.maintenanceCost, pct: (stats.maintenanceCost / stats.totalCost) * 100, color: 'bg-warning' },
+            { label: 'Other', value: otherCost, pct: (otherCost / stats.totalCost) * 100, color: 'bg-success' },
+        ]
+        : [];
 
     return (
         <div className="p-6 space-y-6">
@@ -222,9 +236,9 @@ export default function VehicleDetailPage() {
                             </p>
                         </div>
                         <div className="bg-success/10 p-4 rounded-lg">
-                            <p className="text-xs text-success mb-1">Uptime %</p>
+                            <p className="text-xs text-success mb-1" title="Share of owned days with at least one trip — no status-history tracking exists to measure true downtime">Active Days %</p>
                             <p className="text-sm font-bold text-success">
-                                {stats.uptimePercent.toFixed(1)}%
+                                {stats.activeDaysPercent.toFixed(1)}%
                             </p>
                         </div>
                     </div>
@@ -240,17 +254,23 @@ export default function VehicleDetailPage() {
                     <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                             <div className="bg-info/10 p-3 rounded-lg">
-                                <p className="text-xs text-info">Lifetime Revenue</p>
+                                <p className="text-xs text-info" title="Total invoiced against this vehicle">Invoiced Revenue</p>
                                 <p className="text-sm font-bold text-info">
                                     {format(stats.lifetimeRevenue)}
                                 </p>
                             </div>
-                            <div className="bg-success/10 p-3 rounded-lg">
-                                <p className="text-xs text-success">Profitability</p>
-                                <p className="text-sm font-bold text-success">
-                                    {format(stats.profitability)}
+                            <div className="bg-info/10 p-3 rounded-lg">
+                                <p className="text-xs text-info" title="Actually collected, not just billed">Collected Revenue</p>
+                                <p className="text-sm font-bold text-info">
+                                    {format(stats.collectedRevenue)}
                                 </p>
                             </div>
+                        </div>
+                        <div className="bg-success/10 p-3 rounded-lg">
+                            <p className="text-xs text-success">Profitability</p>
+                            <p className="text-sm font-bold text-success">
+                                {format(stats.profitability)}
+                            </p>
                         </div>
                         <div className="bg-warning/10 p-3 rounded-lg">
                             <p className="text-xs text-warning">Profit Margin %</p>
@@ -298,9 +318,12 @@ export default function VehicleDetailPage() {
 
             {/* SECTION 5: TAB NAVIGATION */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-7">
+                <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-10">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="trips">Trips & Costs</TabsTrigger>
+                    <TabsTrigger value="revenue">Revenue</TabsTrigger>
+                    <TabsTrigger value="drivers">Drivers</TabsTrigger>
+                    <TabsTrigger value="contracts">Contracts</TabsTrigger>
                     <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
                     <TabsTrigger value="inspections">Inspections</TabsTrigger>
                     <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -428,25 +451,25 @@ export default function VehicleDetailPage() {
                             <Card className="p-4">
                                 <h3 className="font-semibold text-sm mb-4">Cost Breakdown</h3>
                                 <div className="space-y-2">
-                                    <div className="flex h-6 bg-muted rounded-full overflow-hidden">
-                                        <div className="bg-primary" style={{ width: '40%' }}></div>
-                                        <div className="bg-warning" style={{ width: '35%' }}></div>
-                                        <div className="bg-success" style={{ width: '25%' }}></div>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2 text-xs pt-2">
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-2 h-2 bg-primary rounded"></div>
-                                            <span>Fuel 40%</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-2 h-2 bg-warning rounded"></div>
-                                            <span>Maint 35%</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-2 h-2 bg-success rounded"></div>
-                                            <span>Allow 25%</span>
-                                        </div>
-                                    </div>
+                                    {costBreakdown.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground text-center py-2">No costs recorded yet</p>
+                                    ) : (
+                                        <>
+                                            <div className="flex h-6 bg-muted rounded-full overflow-hidden">
+                                                {costBreakdown.map((c) => (
+                                                    <div key={c.label} className={c.color} style={{ width: `${c.pct}%` }} title={`${c.label}: ${c.pct.toFixed(1)}%`}></div>
+                                                ))}
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-xs pt-2">
+                                                {costBreakdown.map((c) => (
+                                                    <div key={c.label} className="flex items-center gap-1">
+                                                        <div className={`w-2 h-2 rounded ${c.color}`}></div>
+                                                        <span>{c.label} {c.pct.toFixed(0)}%</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
                                     <div className="text-right text-sm font-bold pt-2 border-t">
                                         {format(stats.totalCost)}
                                     </div>
@@ -509,6 +532,99 @@ export default function VehicleDetailPage() {
                                 ))
                             )}
                         </div>
+                    </Card>
+                </TabsContent>
+
+                {/* REVENUE TAB */}
+                <TabsContent value="revenue">
+                    <Card className="p-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-semibold">Invoices ({invoices.length})</h3>
+                            <div className="text-right text-xs text-muted-foreground">
+                                <p>Invoiced: <span className="font-bold text-foreground">{format(stats.lifetimeRevenue)}</span></p>
+                                <p>Collected: <span className="font-bold text-foreground">{format(stats.collectedRevenue)}</span></p>
+                            </div>
+                        </div>
+                        {invoices.length === 0 ? (
+                            <p className="text-muted-foreground text-sm p-4 text-center">No invoices billed against this vehicle yet</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {invoices.map(inv => (
+                                    <div key={inv.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-sm">{inv.invoice_number}</p>
+                                            <p className="text-xs text-muted-foreground">{inv.client_name} · {new Date(inv.issue_date).toLocaleDateString('en-TZ')}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <Badge variant="outline">{inv.status}</Badge>
+                                            <p className="text-sm font-bold mt-1">{format(inv.total_amount, inv.currency)}</p>
+                                            {Number(inv.paid_amount) > 0 && Number(inv.paid_amount) < Number(inv.total_amount) && (
+                                                <p className="text-xs text-muted-foreground">{format(inv.paid_amount, inv.currency)} paid</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+                </TabsContent>
+
+                {/* DRIVERS TAB */}
+                <TabsContent value="drivers">
+                    <Card className="p-4">
+                        <h3 className="font-semibold mb-4">Who's driven this vehicle ({driverAssignments.length})</h3>
+                        <p className="text-xs text-muted-foreground mb-4">
+                            Derived from trip history — there's no separate assignment record, so this reflects who was actually dispatched with this vehicle.
+                        </p>
+                        {driverAssignments.length === 0 ? (
+                            <p className="text-muted-foreground text-sm p-4 text-center">No trips assigned to a driver yet</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {driverAssignments.map(d => (
+                                    <div key={d.driverId} className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-sm">{d.driverName}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {new Date(d.firstAssigned).toLocaleDateString('en-TZ')} — {new Date(d.lastAssigned).toLocaleDateString('en-TZ')}
+                                            </p>
+                                        </div>
+                                        <Badge variant="outline">{d.tripCount} trip{d.tripCount === 1 ? '' : 's'}</Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+                </TabsContent>
+
+                {/* CONTRACTS TAB */}
+                <TabsContent value="contracts">
+                    <Card className="p-4">
+                        <h3 className="font-semibold mb-4">Contracts ({contracts.length})</h3>
+                        <p className="text-xs text-muted-foreground mb-4">
+                            Contracts aren't tied to a specific vehicle directly — these are the contracts behind invoices actually billed for this vehicle.
+                        </p>
+                        {contracts.length === 0 ? (
+                            <p className="text-muted-foreground text-sm p-4 text-center">No contracts linked to this vehicle's invoices yet</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {contracts.map(c => (
+                                    <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-sm">{c.contract_number}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {c.contract_type}
+                                                {c.start_date ? ` · ${new Date(c.start_date).toLocaleDateString('en-TZ')}` : ''}
+                                                {c.end_date ? ` — ${new Date(c.end_date).toLocaleDateString('en-TZ')}` : ''}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <Badge variant="outline">{c.status}</Badge>
+                                            <p className="text-sm font-bold mt-1">{format(c.contract_value, c.currency)}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </Card>
                 </TabsContent>
 
