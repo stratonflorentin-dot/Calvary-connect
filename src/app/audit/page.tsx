@@ -59,6 +59,18 @@ export default function AuditTrailPage() {
     try {
       const { error, count } = await supabase.from('audit_logs').delete({ count: 'exact' }).not('id', 'is', null);
       if (error) throw error;
+      // A missing RLS delete policy doesn't error here — Postgres/PostgREST
+      // just matches zero rows and reports a clean success, so trusting
+      // `error === null` alone previously showed "cleared" even when
+      // nothing was actually deleted (the 098 migration hadn't run yet).
+      if (!count) {
+        toast({
+          title: 'Nothing was deleted',
+          description: `The delete ran without an error but matched 0 of ${logs.length} record(s) — migration 098_audit_logs_clear.sql likely hasn't been applied in Supabase yet.`,
+          variant: 'destructive',
+        });
+        return;
+      }
       // Recorded in the separate audit_trail table (untouched by this
       // action) so there's still a trace of who cleared the log, even
       // though the log itself is now empty.
@@ -68,9 +80,9 @@ export default function AuditTrailPage() {
         action: 'delete',
         entity_type: 'payment' as any,
         entity_id: 'audit_logs',
-        description: `Cleared the Financial Audit Trail (${count ?? logs.length} record(s) deleted)`,
+        description: `Cleared the Financial Audit Trail (${count} record(s) deleted)`,
       });
-      toast({ variant: 'success', title: 'Audit trail cleared', description: `${count ?? logs.length} record(s) deleted.` });
+      toast({ variant: 'success', title: 'Audit trail cleared', description: `${count} record(s) deleted.` });
       loadLogs();
     } catch (err: any) {
       toast({ title: "Couldn't clear audit trail", description: err.message, variant: 'destructive' });
