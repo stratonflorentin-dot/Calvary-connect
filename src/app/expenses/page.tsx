@@ -18,10 +18,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, DollarSign, BookOpen, CheckCircle2, XCircle, Flame, AlertTriangle, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, DollarSign, BookOpen, Flame, AlertTriangle, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChartOfAccountsService, COAAccount, EXPENSE_CATEGORY_COA_MAP } from '@/services/chart-of-accounts-service';
-import { applyTransition } from '@/lib/workflow/engine';
+import { TransitionButtons } from '@/components/workflow/transition-buttons';
 import { hoursSince, isOverdue, resolveApprovalLevel, slaHours } from '@/lib/workflow/approvals';
 
 interface Expense {
@@ -224,35 +224,6 @@ export default function ExpensesPage() {
             console.error('Error updating expense:', error);
             toast({ title: 'Error', description: 'Failed to update expense', variant: 'destructive' });
         }
-    };
-
-    const handleStatusChange = async (expense: any, newStatus: 'approved' | 'rejected') => {
-        let reason: string | undefined;
-        if (newStatus === 'rejected') {
-            const answer = window.prompt('Reason for rejection?');
-            if (!answer) return;
-            reason = answer;
-        }
-        const result = await applyTransition({
-            kind: 'expense',
-            entityId: expense.id,
-            toState: newStatus,
-            actorId: user?.id ?? 'system',
-            actorRole: (role as any) ?? undefined,
-            payload: { amount: Number(expense.amount) || 0, reason },
-        });
-        if (!result.ok) {
-            toast({ title: 'Blocked', description: result.message, variant: 'destructive' });
-            return;
-        }
-        setExpenses(prev => prev.map(e => e.id === expense.id ? { ...e, status: newStatus } : e));
-        toast({
-            title: newStatus === 'approved' ? 'Approved' : 'Rejected',
-            description:
-                result.sideEffects.length > 0
-                    ? result.sideEffects.map(s => s.replace(/_/g, ' ')).join(', ')
-                    : `Expense ${newStatus}.`,
-        });
     };
 
     // Never summed across currencies — a $20 expense and a TSh 2,000,000
@@ -582,27 +553,21 @@ export default function ExpensesPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex gap-2">
-                                                    {(['CEO', 'ADMIN', 'ACCOUNTANT', 'HR'].includes(role || '')) && expense.status === 'pending' && (
-                                                        <>
-                                                            <Button
-                                                                size="sm"
-                                                                className="h-8 rounded-lg bg-success hover:bg-success/90 text-success-foreground"
-                                                                onClick={() => handleStatusChange(expense, 'approved')}
-                                                                title="Approve"
-                                                            >
-                                                                <CheckCircle2 className="size-4" />
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="h-8 rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10"
-                                                                onClick={() => handleStatusChange(expense, 'rejected')}
-                                                                title="Reject"
-                                                            >
-                                                                <XCircle className="size-4" />
-                                                            </Button>
-                                                        </>
-                                                    )}
+                                                    {/* TransitionButtons renders whatever the expense workflow
+                                                        actually allows for its current status — Approve/Reject
+                                                        while pending, and critically "Mark Paid" once approved,
+                                                        which the old hardcoded Approve/Reject-only buttons never
+                                                        exposed. Without it an approved expense could never reach
+                                                        "paid" from this page, so its bank account was never
+                                                        debited no matter how "done" it looked. */}
+                                                    <TransitionButtons
+                                                        kind="expense"
+                                                        entity={expense}
+                                                        actorId={user?.id ?? 'system'}
+                                                        actorRole={(role as any) ?? undefined}
+                                                        size="sm"
+                                                        onDone={(nextEntity) => setExpenses(prev => prev.map(e => e.id === nextEntity.id ? { ...e, ...nextEntity } : e))}
+                                                    />
                                                     <Dialog>
                                                         <DialogTrigger asChild>
                                                             <Button
