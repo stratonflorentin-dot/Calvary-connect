@@ -386,7 +386,7 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
 
     const { error: txError } = await supabase.rpc("post_bank_transaction", {
       p_bank_account_id: payingAccountId,
-      p_amount: Number(entity.amount) || 0,
+      p_amount: (Number(entity.amount) || 0) + (Number(entity.vat_amount) || 0),
       p_direction: "out",
       p_transaction_type: "withdrawal",
       p_currency: currency,
@@ -413,6 +413,8 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
   let cashRequestRetirementExpenseId: string | undefined;
   let cashRequestRetirementJournalEntryId: string | undefined;
   let cashRequestReturnTxnId: string | undefined;
+  let cashRequestActualSpent = 0;
+  let cashRequestLineResults: { account_code: string; amount: number; description?: string; receipt_url?: string; expenseId: string }[] = [];
 
   if (args.kind === "cash_request" && args.toState === "disbursed") {
     const accountId = args.payload?.disbursed_from_account_id;
@@ -447,11 +449,28 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
   }
 
   if (args.kind === "cash_request" && args.toState === "retired") {
-    const actualSpent = Number(args.payload?.actual_spent) || 0;
-    const expenseAccountCode = args.payload?.expense_account_code;
-    if (actualSpent > 0 && !expenseAccountCode) {
-      return { ok: false, code: "guard_failed", message: "Choose which expense account the spend belongs to." };
+    type RetirementLine = { account_code: string; amount: number; description?: string; receipt_url?: string };
+    const lines: RetirementLine[] = Array.isArray(args.payload?.retirement_lines) ? args.payload.retirement_lines : [];
+    const actualSpent = lines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+    const returnedAmount = Number(args.payload?.returned_amount) || 0;
+    cashRequestActualSpent = actualSpent;
+
+    if (lines.some((l) => !l.account_code || !(Number(l.amount) > 0))) {
+      return { ok: false, code: "guard_failed", message: "Every retirement line needs an account and a positive amount." };
     }
+    // Overspend (retired + returned > what was actually disbursed) is a real,
+    // legitimate case — an advance that ran short — but must be explicit
+    // rather than silently posted, since it means the company owes the
+    // employee a reimbursement rather than the reverse.
+    const disbursedAmount = Number(entity.amount) || 0;
+    if (actualSpent + returnedAmount > disbursedAmount && !args.payload?.allow_overspend) {
+      return {
+        ok: false,
+        code: "guard_failed",
+        message: `Retired + returned (${(actualSpent + returnedAmount).toLocaleString()}) exceeds the ${disbursedAmount.toLocaleString()} disbursed — confirm this is a genuine overspend to continue.`,
+      };
+    }
+
     if (actualSpent > 0) {
       const currency = entity.currency || "TZS";
       const contraCode = await resolveCashAdvanceAccountCode(currency);
@@ -478,8 +497,16 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
         .single();
       if (jeErr) return { ok: false, code: "db_error", message: `Retirement posting failed: ${jeErr.message}` };
 
+      const debitLines = lines.map((l) => ({
+        journal_entry_id: je.id,
+        account_code: l.account_code,
+        debit_amount: Number(l.amount),
+        credit_amount: 0,
+        description: l.description || entity.purpose,
+        currency,
+      }));
       const { error: lineErr } = await supabase.from("journal_entry_lines").insert([
-        { journal_entry_id: je.id, account_code: expenseAccountCode, debit_amount: actualSpent, credit_amount: 0, description: entity.purpose, currency },
+        ...debitLines,
         { journal_entry_id: je.id, account_code: contraCode, debit_amount: 0, credit_amount: actualSpent, description: entity.purpose, currency },
       ]);
       if (lineErr) return { ok: false, code: "db_error", message: `Retirement posting failed: ${lineErr.message}` };
@@ -488,28 +515,45 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
       if (postErr) return { ok: false, code: "db_error", message: `Retirement posting failed: ${postErr.message}` };
       cashRequestRetirementJournalEntryId = je.id;
 
-      const { data: exp, error: expErr } = await supabase
-        .from("expenses")
-        .insert({
-          type: "other",
-          category: args.payload?.expense_category || null,
-          description: args.payload?.expense_description || entity.purpose || "Cash advance retirement",
-          amount: actualSpent,
-          currency,
-          status: "paid",
-          date: new Date().toISOString().slice(0, 10),
-          created_by: args.actorId,
+      // One expense row per line — each shows up in the Expenses list and
+      // its Source filter, same as a single-line retirement always has.
+      for (const l of lines) {
+        const { data: exp, error: expErr } = await supabase
+          .from("expenses")
+          .insert({
+            type: "other",
+            description: l.description || entity.purpose || "Cash advance retirement",
+            amount: Number(l.amount),
+            currency,
+            status: "paid",
+            date: new Date().toISOString().slice(0, 10),
+            created_by: args.actorId,
+            cash_request_id: args.entityId,
+            journal_entry_id: je.id,
+            account_code: l.account_code,
+            receipt_url: l.receipt_url || null,
+          })
+          .select("id")
+          .single();
+        if (expErr) return { ok: false, code: "db_error", message: `Couldn't record a retirement expense: ${expErr.message}` };
+        cashRequestLineResults.push({ ...l, expenseId: exp.id });
+      }
+      cashRequestRetirementExpenseId = cashRequestLineResults[0]?.expenseId;
+
+      const { error: linesInsertErr } = await supabase.from("cash_request_retirement_lines").insert(
+        cashRequestLineResults.map((l) => ({
           cash_request_id: args.entityId,
+          account_code: l.account_code,
+          amount: l.amount,
+          description: l.description || null,
+          receipt_url: l.receipt_url || null,
+          expense_id: l.expenseId,
           journal_entry_id: je.id,
-          account_code: expenseAccountCode,
-        })
-        .select("id")
-        .single();
-      if (expErr) return { ok: false, code: "db_error", message: `Couldn't record the retirement expense: ${expErr.message}` };
-      cashRequestRetirementExpenseId = exp.id;
+        })),
+      );
+      if (linesInsertErr) return { ok: false, code: "db_error", message: `Couldn't save the retirement breakdown: ${linesInsertErr.message}` };
     }
 
-    const returnedAmount = Number(args.payload?.returned_amount) || 0;
     if (returnedAmount > 0) {
       const returnAccountId = args.payload?.return_bank_account_id;
       if (!returnAccountId) {
@@ -566,12 +610,18 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
       updatePayload.disbursed_by = args.actorId;
       updatePayload.disbursed_at = new Date().toISOString();
       updatePayload.disbursed_from_account_id = args.payload?.disbursed_from_account_id;
+      // 7 days out, matching Cash Requests' "Overdue >7 Days" tile — a
+      // fixed default rather than a Setup-level config, same threshold the
+      // spec asked to confirm and this codebase settles on for now.
+      const due = new Date();
+      due.setDate(due.getDate() + 7);
+      updatePayload.due_back_date = due.toISOString().slice(0, 10);
       if (cashRequestDisbursementTxnId) updatePayload.disbursement_bank_transaction_id = cashRequestDisbursementTxnId;
     }
     if (args.toState === "retired") {
       updatePayload.retired_by = args.actorId;
       updatePayload.retired_at = new Date().toISOString();
-      updatePayload.actual_spent = args.payload?.actual_spent ?? 0;
+      updatePayload.actual_spent = cashRequestActualSpent;
       updatePayload.returned_amount = args.payload?.returned_amount ?? 0;
       if (args.payload?.notes) updatePayload.retirement_notes = args.payload.notes;
       if (args.payload?.return_bank_account_id) updatePayload.return_bank_account_id = args.payload.return_bank_account_id;

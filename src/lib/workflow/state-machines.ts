@@ -789,7 +789,10 @@ export const cashRequestMachine: StateMachine<CashRequestState> = {
         intent: "success",
         description: "Reclassifies the advance into a real expense. Posts Dr Expense / Cr Driver Float/Staff Advance.",
         roles: ["ACCOUNTANT", "ADMIN", "CEO"],
-        guard: ({ payload }) => (payload?.actual_spent != null ? true : "Enter the retirement breakdown first."),
+        guard: ({ payload }) =>
+          (payload?.retirement_lines?.length > 0 || Number(payload?.returned_amount) > 0)
+            ? true
+            : "Enter at least one retirement line or a returned amount.",
       },
     ],
     rejected: [],

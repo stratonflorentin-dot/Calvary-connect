@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, DollarSign, BookOpen, Flame, AlertTriangle, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, Receipt, DollarSign, BookOpen, Flame, AlertTriangle, Upload, Tags, Wallet, HandCoins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChartOfAccountsService, COAAccount, EXPENSE_CATEGORY_COA_MAP } from '@/services/chart-of-accounts-service';
 import { TransitionButtons } from '@/components/workflow/transition-buttons';
@@ -41,6 +41,12 @@ interface Expense {
     vehicle_id?: string | null;
     payment_method?: string;
     bank_account_id?: string | null;
+    category_id?: string | null;
+    supplier_id?: string | null;
+    vat_amount?: number | null;
+    is_zero_rated?: boolean;
+    petty_cash_transaction_id?: string | null;
+    cash_request_id?: string | null;
 }
 
 interface BankAccountOption {
@@ -48,6 +54,17 @@ interface BankAccountOption {
     account_name: string;
     bank_name: string;
     currency: string;
+}
+
+interface ExpenseCategoryOption {
+    id: string;
+    name: string;
+    default_account_code: string | null;
+}
+
+interface SupplierOption {
+    id: string;
+    company_name: string;
 }
 
 export default function ExpensesPage() {
@@ -60,6 +77,12 @@ export default function ExpensesPage() {
     const [vehicles, setVehicles] = useState<any[]>([]);
     const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
     const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([]);
+    const [categories, setCategories] = useState<ExpenseCategoryOption[]>([]);
+    const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
+    const [addZeroRated, setAddZeroRated] = useState(false);
+    const [addCategoryId, setAddCategoryId] = useState('');
+    const [addAccountCode, setAddAccountCode] = useState('');
+    const [editZeroRated, setEditZeroRated] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -79,17 +102,21 @@ export default function ExpensesPage() {
             try {
                 setLoading(true);
                 // Load expenses, vehicles, and COA in parallel
-                const [expensesRes, vehiclesRes, accounts, bankAccountsRes] = await Promise.all([
+                const [expensesRes, vehiclesRes, accounts, bankAccountsRes, categoriesRes, suppliersRes] = await Promise.all([
                     supabase.from('expenses').select('*, vehicle_id').order('created_at', { ascending: false }),
                     supabase.from('vehicles').select('*'),
                     ChartOfAccountsService.getAccounts(),
                     supabase.from('bank_accounts').select('id, account_name, bank_name, currency').eq('is_active', true).order('account_name'),
+                    supabase.from('expense_categories').select('id, name, default_account_code').eq('status', 'active').order('name'),
+                    supabase.from('suppliers').select('id, company_name').eq('status', 'active').order('company_name'),
                 ]);
 
                 setExpenses(expensesRes.data || []);
                 setVehicles(vehiclesRes.data || []);
                 setCoaAccounts(accounts);
                 setBankAccounts(bankAccountsRes.data || []);
+                setCategories(categoriesRes.data || []);
+                setSuppliers(suppliersRes.data || []);
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -115,8 +142,9 @@ export default function ExpensesPage() {
             const formData = new FormData(form);
             const vehicleId = formData.get('vehicle_id') as string;
             const expenseCurrency = formData.get('currency') as string || 'TZS';
-            const category = formData.get('category') as string;
-            const customCoaCode = formData.get('coa_account_code') as string;
+            const selectedCategory = categories.find((c) => c.id === addCategoryId);
+            const category = selectedCategory?.name || (formData.get('category') as string) || 'other';
+            const customCoaCode = addAccountCode || (formData.get('coa_account_code') as string);
 
             // Get or map COA account code
             const coaAccountCode = customCoaCode || ChartOfAccountsService.mapExpenseToCOA(category);
@@ -127,10 +155,17 @@ export default function ExpensesPage() {
                 return;
             }
 
+            const supplierId = formData.get('supplier_id') as string;
+            const vatAmount = addZeroRated ? 0 : parseFloat(formData.get('vat_amount') as string) || 0;
+
             const expenseData = {
                 description: formData.get('description') as string,
                 amount: parseFloat(formData.get('amount') as string),
                 category: category,
+                category_id: addCategoryId || null,
+                supplier_id: supplierId && supplierId !== 'none' ? supplierId : null,
+                is_zero_rated: addZeroRated,
+                vat_amount: vatAmount,
                 date: formData.get('date') as string,
                 client_reference: formData.get('clientReference') as string,
                 vendor: formData.get('vendor') as string,
@@ -165,6 +200,9 @@ export default function ExpensesPage() {
 
                 setExpenses(updatedExpenses || []);
                 setIsAddDialogOpen(false);
+                setAddCategoryId('');
+                setAddAccountCode('');
+                setAddZeroRated(false);
                 form.reset();
             }
         } catch (error) {
@@ -180,7 +218,9 @@ export default function ExpensesPage() {
         try {
             const formData = new FormData(e.currentTarget);
             const vehicleId = formData.get('vehicle_id') as string;
-            const category = formData.get('category') as string;
+            const categoryIdField = formData.get('category_id') as string;
+            const selectedCategory = categories.find((c) => c.id === categoryIdField);
+            const category = selectedCategory?.name || (formData.get('category') as string) || 'other';
             const customCoaCode = formData.get('coa_account_code') as string;
 
             // Get or map COA account code
@@ -192,12 +232,19 @@ export default function ExpensesPage() {
                 return;
             }
 
+            const supplierId = formData.get('supplier_id') as string;
+            const vatAmount = editZeroRated ? 0 : parseFloat(formData.get('vat_amount') as string) || 0;
+
             const { data, error } = await supabase
                 .from('expenses')
                 .update({
                     description: formData.get('description') as string,
                     amount: parseFloat(formData.get('amount') as string),
                     category: category,
+                    category_id: categoryIdField || null,
+                    supplier_id: supplierId && supplierId !== 'none' ? supplierId : null,
+                    is_zero_rated: editZeroRated,
+                    vat_amount: vatAmount,
                     date: formData.get('date') as string,
                     client_reference: formData.get('clientReference') as string,
                     vendor: formData.get('vendor') as string,
@@ -253,6 +300,12 @@ export default function ExpensesPage() {
                         </div>
                         <div className="flex items-center gap-2">
                         <Button variant="outline" className="gap-2" asChild>
+                            <Link href="/expenses/categories">
+                                <Tags className="size-4" />
+                                Categories
+                            </Link>
+                        </Button>
+                        <Button variant="outline" className="gap-2" asChild>
                             <Link href="/expenses/bulk">
                                 <Upload className="size-4" />
                                 Bulk Expenses
@@ -302,24 +355,32 @@ export default function ExpensesPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <Label htmlFor="category">Category</Label>
-                                            <Select name="category" defaultValue="other" required>
+                                            <Select
+                                                value={addCategoryId}
+                                                onValueChange={(v) => {
+                                                    setAddCategoryId(v);
+                                                    const def = categories.find((c) => c.id === v)?.default_account_code;
+                                                    if (def) setAddAccountCode(def);
+                                                }}
+                                            >
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select category" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="fuel">Fuel</SelectItem>
-                                                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                                                    <SelectItem value="parts">Parts</SelectItem>
-                                                    <SelectItem value="insurance">Insurance</SelectItem>
-                                                    <SelectItem value="salaries">Salaries</SelectItem>
-                                                    <SelectItem value="utilities">Utilities</SelectItem>
-                                                    <SelectItem value="other">Other</SelectItem>
+                                                    {categories.map((c) => (
+                                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                                    ))}
+                                                    {categories.length === 0 && (
+                                                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                                            No categories yet — <Link href="/expenses/categories" className="text-primary hover:underline">create one</Link>
+                                                        </div>
+                                                    )}
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div>
                                             <Label htmlFor="coa_account_code">Chart of Accounts (Optional)</Label>
-                                            <Select name="coa_account_code" defaultValue="">
+                                            <Select name="coa_account_code" value={addAccountCode} onValueChange={setAddAccountCode}>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Auto-mapped" />
                                                 </SelectTrigger>
@@ -333,11 +394,43 @@ export default function ExpensesPage() {
                                             </Select>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <Label htmlFor="vendor">Vendor (Optional)</Label>
+                                            <Label htmlFor="vendor">Vendor (free text, optional)</Label>
                                             <Input id="vendor" name="vendor" placeholder="Vendor name" />
                                         </div>
+                                        <div>
+                                            <Label htmlFor="supplier_id">Registered Supplier (Optional)</Label>
+                                            <Select name="supplier_id" defaultValue="none">
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select supplier" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">No supplier</SelectItem>
+                                                    {suppliers.map((s) => (
+                                                        <SelectItem key={s.id} value={s.id}>{s.company_name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                        <div className="flex items-center gap-2 pb-2">
+                                            <input
+                                                type="checkbox"
+                                                id="add-zero-rated"
+                                                checked={addZeroRated}
+                                                onChange={(e) => setAddZeroRated(e.target.checked)}
+                                                className="size-4"
+                                            />
+                                            <Label htmlFor="add-zero-rated" className="cursor-pointer">Zero-rated (no VAT)</Label>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="vat_amount">VAT Amount</Label>
+                                            <Input id="vat_amount" name="vat_amount" type="number" step="0.01" defaultValue="0" disabled={addZeroRated} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
                                             <Select name="vehicle_id" defaultValue="none">
@@ -455,6 +548,7 @@ export default function ExpensesPage() {
                                         <TableHead>Vehicle</TableHead>
                                         <TableHead>Category</TableHead>
                                         <TableHead>COA</TableHead>
+                                        <TableHead>Source</TableHead>
                                         <TableHead>Paid From</TableHead>
                                         <TableHead>Amount</TableHead>
                                         <TableHead>Date</TableHead>
@@ -499,6 +593,23 @@ export default function ExpensesPage() {
                                                     {expense.account_code || EXPENSE_CATEGORY_COA_MAP[expense.category] || 'Unmapped'}
                                                 </Badge>
                                             </TableCell>
+                                            <TableCell>
+                                                {expense.petty_cash_transaction_id ? (
+                                                    <Link href="/finance/petty-cash">
+                                                        <Badge variant="outline" className="gap-1 border-primary/30 text-primary hover:bg-primary/10">
+                                                            <Wallet className="size-3" /> Petty Cash
+                                                        </Badge>
+                                                    </Link>
+                                                ) : expense.cash_request_id ? (
+                                                    <Link href="/finance/cash-requests">
+                                                        <Badge variant="outline" className="gap-1 border-info/30 text-info hover:bg-info/10">
+                                                            <HandCoins className="size-3" /> Cash Request
+                                                        </Badge>
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs">Manual</span>
+                                                )}
+                                            </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">
                                                 {expense.bank_account_id
                                                     ? bankAccounts.find((b) => b.id === expense.bank_account_id)?.account_name ?? '—'
@@ -511,6 +622,11 @@ export default function ExpensesPage() {
                                                     maximumFractionDigits: 2,
                                                     minimumFractionDigits: 2
                                                 }).format(expense.amount)}
+                                                {Number(expense.vat_amount) > 0 && (
+                                                    <span className="block text-[10px] text-muted-foreground font-normal">
+                                                        +VAT {new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(expense.vat_amount))}
+                                                    </span>
+                                                )}
                                             </TableCell>
                                             <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
                                             <TableCell>
@@ -573,7 +689,7 @@ export default function ExpensesPage() {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => setEditingExpense(expense)}
+                                                                onClick={() => { setEditingExpense(expense); setEditZeroRated(!!expense.is_zero_rated); }}
                                                             >
                                                                 <Edit className="size-4" />
                                                             </Button>
@@ -633,29 +749,57 @@ export default function ExpensesPage() {
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                     <div>
                                                                         <Label htmlFor="edit-category">Category</Label>
-                                                                        <Select name="category" defaultValue={editingExpense?.category} required>
+                                                                        <Select name="category_id" defaultValue={editingExpense?.category_id ?? ''}>
                                                                             <SelectTrigger>
-                                                                                <SelectValue />
+                                                                                <SelectValue placeholder="Select category" />
                                                                             </SelectTrigger>
                                                                             <SelectContent>
-                                                                                <SelectItem value="fuel">Fuel</SelectItem>
-                                                                                <SelectItem value="maintenance">Maintenance</SelectItem>
-                                                                                <SelectItem value="parts">Parts</SelectItem>
-                                                                                <SelectItem value="insurance">Insurance</SelectItem>
-                                                                                <SelectItem value="salaries">Salaries</SelectItem>
-                                                                                <SelectItem value="utilities">Utilities</SelectItem>
-                                                                                <SelectItem value="other">Other</SelectItem>
+                                                                                {categories.map((c) => (
+                                                                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                                                                ))}
                                                                             </SelectContent>
                                                                         </Select>
                                                                     </div>
                                                                     <div>
-                                                                        <Label htmlFor="edit-vendor">Vendor (Optional)</Label>
+                                                                        <Label htmlFor="edit-vendor">Vendor (free text, optional)</Label>
                                                                         <Input
                                                                             id="edit-vendor"
                                                                             name="vendor"
                                                                             defaultValue={editingExpense?.vendor}
                                                                             placeholder="Vendor name"
                                                                         />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <Label htmlFor="edit-supplier_id">Registered Supplier (Optional)</Label>
+                                                                        <Select name="supplier_id" defaultValue={editingExpense?.supplier_id ?? 'none'}>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Select supplier" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="none">No supplier</SelectItem>
+                                                                                {suppliers.map((s) => (
+                                                                                    <SelectItem key={s.id} value={s.id}>{s.company_name}</SelectItem>
+                                                                                ))}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 gap-2 items-end">
+                                                                        <div className="flex items-center gap-2 pb-2">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                id="edit-zero-rated"
+                                                                                checked={editZeroRated}
+                                                                                onChange={(e) => setEditZeroRated(e.target.checked)}
+                                                                                className="size-4"
+                                                                            />
+                                                                            <Label htmlFor="edit-zero-rated" className="cursor-pointer text-xs">Zero-rated</Label>
+                                                                        </div>
+                                                                        <div>
+                                                                            <Label htmlFor="edit-vat_amount" className="text-xs">VAT Amount</Label>
+                                                                            <Input id="edit-vat_amount" name="vat_amount" type="number" step="0.01" defaultValue={editingExpense?.vat_amount ?? 0} disabled={editZeroRated} />
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

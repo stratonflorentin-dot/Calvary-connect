@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase } from "@/components/supabase-provider";
+import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { KNOWN_CURRENCIES, REPORTING_CURRENCY, sortCurrencyKeys } from "@/lib/finance/multi-currency";
 import { refreshRates, type FxRate } from "@/lib/finance/fx";
@@ -21,6 +22,7 @@ import {
   Plus,
   RefreshCw,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,11 +30,14 @@ import { cn } from "@/lib/utils";
 export default function FxRatesPage() {
   const { toast } = useToast();
   const { user } = useSupabase();
+  const { role } = useRole();
+  const canClearHistory = ["CEO", "ADMIN"].includes(String(role || "").toUpperCase());
   const [loading, setLoading] = useState(true);
   const [rates, setRates] = useState<FxRate[]>([]);
   const [adding, setAdding] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [syncingCrdb, setSyncingCrdb] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const [form, setForm] = useState({
     from_ccy: "USD",
@@ -147,6 +152,34 @@ export default function FxRatesPage() {
     }
   };
 
+  const clearHistory = async () => {
+    if (rates.length === 0) return;
+    const confirmed = window.confirm(
+      `Delete all ${rates.length} FX rate record(s)? Reports that look up a rate for a past date (Trip Cost Variance, Profit & Loss) will no longer find one until new rates are recorded. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    setClearing(true);
+    try {
+      const { error } = await supabase.from("exchange_rates").delete().not("id", "is", null);
+      if (error) throw error;
+      await AuditTrailService.log({
+        user_id: user?.id,
+        module: "finance",
+        action: "delete",
+        entity_type: "payment" as any,
+        entity_id: "exchange_rates",
+        description: `Cleared all FX rate history (${rates.length} record(s))`,
+      });
+      await refreshRates();
+      toast({ variant: "success", title: "FX rate history cleared" });
+      load();
+    } catch (err: any) {
+      toast({ title: "Couldn't clear history", description: err.message, variant: "destructive" });
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const seedCommonPairs = async () => {
     const targets = KNOWN_CURRENCIES.filter((c) => c !== REPORTING_CURRENCY);
     const existing = new Set(latestPerPair.map((r) => `${r.from_ccy}->${r.to_ccy}`));
@@ -199,6 +232,18 @@ export default function FxRatesPage() {
           <Button size="sm" onClick={() => setAdding(true)} className="h-9 gap-2 bg-fuchsia-600 hover:bg-fuchsia-700">
             <Plus className="w-3.5 h-3.5" /> Record rate
           </Button>
+          {canClearHistory && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearHistory}
+              disabled={clearing || rates.length === 0}
+              className="h-9 gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+            >
+              {clearing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              Clear history
+            </Button>
+          )}
         </div>
       </div>
 
