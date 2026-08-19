@@ -255,8 +255,17 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
     } catch (err: any) {
       console.error("[trip-form]", err);
       const raw = err?.message ?? String(err);
+      // "permission denied" (no RLS wording) means the request never
+      // carried a valid session at all — Postgres rejected it at the
+      // GRANT level before RLS was even evaluated, which happens to any
+      // role, admin included, once the browser's session has gone stale.
+      // A real RLS rejection instead says "violates row-level security
+      // policy" — genuinely a role problem. These used to show the same
+      // "contact an admin" message, which is wrong (and confusing) for
+      // an actual admin hitting a stale session.
       const hint =
-        raw.includes("permission") || raw.includes("policy") ? "Your role isn't allowed to create trips. Contact an admin." :
+        raw.includes("row-level security policy") ? "Your role isn't allowed to create trips. Contact an admin." :
+        raw.includes("permission denied") ? "Your session has expired — log out and back in, then try again." :
         raw.includes("does not exist") ? "The trips table is missing a column. Run the latest migrations." :
         raw;
       toast({ title: isEdit ? "Update failed" : "Create failed", description: hint, variant: "destructive" });

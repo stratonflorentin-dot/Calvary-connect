@@ -411,12 +411,20 @@ export function VehicleFormDialog({ open, onOpenChange, vehicle, onSaved }: Prop
       console.error("[vehicle-form]", err);
       const raw = err?.message ?? String(err);
       // Surface the real database error with an actionable hint
+      // "permission denied" (no RLS wording) means the request never
+      // carried a valid session at all — rejected at the GRANT level
+      // before RLS was even evaluated, which happens to any role once
+      // the browser's session has gone stale. A real RLS rejection
+      // instead says "violates row-level security policy" — genuinely a
+      // role problem. These used to show the same "contact an admin"
+      // message even for an actual admin hitting a stale session.
       const hint =
         raw.includes("duplicate key") ? "A vehicle with this plate already exists." :
-          raw.includes("permission") || raw.includes("policy") ? "Your role isn't allowed to add vehicles. Contact an admin." :
-            raw.includes("does not exist") || raw.includes("schema cache") ? `Database schema is out of date — run migrations 026 and 028 in the Supabase SQL editor, then retry. (${raw})` :
-              raw.includes("check constraint") ? `The database rejected a field value — run migration 026 in the Supabase SQL editor, then retry. (${raw})` :
-                raw;
+          raw.includes("row-level security policy") ? "Your role isn't allowed to add vehicles. Contact an admin." :
+            raw.includes("permission denied") ? "Your session has expired — log out and back in, then try again." :
+              raw.includes("does not exist") || raw.includes("schema cache") ? `Database schema is out of date — run migrations 026 and 028 in the Supabase SQL editor, then retry. (${raw})` :
+                raw.includes("check constraint") ? `The database rejected a field value — run migration 026 in the Supabase SQL editor, then retry. (${raw})` :
+                  raw;
       toast({ title: isEdit ? "Update failed" : "Add failed", description: hint, variant: "destructive" });
     } finally {
       setSaving(false);
