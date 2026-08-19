@@ -3,21 +3,30 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
+import { useSupabase } from '@/components/supabase-provider';
+import { supabase } from '@/lib/supabase';
 import { AuditService } from '@/services/audit-service';
+import { AuditTrailService } from '@/services/audit-trail-service';
+import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { History, Search, Filter, ArrowUpDown, ChevronRight, User, Database, Clock } from 'lucide-react';
+import { History, Search, Filter, ArrowUpDown, ChevronRight, User, Database, Clock, Loader2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+
+const CAN_CLEAR_ROLES = ['CEO', 'ADMIN'];
 
 export default function AuditTrailPage() {
   const { role } = useRole();
+  const { user } = useSupabase();
   const effectiveRole = role || 'ADMIN';
+  const canClear = CAN_CLEAR_ROLES.includes(String(role || '').toUpperCase());
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
   const [search, setSearch] = useState('');
   const [tableFilter, setTableFilter] = useState('all');
 
@@ -40,7 +49,37 @@ export default function AuditTrailPage() {
     }
   };
 
-  const filteredLogs = logs.filter(log => 
+  const clearAuditTrail = async () => {
+    if (logs.length === 0) return;
+    const confirmed = window.confirm(
+      `Permanently delete all financial audit trail records? This is a full clear with no export step — the activity history will be gone, not archived. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    setClearing(true);
+    try {
+      const { error, count } = await supabase.from('audit_logs').delete({ count: 'exact' }).not('id', 'is', null);
+      if (error) throw error;
+      // Recorded in the separate audit_trail table (untouched by this
+      // action) so there's still a trace of who cleared the log, even
+      // though the log itself is now empty.
+      await AuditTrailService.log({
+        user_id: user?.id,
+        module: 'management',
+        action: 'delete',
+        entity_type: 'payment' as any,
+        entity_id: 'audit_logs',
+        description: `Cleared the Financial Audit Trail (${count ?? logs.length} record(s) deleted)`,
+      });
+      toast({ variant: 'success', title: 'Audit trail cleared', description: `${count ?? logs.length} record(s) deleted.` });
+      loadLogs();
+    } catch (err: any) {
+      toast({ title: "Couldn't clear audit trail", description: err.message, variant: 'destructive' });
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  const filteredLogs = logs.filter(log =>
     log.user_name?.toLowerCase().includes(search.toLowerCase()) ||
     log.change_summary?.toLowerCase().includes(search.toLowerCase()) ||
     log.table_name?.toLowerCase().includes(search.toLowerCase())
@@ -104,6 +143,17 @@ export default function AuditTrailPage() {
                   <SelectItem value="allowances">HR (Allowances)</SelectItem>
                 </SelectContent>
               </Select>
+              {canClear && (
+                <Button
+                  variant="outline"
+                  onClick={clearAuditTrail}
+                  disabled={clearing || logs.length === 0}
+                  className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 rounded-xl"
+                >
+                  {clearing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Clear audit trail
+                </Button>
+              )}
             </div>
           </div>
 
