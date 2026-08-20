@@ -87,6 +87,15 @@ export default function RevenueAnalysisPage() {
     ? invoices
     : invoices.filter((i) => i.status === selectedStatus);
 
+  // A cancelled invoice is void — it generates zero real revenue, but it
+  // should still be visible in the table, the status breakdown chart, and
+  // selectable via the status filter (so "how much did we cancel" stays
+  // answerable). This only excludes it from the revenue *sums*.
+  const revenueEligibleInvoices = useMemo(
+    () => filteredInvoices.filter((i) => i.status !== "cancelled"),
+    [filteredInvoices],
+  );
+
   // Group revenue by currency
   const revenueByCurrency = useMemo(() => {
     const currencyMap = new Map<string, {
@@ -111,7 +120,7 @@ export default function RevenueAnalysisPage() {
       });
     });
 
-    filteredInvoices.forEach((invoice) => {
+    revenueEligibleInvoices.forEach((invoice) => {
       const currency = invoice.currency || "TZS";
       const existing = currencyMap.get(currency) || {
         totalRevenue: 0,
@@ -148,11 +157,11 @@ export default function RevenueAnalysisPage() {
     });
 
     return currencyMap;
-  }, [filteredInvoices, income]);
+  }, [revenueEligibleInvoices, income]);
 
   const customerData = useMemo(() => {
     const customerMap = new Map<string, { amount: number; currency: string }>();
-    filteredInvoices.forEach((invoice) => {
+    revenueEligibleInvoices.forEach((invoice) => {
       const customer = invoice.customer_name || "Unknown";
       const existing = customerMap.get(customer) || { amount: 0, currency: invoice.currency };
       customerMap.set(customer, { 
@@ -164,7 +173,7 @@ export default function RevenueAnalysisPage() {
       .map(([name, value]) => ({ name, ...value }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 10);
-  }, [filteredInvoices]);
+  }, [revenueEligibleInvoices]);
 
   const statusData = useMemo(() => {
     const statusMap = new Map<string, { amount: number; currency: string }>();
@@ -181,7 +190,7 @@ export default function RevenueAnalysisPage() {
 
   const monthlyData = useMemo(() => {
     const monthlyMap = new Map<string, { amount: number; currency: string }>();
-    [...filteredInvoices, ...income].forEach((item) => {
+    [...revenueEligibleInvoices, ...income].forEach((item) => {
       const date = (item as Invoice).due_date || (item as Income).date;
       if (!date) return;
       const month = new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -192,20 +201,20 @@ export default function RevenueAnalysisPage() {
       });
     });
     return Array.from(monthlyMap.entries()).map(([month, value]) => ({ month, ...value }));
-  }, [filteredInvoices, income]);
+  }, [revenueEligibleInvoices, income]);
 
   const statuses = useMemo(() => {
     const stats = new Set(filteredInvoices.map((i) => i.status).filter(Boolean));
     return Array.from(stats);
   }, [filteredInvoices]);
 
-  const totalRevenue = filteredInvoices.reduce((sum, i) => sum + i.amount, 0) + income.reduce((sum, i) => sum + i.amount, 0);
-  const invoiceRevenue = filteredInvoices.reduce((sum, i) => sum + i.amount, 0);
+  const totalRevenue = revenueEligibleInvoices.reduce((sum, i) => sum + i.amount, 0) + income.reduce((sum, i) => sum + i.amount, 0);
+  const invoiceRevenue = revenueEligibleInvoices.reduce((sum, i) => sum + i.amount, 0);
   const otherIncome = income.reduce((sum, i) => sum + i.amount, 0);
-  const paidRevenue = filteredInvoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.amount, 0);
-  const pendingRevenue = filteredInvoices.filter((i) => i.status === "pending").reduce((sum, i) => sum + i.amount, 0);
+  const paidRevenue = revenueEligibleInvoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.amount, 0);
+  const pendingRevenue = revenueEligibleInvoices.filter((i) => i.status === "pending").reduce((sum, i) => sum + i.amount, 0);
   const topCustomer = customerData.length > 0 ? customerData[0] : null;
-  const avgInvoice = filteredInvoices.length > 0 ? invoiceRevenue / filteredInvoices.length : 0;
+  const avgInvoice = revenueEligibleInvoices.length > 0 ? invoiceRevenue / revenueEligibleInvoices.length : 0;
 
   const exportData = () => {
     const data = {
