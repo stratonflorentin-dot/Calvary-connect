@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { calculateInvoiceTotals } from "@/lib/tanzania-tax-rules";
+import { CURRENCIES, formatCurrency } from "@/components/ui/currency-badge";
 
 // ─── Company Info ─────────────────────────────────────────────────────────────
 // Fallback only — real values are fetched live from company_settings below.
@@ -45,6 +46,12 @@ function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMP
   const statusStamp = invoice.status === "paid"
     ? `<div style="position:absolute;top:220px;right:60px;transform:rotate(-20deg);border:3px solid #059669;color:#059669;padding:8px 20px;font-size:24px;font-weight:900;letter-spacing:4px;opacity:0.2;border-radius:4px">PAID</div>`
     : "";
+
+  // The invoice's own currency, not always TZS — a USD quotation carries
+  // through to a USD invoice (customer-invoices' quotation-select fills
+  // this in), and every amount on the document needs to match it.
+  const cur = invoice.currency || "TZS";
+  const curName = CURRENCIES[cur as keyof typeof CURRENCIES]?.name || cur;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -175,7 +182,7 @@ function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMP
       </div>
       <div class="field">
         <div class="field-key">Currency</div>
-        <div class="field-val">TZS — Tanzania Shilling</div>
+        <div class="field-val">${cur} — ${curName}</div>
       </div>
       ${invoice.trip_number ? `<div class="field"><div class="field-key">Trip Reference</div><div class="field-val">${invoice.trip_number}</div></div>` : ""}
     </div>
@@ -192,8 +199,8 @@ function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMP
           <th>From</th>
           <th>To</th>
           <th class="text-right">Qty</th>
-          <th class="text-right">Unit Price (TZS)</th>
-          <th class="text-right">Amount (TZS)</th>
+          <th class="text-right">Unit Price (${cur})</th>
+          <th class="text-right">Amount (${cur})</th>
         </tr>
       </thead>
       <tbody>
@@ -216,22 +223,22 @@ function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMP
     <table class="totals-table">
       <tr class="subtotal-row">
         <td>Subtotal</td>
-        <td class="text-right">TZS ${subtotal.toLocaleString()}</td>
+        <td class="text-right">${formatCurrency(subtotal, cur)}</td>
       </tr>
       ${invoice.vat_applicable ? `
       <tr>
         <td>VAT (18%) <span class="tax-label">VRN: ${COMPANY.vrn}</span></td>
-        <td class="text-right">TZS ${vatAmount.toLocaleString()}</td>
+        <td class="text-right">${formatCurrency(vatAmount, cur)}</td>
       </tr>` : `
       <tr><td style="color:#6b7280;font-size:9px">VAT: Exempt</td><td></td></tr>`}
       ${whtAmount > 0 ? `
       <tr>
         <td>WHT Deductible (5%) <span class="tax-label">Transport Services</span></td>
-        <td class="text-right" style="color:#dc2626">(TZS ${whtAmount.toLocaleString()})</td>
+        <td class="text-right" style="color:#dc2626">(${formatCurrency(whtAmount, cur)})</td>
       </tr>` : ""}
       <tr class="total-row">
         <td>TOTAL PAYABLE</td>
-        <td class="text-right">TZS ${totalPayable.toLocaleString()}</td>
+        <td class="text-right">${formatCurrency(totalPayable, cur)}</td>
       </tr>
     </table>
   </div>
@@ -320,6 +327,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
     vatApplicable,
     whtApplicable,
   });
+  const previewCurrency = invoiceData.currency || "TZS";
 
   const printInvoice = () => {
     const html = buildInvoiceHTML(invoiceData, client, lineItems, company);
@@ -478,23 +486,23 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
           <div className="bg-info/10 border border-info/20 rounded-xl p-4 space-y-1.5 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium text-foreground">TZS {subtotal.toLocaleString()}</span>
+              <span className="font-medium text-foreground">{formatCurrency(subtotal, previewCurrency)}</span>
             </div>
             {vatApplicable && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">VAT (18%)</span>
-                <span className="font-medium text-foreground">TZS {vatAmount.toLocaleString()}</span>
+                <span className="font-medium text-foreground">{formatCurrency(vatAmount, previewCurrency)}</span>
               </div>
             )}
             {whtAmount > 0 && (
               <div className="flex justify-between text-destructive">
                 <span>WHT Deductible (5%)</span>
-                <span className="font-medium">(TZS {whtAmount.toLocaleString()})</span>
+                <span className="font-medium">({formatCurrency(whtAmount, previewCurrency)})</span>
               </div>
             )}
             <div className="flex justify-between font-black text-info border-t border-info/20 pt-1.5 text-base">
               <span>TOTAL PAYABLE</span>
-              <span>TZS {totalPayable.toLocaleString()}</span>
+              <span>{formatCurrency(totalPayable, previewCurrency)}</span>
             </div>
           </div>
 
