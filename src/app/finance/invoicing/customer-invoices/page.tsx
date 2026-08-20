@@ -1089,6 +1089,12 @@ export default function CustomerInvoicesPage() {
               </div>
               <Button variant="ghost" size="icon" onClick={() => setDetail(null)}><X className="w-4 h-4" /></Button>
             </div>
+            {!["draft", "pending"].includes(detail.status) && (
+              <div className="mx-5 mt-4 rounded-xl bg-warning/10 border border-warning/20 p-3 text-xs text-warning">
+                This invoice is locked and cannot be edited — it has been issued and is a finalized financial document. Corrections go through a{" "}
+                <Link href="/finance/invoicing/credit-notes" className="underline font-bold">Credit Note</Link> instead.
+              </div>
+            )}
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>

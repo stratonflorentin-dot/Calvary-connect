@@ -35,6 +35,7 @@ export default function QuotationDetailPage() {
   const [lines, setLines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [converting, setConverting] = useState(false);
   const [company, setCompany] = useState<DocumentCompanyInfo>({});
   const [fxRate, setFxRate] = useState<number | null>(null);
 
@@ -81,6 +82,37 @@ export default function QuotationDetailPage() {
       toast({ title: "Couldn't send", description: err.message, variant: "destructive" });
     } finally {
       setSending(false);
+    }
+  };
+
+  const convertToShipment = async () => {
+    if (!quotation || quotation.shipment_id) return;
+    setConverting(true);
+    try {
+      const { data: shipmentNumber } = await supabase.rpc("next_doc_number", { p_type: "shipment" });
+      const { data: shipment, error: shipErr } = await supabase
+        .from("shipments")
+        .insert({
+          shipment_number: shipmentNumber || `SH-${Date.now().toString().slice(-6)}`,
+          quotation_id: quotation.id,
+          customer_id: quotation.customer_id,
+          origin_city: quotation.origin,
+          destination_city: quotation.destination,
+          quoted_amount: quotation.total_amount,
+          currency: quotation.currency,
+          status: "created",
+          created_by: user?.id ?? null,
+        })
+        .select()
+        .single();
+      if (shipErr) throw shipErr;
+      await supabase.from("quotations").update({ shipment_id: shipment.id }).eq("id", quotation.id);
+      toast({ variant: "success", title: "Shipment created", description: shipment.shipment_number });
+      router.push(`/shipments/${shipment.id}`);
+    } catch (err: any) {
+      toast({ title: "Couldn't create shipment", description: err.message, variant: "destructive" });
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -167,6 +199,24 @@ export default function QuotationDetailPage() {
           {quotation.status !== "draft" && (
             <div className="rounded-xl bg-muted/30 border border-border p-3 text-xs text-muted-foreground">
               Customer link: <a href={publicLink} target="_blank" rel="noreferrer" className="text-primary hover:underline font-mono">{publicLink}</a>
+            </div>
+          )}
+
+          {quotation.status === "accepted" && (
+            <div className="rounded-xl bg-success/10 border border-success/20 p-3 text-xs flex items-center justify-between gap-3">
+              {quotation.shipment_id ? (
+                <>
+                  <span className="text-success font-bold">Accepted — converted to a shipment.</span>
+                  <Link href={`/shipments/${quotation.shipment_id}`} className="text-primary hover:underline font-bold">View Shipment →</Link>
+                </>
+              ) : (
+                <>
+                  <span className="text-success">Accepted, but no shipment was created (auto-create may have failed).</span>
+                  <Button size="sm" variant="outline" onClick={convertToShipment} disabled={converting} className="gap-2">
+                    {converting ? <Loader2 className="size-3.5 animate-spin" /> : null} Convert to Shipment
+                  </Button>
+                </>
+              )}
             </div>
           )}
 

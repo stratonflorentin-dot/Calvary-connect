@@ -81,9 +81,13 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   trip?: any | null;
   onSaved?: () => void;
+  /** Set when opened from a Shipment's "Assign Truck" / "Create Trip Order" action. */
+  shipmentId?: string;
+  defaultOrigin?: string;
+  defaultDestination?: string;
 }
 
-export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
+export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, defaultOrigin, defaultDestination }: Props) {
   const { user } = useSupabase();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -137,6 +141,8 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
       setForm({
         ...empty(),
         trip_number: `TRP-${Date.now().toString().slice(-6)}`,
+        origin: defaultOrigin ?? "",
+        destination: defaultDestination ?? "",
       });
     }
     setSuggestions([]);
@@ -213,6 +219,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved }: Props) {
     try {
       const payload: Record<string, any> = {
         trip_number: form.trip_number || `TRP-${Date.now().toString().slice(-6)}`,
+        shipment_id: shipmentId || trip?.shipment_id || null,
         origin: form.origin.trim(),
         destination: form.destination.trim(),
         cargo_type: form.cargo || null,

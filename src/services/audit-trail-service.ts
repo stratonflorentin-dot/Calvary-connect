@@ -32,7 +32,9 @@ export type AuditEntityType =
   | 'performance_review'
   | 'bank_statement_batch'
   | 'cash_request'
-  | 'fiscal_period';
+  | 'fiscal_period'
+  | 'shipment'
+  | 'waybill';
 
 export interface AuditLog {
   id?: string;

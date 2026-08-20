@@ -15,6 +15,7 @@ import {
   Users,
   CalendarDays,
   FileText,
+  Ship,
 } from "lucide-react";
 
 /** Every authenticated role can open the home dashboard and profile. */
@@ -156,6 +157,19 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
     icon: CalendarDays,
     category: "logistics",
+  },
+  {
+    path: "/shipments",
+    label: "Shipments",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
+    icon: Ship,
+    category: "logistics",
+  },
+  {
+    path: "/shipments/[id]",
+    label: "Shipment Details",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN", "ACCOUNTANT"],
+    showInNavigation: false,
   },
   {
     path: "/map",
