@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import {
   Search, Package, MapPin, CheckCircle2, Clock, Truck,
   Navigation, AlertCircle, ArrowRight, Phone, RefreshCw,
@@ -106,23 +105,16 @@ export default function TrackingPage() {
     setResult(null);
     setSearched(true);
 
-    // Try exact trip_number match first, then partial
-    const { data, error: dbErr } = await supabase
-      .from("trips")
-      .select(`
-        id, trip_number, origin, destination, status, cargo,
-        client, created_at, estimated_time, notes, salesAmount,
-        driver:user_profiles(name),
-        vehicle:vehicles(plate_number)
-      `)
-      .or(`trip_number.ilike.%${q}%`)
-      .limit(1)
-      .single();
+    // Goes through /api/track (service-role) rather than querying trips
+    // directly — trips_read RLS requires a staff role or being the trip's
+    // own driver, with no exception for an anonymous public visitor.
+    const res = await fetch(`/api/track?q=${encodeURIComponent(q)}`);
+    const json = await res.json();
 
-    if (dbErr || !data) {
+    if (!res.ok || !json.trip) {
       setError("No shipment found with that tracking number. Please double-check and try again.");
     } else {
-      const r = data as any;
+      const r = json.trip as any;
       setResult({
         id: r.id,
         trip_number: r.trip_number || `TRP-${r.id.slice(0, 8).toUpperCase()}`,
