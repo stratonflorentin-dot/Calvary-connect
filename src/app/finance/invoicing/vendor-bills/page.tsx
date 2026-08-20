@@ -22,6 +22,7 @@ import {
   summarizeByCurrency,
 } from "@/lib/finance/aging";
 import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
+import { resolvePayableAccountCode } from "@/lib/finance/ar-ap-accounts";
 import {
   Building2,
   CheckCircle2,
@@ -245,7 +246,12 @@ export default function VendorBillsPage() {
     // Atomically deducts bank_accounts.current_balance and records the
     // bank_transactions row (post_bank_transaction, migration 035) before
     // touching the invoice — previously this page never moved money at all.
-    const { error: txError } = await supabase.rpc("post_bank_transaction", {
+    // p_contra_account_code was missing entirely — the bank's operational
+    // balance moved correctly, but with no contra account the GL side
+    // (Accounts Payable) never got debited down, same "balance moves but
+    // the ledger doesn't" gap fixed for expenses earlier this session.
+    const contraCode = await resolvePayableAccountCode(paying.currency || "TZS");
+    const { data: txn, error: txError } = await supabase.rpc("post_bank_transaction", {
       p_bank_account_id: payBankAccountId,
       p_amount: amt,
       p_direction: "out",
@@ -255,6 +261,7 @@ export default function VendorBillsPage() {
       p_reference: paying.invoice_number,
       p_reference_type: "invoice",
       p_reference_id: paying.id,
+      p_contra_account_code: contraCode ?? undefined,
       p_idempotency_key: crypto.randomUUID(),
     });
     if (txError) {
@@ -269,6 +276,7 @@ export default function VendorBillsPage() {
         status: newStatus,
         paid_at: newStatus === "paid" ? new Date().toISOString() : paying.paid_at,
         payment_method: payMethod,
+        journal_entry_id: (txn as any)?.journal_entry_id ?? paying.journal_entry_id,
       })
       .eq("id", paying.id);
     if (error) {
@@ -314,7 +322,8 @@ export default function VendorBillsPage() {
       // Atomically deducts bank_accounts.current_balance per bill (migration
       // 035) — skip (don't mark paid) any bill whose payment fails to post,
       // e.g. insufficient exchange-rate data for its currency.
-      const { error: txError } = await supabase.rpc("post_bank_transaction", {
+      const contraCode = await resolvePayableAccountCode(bill.currency || "TZS");
+      const { data: txn, error: txError } = await supabase.rpc("post_bank_transaction", {
         p_bank_account_id: payBankAccountId,
         p_amount: balance,
         p_direction: "out",
@@ -324,6 +333,7 @@ export default function VendorBillsPage() {
         p_reference: bill.invoice_number,
         p_reference_type: "invoice",
         p_reference_id: bill.id,
+        p_contra_account_code: contraCode ?? undefined,
         p_idempotency_key: crypto.randomUUID(),
       });
       if (txError) {
@@ -337,6 +347,7 @@ export default function VendorBillsPage() {
         status: "paid",
         paid_at: new Date().toISOString(),
         payment_method: method,
+        journal_entry_id: (txn as any)?.journal_entry_id ?? bill.journal_entry_id,
       }).eq("id", bill.id);
       await AuditTrailService.log({
         user_id: user?.id,

@@ -21,6 +21,7 @@ import {
 } from "@/lib/finance/aging";
 import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
 import { checkCreditLimit } from "@/lib/finance/credit-check";
+import { resolveReceivableAccountCode } from "@/lib/finance/ar-ap-accounts";
 import { calculateInvoiceTotals } from "@/lib/tanzania-tax-rules";
 import { TRAInvoiceDialog } from "@/components/financial/tra-invoice-dialog";
 import { AuditTrailService } from "@/services/audit-trail-service";
@@ -78,16 +79,19 @@ export default function CustomerInvoicesPage() {
   const [paying, setPaying] = useState<any | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("bank_transfer");
+  const [payBankAccountId, setPayBankAccountId] = useState("");
   const [customers, setCustomers] = useState<any[]>([]);
   const [printing, setPrinting] = useState<any | null>(null);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [view, setView] = useState<"table" | "split">("table");
   const [splitSelectedId, setSplitSelectedId] = useState<string | null>(null);
 
+  const [trips, setTrips] = useState<any[]>([]);
   const [form, setForm] = useState({
     customer_id: "",
     customer_name: "",
     invoice_number: "",
+    trip_id: "",
     amount: "",
     vat_rate: "18",
     vat_applicable: true,
@@ -107,9 +111,16 @@ export default function CustomerInvoicesPage() {
 
     supabase
       .from("bank_accounts")
-      .select("id, currency, current_balance, is_active")
+      .select("id, account_name, bank_name, currency, current_balance, is_active")
       .eq("is_active", true)
       .then(({ data }) => setBankAccounts(data ?? []));
+
+    supabase
+      .from("trips")
+      .select("id, trip_number, origin, destination, client")
+      .order("created_at", { ascending: false })
+      .limit(200)
+      .then(({ data }) => setTrips(data ?? []));
   }, []);
 
   const selectedCustomer = useMemo(
@@ -285,11 +296,14 @@ export default function CustomerInvoicesPage() {
         return;
       }
 
+      const selectedTrip = trips.find((t) => t.id === form.trip_id);
       const { data, error } = await supabase.from("invoices").insert({
         customer_id: form.customer_id || null,
         customer_name: form.customer_name,
         invoice_number: invoiceNum,
         client_name: form.customer_name,
+        trip_id: form.trip_id || null,
+        trip_number: selectedTrip?.trip_number || null,
         amount,
         subtotal: amount,
         vat_applicable: form.vat_applicable,
@@ -318,6 +332,7 @@ export default function CustomerInvoicesPage() {
         customer_id: "",
         customer_name: "",
         invoice_number: "",
+        trip_id: "",
         amount: "",
         vat_rate: "18",
         vat_applicable: true,
@@ -342,10 +357,43 @@ export default function CustomerInvoicesPage() {
       toast({ title: "Invalid amount", variant: "destructive" });
       return;
     }
+    if (!payBankAccountId) {
+      toast({ title: "Choose which account received this payment", variant: "destructive" });
+      return;
+    }
     const total = Number(paying.total_amount ?? paying.amount ?? 0);
     const prevPaid = Number(paying.paid_amount ?? 0);
     const newPaid = prevPaid + amt;
     const newStatus = newPaid >= total ? "paid" : "partial";
+    const currency = paying.currency || "TZS";
+
+    // The invoice update alone was the whole bug: it flipped a status
+    // label with no real money movement anywhere. This posts the actual
+    // ledger entry — Dr the receiving bank account / Cr Accounts
+    // Receivable — so the bank account's balance and the customer's
+    // outstanding balance both genuinely reflect the payment, same
+    // mechanism already used for expenses/cash requests/petty cash.
+    const contraCode = await resolveReceivableAccountCode(currency);
+    if (!contraCode) {
+      toast({ title: "Setup needed", description: `No "Accounts Receivable" account exists in ${currency} — add one to the Chart of Accounts first.`, variant: "destructive" });
+      return;
+    }
+    const { data: txn, error: txnError } = await supabase.rpc("post_bank_transaction", {
+      p_bank_account_id: payBankAccountId,
+      p_amount: amt,
+      p_direction: "in",
+      p_transaction_type: "invoice_payment",
+      p_currency: currency,
+      p_description: `Payment for ${paying.invoice_number} — ${paying.customer_name}`,
+      p_reference_type: "invoice",
+      p_reference_id: paying.id,
+      p_contra_account_code: contraCode,
+      p_idempotency_key: crypto.randomUUID(),
+    });
+    if (txnError) {
+      toast({ title: "Payment failed", description: txnError.message, variant: "destructive" });
+      return;
+    }
 
     const { error } = await supabase
       .from("invoices")
@@ -354,10 +402,11 @@ export default function CustomerInvoicesPage() {
         status: newStatus,
         paid_at: newStatus === "paid" ? new Date().toISOString() : paying.paid_at,
         payment_method: payMethod,
+        journal_entry_id: (txn as any)?.journal_entry_id ?? paying.journal_entry_id,
       })
       .eq("id", paying.id);
     if (error) {
-      toast({ title: "Payment failed", description: error.message, variant: "destructive" });
+      toast({ title: "Payment posted but invoice update failed", description: error.message, variant: "destructive" });
       return;
     }
 
@@ -378,6 +427,7 @@ export default function CustomerInvoicesPage() {
     });
     setPaying(null);
     setPayAmount("");
+    setPayBankAccountId("");
     loadInvoices();
   };
 
@@ -582,6 +632,7 @@ export default function CustomerInvoicesPage() {
               <thead className="bg-muted/40 border-b border-border">
                 <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   <th className="px-4 py-3">Invoice #</th>
+                  <th className="px-4 py-3">Trip Ref</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Issued</th>
                   <th className="px-4 py-3">Due</th>
@@ -596,13 +647,13 @@ export default function CustomerInvoicesPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={10} className="text-center py-16 text-muted-foreground">
+                    <td colSpan={11} className="text-center py-16 text-muted-foreground">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-center py-16 text-muted-foreground">
+                    <td colSpan={11} className="text-center py-16 text-muted-foreground">
                       <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
                       No invoices match the current filter.
                     </td>
@@ -619,6 +670,7 @@ export default function CustomerInvoicesPage() {
                     return (
                       <tr key={inv.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 font-mono text-xs font-black text-foreground">{inv.invoice_number}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{inv.trip_number ?? "—"}</td>
                         <td className="px-4 py-3 font-medium text-foreground">{inv.customer_name ?? inv.client_name ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : "—"}</td>
                         <td className={cn("px-4 py-3 text-xs", overdue ? "text-destructive font-bold" : "text-muted-foreground")}>
@@ -865,9 +917,25 @@ export default function CustomerInvoicesPage() {
                   )}
                 </p>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Invoice Number</Label>
-                <Input value={form.invoice_number} onChange={(e) => setForm({ ...form, invoice_number: e.target.value })} placeholder="Auto-generated if blank" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Invoice Number</Label>
+                  <Input value={form.invoice_number} onChange={(e) => setForm({ ...form, invoice_number: e.target.value })} placeholder="Auto-generated if blank" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Trip Ref No</Label>
+                  <Select value={form.trip_id || "__none"} onValueChange={(v) => setForm({ ...form, trip_id: v === "__none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Not tied to a trip" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">— No trip —</SelectItem>
+                      {trips.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.trip_number} · {t.origin} → {t.destination}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -985,6 +1053,20 @@ export default function CustomerInvoicesPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Deposited to *</Label>
+                <Select value={payBankAccountId} onValueChange={setPayBankAccountId}>
+                  <SelectTrigger><SelectValue placeholder="Which account received this?" /></SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts
+                      .filter((b) => b.currency === (paying.currency || "TZS"))
+                      .map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.bank_name} · {b.account_name}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Posts this payment into the ledger — the account you pick here is what actually gets credited.</p>
+              </div>
             </div>
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-border bg-muted/20">
               <Button variant="outline" onClick={() => setPaying(null)}>Cancel</Button>
@@ -1016,6 +1098,10 @@ export default function CustomerInvoicesPage() {
                 <div>
                   <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Status</p>
                   <Badge className={STATUS_BADGES[detail.status ?? "pending"]}>{detail.status ?? "pending"}</Badge>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Trip Ref No</p>
+                  <p className="font-bold text-foreground font-mono">{detail.trip_number ?? "—"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Issued</p>
