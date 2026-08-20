@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { downloadQuotationPdf } from "@/lib/finance/quotation-pdf";
+import { downloadDocumentPdf, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
 import { CheckCircle2, Download, FileText, Loader2, XCircle } from "lucide-react";
 
 // Genuinely public — no auth, no Sidebar, no useRole. Reached only via an
@@ -29,6 +29,8 @@ export default function PublicQuotationPage() {
 
   const [quotation, setQuotation] = useState<any | null>(null);
   const [lines, setLines] = useState<any[]>([]);
+  const [company, setCompany] = useState<DocumentCompanyInfo>({});
+  const [fxRate, setFxRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,6 +45,8 @@ export default function PublicQuotationPage() {
       if (!res.ok) throw new Error(json.error);
       setQuotation(json.quotation);
       setLines(json.lines ?? []);
+      setCompany(json.company ?? {});
+      setFxRate(json.fxRate ?? null);
       setError(null);
     } catch (err: any) {
       setError(err.message || "Couldn't load this quotation.");
@@ -75,23 +79,23 @@ export default function PublicQuotationPage() {
 
   const pdf = () => {
     if (!quotation) return;
-    downloadQuotationPdf({
-      quotation_number: quotation.quotation_number,
-      quotation_date: quotation.quotation_date,
-      valid_until: quotation.valid_until,
-      customer_name: quotation.customer?.company_name ?? quotation.contact_person ?? "",
-      customer_email: quotation.customer?.email,
-      customer_phone: quotation.customer?.phone,
-      origin: quotation.origin, destination: quotation.destination,
-      currency: quotation.currency || "TZS",
-      subtotal: Number(quotation.subtotal) || 0,
-      vat_rate: Number(quotation.vat_rate) || 0,
-      zero_rated_vat: !!quotation.zero_rated_vat,
-      vat_amount: Number(quotation.vat_amount) || 0,
-      total_amount: Number(quotation.total_amount) || 0,
-      payment_terms: quotation.payment_terms,
-      terms_conditions: quotation.terms_conditions,
-      lines: lines.map((l) => ({ description: l.description, service_type: l.service_type, quantity: l.quantity, duration_days: l.duration_days, unit_price: l.unit_price, line_total: l.line_total })),
+    downloadDocumentPdf({
+      kind: "quotation",
+      number: quotation.quotation_number,
+      dateIssued: quotation.quotation_date,
+      dueOrValidUntil: quotation.valid_until,
+      status: quotation.status,
+      company,
+      customer: {
+        name: quotation.customer?.company_name ?? quotation.contact_person ?? "",
+        email: quotation.customer?.email, phone: quotation.customer?.phone,
+        vrn: quotation.customer?.vrn, tin: quotation.customer?.tax_id,
+      },
+      paymentTerms: quotation.payment_terms, currency: quotation.currency || "TZS", fxRateToTzs: fxRate,
+      vatRate: Number(quotation.vat_rate) || 0, zeroRated: !!quotation.zero_rated_vat,
+      subtotal: Number(quotation.subtotal) || 0, vatAmount: Number(quotation.vat_amount) || 0, total: Number(quotation.total_amount) || 0,
+      lines: lines.map((l) => ({ description: l.description, item_type_label: l.service_type, quantity: l.quantity, duration_days: l.duration_days, unit_price: l.unit_price, line_total: l.line_total })),
+      termsConditions: quotation.terms_conditions,
     });
   };
 

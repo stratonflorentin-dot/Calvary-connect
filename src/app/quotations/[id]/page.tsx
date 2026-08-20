@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { downloadQuotationPdf } from "@/lib/finance/quotation-pdf";
+import { downloadDocumentPdf, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
+import { getRate } from "@/lib/finance/fx";
 import { ArrowLeft, Copy, Download, FileText, Loader2, Send } from "lucide-react";
 
 const STATUS_BADGES: Record<string, string> = {
@@ -34,10 +35,23 @@ export default function QuotationDetailPage() {
   const [lines, setLines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [company, setCompany] = useState<DocumentCompanyInfo>({});
+  const [fxRate, setFxRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    supabase.from("company_settings")
+      .select("company_name, tagline, vat_registration, tax_id, phone, email, address, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, bank_branch_code, bank_swift_code")
+      .limit(1).maybeSingle().then(({ data }) => { if (data) setCompany(data); });
+  }, []);
+
+  useEffect(() => {
+    if (!quotation || !quotation.currency || quotation.currency === "TZS") { setFxRate(null); return; }
+    getRate(quotation.currency, "TZS").then(setFxRate).catch(() => setFxRate(null));
+  }, [quotation?.currency]);
 
   const load = async () => {
     setLoading(true);
-    const { data: q } = await supabase.from("quotations").select("*, customer:customer_id(company_name, contact_person, email, phone)").eq("id", id).maybeSingle();
+    const { data: q } = await supabase.from("quotations").select("*, customer:customer_id(company_name, contact_person, email, phone, vrn, tax_id)").eq("id", id).maybeSingle();
     setQuotation(q);
     if (q) {
       const { data: l } = await supabase.from("quotation_lines").select("*").eq("quotation_id", id).order("line_number");
@@ -95,23 +109,23 @@ export default function QuotationDetailPage() {
 
   const pdf = () => {
     if (!quotation) return;
-    downloadQuotationPdf({
-      quotation_number: quotation.quotation_number,
-      quotation_date: quotation.quotation_date,
-      valid_until: quotation.valid_until,
-      customer_name: quotation.customer?.company_name ?? quotation.contact_person ?? "",
-      customer_email: quotation.customer?.email,
-      customer_phone: quotation.customer?.phone,
-      origin: quotation.origin, destination: quotation.destination,
-      currency: quotation.currency || "TZS",
-      subtotal: Number(quotation.subtotal) || 0,
-      vat_rate: Number(quotation.vat_rate) || 0,
-      zero_rated_vat: !!quotation.zero_rated_vat,
-      vat_amount: Number(quotation.vat_amount) || 0,
-      total_amount: Number(quotation.total_amount) || 0,
-      payment_terms: quotation.payment_terms,
-      terms_conditions: quotation.terms_conditions,
-      lines: lines.map((l) => ({ description: l.description, service_type: l.service_type, quantity: l.quantity, duration_days: l.duration_days, unit_price: l.unit_price, line_total: l.line_total })),
+    downloadDocumentPdf({
+      kind: "quotation",
+      number: quotation.quotation_number,
+      dateIssued: quotation.quotation_date,
+      dueOrValidUntil: quotation.valid_until,
+      status: quotation.status,
+      company,
+      customer: {
+        name: quotation.customer?.company_name ?? quotation.contact_person ?? "",
+        email: quotation.customer?.email, phone: quotation.customer?.phone,
+        vrn: quotation.customer?.vrn, tin: quotation.customer?.tax_id,
+      },
+      paymentTerms: quotation.payment_terms, currency: quotation.currency || "TZS", fxRateToTzs: fxRate,
+      vatRate: Number(quotation.vat_rate) || 0, zeroRated: !!quotation.zero_rated_vat,
+      subtotal: Number(quotation.subtotal) || 0, vatAmount: Number(quotation.vat_amount) || 0, total: Number(quotation.total_amount) || 0,
+      lines: lines.map((l) => ({ description: l.description, item_type_label: l.service_type, quantity: l.quantity, duration_days: l.duration_days, unit_price: l.unit_price, line_total: l.line_total })),
+      termsConditions: quotation.terms_conditions,
     });
   };
 

@@ -19,7 +19,11 @@ import { Badge } from "@/components/ui/badge";
 import { calculateInvoiceTotals } from "@/lib/tanzania-tax-rules";
 
 // ─── Company Info ─────────────────────────────────────────────────────────────
-const COMPANY = {
+// Fallback only — real values are fetched live from company_settings below.
+// This used to be the *only* source, hardcoded with placeholder text
+// ("XXX-XXX-XXX" TIN, "XX-XXXXXX-X" VRN) that was going out on real,
+// printed/downloaded invoices instead of the company's actual tax numbers.
+const COMPANY_FALLBACK = {
   name:    "Calvary Investment Company Ltd",
   address: "P.O. Box 75941, Dar es Salaam, Tanzania",
   phone:   "+255 XXX XXX XXX",
@@ -29,7 +33,7 @@ const COMPANY = {
   bank:    "CRDB Bank PLC — Account No: XXXXXXXXXXXXXXX",
 };
 
-function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[]): string {
+function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMPANY: typeof COMPANY_FALLBACK): string {
   const subtotal = lineItems.reduce((s, l) => s + (l.qty * l.unit_price), 0);
   const { vatAmount, whtAmount, totalPayable } = calculateInvoiceTotals({
     subtotal,
@@ -267,6 +271,24 @@ interface TRAInvoiceDialogProps {
 }
 
 export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClose, onSaved, mode = "view" }: TRAInvoiceDialogProps) {
+  const [company, setCompany] = useState(COMPANY_FALLBACK);
+  useEffect(() => {
+    supabase.from("company_settings")
+      .select("company_name, address, phone, email, tax_id, vat_registration, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd")
+      .limit(1).maybeSingle().then(({ data }) => {
+        if (!data) return;
+        const bankParts = [data.bank_name, data.bank_account_name, data.bank_account_number_tzs ? `TZS A/C: ${data.bank_account_number_tzs}` : null, data.bank_account_number_usd ? `USD A/C: ${data.bank_account_number_usd}` : null].filter(Boolean);
+        setCompany({
+          name: data.company_name || COMPANY_FALLBACK.name,
+          address: data.address || COMPANY_FALLBACK.address,
+          phone: data.phone || COMPANY_FALLBACK.phone,
+          email: data.email || COMPANY_FALLBACK.email,
+          tin: data.tax_id || COMPANY_FALLBACK.tin,
+          vrn: data.vat_registration || COMPANY_FALLBACK.vrn,
+          bank: bankParts.length ? bankParts.join(" — ") : COMPANY_FALLBACK.bank,
+        });
+      });
+  }, []);
   const [saving, setSaving] = useState(false);
   const [vatApplicable, setVatApplicable] = useState(initialInvoice?.vat_applicable ?? true);
   const [whtApplicable, setWhtApplicable] = useState(initialInvoice?.wht_applicable ?? true);
@@ -295,7 +317,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
   });
 
   const printInvoice = () => {
-    const html = buildInvoiceHTML(invoiceData, client, lineItems);
+    const html = buildInvoiceHTML(invoiceData, client, lineItems, company);
     const win = window.open("", "_blank", "width=900,height=1200");
     if (!win) return;
     win.document.write(html);
@@ -305,7 +327,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
   };
 
   const downloadInvoice = () => {
-    const html = buildInvoiceHTML(invoiceData, client, lineItems);
+    const html = buildInvoiceHTML(invoiceData, client, lineItems, company);
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { downloadQuotationPdf } from "@/lib/finance/quotation-pdf";
+import { downloadDocumentPdf, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
+import { getRate } from "@/lib/finance/fx";
 import { ArrowLeft, FileText, Loader2, Plus, Trash2 } from "lucide-react";
 
 const ITEM_TYPES: { key: string; label: string; timeBased: boolean }[] = [
@@ -76,18 +77,26 @@ export default function NewQuotationPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  const [settings, setSettings] = useState<{ default_vat_rate: number; quotation_number_prefix: string; quotation_terms_conditions: string | null; company_name?: string }>({
+  const [settings, setSettings] = useState<{ default_vat_rate: number; quotation_number_prefix: string; quotation_terms_conditions: string | null } & DocumentCompanyInfo>({
     default_vat_rate: 18,
     quotation_number_prefix: "QT-",
     quotation_terms_conditions: null,
   });
+  const [fxRate, setFxRate] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.from("customers").select("id, company_name, contact_person, email, phone").order("company_name").then(({ data }) => setCustomers(data ?? []));
-    supabase.from("company_settings").select("default_vat_rate, quotation_number_prefix, quotation_terms_conditions, company_name").limit(1).maybeSingle().then(({ data }) => {
-      if (data) setSettings((s) => ({ ...s, ...data }));
-    });
+    supabase.from("customers").select("id, company_name, contact_person, email, phone, vrn, tax_id").order("company_name").then(({ data }) => setCustomers(data ?? []));
+    supabase.from("company_settings")
+      .select("default_vat_rate, quotation_number_prefix, quotation_terms_conditions, company_name, tagline, vat_registration, tax_id, phone, email, address, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, bank_branch_code, bank_swift_code")
+      .limit(1).maybeSingle().then(({ data }) => {
+        if (data) setSettings((s) => ({ ...s, ...data }));
+      });
   }, []);
+
+  useEffect(() => {
+    if (currency === "TZS") { setFxRate(null); return; }
+    getRate(currency, "TZS").then(setFxRate).catch(() => setFxRate(null));
+  }, [currency]);
 
   const filteredCustomers = useMemo(() => {
     const q = customerSearch.trim().toLowerCase();
@@ -214,18 +223,32 @@ export default function NewQuotationPage() {
   };
 
   const previewPdf = () => {
-    downloadQuotationPdf({
-      quotation_number: "PREVIEW",
-      quotation_date: new Date().toISOString(),
-      valid_until: validUntil,
-      customer_name: customerMode === "new" ? (newCustomer.company || newCustomer.full_name) : (customers.find((c) => c.id === customerId)?.company_name ?? ""),
-      customer_email: customerMode === "new" ? newCustomer.email : customers.find((c) => c.id === customerId)?.email,
-      origin, destination, currency,
-      subtotal, vat_rate: settings.default_vat_rate, zero_rated_vat: zeroRated, vat_amount: vatAmount, total_amount: total,
-      payment_terms: paymentTerms, terms_conditions: settings.quotation_terms_conditions,
-      lines: lines.map((l) => ({ description: l.description, service_type: ITEM_TYPES.find((t) => t.key === l.item_type)?.label ?? l.item_type, quantity: Number(l.quantity) || 1, duration_days: Number(l.duration_days) || null, unit_price: Number(l.unit_price) || 0, line_total: lineSubtotal(l) })),
-      companyName: settings.company_name,
-    } as any);
+    const existingCustomer = customers.find((c) => c.id === customerId);
+    downloadDocumentPdf({
+      kind: "quotation",
+      number: "PREVIEW",
+      dateIssued: new Date().toISOString(),
+      dueOrValidUntil: validUntil,
+      status: "draft",
+      company: settings,
+      customer: {
+        name: customerMode === "new" ? (newCustomer.company || newCustomer.full_name) : (existingCustomer?.company_name ?? ""),
+        email: customerMode === "new" ? newCustomer.email : existingCustomer?.email,
+        phone: customerMode === "new" ? newCustomer.phone : existingCustomer?.phone,
+        vrn: existingCustomer?.vrn, tin: existingCustomer?.tax_id,
+      },
+      paymentTerms, currency, fxRateToTzs: fxRate,
+      vatRate: settings.default_vat_rate, zeroRated, subtotal, vatAmount, total,
+      lines: lines.map((l) => ({
+        description: l.description,
+        item_type_label: ITEM_TYPES.find((t) => t.key === l.item_type)?.label ?? l.item_type,
+        quantity: Number(l.quantity) || 1,
+        duration_days: Number(l.duration_days) || null,
+        unit_price: Number(l.unit_price) || 0,
+        line_total: lineSubtotal(l),
+      })),
+      termsConditions: settings.quotation_terms_conditions,
+    });
   };
 
   if (!role) return null;
