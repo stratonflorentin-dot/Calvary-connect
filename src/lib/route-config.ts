@@ -14,6 +14,7 @@ import {
   Building2,
   Users,
   CalendarDays,
+  FileText,
 } from "lucide-react";
 
 /** Every authenticated role can open the home dashboard and profile. */
@@ -91,6 +92,25 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     path: "/customers/[id]",
     label: "Customer Details",
     allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    showInNavigation: false,
+  },
+  {
+    path: "/quotations",
+    label: "Quotations",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "OPERATOR", "ACCOUNTANT"],
+    icon: FileText,
+    category: "sales",
+  },
+  {
+    path: "/quotations/new",
+    label: "New Quotation",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
+  {
+    path: "/quotations/[id]",
+    label: "Quotation Details",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "OPERATOR", "ACCOUNTANT"],
     showInNavigation: false,
   },
   {
