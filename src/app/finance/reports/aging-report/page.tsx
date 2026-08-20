@@ -156,7 +156,7 @@ export default function AgingReportPage() {
             {kind === "ar" ? "Receivables" : "Payables"} across {currencies.length} currenc{currencies.length === 1 ? "y" : "ies"}
             {currencies.map((c) => {
               const s = summaryByCcy[c];
-              return ` · ${c} ${fmt(s.totalOutstanding, c)}`;
+              return ` · ${fmt(s.totalOutstanding, c)}`;
             }).join("")}
           </p>
         </div>

@@ -485,7 +485,7 @@ export default function FinanceOverviewPage() {
               <div className="p-2 bg-destructive/20 rounded-lg"><AlertTriangle className="w-4 h-4 text-destructive" /></div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-destructive">
-                  Overdue AR: {arCurrencies.filter((c) => arByCcy[c].totalOverdue > 0).map((c) => `${c} ${fmt(arByCcy[c].totalOverdue, c)}`).join(" · ")}
+                  Overdue AR: {arCurrencies.filter((c) => arByCcy[c].totalOverdue > 0).map((c) => fmt(arByCcy[c].totalOverdue, c)).join(" · ")}
                 </p>
                 <p className="text-xs text-destructive">
                   {Math.max(...arCurrencies.map((c) => arByCcy[c].worstDays), 0)} days worst-case
@@ -523,7 +523,7 @@ export default function FinanceOverviewPage() {
               title="Accounts Receivable Aging"
               sub={arCurrencies.length === 0
                 ? "Nothing outstanding"
-                : arCurrencies.map((c) => `${c} ${fmt(arByCcy[c].totalOutstanding, c)}`).join(" · ")}
+                : arCurrencies.map((c) => fmt(arByCcy[c].totalOutstanding, c)).join(" · ")}
               href="/finance/reports/aging-report"
             />
           </div>
@@ -574,7 +574,7 @@ export default function FinanceOverviewPage() {
               title="Accounts Payable Aging"
               sub={apCurrencies.length === 0
                 ? "Nothing outstanding"
-                : apCurrencies.map((c) => `${c} ${fmt(apByCcy[c].totalOutstanding, c)}`).join(" · ")}
+                : apCurrencies.map((c) => fmt(apByCcy[c].totalOutstanding, c)).join(" · ")}
               href="/finance/invoicing/vendor-bills"
             />
           </div>

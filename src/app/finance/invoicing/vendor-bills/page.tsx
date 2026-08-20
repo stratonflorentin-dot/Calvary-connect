@@ -402,7 +402,7 @@ export default function VendorBillsPage() {
             {currencies.length > 0 && (
               <>
                 {" — "}
-                {currencies.map((c) => `${c} ${fmt(summaryByCcy[c].totalOutstanding, c)}`).join(" · ")}
+                {currencies.map((c) => fmt(summaryByCcy[c].totalOutstanding, c)).join(" · ")}
               </>
             )}
           </p>
