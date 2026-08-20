@@ -77,7 +77,11 @@ export function FuelManagement() {
         .order("fuel_date", { ascending: false })
         .limit(200),
       supabase.from("vehicles").select("id, plate_number, make, model").order("plate_number"),
-      supabase.from("trips").select("id, trip_number, origin, destination").eq("status", "in_transit").limit(50),
+      // A driver fuels up before departure just as often as mid-route —
+      // only "in_transit" excluded every trip still in pending/loading,
+      // which is exactly when a fill-up commonly happens. Only delivered/
+      // cancelled trips are genuinely done and excluded here.
+      supabase.from("trips").select("id, trip_number, origin, destination").in("status", ["pending", "loading", "in_transit"]).order("created_at", { ascending: false }).limit(50),
       supabase.from("fuel_stations").select("id, name").eq("is_active", true).order("name"),
       supabase.from("fuel_cards").select("id, card_number, status").eq("status", "active").order("card_number"),
     ]);
