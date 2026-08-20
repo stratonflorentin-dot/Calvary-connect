@@ -432,6 +432,7 @@ export default function ShipmentDetailPage() {
         shipmentId={shipment.id}
         defaultOrigin={shipment.origin_city ?? ""}
         defaultDestination={shipment.destination_city ?? ""}
+        defaultQuotationId={shipment.quotation_id ?? ""}
         onSaved={() => { setTripDialogOpen(false); load(); }}
       />
 

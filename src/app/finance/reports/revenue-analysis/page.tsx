@@ -90,9 +90,12 @@ export default function RevenueAnalysisPage() {
   // A cancelled invoice is void — it generates zero real revenue, but it
   // should still be visible in the table, the status breakdown chart, and
   // selectable via the status filter (so "how much did we cancel" stays
-  // answerable). This only excludes it from the revenue *sums*.
+  // answerable). A draft invoice hasn't been sent yet either — revenue is
+  // now only recognized (a real journal entry posted) at Send, so an
+  // unsent draft is exactly as un-earned as a cancelled one and gets the
+  // same treatment: excluded from the revenue *sums*, not from the table.
   const revenueEligibleInvoices = useMemo(
-    () => filteredInvoices.filter((i) => i.status !== "cancelled"),
+    () => filteredInvoices.filter((i) => i.status !== "cancelled" && i.status !== "draft"),
     [filteredInvoices],
   );
 
@@ -212,7 +215,7 @@ export default function RevenueAnalysisPage() {
   const invoiceRevenue = revenueEligibleInvoices.reduce((sum, i) => sum + i.amount, 0);
   const otherIncome = income.reduce((sum, i) => sum + i.amount, 0);
   const paidRevenue = revenueEligibleInvoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.amount, 0);
-  const pendingRevenue = revenueEligibleInvoices.filter((i) => i.status === "pending").reduce((sum, i) => sum + i.amount, 0);
+  const pendingRevenue = revenueEligibleInvoices.filter((i) => i.status === "pending" || i.status === "sent" || i.status === "partial").reduce((sum, i) => sum + i.amount, 0);
   const topCustomer = customerData.length > 0 ? customerData[0] : null;
   const avgInvoice = revenueEligibleInvoices.length > 0 ? invoiceRevenue / revenueEligibleInvoices.length : 0;
 

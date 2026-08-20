@@ -21,7 +21,7 @@ import {
 } from "@/lib/finance/aging";
 import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
 import { checkCreditLimit } from "@/lib/finance/credit-check";
-import { resolveReceivableAccountCode } from "@/lib/finance/ar-ap-accounts";
+import { postJournalEntry } from "@/lib/finance/journal";
 import { calculateInvoiceTotals } from "@/lib/tanzania-tax-rules";
 import { TRAInvoiceDialog } from "@/components/financial/tra-invoice-dialog";
 import { AuditTrailService } from "@/services/audit-trail-service";
@@ -56,6 +56,7 @@ const PRIMARY_CCY = "TZS";
 
 const STATUS_BADGES: Record<string, string> = {
   paid: "bg-success/10 text-success border-success/20",
+  sent: "bg-info/10 text-info border-info/20",
   pending: "bg-warning/10 text-warning border-warning/20",
   overdue: "bg-destructive/10 text-destructive border-destructive/20",
   draft: "bg-muted text-muted-foreground border-border",
@@ -76,6 +77,7 @@ export default function CustomerInvoicesPage() {
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<any | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [paying, setPaying] = useState<any | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("bank_transfer");
@@ -86,12 +88,12 @@ export default function CustomerInvoicesPage() {
   const [view, setView] = useState<"table" | "split">("table");
   const [splitSelectedId, setSplitSelectedId] = useState<string | null>(null);
 
-  const [trips, setTrips] = useState<any[]>([]);
+  const [quotations, setQuotations] = useState<any[]>([]);
   const [form, setForm] = useState({
     customer_id: "",
     customer_name: "",
     invoice_number: "",
-    trip_id: "",
+    quotation_id: "",
     amount: "",
     vat_rate: "18",
     vat_applicable: true,
@@ -116,16 +118,21 @@ export default function CustomerInvoicesPage() {
       .then(({ data }) => setBankAccounts(data ?? []));
 
     supabase
-      .from("trips")
-      .select("id, trip_number, origin, destination, client")
+      .from("quotations")
+      .select("id, quotation_number, customer_id, origin, destination")
       .order("created_at", { ascending: false })
       .limit(200)
-      .then(({ data }) => setTrips(data ?? []));
+      .then(({ data }) => setQuotations(data ?? []));
   }, []);
 
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === form.customer_id) ?? null,
     [customers, form.customer_id],
+  );
+
+  const quotationById = useMemo(
+    () => new Map(quotations.map((q) => [q.id, q])),
+    [quotations],
   );
 
   const loadInvoices = async () => {
@@ -190,6 +197,7 @@ export default function CustomerInvoicesPage() {
     const overdue = openInv.filter((i) => daysOverdue(i.due_date) > 0);
     const draft = invoices.filter((i) => i.status === "draft");
     const pending = invoices.filter((i) => i.status === "pending");
+    const sent = invoices.filter((i) => i.status === "sent");
     const cancelled = invoices.filter((i) => i.status === "cancelled");
     return {
       paidCount: paid.length,
@@ -198,6 +206,7 @@ export default function CustomerInvoicesPage() {
       overdueCount: overdue.length,
       draftCount: draft.length,
       pendingCount: pending.length,
+      sentCount: sent.length,
       cancelledCount: cancelled.length,
     };
   }, [invoices]);
@@ -296,14 +305,12 @@ export default function CustomerInvoicesPage() {
         return;
       }
 
-      const selectedTrip = trips.find((t) => t.id === form.trip_id);
       const { data, error } = await supabase.from("invoices").insert({
         customer_id: form.customer_id || null,
         customer_name: form.customer_name,
         invoice_number: invoiceNum,
         client_name: form.customer_name,
-        trip_id: form.trip_id || null,
-        trip_number: selectedTrip?.trip_number || null,
+        quotation_id: form.quotation_id || null,
         amount,
         subtotal: amount,
         vat_applicable: form.vat_applicable,
@@ -317,7 +324,7 @@ export default function CustomerInvoicesPage() {
         issue_date: new Date().toISOString().split("T")[0],
         description: form.description,
         payment_terms: form.payment_terms,
-        status: "pending",
+        status: "draft",
         type: "receivable",
       }).select().maybeSingle();
       if (error) throw error;
@@ -332,7 +339,7 @@ export default function CustomerInvoicesPage() {
         customer_id: "",
         customer_name: "",
         invoice_number: "",
-        trip_id: "",
+        quotation_id: "",
         amount: "",
         vat_rate: "18",
         vat_applicable: true,
@@ -347,6 +354,24 @@ export default function CustomerInvoicesPage() {
       toast({ title: "Failed to create", description: err?.message ?? "Unknown error", variant: "destructive" });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const sendInvoice = async (inv: any) => {
+    setSendingId(inv.id);
+    try {
+      // Revenue is recognized right here, not at creation — this is the
+      // Draft/Pending → Sent transition, and the moment the invoice locks
+      // (guard_sent_invoice, 102_shipments_waybills_invoice_lock.sql).
+      await postJournalEntry({ type: "invoice_sent", invoiceId: inv.id });
+      await AuditTrailService.logUpdate("finance", "invoice", inv.id, { status: inv.status }, { status: "sent" }, user?.id, `Invoice ${inv.invoice_number} sent to ${inv.customer_name ?? inv.client_name}`);
+      await loadInvoices();
+      setDetail(null);
+      toast({ variant: "success", title: "Invoice sent", description: `${inv.invoice_number} is now locked and posted to the ledger.` });
+    } catch (err: any) {
+      toast({ title: "Failed to send", description: err?.message ?? "Unknown error", variant: "destructive" });
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -373,28 +398,24 @@ export default function CustomerInvoicesPage() {
     // Receivable — so the bank account's balance and the customer's
     // outstanding balance both genuinely reflect the payment, same
     // mechanism already used for expenses/cash requests/petty cash.
-    const contraCode = await resolveReceivableAccountCode(currency);
-    if (!contraCode) {
-      toast({ title: "Setup needed", description: `No "Accounts Receivable" account exists in ${currency} — add one to the Chart of Accounts first.`, variant: "destructive" });
-      return;
-    }
-    const { data: txn, error: txnError } = await supabase.rpc("post_bank_transaction", {
-      p_bank_account_id: payBankAccountId,
-      p_amount: amt,
-      p_direction: "in",
-      p_transaction_type: "invoice_payment",
-      p_currency: currency,
-      p_description: `Payment for ${paying.invoice_number} — ${paying.customer_name}`,
-      p_reference_type: "invoice",
-      p_reference_id: paying.id,
-      p_contra_account_code: contraCode,
-      p_idempotency_key: crypto.randomUUID(),
-    });
-    if (txnError) {
-      toast({ title: "Payment failed", description: txnError.message, variant: "destructive" });
+    try {
+      await postJournalEntry({
+        type: "invoice_payment",
+        invoiceId: paying.id,
+        invoiceNumber: paying.invoice_number,
+        customerName: paying.customer_name,
+        bankAccountId: payBankAccountId,
+        amount: amt,
+        currency,
+      });
+    } catch (err: any) {
+      toast({ title: "Payment failed", description: err?.message ?? "Unknown error", variant: "destructive" });
       return;
     }
 
+    // journal_entry_id stays as the revenue-recognition entry set at Send —
+    // this payment's own entry is already linked from bank_transactions,
+    // not duplicated onto the invoice.
     const { error } = await supabase
       .from("invoices")
       .update({
@@ -402,7 +423,6 @@ export default function CustomerInvoicesPage() {
         status: newStatus,
         paid_at: newStatus === "paid" ? new Date().toISOString() : paying.paid_at,
         payment_method: payMethod,
-        journal_entry_id: (txn as any)?.journal_entry_id ?? paying.journal_entry_id,
       })
       .eq("id", paying.id);
     if (error) {
@@ -542,6 +562,10 @@ export default function CustomerInvoicesPage() {
                 <span className="font-black text-foreground">{kpis.pendingCount}</span>
               </div>
               <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Sent</span>
+                <span className="font-black text-foreground">{kpis.sentCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Cancelled</span>
                 <span className="font-black text-foreground">{kpis.cancelledCount}</span>
               </div>
@@ -632,7 +656,7 @@ export default function CustomerInvoicesPage() {
               <thead className="bg-muted/40 border-b border-border">
                 <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   <th className="px-4 py-3">Invoice #</th>
-                  <th className="px-4 py-3">Trip Ref</th>
+                  <th className="px-4 py-3">Quotation Ref</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Issued</th>
                   <th className="px-4 py-3">Due</th>
@@ -670,7 +694,7 @@ export default function CustomerInvoicesPage() {
                     return (
                       <tr key={inv.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 font-mono text-xs font-black text-foreground">{inv.invoice_number}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{inv.trip_number ?? "—"}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{quotationById.get(inv.quotation_id)?.quotation_number ?? "—"}</td>
                         <td className="px-4 py-3 font-medium text-foreground">{inv.customer_name ?? inv.client_name ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : "—"}</td>
                         <td className={cn("px-4 py-3 text-xs", overdue ? "text-destructive font-bold" : "text-muted-foreground")}>
@@ -699,7 +723,17 @@ export default function CustomerInvoicesPage() {
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setDetail(inv)} title="View">
                               <ArrowUpRight className="w-4 h-4" />
                             </Button>
-                            {inv.status !== "paid" && inv.status !== "cancelled" && (
+                            {["draft", "pending"].includes(inv.status) && (
+                              <Button
+                                size="sm"
+                                className="h-8 gap-1 bg-info hover:bg-info/90 text-info-foreground text-xs"
+                                disabled={sendingId === inv.id}
+                                onClick={() => sendInvoice(inv)}
+                              >
+                                {sendingId === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />} Send
+                              </Button>
+                            )}
+                            {!["draft", "pending", "paid", "cancelled"].includes(inv.status) && (
                               <Button
                                 size="sm"
                                 className="h-8 gap-1 bg-success hover:bg-success/90 text-success-foreground text-xs"
@@ -923,14 +957,14 @@ export default function CustomerInvoicesPage() {
                   <Input value={form.invoice_number} onChange={(e) => setForm({ ...form, invoice_number: e.target.value })} placeholder="Auto-generated if blank" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Trip Ref No</Label>
-                  <Select value={form.trip_id || "__none"} onValueChange={(v) => setForm({ ...form, trip_id: v === "__none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Not tied to a trip" /></SelectTrigger>
+                  <Label className="text-xs">Quotation Ref No</Label>
+                  <Select value={form.quotation_id || "__none"} onValueChange={(v) => setForm({ ...form, quotation_id: v === "__none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Not tied to a quotation" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none">— No trip —</SelectItem>
-                      {trips.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.trip_number} · {t.origin} → {t.destination}
+                      <SelectItem value="__none">— No quotation —</SelectItem>
+                      {quotations.map((q) => (
+                        <SelectItem key={q.id} value={q.id}>
+                          {q.quotation_number} · {q.origin} → {q.destination}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1106,8 +1140,8 @@ export default function CustomerInvoicesPage() {
                   <Badge className={STATUS_BADGES[detail.status ?? "pending"]}>{detail.status ?? "pending"}</Badge>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Trip Ref No</p>
-                  <p className="font-bold text-foreground font-mono">{detail.trip_number ?? "—"}</p>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Quotation Ref No</p>
+                  <p className="font-bold text-foreground font-mono">{quotationById.get(detail.quotation_id)?.quotation_number ?? "—"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Issued</p>
@@ -1140,7 +1174,12 @@ export default function CustomerInvoicesPage() {
               <Button variant="outline" onClick={() => setPrinting(detail)} className="gap-2">
                 <FileText className="w-4 h-4" /> Print / Download TRA Invoice
               </Button>
-              {detail.status !== "paid" && detail.status !== "cancelled" && (
+              {["draft", "pending"].includes(detail.status) && (
+                <Button onClick={() => sendInvoice(detail)} disabled={sendingId === detail.id} className="bg-info hover:bg-info/90 text-info-foreground gap-2">
+                  {sendingId === detail.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />} Send Invoice
+                </Button>
+              )}
+              {!["draft", "pending", "paid", "cancelled"].includes(detail.status) && (
                 <Button onClick={() => { setPaying(detail); setPayAmount(String(Number(detail.total_payable ?? detail.total_amount ?? detail.amount) - Number(detail.paid_amount ?? 0))); setDetail(null); }} className="bg-success hover:bg-success/90 text-success-foreground gap-2">
                   <CheckCircle2 className="w-4 h-4" /> Record Payment
                 </Button>

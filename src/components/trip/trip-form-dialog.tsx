@@ -38,6 +38,7 @@ const RoutePreviewMap = dynamic(
 
 interface TripFormState {
   trip_number: string;
+  quotationId: string;
   origin: string;
   destination: string;
   cargo: string;
@@ -58,6 +59,7 @@ interface TripFormState {
 
 const empty = (): TripFormState => ({
   trip_number: "",
+  quotationId: "",
   origin: "",
   destination: "",
   cargo: "",
@@ -85,14 +87,17 @@ interface Props {
   shipmentId?: string;
   defaultOrigin?: string;
   defaultDestination?: string;
+  /** Set when opened from a Shipment — that shipment's own quotation, prefilled. */
+  defaultQuotationId?: string;
 }
 
-export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, defaultOrigin, defaultDestination }: Props) {
+export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, defaultOrigin, defaultDestination, defaultQuotationId }: Props) {
   const { user } = useSupabase();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [quotations, setQuotations] = useState<any[]>([]);
   const [form, setForm] = useState<TripFormState>(empty);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<DispatchSuggestion[]>([]);
@@ -102,9 +107,10 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
   useEffect(() => {
     if (!open) return;
     (async () => {
-      const [d, v] = await Promise.all([
+      const [d, v, q] = await Promise.all([
         supabase.from("user_profiles").select("id, name, role").eq("role", "DRIVER").order("name"),
         supabase.from("vehicles").select("id, plate_number, make, model, type, trailer_sub_type, status").order("plate_number"),
+        supabase.from("quotations").select("id, quotation_number, origin, destination").order("created_at", { ascending: false }).limit(200),
       ]);
       // user_profiles has no "uid" column — selecting it made this query
       // fail outright, and the error was silently swallowed by `?? []`,
@@ -113,13 +119,16 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
       // `.id` is what actually exists.
       if (d.error) console.error("Failed to load drivers:", d.error);
       if (v.error) console.error("Failed to load vehicles:", v.error);
+      if (q.error) console.error("Failed to load quotations:", q.error);
       setDrivers(d.data ?? []);
       setVehicles(v.data ?? []);
+      setQuotations(q.data ?? []);
     })();
 
     if (trip) {
       setForm({
         trip_number: trip.trip_number ?? "",
+        quotationId: trip.quotation_id ?? defaultQuotationId ?? "",
         origin: trip.origin ?? "",
         destination: trip.destination ?? "",
         cargo: trip.cargo_type ?? trip.cargo ?? "",
@@ -141,12 +150,14 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
       setForm({
         ...empty(),
         trip_number: `TRP-${Date.now().toString().slice(-6)}`,
+        quotationId: defaultQuotationId ?? "",
         origin: defaultOrigin ?? "",
         destination: defaultDestination ?? "",
       });
     }
     setSuggestions([]);
     setSuggestionCaveats([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, trip]);
 
   const fetchSuggestions = async () => {
@@ -219,6 +230,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
     try {
       const payload: Record<string, any> = {
         trip_number: form.trip_number || `TRP-${Date.now().toString().slice(-6)}`,
+        quotation_id: form.quotationId || null,
         shipment_id: shipmentId || trip?.shipment_id || null,
         origin: form.origin.trim(),
         destination: form.destination.trim(),
@@ -306,6 +318,21 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
                 <Label className="text-xs">Client / customer</Label>
                 <Input value={form.client} onChange={(e) => patch({ client: e.target.value })} placeholder="Company name" />
               </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Quotation Ref No</Label>
+              <Select value={form.quotationId || "__none"} onValueChange={(v) => patch({ quotationId: v === "__none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Not tied to a quotation" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">— No quotation —</SelectItem>
+                  {quotations.map((q) => (
+                    <SelectItem key={q.id} value={q.id}>
+                      {q.quotation_number} · {q.origin} → {q.destination}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">Multiple trips (trucks) can share one quotation ref for the same job.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">

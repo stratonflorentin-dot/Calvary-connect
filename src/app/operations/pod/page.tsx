@@ -177,7 +177,7 @@ export default function PODPage() {
         const vatAmount = trip.salesAmount * (vatRate / 100);
         const totalAmount = trip.salesAmount + vatAmount;
 
-        const { error: invoiceError } = await supabase.from("invoices").insert([{
+        const { data: newInvoice, error: invoiceError } = await supabase.from("invoices").insert([{
           invoice_number: invoiceNumber,
           customer_id: trip.customer_id,
           trip_id: trip.id,
@@ -189,29 +189,28 @@ export default function PODPage() {
           vat_amount: vatAmount,
           total_amount: totalAmount,
           currency: 'TZS',
-          status: 'sent',
+          status: 'draft',
           notes: `Auto-generated from verified POD ${pod.pod_number}`,
-        }]);
+        }]).select("id").single();
 
         if (invoiceError) {
           console.error("Error generating invoice:", invoiceError);
           toast({ title: "Warning", description: "POD verified but invoice generation failed", variant: "destructive" });
         } else {
-          // Create journal entry for the invoice
-          const journalNumber = `JE-${Date.now().toString().slice(-8)}`;
-          const { error: journalError } = await supabase.from("journal_entries").insert([{
-            entry_number: journalNumber,
-            entry_date: new Date().toISOString().split('T')[0],
-            description: `Invoice Revenue: ${invoiceNumber} - Trip ${(pod as any).trips?.trip_number}`,
-            reference: pod.id,
-            created_by: role,
-          }]);
-
-          if (journalError) {
-            console.error("Error creating journal entry:", journalError);
+          // Send immediately — this posts the real Dr AR / Cr Revenue / Cr
+          // VAT journal entry via the same shared post_journal_entry()
+          // primitive every other invoice send goes through (see
+          // supabase/migrations/103_invoice_send_step.sql). This replaces
+          // an old inline journal_entries insert here that had no lines,
+          // no debit/credit amounts, and was never actually posted — it
+          // looked like it recorded revenue but did nothing.
+          const { error: sendError } = await supabase.rpc("send_invoice", { p_invoice_id: newInvoice.id });
+          if (sendError) {
+            console.error("Error posting invoice to ledger:", sendError);
+            toast({ title: "Invoice created but not posted", description: sendError.message, variant: "destructive" });
+          } else {
+            toast({ variant: "success", title: "Success", description: `POD verified and invoice ${invoiceNumber} generated` });
           }
-
-          toast({ variant: "success", title: "Success", description: `POD verified and invoice ${invoiceNumber} generated` });
         }
       }
 
