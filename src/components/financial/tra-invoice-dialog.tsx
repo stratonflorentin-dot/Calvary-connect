@@ -31,6 +31,7 @@ const COMPANY_FALLBACK = {
   tin:     "XXX-XXX-XXX",
   vrn:     "XX-XXXXXX-X",      // VAT Registration Number
   bank:    "CRDB Bank PLC — Account No: XXXXXXXXXXXXXXX",
+  logo:    null as string | null,
 };
 
 function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMPANY: typeof COMPANY_FALLBACK): string {
@@ -107,12 +108,15 @@ function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMP
 
   <!-- Header -->
   <div class="header">
-    <div>
-      <div class="company-name">${COMPANY.name}</div>
-      <div class="company-sub">
-        ${COMPANY.address}<br/>
-        Tel: ${COMPANY.phone} · ${COMPANY.email}<br/>
-        <strong>TIN: ${COMPANY.tin}</strong> &nbsp;|&nbsp; <strong>VRN: ${COMPANY.vrn}</strong>
+    <div style="display:flex;align-items:center;gap:12px">
+      ${COMPANY.logo ? `<img src="${COMPANY.logo}" style="height:44px;max-width:120px;object-fit:contain;background:#fff;border-radius:4px;padding:4px" />` : ""}
+      <div>
+        <div class="company-name">${COMPANY.name}</div>
+        <div class="company-sub">
+          ${COMPANY.address}<br/>
+          Tel: ${COMPANY.phone} · ${COMPANY.email}<br/>
+          <strong>TIN: ${COMPANY.tin}</strong> &nbsp;|&nbsp; <strong>VRN: ${COMPANY.vrn}</strong>
+        </div>
       </div>
     </div>
     <div class="invoice-meta">
@@ -274,7 +278,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
   const [company, setCompany] = useState(COMPANY_FALLBACK);
   useEffect(() => {
     supabase.from("company_settings")
-      .select("company_name, address, phone, email, tax_id, vat_registration, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd")
+      .select("company_name, address, phone, email, tax_id, vat_registration, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, logo_url")
       .limit(1).maybeSingle().then(({ data }) => {
         if (!data) return;
         const bankParts = [data.bank_name, data.bank_account_name, data.bank_account_number_tzs ? `TZS A/C: ${data.bank_account_number_tzs}` : null, data.bank_account_number_usd ? `USD A/C: ${data.bank_account_number_usd}` : null].filter(Boolean);
@@ -286,6 +290,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
           tin: data.tax_id || COMPANY_FALLBACK.tin,
           vrn: data.vat_registration || COMPANY_FALLBACK.vrn,
           bank: bankParts.length ? bankParts.join(" — ") : COMPANY_FALLBACK.bank,
+          logo: (data as any).logo_url || null,
         });
       });
   }, []);

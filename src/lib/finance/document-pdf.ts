@@ -11,6 +11,8 @@ import { formatCurrency } from "@/components/ui/currency-badge";
 export interface DocumentCompanyInfo {
   company_name?: string | null;
   tagline?: string | null;
+  /** Base64 data URL — jsPDF can't fetch a remote logo_url itself, see fetchLogoDataUrl(). */
+  logoDataUrl?: string | null;
   vat_registration?: string | null; // VRN
   tax_id?: string | null; // TIN
   phone?: string | null;
@@ -67,10 +69,42 @@ const LABEL_COLOR: [number, number, number] = [200, 30, 30];
 const MUTED: [number, number, number] = [110, 110, 110];
 const GREEN: [number, number, number] = [22, 130, 70];
 
+/**
+ * company_settings.logo_url points at Supabase Storage — jsPDF's addImage
+ * needs actual image data (data URL / ArrayBuffer), not a URL it can fetch
+ * itself. Callers fetch once and pass the result as company.logoDataUrl.
+ * Fails soft (returns null) so a logo hiccup never blocks a document.
+ */
+export async function fetchLogoDataUrl(url: string | null | undefined): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read logo blob"));
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export function buildDocumentPdf(d: DocumentPdfData): jsPDF {
   const doc = new jsPDF();
   const fmtAmt = (n: number) => formatCurrency(n, d.currency);
   const pageWidth = doc.internal.pageSize.getWidth();
+
+  if (d.company.logoDataUrl) {
+    const format = /data:image\/(\w+);/.exec(d.company.logoDataUrl)?.[1]?.toUpperCase() || "PNG";
+    try {
+      doc.addImage(d.company.logoDataUrl, format, pageWidth - 14 - 26, 8, 26, 16, undefined, "FAST");
+    } catch {
+      // Malformed/unsupported image — the document still generates without it.
+    }
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);

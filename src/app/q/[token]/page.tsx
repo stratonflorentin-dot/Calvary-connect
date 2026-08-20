@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { downloadDocumentPdf, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
+import { downloadDocumentPdf, fetchLogoDataUrl, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
 import { CheckCircle2, Download, FileText, Loader2, XCircle } from "lucide-react";
 
 // Genuinely public — no auth, no Sidebar, no useRole. Reached only via an
@@ -48,6 +48,9 @@ export default function PublicQuotationPage() {
       setCompany(json.company ?? {});
       setFxRate(json.fxRate ?? null);
       setError(null);
+      fetchLogoDataUrl(json.company?.logo_url).then((logoDataUrl) => {
+        if (logoDataUrl) setCompany((c) => ({ ...c, logoDataUrl }));
+      });
     } catch (err: any) {
       setError(err.message || "Couldn't load this quotation.");
     } finally {

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { downloadDocumentPdf, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
+import { downloadDocumentPdf, fetchLogoDataUrl, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
 import { getRate } from "@/lib/finance/fx";
 import { ArrowLeft, Copy, Download, FileText, Loader2, Send } from "lucide-react";
 
@@ -41,8 +41,13 @@ export default function QuotationDetailPage() {
 
   useEffect(() => {
     supabase.from("company_settings")
-      .select("company_name, tagline, vat_registration, tax_id, phone, email, address, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, bank_branch_code, bank_swift_code")
-      .limit(1).maybeSingle().then(({ data }) => { if (data) setCompany(data); });
+      .select("company_name, tagline, vat_registration, tax_id, phone, email, address, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, bank_branch_code, bank_swift_code, logo_url")
+      .limit(1).maybeSingle().then(async ({ data }) => {
+        if (!data) return;
+        setCompany(data);
+        const logoDataUrl = await fetchLogoDataUrl((data as any).logo_url);
+        if (logoDataUrl) setCompany((c) => ({ ...c, logoDataUrl }));
+      });
   }, []);
 
   useEffect(() => {

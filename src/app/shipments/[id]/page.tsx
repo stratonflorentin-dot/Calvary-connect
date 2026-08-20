@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
+import { fetchLogoDataUrl } from "@/lib/finance/document-pdf";
 
 const STAGES = ["created", "approved", "active", "delivered", "paid"] as const;
 const STAGE_LABEL: Record<string, string> = { created: "Created", approved: "Approved", active: "In Transit", delivered: "Delivered", paid: "Paid" };
@@ -53,6 +54,13 @@ export default function ShipmentDetailPage() {
   const [waybillForm, setWaybillForm] = useState({ cargo_description: "", cargo_weight_kg: "", package_count: "", trip_id: "" });
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ origin_city: "", destination_city: "", cargo_description: "", requested_pickup: "", promised_delivery: "" });
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.from("company_settings").select("logo_url").limit(1).maybeSingle().then(({ data }) => {
+      fetchLogoDataUrl((data as any)?.logo_url).then(setCompanyLogo);
+    });
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -167,9 +175,17 @@ export default function ShipmentDetailPage() {
     }
   };
 
+  const addLetterhead = (doc: jsPDF) => {
+    if (!companyLogo) return;
+    const format = /data:image\/(\w+);/.exec(companyLogo)?.[1]?.toUpperCase() || "PNG";
+    const pageWidth = doc.internal.pageSize.getWidth();
+    try { doc.addImage(companyLogo, format, pageWidth - 14 - 26, 8, 26, 16); } catch { /* soft-fail */ }
+  };
+
   const downloadSummary = () => {
     if (!shipment) return;
     const doc = new jsPDF();
+    addLetterhead(doc);
     doc.setFontSize(16);
     doc.text(`Shipment Summary — ${shipment.shipment_number}`, 14, 18);
     doc.setFontSize(10);
@@ -194,6 +210,7 @@ export default function ShipmentDetailPage() {
   const downloadContract = () => {
     if (!shipment) return;
     const doc = new jsPDF();
+    addLetterhead(doc);
     doc.setFontSize(16);
     doc.text("SHIPMENT / BOOKING CONTRACT", 14, 18);
     doc.setFontSize(10);

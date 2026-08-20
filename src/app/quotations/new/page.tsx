@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { downloadDocumentPdf, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
+import { downloadDocumentPdf, fetchLogoDataUrl, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
 import { getRate } from "@/lib/finance/fx";
 import { ArrowLeft, FileText, Loader2, Plus, Trash2 } from "lucide-react";
 
@@ -87,9 +87,12 @@ export default function NewQuotationPage() {
   useEffect(() => {
     supabase.from("customers").select("id, company_name, contact_person, email, phone, vrn, tax_id").order("company_name").then(({ data }) => setCustomers(data ?? []));
     supabase.from("company_settings")
-      .select("default_vat_rate, quotation_number_prefix, quotation_terms_conditions, company_name, tagline, vat_registration, tax_id, phone, email, address, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, bank_branch_code, bank_swift_code")
-      .limit(1).maybeSingle().then(({ data }) => {
-        if (data) setSettings((s) => ({ ...s, ...data }));
+      .select("default_vat_rate, quotation_number_prefix, quotation_terms_conditions, company_name, tagline, vat_registration, tax_id, phone, email, address, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, bank_branch_code, bank_swift_code, logo_url")
+      .limit(1).maybeSingle().then(async ({ data }) => {
+        if (!data) return;
+        setSettings((s) => ({ ...s, ...data }));
+        const logoDataUrl = await fetchLogoDataUrl((data as any).logo_url);
+        if (logoDataUrl) setSettings((s) => ({ ...s, logoDataUrl }));
       });
   }, []);
 
