@@ -16,6 +16,7 @@ import { sanitizeHtml } from '@/lib/sanitize-html';
 import { fetchRateSheets, upsertRateSheet, deleteRateSheet, RateSheetRoute } from '@/lib/rate-sheet-service';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
+import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
 export function TransportAgreementGenerator() {
@@ -47,6 +48,9 @@ export function TransportAgreementGenerator() {
 
   useEffect(() => {
     loadDatabaseRates();
+    supabase.from('company_settings').select('logo_url').limit(1).maybeSingle().then(({ data }) => {
+      if ((data as any)?.logo_url) setFormData((prev) => ({ ...prev, logoUrl: (data as any).logo_url }));
+    });
   }, []);
 
   const loadDatabaseRates = async () => {

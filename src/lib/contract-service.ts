@@ -375,6 +375,7 @@ export const CORE_CLAUSES = [
 ];
 
 export interface ContractData {
+  logoUrl?: string | null;
   clientName: string;
   clientPOBox: string;
   clientRoad: string;
@@ -425,10 +426,12 @@ export function formatContractHTML(data: ContractData): string {
         .signature-line { border-top: 1px solid #333; margin-top: 30px; padding-top: 10px; }
         h2 { color: #1e3a5f; text-align: center; margin-top: 30px; }
         .stamp-area { border: 2px dashed #c53030; padding: 20px; text-align: center; color: #c53030; margin: 20px 0; }
+        .company-logo { max-height: 60px; max-width: 200px; margin-bottom: 8px; }
       </style>
     </head>
     <body>
       <div class="header">
+        ${data.logoUrl ? `<img src="${data.logoUrl}" class="company-logo" alt="Company logo" />` : ""}
         <div class="company-title">TRANSPORTATION AGREEMENT</div>
         <div class="subtitle">CALVARY INVESTMENT COMPANY LIMITED</div>
         <div class="subtitle">P.O. Box 12929, Dar Es Salaam, Tanzania</div>

@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Printer } from 'lucide-react';
 import { generateContractHTML, generatePDF, printContract } from '@/lib/contract-clauses';
+import { supabase } from '@/lib/supabase';
 import type { Contract } from '@/types/contract';
 
 interface ContractPreviewModalProps {
@@ -22,11 +23,21 @@ interface ContractPreviewModalProps {
 export function ContractPreviewModal({ contract, trigger }: ContractPreviewModalProps) {
     const [open, setOpen] = useState(false);
     const [html, setHtml] = useState('');
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (open && logoUrl === null) {
+            supabase.from('company_settings').select('logo_url').limit(1).maybeSingle().then(({ data }) => {
+                if ((data as any)?.logo_url) setLogoUrl((data as any).logo_url);
+            });
+        }
+    }, [open, logoUrl]);
 
     useEffect(() => {
         if (open) {
             const contractHtml = generateContractHTML({
                 contractNumber: contract.contract_number,
+                logoUrl,
                 clientName: contract.client?.name || 'Unknown',
                 clientAddress: contract.client?.address || '',
                 effectiveDate: contract.effective_date,
@@ -42,7 +53,7 @@ export function ContractPreviewModal({ contract, trigger }: ContractPreviewModal
             });
             setHtml(contractHtml);
         }
-    }, [open, contract]);
+    }, [open, contract, logoUrl]);
 
     function handleDownloadPDF() {
         generatePDF(html, `${contract.contract_number}.pdf`);

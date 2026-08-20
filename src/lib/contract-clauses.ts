@@ -145,6 +145,7 @@ export const CONTRACT_CLAUSES = [
 // Generate HTML for contract preview and PDF
 export function generateContractHTML(data: {
     contractNumber: string;
+    logoUrl?: string | null;
     clientName: string;
     clientAddress: string;
     effectiveDate: string;
@@ -200,6 +201,12 @@ export function generateContractHTML(data: {
       margin-bottom: 12pt;
     }
     
+    .company-logo {
+      max-height: 60pt;
+      max-width: 160pt;
+      margin-bottom: 6pt;
+    }
+
     .company-title {
       font-size: 14pt;
       font-weight: bold;
@@ -299,6 +306,7 @@ export function generateContractHTML(data: {
   <!-- PAGE 1: COVER PAGE -->
   <div class="page">
     <div class="header">
+      ${data.logoUrl ? `<img src="${data.logoUrl}" class="company-logo" alt="Company logo" />` : ""}
       <div class="company-title">CALVARY INVESTMENT COMPANY LIMITED</div>
       <div class="company-subtitle">P.O. Box 12929, Dar Es Salaam, Tanzania</div>
     </div>

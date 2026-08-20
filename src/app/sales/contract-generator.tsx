@@ -90,6 +90,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
     client_signatory_title: '',
     special_notes: ''
   });
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -97,15 +98,17 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
 
   const loadData = async () => {
     try {
-      const [templatesRes, ratesRes, customersRes] = await Promise.all([
+      const [templatesRes, ratesRes, customersRes, companyRes] = await Promise.all([
         supabase.from('contract_templates').select('*').eq('is_active', true),
         supabase.from('rate_sheets').select('*').eq('is_active', true).not('rate_sheet_name', 'is', null),
-        supabase.from('customers').select('id, company_name, address, contact_person, email, phone').is('deleted_at', null)
+        supabase.from('customers').select('id, company_name, address, contact_person, email, phone').is('deleted_at', null),
+        supabase.from('company_settings').select('logo_url').limit(1).maybeSingle(),
       ]);
-      
+
       setTemplates(templatesRes.data || []);
       setRateSheets(ratesRes.data || []);
       setCustomers(customersRes.data || []);
+      if ((companyRes.data as any)?.logo_url) setLogoUrl((companyRes.data as any).logo_url);
       
       // Set defaults
       if (templatesRes.data && templatesRes.data.length > 0) setSelectedTemplate(templatesRes.data[0].id);
@@ -135,6 +138,7 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
         <!-- Header with Logo -->
         <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1e3a5f; padding-bottom: 20px;">
           <div style="display: flex; align-items: center; justify-content: center; gap: 24px;">
+            ${logoUrl ? `<img src="${logoUrl}" alt="Company logo" style="max-height: 90px; max-width: 140px;" />` : ""}
             <svg width="110" height="110" viewBox="0 0 340 340">
               <style>.st{font-family:'Times New Roman',serif;fill:#1a5fa8;letter-spacing:2px}</style>
               <circle cx="170" cy="170" r="155" fill="none" stroke="#1a5fa8" stroke-width="4"/>
