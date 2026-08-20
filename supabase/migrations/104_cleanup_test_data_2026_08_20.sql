@@ -1,8 +1,11 @@
 -- One-time cleanup: removes everything created on 2026-08-20 while testing
 -- the Quotations/Shipments/Invoicing features built this session — a test
 -- customer ("fxl"), 4 quotations, 1 trip, 2 invoices, 1 credit note, 2
--- expense rows, and the 7 journal entries + 3 bank transactions they
--- posted — so the system starts clean for real data entry.
+-- expense rows, a fuel log, and the 7 journal entries + 3 bank
+-- transactions they posted — so the system starts clean for real data
+-- entry. A second, older FXL test customer/trip/invoice that predated
+-- this day's UTC boundary is handled separately in
+-- 105_cleanup_remaining_fxl_test_data.sql.
 --
 -- Posted journal entries are protected by guard_posted_journal()
 -- (006_finance_foundation.sql) — by design, so a real entry never
@@ -15,30 +18,21 @@
 -- run backwards) — not reset to zero, since those accounts may carry
 -- balances from before today that must not be touched.
 --
+-- No temp tables: an earlier version of this file used them to avoid
+-- repeating the id lists, but a second run through the Supabase SQL
+-- editor hit "relation does not exist" on a table created earlier in the
+-- very same script — consistent with this SQL runner not guaranteeing
+-- one connection for a whole pasted multi-statement script. Every id is
+-- inlined directly instead, so each statement is self-contained.
+--
 -- Run once, in the Supabase SQL editor. Re-running is safe (all deletes
 -- are id-scoped and become no-ops once the rows are gone) except the
--- balance-reversal UPDATEs, which would double-reverse if the same rows
--- were re-applied — they aren't, because the rows they read from are
--- deleted at the end of this same transaction.
+-- balance-reversal UPDATEs, which would double-reverse if the same
+-- journal_entry_lines/bank_transactions rows were still present — they
+-- aren't after the first run, because those rows are deleted later in
+-- this same script.
 
 BEGIN;
-
--- All the ids being removed, computed once.
-CREATE TEMP TABLE _cleanup_je_ids (id uuid) ON COMMIT DROP;
-INSERT INTO _cleanup_je_ids (id) VALUES
-  ('c4737ada-2713-4339-97e5-cf7547779437'),
-  ('614d4ec2-aa1e-4452-914a-c401c66ed833'),
-  ('e74f1743-6c68-4567-bead-e189e4a720e5'),
-  ('d71a4361-89f3-495f-98ac-6b1549aa15eb'),
-  ('453f7cd8-b5fc-470b-94bc-9f5a48abe864'),
-  ('b58f86dc-2821-42d3-9868-c03aeac1a372'),
-  ('a5bc30fe-cd87-478c-9e37-6db5d5e70d57');
-
-CREATE TEMP TABLE _cleanup_bt_ids (id uuid) ON COMMIT DROP;
-INSERT INTO _cleanup_bt_ids (id) VALUES
-  ('05adb7ba-a3e0-444d-a739-f06e581744d6'),
-  ('b83875c2-476e-4a87-9630-a964fa5f217d'),
-  ('e6696499-6be8-4d8e-8d79-8b3a729f7bb9');
 
 -- 1. Reverse Chart of Accounts balances for the 7 journal entries — same
 --    debit/credit-normal expression post_journal_entry uses, subtracted
@@ -50,7 +44,12 @@ UPDATE accounts a
   FROM (
     SELECT account_code, SUM(debit_amount) AS d, SUM(credit_amount) AS c
       FROM journal_entry_lines
-     WHERE journal_entry_id IN (SELECT id FROM _cleanup_je_ids)
+     WHERE journal_entry_id IN (
+       'c4737ada-2713-4339-97e5-cf7547779437', '614d4ec2-aa1e-4452-914a-c401c66ed833',
+       'e74f1743-6c68-4567-bead-e189e4a720e5', 'd71a4361-89f3-495f-98ac-6b1549aa15eb',
+       '453f7cd8-b5fc-470b-94bc-9f5a48abe864', 'b58f86dc-2821-42d3-9868-c03aeac1a372',
+       'a5bc30fe-cd87-478c-9e37-6db5d5e70d57'
+     )
      GROUP BY account_code
   ) l
  WHERE a.code = l.account_code;
@@ -62,14 +61,20 @@ UPDATE bank_accounts ba
    SET current_balance = COALESCE(ba.current_balance, 0) - (bt.credit - bt.debit),
        updated_at = now()
   FROM bank_transactions bt
- WHERE bt.id IN (SELECT id FROM _cleanup_bt_ids)
+ WHERE bt.id IN (
+   '05adb7ba-a3e0-444d-a739-f06e581744d6', 'b83875c2-476e-4a87-9630-a964fa5f217d',
+   'e6696499-6be8-4d8e-8d79-8b3a729f7bb9'
+ )
    AND ba.id = bt.bank_account_id;
 
 -- 3. Delete in dependency order: documents that reference the journal
 --    entries/invoices/trips first, then the entries/invoices/trips
 --    themselves, then the quotations and customer they all trace back to.
 DELETE FROM credit_notes WHERE id = 'ed1dda56-d4e5-4b19-85ef-96577d9cf39a';
-DELETE FROM bank_transactions WHERE id IN (SELECT id FROM _cleanup_bt_ids);
+DELETE FROM bank_transactions WHERE id IN (
+  '05adb7ba-a3e0-444d-a739-f06e581744d6', 'b83875c2-476e-4a87-9630-a964fa5f217d',
+  'e6696499-6be8-4d8e-8d79-8b3a729f7bb9'
+);
 -- trip_revenue is an auto-generated mirror of the invoice (migration 050's
 -- own comment: "the only automated thing invoices feed is trip_revenue")
 -- with an FK straight back to invoices — must go before the invoices do.
@@ -77,8 +82,18 @@ DELETE FROM trip_revenue WHERE source_invoice_id IN ('dc3b0e01-e9a4-4648-8a8d-6e
 DELETE FROM invoices WHERE id IN ('dc3b0e01-e9a4-4648-8a8d-6e48bb12326b', 'b2c57c12-6efc-4578-8a50-59d1ec3ac064');
 
 ALTER TABLE journal_entries DISABLE TRIGGER trg_guard_posted_journal;
-DELETE FROM journal_entry_lines WHERE journal_entry_id IN (SELECT id FROM _cleanup_je_ids);
-DELETE FROM journal_entries WHERE id IN (SELECT id FROM _cleanup_je_ids);
+DELETE FROM journal_entry_lines WHERE journal_entry_id IN (
+  'c4737ada-2713-4339-97e5-cf7547779437', '614d4ec2-aa1e-4452-914a-c401c66ed833',
+  'e74f1743-6c68-4567-bead-e189e4a720e5', 'd71a4361-89f3-495f-98ac-6b1549aa15eb',
+  '453f7cd8-b5fc-470b-94bc-9f5a48abe864', 'b58f86dc-2821-42d3-9868-c03aeac1a372',
+  'a5bc30fe-cd87-478c-9e37-6db5d5e70d57'
+);
+DELETE FROM journal_entries WHERE id IN (
+  'c4737ada-2713-4339-97e5-cf7547779437', '614d4ec2-aa1e-4452-914a-c401c66ed833',
+  'e74f1743-6c68-4567-bead-e189e4a720e5', 'd71a4361-89f3-495f-98ac-6b1549aa15eb',
+  '453f7cd8-b5fc-470b-94bc-9f5a48abe864', 'b58f86dc-2821-42d3-9868-c03aeac1a372',
+  'a5bc30fe-cd87-478c-9e37-6db5d5e70d57'
+);
 ALTER TABLE journal_entries ENABLE TRIGGER trg_guard_posted_journal;
 
 DELETE FROM expenses WHERE id IN ('c848c670-23d8-4562-84f9-7f3b0d67b552', 'a1c2b576-d907-4c52-9491-28837b88435b');
