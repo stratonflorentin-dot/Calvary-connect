@@ -23,7 +23,10 @@ interface CurrencyBadgeProps {
 
 export function CurrencyBadge({
   currency,
-  showFlag = true,
+  // Off by default — same broken flag-emoji rendering as formatCurrency
+  // (falls back to raw region-code text on platforms without flag glyphs).
+  // Still opt-in for callers on a platform where it's known to render fine.
+  showFlag = false,
   showCode = true,
   showSymbol = false,
   className,
@@ -52,19 +55,24 @@ export function CurrencyBadge({
   );
 }
 
-// Format amount with currency
+// Format amount with currency.
+// No flag emoji here (deliberately) — regional-indicator flag emoji
+// don't render as flags on every platform (Windows in particular falls
+// back to showing the raw two-letter region code as plain text, e.g.
+// "tz" before "TZS 0"), and the currency symbol/code already
+// disambiguates the currency without needing a flag at all.
 export function formatCurrency(
   amount: number,
   currency: CurrencyCode | string = "TZS"
 ): string {
   const currencyInfo = CURRENCIES[currency as CurrencyCode] || CURRENCIES.TZS;
   const n = Number(amount || 0);
-  
+
   if (currencyInfo.dec === 0) {
-    return `${currencyInfo.flag} ${currencyInfo.symbol} ${Math.round(n).toLocaleString()}`;
+    return `${currencyInfo.symbol} ${Math.round(n).toLocaleString()}`;
   }
-  
-  return `${currencyInfo.flag} ${currencyInfo.symbol}${n.toLocaleString("en-US", {
+
+  return `${currencyInfo.symbol}${n.toLocaleString("en-US", {
     minimumFractionDigits: currencyInfo.dec,
     maximumFractionDigits: currencyInfo.dec,
   })}`;
