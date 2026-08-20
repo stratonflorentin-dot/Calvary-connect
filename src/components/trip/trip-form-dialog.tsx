@@ -110,7 +110,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
       const [d, v, q] = await Promise.all([
         supabase.from("user_profiles").select("id, name, role").eq("role", "DRIVER").order("name"),
         supabase.from("vehicles").select("id, plate_number, make, model, type, trailer_sub_type, status").order("plate_number"),
-        supabase.from("quotations").select("id, quotation_number, origin, destination").order("created_at", { ascending: false }).limit(200),
+        supabase.from("quotations").select("id, quotation_number, origin, destination, subtotal, vat_rate, currency").order("created_at", { ascending: false }).limit(200),
       ]);
       // user_profiles has no "uid" column — selecting it made this query
       // fail outright, and the error was silently swallowed by `?? []`,
@@ -321,7 +321,25 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Quotation Ref No</Label>
-              <Select value={form.quotationId || "__none"} onValueChange={(v) => patch({ quotationId: v === "__none" ? "" : v })}>
+              <Select
+                value={form.quotationId || "__none"}
+                onValueChange={(v) => {
+                  if (v === "__none") { patch({ quotationId: "" }); return; }
+                  const q = quotations.find((x) => x.id === v);
+                  // The price was already agreed in the quotation — pull it
+                  // in rather than making someone re-key it for the trip.
+                  patch({
+                    quotationId: v,
+                    ...(q ? {
+                      salesAmount: Number(q.subtotal) || 0,
+                      vatRate: Number(q.vat_rate) || 0,
+                      currency: q.currency || form.currency,
+                      origin: form.origin || q.origin || "",
+                      destination: form.destination || q.destination || "",
+                    } : {}),
+                  });
+                }}
+              >
                 <SelectTrigger><SelectValue placeholder="Not tied to a quotation" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">— No quotation —</SelectItem>
@@ -332,7 +350,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[10px] text-muted-foreground">Multiple trips (trucks) can share one quotation ref for the same job.</p>
+              <p className="text-[10px] text-muted-foreground">Multiple trips (trucks) can share one quotation ref for the same job — selecting one fills in its agreed price.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">

@@ -119,7 +119,7 @@ export default function CustomerInvoicesPage() {
 
     supabase
       .from("quotations")
-      .select("id, quotation_number, customer_id, origin, destination")
+      .select("id, quotation_number, customer_id, origin, destination, subtotal, vat_rate, currency")
       .order("created_at", { ascending: false })
       .limit(200)
       .then(({ data }) => setQuotations(data ?? []));
@@ -958,7 +958,29 @@ export default function CustomerInvoicesPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Quotation Ref No</Label>
-                  <Select value={form.quotation_id || "__none"} onValueChange={(v) => setForm({ ...form, quotation_id: v === "__none" ? "" : v })}>
+                  <Select
+                    value={form.quotation_id || "__none"}
+                    onValueChange={(v) => {
+                      if (v === "__none") { setForm({ ...form, quotation_id: "" }); return; }
+                      const q = quotations.find((x) => x.id === v);
+                      // The price was already agreed in the quotation — pull
+                      // it in rather than making someone re-key it here.
+                      const linkedCustomer = q?.customer_id ? customers.find((c) => c.id === q.customer_id) : null;
+                      setForm({
+                        ...form,
+                        quotation_id: v,
+                        ...(q ? {
+                          amount: q.subtotal != null ? String(q.subtotal) : form.amount,
+                          vat_rate: q.vat_rate != null ? String(q.vat_rate) : form.vat_rate,
+                          currency: q.currency || form.currency,
+                        } : {}),
+                        ...(linkedCustomer && !form.customer_id ? {
+                          customer_id: linkedCustomer.id,
+                          customer_name: linkedCustomer.company_name,
+                        } : {}),
+                      });
+                    }}
+                  >
                     <SelectTrigger><SelectValue placeholder="Not tied to a quotation" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">— No quotation —</SelectItem>
@@ -969,6 +991,7 @@ export default function CustomerInvoicesPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-[10px] text-muted-foreground mt-1">Selecting a quotation fills in its agreed price.</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
