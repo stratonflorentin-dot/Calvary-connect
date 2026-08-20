@@ -51,36 +51,6 @@ interface Customer {
   status: string;
 }
 
-interface RouteQuotation {
-  id: string;
-  quotation_number: string;
-  customer_id: string;
-  company_name?: string;
-  service_type: string;
-  approval_status?: string;
-  origin: string;
-  destination: string;
-  distance_km: number;
-  cargo_type: string;
-  cargo_weight_mt: number;
-  container_size?: string;
-  rate_per_km: number;
-  base_amount: number;
-  fuel_surcharge_pct: number;
-  fuel_surcharge_amount: number;
-  border_fees: number;
-  escort_fees: number;
-  subtotal: number;
-  vat_rate: number;
-  vat_amount: number;
-  total_amount: number;
-  currency: string;
-  validity_days: number;
-  expiry_date: string;
-  status: string;
-  notes: string;
-  created_at: string;
-}
 
 interface TransportContract {
   id: string;
@@ -178,7 +148,7 @@ function SalesModuleContent() {
 
   const [activeTab, setActiveTab] = useState(tabParam || 'customers');
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [quotations, setQuotations] = useState<RouteQuotation[]>([]);
+  const [quotations, setQuotations] = useState<any[]>([]);
   const [contracts, setContracts] = useState<TransportContract[]>([]);
   const [rateSheets, setRateSheets] = useState<RateSheetEntry[]>([]);
   const [opportunities, setOpportunities] = useState<SalesOpportunity[]>([]);
@@ -188,7 +158,6 @@ function SalesModuleContent() {
 
   // Dialog states
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
-  const [showQuotationDialog, setShowQuotationDialog] = useState(false);
   const [showContractDialog, setShowContractDialog] = useState(false);
   const [showOpportunityDialog, setShowOpportunityDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -232,13 +201,6 @@ function SalesModuleContent() {
     company_name: '', contact_person: '', email: '', phone: '',
     address: '', city: 'Dar es Salaam', tax_id: '', vrn: '', credit_limit: '', credit_limit_currency: 'TZS',
     payment_terms: '30 days', status: 'prospect', notes: ''
-  });
-
-  const [quotationForm, setQuotationForm] = useState({
-    customer_id: '', service_type: 'local_transport', origin: '', destination: '',
-    distance_km: 0, cargo_type: '', cargo_weight_mt: '', container_size: '20ft',
-    rate_per_km: 0, fuel_surcharge_pct: 15, border_fees: 0, escort_fees: 0,
-    vat_rate: 18, validity_days: 30, notes: ''
   });
 
   const [contractForm, setContractForm] = useState({
@@ -287,18 +249,14 @@ function SalesModuleContent() {
   }
 
   async function fetchQuotations() {
+    // Real quotations table now — the old route_quotations-backed tab/form
+    // was removed in favor of the full /quotations module; this is kept
+    // only for the "N quotation(s)" stat card on this page.
     const { data, error } = await supabase
-      .from('route_quotations')
-      .select('*, customers(company_name)')
+      .from('quotations')
+      .select('id')
       .order('created_at', { ascending: false });
-    if (!error) {
-      const processedData = data?.map(q => ({
-        ...q,
-        company_name: q.customers?.company_name || '',
-        service_type: q.service_type || 'unknown',
-      })) || [];
-      setQuotations(processedData);
-    }
+    if (!error) setQuotations(data || []);
   }
 
   // Sales Orders = bookings (this page's "New Sales Order" button already
@@ -401,145 +359,9 @@ function SalesModuleContent() {
     }
   }
 
-  async function saveQuotation() {
-    const base = quotationForm.distance_km * quotationForm.rate_per_km;
-    const fuel = base * (quotationForm.fuel_surcharge_pct / 100);
-    const subtotal = base + fuel + quotationForm.border_fees + quotationForm.escort_fees;
-    const vat = subtotal * (quotationForm.vat_rate / 100);
-    const total = subtotal + vat;
-
-    const quotationNumber = `QT-${Date.now().toString().slice(-8)}`;
-
-    const { error } = await supabase.from('route_quotations').insert([{
-      quotation_number: quotationNumber,
-      customer_id: quotationForm.customer_id,
-      service_type: quotationForm.service_type,
-      origin: quotationForm.origin,
-      destination: quotationForm.destination,
-      distance_km: quotationForm.distance_km,
-      cargo_type: quotationForm.cargo_type,
-      cargo_weight_mt: parseFloat(quotationForm.cargo_weight_mt as string) || 0,
-      container_size: quotationForm.container_size,
-      rate_per_km: quotationForm.rate_per_km,
-      base_amount: base,
-      fuel_surcharge_pct: quotationForm.fuel_surcharge_pct,
-      fuel_surcharge_amount: fuel,
-      border_fees: quotationForm.border_fees,
-      escort_fees: quotationForm.escort_fees,
-      subtotal,
-      vat_rate: quotationForm.vat_rate,
-      vat_amount: vat,
-      total_amount: total,
-      validity_days: quotationForm.validity_days,
-      expiry_date: format(addDays(new Date(), quotationForm.validity_days), 'yyyy-MM-dd'),
-      notes: quotationForm.notes,
-      approval_status: 'draft',
-      created_by: user?.id
-    }]);
-
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      logCustomerActivity({
-        customerId: quotationForm.customer_id,
-        activityType: 'quotation',
-        description: `Quotation ${quotationNumber} created`,
-        amount: total,
-        createdBy: user?.id,
-      });
-      toast({ title: 'Success', description: 'Quotation created successfully' });
-      setShowQuotationDialog(false);
-      fetchQuotations();
-    }
-  }
-
-  async function approveQuotation(quotationId: string) {
-    const { error } = await supabase.from('route_quotations').update({
-      approval_status: 'approved',
-      approved_by: user?.id,
-      approved_at: new Date().toISOString()
-    }).eq('id', quotationId);
-
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to approve quotation', variant: 'destructive' });
-    } else {
-      toast({ title: 'Success', description: 'Quotation approved' });
-      fetchQuotations();
-    }
-  }
-
-  async function sendQuotationToCustomer(quotationId: string) {
-    const { error } = await supabase.from('route_quotations').update({
-      approval_status: 'sent',
-      sent_to_customer: true,
-      sent_at: new Date().toISOString()
-    }).eq('id', quotationId);
-
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to send quotation', variant: 'destructive' });
-    } else {
-      toast({ title: 'Success', description: 'Quotation sent to customer' });
-      fetchQuotations();
-    }
-  }
-
-  async function convertQuotationToBooking(quotationId: string) {
-    const quotation = quotations.find(q => q.id === quotationId);
-    if (!quotation) return;
-
-    const credit = await checkCreditLimit(quotation.customer_id, quotation.currency || 'TZS', Number(quotation.total_amount) || 0, role);
-    if (credit.blocked) {
-      toast({ title: 'Credit limit exceeded', description: credit.message || 'This customer is over their credit limit.', variant: 'destructive' });
-      return;
-    }
-    if (credit.overridable && !window.confirm(`${credit.message}\n\nConvert to a booking anyway?`)) {
-      return;
-    }
-
-    const bookingNumber = `BK-${Date.now().toString().slice(-8)}`;
-
-    const { data: booking, error: bookingError } = await supabase.from('bookings').insert([{
-      booking_number: bookingNumber,
-      customer_id: quotation.customer_id,
-      quotation_id: quotation.id,
-      pickup_location: quotation.origin,
-      delivery_location: quotation.destination,
-      cargo_description: quotation.cargo_type,
-      cargo_weight: quotation.cargo_weight_mt,
-      container_size: quotation.container_size,
-      vehicle_requirement: quotation.service_type,
-      amount: quotation.total_amount,
-      currency: quotation.currency || 'TZS',
-      pickup_date: new Date().toISOString().split('T')[0],
-      operations_review_status: 'pending',
-      status: 'pending'
-    }]).select().single();
-
-    if (bookingError) {
-      toast({ title: 'Error', description: 'Failed to create booking', variant: 'destructive' });
-      return;
-    }
-
-    const { error: updateError } = await supabase.from('route_quotations').update({
-      approval_status: 'converted',
-      converted_to_booking_id: booking.id
-    }).eq('id', quotationId);
-
-    if (updateError) {
-      toast({ title: 'Error', description: 'Failed to update quotation', variant: 'destructive' });
-    } else {
-      logCustomerActivity({
-        customerId: quotation.customer_id,
-        activityType: 'booking',
-        description: `Booking ${bookingNumber} created from quotation ${quotation.quotation_number}`,
-        amount: quotation.total_amount,
-        createdBy: user?.id,
-      });
-      toast({ title: 'Success', description: `Booking created: ${bookingNumber}` });
-      fetchQuotations();
-    }
-  }
-
+  // saveQuotation/approveQuotation/sendQuotationToCustomer/convertQuotationToBooking
+  // removed — quotation authoring now lives in /quotations (real quotations/
+  // quotation_lines tables), which also auto-creates a Shipment on accept.
   async function convertContractToBooking(contractId: string) {
     const contract = contracts.find(c => c.id === contractId);
     if (!contract) return;
@@ -1248,206 +1070,20 @@ function SalesModuleContent() {
               <CardHeader className="flex flex-row items-center justify-between pb-4">
                 <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Route Quotations
+                  Quotations
                 </CardTitle>
-                {canCreate && (
-                  <Dialog open={showQuotationDialog} onOpenChange={setShowQuotationDialog}>
-                    <DialogTrigger asChild>
-                      <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"><Plus className="h-4 w-4 mr-2" /> New Quotation</Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
-                      <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold">Create Route Quotation</DialogTitle>
-                      </DialogHeader>
-                      <div className="grid grid-cols-2 gap-4 space-y-6">
-                        <div className="col-span-2 flex items-center gap-2 pb-1 border-b border-border">
-                          <Truck className="h-4 w-4 text-primary" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Service &amp; Cargo</h4>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Customer</Label>
-                          <Select value={quotationForm.customer_id} onValueChange={v => setQuotationForm({ ...quotationForm, customer_id: v })}>
-                            <SelectTrigger className="h-11"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                            <SelectContent>
-                              {customers.map(c => (
-                                <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Service Type</Label>
-                          <Select value={quotationForm.service_type} onValueChange={v => {
-                            setQuotationForm({ ...quotationForm, service_type: v });
-                          }}>
-                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {SERVICE_TYPES.map(t => (
-                                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Origin</Label>
-                          <Input value={quotationForm.origin} onChange={e => setQuotationForm({ ...quotationForm, origin: e.target.value })} placeholder="e.g., Dar es Salaam" className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Destination</Label>
-                          <Input value={quotationForm.destination} onChange={e => setQuotationForm({ ...quotationForm, destination: e.target.value })} placeholder="e.g., Lusaka" className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Distance (km)</Label>
-                          <Input type="number" value={quotationForm.distance_km} onChange={e => setQuotationForm({ ...quotationForm, distance_km: parseInt(e.target.value) || 0 })} className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Cargo Type</Label>
-                          <Input value={quotationForm.cargo_type} onChange={e => setQuotationForm({ ...quotationForm, cargo_type: e.target.value })} placeholder="e.g., Electronics, Maize" className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Weight (MT)</Label>
-                          <Input type="number" value={quotationForm.cargo_weight_mt} onChange={e => setQuotationForm({ ...quotationForm, cargo_weight_mt: e.target.value })} className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Container Size</Label>
-                          <Select value={quotationForm.container_size} onValueChange={v => setQuotationForm({ ...quotationForm, container_size: v })}>
-                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="20ft">20ft Container</SelectItem>
-                              <SelectItem value="40ft">40ft Container</SelectItem>
-                              <SelectItem value="45ft">45ft Container</SelectItem>
-                              <SelectItem value="loose">Loose Cargo</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-2 flex items-center gap-2 pb-1 border-b border-border">
-                          <Route className="h-4 w-4 text-primary" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Logistics Parameters</h4>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Rate per km (TZS)</Label>
-                          <Input type="number" value={quotationForm.rate_per_km} onChange={e => setQuotationForm({ ...quotationForm, rate_per_km: parseFloat(e.target.value) || 0 })} className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Fuel Surcharge %</Label>
-                          <Input type="number" value={quotationForm.fuel_surcharge_pct} onChange={e => setQuotationForm({ ...quotationForm, fuel_surcharge_pct: parseFloat(e.target.value) || 0 })} className="h-11" />
-                        </div>
-                        <div className="col-span-2 flex items-center gap-2 pb-1 border-b border-border">
-                          <DollarSign className="h-4 w-4 text-primary" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fees &amp; Taxes</h4>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Border Fees (TZS)</Label>
-                          <Input type="number" value={quotationForm.border_fees} onChange={e => setQuotationForm({ ...quotationForm, border_fees: parseFloat(e.target.value) || 0 })} className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Escort Fees (TZS)</Label>
-                          <Input type="number" value={quotationForm.escort_fees} onChange={e => setQuotationForm({ ...quotationForm, escort_fees: parseFloat(e.target.value) || 0 })} className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">VAT Rate %</Label>
-                          <Input type="number" value={quotationForm.vat_rate} onChange={e => setQuotationForm({ ...quotationForm, vat_rate: parseFloat(e.target.value) || 0 })} className="h-11" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Validity (days)</Label>
-                          <Input type="number" value={quotationForm.validity_days} onChange={e => setQuotationForm({ ...quotationForm, validity_days: parseInt(e.target.value) || 30 })} className="h-11" />
-                        </div>
-                        <div className="col-span-2 space-y-2">
-                          <Label className="text-sm font-semibold text-foreground">Notes</Label>
-                          <Textarea value={quotationForm.notes} onChange={e => setQuotationForm({ ...quotationForm, notes: e.target.value })} className="min-h-[80px]" />
-                        </div>
-                      </div>
-                      <Separator className="my-6" />
-                      <div className="bg-muted/50 p-5 rounded-xl border border-border">
-                        <h4 className="font-semibold mb-3 text-foreground">Cost Breakdown</h4>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="text-muted-foreground">Base Amount:</div>
-                          <div className="text-right font-medium text-foreground">TZS {(quotationForm.distance_km * quotationForm.rate_per_km).toLocaleString()}</div>
-                          <div className="text-muted-foreground">Fuel Surcharge ({quotationForm.fuel_surcharge_pct}%):</div>
-                          <div className="text-right font-medium text-foreground">TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (quotationForm.fuel_surcharge_pct / 100)).toLocaleString()}</div>
-                          <div className="text-muted-foreground">Border Fees:</div>
-                          <div className="text-right font-medium text-foreground">TZS {quotationForm.border_fees.toLocaleString()}</div>
-                          <div className="text-muted-foreground">Subtotal:</div>
-                          <div className="text-right font-semibold text-foreground">
-                            TZS {((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees).toLocaleString()}
-                          </div>
-                          <div className="text-muted-foreground">VAT ({quotationForm.vat_rate}%):</div>
-                          <div className="text-right font-medium text-foreground">
-                            TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees) * (quotationForm.vat_rate / 100)).toLocaleString()}
-                          </div>
-                          <div className="font-bold text-foreground">Total Amount:</div>
-                          <div className="text-right font-bold text-lg text-success">
-                            TZS {(((quotationForm.distance_km * quotationForm.rate_per_km) * (1 + quotationForm.fuel_surcharge_pct / 100) + quotationForm.border_fees + quotationForm.escort_fees) * (1 + quotationForm.vat_rate / 100)).toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-                      <DialogFooter className="pt-6">
-                        <Button variant="outline" onClick={() => setShowQuotationDialog(false)} className="h-11 px-6">Cancel</Button>
-                        <Button onClick={saveQuotation} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">Create Quotation</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                )}
+                <Button asChild className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">
+                  <Link href="/quotations"><Plus className="h-4 w-4 mr-2" /> Open Quotations</Link>
+                </Button>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Quote #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Route</TableHead>
-                        <TableHead>Service</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Expires</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {quotations.map(q => (
-                        <TableRow key={q.id}>
-                          <TableCell className="font-medium">{q.quotation_number}</TableCell>
-                          <TableCell>{q.company_name}</TableCell>
-                          <TableCell>{q.origin} → {q.destination}</TableCell>
-                          <TableCell>{String(q.service_type || "").replace('_', ' ')}</TableCell>
-                          <TableCell>TZS {(q.total_amount || 0).toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Badge className={
-                              q.approval_status === 'draft' ? 'bg-muted text-muted-foreground border-border' :
-                                q.approval_status === 'sent' ? 'bg-info/10 text-info border-info/20' :
-                                  q.approval_status === 'approved' ? 'bg-success/10 text-success border-success/20' :
-                                    q.approval_status === 'converted' ? 'bg-primary/10 text-primary border-primary/20' :
-                                      'bg-warning/10 text-warning border-warning/20'
-                            }>
-                              {q.approval_status || q.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{format(new Date(q.expiry_date), 'MMM dd, yyyy')}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              {q.approval_status === 'draft' && (
-                                <>
-                                  <Button variant="ghost" size="sm" onClick={() => approveQuotation(q.id)} className="text-success">
-                                    <CheckCircle className="size-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => sendQuotationToCustomer(q.id)}>
-                                    <Mail className="size-4" />
-                                  </Button>
-                                </>
-                              )}
-                              {q.approval_status === 'approved' && (
-                                <Button variant="ghost" size="sm" onClick={() => convertQuotationToBooking(q.id)} className="text-primary">
-                                  <ArrowRight className="size-4 mr-1" /> Book
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Quotations now live in their own module — full builder, PDF, email, and customer accept/reject.
+                </p>
+                <p className="text-2xl font-bold text-foreground mt-3">{totalQuotations} quotation(s)</p>
+                <Button asChild variant="outline" className="mt-4">
+                  <Link href="/quotations">View all quotations →</Link>
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

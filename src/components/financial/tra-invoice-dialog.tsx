@@ -373,7 +373,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
       <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Receipt className="size-5 text-blue-600" />
+            <Receipt className="size-5 text-primary" />
             TRA Tax Invoice — {initialInvoice?.invoice_number || "New Invoice"}
           </DialogTitle>
         </DialogHeader>
@@ -381,17 +381,17 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
         <div className="space-y-5 pt-2">
           {/* Client & Invoice Info */}
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="space-y-1 bg-slate-50 rounded-xl p-3 border">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bill To</p>
-              <p className="font-bold">{client?.company_name || initialInvoice?.customer_name || "—"}</p>
-              <p className="text-slate-500">{client?.address || "—"}</p>
-              <p className="text-slate-500">TIN: {client?.tin || "—"}</p>
+            <div className="space-y-1 bg-muted/30 rounded-xl p-3 border border-border">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Bill To</p>
+              <p className="font-bold text-foreground">{client?.company_name || initialInvoice?.customer_name || "—"}</p>
+              <p className="text-muted-foreground">{client?.address || "—"}</p>
+              <p className="text-muted-foreground">TIN: {client?.tin || "—"}</p>
             </div>
-            <div className="space-y-1 bg-blue-50 rounded-xl p-3 border border-blue-100">
-              <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Invoice</p>
-              <p className="font-bold text-blue-800">{initialInvoice?.invoice_number || "—"}</p>
-              <p className="text-slate-600">Due: {initialInvoice?.due_date ? format(new Date(initialInvoice.due_date), "dd MMM yyyy") : "—"}</p>
-              <Badge className={cn("text-xs", initialInvoice?.status === "paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}>
+            <div className="space-y-1 bg-info/10 rounded-xl p-3 border border-info/20">
+              <p className="text-xs font-bold text-info uppercase tracking-wide">Invoice</p>
+              <p className="font-bold text-info">{initialInvoice?.invoice_number || "—"}</p>
+              <p className="text-muted-foreground">Due: {initialInvoice?.due_date ? format(new Date(initialInvoice.due_date), "dd MMM yyyy") : "—"}</p>
+              <Badge className={cn("text-xs", initialInvoice?.status === "paid" ? "bg-success/10 text-success" : "bg-warning/10 text-warning")}>
                 {initialInvoice?.status || "pending"}
               </Badge>
             </div>
@@ -399,9 +399,9 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
 
           {/* Line Items */}
           <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Service Line Items</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Service Line Items</p>
             {lineItems.map((item, i) => (
-              <div key={i} className="grid grid-cols-12 gap-2 items-end border rounded-xl p-3 bg-slate-50">
+              <div key={i} className="grid grid-cols-12 gap-2 items-end border border-border rounded-xl p-3 bg-muted/30">
                 <div className="col-span-5 space-y-1">
                   <Label className="text-[10px]">Description</Label>
                   <Input value={item.description} onChange={e => updateLineItem(i, "description", e.target.value)} className="text-xs h-8" />
@@ -427,8 +427,8 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
           </div>
 
           {/* Tanzania Tax Settings */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-            <p className="text-xs font-bold text-amber-700 uppercase tracking-wide flex items-center gap-1">
+          <div className="bg-warning/10 border border-warning/20 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-bold text-warning uppercase tracking-wide flex items-center gap-1">
               <Building2 className="size-4" /> Tanzania Tax Settings (TRA)
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -470,24 +470,24 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
           </div>
 
           {/* Totals Preview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-1.5 text-sm">
+          <div className="bg-info/10 border border-info/20 rounded-xl p-4 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-600">Subtotal</span>
-              <span className="font-medium">TZS {subtotal.toLocaleString()}</span>
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-medium text-foreground">TZS {subtotal.toLocaleString()}</span>
             </div>
             {vatApplicable && (
               <div className="flex justify-between">
-                <span className="text-slate-600">VAT (18%)</span>
-                <span className="font-medium">TZS {vatAmount.toLocaleString()}</span>
+                <span className="text-muted-foreground">VAT (18%)</span>
+                <span className="font-medium text-foreground">TZS {vatAmount.toLocaleString()}</span>
               </div>
             )}
             {whtAmount > 0 && (
-              <div className="flex justify-between text-red-600">
+              <div className="flex justify-between text-destructive">
                 <span>WHT Deductible (5%)</span>
                 <span className="font-medium">(TZS {whtAmount.toLocaleString()})</span>
               </div>
             )}
-            <div className="flex justify-between font-black text-blue-800 border-t border-blue-200 pt-1.5 text-base">
+            <div className="flex justify-between font-black text-info border-t border-info/20 pt-1.5 text-base">
               <span>TOTAL PAYABLE</span>
               <span>TZS {totalPayable.toLocaleString()}</span>
             </div>
@@ -507,7 +507,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
                 Save
               </Button>
             )}
-            <Button onClick={printInvoice} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={printInvoice} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Printer className="size-4 mr-1" />Print Invoice
             </Button>
             <Button onClick={downloadInvoice} variant="outline">
