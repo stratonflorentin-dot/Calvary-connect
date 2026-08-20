@@ -70,6 +70,10 @@ UPDATE bank_accounts ba
 --    themselves, then the quotations and customer they all trace back to.
 DELETE FROM credit_notes WHERE id = 'ed1dda56-d4e5-4b19-85ef-96577d9cf39a';
 DELETE FROM bank_transactions WHERE id IN (SELECT id FROM _cleanup_bt_ids);
+-- trip_revenue is an auto-generated mirror of the invoice (migration 050's
+-- own comment: "the only automated thing invoices feed is trip_revenue")
+-- with an FK straight back to invoices — must go before the invoices do.
+DELETE FROM trip_revenue WHERE source_invoice_id IN ('dc3b0e01-e9a4-4648-8a8d-6e48bb12326b', 'b2c57c12-6efc-4578-8a50-59d1ec3ac064');
 DELETE FROM invoices WHERE id IN ('dc3b0e01-e9a4-4648-8a8d-6e48bb12326b', 'b2c57c12-6efc-4578-8a50-59d1ec3ac064');
 
 ALTER TABLE journal_entries DISABLE TRIGGER trg_guard_posted_journal;
@@ -78,6 +82,7 @@ DELETE FROM journal_entries WHERE id IN (SELECT id FROM _cleanup_je_ids);
 ALTER TABLE journal_entries ENABLE TRIGGER trg_guard_posted_journal;
 
 DELETE FROM expenses WHERE id IN ('c848c670-23d8-4562-84f9-7f3b0d67b552', 'a1c2b576-d907-4c52-9491-28837b88435b');
+DELETE FROM fuel_logs WHERE id = '0f24a607-8bbc-4276-a8f7-58c89c9d7174';
 DELETE FROM trips WHERE id = 'd171b9ad-fb38-4966-bcc6-56bd4c5522f0';
 
 DELETE FROM quotation_lines WHERE quotation_id IN (
