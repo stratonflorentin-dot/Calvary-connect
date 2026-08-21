@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   Fuel, Plus, TrendingDown, TrendingUp, BarChart2,
-  Truck, RefreshCw, Download, ChevronRight, Droplets, Gauge, MapPin, CreditCard
+  Truck, RefreshCw, Download, ChevronRight, Droplets, Gauge, MapPin, CreditCard, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,7 @@ export function FuelManagement() {
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [filterVehicle, setFilterVehicle] = useState("all");
   const [capturingGps, setCapturingGps] = useState(false);
 
@@ -159,6 +160,40 @@ export function FuelManagement() {
     ? logs
     : logs.filter(l => l.vehicle_id === filterVehicle);
 
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({
+      vehicle_id: "", trip_id: "", fuel_date: format(new Date(), "yyyy-MM-dd"),
+      litres: "", cost_per_litre: "", odometer_before: "", odometer_after: "",
+      fuel_station: "", fuel_station_id: "", fuel_card_id: "", fuel_card_used: false,
+      receipt_number: "", notes: "",
+      capture_latitude: null, capture_longitude: null, capture_gps_accuracy_m: null,
+    });
+  };
+
+  const openEdit = (log: FuelLog) => {
+    setEditingId(log.id);
+    setForm({
+      vehicle_id: log.vehicle_id,
+      trip_id: log.trip_id || "",
+      fuel_date: log.fuel_date,
+      litres: String(log.litres ?? ""),
+      cost_per_litre: String(log.cost_per_litre ?? ""),
+      odometer_before: log.odometer_before != null ? String(log.odometer_before) : "",
+      odometer_after: log.odometer_after != null ? String(log.odometer_after) : "",
+      fuel_station: log.fuel_station || "",
+      fuel_station_id: (log as any).fuel_station_id || "",
+      fuel_card_id: (log as any).fuel_card_id || "",
+      fuel_card_used: log.fuel_card_used || false,
+      receipt_number: (log as any).receipt_number || "",
+      notes: log.notes || "",
+      capture_latitude: (log as any).capture_latitude ?? null,
+      capture_longitude: (log as any).capture_longitude ?? null,
+      capture_gps_accuracy_m: (log as any).capture_gps_accuracy_m ?? null,
+    });
+    setAddOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.vehicle_id || !form.litres || !form.cost_per_litre) {
@@ -173,7 +208,7 @@ export function FuelManagement() {
       const odoBefore = form.odometer_before ? parseFloat(form.odometer_before) : null;
       const odoAfter = form.odometer_after ? parseFloat(form.odometer_after) : null;
 
-      const { error } = await supabase.from("fuel_logs").insert({
+      const payload = {
         vehicle_id: form.vehicle_id,
         trip_id: form.trip_id || null,
         fuel_date: form.fuel_date,
@@ -191,11 +226,18 @@ export function FuelManagement() {
         capture_longitude: form.capture_longitude,
         capture_gps_accuracy_m: form.capture_gps_accuracy_m,
         notes: form.notes,
-      });
+      };
+
+      const { error } = editingId
+        ? await supabase.from("fuel_logs").update(payload).eq("id", editingId)
+        : await supabase.from("fuel_logs").insert(payload);
 
       if (error) throw error;
 
-      toast({ title: "✅ Fuel Log Saved", description: `${litres}L recorded for ${vehicles.find(v => v.id === form.vehicle_id)?.plate_number}` });
+      toast({
+        title: editingId ? "✅ Fuel Log Updated" : "✅ Fuel Log Saved",
+        description: `${litres}L recorded for ${vehicles.find(v => v.id === form.vehicle_id)?.plate_number}`,
+      });
 
       // Fire-and-forget fraud scan for this vehicle so anomalies (impossible
       // volume, efficiency outlier, too-frequent refuel, price outlier) are
@@ -211,13 +253,7 @@ export function FuelManagement() {
       });
 
       setAddOpen(false);
-      setForm({
-        vehicle_id: "", trip_id: "", fuel_date: format(new Date(), "yyyy-MM-dd"),
-        litres: "", cost_per_litre: "", odometer_before: "", odometer_after: "",
-        fuel_station: "", fuel_station_id: "", fuel_card_id: "", fuel_card_used: false,
-        receipt_number: "", notes: "",
-        capture_latitude: null, capture_longitude: null, capture_gps_accuracy_m: null,
-      });
+      resetForm();
       loadData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -251,9 +287,9 @@ export function FuelManagement() {
           <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
             <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} />Refresh
           </Button>
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={resetForm}>
                 <Plus className="size-4 mr-2" />Log Fuel Fill
               </Button>
             </DialogTrigger>
@@ -261,7 +297,7 @@ export function FuelManagement() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Fuel className="size-5 text-primary" />
-                  Record Fuel Fill-Up
+                  {editingId ? "Edit Fuel Log" : "Record Fuel Fill-Up"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -394,10 +430,10 @@ export function FuelManagement() {
                 </div>
 
                 <div className="flex gap-2 pt-1">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setAddOpen(false)} disabled={saving}>Cancel</Button>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => { setAddOpen(false); resetForm(); }} disabled={saving}>Cancel</Button>
                   <Button type="submit" className="flex-1" disabled={saving}>
                     {saving ? <RefreshCw className="size-4 mr-2 animate-spin" /> : <Fuel className="size-4 mr-2" />}
-                    Save Log
+                    {editingId ? "Update Log" : "Save Log"}
                   </Button>
                 </div>
               </form>
@@ -495,6 +531,7 @@ export function FuelManagement() {
                   <TableHead className="text-right">Total Cost</TableHead>
                   <TableHead className="text-right">Distance</TableHead>
                   <TableHead className="text-right">km/L</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -525,11 +562,16 @@ export function FuelManagement() {
                         </span>
                       ) : "—"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={() => openEdit(log)}>
+                        <Pencil className="size-3.5" /> Edit
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {filteredLogs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
                       <Fuel className="size-8 mx-auto mb-2 opacity-20" />
                       <p className="text-sm">No fuel logs yet. Click "Log Fuel Fill" to start tracking.</p>
                     </TableCell>
