@@ -8,7 +8,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { downloadDocumentPdf, fetchLogoDataUrl, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
+import { cn } from "@/lib/utils";
 import { CheckCircle2, Download, FileText, Loader2, XCircle } from "lucide-react";
+
+const STATUS_BADGES: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground border-border",
+  sent: "bg-info/10 text-info border-info/20",
+  viewed: "bg-warning/10 text-warning border-warning/20",
+  accepted: "bg-success/10 text-success border-success/20",
+  rejected: "bg-destructive/10 text-destructive border-destructive/20",
+  expired: "bg-muted text-muted-foreground border-border",
+};
 
 // Genuinely public — no auth, no Sidebar, no useRole. Reached only via an
 // unguessable token in the URL, same trust model as any "view this
@@ -123,49 +133,74 @@ export default function PublicQuotationPage() {
   return (
     <div className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="rounded-2xl bg-primary text-primary-foreground p-6 text-center">
-          {company.logoDataUrl ? (
-            <img src={company.logoDataUrl} alt="Company logo" className="h-14 w-auto max-w-[160px] object-contain bg-white/90 rounded-md p-1.5 mx-auto mb-2" />
-          ) : (
-            <FileText className="size-8 mx-auto mb-2 text-primary-foreground/80" />
-          )}
-          <p className="font-black text-sm text-primary-foreground/80">{company.company_name || "Quotation"}</p>
-          <h1 className="text-xl font-black">Quotation {quotation.quotation_number}</h1>
-          <Badge variant="outline" className="border-white/30 text-primary-foreground bg-white/10 mt-2">{quotation.status}</Badge>
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Route</p><p>{quotation.origin && quotation.destination ? `${quotation.origin} → ${quotation.destination}` : "—"}</p></div>
-            <div><p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Valid Until</p><p>{quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString() : "—"}</p></div>
+        {/* Letterhead — mirrors the real reference document (QT-2026-0001.pdf) field-for-field */}
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <div className="flex justify-between items-start gap-4">
+            <h1 className="text-2xl font-black text-foreground tracking-widest">QUOTATION</h1>
+            {company.logoDataUrl && (
+              <img src={company.logoDataUrl} alt="Company logo" className="h-12 w-auto max-w-[110px] object-contain shrink-0" />
+            )}
           </div>
-        </div>
 
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="mt-4 text-sm">
+            <p className="font-black text-foreground">{company.company_name || "Company"}</p>
+            {company.tagline && <p className="text-muted-foreground text-xs">{company.tagline}</p>}
+          </div>
+
+          <div className="border-t border-border my-4" />
+
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Quote No</p>
+              <p className="font-bold text-foreground font-mono">{quotation.quotation_number}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Status</p>
+              <Badge variant="outline" className={STATUS_BADGES[quotation.status] ?? ""}>{quotation.status}</Badge>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Route</p>
+              <p className="text-foreground">{quotation.origin && quotation.destination ? `${quotation.origin} → ${quotation.destination}` : "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Valid Until</p>
+              <p className="text-foreground">{quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString("en-GB") : "—"}</p>
+            </div>
+          </div>
+
+          <table className="w-full text-sm mt-5 border border-border rounded-lg overflow-hidden">
             <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-              <tr><th className="px-4 py-2 text-left">Description</th><th className="px-4 py-2 text-right">Qty</th><th className="px-4 py-2 text-right">Amount</th></tr>
+              <tr><th className="px-3 py-2 text-left">Description</th><th className="px-3 py-2 text-right">Qty</th><th className="px-3 py-2 text-right">Amount</th></tr>
             </thead>
             <tbody>
               {lines.map((l) => (
                 <tr key={l.id} className="border-t border-border">
-                  <td className="px-4 py-2">{l.description || l.service_type}</td>
-                  <td className="px-4 py-2 text-right">{l.quantity}{l.duration_days ? ` × ${l.duration_days}d` : ""}</td>
-                  <td className="px-4 py-2 text-right font-mono">{formatCurrency(l.line_total, quotation.currency)}</td>
+                  <td className="px-3 py-2">{l.description || l.service_type}</td>
+                  <td className="px-3 py-2 text-right">{l.quantity}{l.duration_days ? ` × ${l.duration_days}d` : ""}</td>
+                  <td className="px-3 py-2 text-right font-mono">{formatCurrency(l.line_total, quotation.currency)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="p-4 border-t border-border ml-auto max-w-xs space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(quotation.subtotal, quotation.currency)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">{quotation.zero_rated_vat ? "VAT (zero-rated)" : `VAT (${quotation.vat_rate}%)`}</span><span>{formatCurrency(quotation.vat_amount, quotation.currency)}</span></div>
-            <div className="flex justify-between font-black text-base pt-2 mt-1 border-t-2 border-primary/30 bg-primary/5 -mx-4 px-4 py-2 rounded-b-lg text-primary"><span>Total</span><span>{formatCurrency(quotation.total_amount, quotation.currency)}</span></div>
-          </div>
-        </div>
 
-        {quotation.payment_terms && (
-          <div className="text-xs text-muted-foreground"><span className="font-bold">Payment Terms:</span> {quotation.payment_terms}</div>
-        )}
+          <div className="flex justify-end mt-3">
+            <div className="w-full max-w-xs space-y-1 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Sub-Total:</span><span className="font-bold text-foreground">{formatCurrency(quotation.subtotal, quotation.currency)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">VAT:</span><span className={cn("font-bold", quotation.zero_rated_vat ? "text-success" : "text-foreground")}>{quotation.zero_rated_vat ? "Zero Rated (0%)" : formatCurrency(quotation.vat_amount, quotation.currency)}</span></div>
+              <div className="flex justify-between font-black text-base pt-2 border-t border-border text-destructive"><span>Grand Total:</span><span>{formatCurrency(quotation.total_amount, quotation.currency)}</span></div>
+            </div>
+          </div>
+
+          {quotation.valid_until && (
+            <div className="bg-warning/10 border border-warning/20 rounded-lg text-center py-2 mt-5 text-sm font-black text-warning tracking-wide">
+              VALID UNTIL {new Date(quotation.valid_until).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+            </div>
+          )}
+
+          {quotation.payment_terms && (
+            <p className="text-xs text-muted-foreground mt-4"><span className="font-bold text-foreground">Payment Terms:</span> {quotation.payment_terms}</p>
+          )}
+        </div>
 
         <Button onClick={pdf} variant="outline" className="w-full gap-2" disabled={pdfBusy}>
           {pdfBusy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />} {pdfBusy ? "Generating…" : "Download PDF"}

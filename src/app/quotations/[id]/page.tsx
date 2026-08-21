@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { downloadDocumentPdf, fetchLogoDataUrl, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
 import { getRate } from "@/lib/finance/fx";
+import { cn } from "@/lib/utils";
 import { ArrowLeft, Copy, Download, FileText, Loader2, Send } from "lucide-react";
 
 const STATUS_BADGES: Record<string, string> = {
@@ -206,24 +207,6 @@ export default function QuotationDetailPage() {
             <ArrowLeft className="size-4" /> Back to Quotations
           </Link>
 
-          {/* Letterhead banner — matches the colored, logo'd look of the Invoice PDF/dialog */}
-          <div className="rounded-2xl bg-primary text-primary-foreground p-5 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              {company.logoDataUrl && (
-                <img src={company.logoDataUrl} alt="Company logo" className="h-12 w-auto max-w-[140px] object-contain bg-white/90 rounded-md p-1 shrink-0" />
-              )}
-              <div className="min-w-0">
-                <p className="font-black text-lg truncate">{company.company_name || "Company"}</p>
-                {company.tagline && <p className="text-xs text-primary-foreground/70 truncate">{company.tagline}</p>}
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-foreground/70">Quotation</p>
-              <h1 className="text-2xl font-black font-mono">{quotation.quotation_number}</h1>
-              <Badge variant="outline" className="mt-1 border-white/30 text-primary-foreground bg-white/10">{quotation.status}</Badge>
-            </div>
-          </div>
-
           <div className="flex flex-wrap items-center justify-end gap-2">
             {["draft", "sent"].includes(quotation.status) && (
               <Button onClick={send} disabled={sending} size="sm" className="gap-2">
@@ -260,36 +243,120 @@ export default function QuotationDetailPage() {
             </div>
           )}
 
-          <div className="bg-card border border-border rounded-2xl p-5 grid grid-cols-2 gap-4 text-sm">
-            <div><p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Customer</p><p className="font-bold text-foreground">{quotation.customer?.company_name ?? quotation.contact_person ?? "—"}</p></div>
-            <div><p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Route</p><p className="text-foreground">{quotation.origin && quotation.destination ? `${quotation.origin} → ${quotation.destination}` : "—"}</p></div>
-            <div><p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Valid Until</p><p className="text-foreground">{quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString() : "—"}</p></div>
-            <div><p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Created</p><p className="text-foreground">{quotation.created_at ? new Date(quotation.created_at).toLocaleDateString() : "—"}</p></div>
-          </div>
+          {/* Letterhead — mirrors the real reference document (QT-2026-0001.pdf) field-for-field */}
+          <div className="bg-card border border-border rounded-2xl p-6 sm:p-8">
+            <div className="flex justify-between items-start gap-4">
+              <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-widest">QUOTATION</h1>
+              {company.logoDataUrl && (
+                <img src={company.logoDataUrl} alt="Company logo" className="h-14 w-auto max-w-[130px] object-contain shrink-0" />
+              )}
+            </div>
 
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-border"><h2 className="font-black text-sm text-foreground">Line Items</h2></div>
-            <table className="w-full text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <div className="text-sm">
+                <p className="font-black text-foreground">{company.company_name || "Company"}</p>
+                {company.tagline && <p className="text-muted-foreground text-xs">{company.tagline}</p>}
+                <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                  {company.vat_registration && <p><span className="font-bold text-foreground">VRN:</span> {company.vat_registration}</p>}
+                  {company.tax_id && <p><span className="font-bold text-foreground">TIN:</span> {company.tax_id}</p>}
+                  {company.phone && <p><span className="font-bold text-foreground">Phone:</span> {company.phone}</p>}
+                  {company.email && <p><span className="font-bold text-foreground">Email:</span> {company.email}</p>}
+                  {company.address && <p>{company.address}</p>}
+                </div>
+              </div>
+              <div className="text-sm sm:text-right space-y-0.5">
+                <p><span className="text-muted-foreground">Quote No:</span> <span className="font-bold text-foreground font-mono">{quotation.quotation_number}</span></p>
+                <p><span className="text-muted-foreground">Date Issued:</span> <span className="font-bold text-foreground">{quotation.quotation_date ? new Date(quotation.quotation_date).toLocaleDateString("en-GB") : quotation.created_at ? new Date(quotation.created_at).toLocaleDateString("en-GB") : "—"}</span></p>
+                <p><span className="text-muted-foreground">Valid Until:</span> <span className="font-bold text-foreground">{quotation.valid_until ? new Date(quotation.valid_until).toLocaleDateString("en-GB") : "—"}</span></p>
+                <p><span className="text-muted-foreground">Status:</span> <Badge variant="outline" className={cn("ml-1", STATUS_BADGES[quotation.status] ?? "")}>{quotation.status}</Badge></p>
+              </div>
+            </div>
+
+            <div className="border-t border-border my-4" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="text-sm">
+                <p className="text-destructive font-black text-xs uppercase tracking-widest">Prepared For:</p>
+                <p className="font-black text-foreground mt-1">{quotation.customer?.company_name ?? quotation.contact_person ?? "—"}</p>
+                <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                  {quotation.customer?.vrn && <p><span className="font-bold text-foreground">VRN:</span> {quotation.customer.vrn}</p>}
+                  {quotation.customer?.tax_id && <p><span className="font-bold text-foreground">TIN:</span> {quotation.customer.tax_id}</p>}
+                  {quotation.customer?.email && <p><span className="font-bold text-foreground">Email:</span> {quotation.customer.email}</p>}
+                  {quotation.customer?.phone && <p><span className="font-bold text-foreground">Phone:</span> {quotation.customer.phone}</p>}
+                </div>
+              </div>
+              <div className="text-sm sm:text-right space-y-0.5">
+                {quotation.payment_terms && <p><span className="text-muted-foreground">Pay. Terms:</span> <span className="font-bold text-foreground">{quotation.payment_terms}</span></p>}
+                <p><span className="text-muted-foreground">Currency:</span> <span className="font-bold text-foreground">{quotation.currency}{fxRate ? ` (Rate: ${fxRate.toLocaleString()} TZS)` : ""}</span></p>
+                <p><span className="text-muted-foreground">VAT Status:</span> <span className={cn("font-bold", quotation.zero_rated_vat ? "text-success" : "text-foreground")}>{quotation.zero_rated_vat ? "Zero Rated (0%)" : `Standard (${quotation.vat_rate}%)`}</span></p>
+                {quotation.origin && quotation.destination && <p><span className="text-muted-foreground">Route:</span> <span className="font-bold text-foreground">{quotation.origin} → {quotation.destination}</span></p>}
+              </div>
+            </div>
+
+            <table className="w-full text-sm mt-5 border border-border rounded-lg overflow-hidden">
               <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-                <tr><th className="px-4 py-2 text-left">Item</th><th className="px-4 py-2 text-left">Description</th><th className="px-4 py-2 text-right">Qty</th><th className="px-4 py-2 text-right">Unit Price</th><th className="px-4 py-2 text-right">Subtotal</th></tr>
+                <tr>
+                  <th className="px-3 py-2 text-left">Particulars</th>
+                  <th className="px-3 py-2 text-right">Qty</th>
+                  <th className="px-3 py-2 text-right">Unit Price ({quotation.currency})</th>
+                  <th className="px-3 py-2 text-right">Days</th>
+                  <th className="px-3 py-2 text-right">Subtotal ({quotation.currency})</th>
+                </tr>
               </thead>
               <tbody>
                 {lines.map((l) => (
                   <tr key={l.id} className="border-t border-border">
-                    <td className="px-4 py-2">{l.service_type}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{l.description}</td>
-                    <td className="px-4 py-2 text-right">{l.quantity}{l.duration_days ? ` × ${l.duration_days}d` : ""}</td>
-                    <td className="px-4 py-2 text-right font-mono">{formatCurrency(l.unit_price, quotation.currency)}</td>
-                    <td className="px-4 py-2 text-right font-mono font-bold">{formatCurrency(l.line_total, quotation.currency)}</td>
+                    <td className="px-3 py-2">
+                      <p className="text-foreground">{l.description}</p>
+                      {l.service_type && <p className="text-[11px] text-muted-foreground">{l.service_type}</p>}
+                    </td>
+                    <td className="px-3 py-2 text-right">{l.quantity}</td>
+                    <td className="px-3 py-2 text-right font-mono">{formatCurrency(l.unit_price, quotation.currency)}</td>
+                    <td className="px-3 py-2 text-right">{l.duration_days || "—"}</td>
+                    <td className="px-3 py-2 text-right font-mono font-bold">{formatCurrency(l.line_total, quotation.currency)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="p-4 border-t border-border ml-auto max-w-xs space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(quotation.subtotal, quotation.currency)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">{quotation.zero_rated_vat ? "VAT (zero-rated)" : `VAT (${quotation.vat_rate}%)`}</span><span>{formatCurrency(quotation.vat_amount, quotation.currency)}</span></div>
-              <div className="flex justify-between font-black text-base pt-2 mt-1 border-t-2 border-primary/30 bg-primary/5 -mx-4 px-4 py-2 rounded-b-lg text-primary"><span>Total</span><span>{formatCurrency(quotation.total_amount, quotation.currency)}</span></div>
+
+            <div className="flex justify-end mt-3">
+              <div className="w-full max-w-xs space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Sub-Total:</span><span className="font-bold text-foreground">{formatCurrency(quotation.subtotal, quotation.currency)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">VAT:</span><span className={cn("font-bold", quotation.zero_rated_vat ? "text-success" : "text-foreground")}>{quotation.zero_rated_vat ? "Zero Rated (0%)" : formatCurrency(quotation.vat_amount, quotation.currency)}</span></div>
+                <div className="flex justify-between font-black text-base pt-2 border-t border-border text-destructive"><span>Grand Total:</span><span>{formatCurrency(quotation.total_amount, quotation.currency)}</span></div>
+              </div>
             </div>
+
+            {quotation.valid_until && (
+              <div className="bg-warning/10 border border-warning/20 rounded-lg text-center py-2 mt-5 text-sm font-black text-warning tracking-wide">
+                VALID UNTIL {new Date(quotation.valid_until).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+              </div>
+            )}
+
+            {company.bank_name && (
+              <div className="mt-5 text-xs space-y-0.5">
+                <p><span className="text-muted-foreground">Bank:</span> <span className="font-bold text-foreground">{company.bank_name}</span></p>
+                {company.bank_account_name && <p><span className="text-muted-foreground">A/C Name:</span> <span className="font-bold text-foreground">{company.bank_account_name}</span></p>}
+                {(company.bank_account_number_tzs || company.bank_account_number_usd) && (
+                  <p><span className="text-muted-foreground">Account No.:</span> <span className="font-bold text-foreground">{[company.bank_account_number_tzs && `TZS ${company.bank_account_number_tzs}`, company.bank_account_number_usd && `USD ${company.bank_account_number_usd}`].filter(Boolean).join(" ")}</span></p>
+                )}
+                {company.bank_branch_code && <p><span className="text-muted-foreground">Branch Code:</span> <span className="font-bold text-foreground">{company.bank_branch_code}</span></p>}
+                {company.bank_swift_code && <p><span className="text-muted-foreground">Swift Code:</span> <span className="font-bold text-foreground">{company.bank_swift_code}</span></p>}
+              </div>
+            )}
+
+            <div className="flex justify-end mt-8">
+              <div className="text-center text-xs">
+                <div className="w-40 border-t border-border pt-1">
+                  <p className="text-muted-foreground">Authorized Signature</p>
+                  <p className="font-bold text-foreground">{company.company_name}</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-center text-[11px] text-muted-foreground mt-6">
+              This quotation was generated by the {company.company_name || "company"} Logistics System.<br />Thank you for your trust and partnership!
+            </p>
           </div>
 
           {quotation.internal_notes && (
