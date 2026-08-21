@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/components/supabase-provider";
 import { useToast } from "@/hooks/use-toast";
 import { AuditTrailService } from "@/services/audit-trail-service";
+import { createNotification } from "@/services/notification-service";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,6 +268,28 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
           await AuditTrailService.logCreate("operations", "trip", data.id, data, user?.id, `Created trip ${payload.trip_number}`);
         }
         toast({ variant: "success", title: "Trip created", description: payload.trip_number });
+
+        // Let the salesman who closed this deal know dispatch is moving on
+        // it — otherwise a trip gets created and assigned with nobody who
+        // actually owns the customer relationship aware it happened.
+        if (payload.shipment_id) {
+          const { data: shipmentRow } = await supabase.from("shipments").select("quotation_id, shipment_number").eq("id", payload.shipment_id).maybeSingle();
+          if (shipmentRow?.quotation_id) {
+            const { data: quotationRow } = await supabase.from("quotations").select("created_by, quotation_number").eq("id", shipmentRow.quotation_id).maybeSingle();
+            if (quotationRow?.created_by && quotationRow.created_by !== user?.id) {
+              await createNotification({
+                userId: quotationRow.created_by,
+                title: "Trip created for your shipment",
+                message: `${payload.trip_number} was created for ${shipmentRow.shipment_number} (from ${quotationRow.quotation_number}).`,
+                type: "info",
+                module: "sales",
+                entityType: "trip",
+                entityId: data?.id,
+                actionUrl: `/shipments/${payload.shipment_id}`,
+              });
+            }
+          }
+        }
       }
 
       onOpenChange(false);

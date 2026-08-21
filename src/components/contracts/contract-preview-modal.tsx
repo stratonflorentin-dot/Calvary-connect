@@ -18,10 +18,15 @@ import type { Contract } from '@/types/contract';
 interface ContractPreviewModalProps {
     contract: Contract;
     trigger?: React.ReactNode;
+    /** Controlled mode — omit both to fall back to an internal trigger button. */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function ContractPreviewModal({ contract, trigger }: ContractPreviewModalProps) {
-    const [open, setOpen] = useState(false);
+export function ContractPreviewModal({ contract, trigger, open: openProp, onOpenChange: onOpenChangeProp }: ContractPreviewModalProps) {
+    const [openState, setOpenState] = useState(false);
+    const open = openProp ?? openState;
+    const setOpen = onOpenChangeProp ?? setOpenState;
     const [html, setHtml] = useState('');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -65,14 +70,16 @@ export function ContractPreviewModal({ contract, trigger }: ContractPreviewModal
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {trigger || (
-                    <Button variant="outline" className="gap-2">
-                        <FileText className="w-4 h-4" />
-                        Preview Contract
-                    </Button>
-                )}
-            </DialogTrigger>
+            {(trigger || openProp === undefined) && (
+                <DialogTrigger asChild>
+                    {trigger || (
+                        <Button variant="outline" className="gap-2">
+                            <FileText className="w-4 h-4" />
+                            Preview Contract
+                        </Button>
+                    )}
+                </DialogTrigger>
+            )}
             <DialogContent className="max-w-4xl h-[90vh] p-0 flex flex-col">
                 <DialogHeader className="px-6 pt-6 pb-0">
                     <DialogTitle>Contract Preview</DialogTitle>
