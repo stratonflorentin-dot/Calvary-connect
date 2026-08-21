@@ -153,26 +153,38 @@ export default function QuotationDetailPage() {
     router.push(`/quotations/${copy.id}`);
   };
 
+  const [pdfBusy, setPdfBusy] = useState(false);
+
   const pdf = () => {
     if (!quotation) return;
-    downloadDocumentPdf({
-      kind: "quotation",
-      number: quotation.quotation_number,
-      dateIssued: quotation.quotation_date,
-      dueOrValidUntil: quotation.valid_until,
-      status: quotation.status,
-      company,
-      customer: {
-        name: quotation.customer?.company_name ?? quotation.contact_person ?? "",
-        email: quotation.customer?.email, phone: quotation.customer?.phone,
-        vrn: quotation.customer?.vrn, tin: quotation.customer?.tax_id,
-      },
-      paymentTerms: quotation.payment_terms, currency: quotation.currency || "TZS", fxRateToTzs: fxRate,
-      vatRate: Number(quotation.vat_rate) || 0, zeroRated: !!quotation.zero_rated_vat,
-      subtotal: Number(quotation.subtotal) || 0, vatAmount: Number(quotation.vat_amount) || 0, total: Number(quotation.total_amount) || 0,
-      lines: lines.map((l) => ({ description: l.description, item_type_label: l.service_type, quantity: l.quantity, duration_days: l.duration_days, unit_price: l.unit_price, line_total: l.line_total })),
-      termsConditions: quotation.terms_conditions,
-    });
+    // Deferred past the next paint so the button's own busy state renders
+    // before jsPDF's synchronous document build blocks the main thread —
+    // that block is exactly what trips Chrome's INP warning otherwise.
+    setPdfBusy(true);
+    setTimeout(() => {
+      try {
+        downloadDocumentPdf({
+          kind: "quotation",
+          number: quotation.quotation_number,
+          dateIssued: quotation.quotation_date,
+          dueOrValidUntil: quotation.valid_until,
+          status: quotation.status,
+          company,
+          customer: {
+            name: quotation.customer?.company_name ?? quotation.contact_person ?? "",
+            email: quotation.customer?.email, phone: quotation.customer?.phone,
+            vrn: quotation.customer?.vrn, tin: quotation.customer?.tax_id,
+          },
+          paymentTerms: quotation.payment_terms, currency: quotation.currency || "TZS", fxRateToTzs: fxRate,
+          vatRate: Number(quotation.vat_rate) || 0, zeroRated: !!quotation.zero_rated_vat,
+          subtotal: Number(quotation.subtotal) || 0, vatAmount: Number(quotation.vat_amount) || 0, total: Number(quotation.total_amount) || 0,
+          lines: lines.map((l) => ({ description: l.description, item_type_label: l.service_type, quantity: l.quantity, duration_days: l.duration_days, unit_price: l.unit_price, line_total: l.line_total })),
+          termsConditions: quotation.terms_conditions,
+        });
+      } finally {
+        setPdfBusy(false);
+      }
+    }, 0);
   };
 
   if (!role) return null;
@@ -219,7 +231,9 @@ export default function QuotationDetailPage() {
               </Button>
             )}
             <Button onClick={duplicate} variant="outline" size="sm" className="gap-2"><Copy className="size-4" /> Duplicate</Button>
-            <Button onClick={pdf} variant="outline" size="sm" className="gap-2"><Download className="size-4" /> PDF</Button>
+            <Button onClick={pdf} variant="outline" size="sm" className="gap-2" disabled={pdfBusy}>
+              {pdfBusy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />} PDF
+            </Button>
           </div>
 
           {quotation.status !== "draft" && (

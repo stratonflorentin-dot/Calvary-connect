@@ -59,17 +59,38 @@ export async function generateAI(opts: { system: string; messages: Msg[] }): Pro
     };
 
     const tryGenkit = async () => {
-        // dynamic import to avoid bundling node-only libs into client
-        const { createGenkit } = await import('../ai/genkit');
-        if (typeof createGenkit !== 'function') throw new Error('genkit factory not available');
-        const ai = await createGenkit();
-        const response = await (ai as any).generate({ system, messages });
-        const text = (response as any).text || '';
-        const rawUsage = (response as any).usage;
-        const usage: Usage = rawUsage
-            ? { tokensIn: Number(rawUsage.inputTokens ?? rawUsage.promptTokens) || 0, tokensOut: Number(rawUsage.outputTokens ?? rawUsage.completionTokens) || 0 }
+        // genkitx-groq (the genkit plugin previously used here) ships its own
+        // small, hardcoded model allowlist that hasn't kept up with Groq's
+        // actual catalog — confirmed live: of every model that plugin
+        // recognizes, only "allam-2-7b" (a niche Arabic model, wrong for this
+        // agent) still exists on Groq's API at all. gpt-oss-120b (Groq's
+        // current general-purpose model, confirmed via a live /v1/models
+        // call) isn't in the plugin's list under any prefix, so no model
+        // string could ever satisfy it. Calling Groq's OpenAI-compatible API
+        // directly sidesteps that stale allowlist entirely — same pattern as
+        // tryOpenRouter above.
+        const groqKey = process.env.GROQ_API_KEY;
+        if (!groqKey) throw new Error('No Groq API key');
+        const model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+        const groqMessages = [
+            { role: 'system', content: system },
+            ...messages.map((m) => ({ role: m.role === 'model' ? 'assistant' : m.role, content: m.content[0].text })),
+        ];
+
+        const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` },
+            body: JSON.stringify({ model, messages: groqMessages, max_tokens: 1000 }),
+        });
+        const raw = await resp.text();
+        if (!resp.ok) throw new Error(`Groq error status=${resp.status} body=${raw.slice(0, 1000)}`);
+
+        const json = JSON.parse(raw);
+        const text = json?.choices?.[0]?.message?.content || '';
+        const usage: Usage = json?.usage
+            ? { tokensIn: Number(json.usage.prompt_tokens) || 0, tokensOut: Number(json.usage.completion_tokens) || 0 }
             : null;
-        return { text, provider: 'genkit', usage };
+        return { text, provider: 'groq', usage };
     };
 
     // Decide order

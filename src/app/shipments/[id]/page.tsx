@@ -48,6 +48,7 @@ export default function ShipmentDetailPage() {
   const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("overview");
 
   const [tripDialogOpen, setTripDialogOpen] = useState(false);
   const [waybillOpen, setWaybillOpen] = useState(false);
@@ -111,7 +112,9 @@ export default function ShipmentDetailPage() {
   const advanceStage = async (next: string) => {
     if (!shipment) return;
     if (next === "active" && trips.filter((t) => t.vehicle_id || t.truck_id).length === 0) {
-      toast({ title: "Assign at least one truck before dispatching", variant: "destructive" });
+      toast({ title: "Assign at least one truck before dispatching", description: "Opening the truck assignment form for you.", variant: "destructive" });
+      setTab("trucks");
+      setTripDialogOpen(true);
       return;
     }
     setBusy(true);
@@ -293,7 +296,7 @@ export default function ShipmentDetailPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <Tabs defaultValue="overview">
+              <Tabs value={tab} onValueChange={setTab}>
                 <TabsList className="flex w-full overflow-x-auto no-scrollbar justify-start sm:grid sm:grid-cols-5">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="trucks">Trucks & Trips</TabsTrigger>

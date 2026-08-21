@@ -71,9 +71,19 @@ export default function PublicQuotationPage() {
     }
   };
 
+  const [pdfBusy, setPdfBusy] = useState(false);
+
   const pdf = () => {
     if (!quotation) return;
-    downloadDocumentPdf({
+    // jsPDF's document build (autoTable, image embedding) runs synchronously
+    // and single-handedly blocks the main thread long enough to trip
+    // Chrome's INP warning. Setting busy state first, then deferring the
+    // actual build past the next paint, lets the button's own visual
+    // feedback render before the block happens instead of during it.
+    setPdfBusy(true);
+    setTimeout(() => {
+      try {
+        downloadDocumentPdf({
       kind: "quotation",
       number: quotation.quotation_number,
       dateIssued: quotation.quotation_date,
@@ -90,7 +100,11 @@ export default function PublicQuotationPage() {
       subtotal: Number(quotation.subtotal) || 0, vatAmount: Number(quotation.vat_amount) || 0, total: Number(quotation.total_amount) || 0,
       lines: lines.map((l) => ({ description: l.description, item_type_label: l.service_type, quantity: l.quantity, duration_days: l.duration_days, unit_price: l.unit_price, line_total: l.line_total })),
       termsConditions: quotation.terms_conditions,
-    });
+        });
+      } finally {
+        setPdfBusy(false);
+      }
+    }, 0);
   };
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="size-8 animate-spin text-muted-foreground" /></div>;
@@ -153,7 +167,9 @@ export default function PublicQuotationPage() {
           <div className="text-xs text-muted-foreground"><span className="font-bold">Payment Terms:</span> {quotation.payment_terms}</div>
         )}
 
-        <Button onClick={pdf} variant="outline" className="w-full gap-2"><Download className="size-4" /> Download PDF</Button>
+        <Button onClick={pdf} variant="outline" className="w-full gap-2" disabled={pdfBusy}>
+          {pdfBusy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />} {pdfBusy ? "Generating…" : "Download PDF"}
+        </Button>
 
         {!decided && (
           <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
