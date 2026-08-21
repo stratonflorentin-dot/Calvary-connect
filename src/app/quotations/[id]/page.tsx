@@ -194,20 +194,32 @@ export default function QuotationDetailPage() {
             <ArrowLeft className="size-4" /> Back to Quotations
           </Link>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black text-foreground font-mono">{quotation.quotation_number}</h1>
-              <Badge variant="outline" className={STATUS_BADGES[quotation.status] ?? ""}>{quotation.status}</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              {["draft", "sent"].includes(quotation.status) && (
-                <Button onClick={send} disabled={sending} size="sm" className="gap-2">
-                  {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Send to Customer
-                </Button>
+          {/* Letterhead banner — matches the colored, logo'd look of the Invoice PDF/dialog */}
+          <div className="rounded-2xl bg-primary text-primary-foreground p-5 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              {company.logoDataUrl && (
+                <img src={company.logoDataUrl} alt="Company logo" className="h-12 w-auto max-w-[140px] object-contain bg-white/90 rounded-md p-1 shrink-0" />
               )}
-              <Button onClick={duplicate} variant="outline" size="sm" className="gap-2"><Copy className="size-4" /> Duplicate</Button>
-              <Button onClick={pdf} variant="outline" size="sm" className="gap-2"><Download className="size-4" /> PDF</Button>
+              <div className="min-w-0">
+                <p className="font-black text-lg truncate">{company.company_name || "Company"}</p>
+                {company.tagline && <p className="text-xs text-primary-foreground/70 truncate">{company.tagline}</p>}
+              </div>
             </div>
+            <div className="text-right">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-foreground/70">Quotation</p>
+              <h1 className="text-2xl font-black font-mono">{quotation.quotation_number}</h1>
+              <Badge variant="outline" className="mt-1 border-white/30 text-primary-foreground bg-white/10">{quotation.status}</Badge>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {["draft", "sent"].includes(quotation.status) && (
+              <Button onClick={send} disabled={sending} size="sm" className="gap-2">
+                {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Send to Customer
+              </Button>
+            )}
+            <Button onClick={duplicate} variant="outline" size="sm" className="gap-2"><Copy className="size-4" /> Duplicate</Button>
+            <Button onClick={pdf} variant="outline" size="sm" className="gap-2"><Download className="size-4" /> PDF</Button>
           </div>
 
           {quotation.status !== "draft" && (
@@ -262,7 +274,7 @@ export default function QuotationDetailPage() {
             <div className="p-4 border-t border-border ml-auto max-w-xs space-y-1 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(quotation.subtotal, quotation.currency)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">{quotation.zero_rated_vat ? "VAT (zero-rated)" : `VAT (${quotation.vat_rate}%)`}</span><span>{formatCurrency(quotation.vat_amount, quotation.currency)}</span></div>
-              <div className="flex justify-between font-black text-base pt-1 border-t border-border"><span>Total</span><span>{formatCurrency(quotation.total_amount, quotation.currency)}</span></div>
+              <div className="flex justify-between font-black text-base pt-2 mt-1 border-t-2 border-primary/30 bg-primary/5 -mx-4 px-4 py-2 rounded-b-lg text-primary"><span>Total</span><span>{formatCurrency(quotation.total_amount, quotation.currency)}</span></div>
             </div>
           </div>
 

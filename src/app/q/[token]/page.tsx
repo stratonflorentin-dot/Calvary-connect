@@ -14,15 +14,6 @@ import { CheckCircle2, Download, FileText, Loader2, XCircle } from "lucide-react
 // unguessable token in the URL, same trust model as any "view this
 // invoice" email link. Data comes from /api/quotations/public/[token],
 // which uses the service-role client since there's no session here.
-const STATUS_BADGES: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground border-border",
-  sent: "bg-info/10 text-info border-info/20",
-  viewed: "bg-warning/10 text-warning border-warning/20",
-  accepted: "bg-success/10 text-success border-success/20",
-  rejected: "bg-destructive/10 text-destructive border-destructive/20",
-  expired: "bg-muted text-muted-foreground border-border",
-};
-
 export default function PublicQuotationPage() {
   const params = useParams();
   const token = params.token as string;
@@ -118,10 +109,15 @@ export default function PublicQuotationPage() {
   return (
     <div className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center">
-          <FileText className="size-8 mx-auto mb-2 text-primary" />
-          <h1 className="text-xl font-black text-foreground">Quotation {quotation.quotation_number}</h1>
-          <Badge variant="outline" className={`${STATUS_BADGES[quotation.status] ?? ""} mt-2`}>{quotation.status}</Badge>
+        <div className="rounded-2xl bg-primary text-primary-foreground p-6 text-center">
+          {company.logoDataUrl ? (
+            <img src={company.logoDataUrl} alt="Company logo" className="h-14 w-auto max-w-[160px] object-contain bg-white/90 rounded-md p-1.5 mx-auto mb-2" />
+          ) : (
+            <FileText className="size-8 mx-auto mb-2 text-primary-foreground/80" />
+          )}
+          <p className="font-black text-sm text-primary-foreground/80">{company.company_name || "Quotation"}</p>
+          <h1 className="text-xl font-black">Quotation {quotation.quotation_number}</h1>
+          <Badge variant="outline" className="border-white/30 text-primary-foreground bg-white/10 mt-2">{quotation.status}</Badge>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
@@ -149,7 +145,7 @@ export default function PublicQuotationPage() {
           <div className="p-4 border-t border-border ml-auto max-w-xs space-y-1 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(quotation.subtotal, quotation.currency)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">{quotation.zero_rated_vat ? "VAT (zero-rated)" : `VAT (${quotation.vat_rate}%)`}</span><span>{formatCurrency(quotation.vat_amount, quotation.currency)}</span></div>
-            <div className="flex justify-between font-black text-base pt-1 border-t border-border"><span>Total</span><span>{formatCurrency(quotation.total_amount, quotation.currency)}</span></div>
+            <div className="flex justify-between font-black text-base pt-2 mt-1 border-t-2 border-primary/30 bg-primary/5 -mx-4 px-4 py-2 rounded-b-lg text-primary"><span>Total</span><span>{formatCurrency(quotation.total_amount, quotation.currency)}</span></div>
           </div>
         </div>
 
