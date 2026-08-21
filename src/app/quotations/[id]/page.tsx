@@ -81,7 +81,16 @@ export default function QuotationDetailPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      toast({ variant: "success", title: "Quotation sent", description: `Emailed to ${quotation.customer?.email}` });
+      if (json.emailSent) {
+        toast({ variant: "success", title: "Quotation sent", description: `Emailed to ${quotation.customer?.email}` });
+      } else {
+        await navigator.clipboard?.writeText(json.link).catch(() => {});
+        toast({
+          variant: "success",
+          title: "Quotation sent",
+          description: `Email wasn't sent (${json.emailError || "not configured"}) — link copied, share it directly: ${json.link}`,
+        });
+      }
       load();
     } catch (err: any) {
       toast({ title: "Couldn't send", description: err.message, variant: "destructive" });

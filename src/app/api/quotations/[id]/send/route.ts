@@ -58,24 +58,38 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     customerEmail = body.email || customerEmail;
     customerName = body.customerName || customerName;
 
-    if (!customerEmail) {
-      return NextResponse.json({ error: "No customer email on file — pass one explicitly." }, { status: 400 });
-    }
-
     const link = `${appUrl()}/q/${quotation.public_token}`;
     const amount = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(Number(quotation.total_amount) || 0);
 
-    await sendClientEmail({
-      to: customerEmail,
-      toName: customerName || undefined,
-      subject: `Quotation ${quotation.quotation_number || ""} — ${quotation.currency} ${amount}`,
-      body:
-        `Dear ${customerName || "Customer"},\n\n` +
-        `Please find your quotation ${quotation.quotation_number || ""} for ${quotation.currency} ${amount}.\n\n` +
-        `View, accept or decline it here:\n${link}\n\n` +
-        `Thank you for the opportunity to work with you.\n\n` +
-        `Calvary Investment Co. Ltd`,
-    });
+    // The public link is the real mechanism — it's what lets the customer
+    // accept/reject and what stamps viewed_at. Email is a delivery
+    // convenience on top of that, so a missing customer email or
+    // unconfigured SMTP (GMAIL_USER/GMAIL_APP_PASSWORD) shouldn't block
+    // the Draft → Sent transition itself; the link still works when
+    // shared manually (WhatsApp, copy/paste, etc).
+    let emailSent = false;
+    let emailError: string | null = null;
+    if (customerEmail) {
+      try {
+        await sendClientEmail({
+          to: customerEmail,
+          toName: customerName || undefined,
+          subject: `Quotation ${quotation.quotation_number || ""} — ${quotation.currency} ${amount}`,
+          body:
+            `Dear ${customerName || "Customer"},\n\n` +
+            `Please find your quotation ${quotation.quotation_number || ""} for ${quotation.currency} ${amount}.\n\n` +
+            `View, accept or decline it here:\n${link}\n\n` +
+            `Thank you for the opportunity to work with you.\n\n` +
+            `Calvary Investment Co. Ltd`,
+        });
+        emailSent = true;
+      } catch (err: any) {
+        console.warn(`[quotations/${id}/send] email not sent:`, err.message);
+        emailError = err.message;
+      }
+    } else {
+      emailError = "No customer email on file";
+    }
 
     const { data: updated, error: updateErr } = await admin
       .from("quotations")
@@ -85,7 +99,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .maybeSingle();
     if (updateErr) throw updateErr;
 
-    return NextResponse.json({ quotation: updated, link });
+    return NextResponse.json({ quotation: updated, link, emailSent, emailError });
   } catch (error: any) {
     console.error("POST /api/quotations/[id]/send error:", error);
     const status = /^UNAUTHORIZED/.test(error.message) ? 401 : /^FORBIDDEN/.test(error.message) ? 403 : 500;

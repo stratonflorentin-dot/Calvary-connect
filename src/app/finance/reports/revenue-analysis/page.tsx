@@ -19,6 +19,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
+import { getRate } from "@/lib/finance/fx";
+import { Loader2 } from "lucide-react";
 
 type Invoice = {
   id: string;
@@ -27,6 +29,7 @@ type Invoice = {
   amount: number;
   currency: string;
   due_date: string;
+  issue_date?: string;
   status: string;
   type: string;
 };
@@ -162,6 +165,51 @@ export default function RevenueAnalysisPage() {
     return currencyMap;
   }, [revenueEligibleInvoices, income]);
 
+  // Consolidated (TZS) — every non-TZS amount converted at the rate
+  // effective on that transaction's OWN date (fx.ts's getRate picks the
+  // most recent CRDB-sourced rate on or before that date), not blended
+  // or converted at today's rate. A row whose currency/date has no rate
+  // on file is skipped, not fabricated. Per-currency figures stay below,
+  // unconverted — this is an added headline, not a replacement.
+  const [consolidated, setConsolidated] = useState({ total: 0, paid: 0, pending: 0, loading: true, skipped: 0 });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setConsolidated((c) => ({ ...c, loading: true }));
+      type Row = { amount: number; currency: string; date: string; status: string | null; kind: "invoice" | "income" };
+      const rows: Row[] = [
+        ...revenueEligibleInvoices.map((i) => ({ amount: i.amount, currency: i.currency || "TZS", date: i.issue_date || i.due_date, status: i.status, kind: "invoice" as const })),
+        ...income.map((inc) => ({ amount: inc.amount, currency: inc.currency || "TZS", date: inc.date, status: null, kind: "income" as const })),
+      ].filter((r) => r.date);
+
+      const uniqueKeys = Array.from(new Set(rows.map((r) => `${r.currency}|${r.date}`)));
+      const rateEntries = await Promise.all(
+        uniqueKeys.map(async (key) => {
+          const [cur, date] = key.split("|");
+          if (cur === "TZS") return [key, 1] as const;
+          const rate = await getRate(cur, "TZS", date);
+          return [key, rate] as const;
+        }),
+      );
+      const rateMap = new Map(rateEntries);
+
+      let total = 0, paid = 0, pending = 0, skipped = 0;
+      for (const r of rows) {
+        const rate = rateMap.get(`${r.currency}|${r.date}`);
+        if (rate == null) { skipped++; continue; }
+        const tzsAmt = r.amount * rate;
+        total += tzsAmt;
+        if (r.kind === "invoice") {
+          if (r.status === "paid") paid += tzsAmt;
+          if (r.status === "pending" || r.status === "sent" || r.status === "partial") pending += tzsAmt;
+        }
+      }
+      if (!cancelled) setConsolidated({ total, paid, pending, loading: false, skipped });
+    })();
+    return () => { cancelled = true; };
+  }, [revenueEligibleInvoices, income]);
+
   const customerData = useMemo(() => {
     const customerMap = new Map<string, { amount: number; currency: string }>();
     revenueEligibleInvoices.forEach((invoice) => {
@@ -252,9 +300,9 @@ export default function RevenueAnalysisPage() {
     doc.text("Revenue Analysis Report", 14, 22);
     doc.setFontSize(11);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-    doc.text(`Total Revenue: ${formatAmount(totalRevenue)}`, 14, 38);
-    doc.text(`Paid Revenue: ${formatAmount(paidRevenue)}`, 14, 46);
-    doc.text(`Pending Revenue: ${formatAmount(pendingRevenue)}`, 14, 54);
+    doc.text(`Total Revenue (Consolidated TZS): ${formatCurrency(consolidated.total, "TZS")}`, 14, 38);
+    doc.text(`Paid Revenue (Consolidated TZS): ${formatCurrency(consolidated.paid, "TZS")}`, 14, 46);
+    doc.text(`Pending Revenue (Consolidated TZS): ${formatCurrency(consolidated.pending, "TZS")}`, 14, 54);
 
     // Customer breakdown table
     const customerTableData = customerData.map((item) => [
@@ -391,6 +439,43 @@ export default function RevenueAnalysisPage() {
           <Input type="date" value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })} />
         </div>
       </div>
+
+      {/* Consolidated (TZS) — each transaction converted at its own date's CRDB rate */}
+      <Card className="mb-6 border-primary/30">
+        <CardHeader className="bg-primary/5">
+          <CardTitle className="flex items-center justify-between text-sm">
+            <span>Consolidated (TZS)</span>
+            <span className="text-xs font-normal text-muted-foreground">Each amount converted at its own date's CRDB rate — not today's rate</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {consolidated.loading ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="size-4 animate-spin" /> Converting…</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Total Revenue</p>
+                  <p className="text-2xl font-bold text-success">{formatCurrency(consolidated.total, "TZS")}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Paid</p>
+                  <p className="text-2xl font-bold text-success">{formatCurrency(consolidated.paid, "TZS")}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Pending</p>
+                  <p className="text-2xl font-bold text-warning">{formatCurrency(consolidated.pending, "TZS")}</p>
+                </div>
+              </div>
+              {consolidated.skipped > 0 && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  {consolidated.skipped} entr{consolidated.skipped === 1 ? "y" : "ies"} excluded — no CRDB rate on file for that currency as of that date. Sync rates in Finance &gt; Accounting &gt; FX Rates.
+                </p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Summary Cards by Currency */}
       <section className="space-y-6 mb-6">
