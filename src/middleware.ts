@@ -106,7 +106,7 @@ export function middleware(request: NextRequest) {
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://vercel.live",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self' https://fonts.gstatic.com https://vercel.live",
     // OSM/CARTO tile hosts power the Leaflet 2D map; the CARTO apex domain
     // (basemaps.cartocdn.com, no subdomain) serves MapLibre sprites — a
     // *.basemaps wildcard does NOT match the apex, which is why tiles failed.
@@ -120,7 +120,11 @@ export function middleware(request: NextRequest) {
     // fetch() — all governed by connect-src. basemaps.cartocdn.com (apex)
     // hosts the Voyager GL style; demotiles.maplibre.org is the fallback style.
     // stun: entries are WebRTC ICE candidate gathering for voice/video calls.
-    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com stun: turn:",
+    // wss://ws-*.pusher.com / sockjs-mt*.pusher.com: nothing in this app's
+    // own code calls Pusher — it's the Vercel Live toolbar's own realtime
+    // comments connection (vercel.live is already allowed above/below for
+    // that same toolbar), blocked here without this.
+    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com wss://*.pusher.com https://*.pusher.com stun: turn:",
     // MapLibre GL spawns its tile workers from blob: URLs; without worker-src
     // the default-src 'self' fallback blocks them and the canvas stays blank.
     "worker-src 'self' blob:",

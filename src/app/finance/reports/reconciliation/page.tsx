@@ -265,7 +265,7 @@ export default function ReconciliationReport() {
                           <TableCell className="font-mono">{item.id}</TableCell>
                           <TableCell>{item.date || item.issue_date}</TableCell>
                           <TableCell>
-                            {item.amount ? formatCurrency(item.amount, 'TZS') : '-'}
+                            {item.amount ? formatCurrency(item.amount, item.currency || 'TZS') : '-'}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-red-600 border-red-300">

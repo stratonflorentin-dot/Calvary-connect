@@ -61,8 +61,14 @@ export default function QuotationsListPage() {
     const draft = withStatus.filter((q) => q._status === "draft").length;
     const sent = withStatus.filter((q) => ["sent", "viewed"].includes(q._status)).length;
     const accepted = withStatus.filter((q) => q._status === "accepted").length;
-    const totalValue = withStatus.reduce((sum, q) => sum + (Number(q.total_amount) || 0), 0);
-    return { total, draft, sent, accepted, totalValue };
+    // Never sum across currencies into one number — a USD quote and a
+    // TZS quote added together is meaningless, not just mislabeled.
+    const totalValueByCurrency = new Map<string, number>();
+    withStatus.forEach((q) => {
+      const cur = q.currency || "TZS";
+      totalValueByCurrency.set(cur, (totalValueByCurrency.get(cur) ?? 0) + (Number(q.total_amount) || 0));
+    });
+    return { total, draft, sent, accepted, totalValueByCurrency };
   }, [withStatus]);
 
   const filtered = useMemo(() => {
@@ -114,7 +120,13 @@ export default function QuotationsListPage() {
             </div>
             <div className="bg-card border border-border rounded-2xl p-4">
               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Value</p>
-              <p className="text-lg font-black text-foreground">{formatCurrency(stats.totalValue, "TZS")}</p>
+              {stats.totalValueByCurrency.size === 0 ? (
+                <p className="text-lg font-black text-foreground">{formatCurrency(0, "TZS")}</p>
+              ) : (
+                Array.from(stats.totalValueByCurrency.entries()).map(([cur, val]) => (
+                  <p key={cur} className="text-lg font-black text-foreground leading-tight">{formatCurrency(val, cur)}</p>
+                ))
+              )}
             </div>
           </div>
 

@@ -128,7 +128,7 @@ export class ChartOfAccountsService {
           accountsSummary[summaryIndex].totalAmount += (parseFloat(exp.amount) || 0);
         }
       } else {
-        unmappedItems.push({ type: 'expense', id: exp.id, category: exp.category, amount: exp.amount, date: exp.date });
+        unmappedItems.push({ type: 'expense', id: exp.id, category: exp.category, amount: exp.amount, currency: exp.currency, date: exp.date });
       }
     });
 
@@ -148,7 +148,7 @@ export class ChartOfAccountsService {
           accountsSummary[summaryIndex].totalAmount += (parseFloat(inv.amount) || 0);
         }
       } else {
-        unmappedItems.push({ type: 'invoice', id: inv.id, invoice_type: inv.type, amount: inv.amount, date: inv.issue_date });
+        unmappedItems.push({ type: 'invoice', id: inv.id, invoice_type: inv.type, amount: inv.amount, currency: inv.currency, date: inv.issue_date });
       }
     });
 
