@@ -106,10 +106,18 @@ function TripsContent() {
     const active = trips.filter((t) => ["pending", "loading", "in_transit"].includes(t.status)).length;
     const overdue = trips.filter((t) => t.status !== "delivered" && t.status !== "cancelled" && t.created_at && isOverdue("trip", t.created_at)).length;
     const delivered = trips.filter((t) => t.status === "delivered").length;
-    const revenue = trips
+    // Grouped by currency, not blended into one number — a USD trip and a
+    // TZS trip summed together (or worse, the USD figure formatted with a
+    // hardcoded TZS label) is meaningless, not just mislabeled.
+    const revenueByCurrency: Record<string, number> = {};
+    trips
       .filter((t) => t.status === "delivered")
-      .reduce((s, t) => s + Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount ?? 0), 0);
-    return { total: trips.length, active, overdue, delivered, revenue };
+      .forEach((t) => {
+        const cur = t.currency || "TZS";
+        const amt = Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount ?? 0);
+        revenueByCurrency[cur] = (revenueByCurrency[cur] || 0) + amt;
+      });
+    return { total: trips.length, active, overdue, delivered, revenueByCurrency };
   }, [trips]);
 
   const filtered = useMemo(() => {
@@ -191,7 +199,7 @@ function TripsContent() {
             <motion.div variants={listItem}><StatCard label="Active" value={stats.active} icon={Truck} accent="bg-info/10 text-info" /></motion.div>
             <motion.div variants={listItem}><StatCard label="Overdue" value={stats.overdue} icon={Flame} accent="bg-destructive/10 text-destructive" /></motion.div>
             <motion.div variants={listItem}><StatCard label="Delivered" value={stats.delivered} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" /></motion.div>
-            <motion.div variants={listItem}><StatCard label="Revenue (delivered)" value={format(stats.revenue)} icon={Package} accent="bg-success/10 text-success" /></motion.div>
+            <motion.div variants={listItem}><StatCard label="Revenue (delivered)" value={Object.keys(stats.revenueByCurrency).length ? Object.entries(stats.revenueByCurrency).map(([cur, amt]) => format(amt, cur)).join(" · ") : format(0)} icon={Package} accent="bg-success/10 text-success" /></motion.div>
           </motion.div>
 
           {/* Filter chips */}
@@ -315,7 +323,7 @@ function TripsContent() {
                             {age > 24 ? `${(age / 24).toFixed(1)}d` : `${age.toFixed(0)}h`}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-foreground">
-                            {t.total_amount || t.sales_amount || t.totalAmount || t.salesAmount ? format(Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount)) : "—"}
+                            {t.total_amount || t.sales_amount || t.totalAmount || t.salesAmount ? format(Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount), t.currency || "TZS") : "—"}
                           </td>
                           <td className="px-4 py-3">
                             <TransitionButtons
@@ -408,7 +416,7 @@ function TripsContent() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Amount</span>
-                        <span className="font-bold">{t.total_amount || t.sales_amount || t.totalAmount || t.salesAmount ? format(Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount)) : "—"}</span>
+                        <span className="font-bold">{t.total_amount || t.sales_amount || t.totalAmount || t.salesAmount ? format(Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount), t.currency || "TZS") : "—"}</span>
                       </div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-border">
