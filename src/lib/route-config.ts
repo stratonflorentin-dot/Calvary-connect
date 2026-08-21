@@ -351,6 +351,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     category: "reports",
   },
   {
+    path: "/finance/reports/statement-of-accounts",
+    label: "Statement of Accounts",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "reports",
+  },
+  {
     path: "/finance/reports/tax-reports",
     label: "Tax Reports (VAT/WHT)",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
