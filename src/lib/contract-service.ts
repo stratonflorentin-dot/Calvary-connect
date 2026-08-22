@@ -428,10 +428,26 @@ export async function saveContractFromAgreement(
     ? (await supabase.from("contracts").select("id").eq("quotation_id", ctx.quotationId).maybeSingle()).data
     : null;
 
+  // effective_date/expiry_date/term_months are NOT NULL, but the form only
+  // ever collects a start date and an optional end date — a Single Trip
+  // contract in particular has no real "term" to speak of. Derive sensible
+  // values rather than leaving them null: 1 month for a one-off trip, 12
+  // for a Long Term agreement, and an expiry computed from that when no
+  // end date was actually entered.
+  const termMonths = data.contractType === "Long Term" ? 12 : 1;
+  const expiryDate = data.endDate || (() => {
+    const d = new Date(data.startDate);
+    d.setMonth(d.getMonth() + termMonths);
+    return d.toISOString().slice(0, 10);
+  })();
+
   const payload = {
     contract_type: data.contractType,
     start_date: data.startDate,
+    effective_date: data.startDate,
     end_date: data.endDate || null,
+    expiry_date: expiryDate,
+    term_months: termMonths,
     origin: ctx.origin || null,
     destination: data.destination || null,
     contract_value: data.contractValue || 0,
