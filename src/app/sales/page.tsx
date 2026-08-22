@@ -325,11 +325,27 @@ function SalesModuleContent() {
   }
 
   async function fetchContracts() {
+    // The real contracts table (customer_id/quotation_id-linked — what
+    // saveContractFromAgreement actually writes to), not transport_contracts,
+    // which nothing currently writes to and has zero rows live. Field
+    // names differ slightly (payment_schedule vs payment_terms, etc.) —
+    // mapped here so the existing render code below doesn't need to change.
     const { data, error } = await supabase
-      .from('transport_contracts')
+      .from('contracts')
       .select('*, customers(company_name)')
       .order('created_at', { ascending: false });
-    if (!error) setContracts(data?.map(c => ({ ...c, company_name: c.customers?.company_name })) || []);
+    if (!error) {
+      setContracts(
+        (data || []).map((c: any) => ({
+          ...c,
+          company_name: c.customers?.company_name,
+          payment_terms: c.payment_schedule,
+          min_monthly_trips: c.minimum_monthly_volume,
+          signed_by_client: !!c.signed_by_customer,
+          signed_by_calvary: !!c.signed_by_company,
+        })),
+      );
+    }
   }
 
   async function fetchRateSheets() {
@@ -1164,7 +1180,12 @@ function SalesModuleContent() {
                     initialData: contractInitialData ?? undefined,
                     shipmentContext: contractShipmentContext,
                     hideTrigger: true,
-                    onSaved: () => toast({ variant: 'success', title: 'Contract linked to shipment' }),
+                    onSaved: () => {
+                      toast({ variant: 'success', title: 'Contract linked to shipment' });
+                      fetchContracts();
+                      setContractFormOpen(false);
+                      setShowContractGenerator(false);
+                    },
                   } : {})}
                 />
               </div>
