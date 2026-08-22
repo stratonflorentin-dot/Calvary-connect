@@ -88,9 +88,11 @@ export function TransportAgreementGenerator({ open: openProp, onOpenChange: onOp
   useEffect(() => {
     if (!initialData?.destinationHint || dbRates.length === 0) return;
     const hint = initialData.destinationHint.toLowerCase();
-    const match = dbRates.find(
-      (r) => r.route_name.toLowerCase().includes(hint) || hint.includes(r.route_name.toLowerCase()),
-    );
+    const match = dbRates.find((r) => {
+      if (!r.route_name) return false;
+      const name = r.route_name.toLowerCase();
+      return name.includes(hint) || hint.includes(name);
+    });
     if (match) setFormData((prev) => ({ ...prev, destination: match.route_name }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbRates, initialData?.destinationHint]);
