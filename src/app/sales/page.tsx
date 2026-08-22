@@ -32,6 +32,8 @@ import { formatCurrency } from '@/components/ui/currency-badge';
 import Link from 'next/link';
 import { ContractGenerator } from './contract-generator';
 import { TransportAgreementGenerator } from './transport-agreement-generator';
+import { fetchPriorContractTerms, type ShipmentContractContext } from '@/lib/contract-service';
+import type { ContractData } from '@/lib/contract-service';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -163,6 +165,53 @@ function SalesModuleContent() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showContractGenerator, setShowContractGenerator] = useState(false);
   const [previewContract, setPreviewContract] = useState<TransportContract | null>(null);
+
+  // Arrived here via a Shipment's "Contract" action (?shipmentId=...) —
+  // prefill the Transport Agreement Generator instead of a blank form.
+  const [contractShipmentContext, setContractShipmentContext] = useState<ShipmentContractContext | null>(null);
+  const [contractInitialData, setContractInitialData] = useState<(Partial<ContractData> & { destinationHint?: string }) | null>(null);
+  const [contractFormOpen, setContractFormOpen] = useState(false);
+
+  useEffect(() => {
+    const shipmentId = searchParams.get('shipmentId');
+    if (!shipmentId) return;
+    (async () => {
+      const { data: shipment } = await supabase
+        .from('shipments')
+        .select('*, customer:customer_id(company_name, address, phone, email)')
+        .eq('id', shipmentId)
+        .maybeSingle();
+      if (!shipment) return;
+      const customer = shipment.customer as any;
+      const priorTerms = shipment.customer_id ? await fetchPriorContractTerms(shipment.customer_id) : null;
+
+      setContractShipmentContext({
+        shipmentId: shipment.id,
+        customerId: shipment.customer_id,
+        quotationId: shipment.quotation_id || null,
+        origin: shipment.origin_city,
+        currency: shipment.currency || 'TZS',
+      });
+      setContractInitialData({
+        clientName: customer?.company_name || '',
+        clientRoad: customer?.address || '',
+        clientPhone: customer?.phone || '',
+        clientEmail: customer?.email || '',
+        destinationHint: shipment.destination_city || '',
+        contractType: (priorTerms?.contract_type as any) || 'Single Trip',
+        startDate: shipment.requested_pickup || new Date().toISOString().slice(0, 10),
+        endDate: shipment.promised_delivery || '',
+        minMonthlyTrips: priorTerms?.minimum_monthly_volume ?? undefined,
+        contractValue: Number(shipment.final_amount ?? shipment.quoted_amount) || 0,
+        paymentTerms: (priorTerms?.payment_schedule as any) || '30 Days',
+        notes: priorTerms?.notes || '',
+      });
+      setActiveTab('contracts');
+      setShowContractGenerator(true);
+      setContractFormOpen(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Rate sheets from JSONB format (contract_templates system)
   const [jsonbRateSheets, setJsonbRateSheets] = useState<Array<{ id: string; rate_sheet_name: string; effective_date: string; currency: string; rates: any[]; special_conditions: string; is_active: boolean }>>([]);
@@ -1101,7 +1150,16 @@ function SalesModuleContent() {
                     Close
                   </Button>
                 </div>
-                <TransportAgreementGenerator />
+                <TransportAgreementGenerator
+                  {...(contractShipmentContext ? {
+                    open: contractFormOpen,
+                    onOpenChange: setContractFormOpen,
+                    initialData: contractInitialData ?? undefined,
+                    shipmentContext: contractShipmentContext,
+                    hideTrigger: true,
+                    onSaved: () => toast({ variant: 'success', title: 'Contract linked to shipment' }),
+                  } : {})}
+                />
               </div>
             ) : (
               <Card className="shadow-lg border-border">

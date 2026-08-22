@@ -17,9 +17,6 @@ import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { AuditTrailService } from "@/services/audit-trail-service";
 import { TripFormDialog } from "@/components/trip/trip-form-dialog";
-import { ContractPreviewModal } from "@/components/contracts/contract-preview-modal";
-import { generateContractNumber } from "@/lib/contract-service";
-import type { Contract } from "@/types/contract";
 import {
   ArrowLeft, CheckCircle2, Download, Edit2, FileText, Loader2,
   Package, PlusCircle, Ship, Truck, X, XCircle,
@@ -59,9 +56,6 @@ export default function ShipmentDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ origin_city: "", destination_city: "", cargo_description: "", requested_pickup: "", promised_delivery: "" });
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [contractData, setContractData] = useState<Contract | null>(null);
-  const [contractModalOpen, setContractModalOpen] = useState(false);
-  const [contractBusy, setContractBusy] = useState(false);
 
   useEffect(() => {
     supabase.from("company_settings").select("logo_url").limit(1).maybeSingle().then(({ data }) => {
@@ -212,112 +206,20 @@ export default function ShipmentDetailPage() {
     doc.save(`${shipment.shipment_number}-summary.pdf`);
   };
 
-  // Real contract generation, not a stand-in: creates (or reuses) a row in
-  // the actual contracts table — the one this app already has a full
-  // system for (contract-service.ts, ContractPreviewModal) but that had
-  // never been linked to Shipments. One contract per quotation; re-clicking
-  // reopens the same one instead of duplicating it.
+  // The Transport Agreement Generator (Sales > Contracts) is the real
+  // contract tool — richer template (route/rate annexure, full contract
+  // details), and where "old contract's terms carry into the new one"
+  // actually lives (contract-service.ts's fetchPriorContractTerms). This
+  // just hands off with the shipment's id; that page fetches the
+  // shipment/quotation/customer and prefills the form itself.
   const canGenerateContract = hasPermission(["CEO", "ADMIN", "SALESMAN"]);
-  const generateContract = async () => {
-    if (!shipment || !user) return;
+  const openContractGenerator = () => {
+    if (!shipment) return;
     if (!shipment.quotation_id) {
       toast({ title: "No linked quotation", description: "This shipment has no quotation to base a contract on.", variant: "destructive" });
       return;
     }
-    setContractBusy(true);
-    try {
-      const { data: existing } = await supabase.from("contracts").select("*").eq("quotation_id", shipment.quotation_id).maybeSingle();
-      const { data: customerRow } = await supabase.from("customers").select("*").eq("id", shipment.customer_id).maybeSingle();
-
-      let row = existing;
-      if (!row) {
-        // Carry the customer's standing terms forward from their most
-        // recent contract (rate, billing frequency, T&Cs, etc.) rather
-        // than starting blank every time a new quotation converts —
-        // those are properties of the relationship, not of this one trip.
-        // Trip-specific fields (route, value, dates) still come fresh
-        // from this shipment/quotation, never copied.
-        const { data: priorContract } = await supabase
-          .from("contracts")
-          .select("contract_type, payment_schedule, billing_frequency, trips_per_month, minimum_monthly_volume, rate_per_km, rate_per_ton, terms_conditions")
-          .eq("customer_id", shipment.customer_id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        // contracts.client_id is NOT NULL — a legacy column the older
-        // contract pages still join against (client:clients(*)). clients
-        // is just a stub (id, name), so reuse the customer's own id as the
-        // client id (one real entity, two relationship models pointing at
-        // it) and backfill the stub row from the real customer's name
-        // instead of leaving client_id orphaned or fabricating a separate
-        // record.
-        const { data: existingClient } = await supabase.from("clients").select("id").eq("id", shipment.customer_id).maybeSingle();
-        if (!existingClient) {
-          await supabase.from("clients").insert({ id: shipment.customer_id, name: customerRow?.company_name || shipment.customer?.company_name || "Customer" });
-        }
-
-        const contractNumber = await generateContractNumber();
-        const { data: created, error } = await supabase.from("contracts").insert({
-          contract_number: contractNumber,
-          client_id: shipment.customer_id,
-          customer_id: shipment.customer_id,
-          quotation_id: shipment.quotation_id,
-          contract_type: priorContract?.contract_type || "Single Trip",
-          payment_schedule: priorContract?.payment_schedule ?? null,
-          billing_frequency: priorContract?.billing_frequency ?? null,
-          trips_per_month: priorContract?.trips_per_month ?? null,
-          minimum_monthly_volume: priorContract?.minimum_monthly_volume ?? null,
-          rate_per_km: priorContract?.rate_per_km ?? null,
-          rate_per_ton: priorContract?.rate_per_ton ?? null,
-          terms_conditions: priorContract?.terms_conditions ?? null,
-          contract_date: new Date().toISOString().slice(0, 10),
-          start_date: shipment.requested_pickup || new Date().toISOString().slice(0, 10),
-          end_date: shipment.promised_delivery || null,
-          origin: shipment.origin_city,
-          destination: shipment.destination_city,
-          contract_value: revenue || shipment.quoted_amount || shipment.final_amount || 0,
-          currency: shipment.currency || "TZS",
-          status: "draft",
-          created_by: user.id,
-        }).select().single();
-        if (error) throw error;
-        row = created;
-        await AuditTrailService.logCreate("sales", "shipment", shipment.id, row, user.id, `Contract ${contractNumber} generated for ${shipment.shipment_number}`);
-      }
-
-      setContractData({
-        ...row,
-        contractNumber: row.contract_number,
-        clientId: row.customer_id,
-        client_id: row.customer_id,
-        client: {
-          id: customerRow?.id || shipment.customer_id,
-          name: customerRow?.company_name || shipment.customer?.company_name || "",
-          address: customerRow?.address || "",
-          tin: customerRow?.tax_id || "",
-          email: customerRow?.email || shipment.customer?.email || "",
-          phone: customerRow?.phone || shipment.customer?.phone || "",
-        },
-        transporter: { id: "calvary", name: "CALVARY INVESTMENT CO LTD" },
-        effectiveDate: row.start_date || row.contract_date,
-        effective_date: row.start_date || row.contract_date,
-        expiryDate: row.end_date || row.start_date || row.contract_date,
-        expiry_date: row.end_date || row.start_date || row.contract_date,
-        termMonths: row.term_months || 1,
-        term_months: row.term_months || 1,
-        autoRenew: row.auto_renew || false,
-        auto_renew: row.auto_renew || false,
-        createdBy: row.created_by,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at || row.created_at,
-      } as unknown as Contract);
-      setContractModalOpen(true);
-    } catch (err: any) {
-      toast({ title: "Couldn't generate contract", description: err.message, variant: "destructive" });
-    } finally {
-      setContractBusy(false);
-    }
+    router.push(`/sales?tab=contracts&shipmentId=${shipment.id}`);
   };
 
   if (!role) return null;
@@ -341,8 +243,8 @@ export default function ShipmentDetailPage() {
               <Button variant="outline" size="sm" onClick={downloadSummary} className="gap-2"><Download className="size-4" /> Summary</Button>
               <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="gap-2"><Edit2 className="size-4" /> Edit</Button>
               {canGenerateContract && (
-                <Button variant="outline" size="sm" onClick={generateContract} disabled={contractBusy} className="gap-2">
-                  {contractBusy ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />} Contract
+                <Button variant="outline" size="sm" onClick={openContractGenerator} className="gap-2">
+                  <FileText className="size-4" /> Contract
                 </Button>
               )}
               {shipment.status !== "cancelled" && shipment.status !== "paid" && (
@@ -350,9 +252,6 @@ export default function ShipmentDetailPage() {
               )}
             </div>
           </div>
-          {contractData && (
-            <ContractPreviewModal contract={contractData} open={contractModalOpen} onOpenChange={setContractModalOpen} />
-          )}
 
           {/* 5-stage tracker */}
           {shipment.status === "cancelled" ? (

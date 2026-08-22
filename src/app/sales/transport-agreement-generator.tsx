@@ -10,8 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Download, Printer, Plus, Settings, Trash2, Pencil } from 'lucide-react';
-import { RATE_SHEET, ContractData, formatContractHTML, downloadContract, printContract } from '@/lib/contract-service';
+import { FileText, Download, Printer, Plus, Settings, Trash2, Pencil, Save, Loader2 } from 'lucide-react';
+import { RATE_SHEET, ContractData, formatContractHTML, downloadContract, printContract, saveContractFromAgreement, ShipmentContractContext } from '@/lib/contract-service';
+import { useSupabase } from '@/components/supabase-provider';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import { fetchRateSheets, upsertRateSheet, deleteRateSheet, RateSheetRoute } from '@/lib/rate-sheet-service';
 import { useToast } from '@/hooks/use-toast';
@@ -19,13 +20,32 @@ import { useCurrency } from '@/hooks/use-currency';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
-export function TransportAgreementGenerator() {
+interface TransportAgreementGeneratorProps {
+  /** Controlled mode — omit to fall back to the internal "+" trigger. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Pre-fills the form; a shipment's real destination may not exactly
+   * match a rate_sheets.route_name, so it's matched loosely once routes
+   * load rather than forced into the Select. */
+  initialData?: Partial<ContractData> & { destinationHint?: string };
+  /** When set, a "Save to Shipment" action persists a real contracts row
+   * (customer_id/quotation_id-linked) instead of only downloading/printing. */
+  shipmentContext?: ShipmentContractContext;
+  onSaved?: (contractId: string) => void;
+  hideTrigger?: boolean;
+}
+
+export function TransportAgreementGenerator({ open: openProp, onOpenChange: onOpenChangeProp, initialData, shipmentContext, onSaved, hideTrigger }: TransportAgreementGeneratorProps = {}) {
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
+  const { user } = useSupabase();
+  const [openState, setOpenState] = useState(false);
+  const isOpen = openProp ?? openState;
+  const setIsOpen = onOpenChangeProp ?? setOpenState;
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHTML, setPreviewHTML] = useState('');
   const [dbRates, setDbRates] = useState<RateSheetRoute[]>([]);
   const [loadingRates, setLoadingRates] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState<ContractData>({
     clientName: '',
@@ -53,19 +73,55 @@ export function TransportAgreementGenerator() {
     });
   }, []);
 
+  // Prefill from the shipment/quotation the moment it's handed in — the
+  // salesman still sees and can adjust every field before generating.
+  useEffect(() => {
+    if (!initialData) return;
+    const { destinationHint, ...rest } = initialData;
+    setFormData((prev) => ({ ...prev, ...rest }));
+  }, [initialData]);
+
+  // A shipment's real destination_city rarely matches a rate_sheets
+  // route_name exactly (free text vs. a maintained route list) — loose
+  // match once routes are loaded rather than forcing an invalid value
+  // into the Select.
+  useEffect(() => {
+    if (!initialData?.destinationHint || dbRates.length === 0) return;
+    const hint = initialData.destinationHint.toLowerCase();
+    const match = dbRates.find(
+      (r) => r.route_name.toLowerCase().includes(hint) || hint.includes(r.route_name.toLowerCase()),
+    );
+    if (match) setFormData((prev) => ({ ...prev, destination: match.route_name }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbRates, initialData?.destinationHint]);
+
   const loadDatabaseRates = async () => {
     setLoadingRates(true);
     try {
       const rates = await fetchRateSheets();
       setDbRates(rates);
-      if (rates.length > 0) {
-        setFormData(prev => ({ ...prev, destination: rates[0].route_name }));
+      if (rates.length > 0 && !initialData?.destinationHint) {
+        setFormData(prev => ({ ...prev, destination: prev.destination || rates[0].route_name }));
       }
     } catch (error) {
       console.error('Error loading rates:', error);
       toast({ title: 'Warning', description: 'Using default rates' });
     } finally {
       setLoadingRates(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!shipmentContext || !user) return;
+    setSaving(true);
+    try {
+      const contractId = await saveContractFromAgreement(shipmentContext, formData, user.id);
+      toast({ variant: 'success', title: 'Contract saved', description: 'Linked to this shipment’s quotation.' });
+      onSaved?.(contractId);
+    } catch (err: any) {
+      toast({ title: "Couldn't save contract", description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -95,12 +151,14 @@ export function TransportAgreementGenerator() {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button className="gap-2">
-            <Plus className="size-4" />
-            Create Transport Contract
-          </Button>
-        </DialogTrigger>
+        {!hideTrigger && (
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="size-4" />
+              Create Transport Contract
+            </Button>
+          </DialogTrigger>
+        )}
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Transport Contract</DialogTitle>
@@ -295,12 +353,18 @@ export function TransportAgreementGenerator() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 pt-4">
+            <div className="flex flex-wrap gap-2 pt-4">
               <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
               <Button variant="outline" onClick={handleGeneratePreview}>
                 <FileText className="size-4 mr-2" />
                 Preview
               </Button>
+              {shipmentContext && (
+                <Button variant="outline" onClick={handleSave} disabled={saving} className="gap-2">
+                  {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  Save to Shipment
+                </Button>
+              )}
               <Button onClick={handleDownload} className="flex-1">
                 <Download className="size-4 mr-2" />
                 Download
@@ -326,7 +390,13 @@ export function TransportAgreementGenerator() {
               dangerouslySetInnerHTML={{ __html: previewHTML }}
             />
           )}
-          <div className="flex gap-2 pt-4">
+          <div className="flex flex-wrap gap-2 pt-4">
+            {shipmentContext && (
+              <Button variant="outline" onClick={handleSave} disabled={saving} className="gap-2">
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                Save to Shipment
+              </Button>
+            )}
             <Button onClick={handleDownload} className="flex-1">
               <Download className="size-4 mr-2" />
               Download

@@ -398,6 +398,91 @@ export function getDestinationRate(destination: string) {
   return RATE_SHEET[destination as keyof typeof RATE_SHEET] || null;
 }
 
+export interface ShipmentContractContext {
+  shipmentId: string;
+  customerId: string;
+  quotationId: string | null;
+  origin?: string | null;
+  currency?: string;
+}
+
+/**
+ * Persists the Transport Agreement Generator's form as a real contracts
+ * row, linked the same way the rest of this app links shipments —
+ * customer_id + quotation_id, not the legacy client_id/clients pairing.
+ * One contract per quotation: re-saving updates it instead of duplicating.
+ *
+ * contracts.client_id is a legacy NOT NULL column the older contract
+ * pages still join through (client:clients(*)); clients is just a stub
+ * (id, name), so this reuses the customer's own id as the client id and
+ * backfills the stub row from the real customer name rather than leaving
+ * client_id orphaned.
+ */
+export async function saveContractFromAgreement(
+  ctx: ShipmentContractContext,
+  data: ContractData,
+  userId: string,
+): Promise<string> {
+  const existing = ctx.quotationId
+    ? (await supabase.from("contracts").select("id").eq("quotation_id", ctx.quotationId).maybeSingle()).data
+    : null;
+
+  const payload = {
+    contract_type: data.contractType,
+    start_date: data.startDate,
+    end_date: data.endDate || null,
+    origin: ctx.origin || null,
+    destination: data.destination || null,
+    contract_value: data.contractValue || 0,
+    currency: ctx.currency || "TZS",
+    payment_schedule: data.paymentTerms,
+    minimum_monthly_volume: data.minMonthlyTrips ?? null,
+    notes: data.notes || null,
+  };
+
+  if (existing?.id) {
+    const { error } = await supabase.from("contracts").update({ ...payload, updated_by: userId }).eq("id", existing.id);
+    if (error) throw error;
+    return existing.id;
+  }
+
+  const { data: existingClient } = await supabase.from("clients").select("id").eq("id", ctx.customerId).maybeSingle();
+  if (!existingClient) {
+    await supabase.from("clients").insert({ id: ctx.customerId, name: data.clientName || "Customer" });
+  }
+
+  const contractNumber = await generateContractNumber();
+  const { data: created, error } = await supabase.from("contracts").insert({
+    ...payload,
+    contract_number: contractNumber,
+    client_id: ctx.customerId,
+    customer_id: ctx.customerId,
+    quotation_id: ctx.quotationId,
+    contract_date: new Date().toISOString().slice(0, 10),
+    status: "draft",
+    created_by: userId,
+  }).select("id").single();
+  if (error) throw error;
+  return created.id;
+}
+
+/**
+ * The customer's most recent prior contract's reusable terms (rate/
+ * billing/payment terms), so a new one starts from the standing
+ * relationship instead of blank — those are properties of the customer,
+ * not of one trip.
+ */
+export async function fetchPriorContractTerms(customerId: string) {
+  const { data } = await supabase
+    .from("contracts")
+    .select("contract_type, payment_schedule, minimum_monthly_volume, notes")
+    .eq("customer_id", customerId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
 export function formatContractHTML(data: ContractData): string {
   const rate = getDestinationRate(data.destination);
   const contractDate = new Date(data.startDate);
