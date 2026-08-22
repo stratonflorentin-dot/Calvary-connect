@@ -245,9 +245,22 @@ export default function ShipmentDetailPage() {
           .limit(1)
           .maybeSingle();
 
+        // contracts.client_id is NOT NULL — a legacy column the older
+        // contract pages still join against (client:clients(*)). clients
+        // is just a stub (id, name), so reuse the customer's own id as the
+        // client id (one real entity, two relationship models pointing at
+        // it) and backfill the stub row from the real customer's name
+        // instead of leaving client_id orphaned or fabricating a separate
+        // record.
+        const { data: existingClient } = await supabase.from("clients").select("id").eq("id", shipment.customer_id).maybeSingle();
+        if (!existingClient) {
+          await supabase.from("clients").insert({ id: shipment.customer_id, name: customerRow?.company_name || shipment.customer?.company_name || "Customer" });
+        }
+
         const contractNumber = await generateContractNumber();
         const { data: created, error } = await supabase.from("contracts").insert({
           contract_number: contractNumber,
+          client_id: shipment.customer_id,
           customer_id: shipment.customer_id,
           quotation_id: shipment.quotation_id,
           contract_type: priorContract?.contract_type || "Single Trip",
