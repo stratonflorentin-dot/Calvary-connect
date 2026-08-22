@@ -203,6 +203,7 @@ function SalesModuleContent() {
         endDate: shipment.promised_delivery || '',
         minMonthlyTrips: priorTerms?.minimum_monthly_volume ?? undefined,
         contractValue: Number(shipment.final_amount ?? shipment.quoted_amount) || 0,
+        currency: shipment.currency || 'TZS',
         paymentTerms: (priorTerms?.payment_schedule as any) || '30 Days',
         notes: priorTerms?.notes || '',
       });
@@ -1151,6 +1152,12 @@ function SalesModuleContent() {
                   </Button>
                 </div>
                 <TransportAgreementGenerator
+                  // Forces a full remount (fresh internal state, including
+                  // formData) whenever the shipment context appears or
+                  // changes, so a manual test typed into the same mounted
+                  // instance earlier in the session can never bleed into a
+                  // shipment-linked contract.
+                  key={contractShipmentContext?.shipmentId ?? 'standalone'}
                   {...(contractShipmentContext ? {
                     open: contractFormOpen,
                     onOpenChange: setContractFormOpen,

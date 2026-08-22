@@ -388,6 +388,7 @@ export interface ContractData {
   endDate?: string;
   minMonthlyTrips?: number;
   contractValue?: number;
+  currency?: string;
   paymentTerms: "30 Days" | "60 Days" | "90 Days" | "COD";
   notes?: string;
   signatoryName?: string;
@@ -605,7 +606,7 @@ export function formatContractHTML(data: ContractData): string {
         ` : ''}
         ${data.contractValue ? `
           <tr>
-            <td><strong>Contract Value (TZS):</strong></td>
+            <td><strong>Contract Value (${data.currency || 'TZS'}):</strong></td>
             <td>${data.contractValue.toLocaleString()}</td>
           </tr>
         ` : ''}
