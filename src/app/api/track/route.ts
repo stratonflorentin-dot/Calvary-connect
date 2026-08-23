@@ -24,6 +24,18 @@ const SHIPMENT_STAGE_TO_TRIP_STATUS: Record<string, string> = {
   cancelled: "cancelled",
 };
 
+// trips has five separate FKs into vehicles (truck/trailer/escort/hose/vehicle_id)
+// and two into user_profiles (driver/customer_confirmed_by) — PostgREST refuses
+// an unqualified embed when more than one relationship matches, so both joins
+// below must name the exact constraint.
+const TRIP_SELECT = `
+  id, trip_number, origin, destination, status, cargo_type,
+  client, created_at, estimated_arrival, notes, sales_amount, total_amount,
+  pod_uploaded_at, updated_at,
+  driver:user_profiles!fk_trips_driver_id(name),
+  vehicle:vehicles!trips_truck_id_fkey(plate_number)
+`;
+
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim().toUpperCase();
   if (!q) return NextResponse.json({ error: "Missing tracking number" }, { status: 400 });
@@ -34,7 +46,7 @@ export async function GET(request: NextRequest) {
     .from("shipments")
     .select(`
       id, shipment_number, origin_city, destination_city, status, cargo_type,
-      created_at, delivered_at,
+      created_at, actual_delivery,
       customer:customer_id(company_name)
     `)
     .ilike("shipment_number", `%${q}%`)
@@ -44,11 +56,7 @@ export async function GET(request: NextRequest) {
   if (shipment) {
     const { data: trip } = await admin
       .from("trips")
-      .select(`
-        status, notes, estimated_time, salesAmount,
-        driver:user_profiles(name),
-        vehicle:vehicles(plate_number)
-      `)
+      .select(TRIP_SELECT)
       .eq("shipment_id", shipment.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -63,25 +71,20 @@ export async function GET(request: NextRequest) {
         status: SHIPMENT_STAGE_TO_TRIP_STATUS[shipment.status] ?? "pending",
         cargo: shipment.cargo_type,
         client: (shipment.customer as any)?.company_name,
-        driver: trip?.driver,
-        vehicle: trip?.vehicle,
+        driver: (trip as any)?.driver,
+        vehicle: (trip as any)?.vehicle,
         created_at: shipment.created_at,
-        estimated_time: trip?.estimated_time,
-        notes: trip?.notes,
-        salesAmount: trip?.salesAmount,
-        delivered_at: shipment.delivered_at,
+        estimated_time: (trip as any)?.estimated_arrival,
+        notes: (trip as any)?.notes,
+        salesAmount: (trip as any)?.total_amount ?? (trip as any)?.sales_amount,
+        delivered_at: shipment.actual_delivery ?? (trip as any)?.pod_uploaded_at,
       },
     });
   }
 
   const { data: trip, error } = await admin
     .from("trips")
-    .select(`
-      id, trip_number, origin, destination, status, cargo,
-      client, created_at, estimated_time, notes, salesAmount, delivered_at,
-      driver:user_profiles(name),
-      vehicle:vehicles(plate_number)
-    `)
+    .select(TRIP_SELECT)
     .ilike("trip_number", `%${q}%`)
     .limit(1)
     .maybeSingle();
@@ -89,5 +92,23 @@ export async function GET(request: NextRequest) {
   if (error || !trip) {
     return NextResponse.json({ error: "No shipment found with that tracking number" }, { status: 404 });
   }
-  return NextResponse.json({ trip });
+  const t = trip as any;
+  return NextResponse.json({
+    trip: {
+      id: t.id,
+      trip_number: t.trip_number,
+      origin: t.origin,
+      destination: t.destination,
+      status: t.status,
+      cargo: t.cargo_type,
+      client: t.client,
+      created_at: t.created_at,
+      estimated_time: t.estimated_arrival,
+      notes: t.notes,
+      salesAmount: t.total_amount ?? t.sales_amount,
+      delivered_at: t.pod_uploaded_at ?? (t.status?.toLowerCase() === "delivered" ? t.updated_at : null),
+      driver: t.driver,
+      vehicle: t.vehicle,
+    },
+  });
 }
