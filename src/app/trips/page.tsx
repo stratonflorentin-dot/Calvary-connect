@@ -81,6 +81,21 @@ function TripsContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // "View Details" / "Edit Trip" elsewhere (e.g. the Dispatch Board) hand
+  // off a specific trip this same way — open it in the edit dialog, which
+  // doubles as this app's trip detail view since there's no separate
+  // /trips/[id] page.
+  useEffect(() => {
+    const tripId = searchParams.get("tripId");
+    if (!tripId || trips.length === 0) return;
+    const trip = trips.find((t) => t.id === tripId);
+    if (trip) {
+      setEditing(trip);
+      setFormOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, trips]);
+
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase

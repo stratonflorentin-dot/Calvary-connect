@@ -44,8 +44,9 @@ export default function TripHistoryPage() {
       hydrated.map((t) => ({
         ...t,
         completed_at: t.endTime ?? t.updated_at ?? t.created_at,
-        revenue: Number(t.totalAmount ?? t.salesAmount ?? 0),
-        cost: Number(t.fuelExpense ?? 0) + Number(t.otherExpenses ?? 0),
+        revenue: Number(t.total_amount ?? t.totalAmount ?? t.sales_amount ?? t.salesAmount ?? 0),
+        cost: Number(t.cost_fuel ?? 0) + Number(t.cost_tolls ?? 0) + Number(t.cost_border ?? 0) + Number(t.cost_customs ?? 0),
+        currency: t.currency || "TZS",
       })),
     );
     setLoading(false);
@@ -73,11 +74,23 @@ export default function TripHistoryPage() {
   }, [rows, search, range]);
 
   const stats = useMemo(() => {
-    const revenue = filtered.reduce((s, r) => s + r.revenue, 0);
-    const cost = filtered.reduce((s, r) => s + r.cost, 0);
-    const margin = revenue - cost;
-    return { trips: filtered.length, revenue, cost, margin };
+    const revenueByCurrency: Record<string, number> = {};
+    const costByCurrency: Record<string, number> = {};
+    const marginByCurrency: Record<string, number> = {};
+    for (const r of filtered) {
+      const cur = r.currency || "TZS";
+      revenueByCurrency[cur] = (revenueByCurrency[cur] ?? 0) + r.revenue;
+      costByCurrency[cur] = (costByCurrency[cur] ?? 0) + r.cost;
+      marginByCurrency[cur] = (marginByCurrency[cur] ?? 0) + (r.revenue - r.cost);
+    }
+    return { trips: filtered.length, revenueByCurrency, costByCurrency, marginByCurrency };
   }, [filtered]);
+
+  const formatByCurrency = (byCurrency: Record<string, number>) => {
+    const entries = Object.entries(byCurrency);
+    if (entries.length === 0) return format(0);
+    return entries.map(([cur, amt]) => format(amt, cur)).join(" · ");
+  };
 
   const grouped = useMemo(() => {
     const byDay = new Map<string, any[]>();
@@ -161,9 +174,9 @@ export default function TripHistoryPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <StatCard label="Completed trips" value={stats.trips} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
-            <StatCard label="Revenue" value={format(stats.revenue)} icon={RouteIcon} accent="bg-primary/10 text-primary" />
-            <StatCard label="Direct cost" value={format(stats.cost)} icon={Truck} accent="bg-amber-100 text-amber-700" />
-            <StatCard label="Margin" value={format(stats.margin)} icon={CheckCircle2} accent={stats.margin >= 0 ? "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" : "bg-red-100 text-red-700"} />
+            <StatCard label="Revenue" value={formatByCurrency(stats.revenueByCurrency)} icon={RouteIcon} accent="bg-primary/10 text-primary" />
+            <StatCard label="Direct cost" value={formatByCurrency(stats.costByCurrency)} icon={Truck} accent="bg-amber-100 text-amber-700" />
+            <StatCard label="Margin" value={formatByCurrency(stats.marginByCurrency)} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
           </div>
 
           {grouped.length === 0 ? (
@@ -173,12 +186,16 @@ export default function TripHistoryPage() {
           ) : (
             <div className="space-y-4">
               {grouped.map(([day, list]) => {
-                const dayRevenue = list.reduce((s: number, r: any) => s + r.revenue, 0);
+                const dayRevenueByCurrency: Record<string, number> = {};
+                for (const r of list) {
+                  const cur = r.currency || "TZS";
+                  dayRevenueByCurrency[cur] = (dayRevenueByCurrency[cur] ?? 0) + r.revenue;
+                }
                 return (
                   <SectionCard
                     key={day}
                     title={formatDate(new Date(day), "EEEE, d MMMM yyyy")}
-                    subtitle={`${list.length} trip${list.length === 1 ? "" : "s"} · ${format(dayRevenue)} revenue`}
+                    subtitle={`${list.length} trip${list.length === 1 ? "" : "s"} · ${formatByCurrency(dayRevenueByCurrency)} revenue`}
                     padded={false}
                   >
                     <ul className="divide-y divide-border">
@@ -200,10 +217,10 @@ export default function TripHistoryPage() {
                             </div>
                           </div>
                           <div className="text-right shrink-0 space-y-0.5">
-                            <p className="text-sm font-black text-foreground">{format(r.revenue)}</p>
-                            <p className="text-[10px] text-muted-foreground">margin {format(r.revenue - r.cost)}</p>
+                            <p className="text-sm font-black text-foreground">{format(r.revenue, r.currency)}</p>
+                            <p className="text-[10px] text-muted-foreground">margin {format(r.revenue - r.cost, r.currency)}</p>
                           </div>
-                          <Link href={`/trips`} className="text-muted-foreground hover:text-primary">
+                          <Link href={`/trips?tripId=${r.id}`} className="text-muted-foreground hover:text-primary">
                             <ChevronRight className="w-4 h-4" />
                           </Link>
                         </li>

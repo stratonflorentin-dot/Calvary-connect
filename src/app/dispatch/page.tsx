@@ -104,10 +104,10 @@ function TripCard({
             </button>
             {menu && (
               <div className="absolute right-0 top-6 z-20 bg-card border border-border rounded-xl shadow-xl py-1 w-40 text-xs">
-                <Link href={`/trips/${trip.id}`} className="flex items-center gap-2 px-3 py-2 hover:bg-muted text-foreground">
+                <Link href={`/trips?tripId=${trip.id}`} className="flex items-center gap-2 px-3 py-2 hover:bg-muted text-foreground">
                   <Eye className="w-3.5 h-3.5" /> View Details
                 </Link>
-                <Link href={`/trips`} className="flex items-center gap-2 px-3 py-2 hover:bg-muted text-foreground">
+                <Link href={`/trips?tripId=${trip.id}`} className="flex items-center gap-2 px-3 py-2 hover:bg-muted text-foreground">
                   <Edit className="w-3.5 h-3.5" /> Edit Trip
                 </Link>
                 {next && (

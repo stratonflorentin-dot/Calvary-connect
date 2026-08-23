@@ -164,7 +164,7 @@ export default function TrackingPage() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="e.g. TRP-2024-001"
+                  placeholder="e.g. SH-2026-0001 or TRP-2024-001"
                   className="w-full pl-11 pr-4 py-4 bg-white/10 backdrop-blur-sm text-white placeholder-slate-400 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm font-medium transition-all"
                 />
               </div>

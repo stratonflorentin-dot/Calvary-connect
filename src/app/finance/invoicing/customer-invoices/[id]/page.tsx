@@ -18,7 +18,6 @@ import { TRAInvoiceDialog } from "@/components/financial/tra-invoice-dialog";
 import { AuditTrailService } from "@/services/audit-trail-service";
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
-import { Sidebar } from "@/components/navigation/sidebar";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft, CheckCircle2, Download, Loader2, AlertTriangle, Ban, Send, X,
@@ -41,7 +40,7 @@ export default function CustomerInvoiceDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { role, hasPermission } = useRole();
+  const { hasPermission } = useRole();
   const { user } = useSupabase();
   const { toast } = useToast();
 
@@ -206,9 +205,8 @@ export default function CustomerInvoiceDetailPage() {
     }
   };
 
-  if (!role) return null;
-  if (loading) return <div className="flex min-h-screen bg-background"><Sidebar role={role} /><main className="flex-1 flex items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></main></div>;
-  if (!invoice) return <div className="flex min-h-screen bg-background"><Sidebar role={role} /><main className="flex-1 p-8 text-center text-muted-foreground">Invoice not found.</main></div>;
+  if (loading) return <div className="flex items-center justify-center py-24"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
+  if (!invoice) return <div className="p-8 text-center text-muted-foreground">Invoice not found.</div>;
 
   const currency = invoice.currency || "TZS";
   const subtotal = Number(invoice.amount ?? invoice.subtotal) || 0;
@@ -225,13 +223,11 @@ export default function CustomerInvoiceDetailPage() {
     : [{ description: invoice.description || "Services rendered", item_type_label: null, quantity: 1, duration_days: null, unit_price: subtotal, line_total: subtotal }];
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <Link href="/finance/invoicing/customer-invoices" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> All Invoices
-          </Link>
+    <>
+      <div className="space-y-6 pb-8 pb-safe-bottom">
+        <Link href="/finance/invoicing/customer-invoices" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" /> All Invoices
+        </Link>
 
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -391,8 +387,7 @@ export default function CustomerInvoiceDetailPage() {
               </div>
             </div>
           </div>
-        </div>
-      </main>
+      </div>
 
       {paying && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -450,6 +445,6 @@ export default function CustomerInvoiceDetailPage() {
           onSaved={() => { setPrinting(false); load(); }}
         />
       )}
-    </div>
+    </>
   );
 }

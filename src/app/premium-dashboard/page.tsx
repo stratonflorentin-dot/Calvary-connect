@@ -135,9 +135,9 @@ function PremiumDashboard() {
                 cashRequestsRes,
             ] = await Promise.all([
                 supabase.from('vehicles').select('id, plate_number, status, current_driver_id'),
-                supabase.from('trips').select('id, revenue, price, created_at').gte('created_at', rangeStart),
+                supabase.from('trips').select('id, total_amount, sales_amount, currency, created_at').gte('created_at', rangeStart),
                 supabase.from('vehicle_costs').select('cost_type, amount, date').gte('date', rangeStart.slice(0, 10)),
-                supabase.from('transport_contracts').select('id, contract_number, status, contract_value, currency, end_date, created_at, customers(company_name)').order('created_at', { ascending: false }).limit(6),
+                supabase.from('contracts').select('id, contract_number, status, contract_value, currency, end_date, created_at, customer:customer_id(company_name)').order('created_at', { ascending: false }).limit(6),
                 supabase.from('invoices').select('id, status, due_date').lt('due_date', today).neq('status', 'paid'),
                 supabase.from('cash_requests').select('id, status').eq('status', 'pending'),
             ]);
@@ -174,7 +174,7 @@ function PremiumDashboard() {
             setMonthRevenue(
                 trips
                     .filter((t: any) => new Date(t.created_at) >= new Date(monthStart))
-                    .reduce((s: number, t: any) => s + Number(t.revenue ?? t.price ?? 0), 0),
+                    .reduce((s: number, t: any) => s + Number(t.total_amount ?? t.sales_amount ?? 0), 0),
             );
 
             const costs = costsRes.data ?? [];
@@ -215,7 +215,7 @@ function PremiumDashboard() {
                 contractRows.map((c: any) => ({
                     id: c.id,
                     contract_number: c.contract_number,
-                    partner: c.customers?.company_name ?? 'Unknown',
+                    partner: c.customer?.company_name ?? 'Unknown',
                     status: c.status,
                     contract_value: Number(c.contract_value || 0),
                     currency: c.currency ?? 'TZS',
@@ -613,7 +613,7 @@ function PremiumDashboard() {
                                                         {contract.status}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell>{format(contract.contract_value)}</TableCell>
+                                                <TableCell>{format(contract.contract_value, contract.currency)}</TableCell>
                                                 <TableCell>{contract.end_date ?? '—'}</TableCell>
                                             </MotionTableRow>
                                         ))}
