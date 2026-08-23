@@ -439,6 +439,9 @@ function SalesModuleContent() {
       customer_id: contract.customer_id,
       contract_id: contract.id,
       vehicle_requirement: contract.contract_type,
+      cargo_type: 'General',
+      origin: (contract as any).origin || '',
+      destination: (contract as any).destination || '',
       amount: contract.contract_value,
       currency: contract.currency || 'TZS',
       pickup_date: new Date().toISOString().split('T')[0],
@@ -447,11 +450,16 @@ function SalesModuleContent() {
     }]).select().single();
 
     if (bookingError) {
-      toast({ title: 'Error', description: 'Failed to create booking', variant: 'destructive' });
+      console.error('[convertContractToBooking]', bookingError);
+      toast({ title: 'Error', description: bookingError.message || 'Failed to create booking', variant: 'destructive' });
       return;
     }
 
-    const { error: updateError } = await supabase.from('transport_contracts').update({
+    // bookings.contract_id correctly FKs to contracts, not
+    // transport_contracts — this update target was the same stale table
+    // fetchContracts() used to read from, so it silently no-opped
+    // (0 rows matched) instead of ever recording the conversion.
+    const { error: updateError } = await supabase.from('contracts').update({
       converted_to_booking_ids: [...((contract as any).converted_to_booking_ids || []), booking.id]
     }).eq('id', contractId);
 
