@@ -383,6 +383,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     showInNavigation: false,
   },
   {
+    path: "/finance/invoicing/customer-invoices/[id]",
+    label: "Invoice Detail",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
     path: "/finance/invoicing/credit-notes",
     label: "Credit Notes",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],

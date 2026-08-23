@@ -76,7 +76,6 @@ export default function CustomerInvoicesPage() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [detail, setDetail] = useState<any | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [paying, setPaying] = useState<any | null>(null);
   const [payAmount, setPayAmount] = useState("");
@@ -366,7 +365,6 @@ export default function CustomerInvoicesPage() {
       await postJournalEntry({ type: "invoice_sent", invoiceId: inv.id });
       await AuditTrailService.logUpdate("finance", "invoice", inv.id, { status: inv.status }, { status: "sent" }, user?.id, `Invoice ${inv.invoice_number} sent to ${inv.customer_name ?? inv.client_name}`);
       await loadInvoices();
-      setDetail(null);
       toast({ variant: "success", title: "Invoice sent", description: `${inv.invoice_number} is now locked and posted to the ledger.` });
     } catch (err: any) {
       toast({ title: "Failed to send", description: err?.message ?? "Unknown error", variant: "destructive" });
@@ -720,8 +718,8 @@ export default function CustomerInvoicesPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setDetail(inv)} title="View">
-                              <ArrowUpRight className="w-4 h-4" />
+                            <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="View">
+                              <Link href={`/finance/invoicing/customer-invoices/${inv.id}`}><ArrowUpRight className="w-4 h-4" /></Link>
                             </Button>
                             {["draft", "pending"].includes(inv.status) && (
                               <Button
@@ -1130,83 +1128,6 @@ export default function CustomerInvoicesPage() {
               <Button onClick={recordPayment} className="bg-success hover:bg-success/90 text-success-foreground gap-2">
                 <CheckCircle2 className="w-4 h-4" /> Record Payment
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Detail drawer */}
-      {detail && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl mt-16">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <div>
-                <p className="text-[10px] font-black text-primary uppercase tracking-widest">Invoice</p>
-                <h3 className="text-lg font-black text-foreground font-mono">{detail.invoice_number}</h3>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setDetail(null)}><X className="w-4 h-4" /></Button>
-            </div>
-            {!["draft", "pending"].includes(detail.status) && (
-              <div className="mx-5 mt-4 rounded-xl bg-warning/10 border border-warning/20 p-3 text-xs text-warning">
-                This invoice is locked and cannot be edited — it has been issued and is a finalized financial document. Corrections go through a{" "}
-                <Link href="/finance/invoicing/credit-notes" className="underline font-bold">Credit Note</Link> instead.
-              </div>
-            )}
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Customer</p>
-                  <p className="font-bold text-foreground">{detail.customer_name ?? detail.client_name}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Status</p>
-                  <Badge className={STATUS_BADGES[detail.status ?? "pending"]}>{detail.status ?? "pending"}</Badge>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Quotation Ref No</p>
-                  <p className="font-bold text-foreground font-mono">{quotationById.get(detail.quotation_id)?.quotation_number ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Issued</p>
-                  <p className="text-foreground/80">{detail.issue_date}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Due</p>
-                  <p className="text-foreground/80">{detail.due_date}</p>
-                </div>
-              </div>
-              <div className="rounded-xl bg-muted/30 border border-border p-4 text-sm space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="text-foreground">{fmt(Number(detail.amount) || 0, detail.currency)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">VAT</span><span className="text-foreground">{detail.vat_applicable === false ? "Exempt" : fmt(Number(detail.vat_amount) || 0, detail.currency)}</span></div>
-                {Number(detail.wht_amount) > 0 && (
-                  <div className="flex justify-between text-destructive"><span>WHT deductible</span><span>({fmt(Number(detail.wht_amount), detail.currency)})</span></div>
-                )}
-                <div className="flex justify-between font-black text-foreground pt-1 border-t border-border"><span>Total payable</span><span>{fmt(Number(detail.total_payable ?? detail.total_amount ?? detail.amount) || 0, detail.currency)}</span></div>
-                <div className="flex justify-between text-success"><span>Paid</span><span>{fmt(Number(detail.paid_amount ?? 0), detail.currency)}</span></div>
-                <div className="flex justify-between font-black text-destructive"><span>Outstanding</span><span>{fmt(Number(detail.total_payable ?? detail.total_amount ?? detail.amount ?? 0) - Number(detail.paid_amount ?? 0), detail.currency)}</span></div>
-              </div>
-              {detail.description && (
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest mb-1">Notes</p>
-                  <p className="text-sm text-foreground/80 whitespace-pre-wrap">{detail.description}</p>
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border bg-muted/20">
-              <Button variant="outline" onClick={() => setDetail(null)}>Close</Button>
-              <Button variant="outline" onClick={() => setPrinting(detail)} className="gap-2">
-                <FileText className="w-4 h-4" /> Print / Download TRA Invoice
-              </Button>
-              {["draft", "pending"].includes(detail.status) && (
-                <Button onClick={() => sendInvoice(detail)} disabled={sendingId === detail.id} className="bg-info hover:bg-info/90 text-info-foreground gap-2">
-                  {sendingId === detail.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />} Send Invoice
-                </Button>
-              )}
-              {!["draft", "pending", "paid", "cancelled"].includes(detail.status) && (
-                <Button onClick={() => { setPaying(detail); setPayAmount(String(Number(detail.total_payable ?? detail.total_amount ?? detail.amount) - Number(detail.paid_amount ?? 0))); setDetail(null); }} className="bg-success hover:bg-success/90 text-success-foreground gap-2">
-                  <CheckCircle2 className="w-4 h-4" /> Record Payment
-                </Button>
-              )}
             </div>
           </div>
         </div>
