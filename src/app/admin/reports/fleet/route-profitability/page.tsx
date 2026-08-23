@@ -32,18 +32,19 @@ interface RouteProfitabilityStat {
   origin: string;
   destination: string;
   routeName: string;
+  currency: string;
   tripsCount: number;
-  totalRevenueTZS: number;
-  totalFuelCostTZS: number;
-  totalOtherExpensesTZS: number;
-  grossProfitTZS: number;
+  totalRevenue: number;
+  totalFuelCost: number;
+  totalOtherExpenses: number;
+  grossProfit: number;
   profitMarginPercent: number;
 }
 
 interface SummaryStats {
   totalRoutes: number;
-  totalRevenue: number;
-  totalCosts: number;
+  totalRevenueByCurrency: Record<string, number>;
+  totalCostsByCurrency: Record<string, number>;
   bestMarginRoute: string;
   bestMarginPercent: number;
 }
@@ -126,8 +127,14 @@ export default function RouteProfitabilityPage() {
     );
   }
 
-  const formatTZS = (amount: number) => {
-    return amount.toLocaleString('en-TZ') + ' TZS';
+  const formatAmount = (amount: number, currency: string) => {
+    return amount.toLocaleString('en-TZ') + ' ' + currency;
+  };
+
+  const formatByCurrency = (byCurrency: Record<string, number>) => {
+    const entries = Object.entries(byCurrency);
+    if (entries.length === 0) return formatAmount(0, 'TZS');
+    return entries.map(([cur, amt]) => formatAmount(amt, cur)).join(' · ');
   };
 
   const topRoute = routes.length > 0 ? routes[0] : null;
@@ -243,7 +250,7 @@ export default function RouteProfitabilityPage() {
                     <DollarSign className="size-5 text-success" />
                   </div>
                   <p className="text-xs font-bold text-success/80 uppercase tracking-wider">Total Revenues</p>
-                  <p className="text-2xl font-black text-success mt-1 truncate">{formatTZS(summary.totalRevenue)}</p>
+                  <p className="text-2xl font-black text-success mt-1 truncate">{formatByCurrency(summary.totalRevenueByCurrency)}</p>
                 </div>
 
                 {/* Total Costs */}
@@ -252,7 +259,7 @@ export default function RouteProfitabilityPage() {
                     <TrendingDown className="size-5 text-destructive" />
                   </div>
                   <p className="text-xs font-bold text-destructive/80 uppercase tracking-wider">Total Expenses</p>
-                  <p className="text-2xl font-black text-destructive mt-1 truncate">{formatTZS(summary.totalCosts)}</p>
+                  <p className="text-2xl font-black text-destructive mt-1 truncate">{formatByCurrency(summary.totalCostsByCurrency)}</p>
                 </div>
 
                 {/* Best Margin */}
@@ -304,21 +311,22 @@ export default function RouteProfitabilityPage() {
                               <td className="px-6 py-4 font-bold text-foreground flex items-center gap-2">
                                 <MapPin className="size-4 text-sky-600" />
                                 {route.routeName}
+                                <span className="text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{route.currency}</span>
                               </td>
                               <td className="px-6 py-4 text-center font-semibold text-foreground">
                                 {route.tripsCount}
                               </td>
                               <td className="px-6 py-4 text-right text-foreground font-mono">
-                                {formatTZS(route.totalRevenueTZS)}
+                                {formatAmount(route.totalRevenue, route.currency)}
                               </td>
                               <td className="px-6 py-4 text-right text-foreground font-mono">
-                                {formatTZS(route.totalFuelCostTZS)}
+                                {formatAmount(route.totalFuelCost, route.currency)}
                               </td>
                               <td className="px-6 py-4 text-right text-foreground font-mono">
-                                {formatTZS(route.totalOtherExpensesTZS)}
+                                {formatAmount(route.totalOtherExpenses, route.currency)}
                               </td>
                               <td className="px-6 py-4 text-right text-emerald-800 font-bold font-mono">
-                                {formatTZS(route.grossProfitTZS)}
+                                {formatAmount(route.grossProfit, route.currency)}
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
@@ -351,11 +359,11 @@ export default function RouteProfitabilityPage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis dataKey="routeName" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(value: any, name: any) => [formatTZS(value), name]} />
+                        <Tooltip formatter={(value: any, name: any, props: any) => [formatAmount(value, props?.payload?.currency || 'TZS'), name]} />
                         <Legend />
-                        <Bar dataKey="totalRevenueTZS" name="Total Revenue" fill="#0369A1" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="totalFuelCostTZS" name="Fuel Expense" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="grossProfitTZS" name="Gross Profit" fill="#10B981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="totalRevenue" name="Total Revenue" fill="#0369A1" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="totalFuelCost" name="Fuel Expense" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="grossProfit" name="Gross Profit" fill="#10B981" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

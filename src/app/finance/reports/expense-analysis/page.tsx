@@ -197,7 +197,7 @@ export default function ExpenseAnalysisPage() {
       `${totalExpenses > 0 ? ((item.amount / totalExpenses) * 100).toFixed(1) : 0}%`,
     ]);
 
-    const firstTable = autoTable(doc, {
+    autoTable(doc, {
       startY: 55,
       head: [["Category", "Amount", "% of Total"]],
       body: categoryTableData,
@@ -215,8 +215,12 @@ export default function ExpenseAnalysisPage() {
       formatAmount(e.amount),
     ]);
 
+    // jspdf-autotable v5's functional autoTable() returns void — the result
+    // lives on doc.lastAutoTable instead. Reading .finalY off the return
+    // value throws "Cannot read properties of undefined", which silently
+    // aborted this export before doc.save() ever ran.
     autoTable(doc, {
-      startY: (firstTable as any).finalY + 10,
+      startY: (doc as any).lastAutoTable.finalY + 10,
       head: [["Date", "Description", "Category", "Vendor", "Status", "Amount"]],
       body: expenseTableData,
       theme: "grid",

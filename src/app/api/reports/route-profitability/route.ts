@@ -31,10 +31,14 @@ export async function GET(request: NextRequest) {
       .gte('date', fromDate)
       .lte('date', toDate);
 
-    // Group trips by unique Route: Origin -> Destination
+    // Group trips by Route + currency — a route quoted in both TZS and USD
+    // (or however a customer pays) needs its own row rather than blending
+    // the two into a number labeled with whichever currency happened to be
+    // hardcoded in the UI.
     const routeGroups: Record<string, {
       origin: string;
       destination: string;
+      currency: string;
       tripsCount: number;
       revenue: number;
       fuelCost: number;
@@ -46,15 +50,17 @@ export async function GET(request: NextRequest) {
 
     (trips || []).forEach((trip) => {
       if (trip.status?.toLowerCase() === 'cancelled') return;
-      
+
       const origin = (trip.origin || 'Unknown').trim();
       const destination = (trip.destination || 'Unknown').trim();
-      const routeKey = `${origin.toUpperCase()} to ${destination.toUpperCase()}`;
+      const currency = trip.currency || 'TZS';
+      const routeKey = `${origin.toUpperCase()} to ${destination.toUpperCase()}::${currency}`;
 
       if (!routeGroups[routeKey]) {
         routeGroups[routeKey] = {
           origin,
           destination,
+          currency,
           tripsCount: 0,
           revenue: 0,
           fuelCost: 0,
@@ -100,20 +106,26 @@ export async function GET(request: NextRequest) {
         origin: grp.origin,
         destination: grp.destination,
         routeName: `${grp.origin} to ${grp.destination}`,
+        currency: grp.currency,
         tripsCount: grp.tripsCount,
-        totalRevenueTZS: grp.revenue,
-        totalFuelCostTZS: grp.fuelCost,
-        totalOtherExpensesTZS: grp.tollsCost + grp.borderCost + grp.customsCost + grp.otherExpenses,
-        grossProfitTZS: grossProfit,
+        totalRevenue: grp.revenue,
+        totalFuelCost: grp.fuelCost,
+        totalOtherExpenses: grp.tollsCost + grp.borderCost + grp.customsCost + grp.otherExpenses,
+        grossProfit: grossProfit,
         profitMarginPercent: parseFloat(margin.toFixed(1))
       };
-    }).sort((a, b) => b.totalRevenueTZS - a.totalRevenueTZS);
+    }).sort((a, b) => b.totalRevenue - a.totalRevenue);
 
-    // Summary Statistics
+    // Summary Statistics — grouped by currency rather than blended into one
+    // number, since routes above may now span more than one currency.
     const totalRoutes = routeData.length;
-    const totalRevenue = routeData.reduce((sum, r) => sum + r.totalRevenueTZS, 0);
-    const totalCosts = routeData.reduce((sum, r) => sum + (r.totalRevenueTZS - r.grossProfitTZS), 0);
-    const bestMargin = routeData.length > 0 
+    const totalRevenueByCurrency: Record<string, number> = {};
+    const totalCostsByCurrency: Record<string, number> = {};
+    for (const r of routeData) {
+      totalRevenueByCurrency[r.currency] = (totalRevenueByCurrency[r.currency] ?? 0) + r.totalRevenue;
+      totalCostsByCurrency[r.currency] = (totalCostsByCurrency[r.currency] ?? 0) + (r.totalRevenue - r.grossProfit);
+    }
+    const bestMargin = routeData.length > 0
       ? routeData.reduce((prev, curr) => (curr.profitMarginPercent > prev.profitMarginPercent ? curr : prev), routeData[0])
       : null;
 
@@ -121,8 +133,8 @@ export async function GET(request: NextRequest) {
       success: true,
       summary: {
         totalRoutes,
-        totalRevenue,
-        totalCosts,
+        totalRevenueByCurrency,
+        totalCostsByCurrency,
         bestMarginRoute: bestMargin ? bestMargin.routeName : 'N/A',
         bestMarginPercent: bestMargin ? bestMargin.profitMarginPercent : 0
       },

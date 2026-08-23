@@ -221,7 +221,7 @@ export function buildDocumentPdf(d: DocumentPdfData): jsPDF {
     fmtAmt(l.line_total || 0),
   ]);
 
-  const table = autoTable(doc, {
+  autoTable(doc, {
     startY: tableStartY,
     head: [["Particulars", "Qty", `Unit Price (${d.currency})`, "Days", `Subtotal (${d.currency})`]],
     body: rows,
@@ -231,7 +231,11 @@ export function buildDocumentPdf(d: DocumentPdfData): jsPDF {
     columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
   });
 
-  let y = (table as any).finalY + 8;
+  // jspdf-autotable v5's functional autoTable() returns void — the result
+  // lives on doc.lastAutoTable instead. Reading .finalY off the return
+  // value throws "Cannot read properties of undefined", which silently
+  // aborted every invoice/quotation PDF download before doc.save() ran.
+  let y = (doc as any).lastAutoTable.finalY + 8;
   const totalsX = pageWidth - 14;
   const totalsLabelX = pageWidth - 60;
   doc.setFontSize(10);

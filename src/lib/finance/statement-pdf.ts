@@ -123,7 +123,7 @@ export function buildStatementPdf(d: StatementPdfData): jsPDF {
     ]),
   ];
 
-  const table = autoTable(doc, {
+  autoTable(doc, {
     startY: tableStartY,
     head: [["Date", "Description", "Ref", "Debit", "Credit", "Balance"]],
     body: rows,
@@ -139,7 +139,12 @@ export function buildStatementPdf(d: StatementPdfData): jsPDF {
     },
   });
 
-  let y = (table as any).finalY + 8;
+  // jspdf-autotable v5's functional autoTable() returns void — the result
+  // lives on doc.lastAutoTable instead. Reading .finalY off the return
+  // value throws "Cannot read properties of undefined", which silently
+  // aborted this download before doc.save() ever ran — the actual cause of
+  // the "can't download PDF" report on this page.
+  let y = (doc as any).lastAutoTable.finalY + 8;
   doc.setDrawColor(200);
   doc.line(pageWidth - 80, y - 4, pageWidth - 14, y - 4);
   doc.setFontSize(12);

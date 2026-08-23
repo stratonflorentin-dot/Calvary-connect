@@ -312,7 +312,7 @@ export default function RevenueAnalysisPage() {
       filteredInvoices.filter((i) => i.customer_name === item.name).length,
     ]);
 
-    const firstTable = autoTable(doc, {
+    autoTable(doc, {
       startY: 60,
       head: [["Customer", "Revenue", "% of Total", "Invoices"]],
       body: customerTableData,
@@ -330,8 +330,12 @@ export default function RevenueAnalysisPage() {
       formatAmount(i.amount),
     ]);
 
+    // jspdf-autotable v5's functional autoTable() returns void — the result
+    // lives on doc.lastAutoTable instead. Reading .finalY off the return
+    // value throws "Cannot read properties of undefined", which silently
+    // aborted this export before doc.save() ever ran.
     autoTable(doc, {
-      startY: (firstTable as any).finalY + 10,
+      startY: (doc as any).lastAutoTable.finalY + 10,
       head: [["Invoice #", "Customer", "Due Date", "Status", "Type", "Amount"]],
       body: invoiceTableData,
       theme: "grid",
