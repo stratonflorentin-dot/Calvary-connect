@@ -41,12 +41,12 @@ import { useCurrency } from '@/hooks/use-currency';
 import { isVehicleAvailable, isVehicleInMaintenance, vehicleStatusBucket } from '@/lib/fleet/vehicle-status';
 
 const navItems = [
-    { label: 'Overview', icon: Layers, active: true },
-    { label: 'Fleet', icon: Truck },
-    { label: 'Routes', icon: MapPin },
-    { label: 'Analytics', icon: ChartPie },
-    { label: 'Contracts', icon: FileText },
-    { label: 'Safety', icon: ShieldCheck },
+    { label: 'Overview', icon: Layers, active: true, href: null },
+    { label: 'Fleet', icon: Truck, active: false, href: '/fleet' },
+    { label: 'Routes', icon: MapPin, active: false, href: '/route-optimizer' },
+    { label: 'Analytics', icon: ChartPie, active: false, href: null },
+    { label: 'Contracts', icon: FileText, active: false, href: '/sales?tab=contracts' },
+    { label: 'Safety', icon: ShieldCheck, active: false, href: null },
 ];
 
 function statusBadge(status: string) {
@@ -301,14 +301,22 @@ function PremiumDashboard() {
                     <nav className="space-y-2">
                         {navItems.map((item) => {
                             const Icon = item.icon;
+                            const className = `flex w-full items-center gap-3 rounded-[16px] px-4 py-3 text-left text-sm transition-all ${item.active
+                                    ? 'bg-white/10 text-white shadow-[0_12px_24px_rgba(0,0,0,0.12)]'
+                                    : item.href
+                                        ? 'text-[#A2B1D1] hover:bg-white/5 hover:text-white'
+                                        : 'text-[#A2B1D1]/40 cursor-not-allowed'
+                                }`;
+                            if (item.href) {
+                                return (
+                                    <Link key={item.label} href={item.href} className={className}>
+                                        <Icon className="h-4 w-4" />
+                                        {item.label}
+                                    </Link>
+                                );
+                            }
                             return (
-                                <button
-                                    key={item.label}
-                                    className={`flex w-full items-center gap-3 rounded-[16px] px-4 py-3 text-left text-sm transition-all ${item.active
-                                            ? 'bg-white/10 text-white shadow-[0_12px_24px_rgba(0,0,0,0.12)]'
-                                            : 'text-[#A2B1D1] hover:bg-white/5 hover:text-white'
-                                        }`}
-                                >
+                                <button key={item.label} disabled={!item.active} className={className} title={item.active ? undefined : 'Not available yet'}>
                                     <Icon className="h-4 w-4" />
                                     {item.label}
                                     {item.active && <ChevronRight className="h-4 w-4 ml-auto" />}

@@ -3,7 +3,7 @@
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Info, CheckCircle, AlertCircle } from 'lucide-react';
+import { AlertTriangle, Info, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -79,17 +79,52 @@ export default function NotificationsPage() {
     }
   };
 
+  const deleteNotification = async (id: string) => {
+    try {
+      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting notification:', error);
+        return;
+      }
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const clearAll = async () => {
+    if (!user || notifications.length === 0) return;
+    try {
+      const { error } = await supabase.from('notifications').delete().eq('user_id', user.id);
+      if (error) {
+        console.error('Error clearing notifications:', error);
+        return;
+      }
+      setNotifications([]);
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+    }
+  };
+
   if (!role) return null;
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar role={role} />
       <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-headline tracking-tighter">Notifications Center</h1>
-          <p className="text-muted-foreground text-sm font-sans">
-            Trips, fuel, expenses, maintenance, and delivery updates only.
-          </p>
+        <header className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-headline tracking-tighter">Notifications Center</h1>
+            <p className="text-muted-foreground text-sm font-sans">
+              Trips, fuel, expenses, maintenance, and delivery updates only.
+            </p>
+          </div>
+          {notifications.length > 0 && (
+            <Button variant="outline" size="sm" className="shrink-0 text-red-500 hover:text-red-600" onClick={clearAll}>
+              <Trash2 className="size-3.5 mr-1.5" />
+              Clear all
+            </Button>
+          )}
         </header>
         <div className="max-w-2xl space-y-4">
           {!notifications || notifications.length === 0 ? (
@@ -112,11 +147,21 @@ export default function NotificationsPage() {
                       {n.created_at ? new Date(n.created_at).toLocaleString() : ''}
                     </p>
                   </div>
-                  {!n.read && (
-                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => markRead(n.id || '')}>
-                      Mark read
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!n.read && (
+                      <Button size="sm" variant="outline" onClick={() => markRead(n.id || '')}>
+                        Mark read
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-500 hover:text-red-600"
+                      onClick={() => deleteNotification(n.id || '')}
+                    >
+                      <Trash2 className="size-3.5" />
                     </Button>
-                  )}
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <p className="text-sm text-muted-foreground">{n.message}</p>

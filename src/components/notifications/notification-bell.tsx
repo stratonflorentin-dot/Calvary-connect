@@ -120,6 +120,23 @@ export function NotificationBell() {
     setUnreadCount(0);
   };
 
+  const clearAll = async () => {
+    if (!user?.id || notifications.length === 0) return;
+
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Failed to clear notifications:", error);
+      return;
+    }
+
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
   const deleteNotification = async (id: string) => {
     const { error } = await supabase.from("notifications").delete().eq("id", id);
 
@@ -165,17 +182,30 @@ export function NotificationBell() {
       <PopoverContent className="w-96 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold">Notifications</h3>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={markAllAsRead}
-              className="text-xs"
-            >
-              <Check className="size-3 mr-1" />
-              Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={markAllAsRead}
+                className="text-xs"
+              >
+                <Check className="size-3 mr-1" />
+                Mark all read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAll}
+                className="text-xs text-red-500 hover:text-red-600"
+              >
+                <Trash2 className="size-3 mr-1" />
+                Clear all
+              </Button>
+            )}
+          </div>
         </div>
         <div className="max-h-96 overflow-y-auto">
           {notifications.length === 0 ? (

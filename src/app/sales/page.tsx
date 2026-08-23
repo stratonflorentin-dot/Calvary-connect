@@ -160,7 +160,6 @@ function SalesModuleContent() {
 
   // Dialog states
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
-  const [showContractDialog, setShowContractDialog] = useState(false);
   const [showOpportunityDialog, setShowOpportunityDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showContractGenerator, setShowContractGenerator] = useState(false);
@@ -251,13 +250,6 @@ function SalesModuleContent() {
     company_name: '', contact_person: '', email: '', phone: '',
     address: '', city: 'Dar es Salaam', tax_id: '', vrn: '', credit_limit: '', credit_limit_currency: 'TZS',
     payment_terms: '30 days', status: 'prospect', notes: ''
-  });
-
-  const [contractForm, setContractForm] = useState({
-    customer_id: '', quotation_id: '', contract_type: 'long_term',
-    start_date: format(new Date(), 'yyyy-MM-dd'), end_date: '',
-    min_monthly_trips: 10, contract_value: '', payment_terms: '30 days',
-    notes: ''
   });
 
   const [opportunityForm, setOpportunityForm] = useState({
@@ -474,34 +466,6 @@ function SalesModuleContent() {
         createdBy: user?.id,
       });
       toast({ title: 'Success', description: `Booking created: ${bookingNumber}` });
-      fetchContracts();
-    }
-  }
-
-  async function saveContract() {
-    const { error } = await supabase.from('transport_contracts').insert([{
-      customer_id: contractForm.customer_id,
-      contract_type: contractForm.contract_type,
-      start_date: contractForm.start_date,
-      end_date: contractForm.end_date || null,
-      min_monthly_trips: contractForm.min_monthly_trips,
-      contract_value: parseFloat(contractForm.contract_value as string) || 0,
-      payment_terms: contractForm.payment_terms,
-      notes: contractForm.notes,
-      created_by: user?.id
-    }]);
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      logCustomerActivity({
-        customerId: contractForm.customer_id,
-        activityType: 'contract',
-        description: `${contractForm.contract_type} contract signed`,
-        amount: parseFloat(contractForm.contract_value as string) || 0,
-        createdBy: user?.id,
-      });
-      toast({ title: 'Success', description: 'Contract created successfully' });
-      setShowContractDialog(false);
       fetchContracts();
     }
   }
