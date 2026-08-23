@@ -26,6 +26,8 @@ type Trip = {
   end_date: string;
   status: string;
   fare_amount?: number;
+  total_amount?: number | null;
+  sales_amount?: number | null;
 };
 
 type Vehicle = {
@@ -112,7 +114,11 @@ export default function RouteProfitabilityPage() {
       const routeKey = `${trip.origin}-${trip.destination}`;
       const existing = routeMap.get(routeKey);
 
-      const tripRevenue = revenues.filter((r) => r.trip_id === trip.id).reduce((sum, r) => sum + r.amount, 0) + (trip.fare_amount || 0);
+      // trip_revenue is an empty legacy table and fare_amount doesn't exist
+      // on trips — the trip's own total_amount/sales_amount is the real
+      // revenue figure once there's nothing in trip_revenue for it.
+      const tripRevenue = revenues.filter((r) => r.trip_id === trip.id).reduce((sum, r) => sum + r.amount, 0)
+        || Number(trip.total_amount ?? trip.sales_amount ?? trip.fare_amount ?? 0);
       const tripCosts = costs.filter((c) => c.trip_id === trip.id).reduce((sum, c) => sum + c.amount, 0);
 
       if (existing) {

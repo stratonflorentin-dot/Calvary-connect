@@ -68,8 +68,10 @@ export async function GET(request: NextRequest) {
       const grp = routeGroups[routeKey];
       grp.tripsCount += 1;
       
-      // Get trip direct cost values from trip columns
-      const tripRevenue = parseFloat(trip.revenue || trip.price || trip.salesAmount || 0);
+      // Get trip direct cost values from trip columns. trip.revenue/price are
+      // dead legacy columns (always 0) and trip.salesAmount doesn't exist —
+      // the real figures are total_amount/sales_amount.
+      const tripRevenue = parseFloat(trip.total_amount || trip.sales_amount || trip.revenue || trip.price || 0);
       const tripFuel = parseFloat(trip.cost_fuel || trip.costFuel || trip.fuelExpense || 0);
       const tripTolls = parseFloat(trip.cost_tolls || trip.costTolls || 0);
       const tripBorder = parseFloat(trip.cost_border || trip.costBorder || 0);

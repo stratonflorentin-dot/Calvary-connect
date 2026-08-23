@@ -123,7 +123,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   // --- Shipments ---
   {
     path: "/trips",
-    label: "Shipments & Trips",
+    label: "Trips",
     allowedRoles: ["CEO", "ADMIN", "OPERATOR", "SALESMAN"],
     category: "logistics",
   },
@@ -259,7 +259,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: "/premium-dashboard",
-    label: "Executive Command Center",
+    label: "Executive Snapshot",
     allowedRoles: ["CEO", "ADMIN"],
     category: "dashboard",
   },

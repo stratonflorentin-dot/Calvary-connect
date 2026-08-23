@@ -169,7 +169,7 @@ function TripsContent() {
     <PageShell width="wide">
       <PageHeader
         eyebrow="Operations"
-        title="Shipments & Trips"
+        title="Trips"
         subtitle={`${stats.active} active · ${stats.overdue} overdue · ${stats.delivered} delivered`}
         icon={RouteIcon}
         iconAccent="bg-primary text-primary-foreground"
