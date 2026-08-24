@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
 
@@ -210,6 +212,31 @@ export default function TrialBalancePage() {
     URL.revokeObjectURL(url);
   };
 
+  const exportPdf = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Trial Balance", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Period: ${from} to ${to}`, 14, 30);
+    let y = 40;
+    for (const cur of currencies) {
+      const t = totalsByCurrency[cur];
+      doc.setFontSize(13);
+      doc.text(`${cur} — Dr ${fmt(t.debit, cur)} / Cr ${fmt(t.credit, cur)}${t.diff === 0 ? " (balanced)" : ""}`, 14, y);
+      y += 6;
+      autoTable(doc, {
+        startY: y,
+        head: [["Code", "Name", "Type", "Debit", "Credit", "Balance"]],
+        body: (rowsByCurrency[cur] ?? []).map((r) => [r.code, r.name, r.type, fmt(r.debit, cur), fmt(r.credit, cur), fmt(r.balance, cur)]),
+        theme: "grid",
+        headStyles: { fillColor: [124, 58, 237] },
+        styles: { fontSize: 8.5 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 12;
+    }
+    doc.save(`trial-balance-${from}-to-${to}.pdf`);
+  };
+
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
@@ -241,6 +268,9 @@ export default function TrialBalancePage() {
           </Button>
           <Button size="sm" onClick={exportCsv} className="h-9 gap-2 bg-violet-600 hover:bg-violet-700">
             <Download className="w-3.5 h-3.5" /> Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPdf} className="h-9 gap-2">
+            <Download className="w-3.5 h-3.5" /> Export PDF
           </Button>
         </div>
       </div>

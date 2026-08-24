@@ -19,6 +19,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
 
@@ -253,6 +255,45 @@ export default function ProfitLossPage() {
     URL.revokeObjectURL(url);
   };
 
+  const exportPdf = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Profit & Loss", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Period: ${from} to ${to}`, 14, 30);
+    let y = 40;
+    for (const cur of currencies) {
+      const current = currentByCcy[cur] ?? [];
+      const rev = sectionTotal(current, "revenue");
+      const cogs = sectionTotal(current, "cogs");
+      const opex = sectionTotal(current, "opex");
+      const other = sectionTotal(current, "other_expense");
+      const gross = rev - cogs;
+      const operating = gross - opex;
+      const net = operating - other;
+      doc.setFontSize(13);
+      doc.text(cur, 14, y);
+      y += 6;
+      autoTable(doc, {
+        startY: y,
+        head: [["Line", "Amount"]],
+        body: [
+          ["Total Revenue", fmt(rev, cur)],
+          ["Total COGS", fmt(cogs, cur)],
+          ["Gross Profit", fmt(gross, cur)],
+          ["Total Opex", fmt(opex, cur)],
+          ["Operating Profit", fmt(operating, cur)],
+          ["Other Expense", fmt(other, cur)],
+          ["Net Profit", fmt(net, cur)],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [3, 105, 161] },
+      });
+      y = (doc as any).lastAutoTable.finalY + 12;
+    }
+    doc.save(`pnl-${from}-to-${to}.pdf`);
+  };
+
   const sections: Section[] = ["revenue", "cogs", "opex", "other_expense", "unknown"];
 
   return (
@@ -294,6 +335,9 @@ export default function ProfitLossPage() {
           </Button>
           <Button size="sm" onClick={exportCsv} className="h-9 gap-2 bg-primary hover:bg-primary/90">
             <Download className="w-3.5 h-3.5" /> Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPdf} className="h-9 gap-2">
+            <Download className="w-3.5 h-3.5" /> Export PDF
           </Button>
         </div>
       </div>

@@ -26,6 +26,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
 
@@ -129,8 +131,8 @@ export default function AgingReportPage() {
   }, [rows]);
 
   const exportCsv = () => {
-    const header = ["Party", "Invoice #", "Due", "Days", "Bucket", "Balance"];
-    const body = rows.map((r) => [r.party, r.invoice_number, r.due_date, r.days, r.bucket, r.balance].join(","));
+    const header = ["Party", "Invoice #", "Due", "Days", "Bucket", "Currency", "Balance"];
+    const body = rows.map((r) => [r.party, r.invoice_number, r.due_date, r.days, r.bucket, r.currency, r.balance].join(","));
     const csv = [header.join(","), ...body].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -139,6 +141,31 @@ export default function AgingReportPage() {
     a.download = `${kind === "ar" ? "receivables" : "payables"}-aging.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportPdf = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text(`${kind === "ar" ? "Receivables" : "Payables"} Aging Report`, 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    let y = 40;
+    for (const cur of currencies) {
+      const s = summaryByCcy[cur];
+      doc.setFontSize(13);
+      doc.text(`${cur} — Total Outstanding ${fmt(s.totalOutstanding, cur)}`, 14, y);
+      y += 6;
+      autoTable(doc, {
+        startY: y,
+        head: [["Party", "Invoice #", "Due", "Days", "Bucket", "Balance"]],
+        body: (rowsByCurrency[cur] ?? []).map((r) => [r.party, r.invoice_number, r.due_date ?? "—", r.days, r.bucket, fmt(r.balance, cur)]),
+        theme: "grid",
+        headStyles: { fillColor: [30, 41, 59] },
+        styles: { fontSize: 8.5 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 12;
+    }
+    doc.save(`${kind === "ar" ? "receivables" : "payables"}-aging.pdf`);
   };
 
   return (
@@ -182,6 +209,9 @@ export default function AgingReportPage() {
           </Button>
           <Button size="sm" onClick={exportCsv} className="h-9 gap-2 bg-slate-800 hover:bg-slate-900">
             <Download className="w-3.5 h-3.5" /> Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPdf} className="h-9 gap-2">
+            <Download className="w-3.5 h-3.5" /> Export PDF
           </Button>
         </div>
       </div>

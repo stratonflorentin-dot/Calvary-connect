@@ -9,9 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowDown, ArrowUp, Calendar, Download, RefreshCw, TrendingUp, Wallet, DollarSign } from "lucide-react";
+import { ArrowDown, ArrowUp, Calendar, Download, FileText, RefreshCw, TrendingUp, Wallet, DollarSign } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function CashFlowPage() {
   const { toast } = useToast();
@@ -136,6 +139,55 @@ export default function CashFlowPage() {
     toast({ variant: "success", title: "Success", description: "Cash flow report exported successfully" });
   };
 
+  const activeCurrencies = () =>
+    Array.from(cashFlowByCurrency.entries()).filter(([, v]) => v.cashFromOperations !== 0 || v.cashFromFinancing !== 0 || v.beginningCash !== 0 || v.endingCash !== 0);
+
+  const exportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    for (const [currency, v] of activeCurrencies()) {
+      const sheet = XLSX.utils.json_to_sheet([
+        { Line: "Cash from Operations", Amount: v.cashFromOperations },
+        { Line: "Cash from Investing", Amount: v.cashFromInvesting },
+        { Line: "Cash from Financing", Amount: v.cashFromFinancing },
+        { Line: "Net Cash Flow", Amount: v.netCashFlow },
+        { Line: "Beginning Cash", Amount: v.beginningCash },
+        { Line: "Ending Cash", Amount: v.endingCash },
+      ]);
+      XLSX.utils.book_append_sheet(workbook, sheet, currency);
+    }
+    XLSX.writeFile(workbook, `cash-flow-${startDate}-to-${endDate}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Cash Flow Statement", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Period: ${startDate} to ${endDate}`, 14, 30);
+    let y = 40;
+    for (const [currency, v] of activeCurrencies()) {
+      doc.setFontSize(13);
+      doc.text(currency, 14, y);
+      y += 6;
+      autoTable(doc, {
+        startY: y,
+        head: [["Line", "Amount"]],
+        body: [
+          ["Cash from Operations", formatCurrency(v.cashFromOperations, currency)],
+          ["Cash from Investing", formatCurrency(v.cashFromInvesting, currency)],
+          ["Cash from Financing", formatCurrency(v.cashFromFinancing, currency)],
+          ["Net Cash Flow", formatCurrency(v.netCashFlow, currency)],
+          ["Beginning Cash", formatCurrency(v.beginningCash, currency)],
+          ["Ending Cash", formatCurrency(v.endingCash, currency)],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [3, 105, 161] },
+      });
+      y = (doc as any).lastAutoTable.finalY + 12;
+    }
+    doc.save(`cash-flow-${startDate}-to-${endDate}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -143,10 +195,20 @@ export default function CashFlowPage() {
           <h1 className="text-2xl font-bold text-foreground">Cash Flow Statement</h1>
           <p className="text-muted-foreground">Track cash inflows and outflows</p>
         </div>
-        <Button className="gap-2" onClick={exportReport}>
-          <Download className="size-4" />
-          Export Report
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={exportExcel}>
+            <Download className="size-4" />
+            Excel
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={exportPDF}>
+            <FileText className="size-4" />
+            PDF
+          </Button>
+          <Button className="gap-2" onClick={exportReport}>
+            <Download className="size-4" />
+            JSON
+          </Button>
+        </div>
       </div>
 
       <Card className="border border-border">

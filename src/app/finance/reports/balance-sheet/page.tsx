@@ -9,9 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Download, RefreshCw, Scale, Wallet, Building2, TrendingUp } from "lucide-react";
+import { Calendar, Download, FileText, RefreshCw, Scale, Wallet, Building2, TrendingUp } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function BalanceSheetPage() {
   const { toast } = useToast();
@@ -131,6 +134,61 @@ export default function BalanceSheetPage() {
     toast({ variant: "success", title: "Success", description: "Balance sheet exported successfully" });
   };
 
+  const activeCurrencies = () =>
+    Array.from(balanceSheetByCurrency.entries()).filter(([, v]) => v.totalAssets !== 0 || v.totalLiabilities !== 0 || v.totalEquity !== 0);
+
+  const exportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    for (const [currency, v] of activeCurrencies()) {
+      const sheet = XLSX.utils.json_to_sheet([
+        { Line: "Cash & Equivalents", Amount: v.cashAndEquivalents },
+        { Line: "Accounts Receivable", Amount: v.accountsReceivable },
+        { Line: "Total Assets", Amount: v.totalAssets },
+        { Line: "Accounts Payable", Amount: v.accountsPayable },
+        { Line: "Accrued Expenses", Amount: v.accruedExpenses },
+        { Line: "Total Liabilities", Amount: v.totalLiabilities },
+        { Line: "Retained Earnings", Amount: v.retainedEarnings },
+        { Line: "Total Equity", Amount: v.totalEquity },
+        { Line: "Total Liabilities & Equity", Amount: v.totalLiabilitiesAndEquity },
+      ]);
+      XLSX.utils.book_append_sheet(workbook, sheet, currency);
+    }
+    XLSX.writeFile(workbook, `balance-sheet-${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Balance Sheet", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`As of: ${new Date().toLocaleDateString()}`, 14, 30);
+    let y = 40;
+    for (const [currency, v] of activeCurrencies()) {
+      doc.setFontSize(13);
+      doc.text(currency, 14, y);
+      y += 6;
+      autoTable(doc, {
+        startY: y,
+        head: [["Line", "Amount"]],
+        body: [
+          ["Cash & Equivalents", formatCurrency(v.cashAndEquivalents, currency)],
+          ["Accounts Receivable", formatCurrency(v.accountsReceivable, currency)],
+          ["Total Assets", formatCurrency(v.totalAssets, currency)],
+          ["Accounts Payable", formatCurrency(v.accountsPayable, currency)],
+          ["Accrued Expenses", formatCurrency(v.accruedExpenses, currency)],
+          ["Total Liabilities", formatCurrency(v.totalLiabilities, currency)],
+          ["Retained Earnings", formatCurrency(v.retainedEarnings, currency)],
+          ["Total Equity", formatCurrency(v.totalEquity, currency)],
+          ["Total Liabilities & Equity", formatCurrency(v.totalLiabilitiesAndEquity, currency)],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [3, 105, 161] },
+      });
+      y = (doc as any).lastAutoTable.finalY + 12;
+    }
+    doc.save(`balance-sheet-${new Date().toISOString().split("T")[0]}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -138,10 +196,20 @@ export default function BalanceSheetPage() {
           <h1 className="text-2xl font-bold text-foreground">Balance Sheet</h1>
           <p className="text-muted-foreground">Financial position at a point in time</p>
         </div>
-        <Button className="gap-2" onClick={exportReport}>
-          <Download className="size-4" />
-          Export Report
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={exportExcel}>
+            <Download className="size-4" />
+            Excel
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={exportPDF}>
+            <FileText className="size-4" />
+            PDF
+          </Button>
+          <Button className="gap-2" onClick={exportReport}>
+            <Download className="size-4" />
+            JSON
+          </Button>
+        </div>
       </div>
 
       <Card className="border border-border">
