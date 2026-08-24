@@ -32,6 +32,7 @@ interface FuelPerTripRow {
   trip_date: string;
   vehicle_id: string | null;
   plate_number: string | null;
+  currency: string;
   fuel_entry_count: number;
   total_liters: number;
   total_fuel_cost: number;
@@ -45,10 +46,15 @@ interface ImportResult {
   errors: string[];
 }
 
-const fmtTZS = (v: number) => `TZS ${Math.round(v).toLocaleString("en-TZ")}`;
+const fmtAmount = (v: number, currency: string) => `${Math.round(v).toLocaleString("en-TZ")} ${currency}`;
+const fmtByCurrency = (byCurrency: Record<string, number>) => {
+  const entries = Object.entries(byCurrency);
+  if (entries.length === 0) return fmtAmount(0, "TZS");
+  return entries.map(([cur, amt]) => fmtAmount(amt, cur)).join(" · ");
+};
 
 function toCsv(rows: FuelPerTripRow[]) {
-  const headers = ["trip_number", "plate_number", "origin", "destination", "distance_km", "total_liters", "total_fuel_cost", "liters_per_100km", "fuel_cost_per_km", "trip_date"];
+  const headers = ["trip_number", "plate_number", "origin", "destination", "distance_km", "currency", "total_liters", "total_fuel_cost", "liters_per_100km", "fuel_cost_per_km", "trip_date"];
   const lines = [headers.join(",")];
   for (const r of rows) {
     lines.push(
@@ -58,6 +64,7 @@ function toCsv(rows: FuelPerTripRow[]) {
         r.origin,
         r.destination,
         r.distance_km ?? "",
+        r.currency,
         r.total_liters,
         r.total_fuel_cost,
         r.liters_per_100km ?? "",
@@ -79,7 +86,7 @@ export default function FuelPerTripReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<FuelPerTripRow[]>([]);
-  const [summary, setSummary] = useState({ trips: 0, tripsWithFuelLogged: 0, totalLiters: 0, totalFuelCost: 0, totalDistanceKm: 0 });
+  const [summary, setSummary] = useState({ trips: 0, tripsWithFuelLogged: 0, totalLitersByCurrency: {} as Record<string, number>, totalFuelCostByCurrency: {} as Record<string, number>, totalDistanceKm: 0 });
 
   const defaultFrom = new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0];
   const defaultTo = new Date().toISOString().split("T")[0];
@@ -205,7 +212,8 @@ export default function FuelPerTripReportPage() {
     );
   }
 
-  const avgLitersPer100km = summary.totalDistanceKm > 0 ? (summary.totalLiters / summary.totalDistanceKm) * 100 : null;
+  const totalLitersAllCurrencies = Object.values(summary.totalLitersByCurrency).reduce((s, v) => s + v, 0);
+  const avgLitersPer100km = summary.totalDistanceKm > 0 ? (totalLitersAllCurrencies / summary.totalDistanceKm) * 100 : null;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -360,7 +368,13 @@ export default function FuelPerTripReportPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatTile icon={Route} label="Trips" value={summary.trips} accent="bg-primary/10 text-primary" />
                 <StatTile icon={Fuel} label="Trips with fuel logged" value={summary.tripsWithFuelLogged} accent="bg-info/10 text-info" />
-                <StatTile icon={Wallet} label="Total fuel cost" value={summary.totalFuelCost} format={fmtTZS} accent="bg-warning/10 text-warning" />
+                <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3 bg-warning/10 text-warning">
+                    <Wallet className="size-4" />
+                  </div>
+                  <p className="text-xl font-bold text-foreground truncate">{fmtByCurrency(summary.totalFuelCostByCurrency)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Total fuel cost</p>
+                </div>
                 <StatTile
                   icon={Fuel}
                   label="Avg L/100km"
@@ -395,15 +409,15 @@ export default function FuelPerTripReportPage() {
                         className="divide-y divide-border"
                       >
                         {rows.map((r) => (
-                          <motion.tr key={r.trip_id} variants={listItem} className="hover:bg-muted/40 transition-colors">
+                          <motion.tr key={`${r.trip_id}::${r.currency}`} variants={listItem} className="hover:bg-muted/40 transition-colors">
                             <td className="px-4 py-3 font-mono text-xs font-black text-foreground">{r.trip_number ?? `TRP-${r.trip_id.slice(0, 6)}`}</td>
                             <td className="px-4 py-3 text-xs font-mono text-muted-foreground">{r.plate_number ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-xs text-foreground">{r.origin} → {r.destination}</td>
                             <td className="px-4 py-3 text-right text-foreground">{r.distance_km != null ? `${r.distance_km} km` : "—"}</td>
                             <td className="px-4 py-3 text-right text-foreground">{r.total_liters > 0 ? `${r.total_liters.toLocaleString()} L` : "—"}</td>
-                            <td className="px-4 py-3 text-right font-bold text-foreground">{r.total_fuel_cost > 0 ? fmtTZS(r.total_fuel_cost) : "—"}</td>
+                            <td className="px-4 py-3 text-right font-bold text-foreground">{r.total_fuel_cost > 0 ? fmtAmount(r.total_fuel_cost, r.currency) : "—"}</td>
                             <td className="px-4 py-3 text-right text-muted-foreground">{r.liters_per_100km ?? "—"}</td>
-                            <td className="px-4 py-3 text-right text-muted-foreground">{r.fuel_cost_per_km != null ? fmtTZS(r.fuel_cost_per_km) : "—"}</td>
+                            <td className="px-4 py-3 text-right text-muted-foreground">{r.fuel_cost_per_km != null ? fmtAmount(r.fuel_cost_per_km, r.currency) : "—"}</td>
                           </motion.tr>
                         ))}
                       </motion.tbody>

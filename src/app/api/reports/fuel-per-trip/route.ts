@@ -28,12 +28,24 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     const rows = data ?? [];
+    // view_fuel_per_trip (migration 112) now groups per trip+currency, so a
+    // trip with genuinely mixed-currency fuel entries yields multiple rows —
+    // tripsWithFuelLogged/totalDistanceKm dedupe by trip_id to avoid
+    // double-counting those, while cost/liters totals stay per currency.
+    const distinctTrips = new Map(rows.map((r) => [r.trip_id, r]));
+    const totalFuelCostByCurrency: Record<string, number> = {};
+    const totalLitersByCurrency: Record<string, number> = {};
+    for (const r of rows) {
+      const cur = r.currency || 'TZS';
+      totalFuelCostByCurrency[cur] = (totalFuelCostByCurrency[cur] ?? 0) + Number(r.total_fuel_cost || 0);
+      totalLitersByCurrency[cur] = (totalLitersByCurrency[cur] ?? 0) + Number(r.total_liters || 0);
+    }
     const summary = {
-      trips: rows.length,
-      tripsWithFuelLogged: rows.filter((r) => r.fuel_entry_count > 0).length,
-      totalLiters: rows.reduce((sum, r) => sum + Number(r.total_liters || 0), 0),
-      totalFuelCost: rows.reduce((sum, r) => sum + Number(r.total_fuel_cost || 0), 0),
-      totalDistanceKm: rows.reduce((sum, r) => sum + Number(r.distance_km || 0), 0),
+      trips: distinctTrips.size,
+      tripsWithFuelLogged: [...distinctTrips.values()].filter((r) => r.fuel_entry_count > 0).length,
+      totalLitersByCurrency,
+      totalFuelCostByCurrency,
+      totalDistanceKm: [...distinctTrips.values()].reduce((sum, r) => sum + Number(r.distance_km || 0), 0),
     };
 
     return NextResponse.json({ success: true, summary, rows });
