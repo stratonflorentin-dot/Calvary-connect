@@ -210,48 +210,48 @@ export default function RevenueAnalysisPage() {
     return () => { cancelled = true; };
   }, [revenueEligibleInvoices, income]);
 
+  // Keyed by name+currency (not just name) so a customer/status/month with
+  // revenue in more than one currency gets separate, correctly-labeled
+  // entries instead of being summed together under whichever currency
+  // happened to be processed last.
   const customerData = useMemo(() => {
-    const customerMap = new Map<string, { amount: number; currency: string }>();
+    const customerMap = new Map<string, { name: string; amount: number; currency: string }>();
     revenueEligibleInvoices.forEach((invoice) => {
       const customer = invoice.customer_name || "Unknown";
-      const existing = customerMap.get(customer) || { amount: 0, currency: invoice.currency };
-      customerMap.set(customer, { 
-        amount: existing.amount + invoice.amount, 
-        currency: invoice.currency 
-      });
+      const currency = invoice.currency || "TZS";
+      const key = `${customer}::${currency}`;
+      const existing = customerMap.get(key) || { name: customer, amount: 0, currency };
+      customerMap.set(key, { name: customer, amount: existing.amount + invoice.amount, currency });
     });
-    return Array.from(customerMap.entries())
-      .map(([name, value]) => ({ name, ...value }))
+    return Array.from(customerMap.values())
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 10);
   }, [revenueEligibleInvoices]);
 
   const statusData = useMemo(() => {
-    const statusMap = new Map<string, { amount: number; currency: string }>();
+    const statusMap = new Map<string, { name: string; amount: number; currency: string }>();
     filteredInvoices.forEach((invoice) => {
       const status = invoice.status || "unknown";
-      const existing = statusMap.get(status) || { amount: 0, currency: invoice.currency };
-      statusMap.set(status, { 
-        amount: existing.amount + invoice.amount, 
-        currency: invoice.currency 
-      });
+      const currency = invoice.currency || "TZS";
+      const key = `${status}::${currency}`;
+      const existing = statusMap.get(key) || { name: status, amount: 0, currency };
+      statusMap.set(key, { name: status, amount: existing.amount + invoice.amount, currency });
     });
-    return Array.from(statusMap.entries()).map(([name, value]) => ({ name, ...value }));
+    return Array.from(statusMap.values());
   }, [filteredInvoices]);
 
   const monthlyData = useMemo(() => {
-    const monthlyMap = new Map<string, { amount: number; currency: string }>();
+    const monthlyMap = new Map<string, { month: string; amount: number; currency: string }>();
     [...revenueEligibleInvoices, ...income].forEach((item) => {
       const date = (item as Invoice).due_date || (item as Income).date;
       if (!date) return;
       const month = new Date(date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      const existing = monthlyMap.get(month) || { amount: 0, currency: item.currency };
-      monthlyMap.set(month, { 
-        amount: existing.amount + item.amount, 
-        currency: item.currency 
-      });
+      const currency = item.currency || "TZS";
+      const key = `${month}::${currency}`;
+      const existing = monthlyMap.get(key) || { month, amount: 0, currency };
+      monthlyMap.set(key, { month, amount: existing.amount + item.amount, currency });
     });
-    return Array.from(monthlyMap.entries()).map(([month, value]) => ({ month, ...value }));
+    return Array.from(monthlyMap.values());
   }, [revenueEligibleInvoices, income]);
 
   const statuses = useMemo(() => {
@@ -266,6 +266,19 @@ export default function RevenueAnalysisPage() {
   const pendingRevenue = revenueEligibleInvoices.filter((i) => i.status === "pending" || i.status === "sent" || i.status === "partial").reduce((sum, i) => sum + i.amount, 0);
   const topCustomer = customerData.length > 0 ? customerData[0] : null;
   const avgInvoice = revenueEligibleInvoices.length > 0 ? invoiceRevenue / revenueEligibleInvoices.length : 0;
+  // "% of total" only means something within a single currency.
+  const invoiceRevenueByCurrency = useMemo(() => {
+    const byCurrency: Record<string, number> = {};
+    revenueEligibleInvoices.forEach((i) => {
+      const cur = i.currency || "TZS";
+      byCurrency[cur] = (byCurrency[cur] ?? 0) + i.amount;
+    });
+    return byCurrency;
+  }, [revenueEligibleInvoices]);
+  const pctOfCurrencyTotal = (amount: number, currency: string) => {
+    const total = invoiceRevenueByCurrency[currency || "TZS"] || 0;
+    return total > 0 ? (amount / total) * 100 : 0;
+  };
 
   const exportData = () => {
     const data = {
@@ -308,8 +321,8 @@ export default function RevenueAnalysisPage() {
     const customerTableData = customerData.map((item) => [
       item.name,
       formatCurrency(item.amount, item.currency),
-      invoiceRevenue > 0 ? ((item.amount / invoiceRevenue) * 100).toFixed(1) + "%" : "0%",
-      filteredInvoices.filter((i) => i.customer_name === item.name).length,
+      `${pctOfCurrencyTotal(item.amount, item.currency).toFixed(1)}%`,
+      filteredInvoices.filter((i) => i.customer_name === item.name && (i.currency || "TZS") === item.currency).length,
     ]);
 
     autoTable(doc, {
@@ -327,7 +340,7 @@ export default function RevenueAnalysisPage() {
       formatDate(i.due_date),
       i.status,
       i.type,
-      formatAmount(i.amount),
+      formatAmount(i.amount, i.currency),
     ]);
 
     // jspdf-autotable v5's functional autoTable() returns void — the result
@@ -355,8 +368,8 @@ export default function RevenueAnalysisPage() {
         Customer: item.name,
         Revenue: item.amount,
         Currency: item.currency,
-        Percentage: invoiceRevenue > 0 ? ((item.amount / invoiceRevenue) * 100).toFixed(1) + "%" : "0%",
-        InvoiceCount: filteredInvoices.filter((i) => i.customer_name === item.name).length,
+        Percentage: pctOfCurrencyTotal(item.amount, item.currency).toFixed(1) + "%",
+        InvoiceCount: filteredInvoices.filter((i) => i.customer_name === item.name && (i.currency || "TZS") === item.currency).length,
       }))
     );
     XLSX.utils.book_append_sheet(workbook, customerSheet, "Customer Breakdown");
@@ -574,12 +587,12 @@ export default function RevenueAnalysisPage() {
           <CardContent className="p-4">
             <ResponsiveContainer width="100%" height={200}>
               <RechartsPieChart>
-                <Pie data={statusData} cx="50%" cy="50%" outerRadius={60} dataKey="value" label={(entry) => entry.name}>
+                <Pie data={statusData} cx="50%" cy="50%" outerRadius={60} dataKey="amount" label={(entry) => entry.name}>
                   {statusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: any, name: any, props: any) => [formatCurrency(value, props?.payload?.currency || "TZS"), name]} />
               </RechartsPieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -594,7 +607,7 @@ export default function RevenueAnalysisPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="month" className="text-xs" />
                 <YAxis className="text-xs" />
-                <Tooltip />
+                <Tooltip formatter={(value: any, name: any, props: any) => [formatCurrency(value, props?.payload?.currency || "TZS"), name]} />
                 <Line type="monotone" dataKey="amount" stroke="#10b981" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
@@ -610,7 +623,7 @@ export default function RevenueAnalysisPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" angle={-45} textAnchor="end" height={60} />
                 <YAxis className="text-xs" />
-                <Tooltip />
+                <Tooltip formatter={(value: any, name: any, props: any) => [formatCurrency(value, props?.payload?.currency || "TZS"), name]} />
                 <Bar dataKey="amount" fill="#10b981" />
               </BarChart>
             </ResponsiveContainer>
@@ -643,11 +656,11 @@ export default function RevenueAnalysisPage() {
                   </TableRow>
                 ) : (
                   customerData.map((item) => {
-                    const count = filteredInvoices.filter((i) => i.customer_name === item.name).length;
-                    const percentage = invoiceRevenue > 0 ? (item.amount / invoiceRevenue) * 100 : 0;
+                    const count = filteredInvoices.filter((i) => i.customer_name === item.name && (i.currency || "TZS") === item.currency).length;
+                    const percentage = pctOfCurrencyTotal(item.amount, item.currency);
                     return (
-                      <TableRow key={item.name}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableRow key={`${item.name}::${item.currency}`}>
+                        <TableCell className="font-medium">{item.name} <span className="text-[10px] text-muted-foreground">{item.currency}</span></TableCell>
                         <TableCell className="text-success font-medium">{formatCurrency(item.amount, item.currency)}</TableCell>
                         <TableCell>{percentage.toFixed(1)}%</TableCell>
                         <TableCell>{count}</TableCell>
@@ -700,7 +713,7 @@ export default function RevenueAnalysisPage() {
                       <TableCell>
                         <Badge variant="outline">{invoice.type}</Badge>
                       </TableCell>
-                      <TableCell className="font-medium text-success">{formatAmount(invoice.amount)}</TableCell>
+                      <TableCell className="font-medium text-success">{formatAmount(invoice.amount, invoice.currency)}</TableCell>
                     </TableRow>
                   ))
                 )}

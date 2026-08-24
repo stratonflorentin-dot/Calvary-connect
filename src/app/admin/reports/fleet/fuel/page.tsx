@@ -15,7 +15,9 @@ import {
   ArrowRight,
   RefreshCw,
   TrendingUp,
-  Truck
+  Truck,
+  Download,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -28,20 +30,26 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface VehicleFuelStat {
   id: string;
   plateNumber: string;
   makeModel: string;
+  currency: string;
+  mixedCurrencies: boolean;
+  costsByCurrency: Record<string, { liters: number; cost: number }>;
   totalLitresDispensed: number;
-  totalFuelCostTZS: number;
+  totalFuelCost: number;
   kmDriven: number;
   litresPer100km: number;
 }
 
 interface SummaryStats {
-  totalLitresDispensed: number;
-  totalFuelCostTZS: number;
+  totalLitresByCurrency: Record<string, number>;
+  totalCostByCurrency: Record<string, number>;
   totalKmDriven: number;
   mostEfficientVehicle: string;
 }
@@ -124,8 +132,14 @@ export default function FuelConsumptionPage() {
     );
   }
 
-  const formatTZS = (amount: number) => {
-    return amount.toLocaleString('en-TZ') + ' TZS';
+  const formatAmount = (amount: number, currency: string) => {
+    return amount.toLocaleString('en-TZ') + ' ' + currency;
+  };
+
+  const formatByCurrency = (byCurrency: Record<string, number>) => {
+    const entries = Object.entries(byCurrency);
+    if (entries.length === 0) return formatAmount(0, 'TZS');
+    return entries.map(([cur, amt]) => formatAmount(amt, cur)).join(' · ');
   };
 
   // The most efficient vehicle is the one with the lowest L/100km that has actually run km
@@ -133,6 +147,51 @@ export default function FuelConsumptionPage() {
   const bestVehicle = runningVehicles.length > 0
     ? runningVehicles.reduce((prev, curr) => (curr.litresPer100km < prev.litresPer100km ? curr : prev), runningVehicles[0])
     : null;
+
+  const exportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.json_to_sheet(
+      vehicles.map((v) => ({
+        Plate: v.plateNumber,
+        Vehicle: v.makeModel,
+        Currency: v.currency,
+        MixedCurrencies: v.mixedCurrencies ? 'Yes' : 'No',
+        LitersDispensed: v.totalLitresDispensed,
+        TotalFuelCost: v.totalFuelCost,
+        DistanceKm: v.kmDriven,
+        LitersPer100km: v.litresPer100km,
+      })),
+    );
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Fuel Consumption');
+    XLSX.writeFile(workbook, `fuel-consumption-${appliedFrom}_${appliedTo}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Fuel Consumption Report', 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Period: ${appliedFrom} to ${appliedTo}`, 14, 30);
+    if (summary) {
+      doc.text(`Total Fuel Cost: ${formatByCurrency(summary.totalCostByCurrency)}`, 14, 38);
+      doc.text(`Total Distance: ${summary.totalKmDriven.toLocaleString()} km`, 14, 46);
+    }
+    autoTable(doc, {
+      startY: 54,
+      head: [['Plate', 'Vehicle', 'Liters', 'Cost', 'Distance (km)', 'L/100km']],
+      body: vehicles.map((v) => [
+        v.plateNumber,
+        v.makeModel,
+        v.totalLitresDispensed.toLocaleString(),
+        formatAmount(v.totalFuelCost, v.currency),
+        v.kmDriven.toLocaleString(),
+        v.litresPer100km > 0 ? `${v.litresPer100km}` : '—',
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [3, 105, 161] },
+    });
+    doc.save(`fuel-consumption-${appliedFrom}_${appliedTo}.pdf`);
+  };
 
   return (
     <div id="report-root" className="flex min-h-screen bg-background" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
@@ -153,12 +212,20 @@ export default function FuelConsumptionPage() {
               <h1 className="text-2xl font-bold text-foreground font-headline tracking-tighter">Fuel Consumption Report</h1>
               <p className="text-sm text-muted-foreground mt-1">Detailed analysis of fuel logging, mileage metrics, and efficiency ratios for active trucks.</p>
             </div>
-            <Link
-              href="/admin/reports/fleet/fuel-per-trip"
-              className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2 shrink-0"
-            >
-              Fuel Per Trip <ArrowRight className="size-4" />
-            </Link>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={exportExcel} disabled={vehicles.length === 0} className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50">
+                <Download className="size-4" /> Excel
+              </button>
+              <button onClick={exportPDF} disabled={vehicles.length === 0} className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50">
+                <FileText className="size-4" /> PDF
+              </button>
+              <Link
+                href="/admin/reports/fleet/fuel-per-trip"
+                className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2"
+              >
+                Fuel Per Trip <ArrowRight className="size-4" />
+              </Link>
+            </div>
           </div>
 
           {/* Filter Bar */}
@@ -242,7 +309,7 @@ export default function FuelConsumptionPage() {
                     <Fuel className="size-5 text-info" />
                   </div>
                   <p className="text-xs font-bold text-info/80 uppercase tracking-wider">Total Liters Dispensed</p>
-                  <p className="text-2xl font-black text-info mt-1">{summary.totalLitresDispensed.toLocaleString()} L</p>
+                  <p className="text-2xl font-black text-info mt-1">{Object.values(summary.totalLitresByCurrency).reduce((s, v) => s + v, 0).toLocaleString()} L</p>
                 </div>
 
                 {/* Total Fuel Cost */}
@@ -251,7 +318,7 @@ export default function FuelConsumptionPage() {
                     <DollarSign className="size-5 text-success" />
                   </div>
                   <p className="text-xs font-bold text-success/80 uppercase tracking-wider">Total Fuel Costs</p>
-                  <p className="text-2xl font-black text-success mt-1 truncate">{formatTZS(summary.totalFuelCostTZS)}</p>
+                  <p className="text-2xl font-black text-success mt-1 truncate">{formatByCurrency(summary.totalCostByCurrency)}</p>
                 </div>
 
                 {/* Total KM driven */}
@@ -317,7 +384,10 @@ export default function FuelConsumptionPage() {
                                 {vehicle.totalLitresDispensed.toLocaleString()} L
                               </td>
                               <td className="px-6 py-4 text-right text-foreground font-mono">
-                                {formatTZS(vehicle.totalFuelCostTZS)}
+                                {formatAmount(vehicle.totalFuelCost, vehicle.currency)}
+                                {vehicle.mixedCurrencies && (
+                                  <span className="ml-1.5 text-[10px] font-bold text-warning" title="This vehicle also has fuel costs in another currency, not included in this figure">mixed</span>
+                                )}
                               </td>
                               <td className="px-6 py-4 text-right text-foreground font-mono">
                                 {vehicle.kmDriven.toLocaleString()} km
@@ -347,21 +417,21 @@ export default function FuelConsumptionPage() {
                 <div className="lg:col-span-3 bg-card border border-border rounded-xl shadow-sm p-4">
                   <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
                     <TrendingUp className="size-5 text-primary" />
-                    Fuel Cost (TZS) vs Distance Driven (KM) Comparison
+                    Fuel Cost vs Distance Driven (KM) Comparison
                   </h3>
                   <div className="h-80 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={vehicles}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis dataKey="plateNumber" tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: 'Fuel Cost (TZS)', angle: -90, position: 'insideLeft', offset: 10 }} />
+                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: 'Fuel Cost', angle: -90, position: 'insideLeft', offset: 10 }} />
                         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} label={{ value: 'Distance (KM)', angle: 90, position: 'insideRight', offset: 10 }} />
-                        <Tooltip formatter={(value: any, name: any) => {
-                          if (name === 'Fuel Costs') return [formatTZS(value), name];
+                        <Tooltip formatter={(value: any, name: any, props: any) => {
+                          if (name === 'Fuel Costs') return [formatAmount(value, props?.payload?.currency || 'TZS'), name];
                           return [`${value.toLocaleString()} km`, name];
                         }} />
                         <Legend />
-                        <Bar yAxisId="left" dataKey="totalFuelCostTZS" name="Fuel Costs" fill="#0369A1" radius={[4, 4, 0, 0]} />
+                        <Bar yAxisId="left" dataKey="totalFuelCost" name="Fuel Costs" fill="#0369A1" radius={[4, 4, 0, 0]} />
                         <Bar yAxisId="right" dataKey="kmDriven" name="Distance Covered" fill="#F59E0B" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>

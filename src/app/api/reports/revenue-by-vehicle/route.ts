@@ -45,25 +45,34 @@ export async function GET(request: NextRequest) {
       );
       const completedTrips = vehicleTrips.filter((t) => t.status?.toLowerCase() !== 'cancelled');
 
-      // Sum Revenue
-      const totalRevenue = completedTrips.reduce((sum, t) => {
-        return sum + (t.revenue || t.price || t.salesAmount || 0);
-      }, 0);
+      // Revenue by currency — t.revenue/t.price are dead legacy columns
+      // (always 0) and t.salesAmount doesn't exist; the real figures are
+      // total_amount/sales_amount, and blending different-currency trips
+      // into one number would be meaningless arithmetic, not just a label
+      // issue, so costs/revenue are tracked per currency instead.
+      const byCurrency: Record<string, { revenue: number; costs: number }> = {};
+      for (const t of completedTrips) {
+        const cur = t.currency || 'TZS';
+        if (!byCurrency[cur]) byCurrency[cur] = { revenue: 0, costs: 0 };
+        byCurrency[cur].revenue += Number(t.total_amount ?? t.sales_amount ?? t.revenue ?? t.price ?? 0);
+        byCurrency[cur].costs += Number(t.cost_fuel || 0) + Number(t.cost_tolls || 0) + Number(t.cost_border || 0) + Number(t.cost_customs || 0);
+      }
 
-      // Sum direct costs from trips table
-      const tripFuel = completedTrips.reduce((sum, t) => sum + parseFloat(t.cost_fuel || t.costFuel || t.fuelExpense || 0), 0);
-      const tripTolls = completedTrips.reduce((sum, t) => sum + parseFloat(t.cost_tolls || t.costTolls || 0), 0);
-      const tripBorder = completedTrips.reduce((sum, t) => sum + parseFloat(t.cost_border || t.costBorder || 0), 0);
-      const tripCustoms = completedTrips.reduce((sum, t) => sum + parseFloat(t.cost_customs || t.costCustoms || 0), 0);
-      const tripOther = completedTrips.reduce((sum, t) => sum + parseFloat(t.otherExpenses || t.other_expenses || 0), 0);
-
-      const directTripCosts = tripFuel + tripTolls + tripBorder + tripCustoms + tripOther;
-
-      // Sum expenses from expenses table
+      // Sum expenses from expenses table, also by currency
       const vehicleExpenses = (expenses || []).filter((e) => e.vehicle_id === vehicle.id || e.vehicleId === vehicle.id);
-      const expensesTotal = vehicleExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+      for (const e of vehicleExpenses) {
+        const cur = e.currency || 'TZS';
+        if (!byCurrency[cur]) byCurrency[cur] = { revenue: 0, costs: 0 };
+        byCurrency[cur].costs = Math.max(byCurrency[cur].costs, parseFloat(e.amount || 0));
+      }
 
-      const totalExpenses = Math.max(directTripCosts, expensesTotal);
+      const currencies = Object.keys(byCurrency);
+      const mixedCurrencies = currencies.length > 1;
+      const primaryCurrency = currencies.length > 0
+        ? currencies.reduce((a, b) => (byCurrency[a].revenue >= byCurrency[b].revenue ? a : b))
+        : 'TZS';
+      const totalRevenue = byCurrency[primaryCurrency]?.revenue ?? 0;
+      const totalExpenses = byCurrency[primaryCurrency]?.costs ?? 0;
       const netProfit = totalRevenue - totalExpenses;
       const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
@@ -71,32 +80,42 @@ export async function GET(request: NextRequest) {
         id: vehicle.id,
         plateNumber: vehicle.plateNumber || vehicle.plate_number || 'N/A',
         makeModel: `${vehicle.make || 'Unknown'} ${vehicle.model || ''}`.trim(),
+        currency: primaryCurrency,
+        mixedCurrencies,
+        financialsByCurrency: byCurrency,
         tripsCount: completedTrips.length,
-        totalRevenueTZS: totalRevenue,
-        totalExpensesTZS: totalExpenses,
-        netProfitTZS: netProfit,
+        totalRevenue,
+        totalExpenses,
+        netProfit,
         profitMarginPercent: parseFloat(margin.toFixed(1)),
         status: vehicle.status || 'available'
       };
-    }).sort((a, b) => b.totalRevenueTZS - a.totalRevenueTZS);
+    }).sort((a, b) => b.totalRevenue - a.totalRevenue);
 
-    // Summary Statistics
+    // Summary Statistics — grouped by currency, not blended into one number.
     const totalVehiclesActive = vehicleRevenueData.filter((v) => v.tripsCount > 0).length;
-    const totalRevenue = vehicleRevenueData.reduce((sum, v) => sum + v.totalRevenueTZS, 0);
-    const totalExpenses = vehicleRevenueData.reduce((sum, v) => sum + v.totalExpensesTZS, 0);
-    const netProfit = totalRevenue - totalExpenses;
+    const totalRevenueByCurrency: Record<string, number> = {};
+    const totalExpensesByCurrency: Record<string, number> = {};
+    const netProfitByCurrency: Record<string, number> = {};
+    for (const v of vehicleRevenueData) {
+      for (const [cur, { revenue, costs }] of Object.entries(v.financialsByCurrency)) {
+        totalRevenueByCurrency[cur] = (totalRevenueByCurrency[cur] ?? 0) + revenue;
+        totalExpensesByCurrency[cur] = (totalExpensesByCurrency[cur] ?? 0) + costs;
+        netProfitByCurrency[cur] = (netProfitByCurrency[cur] ?? 0) + (revenue - costs);
+      }
+    }
 
     const highestRevenueVehicle = vehicleRevenueData.length > 0
-      ? vehicleRevenueData.reduce((prev, curr) => (curr.totalRevenueTZS > prev.totalRevenueTZS ? curr : prev), vehicleRevenueData[0])
+      ? vehicleRevenueData.reduce((prev, curr) => (curr.totalRevenue > prev.totalRevenue ? curr : prev), vehicleRevenueData[0])
       : null;
 
     return NextResponse.json({
       success: true,
       summary: {
         totalVehiclesActive,
-        totalRevenue,
-        totalExpenses,
-        netProfit,
+        totalRevenueByCurrency,
+        totalExpensesByCurrency,
+        netProfitByCurrency,
         bestPerformingVehicle: highestRevenueVehicle ? `${highestRevenueVehicle.plateNumber}` : 'N/A'
       },
       data: vehicleRevenueData

@@ -88,10 +88,21 @@ export async function GET(request: NextRequest) {
       }
       const distanceTracked = tripsWithDistance > 0;
 
-      // Calculate total revenue
-      const totalRevenue = completedTrips.reduce((sum, t) => {
-        return sum + (t.revenue || t.price || t.salesAmount || 0);
-      }, 0);
+      // Revenue by currency — t.revenue/t.price are dead legacy columns
+      // (always 0) and t.salesAmount doesn't exist; the real figures are
+      // total_amount/sales_amount. Blending different-currency trips into
+      // one number would be meaningless arithmetic, not just a label issue.
+      const revenueByCurrency: Record<string, number> = {};
+      for (const t of completedTrips) {
+        const cur = t.currency || 'TZS';
+        revenueByCurrency[cur] = (revenueByCurrency[cur] ?? 0) + Number(t.total_amount ?? t.sales_amount ?? t.revenue ?? t.price ?? 0);
+      }
+      const revenueCurrencies = Object.keys(revenueByCurrency);
+      const mixedRevenueCurrencies = revenueCurrencies.length > 1;
+      const primaryRevenueCurrency = revenueCurrencies.length > 0
+        ? revenueCurrencies.reduce((a, b) => (revenueByCurrency[a] >= revenueByCurrency[b] ? a : b))
+        : 'TZS';
+      const totalRevenue = revenueByCurrency[primaryRevenueCurrency] ?? 0;
 
       // Calculate fuel cost / litres used
       // Get fuel from fuel requests
@@ -142,7 +153,9 @@ export async function GET(request: NextRequest) {
         completedTripsCount: completedTrips.length,
         totalDistanceKm: totalDistance,
         distanceTracked,
-        totalRevenueTZS: totalRevenue,
+        currency: primaryRevenueCurrency,
+        mixedRevenueCurrencies,
+        totalRevenue,
         totalFuelCostTZS: totalFuelCost,
         totalFuelLiters,
         fuelPriceIsEstimate,
@@ -158,10 +171,13 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Summary Statistics
+    // Summary Statistics — grouped by currency, not blended into one number.
     const activeDrivers = driverPerformance.filter((d) => d.completedTripsCount > 0 || d.status === 'active');
     const totalTrips = driverPerformance.reduce((sum, d) => sum + d.completedTripsCount, 0);
-    const totalRevenue = driverPerformance.reduce((sum, d) => sum + d.totalRevenueTZS, 0);
+    const totalRevenueByCurrency: Record<string, number> = {};
+    for (const d of driverPerformance) {
+      totalRevenueByCurrency[d.currency] = (totalRevenueByCurrency[d.currency] ?? 0) + d.totalRevenue;
+    }
     const driversWithOnTimeData = driverPerformance.filter((d) => d.onTimeDeliveryRate !== null);
     const avgOnTime = driversWithOnTimeData.length > 0
       ? Math.round(driversWithOnTimeData.reduce((sum, d) => sum + (d.onTimeDeliveryRate as number), 0) / driversWithOnTimeData.length)
@@ -172,7 +188,7 @@ export async function GET(request: NextRequest) {
       summary: {
         totalDriversActive: activeDrivers.length,
         totalTrips,
-        totalRevenue,
+        totalRevenueByCurrency,
         avgOnTimePercent: avgOnTime
       },
       data: driverPerformance

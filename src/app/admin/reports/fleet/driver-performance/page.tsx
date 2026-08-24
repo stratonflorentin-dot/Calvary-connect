@@ -5,11 +5,11 @@ import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Users, 
-  Route, 
-  DollarSign, 
-  CheckCircle2, 
+import {
+  Users,
+  Route,
+  DollarSign,
+  CheckCircle2,
   Calendar,
   AlertTriangle,
   ArrowLeft,
@@ -17,7 +17,9 @@ import {
   RefreshCw,
   TrendingUp,
   Sparkles,
-  X
+  X,
+  Download,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -30,6 +32,9 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface DriverStat {
   id: string;
@@ -38,7 +43,9 @@ interface DriverStat {
   completedTripsCount: number;
   totalDistanceKm: number;
   distanceTracked: boolean;
-  totalRevenueTZS: number;
+  currency: string;
+  mixedRevenueCurrencies: boolean;
+  totalRevenue: number;
   totalFuelCostTZS: number;
   totalFuelLiters: number;
   fuelPriceIsEstimate: boolean;
@@ -53,7 +60,7 @@ interface DriverStat {
 interface SummaryStats {
   totalDriversActive: number;
   totalTrips: number;
-  totalRevenue: number;
+  totalRevenueByCurrency: Record<string, number>;
   avgOnTimePercent: number | null;
 }
 
@@ -202,6 +209,62 @@ export default function DriverPerformancePage() {
   const formatTZS = (amount: number) => {
     return amount.toLocaleString('en-TZ') + ' TZS';
   };
+  const formatAmount = (amount: number, currency: string) => {
+    return amount.toLocaleString('en-TZ') + ' ' + currency;
+  };
+  const formatByCurrency = (byCurrency: Record<string, number>) => {
+    const entries = Object.entries(byCurrency);
+    if (entries.length === 0) return formatAmount(0, 'TZS');
+    return entries.map(([cur, amt]) => formatAmount(amt, cur)).join(' · ');
+  };
+
+  const exportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.json_to_sheet(
+      rankedDrivers.map((d) => ({
+        Driver: d.name,
+        EmployeeId: d.employeeId,
+        Trips: d.completedTripsCount,
+        DistanceKm: d.distanceTracked ? d.totalDistanceKm : '',
+        Currency: d.currency,
+        MixedCurrencies: d.mixedRevenueCurrencies ? 'Yes' : 'No',
+        Revenue: d.totalRevenue,
+        FuelCostTZS: d.totalFuelCostTZS,
+        FuelLiters: d.totalFuelLiters,
+        OnTimePercent: d.onTimeDeliveryRate ?? '',
+        Score: scorecards[d.id]?.overall_score ?? '',
+        Rating: d.hasReviews ? d.averagePerformanceScore : '',
+      })),
+    );
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Driver Performance');
+    XLSX.writeFile(workbook, `driver-performance-${appliedFrom}_${appliedTo}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Driver Performance Report', 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Period: ${appliedFrom} to ${appliedTo}`, 14, 30);
+    if (summary) {
+      doc.text(`Total Revenue: ${formatByCurrency(summary.totalRevenueByCurrency)}`, 14, 38);
+    }
+    autoTable(doc, {
+      startY: 46,
+      head: [['Driver', 'Trips', 'Distance', 'Revenue', 'On-Time', 'Score']],
+      body: rankedDrivers.map((d) => [
+        d.name,
+        d.completedTripsCount,
+        d.distanceTracked ? `${d.totalDistanceKm.toLocaleString()} km` : '—',
+        formatAmount(d.totalRevenue, d.currency),
+        d.onTimeDeliveryRate === null ? '—' : `${d.onTimeDeliveryRate}%`,
+        scorecards[d.id]?.overall_score ?? '—',
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [3, 105, 161] },
+    });
+    doc.save(`driver-performance-${appliedFrom}_${appliedTo}.pdf`);
+  };
 
   // Composite rank: performance score, then on-time rate, then trip volume.
   // Drivers with no reviews/no on-time data rank last on those tiebreakers,
@@ -237,6 +300,14 @@ export default function DriverPerformancePage() {
             <div>
               <h1 className="text-2xl font-bold text-foreground font-headline tracking-tighter">Driver Performance Report</h1>
               <p className="text-sm text-muted-foreground mt-1">Analytics on driver trips, revenues, efficiency, and performance ratings.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={exportExcel} disabled={drivers.length === 0} className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50">
+                <Download className="size-4" /> Excel
+              </button>
+              <button onClick={exportPDF} disabled={drivers.length === 0} className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50">
+                <FileText className="size-4" /> PDF
+              </button>
             </div>
           </div>
 
@@ -350,7 +421,7 @@ export default function DriverPerformancePage() {
                     <DollarSign className="size-5 text-primary" />
                   </div>
                   <p className="text-xs font-bold text-primary/80 uppercase tracking-wider">Gross Revenue</p>
-                  <p className="text-2xl font-black text-primary mt-1 truncate">{formatTZS(summary.totalRevenue)}</p>
+                  <p className="text-2xl font-black text-primary mt-1 truncate">{formatByCurrency(summary.totalRevenueByCurrency)}</p>
                 </div>
 
                 {/* On-Time Rate */}
@@ -428,7 +499,10 @@ export default function DriverPerformancePage() {
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-right text-primary font-bold font-mono">
-                                {formatTZS(driver.totalRevenueTZS)}
+                                {formatAmount(driver.totalRevenue, driver.currency)}
+                                {driver.mixedRevenueCurrencies && (
+                                  <span className="ml-1.5 text-[10px] font-bold text-warning" title="This driver also has revenue in another currency, not included in this figure">mixed</span>
+                                )}
                               </td>
                               <td className="px-6 py-4 text-center">
                                 {driver.onTimeDeliveryRate === null ? (
@@ -504,14 +578,14 @@ export default function DriverPerformancePage() {
                       <BarChart data={rankedDrivers}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: 'Revenue (TZS)', angle: -90, position: 'insideLeft', offset: 10 }} />
+                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} label={{ value: 'Revenue', angle: -90, position: 'insideLeft', offset: 10 }} />
                         <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} label={{ value: 'Trips Count', angle: 90, position: 'insideRight', offset: 10 }} />
-                        <Tooltip formatter={(value: any, name: any) => {
-                          if (name === 'Revenue Generated') return [formatTZS(value), name];
+                        <Tooltip formatter={(value: any, name: any, props: any) => {
+                          if (name === 'Revenue Generated') return [formatAmount(value, props?.payload?.currency || 'TZS'), name];
                           return [value, name];
                         }} />
                         <Legend />
-                        <Bar yAxisId="left" dataKey="totalRevenueTZS" name="Revenue Generated" fill="#0369A1" radius={[4, 4, 0, 0]} />
+                        <Bar yAxisId="left" dataKey="totalRevenue" name="Revenue Generated" fill="#0369A1" radius={[4, 4, 0, 0]} />
                         <Bar yAxisId="right" dataKey="completedTripsCount" name="Trips Completed" fill="#10B981" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>

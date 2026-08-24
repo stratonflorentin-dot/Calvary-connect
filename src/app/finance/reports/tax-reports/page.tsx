@@ -17,6 +17,8 @@ import { formatAmount, formatDate } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { loadRateMap, convertSync } from "@/lib/finance/fx";
+import { REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 
 type Tax = {
   id: string;
@@ -56,6 +58,8 @@ export default function TaxReportsPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("current");
   const [selectedTaxType, setSelectedTaxType] = useState<string>("all");
+  const [rateMap, setRateMap] = useState<Record<string, number>>({});
+  const [rateMapMissing, setRateMapMissing] = useState<string[]>([]);
 
   const loadTaxData = async () => {
     setLoading(true);
@@ -81,6 +85,19 @@ export default function TaxReportsPage() {
     loadTaxData();
   }, []);
 
+  useEffect(() => {
+    const currencies = Array.from(new Set([
+      ...taxes.map((t) => t.currency),
+      ...invoices.map((i) => i.currency),
+      ...expenses.map((e) => e.currency),
+    ].filter(Boolean)));
+    if (currencies.length === 0) return;
+    loadRateMap(currencies, REPORTING_CURRENCY).then((map) => {
+      setRateMap(map);
+      setRateMapMissing(currencies.filter((c) => c !== REPORTING_CURRENCY && map[`${c}->${REPORTING_CURRENCY}`] == null));
+    });
+  }, [taxes, invoices, expenses]);
+
   const filteredTaxes = selectedTaxType === "all"
     ? taxes
     : taxes.filter((t) => t.tax_type === selectedTaxType);
@@ -91,34 +108,46 @@ export default function TaxReportsPage() {
   }, [taxes]);
 
   const taxCalculations = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth();
-    
-    const salesTax = invoices
-      .filter((i) => i.type === "AR" || i.type === "sales")
-      .reduce((sum, i) => sum + (i.tax_amount || i.amount * 0.18), 0);
-    
-    const vatCollected = invoices
-      .filter((i) => i.type === "AR")
-      .reduce((sum, i) => sum + (i.amount * 0.18), 0);
-    
-    const vatPaid = expenses
-      .filter((e) => e.tax_deductible !== false)
-      .reduce((sum, e) => sum + (e.amount * 0.18), 0);
-    
+    // These are single statutory figures (VAT/corporate tax filings are
+    // reported to TRA in TZS), so unlike a per-customer or per-route report
+    // they genuinely need one consolidated number — but that number has to
+    // come from converting each amount into TZS first, not from summing raw
+    // amounts across currencies as if $1 and TZS 1 were the same unit.
+    // toTzs returns null (amount excluded, not silently dropped-as-zero)
+    // when no rate is on file for that currency.
+    const toTzs = (amount: number, currency: string) => convertSync(amount, currency, REPORTING_CURRENCY, rateMap);
+    const sumTzs = <T,>(rows: T[], amount: (r: T) => number, currency: (r: T) => string) =>
+      rows.reduce((sum, r) => sum + (toTzs(amount(r), currency(r)) ?? 0), 0);
+
+    const salesTax = sumTzs(
+      invoices.filter((i) => i.type === "AR" || i.type === "sales"),
+      (i) => i.tax_amount || i.amount * 0.18,
+      (i) => i.currency,
+    );
+
+    const vatCollected = sumTzs(
+      invoices.filter((i) => i.type === "AR"),
+      (i) => i.amount * 0.18,
+      (i) => i.currency,
+    );
+
+    const vatPaid = sumTzs(
+      expenses.filter((e) => e.tax_deductible !== false),
+      (e) => e.amount * 0.18,
+      (e) => e.currency,
+    );
+
     const netVat = vatCollected - vatPaid;
-    
-    const corporateTax = (invoices.reduce((sum, i) => sum + i.amount, 0) - 
-                         expenses.reduce((sum, e) => sum + e.amount, 0)) * 0.3;
-    
+
+    const corporateTax = (sumTzs(invoices, (i) => i.amount, (i) => i.currency) -
+                         sumTzs(expenses, (e) => e.amount, (e) => e.currency)) * 0.3;
+
     // Real per-invoice WHT (deducted by clients paying us, per invoices.wht_amount),
     // not a flat 5% guess — invoices created before this column was populated
     // will correctly show 0 here rather than a fabricated estimate.
-    const witholdingTax = invoices.reduce((sum, i) => sum + (Number(i.wht_amount) || 0), 0);
+    const witholdingTax = sumTzs(invoices, (i) => Number(i.wht_amount) || 0, (i) => i.currency);
 
-    const totalTaxDue = taxes
-      .filter((t) => t.status !== "paid")
-      .reduce((sum, t) => sum + t.amount, 0);
+    const totalTaxDue = sumTzs(taxes.filter((t) => t.status !== "paid"), (t) => t.amount, (t) => t.currency);
 
     return {
       salesTax,
@@ -129,7 +158,7 @@ export default function TaxReportsPage() {
       witholdingTax,
       totalTaxDue,
     };
-  }, [invoices, expenses, taxes]);
+  }, [invoices, expenses, taxes, rateMap]);
 
   const exportTaxReport = () => {
     const report = {
@@ -163,12 +192,12 @@ export default function TaxReportsPage() {
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
     doc.text(`Period: ${selectedPeriod}`, 14, 38);
     
-    doc.text(`Total Tax Due: ${formatAmount(taxCalculations.totalTaxDue)}`, 14, 50);
-    doc.text(`VAT Collected: ${formatAmount(taxCalculations.vatCollected)}`, 14, 58);
-    doc.text(`VAT Paid (Deductible): ${formatAmount(taxCalculations.vatPaid)}`, 14, 66);
-    doc.text(`Net VAT Liability: ${formatAmount(taxCalculations.netVat)}`, 14, 74);
-    doc.text(`Corporate Tax (Est.): ${formatAmount(taxCalculations.corporateTax)}`, 14, 82);
-    doc.text(`Withholding Tax: ${formatAmount(taxCalculations.witholdingTax)}`, 14, 90);
+    doc.text(`Total Tax Due (TZS, consolidated): ${formatAmount(taxCalculations.totalTaxDue, "TZS")}`, 14, 50);
+    doc.text(`VAT Collected (TZS, consolidated): ${formatAmount(taxCalculations.vatCollected, "TZS")}`, 14, 58);
+    doc.text(`VAT Paid Deductible (TZS, consolidated): ${formatAmount(taxCalculations.vatPaid, "TZS")}`, 14, 66);
+    doc.text(`Net VAT Liability (TZS, consolidated): ${formatAmount(taxCalculations.netVat, "TZS")}`, 14, 74);
+    doc.text(`Corporate Tax Est (TZS, consolidated): ${formatAmount(taxCalculations.corporateTax, "TZS")}`, 14, 82);
+    doc.text(`Withholding Tax (TZS, consolidated): ${formatAmount(taxCalculations.witholdingTax, "TZS")}`, 14, 90);
 
     // Tax records table
     const taxTableData = filteredTaxes.map((t) => [
@@ -177,7 +206,7 @@ export default function TaxReportsPage() {
       formatDate(t.due_date),
       t.description,
       t.status,
-      formatAmount(t.amount),
+      formatAmount(t.amount, t.currency),
     ]);
 
     autoTable(doc, {
@@ -197,12 +226,12 @@ export default function TaxReportsPage() {
 
     // Tax calculations sheet
     const calcSheet = XLSX.utils.json_to_sheet([
-      { Metric: "Total Tax Due", Value: taxCalculations.totalTaxDue },
-      { Metric: "VAT Collected", Value: taxCalculations.vatCollected },
-      { Metric: "VAT Paid (Deductible)", Value: taxCalculations.vatPaid },
-      { Metric: "Net VAT Liability", Value: taxCalculations.netVat },
-      { Metric: "Corporate Tax (Est.)", Value: taxCalculations.corporateTax },
-      { Metric: "Withholding Tax", Value: taxCalculations.witholdingTax },
+      { Metric: "Total Tax Due (TZS, consolidated)", Value: taxCalculations.totalTaxDue },
+      { Metric: "VAT Collected (TZS, consolidated)", Value: taxCalculations.vatCollected },
+      { Metric: "VAT Paid Deductible (TZS, consolidated)", Value: taxCalculations.vatPaid },
+      { Metric: "Net VAT Liability (TZS, consolidated)", Value: taxCalculations.netVat },
+      { Metric: "Corporate Tax Est (TZS, consolidated)", Value: taxCalculations.corporateTax },
+      { Metric: "Withholding Tax (TZS, consolidated)", Value: taxCalculations.witholdingTax },
     ]);
     XLSX.utils.book_append_sheet(workbook, calcSheet, "Calculations");
 
@@ -263,7 +292,13 @@ export default function TaxReportsPage() {
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground mb-2">Tax Reports</h1>
-        <p className="text-muted-foreground">Track tax liabilities, VAT, and corporate tax obligations</p>
+        <p className="text-muted-foreground">Track tax liabilities, VAT, and corporate tax obligations. Calculations below are consolidated into TZS since statutory filings are reported in TZS.</p>
+        {rateMapMissing.length > 0 && (
+          <p className="text-xs text-warning mt-1">
+            Missing an exchange rate for {rateMapMissing.join(", ")} — those amounts are excluded from the totals below until{" "}
+            <Link href="/finance/accounting/fx-rates" className="text-primary hover:underline">a rate is recorded</Link>.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -304,7 +339,7 @@ export default function TaxReportsPage() {
               <Calculator className="size-4 text-destructive" />
               <p className="text-xs font-medium text-muted-foreground uppercase">Total Tax Due</p>
             </div>
-            <p className="text-2xl font-bold text-destructive">{formatAmount(taxCalculations.totalTaxDue)}</p>
+            <p className="text-2xl font-bold text-destructive">{formatAmount(taxCalculations.totalTaxDue, "TZS")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -313,7 +348,7 @@ export default function TaxReportsPage() {
               <FileText className="size-4 text-primary" />
               <p className="text-xs font-medium text-muted-foreground uppercase">VAT Collected</p>
             </div>
-            <p className="text-2xl font-bold text-primary">{formatAmount(taxCalculations.vatCollected)}</p>
+            <p className="text-2xl font-bold text-primary">{formatAmount(taxCalculations.vatCollected, "TZS")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -322,7 +357,7 @@ export default function TaxReportsPage() {
               <FileText className="size-4 text-success" />
               <p className="text-xs font-medium text-muted-foreground uppercase">VAT Paid (Deductible)</p>
             </div>
-            <p className="text-2xl font-bold text-success">{formatAmount(taxCalculations.vatPaid)}</p>
+            <p className="text-2xl font-bold text-success">{formatAmount(taxCalculations.vatPaid, "TZS")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -332,7 +367,7 @@ export default function TaxReportsPage() {
               <p className="text-xs font-medium text-muted-foreground uppercase">Net VAT Liability</p>
             </div>
             <p className={cn("text-2xl font-bold", taxCalculations.netVat >= 0 ? "text-destructive" : "text-success")}>
-              {formatAmount(taxCalculations.netVat)}
+              {formatAmount(taxCalculations.netVat, "TZS")}
             </p>
           </CardContent>
         </Card>
@@ -346,7 +381,7 @@ export default function TaxReportsPage() {
               <Calculator className="size-4 text-info" />
               <p className="text-xs font-medium text-muted-foreground uppercase">Corporate Tax (Est.)</p>
             </div>
-            <p className="text-2xl font-bold text-info">{formatAmount(taxCalculations.corporateTax)}</p>
+            <p className="text-2xl font-bold text-info">{formatAmount(taxCalculations.corporateTax, "TZS")}</p>
             <p className="text-xs text-muted-foreground">30% of taxable profit</p>
           </CardContent>
         </Card>
@@ -356,7 +391,7 @@ export default function TaxReportsPage() {
               <FileText className="size-4 text-warning" />
               <p className="text-xs font-medium text-muted-foreground uppercase">Withholding Tax</p>
             </div>
-            <p className="text-2xl font-bold text-warning">{formatAmount(taxCalculations.witholdingTax)}</p>
+            <p className="text-2xl font-bold text-warning">{formatAmount(taxCalculations.witholdingTax, "TZS")}</p>
             <p className="text-xs text-muted-foreground">5% on payments</p>
           </CardContent>
         </Card>
@@ -409,7 +444,7 @@ export default function TaxReportsPage() {
                       <TableCell>{formatDate(tax.due_date)}</TableCell>
                       <TableCell>{tax.description}</TableCell>
                       <TableCell>{getTaxStatusBadge(tax.status)}</TableCell>
-                      <TableCell className="font-medium text-destructive">{formatAmount(tax.amount)}</TableCell>
+                      <TableCell className="font-medium text-destructive">{formatAmount(tax.amount, tax.currency)}</TableCell>
                     </TableRow>
                   ))
                 )}

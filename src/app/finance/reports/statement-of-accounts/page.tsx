@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { fetchLogoDataUrl } from "@/lib/finance/document-pdf";
 import { downloadStatementPdf, type StatementLine } from "@/lib/finance/statement-pdf";
-import { ArrowLeft, Download, FileText, Loader2, ScrollText } from "lucide-react";
+import { ArrowLeft, Download, FileText, Loader2, ScrollText, Table as TableIcon } from "lucide-react";
+import * as XLSX from "xlsx";
 
 const fmt = (v: number, cur: string) => formatCurrency(v, cur);
 
@@ -156,6 +157,26 @@ export default function StatementOfAccountsPage() {
     }, `Statement-${selectedCustomer.company_name}-${currency}-${toDate}.pdf`);
   };
 
+  const downloadExcel = (currency: string, openingBalance: number, lines: StatementLine[], closingBalance: number) => {
+    if (!selectedCustomer) return;
+    const workbook = XLSX.utils.book_new();
+    const rows = [
+      { Date: "", Description: "Opening Balance", Reference: "", Debit: "", Credit: "", Balance: openingBalance },
+      ...lines.map((l) => ({
+        Date: l.date,
+        Description: l.description,
+        Reference: l.reference,
+        Debit: l.debit || "",
+        Credit: l.credit || "",
+        Balance: l.balance,
+      })),
+      { Date: "", Description: "Closing Balance", Reference: "", Debit: "", Credit: "", Balance: closingBalance },
+    ];
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, sheet, currency);
+    XLSX.writeFile(workbook, `Statement-${selectedCustomer.company_name}-${currency}-${toDate}.xlsx`);
+  };
+
   return (
     <div className="space-y-6 pb-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -208,9 +229,14 @@ export default function StatementOfAccountsPage() {
                 <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{currency}</p>
                 <p className="text-lg font-black text-foreground">Closing Balance: {fmt(closingBalance, currency)}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => downloadPdf(currency, openingBalance, lines, closingBalance)} className="gap-2">
-                <Download className="w-3.5 h-3.5" /> Download PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => downloadExcel(currency, openingBalance, lines, closingBalance)} className="gap-2">
+                  <TableIcon className="w-3.5 h-3.5" /> Download Excel
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => downloadPdf(currency, openingBalance, lines, closingBalance)} className="gap-2">
+                  <Download className="w-3.5 h-3.5" /> Download PDF
+                </Button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

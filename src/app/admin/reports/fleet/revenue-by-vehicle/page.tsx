@@ -4,16 +4,18 @@ import React, { useState, useEffect, startTransition } from 'react';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
-import { 
-  Truck, 
-  DollarSign, 
+import {
+  Truck,
+  DollarSign,
   TrendingUp,
   Percent,
   Calendar,
   AlertTriangle,
   ArrowLeft,
   RefreshCw,
-  Wallet
+  Wallet,
+  Download,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -26,23 +28,28 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface VehicleRevenueStat {
   id: string;
   plateNumber: string;
   makeModel: string;
+  currency: string;
+  mixedCurrencies: boolean;
   tripsCount: number;
-  totalRevenueTZS: number;
-  totalExpensesTZS: number;
-  netProfitTZS: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
   profitMarginPercent: number;
 }
 
 interface SummaryStats {
   totalVehiclesActive: number;
-  totalRevenue: number;
-  totalExpenses: number;
-  netProfit: number;
+  totalRevenueByCurrency: Record<string, number>;
+  totalExpensesByCurrency: Record<string, number>;
+  netProfitByCurrency: Record<string, number>;
   bestPerformingVehicle: string;
 }
 
@@ -124,11 +131,64 @@ export default function VehicleRevenuePage() {
     );
   }
 
-  const formatTZS = (amount: number) => {
-    return amount.toLocaleString('en-TZ') + ' TZS';
+  const formatAmount = (amount: number, currency: string) => {
+    return amount.toLocaleString('en-TZ') + ' ' + currency;
+  };
+
+  const formatByCurrency = (byCurrency: Record<string, number>) => {
+    const entries = Object.entries(byCurrency);
+    if (entries.length === 0) return formatAmount(0, 'TZS');
+    return entries.map(([cur, amt]) => formatAmount(amt, cur)).join(' · ');
   };
 
   const topVehicle = vehicles.length > 0 ? vehicles[0] : null;
+
+  const exportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.json_to_sheet(
+      vehicles.map((v) => ({
+        Plate: v.plateNumber,
+        Vehicle: v.makeModel,
+        Currency: v.currency,
+        MixedCurrencies: v.mixedCurrencies ? 'Yes' : 'No',
+        Trips: v.tripsCount,
+        Revenue: v.totalRevenue,
+        Expenses: v.totalExpenses,
+        NetProfit: v.netProfit,
+        ProfitMarginPercent: v.profitMarginPercent,
+      })),
+    );
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Vehicle Revenue');
+    XLSX.writeFile(workbook, `vehicle-revenue-${appliedFrom}_${appliedTo}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Vehicle Revenue Report', 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Period: ${appliedFrom} to ${appliedTo}`, 14, 30);
+    if (summary) {
+      doc.text(`Total Revenue: ${formatByCurrency(summary.totalRevenueByCurrency)}`, 14, 38);
+      doc.text(`Net Profit: ${formatByCurrency(summary.netProfitByCurrency)}`, 14, 46);
+    }
+    autoTable(doc, {
+      startY: 54,
+      head: [['Plate', 'Vehicle', 'Trips', 'Revenue', 'Expenses', 'Net Profit', 'Margin']],
+      body: vehicles.map((v) => [
+        v.plateNumber,
+        v.makeModel,
+        v.tripsCount,
+        formatAmount(v.totalRevenue, v.currency),
+        formatAmount(v.totalExpenses, v.currency),
+        formatAmount(v.netProfit, v.currency),
+        `${v.profitMarginPercent}%`,
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [3, 105, 161] },
+    });
+    doc.save(`vehicle-revenue-${appliedFrom}_${appliedTo}.pdf`);
+  };
 
   return (
     <div id="report-root" className="flex min-h-screen bg-background" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
@@ -148,6 +208,14 @@ export default function VehicleRevenuePage() {
             <div>
               <h1 className="text-2xl font-bold text-foreground font-headline tracking-tighter">Vehicle Revenue Report</h1>
               <p className="text-sm text-muted-foreground mt-1">Financial performance audit for fleet vehicles, displaying gross margins, operational expenses, and net profit per truck.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={exportExcel} disabled={vehicles.length === 0} className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50">
+                <Download className="size-4" /> Excel
+              </button>
+              <button onClick={exportPDF} disabled={vehicles.length === 0} className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50">
+                <FileText className="size-4" /> PDF
+              </button>
             </div>
           </div>
 
@@ -241,7 +309,7 @@ export default function VehicleRevenuePage() {
                     <DollarSign className="size-5 text-success" />
                   </div>
                   <p className="text-xs font-bold text-success/80 uppercase tracking-wider">Gross Revenues</p>
-                  <p className="text-2xl font-black text-success mt-1 truncate">{formatTZS(summary.totalRevenue)}</p>
+                  <p className="text-2xl font-black text-success mt-1 truncate">{formatByCurrency(summary.totalRevenueByCurrency)}</p>
                 </div>
 
                 {/* Total Expenses */}
@@ -250,7 +318,7 @@ export default function VehicleRevenuePage() {
                     <Wallet className="size-5 text-destructive" />
                   </div>
                   <p className="text-xs font-bold text-destructive/80 uppercase tracking-wider">Operating Expenses</p>
-                  <p className="text-2xl font-black text-destructive mt-1 truncate">{formatTZS(summary.totalExpenses)}</p>
+                  <p className="text-2xl font-black text-destructive mt-1 truncate">{formatByCurrency(summary.totalExpensesByCurrency)}</p>
                 </div>
 
                 {/* Net Profit */}
@@ -259,7 +327,7 @@ export default function VehicleRevenuePage() {
                     <Wallet className="size-5 text-accent-foreground" />
                   </div>
                   <p className="text-xs font-bold text-accent-foreground/80 uppercase tracking-wider">Net Profit Earnings</p>
-                  <p className="text-2xl font-black text-accent-foreground mt-1 truncate">{formatTZS(summary.netProfit)}</p>
+                  <p className="text-2xl font-black text-accent-foreground mt-1 truncate">{formatByCurrency(summary.netProfitByCurrency)}</p>
                 </div>
 
               </div>
@@ -308,13 +376,16 @@ export default function VehicleRevenuePage() {
                                 {vehicle.tripsCount}
                               </td>
                               <td className="px-6 py-4 text-right text-primary font-bold font-mono">
-                                {formatTZS(vehicle.totalRevenueTZS)}
+                                {formatAmount(vehicle.totalRevenue, vehicle.currency)}
+                                {vehicle.mixedCurrencies && (
+                                  <span className="ml-1.5 text-[10px] font-bold text-warning" title="This vehicle also has revenue in another currency, not included in this figure">mixed</span>
+                                )}
                               </td>
                               <td className="px-6 py-4 text-right text-foreground font-mono">
-                                {formatTZS(vehicle.totalExpensesTZS)}
+                                {formatAmount(vehicle.totalExpenses, vehicle.currency)}
                               </td>
-                              <td className={`px-6 py-4 text-right font-bold font-mono ${vehicle.netProfitTZS >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>
-                                {formatTZS(vehicle.netProfitTZS)}
+                              <td className={`px-6 py-4 text-right font-bold font-mono ${vehicle.netProfit >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>
+                                {formatAmount(vehicle.netProfit, vehicle.currency)}
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
@@ -347,11 +418,11 @@ export default function VehicleRevenuePage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis dataKey="plateNumber" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(value: any, name: any) => [formatTZS(value), name]} />
+                        <Tooltip formatter={(value: any, name: any, props: any) => [formatAmount(value, props?.payload?.currency || 'TZS'), name]} />
                         <Legend />
-                        <Bar dataKey="totalRevenueTZS" name="Revenue" fill="#0369A1" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="totalExpensesTZS" name="Expenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="netProfitTZS" name="Net Profit" fill="#10B981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="totalRevenue" name="Revenue" fill="#0369A1" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="totalExpenses" name="Expenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="netProfit" name="Net Profit" fill="#10B981" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

@@ -11,6 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { RefreshCcw, Download, FileText, AlertTriangle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { ChartOfAccountsService } from '@/services/chart-of-accounts-service';
 import { formatCurrency } from '@/components/ui/currency-badge';
+import * as XLSX from 'xlsx';
 
 export default function ReconciliationReport() {
   const { role } = useRole();
@@ -77,6 +78,47 @@ export default function ReconciliationReport() {
     }
   };
 
+  const handleExport = () => {
+    if (!report) return;
+    const workbook = XLSX.utils.book_new();
+
+    const summarySheet = XLSX.utils.json_to_sheet([
+      { Metric: "Total Expenses", Value: report.totalExpenses },
+      { Metric: "Total Invoices", Value: report.totalInvoices },
+      { Metric: "Mapped Entries", Value: report.mappedExpenses + report.mappedInvoices },
+      { Metric: "Unmapped Entries", Value: report.unmappedItems.length },
+    ]);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+
+    const accountsSheet = XLSX.utils.json_to_sheet(
+      report.accountsSummary.map((acc: any) => ({
+        Code: acc.code,
+        Name: acc.name,
+        Category: acc.category,
+        Transactions: acc.transactionCount,
+        Amount: acc.totalAmount,
+        Currency: acc.currency,
+      })),
+    );
+    XLSX.utils.book_append_sheet(workbook, accountsSheet, "Accounts Summary");
+
+    if (report.unmappedItems.length > 0) {
+      const unmappedSheet = XLSX.utils.json_to_sheet(
+        report.unmappedItems.map((item: any) => ({
+          Type: item.type,
+          ID: item.id,
+          Date: item.date || item.issue_date,
+          Amount: item.amount ?? "",
+          Currency: item.currency || "TZS",
+        })),
+      );
+      XLSX.utils.book_append_sheet(workbook, unmappedSheet, "Unmapped Entries");
+    }
+
+    XLSX.writeFile(workbook, `coa-reconciliation-${new Date().toISOString().split("T")[0]}.xlsx`);
+    toast({ title: 'Success', description: 'Reconciliation report exported' });
+  };
+
   if (!role) return null;
 
   return (
@@ -107,7 +149,7 @@ export default function ReconciliationReport() {
                     )}
                   </Button>
                 )}
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleExport} disabled={!report}>
                   <Download className="size-4 mr-2" />
                   Export
                 </Button>

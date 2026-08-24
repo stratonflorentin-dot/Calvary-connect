@@ -106,46 +106,46 @@ export default function ExpenseAnalysisPage() {
     return currencyMap;
   }, [filteredExpenses]);
 
+  // Keyed by name+currency (not just name) so a category/vendor/month with
+  // expenses in more than one currency gets separate, correctly-labeled
+  // entries instead of being summed together under whichever currency
+  // happened to be processed last.
   const categoryData = useMemo(() => {
-    const categoryMap = new Map<string, { amount: number; currency: string }>();
+    const categoryMap = new Map<string, { name: string; amount: number; currency: string }>();
     filteredExpenses.forEach((expense) => {
       const category = expense.category || "Uncategorized";
-      const existing = categoryMap.get(category) || { amount: 0, currency: expense.currency };
-      categoryMap.set(category, { 
-        amount: existing.amount + expense.amount, 
-        currency: expense.currency 
-      });
+      const currency = expense.currency || "TZS";
+      const key = `${category}::${currency}`;
+      const existing = categoryMap.get(key) || { name: category, amount: 0, currency };
+      categoryMap.set(key, { name: category, amount: existing.amount + expense.amount, currency });
     });
-    return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, ...value }));
+    return Array.from(categoryMap.values());
   }, [filteredExpenses]);
 
   const vendorData = useMemo(() => {
-    const vendorMap = new Map<string, { amount: number; currency: string }>();
+    const vendorMap = new Map<string, { name: string; amount: number; currency: string }>();
     filteredExpenses.forEach((expense) => {
       const vendor = expense.vendor || "Unknown";
-      const existing = vendorMap.get(vendor) || { amount: 0, currency: expense.currency };
-      vendorMap.set(vendor, { 
-        amount: existing.amount + expense.amount, 
-        currency: expense.currency 
-      });
+      const currency = expense.currency || "TZS";
+      const key = `${vendor}::${currency}`;
+      const existing = vendorMap.get(key) || { name: vendor, amount: 0, currency };
+      vendorMap.set(key, { name: vendor, amount: existing.amount + expense.amount, currency });
     });
-    return Array.from(vendorMap.entries())
-      .map(([name, value]) => ({ name, ...value }))
+    return Array.from(vendorMap.values())
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 10);
   }, [filteredExpenses]);
 
   const monthlyData = useMemo(() => {
-    const monthlyMap = new Map<string, { amount: number; currency: string }>();
+    const monthlyMap = new Map<string, { month: string; amount: number; currency: string }>();
     filteredExpenses.forEach((expense) => {
       const month = new Date(expense.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      const existing = monthlyMap.get(month) || { amount: 0, currency: expense.currency };
-      monthlyMap.set(month, { 
-        amount: existing.amount + expense.amount, 
-        currency: expense.currency 
-      });
+      const currency = expense.currency || "TZS";
+      const key = `${month}::${currency}`;
+      const existing = monthlyMap.get(key) || { month, amount: 0, currency };
+      monthlyMap.set(key, { month, amount: existing.amount + expense.amount, currency });
     });
-    return Array.from(monthlyMap.entries()).map(([month, value]) => ({ month, ...value }));
+    return Array.from(monthlyMap.values());
   }, [filteredExpenses]);
 
   const categories = useMemo(() => {
@@ -155,6 +155,20 @@ export default function ExpenseAnalysisPage() {
 
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
   const avgExpense = filteredExpenses.length > 0 ? totalExpenses / filteredExpenses.length : 0;
+  // "% of total" only means something within a single currency — a USD
+  // expense's share of a blended TZS+USD figure is meaningless.
+  const totalExpensesByCurrency = useMemo(() => {
+    const byCurrency: Record<string, number> = {};
+    filteredExpenses.forEach((e) => {
+      const cur = e.currency || "TZS";
+      byCurrency[cur] = (byCurrency[cur] ?? 0) + e.amount;
+    });
+    return byCurrency;
+  }, [filteredExpenses]);
+  const pctOfCurrencyTotal = (amount: number, currency: string) => {
+    const total = totalExpensesByCurrency[currency || "TZS"] || 0;
+    return total > 0 ? (amount / total) * 100 : 0;
+  };
   const topCategory = categoryData.length > 0 ? categoryData.reduce((max, item) => item.amount > max.amount ? item : max) : null;
   const topVendor = vendorData.length > 0 ? vendorData[0] : null;
 
@@ -188,13 +202,14 @@ export default function ExpenseAnalysisPage() {
       doc.text(`Period: ${dateRange.start || "All"} to ${dateRange.end || "All"}`, 14, 38);
     }
     
-    doc.text(`Total Expenses: ${formatAmount(totalExpenses)}`, 14, 46);
+    const totalsLine = Object.entries(totalExpensesByCurrency).map(([cur, amt]) => formatAmount(amt, cur)).join(" · ") || formatAmount(0, "TZS");
+    doc.text(`Total Expenses: ${totalsLine}`, 14, 46);
 
     // Category breakdown table
     const categoryTableData = categoryData.map((item) => [
       item.name,
       formatCurrency(item.amount, item.currency),
-      `${totalExpenses > 0 ? ((item.amount / totalExpenses) * 100).toFixed(1) : 0}%`,
+      `${pctOfCurrencyTotal(item.amount, item.currency).toFixed(1)}%`,
     ]);
 
     autoTable(doc, {
@@ -212,7 +227,7 @@ export default function ExpenseAnalysisPage() {
       e.category,
       e.vendor || "-",
       e.status,
-      formatAmount(e.amount),
+      formatAmount(e.amount, e.currency),
     ]);
 
     // jspdf-autotable v5's functional autoTable() returns void — the result
@@ -240,7 +255,7 @@ export default function ExpenseAnalysisPage() {
         Category: item.name,
         Amount: item.amount,
         Currency: item.currency,
-        Percentage: totalExpenses > 0 ? ((item.amount / totalExpenses) * 100).toFixed(1) + "%" : "0%",
+        Percentage: pctOfCurrencyTotal(item.amount, item.currency).toFixed(1) + "%",
       }))
     );
     XLSX.utils.book_append_sheet(workbook, categorySheet, "Category Breakdown");
@@ -394,7 +409,7 @@ export default function ExpenseAnalysisPage() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: any, name: any, props: any) => [formatCurrency(value, props?.payload?.currency || "TZS"), name]} />
               </RechartsPieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -409,7 +424,7 @@ export default function ExpenseAnalysisPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="month" className="text-xs" />
                 <YAxis className="text-xs" />
-                <Tooltip />
+                <Tooltip formatter={(value: any, name: any, props: any) => [formatCurrency(value, props?.payload?.currency || "TZS"), name]} />
                 <Line type="monotone" dataKey="amount" stroke="#ef4444" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
@@ -425,7 +440,7 @@ export default function ExpenseAnalysisPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" angle={-45} textAnchor="end" height={60} />
                 <YAxis className="text-xs" />
-                <Tooltip />
+                <Tooltip formatter={(value: any, name: any, props: any) => [formatCurrency(value, props?.payload?.currency || "TZS"), name]} />
                 <Bar dataKey="amount" fill="#06b6d4" />
               </BarChart>
             </ResponsiveContainer>
@@ -458,11 +473,11 @@ export default function ExpenseAnalysisPage() {
                   </TableRow>
                 ) : (
                   categoryData.sort((a, b) => b.amount - a.amount).map((item) => {
-                    const count = filteredExpenses.filter((e) => e.category === item.name).length;
-                    const percentage = totalExpenses > 0 ? (item.amount / totalExpenses) * 100 : 0;
+                    const count = filteredExpenses.filter((e) => e.category === item.name && (e.currency || "TZS") === item.currency).length;
+                    const percentage = pctOfCurrencyTotal(item.amount, item.currency);
                     return (
-                      <TableRow key={item.name}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableRow key={`${item.name}::${item.currency}`}>
+                        <TableCell className="font-medium">{item.name} <span className="text-[10px] text-muted-foreground">{item.currency}</span></TableCell>
                         <TableCell className="text-destructive font-medium">{formatCurrency(item.amount, item.currency)}</TableCell>
                         <TableCell>{percentage.toFixed(1)}%</TableCell>
                         <TableCell>{count}</TableCell>
@@ -515,7 +530,7 @@ export default function ExpenseAnalysisPage() {
                           {expense.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium text-destructive">{formatAmount(expense.amount)}</TableCell>
+                      <TableCell className="font-medium text-destructive">{formatAmount(expense.amount, expense.currency)}</TableCell>
                     </TableRow>
                   ))
                 )}
