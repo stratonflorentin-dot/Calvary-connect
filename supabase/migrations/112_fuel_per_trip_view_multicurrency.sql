@@ -10,6 +10,11 @@
 --
 -- Idempotent: safe to run more than once. Run in the Supabase SQL editor.
 
+-- CREATE OR REPLACE VIEW can only append new columns at the end, not insert
+-- them in the middle — Postgres errors ("cannot change name of view column")
+-- if an existing column's position shifts. currency is appended last rather
+-- than placed next to plate_number for that reason; it changes nothing
+-- semantically since PostgREST/the app read columns by name, not position.
 CREATE OR REPLACE VIEW view_fuel_per_trip AS
 SELECT
   t.id AS trip_id,
@@ -21,7 +26,6 @@ SELECT
   t.created_at AS trip_date,
   v.id AS vehicle_id,
   v.plate_number,
-  COALESCE(vc.currency, 'TZS') AS currency,
   COUNT(vc.id) AS fuel_entry_count,
   COALESCE(SUM(vc.liters), 0) AS total_liters,
   COALESCE(SUM(vc.amount), 0) AS total_fuel_cost,
@@ -30,7 +34,8 @@ SELECT
     ELSE NULL END AS liters_per_100km,
   CASE WHEN COUNT(vc.id) > 0 AND COALESCE(t.distance_km, 0) > 0
     THEN ROUND(SUM(vc.amount) / t.distance_km, 2)
-    ELSE NULL END AS fuel_cost_per_km
+    ELSE NULL END AS fuel_cost_per_km,
+  COALESCE(vc.currency, 'TZS') AS currency
 FROM trips t
 LEFT JOIN vehicles v ON v.id = COALESCE(t.vehicle_id, t.truck_id)
 LEFT JOIN vehicle_costs vc ON vc.trip_id = t.id AND vc.cost_type = 'fuel'
