@@ -16,6 +16,10 @@ interface TransitionButtonsProps {
   actorId: string;
   actorRole?: UserRole;
   onDone?: (nextEntity: any) => void;
+  /** Called (in addition to the failure toast, never instead of it) when a
+   * transition is rejected — lets a page react to a specific guard failure,
+   * e.g. opening its own edit form when the message says to. */
+  onError?: (transition: Transition, message: string) => void;
   size?: "sm" | "md";
   layout?: "row" | "stack";
   /** Target states to omit from the button list (e.g. one that needs a custom modal). */
@@ -39,6 +43,7 @@ export function TransitionButtons({
   actorId,
   actorRole,
   onDone,
+  onError,
   size = "md",
   layout = "row",
   exclude,
@@ -74,6 +79,7 @@ export function TransitionButtons({
         description: result.message,
         variant: "destructive",
       });
+      onError?.(t, result.message ?? "");
       return;
     }
 

@@ -22,6 +22,11 @@ export const EXPENSE_CATEGORY_COA_MAP: Record<string, string> = {
   'parts': '5105',
   'insurance': '5110',
   'salaries': '5102',
+  // Payroll-generated expenses (src/app/allowances/actions.ts) now also set
+  // account_code directly, so these are a fallback for anything still
+  // relying on category-string lookup rather than the authoritative code.
+  'Driver Salaries': '5102',
+  'Driver Allowances': '5008',
   'utilities': '6102',
   'other': '6501'
 };

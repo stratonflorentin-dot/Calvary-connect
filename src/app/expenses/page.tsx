@@ -683,8 +683,21 @@ export default function ExpensesPage() {
                                                         actorRole={(role as any) ?? undefined}
                                                         size="sm"
                                                         onDone={(nextEntity) => setExpenses(prev => prev.map(e => e.id === nextEntity.id ? { ...e, ...nextEntity } : e))}
+                                                        onError={(t, message) => {
+                                                            // "More than one active TZS bank account exists — edit this
+                                                            // expense to choose which one paid it" (lib/workflow/engine.ts)
+                                                            // is directly actionable from the Edit dialog already on this
+                                                            // page — open it instead of leaving the user to find it themselves.
+                                                            if (t.to === 'paid' && /bank account/i.test(message)) {
+                                                                setEditingExpense(expense);
+                                                                setEditZeroRated(!!expense.is_zero_rated);
+                                                            }
+                                                        }}
                                                     />
-                                                    <Dialog>
+                                                    <Dialog
+                                                        open={editingExpense?.id === expense.id}
+                                                        onOpenChange={(open) => { if (!open) setEditingExpense(null); }}
+                                                    >
                                                         <DialogTrigger asChild>
                                                             <Button
                                                                 variant="outline"

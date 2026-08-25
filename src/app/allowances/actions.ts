@@ -208,8 +208,17 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
 
     if (updateErrD) throw updateErrD;
 
-    // 3. Create financial expense for payroll (Staff Costs)
+    // 3. Create financial expense, mapped to a real COA account so it
+    // doesn't show "Unmapped" in Expenses/Reconciliation. "Staff Costs"
+    // matched nothing in EXPENSE_CATEGORY_COA_MAP (chart-of-accounts-
+    // service.ts) — its keys are 'salaries'/'fuel'/etc, not this label —
+    // and the category-lookup path is a fallback anyway; account_code is
+    // authoritative when set directly (expenses/page.tsx already checks it
+    // first). Manual payroll (base salary) and trip/per-diem allowances are
+    // genuinely different cost lines in this chart, not one "Staff Costs"
+    // bucket: Driver Salaries (5102) vs Driver Allowances Per Diem (5008).
     const workerName = record.driver_name || "Employee";
+    const isBasePayroll = record.type === "payroll";
     const desc = `Payroll (${period}): ${workerName} - Salary: TZS ${baseSalary.toLocaleString()}, Allowances: TZS ${allowances.toLocaleString()}, Deductions: TZS ${deductions.toLocaleString()}`;
 
     const { data: expense, error: expErr } = await supabaseAdmin
@@ -220,7 +229,8 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
         description: desc,
         driver_id: record.driver_id,
         employee_id: employeeIdText,
-        category: "Staff Costs",
+        category: isBasePayroll ? "Driver Salaries" : "Driver Allowances",
+        account_code: isBasePayroll ? "5102" : "5008",
         status: "approved",
         approved_by: approvedByUserId,
         created_at: now
