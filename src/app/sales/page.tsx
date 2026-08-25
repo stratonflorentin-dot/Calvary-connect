@@ -32,7 +32,7 @@ import { formatCurrency } from '@/components/ui/currency-badge';
 import Link from 'next/link';
 import { ContractGenerator } from './contract-generator';
 import { TransportAgreementGenerator } from './transport-agreement-generator';
-import { fetchPriorContractTerms, type ShipmentContractContext } from '@/lib/contract-service';
+import { fetchPriorContractTerms, markContractAsSent, markContractAsActive, type ShipmentContractContext } from '@/lib/contract-service';
 import type { ContractData } from '@/lib/contract-service';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -424,6 +424,32 @@ function SalesModuleContent() {
     }
   }
 
+  // A saved contract had no way to leave "draft" — the real lifecycle
+  // (draft → sent → active, contract-service.ts) already existed but
+  // nothing in this table called it, so every contract stayed stuck at
+  // draft forever regardless of what actually happened with the customer.
+  async function sendContract(contractId: string) {
+    if (!user?.id) return;
+    try {
+      await markContractAsSent(contractId, user.id);
+      toast({ variant: 'success', title: 'Contract sent', description: 'Marked as sent to the customer.' });
+      fetchContracts();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to update contract', variant: 'destructive' });
+    }
+  }
+
+  async function activateContract(contractId: string) {
+    if (!user?.id) return;
+    try {
+      await markContractAsActive(contractId, user.id);
+      toast({ variant: 'success', title: 'Contract activated' });
+      fetchContracts();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to update contract', variant: 'destructive' });
+    }
+  }
+
   // saveQuotation/approveQuotation/sendQuotationToCustomer/convertQuotationToBooking
   // removed — quotation authoring now lives in /quotations (real quotations/
   // quotation_lines tables), which also auto-creates a Shipment on accept.
@@ -735,6 +761,7 @@ function SalesModuleContent() {
   function getContractStatusBadge(status: string) {
     switch (status) {
       case 'active': return { bg: 'bg-success/10', text: 'text-success', label: 'Active' };
+      case 'sent': return { bg: 'bg-primary/10', text: 'text-primary', label: 'Sent' };
       case 'draft': return { bg: 'bg-muted/50', text: 'text-muted-foreground', label: 'Draft' };
       case 'expired': return { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Expired' };
       case 'terminated': return { bg: 'bg-warning/10', text: 'text-warning', label: 'Terminated' };
@@ -1239,6 +1266,16 @@ function SalesModuleContent() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                  {c.status === 'draft' && (
+                                    <Button variant="ghost" size="sm" onClick={() => sendContract(c.id)} title="Mark as sent to customer" className="hover:bg-primary/10 hover:text-primary text-primary">
+                                      Send
+                                    </Button>
+                                  )}
+                                  {c.status === 'sent' && (
+                                    <Button variant="ghost" size="sm" onClick={() => activateContract(c.id)} title="Activate contract" className="hover:bg-success/10 hover:text-success text-success">
+                                      Activate
+                                    </Button>
+                                  )}
                                   <Button variant="ghost" size="sm" onClick={() => convertContractToBooking(c.id)} title="Create Booking" className="hover:bg-primary/10 hover:text-primary text-primary">
                                     <ArrowRight className="h-4 w-4 mr-1" /> Book
                                   </Button>
@@ -1295,14 +1332,23 @@ function SalesModuleContent() {
                     <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewContract.generated_html) }} />
                   </div>
                 ) : (
-                  <div className="py-12 text-center text-muted-foreground">
-                    <p className="text-base">No contract document was generated for this contract.</p>
-                    <p className="text-sm mt-2">Contract details:</p>
-                    <div className="text-left mt-4 space-y-2 max-w-md mx-auto">
-                      <p><strong>Customer:</strong> {previewContract?.company_name}</p>
-                      <p><strong>Type:</strong> {previewContract?.contract_type}</p>
-                      <p><strong>Value:</strong> {previewContract?.currency} {previewContract?.contract_value?.toLocaleString()}</p>
-                      <p><strong>Status:</strong> {previewContract?.status}</p>
+                  <div className="py-6">
+                    <p className="text-sm text-muted-foreground text-center mb-6">
+                      This contract was recorded without a formatted document — generate one from the Transport Agreement Generator ("+ New Contract") for a printable copy. Here's everything on file for it:
+                    </p>
+                    <div className="max-w-lg mx-auto border border-border rounded-xl divide-y divide-border overflow-hidden">
+                      <div className="grid grid-cols-2 gap-x-4 px-4 py-3"><span className="text-muted-foreground">Customer</span><span className="text-right font-medium">{previewContract?.company_name || '—'}</span></div>
+                      <div className="grid grid-cols-2 gap-x-4 px-4 py-3"><span className="text-muted-foreground">Type</span><span className="text-right font-medium capitalize">{String(previewContract?.contract_type || '').replace('_', ' ') || '—'}</span></div>
+                      <div className="grid grid-cols-2 gap-x-4 px-4 py-3"><span className="text-muted-foreground">Value</span><span className="text-right font-medium">{previewContract?.currency} {previewContract?.contract_value?.toLocaleString()}</span></div>
+                      <div className="grid grid-cols-2 gap-x-4 px-4 py-3"><span className="text-muted-foreground">Payment terms</span><span className="text-right font-medium">{previewContract?.payment_terms || '—'}</span></div>
+                      <div className="grid grid-cols-2 gap-x-4 px-4 py-3"><span className="text-muted-foreground">Period</span><span className="text-right font-medium">{previewContract?.start_date ? format(new Date(previewContract.start_date), 'MMM d, yyyy') : '—'}{previewContract?.end_date ? ` → ${format(new Date(previewContract.end_date), 'MMM d, yyyy')}` : ''}</span></div>
+                      {previewContract?.min_monthly_trips != null && (
+                        <div className="grid grid-cols-2 gap-x-4 px-4 py-3"><span className="text-muted-foreground">Min. monthly trips</span><span className="text-right font-medium">{previewContract.min_monthly_trips}</span></div>
+                      )}
+                      <div className="grid grid-cols-2 gap-x-4 px-4 py-3"><span className="text-muted-foreground">Status</span><span className="text-right font-medium capitalize">{previewContract?.status}</span></div>
+                      {(previewContract as any)?.notes && (
+                        <div className="px-4 py-3"><span className="text-muted-foreground block mb-1">Notes</span><span className="font-medium">{(previewContract as any).notes}</span></div>
+                      )}
                     </div>
                   </div>
                 )}
