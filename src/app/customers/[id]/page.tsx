@@ -44,17 +44,18 @@ const BOOKING_STATUS_STYLES: Record<string, string> = {
   cancelled: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
-// Keys must match route_quotations.approval_status exactly (draft/sent/
-// approved/converted — see src/app/sales/page.tsx, the only writer).
-// "accepted" here previously never matched a real row's value, so every
-// approved quotation silently fell through to the default muted style.
+// Keys must match quotations.status exactly (draft/sent/viewed/accepted/
+// rejected/expired — see src/app/quotations/page.tsx, the real quotation
+// module this app uses; route_quotations/approval_status are a disconnected
+// legacy table+column this page previously queried instead, so every real
+// quotation was invisible here regardless of status).
 const QUOTATION_STATUS_STYLES: Record<string, string> = {
   draft: "bg-muted text-muted-foreground border-border",
   sent: "bg-info/10 text-info border-info/20",
-  approved: "bg-success/10 text-success border-success/20",
+  viewed: "bg-info/10 text-info border-info/20",
+  accepted: "bg-success/10 text-success border-success/20",
   rejected: "bg-destructive/10 text-destructive border-destructive/20",
   expired: "bg-warning/10 text-warning border-warning/20",
-  converted: "bg-primary/10 text-primary border-primary/20",
 };
 
 const CONTRACT_STATUS_STYLES: Record<string, string> = {
@@ -100,7 +101,9 @@ export default function CustomerDetailPage() {
 
       const [bookingsRes, quotationsRes, invoicesRes, activitiesRes, contractsRes] = await Promise.all([
         supabase.from("bookings").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
-        supabase.from("route_quotations").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
+        // quotations, not the disconnected legacy route_quotations table —
+        // see src/app/quotations/page.tsx, the real quotation module.
+        supabase.from("quotations").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
         // customer_id is the reliable join; older rows may only have the
         // text name populated, so those are picked up as a fallback.
         supabase
@@ -109,7 +112,9 @@ export default function CustomerDetailPage() {
           .or(`customer_id.eq.${customerId},customer_name.eq.${customerData.company_name}`)
           .order("created_at", { ascending: false }),
         supabase.from("customer_activities").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
-        supabase.from("transport_contracts").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
+        // contracts, not the disconnected legacy transport_contracts table —
+        // same real-vs-legacy split as quotations above.
+        supabase.from("contracts").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
       ]);
 
       setBookings(bookingsRes.data || []);
@@ -131,7 +136,11 @@ export default function CustomerDetailPage() {
 
   const stats = useMemo(() => {
     const totalBookingRevenue = bookings.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-    const convertedQuotations = quotations.filter((q) => q.approval_status === "converted").length;
+    // A quotation "converts" when it produces a real shipment, not via a
+    // status value — quotations.status tracks the customer-facing document
+    // lifecycle (draft/sent/viewed/accepted/rejected/expired), while
+    // shipment_id is set once /quotations' accept flow actually creates one.
+    const convertedQuotations = quotations.filter((q) => Boolean(q.shipment_id)).length;
     const conversionRate = quotations.length > 0 ? Math.round((convertedQuotations / quotations.length) * 100) : null;
 
     const paidInvoices = invoices.filter((i) => i.status === "paid");
@@ -363,9 +372,9 @@ export default function CustomerDetailPage() {
                                 <p className="text-xs text-muted-foreground">{q.quotation_number} · {formatDate(q.created_at)}</p>
                               </div>
                               <div className="text-right shrink-0">
-                                <p className="text-sm font-medium">Tsh {(Number(q.total_amount) || 0).toLocaleString()}</p>
-                                <Badge className={`${QUOTATION_STATUS_STYLES[q.approval_status] || "bg-muted text-muted-foreground border-border"} capitalize`}>
-                                  {q.approval_status}
+                                <p className="text-sm font-medium">{q.currency || "TZS"} {(Number(q.total_amount) || 0).toLocaleString()}</p>
+                                <Badge className={`${QUOTATION_STATUS_STYLES[q.status] || "bg-muted text-muted-foreground border-border"} capitalize`}>
+                                  {q.status}
                                 </Badge>
                               </div>
                             </li>
