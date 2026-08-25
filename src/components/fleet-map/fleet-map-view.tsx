@@ -295,10 +295,26 @@ export default function FleetMapView({
   // Wialon-style summary breakdown — same "moving" threshold (>2 km/h) the
   // map markers already use, so a truck never reads as "moving" on one
   // surface and "stationary" on another.
+  //
+  // Moving/stationary/ignition are only computed for units that are
+  // actually online. isOnline is purely a freshness check (data received
+  // within the last few minutes for a driver's phone, or last 24h for a
+  // vehicle tracker) that's completely independent of the row's speed —
+  // an offline tracker still has a last-known speed/ignition value sitting
+  // in the row, which could be nonzero from whenever it last reported. That
+  // previously produced contradictions like "0 online" alongside "1
+  // moving": a truck silent for a day, whose last reading happened to be a
+  // nonzero speed, was being presented as currently moving. Now offline
+  // units are only ever counted in `offline` — their stale last-known state
+  // isn't presented as current fleet activity.
   const summary = useMemo(() => {
     let online = 0, offline = 0, moving = 0, stationary = 0, idleOn = 0, noData = 0;
     for (const l of locations) {
-      if (l.isOnline) online++; else offline++;
+      if (!l.isOnline) {
+        offline++;
+        continue;
+      }
+      online++;
       if (l.speed > 2) {
         moving++;
       } else {
@@ -732,7 +748,7 @@ export default function FleetMapView({
                       {loc.id.startsWith("vehicle-tracker-") && (
                         <Truck className="h-3.5 w-3.5 text-info shrink-0" />
                       )}
-                      {loc.engineOn === true && (
+                      {loc.isOnline && loc.engineOn === true && (
                         <Key className="h-3.5 w-3.5 text-destructive shrink-0" aria-label="Ignition on" />
                       )}
                       <div className="flex-1 min-w-0">
