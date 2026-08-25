@@ -4,7 +4,7 @@ import { PageShell, PageHeader } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, TrendingUp, PieChart, BarChart3, Users, Scale } from 'lucide-react';
+import { FileText, TrendingUp, PieChart, BarChart3, Users, Scale, ArrowRight, BriefcaseBusiness, Route, WalletCards } from 'lucide-react';
 import Link from 'next/link';
 import ExecutiveSummary from './executive-summary';
 import { ProfessionalFinancialReport } from '@/components/financial/professional-financial-report';
@@ -25,6 +25,38 @@ export default function ReportsPage() {
                 icon={BarChart3}
             />
             <div className="space-y-6">
+                    <section className="border border-border bg-card rounded-xl overflow-hidden">
+                        <div className="px-5 py-4 border-b border-border">
+                            <h2 className="text-sm font-black text-foreground">Enterprise reporting flow</h2>
+                            <p className="text-xs text-muted-foreground mt-1">Follow commercial activity from quote to cash, then investigate performance at the right level.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border">
+                            <Link href="/sales/dashboard" className="group p-5 hover:bg-muted/50 transition-colors">
+                                <BriefcaseBusiness className="size-5 text-primary mb-3" />
+                                <p className="text-sm font-bold">Sales pipeline</p>
+                                <p className="text-xs text-muted-foreground mt-1">Leads, quotations, contracts and bookings.</p>
+                                <span className="mt-3 text-xs font-bold text-primary inline-flex items-center gap-1">Open sales <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" /></span>
+                            </Link>
+                            <Link href="/operations/dashboard" className="group p-5 hover:bg-muted/50 transition-colors">
+                                <Route className="size-5 text-info mb-3" />
+                                <p className="text-sm font-bold">Operations control</p>
+                                <p className="text-xs text-muted-foreground mt-1">Dispatch, trips, delivery evidence and fleet execution.</p>
+                                <span className="mt-3 text-xs font-bold text-primary inline-flex items-center gap-1">Open operations <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" /></span>
+                            </Link>
+                            <Link href="/finance" className="group p-5 hover:bg-muted/50 transition-colors">
+                                <WalletCards className="size-5 text-success mb-3" />
+                                <p className="text-sm font-bold">Finance & collections</p>
+                                <p className="text-xs text-muted-foreground mt-1">Invoices, collections, bank matching and statutory books.</p>
+                                <span className="mt-3 text-xs font-bold text-primary inline-flex items-center gap-1">Open finance <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" /></span>
+                            </Link>
+                            <Link href="/finance/reports" className="group p-5 hover:bg-muted/50 transition-colors">
+                                <BarChart3 className="size-5 text-warning mb-3" />
+                                <p className="text-sm font-bold">Board & compliance</p>
+                                <p className="text-xs text-muted-foreground mt-1">P&L, cash flow, tax, ageing and reconciliation.</p>
+                                <span className="mt-3 text-xs font-bold text-primary inline-flex items-center gap-1">Open reports <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" /></span>
+                            </Link>
+                        </div>
+                    </section>
                     {/* Tabs */}
                     <Tabs defaultValue="executive" className="w-full">
                         <TabsList className={`grid w-full ${showFinancialTab ? 'grid-cols-3 lg:w-[400px]' : 'grid-cols-2 lg:w-[300px]'} bg-card border-border shadow-lg`}>

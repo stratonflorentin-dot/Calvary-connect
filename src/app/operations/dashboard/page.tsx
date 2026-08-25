@@ -55,7 +55,7 @@ export default function OperationsDashboard() {
         podsData,
       ] = await Promise.all([
         supabase.from("bookings").select("*").eq("status", "pending").limit(5),
-        supabase.from("trips").select("*").in("status", ["PENDING", "IN_PROGRESS", "in_transit"]).limit(5),
+        supabase.from("trips").select("*").in("status", ["pending", "loading", "in_transit"]).limit(5),
         supabase.from("vehicles").select("*"),
         supabase.from("users").select("*").eq("role", "DRIVER"),
         supabase.from("proof_of_delivery").select("*"),
@@ -70,16 +70,16 @@ export default function OperationsDashboard() {
         confirmedBookings: allBookings.data?.filter((b: any) => b.status === "confirmed").length || 0,
         inProgressBookings: allBookings.data?.filter((b: any) => b.status === "in_progress").length || 0,
         totalTrips: allTrips.data?.length || 0,
-        pendingTrips: allTrips.data?.filter((t: any) => t.status === "PENDING").length || 0,
-        inProgressTrips: allTrips.data?.filter((t: any) => t.status === "IN_PROGRESS" || t.status === "in_transit").length || 0,
-        completedTrips: allTrips.data?.filter((t: any) => t.status === "COMPLETED").length || 0,
+        pendingTrips: allTrips.data?.filter((t: any) => t.status === "pending" || t.status === "loading").length || 0,
+        inProgressTrips: allTrips.data?.filter((t: any) => t.status === "in_transit").length || 0,
+        completedTrips: allTrips.data?.filter((t: any) => t.status === "delivered").length || 0,
         totalVehicles: vehiclesData.data?.length || 0,
         availableVehicles: vehiclesData.data?.filter((v: any) => isVehicleAvailable(v.status)).length || 0,
         inUseVehicles: vehiclesData.data?.filter((v: any) => isVehicleInUse(v.status)).length || 0,
         maintenanceVehicles: vehiclesData.data?.filter((v: any) => isVehicleInMaintenance(v.status)).length || 0,
         totalDrivers: usersData.data?.length || 0,
         availableDrivers: usersData.data?.filter((u: any) => u.status === "active").length || 0,
-        onTripDrivers: allTrips.data?.filter((t: any) => t.status === "IN_PROGRESS" || t.status === "in_transit").length || 0,
+        onTripDrivers: allTrips.data?.filter((t: any) => t.status === "in_transit").length || 0,
         pendingPODs: podsData.data?.filter((p: any) => p.status === "pending").length || 0,
         verifiedPODs: podsData.data?.filter((p: any) => p.status === "verified").length || 0,
         totalPODs: podsData.data?.length || 0,
@@ -302,7 +302,7 @@ export default function OperationsDashboard() {
                         <Badge 
                           variant="outline" 
                           className={
-                            trip.status === "IN_PROGRESS" || trip.status === "in_transit" 
+                            trip.status === "in_transit"
                               ? "bg-primary/10 text-primary border-primary/20" 
                               : "bg-warning/10 text-warning border-warning/20"
                           }

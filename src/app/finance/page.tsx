@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "@/lib/supabase";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { listItem, staggerContainer, TRANSITION } from "@/lib/animations";
@@ -90,10 +91,11 @@ function KPICard({
   const inner = (
     <motion.div
       whileTap={{ scale: 0.98 }}
-      className="bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all group h-full"
+      className="bg-card border border-border rounded-xl p-5 hover:border-primary/40 hover:shadow-lg hover:-translate-y-0.5 transition-all group h-full relative overflow-hidden"
     >
+      <div className={cn("absolute left-0 top-0 h-full w-1", accent.replace("bg-", "bg-").split(" ")[0])} />
       <div className="flex items-start justify-between mb-4">
-        <div className={cn("p-2.5 rounded-xl", accent)}>
+        <div className={cn("p-2.5 rounded-lg", accent)}>
           <Icon className="w-5 h-5" />
         </div>
         {delta != null && (
@@ -108,7 +110,7 @@ function KPICard({
           </span>
         )}
       </div>
-      <p className="text-2xl font-black text-foreground tracking-tight">
+      <p className="text-2xl sm:text-3xl font-black text-foreground tracking-tight tabular-nums">
         <AnimatedCounter value={value} format={(v) => fmt(v, currency)} />
       </p>
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{label}</p>
@@ -196,11 +198,15 @@ export default function FinanceOverviewPage() {
       setExpenses(exp.data ?? []);
       setRecentEntries(je.data ?? []);
 
-      // A "delivered" trip with no matching invoice_number pattern is unbilled.
+      // Prefer the relational trip_id link. Older invoices did not carry it,
+      // so retain the legacy number lookup only as a compatibility fallback.
+      // This prevents POD-generated invoices (which have a sequence number)
+      // from being shown as unbilled deliveries.
+      const invoicedTripIds = new Set(allInvoices.map((i: any) => i.trip_id).filter(Boolean));
       const invoiceRefs = new Set(allInvoices.map((i: any) => i.invoice_number ?? ""));
       const unbilled = (trips.data ?? []).filter((t: any) => {
         const ref = `INV-${t.trip_number ?? t.id}`;
-        return !invoiceRefs.has(ref);
+        return !invoicedTripIds.has(t.id) && !invoiceRefs.has(ref);
       });
       setUnbilledTrips(unbilled);
     } catch (err: any) {
@@ -412,6 +418,46 @@ export default function FinanceOverviewPage() {
     return kpis;
   }, [allCurrencies, cashByCurrency, revenueByCurrency, expenseStatsByCurrency, arByCcy, apByCcy]);
 
+  // A compact six-month operating view makes the dashboard useful before a
+  // finance team drills into the statutory reports. Revenue is cash-collected
+  // invoice value and spend is approved / paid expense value, both kept in the
+  // reporting currency to avoid false multi-currency aggregation.
+  const operatingTrend = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const start = date.getTime();
+      const end = new Date(date.getFullYear(), date.getMonth() + 1, 1).getTime();
+      const revenue = invoices.reduce((total, invoice) => {
+        const postedAt = invoice.paid_at ?? invoice.issue_date ?? invoice.created_at;
+        const time = postedAt ? new Date(postedAt).getTime() : 0;
+        return normalizeCurrency(invoice.currency) === REPORTING_CURRENCY && invoice.status === "paid" && time >= start && time < end
+          ? total + (Number(invoice.total_amount ?? invoice.amount) || 0)
+          : total;
+      }, 0);
+      const expense = expenses.reduce((total, item) => {
+        const postedAt = item.date ?? item.created_at;
+        const time = postedAt ? new Date(postedAt).getTime() : 0;
+        return normalizeCurrency(item.currency) === REPORTING_CURRENCY && (item.status === "approved" || item.status === "paid") && time >= start && time < end
+          ? total + (Number(item.amount) || 0)
+          : total;
+      }, 0);
+      return {
+        label: date.toLocaleDateString("en-TZ", { month: "short" }),
+        revenue,
+        expense,
+        margin: revenue - expense,
+      };
+    });
+  }, [invoices, expenses]);
+
+  const executiveKPIs = [
+    { label: "Available cash", value: cashTotal, currency: REPORTING_CURRENCY, icon: Wallet, accent: "bg-success/10 text-success", href: "/finance/banking/bank-accounts" },
+    { label: "Receivables", value: arSummary.totalOutstanding, currency: REPORTING_CURRENCY, icon: CreditCard, accent: "bg-warning/10 text-warning", href: "/finance/invoicing/customer-invoices" },
+    { label: "Operating result", value: netProfitMtd, currency: REPORTING_CURRENCY, icon: TrendingUp, delta: pctDelta(netProfitMtd, revenue.prevMtd - expenseStats.prevMtd), accent: netProfitMtd >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive", href: "/finance/reports/profit-loss" },
+    { label: "Payables due", value: apSummary.totalOutstanding, currency: REPORTING_CURRENCY, icon: Building2, accent: "bg-primary/10 text-primary", href: "/finance/invoicing/vendor-bills" },
+  ];
+
   const REPORT_LINKS = [
     { label: "Profit & Loss", sub: "Income vs expenditure", href: "/finance/reports/profit-loss", color: "border-l-primary" },
     { label: "Balance Sheet", sub: "Assets, liabilities & equity", href: "/finance/reports/balance-sheet", color: "border-l-success" },
@@ -433,18 +479,13 @@ export default function FinanceOverviewPage() {
   );
 
   return (
-    <div className="space-y-6 pb-8 pb-safe-bottom">
+    <div className="space-y-6 pb-10 pb-safe-bottom">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-black text-primary uppercase tracking-widest px-2 py-0.5 bg-primary/10 rounded-full">Finance & Accounting</span>
-            <span className="flex items-center gap-1 text-[10px] text-success font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> Live
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black text-foreground">Financial Control Center</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.16em] mb-2">Finance workspace · Tanzania</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground">Financial Control Center</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 max-w-3xl">
             {REPORTING_CURRENCY} YTD Revenue {formatCurrencyShort(revenue.ytd, REPORTING_CURRENCY)} · YTD Net {formatCurrencyShort(netProfitYtd, REPORTING_CURRENCY)} · Cash {formatCurrencyShort(cashTotal, REPORTING_CURRENCY)}
             {Object.keys(cashByCurrency).filter((c) => c !== REPORTING_CURRENCY).length > 0 && (
               <>
@@ -458,10 +499,10 @@ export default function FinanceOverviewPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={load} className="h-9 gap-2 border-border text-muted-foreground rounded-lg text-xs">
+          <Button variant="outline" size="sm" onClick={load} className="h-10 gap-2 border-border text-muted-foreground rounded-lg text-xs">
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </Button>
-          <Button size="sm" asChild className="h-9 gap-2 bg-primary hover:bg-primary/90 rounded-lg text-xs font-bold shadow-sm">
+          <Button size="sm" asChild className="h-10 gap-2 bg-primary hover:bg-primary/90 rounded-lg text-xs font-bold shadow-sm">
             <Link href="/finance/invoicing/customer-invoices">
               <Plus className="w-3.5 h-3.5" /> New Invoice
             </Link>
@@ -469,9 +510,9 @@ export default function FinanceOverviewPage() {
         </div>
       </div>
 
-      {/* Alerts */}
+      {/* Operational attention rail */}
       {(expenseStatsByCurrency.totalPending > 0 || arSummary.totalOverdue > 0 || unbilledTrips.length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-y border-border py-3">
           {expenseStatsByCurrency.totalPending > 0 && (
             <Link href="/approvals" className="flex items-center gap-3 px-4 py-3 bg-warning/10 border border-warning/20 rounded-xl hover:bg-warning/20 transition-colors">
               <div className="p-2 bg-warning/20 rounded-lg"><Receipt className="w-4 h-4 text-warning" /></div>
@@ -506,15 +547,52 @@ export default function FinanceOverviewPage() {
         </div>
       )}
 
-      {/* KPI Grid */}
+      {/* Executive view keeps all metrics in the reporting currency; currency-specific detail remains below. */}
       <motion.div
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
       >
-        {KPIS.map((k) => <motion.div key={k.label} variants={listItem}><KPICard {...k} /></motion.div>)}
+        {executiveKPIs.map((k) => <motion.div key={k.label} variants={listItem}><KPICard {...k} /></motion.div>)}
       </motion.div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+        <section className="xl:col-span-2 bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-border">
+            <div>
+              <h2 className="text-sm font-black text-foreground">Revenue & operating margin</h2>
+              <p className="text-xs text-muted-foreground mt-1">Cash collected less approved operating expenses · {REPORTING_CURRENCY}</p>
+            </div>
+            <Link href="/finance/reports/profit-loss" className="text-xs font-bold text-primary whitespace-nowrap">Open P&L <ChevronRight className="inline w-3.5 h-3.5" /></Link>
+          </div>
+          <div className="h-[260px] pt-4 pr-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={operatingTrend} margin={{ top: 12, right: 8, left: 2, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                <YAxis axisLine={false} tickLine={false} width={55} tickFormatter={(value) => `${Math.round(value / 1000000)}M`} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                <Tooltip formatter={(value: number) => fmt(value, REPORTING_CURRENCY)} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }} />
+                <Area type="monotone" dataKey="revenue" name="Revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="hsl(var(--primary))" fillOpacity={0.12} />
+                <Area type="monotone" dataKey="margin" name="Operating margin" stroke="hsl(var(--success))" strokeWidth={2.5} fill="hsl(var(--success))" fillOpacity={0.1} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border"><SectionHeader title="Collections requiring action" sub="Prioritised by overdue exposure" href="/finance/reports/aging-report" /></div>
+          <div className="divide-y divide-border">
+            {topDebtors.length === 0 ? <p className="p-8 text-sm text-muted-foreground">No overdue receivables. Collections are on track.</p> : topDebtors.slice(0, 4).map((d: any) => (
+              <Link key={d.id} href="/finance/invoicing/customer-invoices" className="flex items-center gap-3 px-5 py-3 hover:bg-muted/60 transition-colors">
+                <div className="w-2 h-8 rounded-full bg-warning" />
+                <div className="min-w-0 flex-1"><p className="text-sm font-bold truncate">{d.customer_name ?? "Unassigned customer"}</p><p className="text-[11px] text-muted-foreground">{d.invoice_number} · {daysOverdue(d.due_date)} days overdue</p></div>
+                <p className="text-xs font-black text-destructive text-right">{fmt(Number(d.amount) || 0, d.currency ?? REPORTING_CURRENCY)}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
 
       {/* AR / AP aging strips — per currency */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">

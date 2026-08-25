@@ -316,7 +316,7 @@ export default function MobileDashboardPage() {
                         </div>
                     </div>
                     <Button className="mt-4 w-full bg-white/10 text-white hover:bg-white/15" asChild>
-                        <Link href="/ai-assistant">Open AI Console →</Link>
+                        <Link href="/company-ai">Open AI Console →</Link>
                     </Button>
                 </Card>
             </div>

@@ -352,23 +352,44 @@ export function ContractGenerator({ customerId, onClose, onSaved }: { customerId
         contractValue = selectedRateSheetData.rates.reduce((sum, r) => sum + (r.container_20ft || 0), 0);
       }
 
-      // Insert contract record
-      const { error: insertError } = await supabase.from('transport_contracts').insert([{
+      // contracts.client_id is a legacy NOT NULL column older contract pages
+      // still join through (client:clients(*)); clients is just a stub
+      // (id, name), so backfill it from the real customer rather than
+      // leaving client_id — and the insert below — failing with a
+      // not-null violation. effective_date/expiry_date/term_months are also
+      // NOT NULL but this form only collects start/end dates, so derive them
+      // the same way saveContractFromAgreement (contract-service.ts) does.
+      const { data: existingClient } = await supabase.from('clients').select('id').eq('id', selectedCustomer).maybeSingle();
+      if (!existingClient) {
+        await supabase.from('clients').insert({ id: selectedCustomer, name: selectedCustomerData?.company_name || 'Customer' });
+      }
+      const termMonths = 12;
+      const expiryDate = contractDetails.end_date || (() => {
+        const d = new Date(contractDetails.start_date);
+        d.setMonth(d.getMonth() + termMonths);
+        return d.toISOString().slice(0, 10);
+      })();
+
+      // Store generated agreements in the same contracts ledger used by sales,
+      // bookings and the shipment agreement flow. transport_contracts was a
+      // legacy parallel table, which made newly created agreements invisible
+      // to the commercial pipeline and impossible to convert reliably.
+      const { error: insertError } = await supabase.from('contracts').insert([{
         contract_number: contractNumber,
+        client_id: selectedCustomer,
         customer_id: selectedCustomer,
-        template_id: selectedTemplate,
-        rate_sheet_id: selectedRateSheet || null,
-        contract_type: 'standard',
+        contract_type: 'standard_transport',
         contract_date: contractDetails.contract_date,
         start_date: contractDetails.start_date,
+        effective_date: contractDetails.start_date,
         end_date: contractDetails.end_date || null,
+        expiry_date: expiryDate,
+        term_months: termMonths,
         contract_value: contractValue,
         currency: selectedRateSheetData?.currency || 'USD',
+        payment_schedule: 'net_30',
         status: 'draft',
-        client_signatory_name: contractDetails.client_signatory_name || null,
-        client_signatory_title: contractDetails.client_signatory_title || null,
-        special_notes: contractDetails.special_notes || null,
-        generated_html: sanitizeHtml(generateContractHTML()),
+        notes: contractDetails.special_notes || null,
         created_by: user?.id
       }]);
 

@@ -52,20 +52,26 @@ export default function SalesDashboard() {
         contractsData,
         bookingsData,
       ] = await Promise.all([
-        supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(10),
+        supabase.from("leads").select("*").order("created_at", { ascending: false }),
         supabase.from("customers").select("*"),
-        supabase.from("route_quotations").select("*").eq("approval_status", "draft").limit(5),
-        supabase.from("transport_contracts").select("*"),
+        supabase.from("quotations").select("*").eq("status", "draft").limit(5),
+        supabase.from("contracts").select("*"),
         supabase.from("bookings").select("*"),
       ]);
 
-      const allQuotations = await supabase.from("route_quotations").select("*");
+      const allQuotations = await supabase.from("quotations").select("*");
       const leads = leadsData.data ?? [];
       const customers = customersData.data ?? [];
       const allQuotationRows = allQuotations.data ?? [];
       const contractRows = contractsData.data ?? [];
       const bookingRows = bookingsData.data ?? [];
       const pendingQuotationRows = quotationsData.data ?? [];
+
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+      const bookedThisMonth = bookingRows.filter((b: any) => {
+        const createdAt = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return createdAt >= monthStart && ["confirmed", "in_progress", "completed"].includes(b.status);
+      });
 
       setStats({
         totalLeads: leads.length,
@@ -74,16 +80,16 @@ export default function SalesDashboard() {
         convertedLeads: leads.filter((l: any) => l.status === "converted").length,
         totalCustomers: customers.length,
         totalQuotations: allQuotationRows.length,
-        draftQuotations: allQuotationRows.filter((q: any) => q.approval_status === "draft").length,
-        approvedQuotations: allQuotationRows.filter((q: any) => q.approval_status === "approved").length,
-        sentQuotations: allQuotationRows.filter((q: any) => q.approval_status === "sent").length,
-        convertedQuotations: allQuotationRows.filter((q: any) => q.approval_status === "converted").length,
+        draftQuotations: allQuotationRows.filter((q: any) => q.status === "draft").length,
+        approvedQuotations: allQuotationRows.filter((q: any) => q.status === "accepted").length,
+        sentQuotations: allQuotationRows.filter((q: any) => q.status === "sent" || q.status === "viewed").length,
+        convertedQuotations: allQuotationRows.filter((q: any) => Boolean(q.shipment_id)).length,
         totalContracts: contractRows.length,
         totalBookings: bookingRows.length,
         pendingBookings: bookingRows.filter((b: any) => b.status === "pending").length,
         confirmedBookings: bookingRows.filter((b: any) => b.status === "confirmed").length,
-        totalPipelineValue: allQuotationRows.reduce((sum: number, q: any) => sum + (q.total_amount || 0), 0),
-        monthlyRevenue: bookingRows.reduce((sum: number, b: any) => sum + (b.amount || 0), 0),
+        totalPipelineValue: allQuotationRows.filter((q: any) => !["rejected", "expired"].includes(q.status)).reduce((sum: number, q: any) => sum + (Number(q.total_amount ?? q.amount) || 0), 0),
+        monthlyRevenue: bookedThisMonth.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0),
         conversionRate: leads.length > 0
           ? Math.round((leads.filter((l: any) => l.status === "converted").length / leads.length) * 100)
           : 0,
@@ -218,7 +224,7 @@ export default function SalesDashboard() {
                 <CardContent>
                   <div className="text-2xl font-bold">TZS {(stats.monthlyRevenue / 1000000).toFixed(1)}M</div>
                   <div className="text-xs text-success mt-1 flex items-center">
-                    <TrendingUp className="size-3 mr-1" /> Confirmed bookings
+                    <TrendingUp className="size-3 mr-1" /> Confirmed this month
                   </div>
                 </CardContent>
               </Card>
@@ -257,7 +263,7 @@ export default function SalesDashboard() {
                           </p>
                         </div>
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/sales?tab=quotations`}>
+                          <Link href={`/quotations/${quote.id}`}>
                             Review <ArrowUpRight className="size-3 ml-1" />
                           </Link>
                         </Button>
@@ -317,7 +323,7 @@ export default function SalesDashboard() {
                 </Link>
               </Button>
               <Button variant="outline" asChild className="h-24 flex-col gap-2">
-                <Link href="/sales?tab=quotations">
+                <Link href="/quotations/new">
                   <FileText className="size-6" />
                   <span>New Quotation</span>
                 </Link>

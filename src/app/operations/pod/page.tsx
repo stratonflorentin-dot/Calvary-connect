@@ -170,33 +170,47 @@ export default function PODPage() {
       // Get trip details for invoice generation
       const { data: trip } = await supabase.from("trips").select("*").eq("id", pod.trip_id).single();
       
-      if (trip && trip.salesAmount > 0) {
-        // Generate invoice automatically
-        const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
-        const vatRate = trip.tripType === 'transit' ? 0 : 18;
-        const vatAmount = trip.salesAmount * (vatRate / 100);
-        const totalAmount = trip.salesAmount + vatAmount;
+      const tripRevenue = Number(trip?.salesAmount ?? trip?.sales_amount ?? trip?.totalAmount ?? trip?.total_amount ?? 0);
+      if (trip && tripRevenue > 0) {
+        // POD verification is repeatable. Check its immutable pod/trip links
+        // first so an operator can never create a second AR invoice by
+        // clicking Verify again after a refresh or an interrupted request.
+        const { data: existingInvoice } = await supabase
+          .from("invoices")
+          .select("id, invoice_number")
+          .or(`pod_id.eq.${pod.id},trip_id.eq.${trip.id}`)
+          .limit(1)
+          .maybeSingle();
 
-        const { data: newInvoice, error: invoiceError } = await supabase.from("invoices").insert([{
+        if (existingInvoice) {
+          toast({ variant: "success", title: "POD verified", description: `Invoice ${existingInvoice.invoice_number} is already linked to this trip.` });
+        } else {
+          // Generate a traceable invoice number tied to the logistics job.
+          const invoiceNumber = `INV-${trip.trip_number ?? trip.id.slice(0, 8)}`;
+          const vatRate = (trip.tripType ?? trip.trip_type) === 'transit' ? 0 : 18;
+          const vatAmount = tripRevenue * (vatRate / 100);
+          const totalAmount = tripRevenue + vatAmount;
+
+          const { data: newInvoice, error: invoiceError } = await supabase.from("invoices").insert([{
           invoice_number: invoiceNumber,
           customer_id: trip.customer_id,
           trip_id: trip.id,
           pod_id: pod.id,
           invoice_date: new Date().toISOString().split('T')[0],
           due_date: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-          subtotal: trip.salesAmount,
+          subtotal: tripRevenue,
           vat_rate: vatRate,
           vat_amount: vatAmount,
           total_amount: totalAmount,
-          currency: 'TZS',
+          currency: trip.currency || 'TZS',
           status: 'draft',
           notes: `Auto-generated from verified POD ${pod.pod_number}`,
-        }]).select("id").single();
+          }]).select("id").single();
 
-        if (invoiceError) {
+          if (invoiceError) {
           console.error("Error generating invoice:", invoiceError);
           toast({ title: "Warning", description: "POD verified but invoice generation failed", variant: "destructive" });
-        } else {
+          } else {
           // Send immediately — this posts the real Dr AR / Cr Revenue / Cr
           // VAT journal entry via the same shared post_journal_entry()
           // primitive every other invoice send goes through (see
@@ -205,18 +219,21 @@ export default function PODPage() {
           // no debit/credit amounts, and was never actually posted — it
           // looked like it recorded revenue but did nothing.
           const { error: sendError } = await supabase.rpc("send_invoice", { p_invoice_id: newInvoice.id });
-          if (sendError) {
+            if (sendError) {
             console.error("Error posting invoice to ledger:", sendError);
             toast({ title: "Invoice created but not posted", description: sendError.message, variant: "destructive" });
-          } else {
+            } else {
             toast({ variant: "success", title: "Success", description: `POD verified and invoice ${invoiceNumber} generated` });
+            }
           }
         }
       }
 
-      // Update trip status to completed
+      // Use the same canonical status as dispatch, trip management and
+      // finance. The former uppercase COMPLETED value was invisible to the
+      // delivered-trip queues and delayed the finance hand-off.
       await supabase.from("trips").update({
-        status: "COMPLETED",
+        status: "delivered",
         pod_status: "verified",
       }).eq("id", pod.trip_id);
 
