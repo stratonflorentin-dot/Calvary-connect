@@ -137,8 +137,8 @@ function ExecutiveDashboardContent() {
           href="/trips"
         />
         <KpiCard
-          label="Revenue MTD"
-          value={format(stats.revenueMtd)}
+          label="Revenue MTD (TZS)"
+          value={format(stats.revenueMtd, "TZS")}
           icon={<DollarSign className="w-5 h-5 text-success" />}
         />
         <KpiCard
@@ -248,7 +248,7 @@ function ExecutiveDashboardContent() {
               })}
             </div>
             <div className="text-center border-t border-border pt-4">
-              <p className="text-sm text-muted-foreground">Average/Month:</p>
+              <p className="text-sm text-muted-foreground">Average/Month (TZS):</p>
               <p className="text-xl font-bold text-foreground">
                 TZS {Math.round(revenueTrend.reduce((sum, m) => sum + m.revenue, 0) / revenueTrend.length).toLocaleString('en-TZ')}
               </p>

@@ -243,15 +243,22 @@ export function useDashboard(
                     utilizationPct: totalVehicles > 0 ? ((inTransitCount / totalVehicles) * 100) : 0,
                 }));
 
-                // Fetch trips for revenue trend and performance
+                // Fetch trips for revenue trend and performance. actual_cost is
+                // not a real trips column (confirmed against the live schema —
+                // querying it throws "column trips.actual_cost does not exist"),
+                // so this silently returned null and revenueMtd/revenue trend
+                // showed 0 every time; the real revenue figure is
+                // total_amount/sales_amount. Status also used 'completed',
+                // which no trip ever has — the real terminal status is
+                // 'delivered'.
                 const { data: tripsData } = await supabase
                     .from('trips')
-                    .select('id, status, actual_cost, created_at')
+                    .select('id, status, total_amount, sales_amount, currency, created_at')
                     .gte('created_at', startDate.toISOString())
                     .lte('created_at', endDate.toISOString());
 
                 if (tripsData) {
-                    const completed = tripsData.filter((t: any) => t.status === 'completed').length;
+                    const completed = tripsData.filter((t: any) => t.status === 'delivered').length;
                     const inTransit = tripsData.filter((t: any) => t.status === 'in_transit').length;
                     const completionRate = tripsData.length > 0 ? (completed / tripsData.length) * 100 : 0;
 
@@ -262,7 +269,13 @@ export function useDashboard(
                         completionRate,
                     });
 
-                    const revenue = tripsData.reduce((sum: number, trip: any) => sum + (trip.actual_cost || 0), 0);
+                    // TZS-only, same as every other single-number trend/KPI on
+                    // this dashboard — a trip in another currency isn't summed
+                    // in here rather than being silently blended into a wrong
+                    // TZS-labeled figure.
+                    const revenue = tripsData
+                        .filter((trip: any) => (trip.currency || 'TZS') === 'TZS')
+                        .reduce((sum: number, trip: any) => sum + Number(trip.total_amount ?? trip.sales_amount ?? 0), 0);
                     setStats(prev => ({
                         ...prev,
                         revenueMtd: revenue,
@@ -363,11 +376,13 @@ export function useDashboard(
 
                     const { data: monthTrips } = await supabase
                         .from('trips')
-                        .select('actual_cost')
+                        .select('total_amount, sales_amount, currency')
                         .gte('created_at', monthStart.toISOString())
                         .lte('created_at', monthEnd.toISOString());
 
-                    const revenue = monthTrips?.reduce((sum: number, trip: any) => sum + (trip.actual_cost || 0), 0) || 0;
+                    const revenue = (monthTrips ?? [])
+                        .filter((trip: any) => (trip.currency || 'TZS') === 'TZS')
+                        .reduce((sum: number, trip: any) => sum + Number(trip.total_amount ?? trip.sales_amount ?? 0), 0);
 
                     trendData.push({
                         month: date.toLocaleString('en-TZ', { month: 'short' }),

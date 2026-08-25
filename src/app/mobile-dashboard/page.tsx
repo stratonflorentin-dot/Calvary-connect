@@ -164,8 +164,8 @@ export default function MobileDashboardPage() {
                             <div className="grid grid-cols-2 gap-3 pt-3">
                                 <div className="rounded-3xl bg-white/10 p-4">
                                     <p className="text-xs uppercase tracking-[0.24em] text-slate-200/70">Revenue</p>
-                                    <p className="mt-3 text-2xl font-bold">{format(revenueValue)}</p>
-                                    <p className="text-xs text-slate-200/80 mt-1">This Month</p>
+                                    <p className="mt-3 text-2xl font-bold">{format(revenueValue, "TZS")}</p>
+                                    <p className="text-xs text-slate-200/80 mt-1">This Month (TZS)</p>
                                 </div>
                                 <div className="rounded-3xl bg-white/10 p-4">
                                     <p className="text-xs uppercase tracking-[0.24em] text-slate-200/70">Fleet Active</p>
