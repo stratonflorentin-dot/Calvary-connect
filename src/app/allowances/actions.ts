@@ -11,6 +11,28 @@ function getAdminClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+/**
+ * Active bank accounts for a currency — used by the Mark Paid account
+ * picker, since markPayrollPaidAction can no longer guess which one to
+ * debit when more than one is active (see
+ * 115_driver_allowances_bank_account_id.sql).
+ */
+export async function getActiveBankAccountsAction(currency: string = "TZS") {
+  try {
+    const supabaseAdmin = getAdminClient();
+    const { data, error } = await supabaseAdmin
+      .from("bank_accounts")
+      .select("id, account_name, currency")
+      .eq("currency", currency)
+      .eq("is_active", true)
+      .order("account_name");
+    if (error) throw error;
+    return { success: true, accounts: data || [] };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to load bank accounts", accounts: [] };
+  }
+}
+
 /** Fetches all active worker profiles including base salary information */
 export async function getWorkersAction() {
   try {
@@ -263,7 +285,7 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
  * `PAY-{id}` number approvePayrollRecordAction always uses, so no new
  * column/schema change is needed to relate them.
  */
-export async function markPayrollPaidAction(id: string) {
+export async function markPayrollPaidAction(id: string, bankAccountId?: string) {
   try {
     const supabaseAdmin = getAdminClient();
     const now = new Date().toISOString();
@@ -287,23 +309,49 @@ export async function markPayrollPaidAction(id: string) {
     // ever debited. driver_allowances is always inserted with currency
     // "TZS" (see savePayrollAction above), so that's the account to debit.
     const currency = (record as any).currency || "TZS";
-    const { data: accounts, error: acctErr } = await supabaseAdmin
-      .from("bank_accounts")
-      .select("id")
-      .eq("currency", currency)
-      .eq("is_active", true);
-    if (acctErr) {
-      throw new Error(`Could not look up ${currency} bank accounts: ${acctErr.message}`);
-    }
-    if (!accounts || accounts.length !== 1) {
-      throw new Error(
-        accounts && accounts.length > 1
-          ? `More than one active ${currency} bank account exists — pay this from Finance instead.`
-          : `No active ${currency} bank account found to pay this payroll record from.`,
-      );
+    let payingAccountId: string;
+
+    // An explicit choice (the account picker on Mark Paid, or a
+    // pre-selected driver_allowances.bank_account_id) beats guessing — see
+    // 115_driver_allowances_bank_account_id.sql. Falling back to "the one
+    // active account in this currency" only when nothing was chosen, same
+    // as the expense flow in lib/workflow/engine.ts.
+    if (bankAccountId) {
+      const { data: chosen, error: chosenErr } = await supabaseAdmin
+        .from("bank_accounts")
+        .select("id, currency, is_active")
+        .eq("id", bankAccountId)
+        .maybeSingle();
+      if (chosenErr) {
+        throw new Error(`Could not look up the chosen bank account: ${chosenErr.message}`);
+      }
+      if (!chosen || !chosen.is_active) {
+        throw new Error("The chosen account is no longer active.");
+      }
+      if (chosen.currency !== currency) {
+        throw new Error(`The chosen account is ${chosen.currency}, but this payroll record is ${currency}.`);
+      }
+      payingAccountId = chosen.id;
+    } else {
+      const { data: accounts, error: acctErr } = await supabaseAdmin
+        .from("bank_accounts")
+        .select("id")
+        .eq("currency", currency)
+        .eq("is_active", true);
+      if (acctErr) {
+        throw new Error(`Could not look up ${currency} bank accounts: ${acctErr.message}`);
+      }
+      if (!accounts || accounts.length !== 1) {
+        throw new Error(
+          accounts && accounts.length > 1
+            ? `More than one active ${currency} bank account exists — choose which one paid it.`
+            : `No active ${currency} bank account found to pay this payroll record from.`,
+        );
+      }
+      payingAccountId = accounts[0].id;
     }
     const { error: txError } = await supabaseAdmin.rpc("post_bank_transaction", {
-      p_bank_account_id: accounts[0].id,
+      p_bank_account_id: payingAccountId,
       p_amount: Number(record.amount) || 0,
       p_direction: "out",
       p_transaction_type: "withdrawal",

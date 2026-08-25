@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Coins, Calculator, Truck, Globe, Plus, RefreshCw,
   User, DollarSign, Calendar, Search, Trash2, CheckCircle,
@@ -25,7 +27,8 @@ import {
   markPayrollPaidAction,
   rejectPayrollRecordAction,
   deletePayrollRecordAction,
-  updateWorkerSalaryAction
+  updateWorkerSalaryAction,
+  getActiveBankAccountsAction,
 } from './actions';
 
 interface Worker {
@@ -69,6 +72,14 @@ export default function AllowancesPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Mark Paid account picker — driver_allowances has no fixed bank account,
+  // and this chart has more than one active TZS account, so the payer must
+  // be chosen explicitly rather than guessed.
+  const [markPaidTarget, setMarkPaidTarget] = useState<PayrollRecord | null>(null);
+  const [markPaidAccounts, setMarkPaidAccounts] = useState<{ id: string; account_name: string; currency: string }[]>([]);
+  const [markPaidAccountId, setMarkPaidAccountId] = useState('');
+  const [markPaidAccountsLoading, setMarkPaidAccountsLoading] = useState(false);
 
   // Manual payroll input states (indexed by workerId)
   const [baseSalaries, setBaseSalaries] = useState<Record<string, number>>({});
@@ -238,12 +249,34 @@ export default function AllowancesPage() {
 
   // Mark an approved payroll record as paid — closes the loop into Finance
   // (sets invoices.paid_at so it surfaces in Bank Reconciliation and Reports).
-  const handleMarkPaidPayroll = async (id: string) => {
+  // Opens an account picker rather than paying immediately: this chart has
+  // more than one active TZS account, so which one actually gets debited
+  // has to be a real choice, not a guess.
+  const openMarkPaidDialog = async (record: PayrollRecord) => {
+    setMarkPaidTarget(record);
+    setMarkPaidAccountId('');
+    setMarkPaidAccountsLoading(true);
+    try {
+      const res = await getActiveBankAccountsAction('TZS');
+      setMarkPaidAccounts(res.accounts || []);
+      if ((res.accounts || []).length === 1) setMarkPaidAccountId(res.accounts[0].id);
+      if (!res.success) {
+        toast({ title: "Error", description: res.error || "Failed to load bank accounts.", variant: "destructive" });
+      }
+    } finally {
+      setMarkPaidAccountsLoading(false);
+    }
+  };
+
+  const handleMarkPaidPayroll = async () => {
+    if (!markPaidTarget) return;
+    const id = markPaidTarget.id;
     setActionLoading(id);
     try {
-      const res = await markPayrollPaidAction(id);
+      const res = await markPayrollPaidAction(id, markPaidAccountId || undefined);
       if (res.success) {
         toast({ title: "Payroll Paid", description: "Marked as disbursed — linked invoice and expense updated." });
+        setMarkPaidTarget(null);
         await loadHistory();
       } else {
         toast({ title: "Could Not Mark Paid", description: res.error || "Please try again.", variant: "destructive" });
@@ -840,7 +873,7 @@ export default function AllowancesPage() {
                                   {item.status === 'approved' && (
                                     <Button
                                       size="sm"
-                                      onClick={() => handleMarkPaidPayroll(item.id)}
+                                      onClick={() => openMarkPaidDialog(item)}
                                       disabled={isActionLoading}
                                       className="bg-info hover:bg-info/90 text-info-foreground text-[10px] h-7 px-3 font-semibold shadow-md"
                                     >
@@ -873,6 +906,48 @@ export default function AllowancesPage() {
 
         </div>
       </main>
+
+      <Dialog open={!!markPaidTarget} onOpenChange={(open) => { if (!open) setMarkPaidTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark Payroll as Paid</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              {markPaidTarget?.driver_name} — {format(markPaidTarget?.amount || 0)}
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-foreground">Pay from</label>
+              {markPaidAccountsLoading ? (
+                <p className="text-sm text-muted-foreground">Loading bank accounts…</p>
+              ) : markPaidAccounts.length === 0 ? (
+                <p className="text-sm text-destructive">No active TZS bank account found to pay this from.</p>
+              ) : (
+                <Select value={markPaidAccountId} onValueChange={setMarkPaidAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a bank account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {markPaidAccounts.map((acct) => (
+                      <SelectItem key={acct.id} value={acct.id}>{acct.account_name} ({acct.currency})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMarkPaidTarget(null)}>Cancel</Button>
+            <Button
+              onClick={handleMarkPaidPayroll}
+              disabled={!markPaidAccountId || actionLoading === markPaidTarget?.id}
+              className="bg-info hover:bg-info/90 text-info-foreground"
+            >
+              {actionLoading === markPaidTarget?.id ? "Paying…" : "Confirm Payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
