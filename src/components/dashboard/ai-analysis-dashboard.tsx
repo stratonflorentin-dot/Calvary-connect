@@ -84,12 +84,18 @@ export default function AIAnalysisDashboard() {
   const activeTrips = trips.filter((t) =>
     ["in_transit", "loading", "pending"].includes(t.status),
   );
-  const completedTrips = trips.filter((t) => t.status === "completed");
-  const totalRevenue = completedTrips.reduce(
-    (sum, t) => sum + (Number(t.revenue || t.price) || 0),
-    0,
-  );
-  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  // Real terminal status is 'delivered' (no trip is ever 'completed'), and
+  // revenue/price are dead legacy columns (always 0) — total_amount/
+  // sales_amount are the real figures. Scoped to TZS trips for this single
+  // blended number, same as every other single-number tile fixed this
+  // session; businessMetrics below carries the full per-currency picture.
+  const completedTrips = trips.filter((t) => t.status === "delivered");
+  const totalRevenue = completedTrips
+    .filter((t: any) => (t.currency || "TZS") === "TZS")
+    .reduce((sum, t: any) => sum + (Number(t.total_amount ?? t.sales_amount) || 0), 0);
+  const totalExpenses = expenses
+    .filter((e: any) => (e.currency || "TZS") === "TZS")
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
   const netProfit = totalRevenue - totalExpenses;
 
   const inUseVehicles = vehicles.filter((v) => v.status === "in_use").length;
@@ -129,7 +135,7 @@ export default function AIAnalysisDashboard() {
   const [dbContext, setDbContext] = useState<any | null>(null);
   const [businessMetrics, setBusinessMetrics] = useState<any | null>(null);
   // Forecast sliders
-  const [monthlyTrips, setMonthlyTrips] = useState<number>(Number((businessMetrics?.completedTripsCount) || 38));
+  const [monthlyTrips, setMonthlyTrips] = useState<number>(Number((businessMetrics?.deliveredTripsCount) || 38));
   const [avgRate, setAvgRate] = useState<number>(4800);
   const [costRatio, setCostRatio] = useState<number>(67);
   const [growthRate, setGrowthRate] = useState<number>(2);
@@ -328,17 +334,23 @@ export default function AIAnalysisDashboard() {
     const inUse = vehicles.filter((v) => vehicleStatusBucket(v.status) === 'in_use').length;
     const maintenance = vehicles.filter((v) => vehicleStatusBucket(v.status) === 'maintenance').length;
 
+    // This flow's schema expects single numbers, so the TZS figure leads
+    // here (same "primary currency" scoping used elsewhere) — businessMetrics
+    // itself now carries the full per-currency breakdown for the general chat.
+    const revenueThisMonthTzs = Number(businessMetrics?.revenueThisMonthByCurrency?.TZS || 0);
+    const expensesThisMonthTzs = Number(businessMetrics?.expensesThisMonthByCurrency?.TZS || 0);
+
     return {
       activeTripsCount: activeTrips.length,
       fleetBreakdown: { available, inUse, maintenance },
-      revenueThisMonth: Number(businessMetrics?.revenueThisMonth || 0),
-      expensesThisMonth: Number(businessMetrics?.expensesThisMonth || 0),
-      netProfit: Number(businessMetrics?.netProfitThisMonth || 0),
+      revenueThisMonth: revenueThisMonthTzs,
+      expensesThisMonth: expensesThisMonthTzs,
+      netProfit: revenueThisMonthTzs - expensesThisMonthTzs,
       fuelConsumptionLiters: Number(businessMetrics?.fuelLitersThisMonth || 0),
       pendingMaintenanceCount: Number(businessMetrics?.pendingMaintenanceCount || 0),
       lowStockCount: Number(businessMetrics?.lowStockCount || 0),
       onlineDriverCount: Number(businessMetrics?.onlineDriverCount || 0),
-      completedDeliveriesThisMonth: Number(businessMetrics?.completedDeliveriesThisMonth || 0),
+      completedDeliveriesThisMonth: Number(businessMetrics?.deliveredTripsThisMonthCount || 0),
     };
   };
 

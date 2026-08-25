@@ -68,23 +68,77 @@ export const FLEET_SCHEMA: DatabaseSchema = {
 // Extend schema with additional tables used by AI
 FLEET_SCHEMA.tables.push(
   {
-    // NOT the legacy `contracts` table — that one is abandoned (see
-    // migration 041's era investigation this session: real contract data
-    // lives in transport_contracts, created from src/app/sales/page.tsx's
-    // Contracts tab; `contracts`/`clients` are dead duplicates that were
-    // silently making Contract Health and CEO Insights report zero data).
-    name: 'transport_contracts',
+    // The real, live contract ledger — confirmed this session against the
+    // actual schema. transport_contracts (what this file queried until now)
+    // is the dead duplicate: zero rows, nothing writes to it anymore. Every
+    // real contract created through Sales (contract-generator.tsx,
+    // saveContractFromAgreement) writes here, keyed by customer_id.
+    name: 'contracts',
     columns: [
       { name: 'id', type: 'UUID' },
       { name: 'contract_number', type: 'TEXT' },
       { name: 'customer_id', type: 'UUID' },
       { name: 'contract_type', type: 'TEXT' },
-      { name: 'status', type: "TEXT /* draft/active/expired/terminated */" },
+      { name: 'status', type: "TEXT /* draft/sent/active/expired/terminated */" },
       { name: 'start_date', type: 'DATE' },
       { name: 'end_date', type: 'DATE' },
       { name: 'contract_value', type: 'DECIMAL' },
       { name: 'currency', type: 'TEXT' },
       { name: 'created_at', type: 'TIMESTAMP' }
+    ]
+  },
+  {
+    name: 'quotations',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'quotation_number', type: 'TEXT' },
+      { name: 'customer_id', type: 'UUID' },
+      { name: 'status', type: "TEXT /* draft/sent/viewed/accepted/rejected/expired */" },
+      { name: 'origin', type: 'TEXT' },
+      { name: 'destination', type: 'TEXT' },
+      { name: 'total_amount', type: 'DECIMAL' },
+      { name: 'currency', type: 'TEXT' },
+      { name: 'shipment_id', type: 'UUID /* set once accepted and converted into a real job */' },
+      { name: 'created_at', type: 'TIMESTAMP' }
+    ]
+  },
+  {
+    name: 'invoices',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'invoice_number', type: 'TEXT' },
+      { name: 'customer_id', type: 'UUID' },
+      { name: 'type', type: "TEXT /* receivable/payable */" },
+      { name: 'status', type: "TEXT /* draft/sent/partial/paid/overdue/cancelled */" },
+      { name: 'total_amount', type: 'DECIMAL' },
+      { name: 'currency', type: 'TEXT' },
+      { name: 'due_date', type: 'DATE' },
+      { name: 'paid_at', type: 'TIMESTAMP' }
+    ]
+  },
+  {
+    name: 'bookings',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'booking_number', type: 'TEXT' },
+      { name: 'customer_id', type: 'UUID' },
+      { name: 'status', type: 'TEXT' },
+      { name: 'amount', type: 'DECIMAL' },
+      { name: 'currency', type: 'TEXT' },
+      { name: 'created_at', type: 'TIMESTAMP' }
+    ]
+  },
+  {
+    name: 'shipments',
+    columns: [
+      { name: 'id', type: 'UUID' },
+      { name: 'shipment_number', type: 'TEXT' },
+      { name: 'customer_id', type: 'UUID' },
+      { name: 'status', type: "TEXT /* created/approved/active/delivered/paid/cancelled */" },
+      { name: 'origin_city', type: 'TEXT' },
+      { name: 'destination_city', type: 'TEXT' },
+      { name: 'quoted_amount', type: 'DECIMAL' },
+      { name: 'currency', type: 'TEXT' }
     ]
   },
   {
@@ -163,13 +217,19 @@ async function safeQuery(queryFn: () => any, fallbackKey = 'data') {
 }
 
 export async function getFleetContext() {
-  const [vehicles, trips, expenses, users, contracts, customers, fuelLogs, maintenance, rateSheets, inventory] = await Promise.all([
+  const [
+    vehicles, trips, expenses, users, contracts, customers, fuelLogs, maintenance,
+    rateSheets, inventory, quotations, invoices, bookings, shipments, bankAccounts,
+  ] = await Promise.all([
     safeQuery(() => supabase.from('vehicles').select('*').limit(200)),
     safeQuery(() => supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(200)),
     safeQuery(() => supabase.from('expenses').select('*').order('date', { ascending: false }).limit(200)),
     safeQuery(() => supabase.from('user_profiles').select('*').limit(200)),
+    // contracts, not transport_contracts — confirmed dead (zero rows,
+    // nothing writes to it) elsewhere this session. customer_id is the
+    // real FK this table is linked by.
     safeQuery(async () => {
-      let r = await supabase.from('transport_contracts').select('*, customers(company_name)').order('created_at', { ascending: false }).limit(200);
+      let r = await supabase.from('contracts').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
       if (r.error) return { data: [] };
       return r;
     }),
@@ -199,6 +259,28 @@ export async function getFleetContext() {
     }),
     safeQuery(() => supabase.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50)),
     safeQuery(() => supabase.from('inventory').select('*').limit(500)),
+    // Sales pipeline — the AI previously had no visibility into quotations
+    // at all, so it couldn't answer anything about pipeline/conversion.
+    safeQuery(async () => {
+      let r = await supabase.from('quotations').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
+      if (r.error) return { data: [] };
+      return r;
+    }),
+    // Real revenue/AR — trips.revenue is a dead legacy column (always 0);
+    // invoices is the actual billing/receivable record, and the AI
+    // previously had zero visibility into it.
+    safeQuery(async () => {
+      let r = await supabase.from('invoices').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
+      if (r.error) return { data: [] };
+      return r;
+    }),
+    safeQuery(() => supabase.from('bookings').select('*').order('created_at', { ascending: false }).limit(200)),
+    safeQuery(async () => {
+      let r = await supabase.from('shipments').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
+      if (r.error) return { data: [] };
+      return r;
+    }),
+    safeQuery(() => supabase.from('bank_accounts').select('*')),
   ]);
 
   return {
@@ -212,6 +294,11 @@ export async function getFleetContext() {
     maintenance: (maintenance.data || []).map((m: any) => ({ ...m, vehicle: m.vehicles })),
     rateSheets: rateSheets.data || [],
     inventory: inventory.data || [],
+    quotations: quotations.data || [],
+    invoices: invoices.data || [],
+    bookings: bookings.data || [],
+    shipments: shipments.data || [],
+    bankAccounts: bankAccounts.data || [],
   };
 }
 
@@ -308,6 +395,15 @@ export async function getDispatchContext(): Promise<DispatchContext> {
   };
 }
 
+function sumByCurrency(rows: any[], amountOf: (r: any) => number, currencyOf: (r: any) => string = (r) => r.currency || 'TZS'): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of rows) {
+    const cur = currencyOf(r) || 'TZS';
+    out[cur] = (out[cur] ?? 0) + (Number(amountOf(r)) || 0);
+  }
+  return out;
+}
+
 export function computeBusinessMetrics(ctx: any) {
   const now = new Date();
   const isThisMonth = (dateStr: string | null | undefined) => {
@@ -316,11 +412,39 @@ export function computeBusinessMetrics(ctx: any) {
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   };
 
-  const completedTrips = (ctx.trips || []).filter((t: any) => t.status === 'completed');
-  const totalRevenue = completedTrips.reduce((s: number, t: any) => s + (Number(t.revenue) || 0), 0);
-  const totalExpenses = (ctx.expenses || []).reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
-  const revenueThisMonth = completedTrips.filter((t: any) => isThisMonth(t.created_at)).reduce((s: number, t: any) => s + (Number(t.revenue) || 0), 0);
-  const expensesThisMonth = (ctx.expenses || []).filter((e: any) => isThisMonth(e.date)).reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+  // Real terminal trip status is 'delivered' (not 'completed', which no
+  // trip ever has), and trips.revenue/price are dead legacy columns
+  // (always 0) — total_amount/sales_amount are the real figures. Kept
+  // for trip-volume counts; paid invoices below are the real revenue
+  // source, since they're the actual billing/recognition record.
+  const deliveredTrips = (ctx.trips || []).filter((t: any) => t.status === 'delivered');
+  const deliveredTripsThisMonth = deliveredTrips.filter((t: any) => isThisMonth(t.created_at));
+
+  // Revenue and expenses are grouped by currency rather than blindly
+  // summed — a USD invoice and a TZS expense are not the same unit, and
+  // presenting a blended "total" would just be a wrong number with a
+  // confident-looking label. The AI is instructed (system prompt) to
+  // always state currency and never sum across these maps itself.
+  const paidInvoices = (ctx.invoices || []).filter((i: any) => i.status === 'paid' && (i.type ?? 'receivable') === 'receivable');
+  const revenueByCurrency = sumByCurrency(paidInvoices, (i) => i.total_amount ?? i.amount ?? 0);
+  const revenueThisMonthByCurrency = sumByCurrency(paidInvoices.filter((i: any) => isThisMonth(i.paid_at ?? i.issue_date ?? i.created_at)), (i) => i.total_amount ?? i.amount ?? 0);
+  const outstandingReceivables = (ctx.invoices || []).filter((i: any) => (i.type ?? 'receivable') === 'receivable' && i.status !== 'paid' && i.status !== 'cancelled');
+  const outstandingReceivablesByCurrency = sumByCurrency(outstandingReceivables, (i) => (i.total_amount ?? i.amount ?? 0) - (i.paid_amount ?? 0));
+  const overdueReceivables = outstandingReceivables.filter((i: any) => i.due_date && new Date(i.due_date).getTime() < Date.now());
+  const overdueReceivablesByCurrency = sumByCurrency(overdueReceivables, (i) => (i.total_amount ?? i.amount ?? 0) - (i.paid_amount ?? 0));
+
+  const expensesByCurrency = sumByCurrency(ctx.expenses || [], (e) => e.amount ?? 0);
+  const expensesThisMonthByCurrency = sumByCurrency((ctx.expenses || []).filter((e: any) => isThisMonth(e.date)), (e) => e.amount ?? 0);
+
+  const cashByCurrency = sumByCurrency(ctx.bankAccounts || [], (a) => a.current_balance ?? 0);
+
+  // Sales pipeline — previously entirely invisible to the AI.
+  const quotations = ctx.quotations || [];
+  const openQuotations = quotations.filter((q: any) => !['accepted', 'rejected', 'expired'].includes(q.status));
+  const acceptedQuotations = quotations.filter((q: any) => Boolean(q.shipment_id));
+  const pipelineValueByCurrency = sumByCurrency(openQuotations, (q) => q.total_amount ?? q.amount ?? 0);
+  const quotationConversionRate = quotations.length > 0 ? Number(((acceptedQuotations.length / quotations.length) * 100).toFixed(1)) : null;
+
   const totalFuelCost = (ctx.fuelLogs || []).reduce((s: number, f: any) => s + (Number(f.total_cost) || 0), 0);
   const totalFuelLiters = (ctx.fuelLogs || []).reduce((s: number, f: any) => s + (Number(f.litres) || 0), 0);
   const fuelLitersThisMonth = (ctx.fuelLogs || []).filter((f: any) => isThisMonth(f.date)).reduce((s: number, f: any) => s + (Number(f.litres) || 0), 0);
@@ -337,20 +461,23 @@ export function computeBusinessMetrics(ctx: any) {
   const onlineDrivers = (ctx.users || []).filter((u: any) =>
     u.role === 'DRIVER' && u.presence_status === 'online',
   ).length;
-  const completedDeliveriesThisMonth = completedTrips.filter((t: any) => isThisMonth(t.created_at)).length;
 
   return {
-    totalRevenue,
-    totalExpenses,
-    revenueThisMonth,
-    expensesThisMonth,
-    netProfit: totalRevenue - totalExpenses,
-    netProfitThisMonth: revenueThisMonth - expensesThisMonth,
-    profitMargin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue * 100).toFixed(1) : '0',
+    revenueByCurrency,
+    revenueThisMonthByCurrency,
+    expensesByCurrency,
+    expensesThisMonthByCurrency,
+    cashByCurrency,
+    outstandingReceivablesByCurrency,
+    overdueReceivablesByCurrency,
+    overdueReceivablesCount: overdueReceivables.length,
+    pipelineValueByCurrency,
+    openQuotationsCount: openQuotations.length,
+    quotationConversionRate,
     fleetUtilization: (ctx.vehicles || []).length > 0 ? (inUseVehicles / (ctx.vehicles || []).length * 100).toFixed(1) : '0',
     activeTripsCount: (ctx.trips || []).filter((t: any) => ['in_transit', 'loading', 'pending'].includes(t.status)).length,
-    completedTripsCount: completedTrips.length,
-    completedDeliveriesThisMonth,
+    deliveredTripsCount: deliveredTrips.length,
+    deliveredTripsThisMonthCount: deliveredTripsThisMonth.length,
     totalFuelCost,
     totalFuelLiters,
     fuelLitersThisMonth,
@@ -361,7 +488,6 @@ export function computeBusinessMetrics(ctx: any) {
     pendingMaintenanceCount: (ctx.maintenance || []).filter((m: any) => m.status === 'pending').length,
     lowStockCount,
     onlineDriverCount: onlineDrivers,
-    costPerTrip: completedTrips.length > 0 ? totalExpenses / completedTrips.length : 0
   };
 }
 

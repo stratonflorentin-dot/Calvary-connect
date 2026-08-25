@@ -211,17 +211,22 @@ async function runCeoInsights(): Promise<AgentRunResult> {
   // Reuse computeBusinessMetrics() rather than recomputing locally — it's
   // the single source of truth also used by the AI dashboard and already
   // filters onlineDriverCount by presence_status, not just role.
+  // revenue/expenses are now grouped by currency (a USD invoice and a TZS
+  // expense aren't the same unit to sum); this flow's schema still wants
+  // single numbers, so TZS leads, same scoping used elsewhere.
+  const revenueThisMonthTzs = Number(metrics.revenueThisMonthByCurrency?.TZS || 0);
+  const expensesThisMonthTzs = Number(metrics.expensesThisMonthByCurrency?.TZS || 0);
   const insights = await getCeoAiInsights({
     activeTripsCount: metrics.activeTripsCount,
     fleetBreakdown: { available, inUse, maintenance },
-    revenueThisMonth: metrics.revenueThisMonth,
-    expensesThisMonth: metrics.expensesThisMonth,
-    netProfit: metrics.netProfitThisMonth,
+    revenueThisMonth: revenueThisMonthTzs,
+    expensesThisMonth: expensesThisMonthTzs,
+    netProfit: revenueThisMonthTzs - expensesThisMonthTzs,
     fuelConsumptionLiters: metrics.fuelLitersThisMonth,
     pendingMaintenanceCount: metrics.pendingMaintenanceCount,
     lowStockCount: metrics.lowStockCount,
     onlineDriverCount: metrics.onlineDriverCount,
-    completedDeliveriesThisMonth: metrics.completedDeliveriesThisMonth,
+    completedDeliveriesThisMonth: metrics.deliveredTripsThisMonthCount,
   });
 
   return {
