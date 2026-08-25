@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
@@ -103,6 +103,7 @@ interface SalesOpportunity {
   opportunity_name: string;
   service_type: string;
   estimated_monthly_revenue: number;
+  currency?: string;
   probability: number;
   stage: string;
   expected_close_date: string;
@@ -139,6 +140,12 @@ const LOCAL_ROUTES = [
   { origin: 'Dar es Salaam', destination: 'Morogoro', distance: 190 },
   { origin: 'Dar es Salaam', destination: 'Kigoma', distance: 1050 },
 ];
+
+function formatByCurrency(byCurrency: Record<string, number>): string {
+  const entries = Object.entries(byCurrency);
+  if (entries.length === 0) return formatCurrency(0, 'TZS');
+  return entries.map(([cur, amt]) => formatCurrency(amt, cur)).join(' · ');
+}
 
 // ─── Main Component ────────────────────────────────────────────────
 
@@ -708,8 +715,21 @@ function SalesModuleContent() {
   const totalContracts = contracts.length;
   const activeContracts = contracts.filter(c => c.status === 'active').length;
   const totalOpportunities = opportunities.length;
-  const pipelineValue = opportunities.reduce((sum, o) => sum + (o.estimated_monthly_revenue || 0), 0)
-    + contracts.filter(c => c.status !== 'terminated' && c.status !== 'expired').reduce((sum, c) => sum + (c.contract_value || 0), 0);
+  // Grouped by currency — opportunities and contracts both carry their own
+  // currency, and summing a USD contract's value directly onto a TZS
+  // opportunity's estimate isn't one real number.
+  const pipelineValueByCurrency = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const o of opportunities) {
+      const cur = o.currency || 'TZS';
+      out[cur] = (out[cur] ?? 0) + (o.estimated_monthly_revenue || 0);
+    }
+    for (const c of contracts.filter(c => c.status !== 'terminated' && c.status !== 'expired')) {
+      const cur = (c as any).currency || 'TZS';
+      out[cur] = (out[cur] ?? 0) + (c.contract_value || 0);
+    }
+    return out;
+  }, [opportunities, contracts]);
 
   // Contract status badge helper
   function getContractStatusBadge(status: string) {
@@ -790,7 +810,7 @@ function SalesModuleContent() {
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Pipeline Value</p>
-                  <p className="text-2xl font-bold text-foreground">TZS {pipelineValue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-foreground truncate">{formatByCurrency(pipelineValueByCurrency)}</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shadow-sm flex-shrink-0">
                   <TrendingUp className="h-6 w-6 text-accent-foreground" />
@@ -1774,7 +1794,11 @@ function SalesModuleContent() {
                   <div className="flex gap-4 items-start min-w-max">
                     {PIPELINE_STAGES.map(({ value, label }) => {
                       const stageDeals = opportunities.filter(o => o.stage === value);
-                      const stageValue = stageDeals.reduce((sum, o) => sum + (o.estimated_monthly_revenue || 0), 0);
+                      const stageValueByCurrency = stageDeals.reduce((acc: Record<string, number>, o) => {
+                        const cur = o.currency || 'TZS';
+                        acc[cur] = (acc[cur] ?? 0) + (o.estimated_monthly_revenue || 0);
+                        return acc;
+                      }, {});
                       return (
                         <div key={value} className="w-[280px] shrink-0 flex flex-col">
                           <div className="flex items-center justify-between border-b-2 border-border pb-2 mb-3">
@@ -1782,8 +1806,8 @@ function SalesModuleContent() {
                               {label}
                               <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">{stageDeals.length}</span>
                             </h3>
-                            <span className="text-xs font-medium text-muted-foreground">
-                              TZS {stageValue >= 1_000_000 ? `${(stageValue / 1_000_000).toFixed(1)}M` : stageValue.toLocaleString()}
+                            <span className="text-xs font-medium text-muted-foreground truncate max-w-[140px]">
+                              {formatByCurrency(stageValueByCurrency)}
                             </span>
                           </div>
                           <div className="flex flex-col gap-3">
@@ -1804,7 +1828,7 @@ function SalesModuleContent() {
                                       {o.probability}%
                                     </Badge>
                                     <span className="text-sm font-semibold text-primary">
-                                      TZS {(o.estimated_monthly_revenue || 0).toLocaleString()}
+                                      {formatCurrency(o.estimated_monthly_revenue || 0, o.currency || 'TZS')}
                                     </span>
                                   </div>
                                 </CardContent>

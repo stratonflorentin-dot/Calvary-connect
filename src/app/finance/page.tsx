@@ -451,12 +451,44 @@ export default function FinanceOverviewPage() {
     });
   }, [invoices, expenses]);
 
-  const executiveKPIs = [
-    { label: "Available cash", value: cashTotal, currency: REPORTING_CURRENCY, icon: Wallet, accent: "bg-success/10 text-success", href: "/finance/banking/bank-accounts" },
-    { label: "Receivables", value: arSummary.totalOutstanding, currency: REPORTING_CURRENCY, icon: CreditCard, accent: "bg-warning/10 text-warning", href: "/finance/invoicing/customer-invoices" },
-    { label: "Operating result", value: netProfitMtd, currency: REPORTING_CURRENCY, icon: TrendingUp, delta: pctDelta(netProfitMtd, revenue.prevMtd - expenseStats.prevMtd), accent: netProfitMtd >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive", href: "/finance/reports/profit-loss" },
-    { label: "Payables due", value: apSummary.totalOutstanding, currency: REPORTING_CURRENCY, icon: Building2, accent: "bg-primary/10 text-primary", href: "/finance/invoicing/vendor-bills" },
-  ];
+  // One set of KPI cards per currency that actually has money in it — the
+  // previous version only ever read the REPORTING_CURRENCY (TZS) bucket out
+  // of cashByCurrency/arByCcy/apByCcy, so a real USD bank balance or
+  // receivable was silently invisible on the headline cards even though the
+  // underlying per-currency data was already computed correctly elsewhere
+  // on this page.
+  const kpiNetProfitByCurrency = useMemo(() => {
+    const out: Record<string, { mtd: number; prevMtd: number }> = {};
+    for (const cur of allCurrencies) {
+      const rev = revenueByCurrency[cur] ?? { mtd: 0, prevMtd: 0 };
+      const exp = expenseStatsByCurrency.byCurrency[cur] ?? { mtd: 0, prevMtd: 0 };
+      out[cur] = { mtd: rev.mtd - exp.mtd, prevMtd: rev.prevMtd - exp.prevMtd };
+    }
+    return out;
+  }, [allCurrencies, revenueByCurrency, expenseStatsByCurrency]);
+
+  const executiveKPIs = allCurrencies.flatMap((cur) => {
+    const cash = cashByCurrency[cur] ?? 0;
+    const ar = (arByCcy[cur] ?? summarize([])).totalOutstanding;
+    const ap = (apByCcy[cur] ?? summarize([])).totalOutstanding;
+    const net = kpiNetProfitByCurrency[cur] ?? { mtd: 0, prevMtd: 0 };
+    const isPrimary = cur === REPORTING_CURRENCY;
+    const suffix = isPrimary ? "" : ` (${cur})`;
+    const cards: { label: string; value: number; currency: string; icon: React.ElementType; delta?: number; accent: string; href: string }[] = [];
+    if (isPrimary || cash !== 0) {
+      cards.push({ label: `Available cash${suffix}`, value: cash, currency: cur, icon: Wallet, accent: "bg-success/10 text-success", href: "/finance/banking/bank-accounts" });
+    }
+    if (isPrimary || ar !== 0) {
+      cards.push({ label: `Receivables${suffix}`, value: ar, currency: cur, icon: CreditCard, accent: "bg-warning/10 text-warning", href: "/finance/invoicing/customer-invoices" });
+    }
+    if (isPrimary || net.mtd !== 0) {
+      cards.push({ label: `Operating result${suffix}`, value: net.mtd, currency: cur, icon: TrendingUp, delta: pctDelta(net.mtd, net.prevMtd), accent: net.mtd >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive", href: "/finance/reports/profit-loss" });
+    }
+    if (isPrimary || ap !== 0) {
+      cards.push({ label: `Payables due${suffix}`, value: ap, currency: cur, icon: Building2, accent: "bg-primary/10 text-primary", href: "/finance/invoicing/vendor-bills" });
+    }
+    return cards;
+  });
 
   const REPORT_LINKS = [
     { label: "Profit & Loss", sub: "Income vs expenditure", href: "/finance/reports/profit-loss", color: "border-l-primary" },
@@ -571,7 +603,7 @@ export default function FinanceOverviewPage() {
               <AreaChart data={operatingTrend} margin={{ top: 12, right: 8, left: 2, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                <YAxis axisLine={false} tickLine={false} width={55} tickFormatter={(value) => `${Math.round(value / 1000000)}M`} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                <YAxis axisLine={false} tickLine={false} width={55} tickFormatter={(value) => formatCurrencyShort(value, "").trim()} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
                 <Tooltip formatter={(value: number) => fmt(value, REPORTING_CURRENCY)} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", fontSize: 12 }} />
                 <Area type="monotone" dataKey="revenue" name="Revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="hsl(var(--primary))" fillOpacity={0.12} />
                 <Area type="monotone" dataKey="margin" name="Operating margin" stroke="hsl(var(--success))" strokeWidth={2.5} fill="hsl(var(--success))" fillOpacity={0.1} />

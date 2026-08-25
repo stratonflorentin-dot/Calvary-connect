@@ -16,6 +16,20 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
+function formatShort(v: number, cur: string): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000_000) return `${cur} ${(v / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `${cur} ${(v / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${cur} ${(v / 1_000).toFixed(1)}K`;
+  return `${cur} ${v.toFixed(0)}`;
+}
+
+function formatByCurrency(byCurrency: Record<string, number>): string {
+  const entries = Object.entries(byCurrency);
+  if (entries.length === 0) return formatShort(0, "TZS");
+  return entries.map(([cur, amt]) => formatShort(amt, cur)).join(" · ");
+}
+
 export default function SalesDashboard() {
   const { toast } = useToast();
   const { role, hasDepartmentAccess } = useRole();
@@ -35,8 +49,8 @@ export default function SalesDashboard() {
     totalBookings: 0,
     pendingBookings: 0,
     confirmedBookings: 0,
-    totalPipelineValue: 0,
-    monthlyRevenue: 0,
+    totalPipelineValueByCurrency: {} as Record<string, number>,
+    monthlyRevenueByCurrency: {} as Record<string, number>,
     conversionRate: 0,
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
@@ -88,8 +102,18 @@ export default function SalesDashboard() {
         totalBookings: bookingRows.length,
         pendingBookings: bookingRows.filter((b: any) => b.status === "pending").length,
         confirmedBookings: bookingRows.filter((b: any) => b.status === "confirmed").length,
-        totalPipelineValue: allQuotationRows.filter((q: any) => !["rejected", "expired"].includes(q.status)).reduce((sum: number, q: any) => sum + (Number(q.total_amount ?? q.amount) || 0), 0),
-        monthlyRevenue: bookedThisMonth.reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0),
+        totalPipelineValueByCurrency: allQuotationRows
+          .filter((q: any) => !["rejected", "expired"].includes(q.status))
+          .reduce((acc: Record<string, number>, q: any) => {
+            const cur = q.currency || "TZS";
+            acc[cur] = (acc[cur] ?? 0) + (Number(q.total_amount ?? q.amount) || 0);
+            return acc;
+          }, {}),
+        monthlyRevenueByCurrency: bookedThisMonth.reduce((acc: Record<string, number>, b: any) => {
+          const cur = b.currency || "TZS";
+          acc[cur] = (acc[cur] ?? 0) + (Number(b.amount) || 0);
+          return acc;
+        }, {}),
         conversionRate: leads.length > 0
           ? Math.round((leads.filter((l: any) => l.status === "converted").length / leads.length) * 100)
           : 0,
@@ -211,7 +235,7 @@ export default function SalesDashboard() {
                   <CardTitle className="text-sm font-medium text-muted-foreground">Pipeline Value</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">TZS {(stats.totalPipelineValue / 1000000).toFixed(1)}M</div>
+                  <div className="text-2xl font-bold truncate">{formatByCurrency(stats.totalPipelineValueByCurrency)}</div>
                   <div className="text-xs text-primary mt-1 flex items-center">
                     <TrendingUp className="size-3 mr-1" /> Total quotations
                   </div>
@@ -222,7 +246,7 @@ export default function SalesDashboard() {
                   <CardTitle className="text-sm font-medium text-muted-foreground">Booked Revenue</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">TZS {(stats.monthlyRevenue / 1000000).toFixed(1)}M</div>
+                  <div className="text-2xl font-bold truncate">{formatByCurrency(stats.monthlyRevenueByCurrency)}</div>
                   <div className="text-xs text-success mt-1 flex items-center">
                     <TrendingUp className="size-3 mr-1" /> Confirmed this month
                   </div>
@@ -259,7 +283,7 @@ export default function SalesDashboard() {
                         <div>
                           <p className="font-medium">{quote.quotation_number}</p>
                           <p className="text-xs text-muted-foreground">
-                            TZS {(quote.total_amount || 0).toLocaleString()}
+                            {quote.currency || "TZS"} {(quote.total_amount || 0).toLocaleString()}
                           </p>
                         </div>
                         <Button variant="outline" size="sm" asChild>
