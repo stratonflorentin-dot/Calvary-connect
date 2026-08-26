@@ -469,6 +469,7 @@ export default function FinanceOverviewPage() {
 
   const executiveKPIs = allCurrencies.flatMap((cur) => {
     const cash = cashByCurrency[cur] ?? 0;
+    const rev = revenueByCurrency[cur] ?? { mtd: 0, prevMtd: 0 };
     const ar = (arByCcy[cur] ?? summarize([])).totalOutstanding;
     const ap = (apByCcy[cur] ?? summarize([])).totalOutstanding;
     const net = kpiNetProfitByCurrency[cur] ?? { mtd: 0, prevMtd: 0 };
@@ -477,6 +478,9 @@ export default function FinanceOverviewPage() {
     const cards: { label: string; value: number; currency: string; icon: React.ElementType; delta?: number; accent: string; href: string }[] = [];
     if (isPrimary || cash !== 0) {
       cards.push({ label: `Available cash${suffix}`, value: cash, currency: cur, icon: Wallet, accent: "bg-success/10 text-success", href: "/finance/banking/bank-accounts" });
+    }
+    if (isPrimary || rev.mtd !== 0) {
+      cards.push({ label: `Revenue MTD${suffix}`, value: rev.mtd, currency: cur, icon: DollarSign, delta: pctDelta(rev.mtd, rev.prevMtd), accent: "bg-info/10 text-info", href: "/finance/reports/profit-loss" });
     }
     if (isPrimary || ar !== 0) {
       cards.push({ label: `Receivables${suffix}`, value: ar, currency: cur, icon: CreditCard, accent: "bg-warning/10 text-warning", href: "/finance/invoicing/customer-invoices" });

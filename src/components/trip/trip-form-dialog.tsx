@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PlaceAutocomplete } from "@/components/ui/place-autocomplete";
-import { Loader2, Route as RouteIcon, Save, Sparkles } from "lucide-react";
+import { Loader2, Plus, Route as RouteIcon, Save, Sparkles, X } from "lucide-react";
 import dynamic from "next/dynamic";
 
 interface DispatchSuggestion {
@@ -23,6 +23,15 @@ interface DispatchSuggestion {
   score: number;
   reasoning: string;
 }
+
+/** An additional truck+driver(+trailer) on the same trip, beyond the primary assignment above. */
+interface ExtraAssignment {
+  id?: string;
+  driverId: string;
+  truckId: string;
+  trailerId: string;
+}
+const emptyAssignment = (): ExtraAssignment => ({ driverId: "", truckId: "", trailerId: "" });
 
 const RoutePreviewMap = dynamic(
   () => import("@/components/trip/route-preview-map").then((m) => m.RoutePreviewMap),
@@ -100,6 +109,7 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [quotations, setQuotations] = useState<any[]>([]);
   const [form, setForm] = useState<TripFormState>(empty);
+  const [extraAssignments, setExtraAssignments] = useState<ExtraAssignment[]>([]);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<DispatchSuggestion[]>([]);
   const [suggestionCaveats, setSuggestionCaveats] = useState<string[]>([]);
@@ -125,6 +135,22 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
       setVehicles(v.data ?? []);
       setQuotations(q.data ?? []);
     })();
+
+    if (trip?.id) {
+      supabase
+        .from("trip_assignments")
+        .select("id, driver_id, truck_id, trailer_id")
+        .eq("trip_id", trip.id)
+        .order("created_at", { ascending: true })
+        .then(({ data, error }) => {
+          if (error) { console.error("Failed to load trip assignments:", error); return; }
+          setExtraAssignments(
+            (data ?? []).map((a) => ({ id: a.id, driverId: a.driver_id ?? "", truckId: a.truck_id ?? "", trailerId: a.trailer_id ?? "" })),
+          );
+        });
+    } else {
+      setExtraAssignments([]);
+    }
 
     if (trip) {
       setForm({
@@ -212,6 +238,11 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
 
   const patch = (p: Partial<TripFormState>) => setForm((prev) => ({ ...prev, ...p }));
 
+  const addExtraAssignment = () => setExtraAssignments((prev) => [...prev, emptyAssignment()]);
+  const patchExtraAssignment = (index: number, p: Partial<ExtraAssignment>) =>
+    setExtraAssignments((prev) => prev.map((a, i) => (i === index ? { ...a, ...p } : a)));
+  const removeExtraAssignment = (index: number) => setExtraAssignments((prev) => prev.filter((_, i) => i !== index));
+
   // Transit (cross-border) trips are VAT-exempt; local trips carry VAT.
   const effectiveVatRate = form.tripType === "transit" ? 0 : Number(form.vatRate) || 0;
 
@@ -255,15 +286,19 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
         updated_at: new Date().toISOString(),
       };
 
+      let tripId: string;
+
       if (isEdit) {
         const { error } = await supabase.from("trips").update(payload).eq("id", trip.id);
         if (error) throw error;
         await AuditTrailService.logUpdate("operations", "trip", trip.id, trip, payload, user?.id, `Updated trip ${payload.trip_number}`);
         toast({ title: "Trip updated" });
+        tripId = trip.id;
       } else {
         payload.created_at = new Date().toISOString();
         const { data, error } = await supabase.from("trips").insert(payload).select().maybeSingle();
         if (error) throw error;
+        tripId = data!.id;
         if (data?.id) {
           await AuditTrailService.logCreate("operations", "trip", data.id, data, user?.id, `Created trip ${payload.trip_number}`);
         }
@@ -290,6 +325,24 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
             }
           }
         }
+      }
+
+      // Replace this trip's additional assignments wholesale — simpler and
+      // safer than diffing adds/edits/removes, and this table has no other
+      // consumers yet to worry about disturbing.
+      await supabase.from("trip_assignments").delete().eq("trip_id", tripId);
+      const rowsToInsert = extraAssignments
+        .filter((a) => a.driverId || a.truckId || a.trailerId)
+        .map((a) => ({
+          trip_id: tripId,
+          driver_id: a.driverId || null,
+          truck_id: a.truckId || null,
+          trailer_id: a.trailerId || null,
+          created_by: user?.id || null,
+        }));
+      if (rowsToInsert.length > 0) {
+        const { error: assignError } = await supabase.from("trip_assignments").insert(rowsToInsert);
+        if (assignError) throw assignError;
       }
 
       onOpenChange(false);
@@ -483,6 +536,53 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
                 </Select>
               </div>
             </div>
+
+            {extraAssignments.length > 0 && (
+              <div className="space-y-2">
+                {extraAssignments.map((a, i) => (
+                  <div key={a.id ?? i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end rounded-xl border border-border p-2.5">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Driver {i + 2}</Label>
+                      <Select value={a.driverId || "__none"} onValueChange={(v) => patchExtraAssignment(i, { driverId: v === "__none" ? "" : v })}>
+                        <SelectTrigger><SelectValue placeholder="Select driver" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">Unassigned</SelectItem>
+                          {drivers.map((d) => <SelectItem key={d.id ?? d.uid} value={d.id ?? d.uid}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Truck {i + 2}</Label>
+                      <Select value={a.truckId || "__none"} onValueChange={(v) => patchExtraAssignment(i, { truckId: v === "__none" ? "" : v })}>
+                        <SelectTrigger><SelectValue placeholder="Select truck" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">Unassigned</SelectItem>
+                          {trucks.map((v) => <SelectItem key={v.id} value={v.id}>{v.plate_number} · {v.make} {v.model}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Trailer {i + 2}</Label>
+                      <Select value={a.trailerId || "__none"} onValueChange={(v) => patchExtraAssignment(i, { trailerId: v === "__none" ? "" : v })}>
+                        <SelectTrigger><SelectValue placeholder="No trailer" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">No trailer</SelectItem>
+                          {trailers.map((v) => <SelectItem key={v.id} value={v.id}>{v.plate_number} · {v.trailer_sub_type ?? "Trailer"}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeExtraAssignment(i)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button type="button" variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={addExtraAssignment}>
+              <Plus className="w-3.5 h-3.5" />
+              Add another truck / driver
+            </Button>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Trip type</Label>

@@ -51,6 +51,7 @@ export default function ShipmentDetailPage() {
   const [tab, setTab] = useState("overview");
 
   const [tripDialogOpen, setTripDialogOpen] = useState(false);
+  const [tripBeingAssigned, setTripBeingAssigned] = useState<any | null>(null);
   const [waybillOpen, setWaybillOpen] = useState(false);
   const [waybillForm, setWaybillForm] = useState({ cargo_description: "", cargo_weight_kg: "", package_count: "", trip_id: "" });
   const [editOpen, setEditOpen] = useState(false);
@@ -112,8 +113,20 @@ export default function ShipmentDetailPage() {
   const advanceStage = async (next: string) => {
     if (!shipment) return;
     if (next === "active" && trips.filter((t) => t.vehicle_id || t.truck_id).length === 0) {
-      toast({ title: "Assign at least one truck before dispatching", description: "Opening the truck assignment form for you.", variant: "destructive" });
+      // Don't spawn a brand-new, untethered trip when one already exists for
+      // this shipment and just needs a truck — that used to always open a
+      // blank "Create new trip" form, which could leave a shipment with two
+      // unrelated trips (one still truckless) instead of one properly
+      // assigned trip. Edit the existing trip in place; only fall back to
+      // creating one if the shipment genuinely has none yet.
+      const tripNeedingTruck = trips[0] ?? null;
+      toast({
+        title: "Assign at least one truck before dispatching",
+        description: tripNeedingTruck ? "Opening this shipment's trip so you can assign one." : "Opening the truck assignment form for you.",
+        variant: "destructive",
+      });
       setTab("trucks");
+      setTripBeingAssigned(tripNeedingTruck);
       setTripDialogOpen(true);
       return;
     }
@@ -321,7 +334,7 @@ export default function ShipmentDetailPage() {
 
                 <TabsContent value="trucks" className="space-y-4">
                   <div className="flex justify-end gap-2">
-                    <Button size="sm" onClick={() => setTripDialogOpen(true)} className="gap-2"><PlusCircle className="size-4" /> Assign Truck / Create Trip Order</Button>
+                    <Button size="sm" onClick={() => { setTripBeingAssigned(null); setTripDialogOpen(true); }} className="gap-2"><PlusCircle className="size-4" /> Assign Truck / Create Trip Order</Button>
                   </div>
                   {trips.length === 0 ? (
                     <div className="bg-card border border-border rounded-2xl p-8 text-center text-sm text-muted-foreground">
@@ -438,12 +451,13 @@ export default function ShipmentDetailPage() {
 
       <TripFormDialog
         open={tripDialogOpen}
-        onOpenChange={setTripDialogOpen}
+        onOpenChange={(open) => { setTripDialogOpen(open); if (!open) setTripBeingAssigned(null); }}
+        trip={tripBeingAssigned ?? undefined}
         shipmentId={shipment.id}
         defaultOrigin={shipment.origin_city ?? ""}
         defaultDestination={shipment.destination_city ?? ""}
         defaultQuotationId={shipment.quotation_id ?? ""}
-        onSaved={() => { setTripDialogOpen(false); load(); }}
+        onSaved={() => { setTripDialogOpen(false); setTripBeingAssigned(null); load(); }}
       />
 
       {editOpen && (
