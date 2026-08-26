@@ -200,6 +200,140 @@ function makeAnomaly(
 }
 
 /**
+ * Pure baseline arithmetic, split out from the two DB-querying wrappers
+ * below so it's directly unit-testable without a Supabase client — see
+ * tests/unit/fuel-fraud-scoring.test.ts.
+ */
+export function computeBaseline(efficiencies: number[]): { mean: number; stddev: number; sampleSize: number } | null {
+  const values = efficiencies.filter((v) => v > 0);
+  if (values.length < MIN_HISTORY_FOR_BASELINE) return null;
+  const avg = mean(values);
+  return { mean: Number(avg.toFixed(2)), stddev: Number(stddev(values, avg).toFixed(2)), sampleSize: values.length };
+}
+
+/**
+ * A driver's own trailing efficiency baseline, same shape/gating as the
+ * per-vehicle baseline below but scoped to fuel_logs.driver_id across
+ * whatever vehicles they've driven — lets a finding say "John: 2.21 km/L vs.
+ * his own usual 2.55 km/L" alongside "vs. this truck's usual 2.55 km/L",
+ * since a driver moved onto an unfamiliar vehicle can look like a vehicle
+ * anomaly when it's really just unfamiliarity, and vice versa.
+ */
+export async function getDriverBaseline(
+  supabase: SupabaseClient,
+  driverId: string,
+): Promise<{ mean: number; stddev: number; sampleSize: number } | null> {
+  const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const { data } = await supabase
+    .from("fuel_logs")
+    .select("efficiency_km_l")
+    .eq("driver_id", driverId)
+    .gte("fuel_date", since)
+    .not("efficiency_km_l", "is", null);
+  return computeBaseline((data || []).map((r: any) => Number(r.efficiency_km_l)));
+}
+
+/**
+ * Standalone equivalent of the per-vehicle baseline computed inline inside
+ * detectFuelAnomaliesForVehicle — that one stays inline (it already has the
+ * rows loaded for its own scan), this is for callers that need just the
+ * baseline on its own, like the investigation flow's context.
+ */
+export async function getVehicleBaseline(
+  supabase: SupabaseClient,
+  vehicleId: string,
+): Promise<{ mean: number; stddev: number; sampleSize: number } | null> {
+  const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const { data } = await supabase
+    .from("fuel_logs")
+    .select("efficiency_km_l")
+    .eq("vehicle_id", vehicleId)
+    .gte("fuel_date", since)
+    .not("efficiency_km_l", "is", null);
+  return computeBaseline((data || []).map((r: any) => Number(r.efficiency_km_l)));
+}
+
+// A single repeated-offense ladder, keyed on how many times this exact
+// driver+rule combination has already fired (this finding included) within
+// a trailing window. Deliberately conservative — this is about the same
+// signal recurring, not about "confirmed fraud", which stays a human call
+// via fuelAnomalyMachine. A transaction where several *different* rules fire
+// together is instead reflected by calculateFraudRisk's own Critical band,
+// not by this ladder — the two are complementary, not the same measurement.
+const ESCALATION_LOOKBACK_DAYS = 90;
+export type EscalationTier = "observation" | "warning" | "investigation" | "high_risk_case";
+
+export function escalationTierForCount(occurrences: number): EscalationTier {
+  return occurrences <= 1 ? "observation" : occurrences <= 3 ? "warning" : occurrences <= 6 ? "investigation" : "high_risk_case";
+}
+
+export async function getAnomalyEscalationTier(
+  supabase: SupabaseClient,
+  driverId: string,
+  ruleCode: RuleCode,
+): Promise<{ tier: EscalationTier; occurrences: number }> {
+  const since = new Date(Date.now() - ESCALATION_LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { count } = await supabase
+    .from("fuel_anomalies")
+    .select("id", { count: "exact", head: true })
+    .eq("driver_id", driverId)
+    .eq("rule_code", ruleCode)
+    .neq("status", "dismissed")
+    .gte("created_at", since);
+  const occurrences = count ?? 0;
+  return { tier: escalationTierForCount(occurrences), occurrences };
+}
+
+// A single high-severity, full-confidence finding (weight 3) alone lands at
+// 25 points — the Low/Medium boundary. Two independent findings of that
+// strength push into Medium/High; three or more into Critical. Rule weights
+// (1-3) come from fuel_fraud_rules, admin-configurable on the Rules page —
+// this constant just rescales their sum onto the spec's 0-100 band.
+const POINTS_PER_RISK_UNIT = 25 / 3;
+export type FraudRiskBand = "normal" | "low" | "medium" | "high" | "critical";
+
+export function bandForScore(score: number): FraudRiskBand {
+  if (score <= 20) return "normal";
+  if (score <= 40) return "low";
+  if (score <= 60) return "medium";
+  if (score <= 80) return "high";
+  return "critical";
+}
+
+export function combineRiskScores(riskScores: number[]): { combinedScore: number; band: FraudRiskBand } {
+  const rawSum = riskScores.reduce((s, v) => s + (Number(v) || 0), 0);
+  const combinedScore = Math.min(100, Math.round(rawSum * POINTS_PER_RISK_UNIT));
+  return { combinedScore, band: bandForScore(combinedScore) };
+}
+
+/**
+ * Rolls every non-dismissed fuel_anomalies finding tied to one fuel_log_id
+ * into a single 0-100 combined score + named band — the per-transaction
+ * "multi-signal fraud score" spec calls for. Each rule already computes its
+ * own risk_score deterministically (see makeAnomaly above); this only sums
+ * and rescales what's already been calculated (combineRiskScores). No LLM
+ * involved.
+ */
+export async function calculateFraudRisk(
+  supabase: SupabaseClient,
+  fuelLogId: string,
+): Promise<{ combinedScore: number; band: FraudRiskBand; findingsCount: number; ruleCodes: string[] }> {
+  const { data } = await supabase
+    .from("fuel_anomalies")
+    .select("risk_score, rule_code")
+    .eq("fuel_log_id", fuelLogId)
+    .neq("status", "dismissed");
+  const rows = data || [];
+  const { combinedScore, band } = combineRiskScores(rows.map((r: any) => r.risk_score));
+  return {
+    combinedScore,
+    band,
+    findingsCount: rows.length,
+    ruleCodes: [...new Set(rows.map((r: any) => r.rule_code).filter(Boolean))],
+  };
+}
+
+/**
  * Flags anomalous fuel_logs rows for one vehicle. Every rule independently
  * checks its own required inputs and contributes nothing when they're
  * missing — never fabricates a finding from absent data.
@@ -272,6 +406,14 @@ export async function detectFuelAnomaliesForVehicle(
   const cardById = new Map((cards || []).map((c: any) => [c.id, c]));
   const tripById = new Map((trips || []).map((t: any) => [t.id, t]));
 
+  // A handful of distinct drivers per vehicle per window at this fleet's
+  // scale — a small query per driver is fine, no batching needed.
+  const driverIds = [...new Set(rows.map((r) => r.driver_id).filter(Boolean))] as string[];
+  const driverBaselineEntries = await Promise.all(
+    driverIds.map(async (id) => [id, await getDriverBaseline(supabase, id)] as const),
+  );
+  const driverBaselineById = new Map(driverBaselineEntries);
+
   const gpsRule = ruleFor(config, "GPS_MISMATCH");
   const routeRule = ruleFor(config, "OFF_ROUTE_FUELING");
   const cardRule = ruleFor(config, "FUEL_CARD_MISMATCH");
@@ -315,6 +457,9 @@ export async function detectFuelAnomaliesForVehicle(
                 : `Efficiency of ${row.efficiency_km_l.toFixed(2)} km/L is far above this vehicle's usual ${baselineAvg.toFixed(2)} km/L — check odometer readings for this fill.`,
             evidence: {
               baseline: { metric: "km_per_litre", mean: baselineAvg, stddev: baselineStddev, sample_size: efficiencies.length },
+              ...(row.driver_id && driverBaselineById.get(row.driver_id)
+                ? { driver_baseline: { metric: "km_per_litre", ...driverBaselineById.get(row.driver_id) } }
+                : {}),
             },
           }),
         );

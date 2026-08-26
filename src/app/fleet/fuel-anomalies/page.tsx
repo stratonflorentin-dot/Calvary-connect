@@ -12,10 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TransitionButtons } from "@/components/workflow/transition-buttons";
-import { ShieldAlert, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, Settings2, DollarSign, Satellite } from "lucide-react";
+import { ShieldAlert, RefreshCw, AlertTriangle, ChevronDown, ChevronRight, Settings2, DollarSign, Satellite, Sparkles, Lock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { lockFuelCardAction } from "./actions";
 
 type Anomaly = {
   id: string;
@@ -89,10 +90,13 @@ export default function FuelAnomaliesPage() {
   const [ruleFilter, setRuleFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [syncingGps, setSyncingGps] = useState(false);
+  const [investigations, setInvestigations] = useState<Record<string, { loading: boolean; report?: any; risk?: any; error?: string }>>({});
+  const [lockingCard, setLockingCard] = useState<string | null>(null);
 
   const canReview = ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT"].includes(role ?? "");
   const canManageRules = ["CEO", "ADMIN", "OPERATOR"].includes(role ?? "");
   const canConfirmFinance = ["CEO", "ADMIN", "ACCOUNTANT"].includes(role ?? "");
+  const canLockCard = ["CEO", "ADMIN"].includes(role ?? "");
 
   const load = async () => {
     setLoading(true);
@@ -156,6 +160,39 @@ export default function FuelAnomaliesPage() {
       toast({ title: "GPS sync failed", description: err.message, variant: "destructive" });
     } finally {
       setSyncingGps(false);
+    }
+  };
+
+  const investigate = async (fuelLogId: string) => {
+    setInvestigations((prev) => ({ ...prev, [fuelLogId]: { loading: true } }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not signed in");
+      const res = await fetch("/api/fuel/investigate-anomaly", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ fuel_log_id: fuelLogId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Investigation failed");
+      setInvestigations((prev) => ({ ...prev, [fuelLogId]: { loading: false, report: json.report, risk: json.risk } }));
+    } catch (err: any) {
+      setInvestigations((prev) => ({ ...prev, [fuelLogId]: { loading: false, error: err.message } }));
+    }
+  };
+
+  const lockCard = async (fuelLogId: string) => {
+    if (!user?.id) return;
+    const reason = window.prompt("Reason for locking this fuel card?") ?? "";
+    setLockingCard(fuelLogId);
+    try {
+      const result = await lockFuelCardAction(fuelLogId, user.id, reason);
+      if (!result.success) throw new Error(result.error || "Failed to lock card");
+      toast({ variant: "success", title: result.alreadyLocked ? "Card already locked" : `Fuel card ${result.cardNumber ?? ""} locked` });
+    } catch (err: any) {
+      toast({ title: "Couldn't lock card", description: err.message, variant: "destructive" });
+    } finally {
+      setLockingCard(null);
     }
   };
 
@@ -338,6 +375,42 @@ export default function FuelAnomaliesPage() {
                                 <p className="text-xs text-muted-foreground mt-2">
                                   Expected: {a.expected_value ?? "—"} · Actual: {a.actual_value ?? "—"} · Deviation: {a.deviation_pct !== null ? `${a.deviation_pct}%` : "—"}
                                 </p>
+
+                                {canReview && (
+                                  <div className="mt-3">
+                                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">AI Investigation</p>
+                                    {!investigations[a.fuel_log_id] && (
+                                      <Button type="button" size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => investigate(a.fuel_log_id)}>
+                                        <Sparkles className="size-3.5" /> Investigate with AI
+                                      </Button>
+                                    )}
+                                    {investigations[a.fuel_log_id]?.loading && (
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Investigating…</p>
+                                    )}
+                                    {investigations[a.fuel_log_id]?.error && (
+                                      <p className="text-xs text-destructive">{investigations[a.fuel_log_id].error}</p>
+                                    )}
+                                    {investigations[a.fuel_log_id]?.report && (
+                                      <div className="bg-card border border-border rounded-lg p-3 space-y-2">
+                                        <div className="flex items-center gap-2">
+                                          <Badge className={cn(CONFIDENCE_STYLES[investigations[a.fuel_log_id].report.confidence], "text-[10px] capitalize")}>
+                                            {investigations[a.fuel_log_id].report.confidence} confidence
+                                          </Badge>
+                                          <span className="text-[10px] text-muted-foreground">
+                                            Combined score: {investigations[a.fuel_log_id].risk?.combinedScore ?? "—"}/100 ({investigations[a.fuel_log_id].risk?.band ?? "—"})
+                                          </span>
+                                        </div>
+                                        <p className="text-sm">{investigations[a.fuel_log_id].report.narrative}</p>
+                                        {investigations[a.fuel_log_id].report.possibleExplanations?.length > 0 && (
+                                          <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5">
+                                            {investigations[a.fuel_log_id].report.possibleExplanations.map((exp: string, i: number) => <li key={i}>{exp}</li>)}
+                                          </ul>
+                                        )}
+                                        <p className="text-xs font-semibold">Recommended: {investigations[a.fuel_log_id].report.recommendedAction}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                               <div className="space-y-3">
                                 <div>
@@ -358,6 +431,22 @@ export default function FuelAnomaliesPage() {
                                     </p>
                                   )}
                                 </div>
+                                {(a.status === "investigating" || a.status === "confirmed_fraud" || a.status === "confirmed") && canLockCard && (
+                                  <div>
+                                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Fuel Card</p>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 gap-1.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                                      disabled={lockingCard === a.fuel_log_id}
+                                      onClick={() => lockCard(a.fuel_log_id)}
+                                    >
+                                      {lockingCard === a.fuel_log_id ? <Loader2 className="size-3.5 animate-spin" /> : <Lock className="size-3.5" />}
+                                      Lock Fuel Card
+                                    </Button>
+                                  </div>
+                                )}
                                 {(a.status === "confirmed_fraud" || a.status === "confirmed") && canConfirmFinance && (
                                   <div>
                                     <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Finance</p>

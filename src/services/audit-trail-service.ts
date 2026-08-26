@@ -25,6 +25,7 @@ export type AuditEntityType =
   | 'user'
   | 'leave_request'
   | 'fuel_anomaly'
+  | 'fuel_card'
   | 'supplier'
   | 'purchase_order'
   | 'disciplinary_case'
