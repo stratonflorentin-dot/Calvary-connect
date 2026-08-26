@@ -260,10 +260,22 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
     }
     setSaving(true);
     try {
+      // A trip created straight from a quotation ref (not opened from the
+      // shipment page itself, so no shipmentId prop) still needs to show up
+      // on that quotation's shipment — otherwise the shipment's own Trucks &
+      // Trips tab says "no vehicle assigned" despite a real, assigned trip
+      // existing for the exact same job (confirmed live: two trips had this
+      // gap before this fix).
+      let resolvedShipmentId = shipmentId || trip?.shipment_id || null;
+      if (!resolvedShipmentId && form.quotationId) {
+        const { data: q } = await supabase.from("quotations").select("shipment_id").eq("id", form.quotationId).maybeSingle();
+        resolvedShipmentId = q?.shipment_id ?? null;
+      }
+
       const payload: Record<string, any> = {
         trip_number: form.trip_number || `TRP-${Date.now().toString().slice(-6)}`,
         quotation_id: form.quotationId || null,
-        shipment_id: shipmentId || trip?.shipment_id || null,
+        shipment_id: resolvedShipmentId,
         origin: form.origin.trim(),
         destination: form.destination.trim(),
         cargo_type: form.cargo || null,
