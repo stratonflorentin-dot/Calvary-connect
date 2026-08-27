@@ -107,8 +107,39 @@ async function runSideEffects(
     if (kind === "trip" && toState === "delivered") {
       await WorkflowService.completeTrip(entity.id, entity);
       effects.push("invoice_generated", "finance_notified");
+
+      // Dispatching a shipment (Mark as In Transit) and dispatching its
+      // trip(s) on the Dispatch Board used to be two disconnected clicks —
+      // a shipment could sit at "In Transit" while its trip was still
+      // "Loading", or vice versa. Only advance the shipment once every
+      // linked trip has actually finished (a shipment can have more than
+      // one truck), and never regress a shipment that's already moved past
+      // "active" (invoiced/paid/cancelled).
+      if (entity.shipment_id) {
+        const { data: shipment } = await supabase.from("shipments").select("status").eq("id", entity.shipment_id).maybeSingle();
+        if (shipment && shipment.status === "active") {
+          const { data: siblingTrips } = await supabase.from("trips").select("status").eq("shipment_id", entity.shipment_id);
+          const allDone = (siblingTrips || []).every((t: any) => t.status === "delivered" || t.status === "cancelled");
+          if (allDone) {
+            await supabase.from("shipments").update({ status: "delivered" }).eq("id", entity.shipment_id);
+            effects.push("shipment_synced");
+          }
+        }
+      }
     }
     if (kind === "trip" && toState === "in_transit") {
+      // Same sync, the other direction: a trip actually moving means its
+      // shipment is no longer just "Approved" — move it to "active" so the
+      // shipment page's stage tracker reflects what's physically happening
+      // without requiring a second, separate click there.
+      if (entity.shipment_id) {
+        const { data: shipment } = await supabase.from("shipments").select("status").eq("id", entity.shipment_id).maybeSingle();
+        if (shipment && (shipment.status === "created" || shipment.status === "approved")) {
+          await supabase.from("shipments").update({ status: "active" }).eq("id", entity.shipment_id);
+          effects.push("shipment_synced");
+        }
+      }
+
       const operators = await fetchOperatorUserIds();
       await Promise.all(
         operators.map((id) =>

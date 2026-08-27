@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { AuditTrailService } from "@/services/audit-trail-service";
+import { applyTransition } from "@/lib/workflow/engine";
 import { TripFormDialog } from "@/components/trip/trip-form-dialog";
 import {
   ArrowLeft, CheckCircle2, Download, Edit2, FileText, Loader2,
@@ -132,9 +133,25 @@ export default function ShipmentDetailPage() {
     }
     setBusy(true);
     const { error } = await supabase.from("shipments").update({ status: next }).eq("id", shipment.id);
-    setBusy(false);
-    if (error) { toast({ title: "Couldn't update status", description: error.message, variant: "destructive" }); return; }
+    if (error) { setBusy(false); toast({ title: "Couldn't update status", description: error.message, variant: "destructive" }); return; }
     await AuditTrailService.log({ user_id: user?.id, module: "sales", action: "update", entity_type: "shipment", entity_id: shipment.id, description: `Shipment moved to ${next}` });
+
+    // Marking the shipment In Transit used to leave its trip(s) sitting
+    // wherever they were on the Dispatch Board (still "Loading") until
+    // someone separately clicked Dispatch there too — the two trackers
+    // would disagree. Dispatch every trip that's actually ready (already
+    // loading) so both views move together; a trip still "pending" hasn't
+    // been loaded yet and is deliberately left for that step first.
+    if (next === "active") {
+      const loadingTrips = trips.filter((t) => t.status === "loading");
+      await Promise.all(
+        loadingTrips.map((t) =>
+          applyTransition({ kind: "trip", entityId: t.id, toState: "in_transit", actorId: user?.id ?? "", actorRole: role ?? undefined }),
+        ),
+      );
+    }
+
+    setBusy(false);
     toast({ variant: "success", title: `Shipment marked ${STAGE_LABEL[next] ?? next}` });
     load();
   };
