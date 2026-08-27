@@ -200,15 +200,42 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
       note = record.reason || note;
     }
 
-    // 2. Update status in driver_allowances to 'approved'
+    // 2. Deduct any active salary advance (employee_loans — issued via
+    // /admin/hr/payroll/loans, which already lists drivers as eligible
+    // employees) from this payment. Oldest-first, same order as the general
+    // HR payroll engine (src/lib/finance/payroll/engine.ts), and capped so
+    // the deduction can never exceed what's actually being paid this period.
+    const { data: activeLoans, error: loansErr } = await supabaseAdmin
+      .from("employee_loans")
+      .select("id, installment_amount, outstanding_balance")
+      .eq("employee_id", record.driver_id)
+      .eq("status", "active")
+      .gt("outstanding_balance", 0)
+      .order("created_at", { ascending: true });
+    if (loansErr) console.error("Failed to check for active salary advances:", loansErr);
+
+    let loanDeductionAmount = 0;
+    const loanDeductions: { employee_loan_id: string; amount: number }[] = [];
+    let remaining = Number(record.amount) || 0;
+    for (const loan of activeLoans || []) {
+      if (remaining <= 0) break;
+      const applied = Math.min(Number(loan.installment_amount), Number(loan.outstanding_balance), remaining);
+      if (applied > 0) {
+        loanDeductionAmount += applied;
+        loanDeductions.push({ employee_loan_id: loan.id, amount: applied });
+        remaining -= applied;
+      }
+    }
+
+    // 3. Update status in driver_allowances to 'approved'
     const { error: updateErrD } = await supabaseAdmin
       .from("driver_allowances")
-      .update({ status: "approved", updated_at: now })
+      .update({ status: "approved", updated_at: now, loan_deduction_amount: loanDeductionAmount, loan_deductions: loanDeductions })
       .eq("id", id);
 
     if (updateErrD) throw updateErrD;
 
-    // 3. Create financial expense, mapped to a real COA account so it
+    // 4. Create financial expense, mapped to a real COA account so it
     // doesn't show "Unmapped" in Expenses/Reconciliation. "Staff Costs"
     // matched nothing in EXPENSE_CATEGORY_COA_MAP (chart-of-accounts-
     // service.ts) — its keys are 'salaries'/'fuel'/etc, not this label —
@@ -277,7 +304,7 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
       console.error("Failed to send notification:", notifErr);
     }
 
-    return { success: true };
+    return { success: true, loanDeductionAmount };
   } catch (error: any) {
     console.error("Failed to approve payroll record:", error);
     return { success: false, error: error.message || "Failed to approve payroll record" };
@@ -302,7 +329,7 @@ export async function markPayrollPaidAction(id: string, bankAccountId?: string) 
 
     const { data: record, error: fetchErr } = await supabaseAdmin
       .from("driver_allowances")
-      .select("id, driver_id, driver_name, amount, status")
+      .select("id, driver_id, driver_name, amount, status, loan_deduction_amount, loan_deductions")
       .eq("id", id)
       .single();
 
@@ -312,6 +339,13 @@ export async function markPayrollPaidAction(id: string, bankAccountId?: string) 
     if (record.status !== "approved") {
       throw new Error("Only approved payroll can be marked as paid.");
     }
+
+    // Net of any active salary advance recovered this period (computed at
+    // approval time — see approvePayrollRecordAction). The expense/invoice
+    // stay at the full gross amount; only the actual cash disbursed shrinks,
+    // since the advance's cash already left the business when it was issued.
+    const loanDeductionAmount = Number((record as any).loan_deduction_amount) || 0;
+    const netPayAmount = Math.max(0, Number(record.amount) - loanDeductionAmount);
 
     // Debit the bank account BEFORE flipping status — this is the same bug
     // class as expenses (see runSideEffects note in src/lib/workflow/engine.ts):
@@ -360,19 +394,49 @@ export async function markPayrollPaidAction(id: string, bankAccountId?: string) 
       }
       payingAccountId = accounts[0].id;
     }
-    const { error: txError } = await supabaseAdmin.rpc("post_bank_transaction", {
-      p_bank_account_id: payingAccountId,
-      p_amount: Number(record.amount) || 0,
-      p_direction: "out",
-      p_transaction_type: "withdrawal",
-      p_currency: currency,
-      p_description: `Payroll disbursement: ${record.driver_name || "Employee"}`,
-      p_reference_type: "payroll",
-      p_reference_id: id,
-      p_idempotency_key: crypto.randomUUID(),
-    });
-    if (txError) {
-      throw new Error(`Bank account was not debited: ${txError.message}`);
+    // Skip the bank transaction entirely when the advance deduction covers
+    // the whole payment — a zero-value withdrawal is noise, not a real
+    // disbursement, and some post_bank_transaction implementations reject
+    // a zero amount outright.
+    if (netPayAmount > 0) {
+      const { error: txError } = await supabaseAdmin.rpc("post_bank_transaction", {
+        p_bank_account_id: payingAccountId,
+        p_amount: netPayAmount,
+        p_direction: "out",
+        p_transaction_type: "withdrawal",
+        p_currency: currency,
+        p_description:
+          loanDeductionAmount > 0
+            ? `Payroll disbursement: ${record.driver_name || "Employee"} (net of ${loanDeductionAmount.toLocaleString()} advance recovery)`
+            : `Payroll disbursement: ${record.driver_name || "Employee"}`,
+        p_reference_type: "payroll",
+        p_reference_id: id,
+        p_idempotency_key: crypto.randomUUID(),
+      });
+      if (txError) {
+        throw new Error(`Bank account was not debited: ${txError.message}`);
+      }
+    }
+
+    // Now that payment has actually cleared, recover the advance for real —
+    // mirrors postPayrollPeriod's "only decrement outstanding_balance once
+    // payment is irreversible" pattern in src/lib/finance/payroll/engine.ts.
+    for (const applied of ((record as any).loan_deductions as { employee_loan_id: string; amount: number }[]) || []) {
+      const { data: loan, error: loanFetchErr } = await supabaseAdmin
+        .from("employee_loans")
+        .select("outstanding_balance")
+        .eq("id", applied.employee_loan_id)
+        .maybeSingle();
+      if (loanFetchErr || !loan) {
+        console.error(`Failed to load salary advance ${applied.employee_loan_id} to recover it:`, loanFetchErr);
+        continue;
+      }
+      const newBalance = Math.max(0, Number(loan.outstanding_balance) - applied.amount);
+      const { error: loanUpdateErr } = await supabaseAdmin
+        .from("employee_loans")
+        .update({ outstanding_balance: newBalance, status: newBalance <= 0 ? "completed" : "active", updated_at: now })
+        .eq("id", applied.employee_loan_id);
+      if (loanUpdateErr) console.error(`Failed to recover salary advance ${applied.employee_loan_id}:`, loanUpdateErr);
     }
 
     const { error: updateErrD } = await supabaseAdmin
@@ -415,7 +479,10 @@ export async function markPayrollPaidAction(id: string, bankAccountId?: string) 
         user_id: record.driver_id,
         category: "general",
         title: "Payroll Paid",
-        message: `Your payroll of TZS ${Number(record.amount).toLocaleString()} has been disbursed.`,
+        message:
+          loanDeductionAmount > 0
+            ? `Your payroll of TZS ${Number(record.amount).toLocaleString()} has been processed — TZS ${netPayAmount.toLocaleString()} disbursed after TZS ${loanDeductionAmount.toLocaleString()} advance recovery.`
+            : `Your payroll of TZS ${Number(record.amount).toLocaleString()} has been disbursed.`,
         severity: "success",
         created_at: now,
       });

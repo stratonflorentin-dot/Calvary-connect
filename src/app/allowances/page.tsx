@@ -58,6 +58,7 @@ interface PayrollRecord {
   worker_role?: string;
   avatar_url?: string | null;
   employee_id?: string | null;
+  loan_deduction_amount?: number;
 }
 
 export default function AllowancesPage() {
@@ -232,9 +233,13 @@ export default function AllowancesPage() {
     try {
       const res = await approvePayrollRecordAction(id, user.id);
       if (res.success) {
+        const deduction = (res as any).loanDeductionAmount as number | undefined;
         toast({
           title: "Payroll Approved",
-          description: "Compensation record approved, expense logged, and payable invoice generated."
+          description:
+            deduction && deduction > 0
+              ? `Expense logged and payable invoice generated. TZS ${deduction.toLocaleString()} will be withheld for an active salary advance.`
+              : "Compensation record approved, expense logged, and payable invoice generated."
         });
         await loadHistory();
       } else {
@@ -824,6 +829,11 @@ export default function AllowancesPage() {
                               {/* Net Salary Amount */}
                               <TableCell className="py-4 font-mono font-bold text-sm text-foreground">
                                 {format(item.amount)}
+                                {(item.loan_deduction_amount ?? 0) > 0 && (
+                                  <p className="text-[10px] font-normal text-destructive mt-0.5">
+                                    -{format(item.loan_deduction_amount!)} advance · net {format(item.amount - item.loan_deduction_amount!)}
+                                  </p>
+                                )}
                               </TableCell>
 
                               {/* Status Badge */}
