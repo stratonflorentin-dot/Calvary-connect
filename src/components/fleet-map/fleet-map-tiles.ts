@@ -101,6 +101,15 @@ export const FLEET_MAP_SATELLITE_LAYERS: {
     options: {
       attribution:
         "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      // Esri's free World Imagery only has true high-res captures up to
+      // ~z17 in most rural/remote areas (it's dense in cities, sparse
+      // elsewhere) — past its actual coverage it doesn't 404, it serves a
+      // real tile image with "Map data not yet available" baked into the
+      // pixels, which slipped through as if it were legitimate imagery.
+      // Capping maxNativeZoom below the map's maxZoom makes Leaflet
+      // upscale the last real tile for deeper zooms instead of requesting
+      // one that doesn't exist.
+      maxNativeZoom: 17,
       maxZoom: 19,
     },
   },

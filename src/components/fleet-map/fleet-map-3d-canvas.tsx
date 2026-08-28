@@ -64,6 +64,12 @@ const SATELLITE_STYLE: maplibregl.StyleSpecification = {
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ],
       tileSize: 256,
+      // Esri's free World Imagery only has true high-res captures up to
+      // ~z17 in most rural/remote areas — past that it doesn't 404, it
+      // serves a real tile with "Map data not yet available" baked into
+      // the pixels. Capping maxzoom makes MapLibre over-zoom (upscale the
+      // last real tile) instead of requesting one that doesn't exist.
+      maxzoom: 17,
       attribution:
         "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
     },
