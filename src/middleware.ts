@@ -113,7 +113,10 @@ export function middleware(request: NextRequest) {
     // Supabase Storage serves vehicle photos, avatars, chat attachments, and
     // compliance docs — without it here, images upload fine but the browser
     // silently refuses to render them.
-    "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com https://placehold.co https://images.unsplash.com https://picsum.photos",
+    // server.arcgisonline.com serves the satellite basemap (Esri World
+    // Imagery + place-name labels overlay) for both the Leaflet 2D map and
+    // the MapLibre 3D map's satellite toggle.
+    "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://firebasestorage.googleapis.com https://*.tile.openstreetmap.org https://tile.openstreetmap.de https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com https://server.arcgisonline.com https://placehold.co https://images.unsplash.com https://picsum.photos",
     // wss://*.supabase.co is required for realtime (chat, live dashboards);
     // nominatim/osrm serve geocoding and road routing.
     // MapLibre fetches its style.json, vector tiles, glyphs and sprites via
@@ -124,7 +127,7 @@ export function middleware(request: NextRequest) {
     // own code calls Pusher — it's the Vercel Live toolbar's own realtime
     // comments connection (vercel.live is already allowed above/below for
     // that same toolbar), blocked here without this.
-    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com wss://*.pusher.com https://*.pusher.com stun: turn:",
+    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com https://server.arcgisonline.com wss://*.pusher.com https://*.pusher.com stun: turn:",
     // MapLibre GL spawns its tile workers from blob: URLs; without worker-src
     // the default-src 'self' fallback blocks them and the canvas stays blank.
     "worker-src 'self' blob:",

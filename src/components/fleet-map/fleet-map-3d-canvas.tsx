@@ -49,12 +49,122 @@ const FALLBACK_STYLE_URL = MAPTILER_KEY
   ? CARTO_DARK_STYLE_URL
   : "https://demotiles.maplibre.org/style.json";
 
+// Satellite imagery style — a plain raster style (Esri World Imagery, free
+// and keyless) with a transparent place-name/border overlay on top, so it
+// reads as a hybrid view rather than an unlabeled photo. This is the
+// gods-eye-view-style "view as satellite" toggle, done as a raster style
+// swap instead of Cesium's full 3D-tiles globe (which needs a metered
+// Google Maps key) since this map only needs a flat satellite basemap.
+const SATELLITE_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "esri-satellite": {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      attribution:
+        "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+    },
+    "esri-labels": {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+    },
+  },
+  layers: [
+    { id: "esri-satellite", type: "raster", source: "esri-satellite" },
+    { id: "esri-labels", type: "raster", source: "esri-labels" },
+  ],
+};
+
 /** True for styles that ship their own 3D building layer (MapTiler's
  *  "Building 3D") — adding the hand-rolled extrusion layer on top of those
  *  would just duplicate it with a mismatched color scheme. Only CARTO Dark
  *  Matter, which has no building layer of its own, needs the custom one. */
 function styleHasNativeBuildings(styleUrl: string): boolean {
   return styleUrl.includes("api.maptiler.com");
+}
+
+/** GPS accuracy circle source + layers — style-dependent (setStyle() wipes
+ *  them), so this is called both on initial load and after every satellite
+ *  toggle re-applies a style. */
+function addAccuracyLayers(map: maplibregl.Map) {
+  if (map.getSource("accuracy-src")) return;
+  map.addSource("accuracy-src", {
+    type: "geojson",
+    data: { type: "FeatureCollection", features: [] },
+  });
+  map.addLayer({
+    id: "accuracy-fill",
+    type: "fill",
+    source: "accuracy-src",
+    paint: { "fill-color": "#0284c7", "fill-opacity": 0.12 },
+  });
+  map.addLayer({
+    id: "accuracy-line",
+    type: "line",
+    source: "accuracy-src",
+    paint: {
+      "line-color": "#0284c7",
+      "line-width": 1.5,
+      "line-dasharray": [2, 2],
+    },
+  });
+}
+
+/** 3D building extrusions for vector styles without their own (CARTO Dark
+ *  Matter) — extracted so the satellite-toggle effect can re-add it when
+ *  switching back to a vector style, same as the initial "load" handler. */
+function addBuildingsLayer(map: maplibregl.Map) {
+  if (map.getLayer("3d-buildings")) return;
+  const layers = map.getStyle()?.layers ?? [];
+  let labelId = "";
+  for (const layer of layers) {
+    if (layer.type === "symbol" && (layer.layout as any)?.["text-field"]) {
+      labelId = layer.id;
+      break;
+    }
+  }
+  try {
+    map.addLayer(
+      {
+        id: "3d-buildings",
+        source: "carto",
+        "source-layer": "building",
+        type: "fill-extrusion",
+        minzoom: 14,
+        paint: {
+          "fill-extrusion-color": [
+            "interpolate", ["linear"],
+            ["coalesce", ["get", "height"], 0],
+            0,   "#dde6f0",
+            15,  "#c8d8e8",
+            40,  "#aabfd4",
+            80,  "#8aa5bc",
+            200, "#6b8ea8",
+          ],
+          "fill-extrusion-height": [
+            "interpolate", ["linear"], ["zoom"],
+            14, 0,
+            14.1, ["coalesce", ["get", "render_height"], ["get", "height"], 10],
+          ],
+          "fill-extrusion-base": [
+            "interpolate", ["linear"], ["zoom"],
+            14, 0,
+            14.1, ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
+          ],
+          "fill-extrusion-opacity": 0.72,
+        },
+      },
+      labelId || undefined,
+    );
+  } catch (e) {
+    console.warn("[3D buildings]", e);
+  }
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -71,6 +181,7 @@ type Props = {
   selectedId: string | null;
   onSelectDriver: (driver: FleetMapDriver) => void;
   cameraMode?: "overview" | "follow" | "follow-3d" | "north-up" | "heading-up";
+  satellite?: boolean;
   /** Called when both the primary and fallback styles fail — the parent
    *  should switch to the 2D Leaflet engine instead of showing a blank map. */
   onFatalError?: (message: string) => void;
@@ -267,7 +378,7 @@ function popupHtml(d: FleetMapDriver): string {
 
 export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
   function FleetMap3DCanvas(
-    { locations, defaultCenter, selectedId, onSelectDriver, cameraMode = "follow-3d", onFatalError },
+    { locations, defaultCenter, selectedId, onSelectDriver, cameraMode = "follow-3d", satellite = false, onFatalError },
     ref,
   ) {
     const containerRef  = useRef<HTMLDivElement>(null);
@@ -284,6 +395,17 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     // impossible to pan away and look at the rest of the fleet. Cleared on
     // a fresh selection or an explicit "Center on driver" / fitAll action.
     const userPannedRef = useRef(false);
+    // Tracks whether the currently-applied style is the satellite raster
+    // style, so the satellite-toggle effect below knows when a switch is
+    // actually needed and what to restore when toggling back off.
+    const currentSatelliteRef = useRef(false);
+    const activeVectorStyleRef = useRef<string>(MAP_STYLE_URL);
+    const latestLocationsRef = useRef(locations);
+    const latestSelectedIdRef = useRef(selectedId);
+    useEffect(() => {
+      latestLocationsRef.current = locations;
+      latestSelectedIdRef.current = selectedId;
+    }, [locations, selectedId]);
 
     // ── Camera helpers ─────────────────────────────────────────────────────
     const fitAll = () => {
@@ -339,7 +461,11 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       let mapInstance: maplibregl.Map | null = null;
       let usingFallback = false;
 
-      const initMap = (styleUrl: string, isFallback: boolean = false) => {
+      const initMap = (
+        styleUrl: string | maplibregl.StyleSpecification,
+        isFallback: boolean = false,
+        isSatellite: boolean = false,
+      ) => {
         console.log(`[MapLibre] Initializing map with ${isFallback ? 'fallback' : 'primary'} style:`, styleUrl);
 
         const map = new maplibregl.Map({
@@ -354,6 +480,8 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         mapRef.current = map;
         mapInstance = map;
         usingFallback = isFallback;
+        currentSatelliteRef.current = isSatellite;
+        if (!isSatellite) activeVectorStyleRef.current = styleUrl as string;
 
         map.addControl(
           new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }),
@@ -409,74 +537,13 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           // own (CARTO Dark Matter); MapTiler's Streets Dark already ships
           // a properly-colored "Building 3D" layer, so adding this one on
           // top would just duplicate it with a mismatched color scheme.
-          if (!isFallback && !styleHasNativeBuildings(styleUrl)) {
-            const layers = map.getStyle()?.layers ?? [];
-            let labelId = "";
-            for (const layer of layers) {
-              if (layer.type === "symbol" && (layer.layout as any)?.["text-field"]) {
-                labelId = layer.id;
-                break;
-              }
-            }
-            try {
-              map.addLayer(
-                {
-                  id: "3d-buildings",
-                  source: "carto",
-                  "source-layer": "building",
-                  type: "fill-extrusion",
-                  minzoom: 14,
-                  paint: {
-                    "fill-extrusion-color": [
-                      "interpolate", ["linear"],
-                      ["coalesce", ["get", "height"], 0],
-                      0,   "#dde6f0",
-                      15,  "#c8d8e8",
-                      40,  "#aabfd4",
-                      80,  "#8aa5bc",
-                      200, "#6b8ea8",
-                    ],
-                    "fill-extrusion-height": [
-                      "interpolate", ["linear"], ["zoom"],
-                      14, 0,
-                      14.1, ["coalesce", ["get", "render_height"], ["get", "height"], 10],
-                    ],
-                    "fill-extrusion-base": [
-                      "interpolate", ["linear"], ["zoom"],
-                      14, 0,
-                      14.1, ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
-                    ],
-                    "fill-extrusion-opacity": 0.72,
-                  },
-                },
-                labelId || undefined,
-              );
-            } catch (e) {
-              console.warn("[3D buildings]", e);
-            }
+          // The satellite raster style has neither vector buildings nor a
+          // "carto" source to extrude, so it's skipped there too.
+          if (!isFallback && !isSatellite && !styleHasNativeBuildings(styleUrl as string)) {
+            addBuildingsLayer(map);
           }
 
-          // GPS accuracy circle layers
-          map.addSource("accuracy-src", {
-            type: "geojson",
-            data: { type: "FeatureCollection", features: [] },
-          });
-          map.addLayer({
-            id: "accuracy-fill",
-            type: "fill",
-            source: "accuracy-src",
-            paint: { "fill-color": "#0284c7", "fill-opacity": 0.12 },
-          });
-          map.addLayer({
-            id: "accuracy-line",
-            type: "line",
-            source: "accuracy-src",
-            paint: {
-              "line-color": "#0284c7",
-              "line-width": 1.5,
-              "line-dasharray": [2, 2],
-            },
-          });
+          addAccuracyLayers(map);
 
           // Static markers — border points
           BORDER_POINTS.forEach((p) => {
@@ -521,7 +588,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       // Initialize map with primary style. A synchronous throw here usually
       // means WebGL is unavailable or the blob: worker was blocked by CSP.
       try {
-        initMap(MAP_STYLE_URL, false);
+        initMap(satellite ? SATELLITE_STYLE : MAP_STYLE_URL, false, satellite);
       } catch (err) {
         const reason = err instanceof Error ? err.message : "3D map engine failed to start.";
         setLoadErr(reason);
@@ -546,6 +613,40 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // ── Satellite toggle ──────────────────────────────────────────────────
+    // Swaps the whole style via setStyle() rather than tearing down the map,
+    // so camera position, driver markers (DOM overlays, unaffected by style)
+    // and event listeners all survive. setStyle() does wipe style-owned
+    // sources/layers (accuracy circle, 3D buildings), so those are re-added
+    // once the new style finishes loading.
+    const isFirstSatelliteRunRef = useRef(true);
+    useEffect(() => {
+      const map = mapRef.current;
+      if (!map || !mapReady.current) return;
+      if (isFirstSatelliteRunRef.current) {
+        isFirstSatelliteRunRef.current = false;
+        return;
+      }
+      if (currentSatelliteRef.current === satellite) return;
+      currentSatelliteRef.current = satellite;
+
+      map.setStyle(satellite ? SATELLITE_STYLE : activeVectorStyleRef.current);
+      map.once("style.load", () => {
+        addAccuracyLayers(map);
+        if (!satellite && !styleHasNativeBuildings(activeVectorStyleRef.current)) {
+          addBuildingsLayer(map);
+        }
+
+        const sel = latestLocationsRef.current.find(
+          (l) => l.id === latestSelectedIdRef.current,
+        );
+        if (sel && sel.accuracy && sel.accuracy > 0 && sel.accuracy <= 5000) {
+          const source = map.getSource("accuracy-src") as maplibregl.GeoJSONSource | undefined;
+          source?.setData(makeAccuracyCircle(sel.latitude, sel.longitude, sel.accuracy) as any);
+        }
+      });
+    }, [satellite]);
 
     // ── Driver markers sync ────────────────────────────────────────────────
     useEffect(() => {

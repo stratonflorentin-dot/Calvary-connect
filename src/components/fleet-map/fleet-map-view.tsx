@@ -34,6 +34,7 @@ import {
   Square,
   HelpCircle,
   ArrowRight,
+  Satellite,
   // AlertCircle used via dynamic fallback to avoid runtime import errors
 } from "lucide-react";
 
@@ -254,6 +255,7 @@ export default function FleetMapView({
   const [cameraMode, setCameraMode] = useState<"overview" | "follow" | "follow-3d" | "north-up" | "heading-up">("follow-3d");
   const [mapEngine, setMapEngine] = useState<"3d" | "2d">("3d");
   const [engineNotice, setEngineNotice] = useState<string | null>(null);
+  const [satellite, setSatellite] = useState(false);
 
   // If the MapLibre style/tiles cannot load, fall back to the Leaflet 2D map
   // instead of leaving a blank canvas.
@@ -344,6 +346,7 @@ export default function FleetMapView({
           selectedId={selectedId}
           onSelectDriver={handleSelect}
           cameraMode={cameraMode}
+          satellite={satellite}
           onFatalError={handle3DFatalError}
         />
       ) : (
@@ -353,6 +356,7 @@ export default function FleetMapView({
           defaultCenter={defaultCenter}
           selectedId={selectedId}
           onSelectDriver={handleSelect}
+          satellite={satellite}
         />
       )}
 
@@ -536,6 +540,19 @@ export default function FleetMapView({
               {engine.toUpperCase()}
             </Button>
           ))}
+          <div className="h-px bg-border/60 mx-1 my-0.5" />
+          <Button
+            variant={satellite ? "default" : "ghost"}
+            size="icon"
+            title={satellite ? "Switch to street map" : "Switch to satellite view"}
+            className={cn(
+              "h-8 w-8 rounded-lg transition-all",
+              satellite ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:bg-muted"
+            )}
+            onClick={() => setSatellite((s) => !s)}
+          >
+            <Satellite className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* 3D Smart Camera Mode Controls */}

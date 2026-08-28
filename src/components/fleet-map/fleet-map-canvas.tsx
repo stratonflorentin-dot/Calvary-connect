@@ -18,7 +18,11 @@ import {
   DRIVER_MARKER_SIZE,
   DRIVER_MARKER_ANCHOR,
 } from "@/components/fleet-map/map-markers";
-import { FLEET_MAP_TILE_LAYERS } from "@/components/fleet-map/fleet-map-tiles";
+import {
+  FLEET_MAP_TILE_LAYERS,
+  FLEET_MAP_SATELLITE_LAYERS,
+  FLEET_MAP_SATELLITE_LABELS_URL,
+} from "@/components/fleet-map/fleet-map-tiles";
 
 const BORDER_POINTS = [
   { name: "Namanga", coords: [-2.5276, 36.7873] as [number, number] },
@@ -45,6 +49,7 @@ type Props = {
   defaultCenter: [number, number];
   selectedId: string | null;
   onSelectDriver: (driver: FleetMapDriver) => void;
+  satellite?: boolean;
 };
 
 function scheduleInvalidate(map: import("leaflet").Map | null | undefined) {
@@ -62,17 +67,54 @@ function scheduleInvalidate(map: import("leaflet").Map | null | undefined) {
 
 export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
   function FleetMapCanvas(
-    { locations, defaultCenter, selectedId, onSelectDriver },
+    { locations, defaultCenter, selectedId, onSelectDriver, satellite = false },
     ref,
   ) {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<import("leaflet").Map | null>(null);
     const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map());
     const tileLayerRef = useRef<import("leaflet").TileLayer | null>(null);
+    const labelsLayerRef = useRef<import("leaflet").TileLayer | null>(null);
+    const streetFallbackIndexRef = useRef(0);
+    const streetSwitchedRef = useRef(false);
     const initRef = useRef(false);
     const [mapReady, setMapReady] = useState(false);
     const lastFitCountRef = useRef(0);
     const initialCenterRef = useRef(defaultCenter);
+
+    // Applies the street tile chain (with provider failover) as the base
+    // layer. Shared by initial map setup and by the satellite toggle
+    // switching back to street view, so both go through the same failover.
+    const applyStreetLayer = (L: typeof import("leaflet"), index: number) => {
+      const map = mapInstanceRef.current;
+      if (!map || index >= FLEET_MAP_TILE_LAYERS.length) return;
+      const cfg = FLEET_MAP_TILE_LAYERS[index];
+      if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
+
+      const layer = L.tileLayer(cfg.url, cfg.options);
+      layer.on("tileerror", () => {
+        if (streetSwitchedRef.current) return;
+        streetFallbackIndexRef.current += 1;
+        if (streetFallbackIndexRef.current < FLEET_MAP_TILE_LAYERS.length) {
+          streetSwitchedRef.current = true;
+          applyStreetLayer(L, streetFallbackIndexRef.current);
+        }
+      });
+      layer.addTo(map);
+      tileLayerRef.current = layer;
+    };
+
+    const applySatelliteLayer = (L: typeof import("leaflet")) => {
+      const map = mapInstanceRef.current;
+      if (!map) return;
+      if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
+
+      const cfg = FLEET_MAP_SATELLITE_LAYERS[0];
+      tileLayerRef.current = L.tileLayer(cfg.url, cfg.options).addTo(map);
+      labelsLayerRef.current = L.tileLayer(FLEET_MAP_SATELLITE_LABELS_URL, {
+        maxZoom: 19,
+      }).addTo(map);
+    };
 
     const fitAllDrivers = () => {
       const map = mapInstanceRef.current;
@@ -123,28 +165,13 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           preferCanvas: false,
         });
 
-        let fallbackIndex = 0;
-        let switchedProvider = false;
+        mapInstanceRef.current = map;
 
-        const addTileLayer = (index: number) => {
-          if (!map || index >= FLEET_MAP_TILE_LAYERS.length) return;
-          const cfg = FLEET_MAP_TILE_LAYERS[index];
-          if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
-
-          const layer = L.tileLayer(cfg.url, cfg.options);
-          layer.on("tileerror", () => {
-            if (switchedProvider) return;
-            fallbackIndex += 1;
-            if (fallbackIndex < FLEET_MAP_TILE_LAYERS.length) {
-              switchedProvider = true;
-              addTileLayer(fallbackIndex);
-            }
-          });
-          layer.addTo(map);
-          tileLayerRef.current = layer;
-        };
-
-        addTileLayer(0);
+        if (satellite) {
+          applySatelliteLayer(L);
+        } else {
+          applyStreetLayer(L, 0);
+        }
 
         const staticLayers = L.layerGroup().addTo(map);
 
@@ -178,7 +205,6 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
             .addTo(staticLayers);
         });
 
-        mapInstanceRef.current = map;
         initRef.current = true;
 
         map.whenReady(() => {
@@ -217,11 +243,40 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         }
         mapInstanceRef.current = null;
         tileLayerRef.current = null;
+        labelsLayerRef.current = null;
         markersRef.current.clear();
         initRef.current = false;
         setMapReady(false);
       };
     }, []);
+
+    // Satellite toggle — swap the base layer without tearing down the map,
+    // so pan/zoom/markers survive the switch. Skipped on the initial mount
+    // (handled by the init effect above with the correct starting layer).
+    const isFirstSatelliteRunRef = useRef(true);
+    useEffect(() => {
+      if (!mapReady) return;
+      if (isFirstSatelliteRunRef.current) {
+        isFirstSatelliteRunRef.current = false;
+        return;
+      }
+      if (labelsLayerRef.current) {
+        mapInstanceRef.current?.removeLayer(labelsLayerRef.current);
+        labelsLayerRef.current = null;
+      }
+      import("leaflet").then((L) => {
+        if (satellite) {
+          applySatelliteLayer(L);
+        } else {
+          streetFallbackIndexRef.current = 0;
+          streetSwitchedRef.current = false;
+          applyStreetLayer(L, 0);
+        }
+      });
+      // applyStreetLayer/applySatelliteLayer are stable closures over refs —
+      // safe to omit from deps.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [satellite, mapReady]);
 
     useEffect(() => {
       if (!mapReady) return;

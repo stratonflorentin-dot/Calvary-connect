@@ -68,3 +68,45 @@ export const FLEET_MAP_TILE_LAYERS: {
     },
   },
 ];
+
+/**
+ * Satellite imagery basemap — MapTiler when a key is configured (higher
+ * resolution, same account as the streets layers above), otherwise Esri
+ * World Imagery, a free, keyless, widely-used satellite tile source with no
+ * signup required. Kept as a single layer with its own fallback chain
+ * (rather than folding into FLEET_MAP_TILE_LAYERS above), since satellite
+ * and street are a user-facing toggle, not an availability fallback chain
+ * for one "the" basemap.
+ */
+export const FLEET_MAP_SATELLITE_LAYERS: {
+  id: string;
+  url: string;
+  options: TileLayerOptions;
+}[] = [
+  ...(MAPTILER_KEY
+    ? [
+        {
+          id: "maptiler-satellite",
+          url: `https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=${MAPTILER_KEY}`,
+          options: {
+            attribution: '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a>',
+            maxZoom: 20,
+          } satisfies TileLayerOptions,
+        },
+      ]
+    : []),
+  {
+    id: "esri-world-imagery",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    options: {
+      attribution:
+        "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+      maxZoom: 19,
+    },
+  },
+];
+
+/** Transparent place-name/border overlay drawn on top of the satellite
+ *  imagery so it reads as a hybrid view instead of an unlabeled photo. */
+export const FLEET_MAP_SATELLITE_LABELS_URL =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
