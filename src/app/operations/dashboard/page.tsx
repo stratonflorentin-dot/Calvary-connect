@@ -1,35 +1,37 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/hooks/use-role";
-import { Sidebar } from "@/components/navigation/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getListStagger, listItem } from "@/lib/animations";
+import { PageShell, PageHeader, StatCard, SectionCard, EmptyState, PageSkeleton, RefreshControl } from "@/components/shell";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Truck, MapPin, Calendar, CheckCircle, Clock, AlertCircle, 
-  Activity, Users, Fuel, Wrench, ArrowUpRight, Package
+import {
+  Truck, Calendar, CheckCircle2, Clock, Activity, Users, Wrench,
+  ArrowUpRight, Package, ShieldAlert, ClipboardCheck,
 } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 import { isVehicleAvailable, isVehicleInUse, isVehicleInMaintenance } from "@/lib/fleet/vehicle-status";
+
+const QUICK_ACTIONS = [
+  { href: "/trips", label: "New trip", icon: Truck, accent: "bg-primary/10 text-primary" },
+  { href: "/bookings", label: "View bookings", icon: Calendar, accent: "bg-info/10 text-info" },
+  { href: "/operations/pod", label: "Manage PODs", icon: Package, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" },
+  { href: "/fleet", label: "Fleet status", icon: Wrench, accent: "bg-warning/10 text-warning" },
+];
 
 export default function OperationsDashboard() {
   const { toast } = useToast();
-  const { role, hasDepartmentAccess } = useRole();
+  const { role, isLoading: roleLoading, hasDepartmentAccess } = useRole();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalBookings: 0,
     pendingBookings: 0,
     confirmedBookings: 0,
     inProgressBookings: 0,
-    totalTrips: 0,
-    pendingTrips: 0,
-    inProgressTrips: 0,
-    completedTrips: 0,
     totalVehicles: 0,
     availableVehicles: 0,
     inUseVehicles: 0,
@@ -69,10 +71,6 @@ export default function OperationsDashboard() {
         pendingBookings: allBookings.data?.filter((b: any) => b.status === "pending").length || 0,
         confirmedBookings: allBookings.data?.filter((b: any) => b.status === "confirmed").length || 0,
         inProgressBookings: allBookings.data?.filter((b: any) => b.status === "in_progress").length || 0,
-        totalTrips: allTrips.data?.length || 0,
-        pendingTrips: allTrips.data?.filter((t: any) => t.status === "pending" || t.status === "loading").length || 0,
-        inProgressTrips: allTrips.data?.filter((t: any) => t.status === "in_transit").length || 0,
-        completedTrips: allTrips.data?.filter((t: any) => t.status === "delivered").length || 0,
         totalVehicles: vehiclesData.data?.length || 0,
         availableVehicles: vehiclesData.data?.filter((v: any) => isVehicleAvailable(v.status)).length || 0,
         inUseVehicles: vehiclesData.data?.filter((v: any) => isVehicleInUse(v.status)).length || 0,
@@ -99,290 +97,168 @@ export default function OperationsDashboard() {
     loadDashboardData();
   }, []);
 
+  if (roleLoading) return <PageShell width="wide"><PageSkeleton kpiCount={8} /></PageShell>;
+
   if (!hasDepartmentAccess("OPERATIONS") && role !== "CEO" && role !== "ADMIN") {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={role || "CEO"} />
-        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-muted-foreground">Access denied. Operations dashboard requires Operations department access.</p>
-          </div>
-        </main>
-      </div>
+      <PageShell width="wide">
+        <EmptyState
+          icon={ShieldAlert}
+          title="Access denied"
+          description="Operations dashboard requires Operations department access."
+        />
+      </PageShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role || "CEO"} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">Operations Dashboard</h1>
-              <p className="text-muted-foreground">Fleet operations and trip management overview</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" asChild>
-                <Link href="/trips">
-                  <Truck className="size-4 mr-2" /> Manage Trips
-                </Link>
+    <PageShell width="wide">
+      <PageHeader
+        eyebrow="Operations"
+        title="Operations Dashboard"
+        subtitle="Fleet operations and trip management overview"
+        icon={Activity}
+        iconAccent="bg-primary text-primary-foreground"
+        actions={
+          <>
+            <RefreshControl onRefresh={loadDashboardData} storageKey="operations-dashboard" />
+            <Link href="/trips">
+              <Button variant="outline" size="sm" className="h-9 gap-2">
+                <Truck className="w-3.5 h-3.5" /> Manage trips
               </Button>
-              <Button onClick={loadDashboardData} disabled={loading}>
-                <Activity className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
-              </Button>
-            </div>
+            </Link>
+          </>
+        }
+      />
+
+      {loading ? (
+        <PageSkeleton kpiCount={8} />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <StatCard label="Total bookings" value={stats.totalBookings} sub="All time" icon={Calendar} accent="bg-primary/10 text-primary" />
+            <StatCard label="Pending" value={stats.pendingBookings} sub="Awaiting confirmation" icon={Clock} accent="bg-warning/10 text-warning" />
+            <StatCard label="Confirmed" value={stats.confirmedBookings} sub="Ready for dispatch" icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
+            <StatCard label="In progress" value={stats.inProgressBookings} sub="Active operations" icon={Activity} accent="bg-info/10 text-info" />
           </div>
 
-          {/* Bookings Overview */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Calendar className="size-5 text-primary" /> Bookings Overview
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Bookings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalBookings}</div>
-                  <div className="text-xs text-muted-foreground mt-1">All time</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-warning">{stats.pendingBookings}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Awaiting confirmation</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Confirmed</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-success">{stats.confirmedBookings}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Ready for dispatch</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">In Progress</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">{stats.inProgressBookings}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Active operations</div>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <StatCard label="Total vehicles" value={stats.totalVehicles} sub="Fleet size" icon={Truck} accent="bg-primary/10 text-primary" />
+            <StatCard label="Available" value={stats.availableVehicles} sub="Ready for assignment" icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
+            <StatCard label="In use" value={stats.inUseVehicles} sub="Currently on trips" icon={ArrowUpRight} accent="bg-info/10 text-info" />
+            <StatCard label="Maintenance" value={stats.maintenanceVehicles} sub="Under repair" icon={Wrench} accent="bg-destructive/10 text-destructive" />
           </div>
 
-          {/* Fleet Overview */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Truck className="size-5 text-primary" /> Fleet Overview
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Vehicles</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalVehicles}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Fleet size</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Available</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-success">{stats.availableVehicles}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Ready for assignment</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">In Use</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">{stats.inUseVehicles}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Currently on trips</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-destructive">{stats.maintenanceVehicles}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Under repair</div>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+            <SectionCard title="Driver status" icon={Users}>
+              <div className="grid grid-cols-3 gap-3">
+                <MiniStat value={stats.totalDrivers} label="Total" tone="neutral" />
+                <MiniStat value={stats.availableDrivers} label="Available" tone="success" />
+                <MiniStat value={stats.onTripDrivers} label="On trip" tone="info" />
+              </div>
+            </SectionCard>
+
+            <SectionCard title="POD status" icon={ClipboardCheck} href="/operations/pod">
+              <div className="grid grid-cols-3 gap-3">
+                <MiniStat value={stats.totalPODs} label="Total" tone="neutral" />
+                <MiniStat value={stats.pendingPODs} label="Pending" tone="warning" />
+                <MiniStat value={stats.verifiedPODs} label="Verified" tone="success" />
+              </div>
+            </SectionCard>
           </div>
 
-          {/* Driver & POD Overview */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Drivers */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="size-5 text-primary" /> Driver Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <div className="text-2xl font-bold">{stats.totalDrivers}</div>
-                    <div className="text-xs text-muted-foreground">Total</div>
-                  </div>
-                  <div className="text-center p-4 rounded-lg bg-success/10">
-                    <div className="text-2xl font-bold text-success">{stats.availableDrivers}</div>
-                    <div className="text-xs text-muted-foreground">Available</div>
-                  </div>
-                  <div className="text-center p-4 rounded-lg bg-primary/10">
-                    <div className="text-2xl font-bold text-primary">{stats.onTripDrivers}</div>
-                    <div className="text-xs text-muted-foreground">On Trip</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* POD Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="size-5 text-primary" /> POD Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <div className="text-2xl font-bold">{stats.totalPODs}</div>
-                    <div className="text-xs text-muted-foreground">Total</div>
-                  </div>
-                  <div className="text-center p-4 rounded-lg bg-warning/10">
-                    <div className="text-2xl font-bold text-warning">{stats.pendingPODs}</div>
-                    <div className="text-xs text-muted-foreground">Pending</div>
-                  </div>
-                  <div className="text-center p-4 rounded-lg bg-success/10">
-                    <div className="text-2xl font-bold text-success">{stats.verifiedPODs}</div>
-                    <div className="text-xs text-muted-foreground">Verified</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Active Trips & Pending Bookings */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Active Trips */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="size-5 text-primary" /> Active Trips
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {activeTrips.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No active trips</p>
-                ) : (
-                  <div className="space-y-3">
-                    {activeTrips.map((trip) => (
-                      <div key={trip.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <div>
-                          <p className="font-medium">{trip.trip_number || trip.id.slice(0, 8)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {trip.origin} → {trip.destination}
-                          </p>
-                        </div>
-                        <Badge 
-                          variant="outline" 
-                          className={
-                            trip.status === "in_transit"
-                              ? "bg-primary/10 text-primary border-primary/20" 
-                              : "bg-warning/10 text-warning border-warning/20"
-                          }
-                        >
-                          {trip.status}
-                        </Badge>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+            <SectionCard title="Active trips" icon={Truck} href="/trips" padded={false}>
+              {activeTrips.length === 0 ? (
+                <EmptyState icon={Truck} title="No active trips" description="Trips in progress will show up here." />
+              ) : (
+                <motion.ul
+                  variants={{ hidden: {}, visible: { transition: { staggerChildren: getListStagger(activeTrips.length) } } }}
+                  initial="hidden"
+                  animate="visible"
+                  className="divide-y divide-border"
+                >
+                  {activeTrips.map((trip) => (
+                    <motion.li key={trip.id} variants={listItem} className="px-5 py-3 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{trip.trip_number || trip.id.slice(0, 8)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{trip.origin} → {trip.destination}</p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      <span className={cn("cv-chip shrink-0", trip.status === "in_transit" ? "cv-chip-info" : "cv-chip-warning")}>
+                        {trip.status}
+                      </span>
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              )}
+            </SectionCard>
 
-            {/* Pending Bookings */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="size-5 text-warning" /> Pending Bookings
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pendingBookings.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No pending bookings</p>
-                ) : (
-                  <div className="space-y-3">
-                    {pendingBookings.map((booking) => (
-                      <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <div>
-                          <p className="font-medium">{booking.booking_number}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {booking.pickup_location} → {booking.delivery_location}
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href="/trips">
-                            Create Trip <ArrowUpRight className="size-3 ml-1" />
-                          </Link>
+            <SectionCard title="Pending bookings" icon={Clock} href="/bookings" padded={false}>
+              {pendingBookings.length === 0 ? (
+                <EmptyState icon={Calendar} title="No pending bookings" description="New bookings awaiting a trip will show up here." />
+              ) : (
+                <motion.ul
+                  variants={{ hidden: {}, visible: { transition: { staggerChildren: getListStagger(pendingBookings.length) } } }}
+                  initial="hidden"
+                  animate="visible"
+                  className="divide-y divide-border"
+                >
+                  {pendingBookings.map((booking) => (
+                    <motion.li key={booking.id} variants={listItem} className="px-5 py-3 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{booking.booking_number}</p>
+                        <p className="text-xs text-muted-foreground truncate">{booking.pickup_location} → {booking.delivery_location}</p>
+                      </div>
+                      <Link href="/trips" className="shrink-0">
+                        <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
+                          Create trip <ArrowUpRight className="w-3 h-3" />
                         </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      </Link>
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              )}
+            </SectionCard>
           </div>
 
-          {/* Quick Actions */}
           <div>
-            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Activity className="size-5 text-primary" /> Quick Actions
+            <h2 className="text-sm font-black text-foreground mb-3 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primary" /> Quick actions
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button variant="outline" asChild className="h-24 flex-col gap-2">
-                <Link href="/trips">
-                  <Truck className="size-6" />
-                  <span>New Trip</span>
+              {QUICK_ACTIONS.map(({ href, label, icon: Icon, accent }) => (
+                <Link key={href} href={href}>
+                  <motion.div
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="cv-surface p-5 flex flex-col items-center justify-center gap-2 text-center transition-colors hover:border-primary/30 hover:shadow-md"
+                  >
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", accent)}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-foreground">{label}</span>
+                  </motion.div>
                 </Link>
-              </Button>
-              <Button variant="outline" asChild className="h-24 flex-col gap-2">
-                <Link href="/bookings">
-                  <Calendar className="size-6" />
-                  <span>View Bookings</span>
-                </Link>
-              </Button>
-              <Button variant="outline" asChild className="h-24 flex-col gap-2">
-                <Link href="/operations/pod">
-                  <Package className="size-6" />
-                  <span>Manage PODs</span>
-                </Link>
-              </Button>
-              <Button variant="outline" asChild className="h-24 flex-col gap-2">
-                <Link href="/fleet">
-                  <Wrench className="size-6" />
-                  <span>Fleet Status</span>
-                </Link>
-              </Button>
+              ))}
             </div>
           </div>
-        </div>
-      </main>
+        </>
+      )}
+    </PageShell>
+  );
+}
+
+function MiniStat({ value, label, tone }: { value: number; label: string; tone: "neutral" | "success" | "warning" | "info" }) {
+  const toneClass = {
+    neutral: "bg-muted text-foreground",
+    success: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]",
+    warning: "bg-[hsl(var(--warning-soft))] text-[hsl(var(--warning))]",
+    info: "bg-[hsl(var(--info-soft))] text-[hsl(var(--info))]",
+  }[tone];
+  return (
+    <div className={cn("text-center py-4 rounded-lg", toneClass)}>
+      <div className="text-2xl font-black tracking-tight">{value}</div>
+      <div className="text-[10px] font-bold uppercase tracking-widest opacity-80 mt-0.5">{label}</div>
     </div>
   );
 }

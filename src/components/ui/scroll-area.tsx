@@ -36,10 +36,13 @@ const ScrollBar = React.forwardRef<
     orientation={orientation}
     className={cn(
       "flex touch-none select-none transition-colors",
+      // Absolutely positioned so the always-visible scrollbar floats over
+      // the content instead of reserving layout width, which would narrow
+      // every row and force extra text truncation in tight panels.
       orientation === "vertical" &&
-        "h-full w-4 border-l border-l-transparent p-[2px]",
+        "absolute right-0 top-0 bottom-0 w-2.5 p-[2px]",
       orientation === "horizontal" &&
-        "h-4 flex-col border-t border-t-transparent p-[2px]",
+        "absolute bottom-0 left-0 right-0 h-2.5 flex-col p-[2px]",
       className
     )}
     {...props}
