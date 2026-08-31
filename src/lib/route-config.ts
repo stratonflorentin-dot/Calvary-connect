@@ -1055,6 +1055,18 @@ function routeDebug(level: "log" | "warn" | "error", ...args: unknown[]) {
 }
 
 // Route guard hook
+// AUDIT NOTE: this hook is exported but, as of this audit, not invoked
+// anywhere in the app (no layout or page calls useRouteGuard()) — grep
+// confirms zero call sites outside its own definition. middleware.ts's own
+// comment on this describes it as the intended client-side half of access
+// control ("useRouteGuard() redirects client-side once the session is
+// known"), so this looks like an incomplete wiring rather than deliberate
+// dead code. Its absence is a UX gap, not a data leak: RLS policies are
+// documented as the actual security boundary regardless of what the UI
+// shows or hides. Wiring this into a shared authenticated layout was left
+// for a deliberate decision rather than done as part of this pass, since a
+// mis-wired global redirect risks locking users out of pages they need —
+// a worse failure mode than the current gap.
 export function useRouteGuard() {
   const router = useRouter();
   const pathname = usePathname();
