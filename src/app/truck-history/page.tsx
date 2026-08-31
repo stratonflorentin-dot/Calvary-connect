@@ -24,14 +24,6 @@ import { toast } from '@/hooks/use-toast';
 
 export default function TruckHistoryPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
-
-  if (roleLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
   const { user } = useSupabase();
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [fleet, setFleet] = useState<any[]>([]);
@@ -153,6 +145,14 @@ export default function TruckHistoryPage() {
 
     loadData();
   }, [user]);
+
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const selectedVehicle = fleet?.find(v => v.id === selectedVehicleId);
   const vehicleServices = serviceRecords?.filter(s => s.vehicle_id === selectedVehicleId);

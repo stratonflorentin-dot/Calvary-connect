@@ -39,13 +39,6 @@ interface InventoryItem {
 export default function PartsRequestsPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
 
-  if (roleLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
   const { user } = useSupabase();
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +92,14 @@ export default function PartsRequestsPage() {
 
     loadData();
   }, [user]);
+
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const handleAction = async (requestId: string, status: 'approved' | 'rejected', item: any) => {
     try {

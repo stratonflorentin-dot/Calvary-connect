@@ -50,13 +50,6 @@ import { WorkflowService } from '@/services/workflow-service';
 export default function ServiceRequestsPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
 
-  if (roleLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
   const { user } = useSupabase();
   const [requests, setRequests] = useState<Req[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +80,14 @@ export default function ServiceRequestsPage() {
 
     loadRequests();
   }, [user]);
+
+  if (roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const notifyDriver = async (request: Req, message: string) => {
     const driverId = String(request.driver_id || request.user_id || '');
