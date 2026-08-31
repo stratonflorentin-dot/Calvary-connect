@@ -12,10 +12,13 @@ import { Input } from "@/components/ui/input";
 import { VehicleFormDialog } from "@/components/fleet/vehicle-form-dialog";
 import {
   AlertTriangle,
+  CarFront,
   CheckCircle2,
   ClipboardList,
+  Container,
   Fuel,
   Gauge,
+  Link2,
   Pencil,
   Plus,
   Search,
@@ -97,7 +100,13 @@ export default function FleetPage() {
       );
       return doc <= 14;
     }).length;
-    return { total, inUse, maint, available, attention, utilization: total > 0 ? (inUse / total) * 100 : 0 };
+    const byType = {
+      dumpTruck: vehicles.filter((v) => v.type === "DUMP_TRUCK").length,
+      truckHead: vehicles.filter((v) => v.type === "TRUCK_HEAD").length,
+      trailer: vehicles.filter((v) => v.type === "TRAILER").length,
+      escortCar: vehicles.filter((v) => v.type === "ESCORT_CAR").length,
+    };
+    return { total, inUse, maint, available, attention, byType, utilization: total > 0 ? (inUse / total) * 100 : 0 };
   }, [vehicles]);
 
   const filtered = useMemo(() => {
@@ -199,6 +208,13 @@ export default function FleetPage() {
             <StatCard label="Available" value={stats.available} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
             <StatCard label="In maintenance" value={stats.maint} icon={Wrench} accent="bg-warning/10 text-warning" />
             <StatCard label="Needs attention" value={stats.attention} icon={AlertTriangle} accent="bg-destructive/10 text-destructive" />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <StatCard label="Dump trucks" value={stats.byType.dumpTruck} icon={Container} accent="bg-primary/10 text-primary" />
+            <StatCard label="Truck heads" value={stats.byType.truckHead} icon={Truck} accent="bg-info/10 text-info" />
+            <StatCard label="Trailers" value={stats.byType.trailer} icon={Link2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" />
+            <StatCard label="Escort cars" value={stats.byType.escortCar} icon={CarFront} accent="bg-warning/10 text-warning" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
