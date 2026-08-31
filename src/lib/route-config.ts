@@ -788,6 +788,246 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: [...ALL_APP_ROLES],
     category: "system",
   },
+
+  // --- Added by audit: these pages existed with no ROUTE_CONFIG entry at
+  // all. useRouteGuard() currently isn't invoked anywhere (a separate,
+  // bigger gap — see the comment on that function), so this had no live
+  // access-control effect yet, but getMenuByRole/getNavigationMenuByRole
+  // silently couldn't build nav links for any of them either, and any
+  // future wiring-up of useRouteGuard would otherwise have locked every
+  // non-CEO/ADMIN role out of pages built for them (checkAccess treats "no
+  // matching route" as deny). Roles below match each page's own inline
+  // role check where one exists, or the closest sibling route's roles.
+  {
+    path: "/admin/contracts",
+    label: "Contracts",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    category: "sales",
+  },
+  {
+    path: "/admin/contracts/new",
+    label: "New Contract",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/contracts/[id]",
+    label: "Contract Details",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/contracts/[id]/edit",
+    label: "Edit Contract",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/contracts/[id]/sign-client",
+    label: "Client Signature",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/contracts/[id]/sign-transporter",
+    label: "Transporter Countersignature",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/contracts/[id]/upload-pdf",
+    label: "Upload Signed PDF",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/hr/payroll/run",
+    label: "Run Payroll",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+    showInNavigation: false,
+  },
+  {
+    path: "/admin/reports/fleet/trip-cost-variance",
+    label: "Trip Cost Variance",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    category: "reports",
+  },
+  {
+    path: "/admin/settings",
+    label: "Settings",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "system",
+  },
+  {
+    path: "/dashboard",
+    label: "Operational Finance",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "OPERATOR"],
+    category: "dashboard",
+    showInNavigation: false,
+  },
+  {
+    path: "/design-system",
+    label: "Design System",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "system",
+    showInNavigation: false,
+  },
+  {
+    path: "/expenses/categories",
+    label: "Expense Categories",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/cfo-dashboard",
+    label: "CFO Dashboard",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/dashboard",
+    label: "Finance Dashboard",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/income",
+    label: "Income",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/reports",
+    label: "Financial Reports",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+  },
+  {
+    path: "/fleet/fuel-anomalies/rules",
+    label: "Fuel Anomaly Rules",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR"],
+    category: "fleet",
+    showInNavigation: false,
+  },
+  {
+    path: "/hr",
+    label: "HR Hub",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+    category: "people",
+  },
+  {
+    path: "/hr/meetings/new",
+    label: "New Meeting",
+    allowedRoles: ["CEO", "ADMIN", "HR"],
+    showInNavigation: false,
+  },
+  {
+    path: "/income",
+    label: "Income (Legacy)",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/landing",
+    label: "Landing",
+    allowedRoles: [...ALL_APP_ROLES],
+    showInNavigation: false,
+  },
+  {
+    path: "/maintenance/new",
+    label: "New Maintenance Record",
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR", "DRIVER"],
+    category: "fleet",
+    showInNavigation: false,
+  },
+  {
+    path: "/management",
+    label: "Management Dashboard",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "dashboard",
+    showInNavigation: false,
+  },
+  {
+    path: "/mobile-dashboard",
+    label: "Field Operations Terminal",
+    allowedRoles: ["CEO", "ADMIN", "DRIVER"],
+    showInNavigation: false,
+  },
+  {
+    path: "/monthly-report",
+    label: "Monthly Report",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/operations/dashboard",
+    label: "Operations Dashboard",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR"],
+    category: "logistics",
+  },
+  {
+    path: "/operations/pod",
+    label: "Proof of Delivery",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "DRIVER"],
+    category: "logistics",
+  },
+  {
+    path: "/q/[token]",
+    label: "Shared Quotation",
+    allowedRoles: [...ALL_APP_ROLES],
+    showInNavigation: false,
+  },
+  {
+    path: "/report",
+    label: "Maintenance Report",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC", "DRIVER"],
+    category: "fleet",
+    showInNavigation: false,
+  },
+  {
+    path: "/sales/dashboard",
+    label: "Sales Dashboard",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "ACCOUNTANT", "SALESMAN"],
+    category: "sales",
+  },
+  {
+    path: "/sales/leads",
+    label: "Leads",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN"],
+    category: "sales",
+  },
+  {
+    path: "/spare-parts",
+    label: "Spare Parts",
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR", "WAREHOUSE_STAFF"],
+    category: "inventory",
+    showInNavigation: false,
+  },
+  {
+    path: "/truck-history",
+    label: "Truck History",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+    category: "fleet",
+  },
+  {
+    path: "/fleet/vehicles/[id]",
+    label: "Vehicle Details",
+    allowedRoles: ["CEO", "ADMIN", "OPERATOR", "MECHANIC"],
+    showInNavigation: false,
+  },
+  {
+    path: "/maintenance/[id]",
+    label: "Maintenance Record Details",
+    allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR", "DRIVER"],
+    showInNavigation: false,
+  },
 ];
 
 // Role-specific default landing pages
