@@ -10,7 +10,7 @@
 //   - Firebase Realtime Database
 //   - Any authenticated API endpoint
 
-const CACHE_VERSION = 'calvary-connect-v6';
+const CACHE_VERSION = 'calvary-connect-v7';
 
 // Only cache assets that are guaranteed to exist at the root level
 const STATIC_PRECACHE = [
