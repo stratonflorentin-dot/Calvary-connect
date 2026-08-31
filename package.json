@@ -58,7 +58,6 @@
     "docxtemplater": "^3.68.7",
     "dompurify": "^3.4.12",
     "embla-carousel-react": "^8.6.0",
-    "firebase": "^11.9.1",
     "framer-motion": "^12.38.0",
     "genkit": "^1.28.0",
     "genkitx-groq": "^0.30.0",
