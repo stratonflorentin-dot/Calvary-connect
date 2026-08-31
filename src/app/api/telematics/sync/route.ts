@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { wialonLogin, wialonFetchUnitsTelemetry } from "@/lib/telematics/wialon-client";
+import { cartrackFetchVehiclesTelemetry } from "@/lib/telematics/cartrack-client";
 
 const ALLOWED_ROLES = ["CEO", "ADMIN", "OPERATOR"];
 
@@ -39,9 +40,9 @@ async function requireSyncAccess(request: NextRequest) {
  * appends a row to vehicle_telemetry_history (the time series the fuel
  * fraud engine's POSSIBLE_SIPHONING/EXCESSIVE_IDLING rules read).
  *
- * Cartrack support isn't wired in yet — that account isn't provisioned for
- * Fleet API access yet (confirmed live: 401 "must be a Cartrack
- * Subscriber"). Only wialon-mapped vehicles sync until that's resolved.
+ * Cartrack support enabled Fleet API/Subscriber access on 2026-08-31
+ * (confirmed live against the real account — see cartrack-client.ts);
+ * cartrack-mapped vehicles now sync the same way wialon-mapped ones do.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -56,7 +57,10 @@ export async function POST(request: NextRequest) {
     if (vehiclesError) throw vehiclesError;
 
     const wialonVehicles = (vehicles ?? []).filter((v) => v.gps_provider === "wialon");
-    const unsupportedProviders = (vehicles ?? []).filter((v) => v.gps_provider !== "wialon");
+    const cartrackVehicles = (vehicles ?? []).filter((v) => v.gps_provider === "cartrack");
+    const unsupportedProviders = (vehicles ?? []).filter(
+      (v) => v.gps_provider !== "wialon" && v.gps_provider !== "cartrack",
+    );
 
     let synced = 0;
     const errors: string[] = [];
@@ -110,6 +114,56 @@ export async function POST(request: NextRequest) {
         }
       } catch (err: any) {
         errors.push(`Wialon: ${err.message}`);
+      }
+    }
+
+    if (cartrackVehicles.length > 0) {
+      try {
+        const deviceIds = cartrackVehicles.map((v) => v.gps_device_id as string);
+        const byDeviceId = await cartrackFetchVehiclesTelemetry(deviceIds);
+
+        for (const vehicle of cartrackVehicles) {
+          const reading = byDeviceId.get(vehicle.gps_device_id as string);
+          if (!reading || reading.latitude == null || reading.longitude == null) continue;
+
+          const engineStatus = reading.engineOn === null ? null : reading.engineOn ? "on" : "off";
+          const recordedAt = reading.recordedAt ?? new Date();
+
+          const { error: locErr } = await admin.from("vehicle_locations").upsert(
+            {
+              vehicle_id: vehicle.id,
+              latitude: reading.latitude,
+              longitude: reading.longitude,
+              speed: reading.speedKmh,
+              heading: reading.heading,
+              engine_status: engineStatus,
+              is_online: true,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "vehicle_id" },
+          );
+          if (locErr) { errors.push(`${vehicle.plate_number}: ${locErr.message}`); continue; }
+
+          const { error: histErr } = await admin.from("vehicle_telemetry_history").upsert(
+            {
+              vehicle_id: vehicle.id,
+              source: "cartrack",
+              recorded_at: recordedAt.toISOString(),
+              latitude: reading.latitude,
+              longitude: reading.longitude,
+              speed_kmh: reading.speedKmh,
+              engine_on: reading.engineOn,
+              raw: reading.raw,
+            },
+            { onConflict: "vehicle_id,source,recorded_at", ignoreDuplicates: true },
+          );
+          if (histErr) { errors.push(`${vehicle.plate_number} history: ${histErr.message}`); continue; }
+
+          await admin.from("vehicles").update({ gps_last_synced_at: new Date().toISOString() }).eq("id", vehicle.id);
+          synced++;
+        }
+      } catch (err: any) {
+        errors.push(`Cartrack: ${err.message}`);
       }
     }
 
