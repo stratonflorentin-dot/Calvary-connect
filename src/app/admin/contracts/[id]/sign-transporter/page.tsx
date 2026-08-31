@@ -49,9 +49,14 @@ export default function SignTransporterPage() {
             setLoading(true);
             const data = await fetchContract(contractId);
 
-            // Only allow signing if client already signed and transporter hasn't
+            // Only allow signing if client already signed and transporter hasn't.
+            // Both signatures happen while the contract is still 'sent' — 'active'
+            // is reached only after both are in (see the "Activate Contract" gate
+            // on the detail page), so requiring 'active' here made countersigning
+            // impossible: it can only ever follow the client's signature, and the
+            // client signs while status is 'sent', never 'active'.
             if (
-                data.status !== 'active' ||
+                data.status !== 'sent' ||
                 !data.client_signed_at ||
                 data.transporter_signed_at
             ) {

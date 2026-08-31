@@ -314,8 +314,14 @@ export function getStatusColor(status: ContractStatus): { bg: string; text: stri
 export function getVisibleActions(status: ContractStatus): string[] {
   const actions = {
     draft: ['edit', 'markSent', 'sign', 'terminate'],
-    sent: ['view', 'signClient', 'terminate'],
-    active: ['view', 'countersign', 'uploadPdf', 'terminate'],
+    // Both signatures happen while the contract is 'sent' — the individual
+    // sign-client/sign-transporter pages gate on client_signed_at/
+    // transporter_signed_at to sequence them and prevent re-signing.
+    // 'active' is a separate, later status reached via the "Activate
+    // Contract" button once both signatures exist, so countersign can't
+    // require 'active' as a prerequisite without making it unreachable.
+    sent: ['view', 'signClient', 'countersign', 'terminate'],
+    active: ['view', 'uploadPdf', 'terminate'],
     expired: ['view', 'archive'],
     terminated: ['view', 'archive'],
   };
