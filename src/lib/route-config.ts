@@ -858,6 +858,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     label: "Settings",
     allowedRoles: ["CEO", "ADMIN"],
     category: "system",
+    showInNavigation: false,
   },
   {
     path: "/dashboard",
