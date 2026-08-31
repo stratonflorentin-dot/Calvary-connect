@@ -98,12 +98,33 @@ export default function CustomersPage() {
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const name = customerForm.company_name.trim();
+      const phone = customerForm.phone.trim();
+      if (name && phone) {
+        const { data: existing, error: dupeError } = await supabase
+          .from('customers')
+          .select('customer_code, company_name')
+          .is('deleted_at', null)
+          .ilike('company_name', name)
+          .eq('phone', phone)
+          .limit(1);
+        if (dupeError) throw dupeError;
+        if (existing && existing.length > 0) {
+          toast({
+            title: 'Customer already exists',
+            description: `${existing[0].company_name} with this phone number is already saved as ${existing[0].customer_code}.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       const { data, error } = await supabase.from('customers').insert({
         ...customerForm,
         credit_limit: parseFloat(customerForm.credit_limit) || 0,
         created_by: user?.id
       }).select().single();
-      
+
       if (error) throw error;
       
       toast({ title: 'Success', description: `Customer ${data.customer_code} created` });
