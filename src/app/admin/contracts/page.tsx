@@ -52,6 +52,7 @@ export default function ContractsPage() {
             );
             setContracts(data || []);
         } catch (error) {
+            console.error('Failed to load contracts:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to load contracts',

@@ -49,6 +49,7 @@ export default function UploadPdfPage() {
 
             setContract(data);
         } catch (error) {
+            console.error('Failed to load contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to load contract',
@@ -108,6 +109,7 @@ export default function UploadPdfPage() {
 
             router.push(`/admin/contracts/${contractId}`);
         } catch (error) {
+            console.error('Failed to upload PDF:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to upload PDF',

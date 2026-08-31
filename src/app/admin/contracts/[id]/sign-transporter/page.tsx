@@ -68,6 +68,7 @@ export default function SignTransporterPage() {
             setName(data.transporter_signatory_name || '');
             setPosition(data.transporter_signatory_position || '');
         } catch (error) {
+            console.error('Failed to load contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to load contract',
@@ -154,6 +155,7 @@ export default function SignTransporterPage() {
 
             router.push(`/admin/contracts/${contractId}`);
         } catch (error) {
+            console.error('Failed to countersign contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to countersign contract',

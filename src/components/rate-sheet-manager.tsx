@@ -44,6 +44,7 @@ export function RateSheetManager() {
             const data = await fetchRateSheets();
             setRates(data);
         } catch (error) {
+            console.error('Failed to load rate sheets:', error);
             toast({ title: 'Error', description: 'Failed to load rate sheets', variant: 'destructive' });
         } finally {
             setLoading(false);
@@ -88,6 +89,7 @@ export function RateSheetManager() {
             setIsOpen(false);
             loadRates();
         } catch (error) {
+            console.error('Failed to save rate sheet:', error);
             toast({ title: 'Error', description: 'Failed to save rate sheet', variant: 'destructive' });
         }
     };
@@ -99,6 +101,7 @@ export function RateSheetManager() {
             toast({ title: 'Success', description: 'Route deleted' });
             loadRates();
         } catch (error) {
+            console.error('Failed to delete rate sheet:', error);
             toast({ title: 'Error', description: 'Failed to delete rate sheet', variant: 'destructive' });
         }
     };

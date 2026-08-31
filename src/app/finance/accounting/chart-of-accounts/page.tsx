@@ -264,6 +264,7 @@ export default function ChartOfAccountsPage() {
         setAccounts(defaultAccts);
       }
     } catch (error) {
+      console.error('Failed to load chart of accounts:', error);
       // Use defaults on error
       const defaultAccts = DEFAULT_ACCOUNTS.map((a, i) => ({
         ...a,

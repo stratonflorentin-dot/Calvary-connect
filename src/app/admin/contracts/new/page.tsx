@@ -56,6 +56,7 @@ export default function NewContractPage() {
             if (error) throw error;
             setClients(data || []);
         } catch (error) {
+            console.error('Failed to load clients:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to load clients',
@@ -109,6 +110,7 @@ export default function NewContractPage() {
 
             router.push(`/admin/contracts/${contract.id}`);
         } catch (error) {
+            console.error('Failed to create contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to create contract',

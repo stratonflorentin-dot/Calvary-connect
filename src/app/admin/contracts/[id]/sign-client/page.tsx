@@ -64,6 +64,7 @@ export default function SignClientPage() {
             setName(data.client_signatory_name || '');
             setPosition(data.client_signatory_position || '');
         } catch (error) {
+            console.error('Failed to load contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to load contract',
@@ -150,6 +151,7 @@ export default function SignClientPage() {
 
             router.push(`/admin/contracts/${contractId}`);
         } catch (error) {
+            console.error('Failed to sign contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to sign contract',

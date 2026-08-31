@@ -62,6 +62,7 @@ export default function ContractEditPage() {
             setTermMonths(data.term_months.toString());
             setAutoRenew(data.auto_renew);
         } catch (error) {
+            console.error('Failed to load contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to load contract',
@@ -109,6 +110,7 @@ export default function ContractEditPage() {
 
             router.push(`/admin/contracts/${contractId}`);
         } catch (error) {
+            console.error('Failed to update contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to update contract',

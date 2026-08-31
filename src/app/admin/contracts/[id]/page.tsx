@@ -92,6 +92,7 @@ export default function ContractDetailPage() {
             setContract(contractData);
             setHistory(historyData);
         } catch (error) {
+            console.error('Failed to load contract details:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to load contract details',
@@ -110,6 +111,7 @@ export default function ContractDetailPage() {
             await loadContractDetails();
             toast({ title: 'Success', description: 'Contract marked as sent' });
         } catch (error) {
+            console.error('Failed to mark contract as sent:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to mark contract as sent',
@@ -126,6 +128,7 @@ export default function ContractDetailPage() {
             await loadContractDetails();
             toast({ title: 'Success', description: 'Contract activated' });
         } catch (error) {
+            console.error('Failed to activate contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to activate contract',
@@ -152,6 +155,7 @@ export default function ContractDetailPage() {
             await loadContractDetails();
             toast({ title: 'Success', description: 'Contract terminated' });
         } catch (error) {
+            console.error('Failed to terminate contract:', error);
             toast({
                 title: 'Error',
                 description: 'Failed to terminate contract',
