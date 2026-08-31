@@ -231,12 +231,12 @@ After running the SQL, you should see:
 2. **Enable** "Email" authentication
 3. **Add** admin user manually if needed:
    - Email: `stratonflorentin@gmail.com`
-   - Password: `Tony@5002`
+   - Password: `<your-password>`
 
 ## 🚀 Step 7: Test Your Application
 
 1. **Refresh** your application at http://localhost:9002
-2. **Sign up** with: stratonflorentin@gmail.com / Tony@5002
+2. **Sign up** with: stratonflorentin@gmail.com / <your-password>
 3. **Demo banner should disappear**
 4. **Test adding vehicles, trips, expenses**
 

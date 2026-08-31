@@ -43,7 +43,7 @@ All tables created with proper RLS policies and sample data.
 ### **Step 5: Test Your Application**
 1. Refresh your app: http://localhost:9002
 2. The "Supabase Setup Required" banner should disappear
-3. Try signing up with: stratonflorentin@gmail.com / Tony@5002
+3. Try signing up with: stratonflorentin@gmail.com / <your-password>
 4. Test adding vehicles, trips, expenses
 
 ## 🎯 **What This Accomplishes**
@@ -57,7 +57,7 @@ All tables created with proper RLS policies and sample data.
 
 ## 🔐 **Login Credentials**
 - **Email**: stratonflorentin@gmail.com
-- **Password**: Tony@5002
+- **Password**: <your-password>
 - **Default Role**: CEO (can switch to any role)
 
 ## 🎉 **Expected Results**

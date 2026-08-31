@@ -183,4 +183,4 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_requests_status ON maintenance_reques
 
 -- Success message
 SELECT '✅ Fleet Management Database Setup Complete!' as status,
-       'You can now sign up with stratonflorentin@gmail.com and password Tony@5002' as message;
+       'You can now sign up with stratonflorentin@gmail.com and password <your-password>' as message;

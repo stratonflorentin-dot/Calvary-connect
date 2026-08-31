@@ -127,7 +127,7 @@ I systematically verified all major components:
 ## 🌐 **Access Your Production-Ready System**
 
 **URL**: http://localhost:9002  
-**Login**: stratonflorentin@gmail.com / Tony@5002
+**Login**: stratonflorentin@gmail.com / <your-password>
 
 **🎉 Your Fleet Management System is now fully operational without any errors!**
 

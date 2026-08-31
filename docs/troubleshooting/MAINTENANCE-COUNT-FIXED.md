@@ -85,7 +85,7 @@ const maintenanceCount = expenses.filter((expense: any) => expense.category === 
 ## 🌐 **Access Your System**
 
 **URL**: http://localhost:9002  
-**Login**: stratonflorentin@gmail.com / Tony@5002
+**Login**: stratonflorentin@gmail.com / <your-password>
 
 **All Fleet Management System features are now working without errors! 🎉**
 

@@ -100,6 +100,6 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 **Your Fleet Management System now has full CEO user management capabilities!**
 
 🌐 **Access**: http://localhost:9002  
-🔑 **Login**: stratonflorentin@gmail.com / Tony@5002
+🔑 **Login**: stratonflorentin@gmail.com / <your-password>
 
 **CEO users can now be added and managed with real Supabase database operations! 👑✨**

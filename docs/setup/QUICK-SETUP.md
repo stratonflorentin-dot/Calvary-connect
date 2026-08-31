@@ -5,7 +5,7 @@ The previous version had a JWT role error. This version fixes it!
 
 ## Your Admin Credentials:
 - **Email**: stratonflorentin@gmail.com
-- **Password**: Tony@5002
+- **Password**: <your-password>
 
 ## ⚡ Quick Setup (2 Minutes):
 
@@ -25,7 +25,7 @@ The previous version had a JWT role error. This version fixes it!
 1. Go to: http://localhost:9002
 2. Click "Sign Up" tab
 3. Email: stratonflorentin@gmail.com
-4. Password: Tony@5002
+4. Password: <your-password>
 5. Name: Admin User
 
 ### 5. Done! 🎉

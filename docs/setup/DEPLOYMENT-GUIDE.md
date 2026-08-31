@@ -30,7 +30,7 @@
 2. Enable email/password authentication
 3. Add admin user:
    - Email: `stratonflorentin@gmail.com`
-   - Password: `Tony@5002`
+   - Password: `<your-password>`
 
 ## 🚀 Deployment Steps
 
@@ -52,7 +52,7 @@ npm start
 ## 🌐 Access Your System
 
 - **Local**: http://localhost:3000
-- **Login**: stratonflorentin@gmail.com / Tony@5002
+- **Login**: stratonflorentin@gmail.com / <your-password>
 - **Default Role**: CEO (can switch to any role)
 
 ## 🎯 Features Available

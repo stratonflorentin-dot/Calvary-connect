@@ -30,7 +30,7 @@ Your Fleet Management System is now **running with real Supabase integration**!
 
 ### 🔑 **Login Credentials**
 - **Email**: stratonflorentin@gmail.com
-- **Password**: Tony@5002
+- **Password**: <your-password>
 - **Default Role**: CEO (switchable to any role)
 
 ---
@@ -128,7 +128,7 @@ npm start        # Start production server
 **Your Fleet Management System is fully operational with real Supabase integration!**
 
 🌐 **Access**: http://localhost:9002
-🔑 **Login**: stratonflorentin@gmail.com / Tony@5002
+🔑 **Login**: stratonflorentin@gmail.com / <your-password>
 
 🚛 **All features are working with live data instead of demo data!**
 

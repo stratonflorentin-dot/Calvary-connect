@@ -22,7 +22,7 @@
 4. 🚀 LAUNCH APPLICATION
    - Run: npm run dev
    - Open: http://localhost:9002
-   - Login: stratonflorentin@gmail.com / Tony@5002
+   - Login: stratonflorentin@gmail.com / <your-password>
 
 ✅ WHAT'S BEEN DONE FOR YOU:
 
