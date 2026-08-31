@@ -31,6 +31,25 @@ import {
   getActiveBankAccountsAction,
 } from './actions';
 
+/**
+ * Payroll periods selectable for processing — the current month plus the
+ * trailing 5, oldest first. Deliberately never offers a future month: the
+ * dropdown used to be a hardcoded list of hardcoded strings ("May 2026"
+ * through "August 2026") with nothing stopping HR from picking a period
+ * that hadn't started yet and immediately approving + paying it, i.e.
+ * workers getting salary before their actual pay date. Regenerated from
+ * `new Date()` so it never goes stale either.
+ */
+function selectablePayrollPeriods(): string[] {
+  const now = new Date();
+  const periods: string[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    periods.push(d.toLocaleString('en-US', { month: 'long', year: 'numeric' }));
+  }
+  return periods;
+}
+
 interface Worker {
   id: string;
   name: string;
@@ -89,6 +108,10 @@ export default function AllowancesPage() {
   const [periods, setPeriods] = useState<Record<string, string>>({});
   const [paymentMethods, setPaymentMethods] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
+
+  // Regenerated once per mount rather than inline in the JSX so every
+  // worker row's dropdown shares the exact same option list.
+  const [payrollPeriods] = useState<string[]>(selectablePayrollPeriods);
 
   // Filter history
   const [historySearch, setHistorySearch] = useState('');
@@ -569,10 +592,9 @@ export default function AllowancesPage() {
                                 onChange={(e) => setPeriods(prev => ({ ...prev, [worker.id]: e.target.value }))}
                                 className="mt-1 block w-44 rounded-lg bg-background border border-border text-foreground py-1.5 px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                               >
-                                <option value="May 2026">May 2026</option>
-                                <option value="June 2026">June 2026</option>
-                                <option value="July 2026">July 2026</option>
-                                <option value="August 2026">August 2026</option>
+                                {payrollPeriods.map((p) => (
+                                  <option key={p} value={p}>{p}</option>
+                                ))}
                               </select>
                             </div>
 

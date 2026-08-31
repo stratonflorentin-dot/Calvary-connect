@@ -2,6 +2,26 @@
 
 import { createClient } from "@supabase/supabase-js";
 
+/**
+ * Rejects approving payroll for a period that hasn't ended yet. The period
+ * selector used to offer hardcoded future months with nothing stopping HR
+ * from picking one and immediately approving + paying it — workers getting
+ * salary before their actual pay date. `period` is a free-text "Month Year"
+ * string (see selectablePayrollPeriods() in allowances/page.tsx); parses to
+ * end-of-month and compares against now. Unparseable periods (older
+ * records, or a period string outside the "Month Year" format) are let
+ * through rather than blocked, since this only needs to catch the
+ * reproducible bug — a genuinely unparseable value isn't that.
+ */
+function assertPeriodHasElapsed(period: string): void {
+  const parsed = new Date(`1 ${period}`);
+  if (Number.isNaN(parsed.getTime())) return;
+  const endOfPeriod = new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0, 23, 59, 59, 999);
+  if (endOfPeriod > new Date()) {
+    throw new Error(`Cannot approve payroll for ${period} — that period hasn't ended yet.`);
+  }
+}
+
 function getAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -199,6 +219,8 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
     } catch (e) {
       note = record.reason || note;
     }
+
+    assertPeriodHasElapsed(period);
 
     // 2. Deduct any active salary advance (employee_loans — issued via
     // /admin/hr/payroll/loans, which already lists drivers as eligible
