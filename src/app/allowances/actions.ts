@@ -220,6 +220,13 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
       note = record.reason || note;
     }
 
+    // Re-approving an already-approved/paid/rejected record (double-click,
+    // retry) would otherwise insert a second expense/invoice below and
+    // re-reserve the same loan deduction a second time.
+    if (record.status !== "pending") {
+      throw new Error(`This payroll record is already ${record.status} — cannot approve again.`);
+    }
+
     assertPeriodHasElapsed(period);
 
     // 2. Deduct any active salary advance (employee_loans — issued via
@@ -236,12 +243,44 @@ export async function approvePayrollRecordAction(id: string, approvedByUserId: s
       .order("created_at", { ascending: true });
     if (loansErr) console.error("Failed to check for active salary advances:", loansErr);
 
+    // employee_loans.outstanding_balance is deliberately only decremented
+    // once a record is actually paid (markPayrollPaidAction) — posting is
+    // irreversible, so recovery has to wait until the cash has genuinely
+    // gone out. That means another driver_allowances record for the same
+    // driver, already approved but not yet paid, has already "claimed" a
+    // deduction against this same still-undecremented balance. Without
+    // subtracting what's already reserved here, two records approved
+    // before either is paid would each independently deduct the full
+    // installment against the same balance, and paying both would recover
+    // the loan twice as fast as it should — the driver shorted the extra
+    // amount. (This narrows the race to "two separate approval actions
+    // before either pays" — a true simultaneous double-approval isn't
+    // closed without row-level locking, which this per-request server
+    // action doesn't have.)
+    const { data: reservedRows, error: reservedErr } = await supabaseAdmin
+      .from("driver_allowances")
+      .select("loan_deductions")
+      .eq("driver_id", record.driver_id)
+      .eq("status", "approved")
+      .neq("id", id);
+    if (reservedErr) console.error("Failed to check for already-reserved salary advance deductions:", reservedErr);
+
+    const reservedByLoan = new Map<string, number>();
+    for (const row of reservedRows || []) {
+      const deductions = (row as any).loan_deductions as { employee_loan_id: string; amount: number }[] | null;
+      for (const d of deductions || []) {
+        reservedByLoan.set(d.employee_loan_id, (reservedByLoan.get(d.employee_loan_id) || 0) + (Number(d.amount) || 0));
+      }
+    }
+
     let loanDeductionAmount = 0;
     const loanDeductions: { employee_loan_id: string; amount: number }[] = [];
     let remaining = Number(record.amount) || 0;
     for (const loan of activeLoans || []) {
       if (remaining <= 0) break;
-      const applied = Math.min(Number(loan.installment_amount), Number(loan.outstanding_balance), remaining);
+      const availableBalance = Number(loan.outstanding_balance) - (reservedByLoan.get(loan.id) || 0);
+      if (availableBalance <= 0) continue;
+      const applied = Math.min(Number(loan.installment_amount), availableBalance, remaining);
       if (applied > 0) {
         loanDeductionAmount += applied;
         loanDeductions.push({ employee_loan_id: loan.id, amount: applied });

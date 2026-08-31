@@ -146,7 +146,14 @@ export default function CustomerDetailPage() {
     const paidInvoices = invoices.filter((i) => i.status === "paid");
     const outstandingInvoices = invoices.filter((i) => i.status !== "paid" && i.status !== "cancelled");
     const totalPaid = paidInvoices.reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0), 0);
-    const totalOutstanding = outstandingInvoices.reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0), 0);
+    // total_amount minus paid_amount, not the full total — a partially-paid
+    // invoice was otherwise counted as fully owed here, same fix already
+    // applied everywhere else this app computes outstanding balance (see
+    // accountant-view.tsx's arByCcy/apByCcy).
+    const totalOutstanding = outstandingInvoices.reduce(
+      (s, i) => s + (Number(i.total_amount ?? i.amount ?? 0) - Number(i.paid_amount ?? 0)),
+      0,
+    );
 
     // Last activity: prefer the customer_activities timeline (once it's
     // populated going forward); fall back to the most recent booking,
