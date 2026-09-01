@@ -102,7 +102,7 @@ export default function PaymentsPage() {
       // — this page previously inserted into a `payments` shape that didn't
       // match the live schema (missing `direction`, wrong status values) and
       // never moved money or updated the invoice at all.
-      const { error: txError } = await supabase.rpc("post_bank_transaction", {
+      const { data: bankTxn, error: txError } = await supabase.rpc("post_bank_transaction", {
         p_bank_account_id: paymentForm.bank_account_id,
         p_amount: amount,
         p_direction: "in",
@@ -116,6 +116,11 @@ export default function PaymentsPage() {
         p_idempotency_key: crypto.randomUUID(),
       });
       if (txError) throw txError;
+      // Keeps this payment traceable back to the bank transaction and
+      // journal entry post_bank_transaction() just created for it — see
+      // supabase/migrations/125_payment_bank_transaction_linking.sql. Both
+      // come back on the RPC's own return value; nothing extra to fetch.
+      const bankTxnRow = Array.isArray(bankTxn) ? bankTxn[0] : bankTxn;
 
       const { data: payment, error } = await supabase.from("payments").insert({
         direction: "in",
@@ -130,6 +135,8 @@ export default function PaymentsPage() {
         reference: invoice?.invoice_number ?? null,
         notes: paymentForm.notes,
         status: "posted",
+        bank_transaction_id: bankTxnRow?.id ?? null,
+        journal_entry_id: bankTxnRow?.journal_entry_id ?? null,
         created_by: user?.id ?? null,
       }).select().single();
       if (error) throw error;
@@ -303,6 +310,7 @@ export default function PaymentsPage() {
                   <TableHead>Invoice #</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Method</TableHead>
+                  <TableHead>Bank Transaction</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Currency</TableHead>
                   <TableHead>Status</TableHead>
@@ -340,6 +348,13 @@ export default function PaymentsPage() {
                           <Badge variant="secondary" className="capitalize">
                             {payment.method?.replace("_", " ") || "N/A"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {payment.transaction_reference || (
+                            <span className="italic">
+                              {payment.reconciled ? "—" : "Not yet reconciled"}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="font-bold text-emerald-700 dark:text-emerald-400 text-right whitespace-nowrap">
                           {formatAmount(payment.amount, payment.currency)}

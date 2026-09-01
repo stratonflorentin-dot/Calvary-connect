@@ -70,13 +70,39 @@ export default function CustomerInvoiceDetailPage() {
     } else {
       setCustomer(null);
     }
-    const { data: pays } = await supabase
-      .from("bank_transactions")
-      .select("id, transaction_date, description, reference, credit, currency")
-      .eq("reference_type", "invoice")
-      .eq("reference_id", id)
-      .order("transaction_date", { ascending: true });
-    setPayments(pays ?? []);
+    // Invoices can be paid through either of this app's two payment paths —
+    // the Record Payment button below (writes bank_transactions directly)
+    // or /finance/transactions/payments (writes payments + payment_allocations,
+    // see supabase/migrations/125_payment_bank_transaction_linking.sql). Show
+    // both so the accountant sees the full trail regardless of which was used.
+    const [{ data: pays }, { data: allocations }] = await Promise.all([
+      supabase
+        .from("bank_transactions")
+        .select("id, transaction_date, description, reference, credit, currency")
+        .eq("reference_type", "invoice")
+        .eq("reference_id", id)
+        .order("transaction_date", { ascending: true }),
+      supabase
+        .from("payment_allocations")
+        .select("amount, payments(id, payment_number, payment_date, method, currency, reference, transaction_reference, status, bank_account_id, bank_accounts(account_name, bank_name))")
+        .eq("invoice_id", id),
+    ]);
+    const paymentRows = (allocations ?? [])
+      .map((a: any) => a.payments)
+      .filter(Boolean)
+      .map((p: any) => ({
+        id: `pay-${p.id}`,
+        transaction_date: p.payment_date,
+        description: p.bank_accounts ? `${p.bank_accounts.account_name} — ${p.bank_accounts.bank_name}` : (p.method ?? "Payment"),
+        reference: p.payment_number,
+        transaction_reference: p.transaction_reference,
+        credit: (allocations ?? []).find((a: any) => a.payments?.id === p.id)?.amount ?? 0,
+        currency: p.currency,
+        status: p.status,
+        source: "payments" as const,
+      }));
+    const bankTxnRows = (pays ?? []).map((p: any) => ({ ...p, transaction_reference: p.reference, status: null, source: "bank_transactions" as const }));
+    setPayments([...paymentRows, ...bankTxnRows].sort((a, b) => String(a.transaction_date).localeCompare(String(b.transaction_date))));
     const { data: banks } = await supabase.from("bank_accounts").select("id, account_name, bank_name, currency, current_balance, is_active").eq("is_active", true);
     setBankAccounts(banks ?? []);
     setLoading(false);
@@ -329,13 +355,32 @@ export default function CustomerInvoiceDetailPage() {
                 ) : (
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-                      <tr><th className="px-4 py-2 text-left">Date</th><th className="px-4 py-2 text-left">Description</th><th className="px-4 py-2 text-right">Amount</th></tr>
+                      <tr>
+                        <th className="px-4 py-2 text-left">Date</th>
+                        <th className="px-4 py-2 text-left">Reference</th>
+                        <th className="px-4 py-2 text-left">Bank Transaction</th>
+                        <th className="px-4 py-2 text-left">Status</th>
+                        <th className="px-4 py-2 text-right">Amount</th>
+                      </tr>
                     </thead>
                     <tbody>
-                      {payments.map((p) => (
+                      {payments.map((p: any) => (
                         <tr key={p.id} className="border-t border-border">
                           <td className="px-4 py-2 text-muted-foreground text-xs">{new Date(p.transaction_date).toLocaleDateString()}</td>
-                          <td className="px-4 py-2 text-foreground">{p.description}{p.reference ? ` (${p.reference})` : ""}</td>
+                          <td className="px-4 py-2 text-foreground">
+                            <p>{p.reference || "—"}</p>
+                            <p className="text-[11px] text-muted-foreground">{p.description}</p>
+                          </td>
+                          <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+                            {p.transaction_reference || <span className="italic">Not yet reconciled</span>}
+                          </td>
+                          <td className="px-4 py-2">
+                            {p.status ? (
+                              <Badge variant="outline" className="capitalize">{p.status}</Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-2 text-right font-mono font-bold text-success">{fmt(Number(p.credit) || 0, p.currency || currency)}</td>
                         </tr>
                       ))}
