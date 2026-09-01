@@ -71,6 +71,7 @@
     "nodemailer": "^9.0.5",
     "papaparse": "^5.4.1",
     "patch-package": "^8.0.0",
+    "pdfjs-dist": "^4.10.38",
     "pg": "^8.21.0",
     "pizzip": "^3.2.0",
     "puppeteer": "^25.1.0",
