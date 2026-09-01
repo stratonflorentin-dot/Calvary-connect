@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
@@ -203,10 +202,8 @@ export default function ProformaInvoiceDetailPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-5xl mx-auto space-y-6 pb-8">
+    <>
+      <div className="max-w-5xl mx-auto space-y-6 pb-8">
           <EntityHeader
             crumbs={[
               { label: "Finance", href: "/finance" },
@@ -343,7 +340,6 @@ export default function ProformaInvoiceDetailPage() {
             </div>
           </div>
         </div>
-      </main>
 
       {/* Convert confirmation */}
       <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
@@ -384,6 +380,6 @@ export default function ProformaInvoiceDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

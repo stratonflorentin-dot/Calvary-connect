@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
@@ -241,10 +240,7 @@ export default function NewProformaInvoicePage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
           <div>
             <Link href="/finance/invoicing/proforma-invoices" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
               <ArrowLeft className="size-4" /> Back to Proforma Invoices
@@ -393,8 +389,6 @@ export default function NewProformaInvoicePage() {
               </div>
             </div>
           </div>
-        </div>
-      </main>
     </div>
   );
 }

@@ -6,7 +6,6 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useRole } from "@/hooks/use-role";
 import { useToast } from "@/hooks/use-toast";
-import { Sidebar } from "@/components/navigation/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -626,22 +625,15 @@ export default function BankAccountDetailPage() {
 
   if (loading || !account) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={role} />
-        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-          <div className="max-w-7xl mx-auto">
-            <p className="text-muted-foreground">Loading…</p>
-          </div>
-        </main>
+      <div className="max-w-7xl mx-auto">
+        <p className="text-muted-foreground">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
+    <>
+      <div className="max-w-7xl mx-auto space-y-6">
           <EntityHeader
             crumbs={[
               { label: "Bank Accounts", href: "/finance/banking/bank-accounts" },
@@ -726,7 +718,9 @@ export default function BankAccountDetailPage() {
                       if (!m) return <span className="text-xs text-muted-foreground">—</span>;
                       return (
                         <div className="text-xs">
-                          <span className="text-foreground font-medium">{m.paymentNumber ?? "Payment"}</span>
+                          <Link href={`/finance/transactions/payments/${m.paymentId}`} className="text-foreground font-medium hover:underline">
+                            {m.paymentNumber ?? "Payment"}
+                          </Link>
                           {m.invoiceId && m.invoiceNumber && (
                             <>
                               {" · "}
@@ -929,7 +923,6 @@ export default function BankAccountDetailPage() {
             </TabsContent>
           </Tabs>
         </div>
-      </main>
 
       <TransferFundsDialog
         open={transferOpen}
@@ -1143,6 +1136,6 @@ export default function BankAccountDetailPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

@@ -19,6 +19,7 @@ const STATUS_TONE: Record<string, Tone> = {
   inactive: "neutral",
   cancelled: "danger",
   canceled: "danger",
+  voided: "danger",
   completed: "success",
   expired: "neutral",
   archived: "neutral",
