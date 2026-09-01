@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/components/supabase-provider";
 import { isVehicleAvailable } from "@/lib/fleet/vehicle-status";
 import { useCurrency } from "@/hooks/use-currency";
 import { StatCard, SectionCard, EmptyState, RefreshControl } from "@/components/shell";
@@ -16,6 +17,7 @@ import {
   CreditCard,
   DollarSign,
   Flame,
+  Landmark,
   Navigation,
   Package,
   Receipt,
@@ -39,8 +41,17 @@ import { hydrateTrips } from "@/lib/trips/hydrate";
  * fleet utilization, overdue receivables, active shipments, and the
  * approvals queue. Every number links through to its owning module.
  */
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export function CeoView() {
   const { format } = useCurrency();
+  const { user } = useSupabase();
+  const firstName = (user?.name ?? "").trim().split(" ")[0] || null;
   const [loading, setLoading] = useState(true);
   const [banks, setBanks] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -49,10 +60,11 @@ export function CeoView() {
   const [maintenance, setMaintenance] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [fuel, setFuel] = useState<any[]>([]);
+  const [pendingBankLines, setPendingBankLines] = useState(0);
 
   const load = async () => {
     setLoading(true);
-    const [b, i, e, t, m, v, f] = await Promise.all([
+    const [b, i, e, t, m, v, f, bs] = await Promise.all([
       supabase.from("bank_accounts").select("*"),
       supabase.from("invoices").select("*"),
       supabase.from("expenses").select("*"),
@@ -60,6 +72,7 @@ export function CeoView() {
       supabase.from("maintenance_records").select("*").in("status", ["requested", "scheduled", "in_progress"]),
       supabase.from("vehicles").select("*"),
       supabase.from("fuel_requests").select("*").eq("status", "pending"),
+      supabase.from("bank_statement_lines").select("id", { count: "exact", head: true }).eq("match_status", "unmatched"),
     ]);
     setBanks(b.data ?? []);
     setInvoices(i.data ?? []);
@@ -68,6 +81,7 @@ export function CeoView() {
     setMaintenance(m.data ?? []);
     setVehicles(v.data ?? []);
     setFuel(f.data ?? []);
+    setPendingBankLines(bs.count ?? 0);
     setLoading(false);
   };
 
@@ -156,11 +170,12 @@ export function CeoView() {
   const alerts = useMemo(() => {
     const list: { id: string; icon: any; title: string; description: string; href: string; tone: string }[] = [];
     if (stats.overdueTrips > 0) list.push({ id: "trips", icon: Flame, title: `${stats.overdueTrips} overdue trips`, description: "Dispatch operations are behind SLA", href: "/dispatch", tone: "bg-destructive/10 border-destructive/20 text-destructive" });
+    if (pendingBankLines > 0) list.push({ id: "bank", icon: Landmark, title: `${pendingBankLines} bank transaction${pendingBankLines === 1 ? "" : "s"} need reconciliation`, description: "Post or match them against your books", href: "/finance/banking/bank-statements", tone: "bg-warning/10 border-warning/20 text-warning" });
     if (stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance > 0) list.push({ id: "appr", icon: ClipboardList, title: `${stats.pendingExpenses + stats.pendingFuel + stats.pendingMaintenance} items waiting for approval`, description: "Route through the Approvals inbox", href: "/approvals", tone: "bg-warning/10 border-warning/20 text-warning" });
     const arOverdue = invoices.filter((i) => (i.type ?? "receivable") === "receivable" && i.status !== "paid" && i.due_date && new Date(i.due_date) < new Date());
     if (arOverdue.length > 0) list.push({ id: "ar", icon: AlertTriangle, title: `${arOverdue.length} overdue receivables`, description: "Collections need attention", href: "/finance/reports/aging-report", tone: "bg-destructive/10 border-destructive/20 text-destructive" });
     return list;
-  }, [stats, invoices]);
+  }, [stats, invoices, pendingBankLines]);
 
   const recentTrips = useMemo(
     () => trips.slice(0, 6),
@@ -183,9 +198,9 @@ export function CeoView() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Executive Command</p>
-            <h1 className="text-2xl font-black tracking-tight">Everything at a glance</h1>
+            <h1 className="text-2xl font-black tracking-tight">{greeting()}{firstName ? `, ${firstName}` : ""}</h1>
             <p className="text-sm opacity-90 mt-1">
-              {stats.activeTrips} active shipments · {stats.utilization.toFixed(0)}% fleet utilization · {alerts.length} attention item{alerts.length === 1 ? "" : "s"}
+              {stats.activeTrips} active shipments · {stats.utilization.toFixed(0)}% fleet utilization · {alerts.length === 0 ? "nothing needs your attention" : `${alerts.length} attention item${alerts.length === 1 ? "" : "s"}`}
             </p>
           </div>
           <div className="flex items-center gap-2">

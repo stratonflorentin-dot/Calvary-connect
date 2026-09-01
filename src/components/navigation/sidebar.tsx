@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -40,6 +40,7 @@ import {
   ShoppingCart,
   Gavel,
   Star,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/roles";
@@ -55,6 +56,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -133,6 +135,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
   const [serviceRequestCount, setServiceRequestCount] = useState(0);
   const [partsRequestCount, setPartsRequestCount] = useState(0);
   const [meetingCount, setMeetingCount] = useState(0);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Subscribed for its re-render trigger only — getNavigationMenuByRole reads
   // the same module store internally (route-overrides-store.ts) rather than
@@ -142,6 +145,20 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
   useRouteOverridesSnapshot();
   const effectiveRole = canUseRolePreview ? resolveUserRole(String(role || "ADMIN"), "ADMIN") : resolveUserRole(String(role || ""), "OPERATOR");
   const menuItems = getNavigationMenuByRole(effectiveRole, false, t, menuOwnerEmail, false);
+
+  // A nav item is active on an exact match OR when the current page is
+  // nested under it (e.g. "/fleet" while viewing "/fleet/vehicles/abc") —
+  // picking the LONGEST matching path so a page under "/fleet/compliance"
+  // highlights that item rather than also lighting up the broader "/fleet".
+  const activeItemPath = useMemo(() => {
+    let best: string | null = null;
+    for (const item of menuItems) {
+      if (item.path.startsWith("http")) continue;
+      const matches = pathname === item.path || pathname.startsWith(`${item.path}/`);
+      if (matches && (!best || item.path.length > best.length)) best = item.path;
+    }
+    return best;
+  }, [menuItems, pathname]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -309,7 +326,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
         <div className="h-16 grid grid-cols-5">
           {bottomNavItems.map((item) => {
             const Icon = routeIconMap[item.path] || LayoutDashboard;
-            const active = pathname === item.path;
+            const active = item.path === activeItemPath;
             return (
               <Link
                 key={item.path}
@@ -408,18 +425,30 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
         {!isCollapsed && <p className="text-[10px] uppercase tracking-[0.2em] text-[hsl(var(--sidebar-muted))] font-bold px-6 -mt-2 mb-4">Command Panel</p>}
 
         <nav className="flex-1 min-h-0 px-2 space-y-6 overflow-y-auto no-scrollbar pb-10">
+          <TooltipProvider delayDuration={200}>
           {NAVIGATION_CATEGORY_ORDER.map((key) => {
             const label = NAVIGATION_CATEGORY_LABELS[key];
             const items = groupedMenu[key];
             if (!items || items.length === 0) return null;
+
+            // Long categories (People, Reports, ...) stay collapsed to a
+            // manageable count by default rather than dumping every route
+            // into the sidebar at once — but never hide the page the user
+            // is actually on.
+            const COLLAPSE_THRESHOLD = 8;
+            const activeIsHidden = items.slice(COLLAPSE_THRESHOLD).some((i) => i.path === activeItemPath);
+            const isExpanded = isCollapsed || expandedCategories.has(key) || activeIsHidden || items.length <= COLLAPSE_THRESHOLD;
+            const visibleItems = isExpanded ? items : items.slice(0, COLLAPSE_THRESHOLD);
+            const hiddenCount = items.length - visibleItems.length;
+
             return (
               <div key={key} className="space-y-2">
                 {!isCollapsed && <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--sidebar-muted))] font-bold px-4">{label}</p>}
                 <div className="space-y-1">
-                  {items.map(item => {
+                  {visibleItems.map(item => {
                     const Icon = routeIconMap[item.path] || LayoutDashboard;
-                    const active = pathname === item.path;
-                    return (
+                    const active = item.path === activeItemPath;
+                    const linkContent = (
                       <Link
                         key={item.path}
                         href={item.path}
@@ -430,6 +459,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                         }}
                         className={cn(
                           "relative flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-colors group",
+                          isCollapsed && "justify-center px-0",
                           active
                             ? "text-[hsl(var(--sidebar-primary-foreground))]"
                             : "text-[hsl(var(--sidebar-foreground))] hover:text-white hover:bg-[hsl(var(--sidebar-accent))]"
@@ -479,11 +509,28 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                         )}
                       </Link>
                     );
+
+                    if (!isCollapsed) return linkContent;
+                    return (
+                      <Tooltip key={item.path} delayDuration={200}>
+                        <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                        <TooltipContent side="right">{translateNavLabel(item.label, lang)}</TooltipContent>
+                      </Tooltip>
+                    );
                   })}
+                  {!isCollapsed && hiddenCount > 0 && (
+                    <button
+                      onClick={() => setExpandedCategories((prev) => new Set(prev).add(key))}
+                      className="w-full flex items-center gap-2 px-4 py-1.5 mx-1 rounded-lg text-[11px] font-bold text-[hsl(var(--sidebar-muted))] hover:text-white transition-colors"
+                    >
+                      <ChevronDown className="size-3" /> {hiddenCount} more
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })}
+          </TooltipProvider>
         </nav>
 
         <div className="p-3 border-t border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-accent))]/40 backdrop-blur-md">
