@@ -22,6 +22,7 @@ import {
 import { normalizeCurrency, sortCurrencyKeys } from "@/lib/finance/multi-currency";
 import { checkCreditLimit } from "@/lib/finance/credit-check";
 import { postJournalEntry } from "@/lib/finance/journal";
+import { createCustomerPayment } from "@/lib/finance/customer-payment";
 import { calculateInvoiceTotals } from "@/lib/tanzania-tax-rules";
 import { TRAInvoiceDialog } from "@/components/financial/tra-invoice-dialog";
 import { AuditTrailService } from "@/services/audit-trail-service";
@@ -384,64 +385,50 @@ export default function CustomerInvoicesPage() {
       toast({ title: "Choose which account received this payment", variant: "destructive" });
       return;
     }
+    if (!paying.customer_id) {
+      toast({ title: "This invoice has no linked customer record", variant: "destructive" });
+      return;
+    }
     const total = Number(paying.total_amount ?? paying.amount ?? 0);
     const prevPaid = Number(paying.paid_amount ?? 0);
-    const newPaid = prevPaid + amt;
-    const newStatus = newPaid >= total ? "paid" : "partial";
     const currency = paying.currency || "TZS";
 
-    // The invoice update alone was the whole bug: it flipped a status
-    // label with no real money movement anywhere. This posts the actual
-    // ledger entry — Dr the receiving bank account / Cr Accounts
-    // Receivable — so the bank account's balance and the customer's
-    // outstanding balance both genuinely reflect the payment, same
-    // mechanism already used for expenses/cash requests/petty cash.
+    // Same canonical path /finance/transactions/payments and the Invoice
+    // Detail page use — creates a real payments + payment_allocations
+    // record instead of just flipping the invoice's own fields, so this
+    // receipt shows up in the Payments list, is matchable by
+    // findPaymentMatches, and is reconcilable through the existing
+    // bank-statement workflow.
+    let result;
     try {
-      await postJournalEntry({
-        type: "invoice_payment",
-        invoiceId: paying.id,
-        invoiceNumber: paying.invoice_number,
+      result = await createCustomerPayment({
+        customerId: paying.customer_id,
         customerName: paying.customer_name,
         bankAccountId: payBankAccountId,
         amount: amt,
         currency,
+        paymentDate: new Date().toISOString().slice(0, 10),
+        method: payMethod,
+        allocations: [{
+          invoiceId: paying.id,
+          invoiceNumber: paying.invoice_number,
+          invoiceCurrency: currency,
+          invoiceTotal: total,
+          invoicePaidAmount: prevPaid,
+          amount: amt,
+        }],
+        createdBy: user?.id,
       });
     } catch (err: any) {
       toast({ title: "Payment failed", description: err?.message ?? "Unknown error", variant: "destructive" });
       return;
     }
 
-    // journal_entry_id stays as the revenue-recognition entry set at Send —
-    // this payment's own entry is already linked from bank_transactions,
-    // not duplicated onto the invoice.
-    const { error } = await supabase
-      .from("invoices")
-      .update({
-        paid_amount: newPaid,
-        status: newStatus,
-        paid_at: newStatus === "paid" ? new Date().toISOString() : paying.paid_at,
-        payment_method: payMethod,
-      })
-      .eq("id", paying.id);
-    if (error) {
-      toast({ title: "Payment posted but invoice update failed", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    await AuditTrailService.log({
-      user_id: user?.id,
-      module: "finance",
-      action: "update",
-      entity_type: "payment",
-      entity_id: paying.id,
-      new_value: { amount: amt, method: payMethod, running_total: newPaid, status: newStatus },
-      description: `Payment ${fmt(amt, paying.currency)} recorded via ${payMethod.replace(/_/g, " ")}`,
-    });
-
+    const newPaid = prevPaid + result.allocatedTotal;
     toast({
-      variant: newStatus === "paid" ? "success" : "default",
-      title: newStatus === "paid" ? "Fully paid" : "Partial payment recorded",
-      description: `${fmt(amt, paying.currency)} · balance ${fmt(total - newPaid, paying.currency)}`,
+      variant: newPaid >= total - 0.01 ? "success" : "default",
+      title: newPaid >= total - 0.01 ? "Fully paid" : "Partial payment recorded",
+      description: `${fmt(amt, paying.currency)} · balance ${fmt(Math.max(0, total - newPaid), paying.currency)}`,
     });
     setPaying(null);
     setPayAmount("");

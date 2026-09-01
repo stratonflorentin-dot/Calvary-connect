@@ -5,14 +5,19 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabase } from "@/components/supabase-provider";
+import { useRole } from "@/hooks/use-role";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { EntityHeader, StatCard, DataTable, StatusBadge } from "@/components/shell";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { AuditTrailService } from "@/services/audit-trail-service";
 import { formatDate } from "@/lib/utils";
 import {
-  ArrowRight, BookOpen, CreditCard, FileText, Landmark, Receipt, ShieldCheck,
+  ArrowRight, BookOpen, CreditCard, FileText, Landmark, Loader2, Receipt, ShieldCheck, Undo2,
 } from "lucide-react";
 
 interface Payment {
@@ -33,6 +38,11 @@ interface Payment {
   bank_transaction_id: string | null;
   transaction_reference: string | null;
   reconciled: boolean;
+  reversed_at: string | null;
+  reversed_by: string | null;
+  reversal_reason: string | null;
+  reversal_journal_entry_id: string | null;
+  reversal_bank_transaction_id: string | null;
 }
 
 interface AllocationRow {
@@ -62,8 +72,15 @@ export default function PaymentDetailPage() {
   const params = useParams();
   const paymentId = params.id as string;
   const { toast } = useToast();
+  const { user } = useSupabase();
+  const { role } = useRole();
+  // reverse_customer_payment (132_payment_reversal.sql) is CEO/ADMIN-only.
+  const canReverse = role ? ["CEO", "ADMIN"].includes(role) : false;
 
   const [payment, setPayment] = useState<Payment | null>(null);
+  const [reverseOpen, setReverseOpen] = useState(false);
+  const [reverseReason, setReverseReason] = useState("");
+  const [reversing, setReversing] = useState(false);
   const [allocations, setAllocations] = useState<AllocationRow[]>([]);
   const [bankAccount, setBankAccount] = useState<{ id: string; account_name: string; bank_name: string } | null>(null);
   const [bankTransaction, setBankTransaction] = useState<{ id: string; description: string; debit: number; credit: number; reference?: string; transaction_date: string } | null>(null);
@@ -111,6 +128,30 @@ export default function PaymentDetailPage() {
 
   useEffect(() => { if (paymentId) load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [paymentId]);
 
+  const reversePayment = async () => {
+    if (!payment) return;
+    setReversing(true);
+    try {
+      const { error } = await supabase.rpc("reverse_customer_payment", {
+        p_payment_id: payment.id,
+        p_reason: reverseReason || null,
+      });
+      if (error) throw error;
+      await AuditTrailService.log({
+        user_id: user?.id, module: "finance", action: "update", entity_type: "payment", entity_id: payment.id,
+        description: `Payment ${payment.payment_number ?? payment.id} reversed${reverseReason ? `: ${reverseReason}` : ""}`,
+      });
+      toast({ variant: "success", title: "Payment reversed" });
+      setReverseOpen(false);
+      setReverseReason("");
+      await load();
+    } catch (err: any) {
+      toast({ title: "Couldn't reverse payment", description: err.message, variant: "destructive" });
+    } finally {
+      setReversing(false);
+    }
+  };
+
   const totals = useMemo(() => {
     const allocated = allocations.reduce((s, a) => s + (Number(a.amount) || 0), 0);
     const amount = Number(payment?.amount) || 0;
@@ -124,6 +165,7 @@ export default function PaymentDetailPage() {
   const singleInvoice = allocations.length === 1 ? allocations[0].invoices : null;
 
   return (
+    <>
     <div className="max-w-6xl mx-auto space-y-6">
       <EntityHeader
         crumbs={[
@@ -153,6 +195,11 @@ export default function PaymentDetailPage() {
             {singleInvoice && (
               <Button asChild size="sm" variant="outline" className="gap-2">
                 <Link href={`/finance/invoicing/customer-invoices/${singleInvoice.id}`}><FileText className="size-4" /> View Invoice</Link>
+              </Button>
+            )}
+            {canReverse && payment.status === "posted" && !payment.reconciled && (
+              <Button size="sm" variant="outline" className="gap-2 text-destructive border-destructive/30" onClick={() => setReverseOpen(true)}>
+                <Undo2 className="size-4" /> Reverse Payment
               </Button>
             )}
           </>
@@ -194,6 +241,18 @@ export default function PaymentDetailPage() {
           />
         </CardContent>
       </Card>
+
+      {payment.status === "voided" && (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2 text-destructive"><Undo2 className="size-4" /> Reversed</CardTitle></CardHeader>
+          <CardContent className="space-y-1 text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Original Amount</span><span className="font-bold text-foreground">{formatCurrency(payment.amount, payment.currency)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Reversed</span><span className="text-foreground">{payment.reversed_at ? formatDate(payment.reversed_at) : "—"}</span></div>
+            {payment.reversal_reason && <div className="flex justify-between"><span className="text-muted-foreground">Reason</span><span className="text-foreground text-right">{payment.reversal_reason}</span></div>}
+            {payment.reversal_journal_entry_id && <div className="flex justify-between"><span className="text-muted-foreground">Reversal Journal</span><span className="font-mono text-xs text-foreground">{payment.reversal_journal_entry_id.slice(0, 8)}</span></div>}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -260,5 +319,36 @@ export default function PaymentDetailPage() {
         </CardContent>
       </Card>
     </div>
+
+    <Dialog open={reverseOpen} onOpenChange={(o) => { if (!reversing) { setReverseOpen(o); if (!o) setReverseReason(""); } }}>
+      <DialogContent className="sm:max-w-[440px]">
+        <DialogHeader><DialogTitle>Reverse Payment?</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="rounded-lg border border-border p-3 text-sm space-y-1">
+            <p className="font-mono font-bold text-foreground">{payment.payment_number ?? payment.id}</p>
+            <p className="text-muted-foreground">{payment.counterparty_name}</p>
+            <p className="font-bold text-foreground">{formatCurrency(payment.amount, payment.currency)}</p>
+            {singleInvoice && <p className="text-xs text-muted-foreground">{singleInvoice.invoice_number}</p>}
+          </div>
+          <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+            <li>Reverses the accounting entry (a new journal entry, not an edit to the original)</li>
+            <li>Removes this payment&apos;s effect on the bank balance</li>
+            <li>Restores the outstanding balance on any invoice(s) it was allocated to</li>
+            <li>Preserves the original payment in history, marked as voided</li>
+          </ul>
+          <div className="space-y-1">
+            <Label className="text-xs">Reason (optional)</Label>
+            <Input value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} placeholder="e.g. recorded in error" />
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            <Button variant="outline" onClick={() => setReverseOpen(false)} disabled={reversing}>Cancel</Button>
+            <Button onClick={reversePayment} disabled={reversing} variant="destructive" className="gap-2">
+              {reversing ? <Loader2 className="size-4 animate-spin" /> : <Undo2 className="size-4" />} Reverse Payment
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

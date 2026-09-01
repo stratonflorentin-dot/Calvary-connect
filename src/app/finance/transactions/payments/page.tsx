@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
-import { logCustomerActivity } from "@/lib/customer-activity";
-import { resolveReceivableAccountCode } from "@/lib/finance/ar-ap-accounts";
+import { createCustomerPayment } from "@/lib/finance/customer-payment";
 import { AuditTrailService } from "@/services/audit-trail-service";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DataTable, DataTableFilterSelect, StatusBadge, StatCard } from "@/components/shell";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, DollarSign, Loader2, Plus, Wallet } from "lucide-react";
+import { CreditCard, DollarSign, Loader2, Plus, Undo2, Wallet } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 const CURRENCIES = ["TZS", "USD", "EUR"];
@@ -51,6 +50,7 @@ export default function PaymentsPage() {
   const { role } = useRole();
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState<any[]>([]);
+  const [allocatedByPayment, setAllocatedByPayment] = useState<Map<string, number>>(new Map());
   const [invoices, setInvoices] = useState<InvoiceOption[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -68,7 +68,14 @@ export default function PaymentsPage() {
   const [notes, setNotes] = useState("");
   const [allocations, setAllocations] = useState<Record<string, string>>({});
 
+  const [reversingPayment, setReversingPayment] = useState<any | null>(null);
+  const [reverseReason, setReverseReason] = useState("");
+  const [reversing, setReversing] = useState(false);
+
   const canManage = role ? ["CEO", "ADMIN", "ACCOUNTANT"].includes(role) : false;
+  // reverse_customer_payment (132_payment_reversal.sql) is CEO/ADMIN-only —
+  // matches reverse_bank_transfer's existing precedent for reversal actions.
+  const canReverse = role ? ["CEO", "ADMIN"].includes(role) : false;
 
   const load = async () => {
     setLoading(true);
@@ -85,6 +92,18 @@ export default function PaymentsPage() {
       setPayments(paymentsRes.data || []);
       setInvoices((invoicesRes.data as InvoiceOption[]) || []);
       setBankAccounts(accountsRes.data || []);
+
+      // One aggregated query for the whole list's Allocated/Unallocated
+      // columns instead of a per-row lookup.
+      const paymentIds = (paymentsRes.data || []).map((p: any) => p.id);
+      if (paymentIds.length > 0) {
+        const { data: allocRows } = await supabase.from("payment_allocations").select("payment_id, amount").in("payment_id", paymentIds);
+        const map = new Map<string, number>();
+        for (const a of allocRows ?? []) map.set(a.payment_id, (map.get(a.payment_id) ?? 0) + (Number(a.amount) || 0));
+        setAllocatedByPayment(map);
+      } else {
+        setAllocatedByPayment(new Map());
+      }
       if (accountsRes.data && accountsRes.data.length > 0) {
         setBankAccountId((prev) => prev || accountsRes.data[0].id);
       }
@@ -161,110 +180,58 @@ export default function PaymentsPage() {
     try {
       const customerName = customers.find((c) => c.id === customerId)?.name ?? "Customer";
 
-      // Same Accounts Receivable lookup postJournalEntry() uses for the
-      // Invoice Detail page's single-invoice "Record Payment" — reused here
-      // rather than re-deriving it, since this page's own post_bank_transaction
-      // call previously omitted p_contra_account_code entirely, which meant
-      // every payment recorded here moved the bank balance but never posted
-      // a journal entry (no debit to bank, no credit to AR). That was a
-      // pre-existing gap, not something a UI pass should leave in place.
-      const contraCode = await resolveReceivableAccountCode(currency);
-      if (!contraCode) {
-        throw new Error(`No "Accounts Receivable" account exists in ${currency} — add one to the Chart of Accounts first.`);
-      }
-
-      // Atomically deposits into bank_accounts.current_balance and posts the
-      // balanced journal entry (migration 035) — the same primitive every
-      // other money-in flow in this app uses.
-      const { data: bankTxn, error: txError } = await supabase.rpc("post_bank_transaction", {
-        p_bank_account_id: bankAccountId,
-        p_amount: amt,
-        p_direction: "in",
-        p_transaction_type: "deposit",
-        p_currency: currency,
-        p_description: `Payment received from ${customerName}`,
-        p_reference: allocatedInvoices.length === 1 ? allocatedInvoices[0].inv.invoice_number : null,
-        p_reference_type: "customer",
-        p_reference_id: customerId,
-        p_transaction_date: paymentDate,
-        p_contra_account_code: contraCode,
-        p_idempotency_key: crypto.randomUUID(),
-      });
-      if (txError) throw txError;
-      const bankTxnRow = Array.isArray(bankTxn) ? bankTxn[0] : bankTxn;
-
-      const { data: paymentNumber } = await supabase.rpc("next_doc_number", { p_type: "payment" });
-
-      const referenceLabel = allocatedInvoices.length === 0
-        ? null
-        : allocatedInvoices.length <= 3
-          ? allocatedInvoices.map((a) => a.inv.invoice_number).join(", ")
-          : `${allocatedInvoices.length} invoices`;
-
-      const { data: payment, error } = await supabase.from("payments").insert({
-        payment_number: paymentNumber,
-        direction: "in",
-        counterparty_type: "customer",
-        counterparty_id: customerId,
-        counterparty_name: customerName,
-        bank_account_id: bankAccountId,
+      const result = await createCustomerPayment({
+        customerId,
+        customerName,
+        bankAccountId,
         amount: amt,
         currency,
-        payment_date: paymentDate,
+        paymentDate,
         method,
-        reference: referenceLabel,
         notes,
-        status: "posted",
-        bank_transaction_id: bankTxnRow?.id ?? null,
-        journal_entry_id: bankTxnRow?.journal_entry_id ?? null,
-        created_by: user?.id ?? null,
-      }).select().single();
-      if (error) throw error;
-
-      if (allocatedInvoices.length > 0) {
-        const { error: allocError } = await supabase.from("payment_allocations").insert(
-          allocatedInvoices.map((a) => ({ payment_id: payment.id, invoice_id: a.inv.id, amount: a.amt })),
-        );
-        if (allocError) throw allocError;
-
-        // Same-currency full/partial settlement — matches the rule already
-        // used by the vendor-bills page and the Invoice Detail "Record
-        // Payment" action. Cross-currency allocation isn't attempted; the
-        // allocation is still recorded, but the invoice balance is left for
-        // manual reconciliation exactly as those other flows already do.
-        for (const { inv, amt: allocAmt } of allocatedInvoices) {
-          if (currency !== inv.currency) continue;
-          const newPaid = Number(inv.paid_amount ?? 0) + allocAmt;
-          const total = Number(inv.total_amount ?? inv.amount ?? 0);
-          await supabase.from("invoices").update({
-            paid_amount: newPaid,
-            status: newPaid >= total - 0.01 ? "paid" : "partial",
-          }).eq("id", inv.id);
-        }
-      }
-
-      await AuditTrailService.log({
-        user_id: user?.id, module: "finance", action: "create", entity_type: "payment", entity_id: payment.id,
-        new_value: { amount: amt, currency, allocated: totalAllocated, unallocated: amt - totalAllocated },
-        description: `Payment ${paymentNumber} of ${formatCurrency(amt, currency)} recorded from ${customerName}${allocatedInvoices.length > 0 ? ` — allocated to ${referenceLabel}` : " — not yet allocated"}`,
-      });
-
-      logCustomerActivity({
-        customerId,
-        activityType: "payment",
-        description: `Payment ${paymentNumber} received${referenceLabel ? ` for ${referenceLabel}` : ""}`,
-        amount: amt,
+        allocations: allocatedInvoices.map((a) => ({
+          invoiceId: a.inv.id,
+          invoiceNumber: a.inv.invoice_number,
+          invoiceCurrency: a.inv.currency,
+          invoiceTotal: Number(a.inv.total_amount ?? a.inv.amount ?? 0),
+          invoicePaidAmount: Number(a.inv.paid_amount ?? 0),
+          amount: a.amt,
+        })),
         createdBy: user?.id,
       });
 
       await load();
       setModalOpen(false);
       resetForm();
-      toast({ variant: "success", title: "Payment recorded", description: paymentNumber ? `${paymentNumber} saved` : undefined });
+      toast({ variant: "success", title: "Payment recorded", description: result.paymentNumber ? `${result.paymentNumber} saved` : undefined });
     } catch (err: any) {
       toast({ title: "Couldn't record payment", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const reversePayment = async () => {
+    if (!reversingPayment) return;
+    setReversing(true);
+    try {
+      const { error } = await supabase.rpc("reverse_customer_payment", {
+        p_payment_id: reversingPayment.id,
+        p_reason: reverseReason || null,
+      });
+      if (error) throw error;
+      await AuditTrailService.log({
+        user_id: user?.id, module: "finance", action: "update", entity_type: "payment", entity_id: reversingPayment.id,
+        description: `Payment ${reversingPayment.payment_number ?? reversingPayment.id} reversed${reverseReason ? `: ${reverseReason}` : ""}`,
+      });
+      toast({ variant: "success", title: "Payment reversed" });
+      setReversingPayment(null);
+      setReverseReason("");
+      await load();
+    } catch (err: any) {
+      toast({ title: "Couldn't reverse payment", description: err.message, variant: "destructive" });
+    } finally {
+      setReversing(false);
     }
   };
 
@@ -346,8 +313,26 @@ export default function PaymentsPage() {
           { key: "method", header: "Method", hideBelow: "lg", accessor: (p) => <span className="text-xs capitalize text-muted-foreground">{p.method?.replace(/_/g, " ") || "—"}</span> },
           { key: "bank_txn", header: "Bank Transaction", hideBelow: "lg", accessor: (p) => <span className="font-mono text-xs text-muted-foreground">{p.transaction_reference || (p.reconciled ? "—" : "Not yet reconciled")}</span> },
           { key: "amount", header: "Amount", align: "right", accessor: (p) => <span className="font-bold">{formatCurrency(Number(p.amount) || 0, p.currency)}</span>, sortValue: (p) => Number(p.amount) || 0 },
+          { key: "allocated", header: "Allocated", align: "right", hideBelow: "lg", accessor: (p) => formatCurrency(allocatedByPayment.get(p.id) ?? 0, p.currency) },
+          {
+            key: "unallocated", header: "Unallocated", align: "right", hideBelow: "lg",
+            accessor: (p) => {
+              const un = Math.max(0, (Number(p.amount) || 0) - (allocatedByPayment.get(p.id) ?? 0));
+              return un > 0.01 ? <span className="text-warning font-medium">{formatCurrency(un, p.currency)}</span> : <span className="text-muted-foreground">—</span>;
+            },
+          },
           { key: "status", header: "Status", accessor: (p) => <StatusBadge status={p.status} />, sortValue: (p) => p.status ?? "" },
         ]}
+        rowActions={canReverse ? (p) => (
+          p.status === "posted" && !p.reconciled ? (
+            <Button
+              size="sm" variant="ghost" className="h-7 text-xs gap-1 text-destructive"
+              onClick={() => { setReversingPayment(p); setReverseReason(""); }}
+            >
+              <Undo2 className="w-3 h-3" /> Reverse
+            </Button>
+          ) : null
+        ) : undefined}
       />
 
       <Dialog open={modalOpen} onOpenChange={(o) => { if (!submitting) { setModalOpen(o); if (!o) resetForm(); } }}>
@@ -470,6 +455,39 @@ export default function PaymentsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reverse payment confirmation */}
+      <Dialog open={!!reversingPayment} onOpenChange={(o) => { if (!reversing) { if (!o) { setReversingPayment(null); setReverseReason(""); } } }}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader><DialogTitle>Reverse Payment?</DialogTitle></DialogHeader>
+          {reversingPayment && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-border p-3 text-sm space-y-1">
+                <p className="font-mono font-bold text-foreground">{reversingPayment.payment_number ?? reversingPayment.id}</p>
+                <p className="text-muted-foreground">{reversingPayment.counterparty_name}</p>
+                <p className="font-bold text-foreground">{formatCurrency(Number(reversingPayment.amount) || 0, reversingPayment.currency)}</p>
+                {reversingPayment.reference && <p className="text-xs text-muted-foreground">{reversingPayment.reference}</p>}
+              </div>
+              <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                <li>Reverses the accounting entry (a new journal entry, not an edit to the original)</li>
+                <li>Removes this payment's effect on the bank balance</li>
+                <li>Restores the outstanding balance on any invoice(s) it was allocated to</li>
+                <li>Preserves the original payment in history, marked as voided</li>
+              </ul>
+              <div className="space-y-1">
+                <Label className="text-xs">Reason (optional)</Label>
+                <Input value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} placeholder="e.g. recorded in error" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <Button variant="outline" onClick={() => { setReversingPayment(null); setReverseReason(""); }} disabled={reversing}>Cancel</Button>
+                <Button onClick={reversePayment} disabled={reversing} variant="destructive" className="gap-2">
+                  {reversing ? <Loader2 className="size-4 animate-spin" /> : <Undo2 className="size-4" />} Reverse Payment
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

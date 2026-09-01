@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { postJournalEntry } from "@/lib/finance/journal";
+import { createCustomerPayment } from "@/lib/finance/customer-payment";
 import { getRate } from "@/lib/finance/fx";
 import { TRAInvoiceDialog } from "@/components/financial/tra-invoice-dialog";
 import { AuditTrailService } from "@/services/audit-trail-service";
@@ -198,36 +199,38 @@ export default function CustomerInvoiceDetailPage() {
     const amt = Number(payAmount);
     if (!amt || amt <= 0) { toast({ title: "Invalid amount", variant: "destructive" }); return; }
     if (!payBankAccountId) { toast({ title: "Choose which account received this payment", variant: "destructive" }); return; }
+    if (!invoice.customer_id) { toast({ title: "This invoice has no linked customer record", variant: "destructive" }); return; }
     const total = Number(invoice.total_payable ?? invoice.total_amount ?? 0);
     const prevPaid = Number(invoice.paid_amount ?? 0);
-    const newPaid = prevPaid + amt;
-    const newStatus = newPaid >= total ? "paid" : "partial";
     const currency = invoice.currency || "TZS";
 
     setBusy(true);
     try {
-      await postJournalEntry({
-        type: "invoice_payment",
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoice_number,
+      // Same canonical path /finance/transactions/payments uses — creates a
+      // real payments + payment_allocations record (not just an invoice
+      // field flip + a bare journal entry), so a payment recorded from here
+      // shows up in the Payments list, is matchable by findPaymentMatches,
+      // and is reconcilable through the existing bank-statement workflow.
+      const result = await createCustomerPayment({
+        customerId: invoice.customer_id,
         customerName: invoice.customer_name,
         bankAccountId: payBankAccountId,
         amount: amt,
         currency,
+        paymentDate: new Date().toISOString().slice(0, 10),
+        method: payMethod,
+        allocations: [{
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoice_number,
+          invoiceCurrency: currency,
+          invoiceTotal: total,
+          invoicePaidAmount: prevPaid,
+          amount: amt,
+        }],
+        createdBy: user?.id,
       });
-      const { error } = await supabase.from("invoices").update({
-        paid_amount: newPaid,
-        status: newStatus,
-        paid_at: newStatus === "paid" ? new Date().toISOString() : invoice.paid_at,
-        payment_method: payMethod,
-      }).eq("id", invoice.id);
-      if (error) throw error;
-      await AuditTrailService.log({
-        user_id: user?.id, module: "finance", action: "update", entity_type: "payment", entity_id: invoice.id,
-        new_value: { amount: amt, method: payMethod, running_total: newPaid, status: newStatus },
-        description: `Payment ${fmt(amt, currency)} recorded via ${payMethod.replace(/_/g, " ")}`,
-      });
-      toast({ variant: newStatus === "paid" ? "success" : "default", title: newStatus === "paid" ? "Fully paid" : "Partial payment recorded", description: `${fmt(amt, currency)} · balance ${fmt(total - newPaid, currency)}` });
+      const newPaid = prevPaid + result.allocatedTotal;
+      toast({ variant: newPaid >= total - 0.01 ? "success" : "default", title: newPaid >= total - 0.01 ? "Fully paid" : "Partial payment recorded", description: `${fmt(amt, currency)} · balance ${fmt(Math.max(0, total - newPaid), currency)}` });
       setPaying(false);
       setPayAmount("");
       setPayBankAccountId("");
