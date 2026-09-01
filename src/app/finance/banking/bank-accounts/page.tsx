@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ interface BankAccount {
 }
 
 export default function BankAccountsPage() {
+  const router = useRouter();
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -281,7 +283,8 @@ export default function BankAccountsPage() {
                       return (
                         <div
                           key={account.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/finance/banking/bank-accounts/${account.id}`)}
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
@@ -311,7 +314,7 @@ export default function BankAccountsPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-lg font-semibold">{formatCurrency(account.current_balance || 0, currency)}</p>
-                            <div className="flex gap-2 mt-2">
+                            <div className="flex gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                               <Button
                                 size="sm"
                                 variant="ghost"

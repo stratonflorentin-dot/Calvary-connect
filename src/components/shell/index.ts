@@ -9,3 +9,4 @@ export { RefreshControl } from "./refresh-control";
 export { DataTable, DataTableFilterSelect } from "./data-table";
 export type { DataTableColumn } from "./data-table";
 export { StatusBadge, statusTone } from "./status-badge";
+export { EntityHeader } from "./entity-header";

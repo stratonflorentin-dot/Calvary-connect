@@ -8,15 +8,15 @@ import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import { downloadDocumentPdf, fetchLogoDataUrl, DocumentCompanyInfo } from "@/lib/finance/document-pdf";
+import { EntityHeader } from "@/components/shell";
 import {
-  ArrowLeft, ArrowRight, Ban, Copy, FileText, Loader2, Send as SendIcon,
+  ArrowRight, Ban, Copy, FileText, Loader2, Send as SendIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -207,52 +207,58 @@ export default function ProformaInvoiceDetailPage() {
       <Sidebar role={role} />
       <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
         <div className="max-w-5xl mx-auto space-y-6 pb-8">
-          <Link href="/finance/invoicing/proforma-invoices" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" /> All Proforma Invoices
-          </Link>
-
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-black text-foreground font-mono">{pf.proforma_number}</h1>
-                <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {customer?.company_name ?? pf.customer_name ?? "—"} · Issued {new Date(pf.issue_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                {pf.valid_until && ` · Valid until ${new Date(pf.valid_until).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={downloadPdf} className="gap-2"><FileText className="size-4" /> Download PDF</Button>
-              {canManage && effectiveStatus !== "converted" && effectiveStatus !== "cancelled" && (
-                <Button variant="outline" size="sm" onClick={sendProforma} disabled={busy} className="gap-2">
-                  {busy ? <Loader2 className="size-4 animate-spin" /> : <SendIcon className="size-4" />} Send
-                </Button>
-              )}
-              {canManage && (
-                <Button variant="outline" size="sm" onClick={duplicate} disabled={busy} className="gap-2">
-                  <Copy className="size-4" /> Duplicate
-                </Button>
-              )}
-              {canManage && effectiveStatus === "converted" && convertedInvoice && (
-                <Button asChild size="sm" className="gap-2">
-                  <Link href={`/finance/invoicing/customer-invoices/${convertedInvoice.id}`}>
-                    <ArrowRight className="size-4" /> View Invoice {convertedInvoice.invoice_number}
-                  </Link>
-                </Button>
-              )}
-              {canManage && effectiveStatus !== "converted" && effectiveStatus !== "cancelled" && (
+          <EntityHeader
+            crumbs={[
+              { label: "Finance", href: "/finance" },
+              { label: "Proforma Invoices", href: "/finance/invoicing/proforma-invoices" },
+              { label: pf.proforma_number },
+            ]}
+            eyebrow="Proforma Invoice"
+            title={pf.proforma_number}
+            subtitle={customer?.company_name ?? pf.customer_name ?? "—"}
+            status={effectiveStatus}
+            statusLabel={meta.label}
+            primaryMetricLabel="Total"
+            primaryMetricValue={formatCurrency(pf.total_amount, currency)}
+            metadata={[
+              { label: "Issued", value: new Date(pf.issue_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) },
+              ...(pf.valid_until ? [{ label: "Valid Until", value: new Date(pf.valid_until).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) }] : []),
+            ]}
+            secondaryActions={
+              <>
+                <Button variant="outline" size="sm" onClick={downloadPdf} className="gap-2"><FileText className="size-4" /> Download PDF</Button>
+                {canManage && effectiveStatus !== "converted" && effectiveStatus !== "cancelled" && (
+                  <Button variant="outline" size="sm" onClick={sendProforma} disabled={busy} className="gap-2">
+                    {busy ? <Loader2 className="size-4 animate-spin" /> : <SendIcon className="size-4" />} Send
+                  </Button>
+                )}
+                {canManage && (
+                  <Button variant="outline" size="sm" onClick={duplicate} disabled={busy} className="gap-2">
+                    <Copy className="size-4" /> Duplicate
+                  </Button>
+                )}
+                {canManage && effectiveStatus === "converted" && convertedInvoice && (
+                  <Button asChild size="sm" variant="outline" className="gap-2">
+                    <Link href={`/finance/invoicing/customer-invoices/${convertedInvoice.id}`}>
+                      <ArrowRight className="size-4" /> View Invoice {convertedInvoice.invoice_number}
+                    </Link>
+                  </Button>
+                )}
+                {canManage && effectiveStatus !== "converted" && effectiveStatus !== "cancelled" && (
+                  <Button variant="outline" size="sm" onClick={() => setCancelOpen(true)} className="gap-2 text-destructive border-destructive/30">
+                    <Ban className="size-4" /> Cancel
+                  </Button>
+                )}
+              </>
+            }
+            primaryAction={
+              canManage && effectiveStatus !== "converted" && effectiveStatus !== "cancelled" ? (
                 <Button size="sm" onClick={() => setConvertOpen(true)} className="gap-2 bg-primary hover:bg-primary/90">
                   <ArrowRight className="size-4" /> Convert to Invoice
                 </Button>
-              )}
-              {canManage && effectiveStatus !== "converted" && effectiveStatus !== "cancelled" && (
-                <Button variant="outline" size="sm" onClick={() => setCancelOpen(true)} className="gap-2 text-destructive border-destructive/30">
-                  <Ban className="size-4" /> Cancel
-                </Button>
-              )}
-            </div>
-          </div>
+              ) : undefined
+            }
+          />
 
           {effectiveStatus === "converted" && convertedInvoice && (
             <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 text-xs text-foreground flex items-center gap-2">

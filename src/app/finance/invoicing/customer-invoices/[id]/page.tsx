@@ -18,9 +18,10 @@ import { TRAInvoiceDialog } from "@/components/financial/tra-invoice-dialog";
 import { AuditTrailService } from "@/services/audit-trail-service";
 import { useSupabase } from "@/components/supabase-provider";
 import { useRole } from "@/hooks/use-role";
+import { EntityHeader } from "@/components/shell";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft, CheckCircle2, Download, Loader2, AlertTriangle, Ban, Send, X,
+  CheckCircle2, Download, Loader2, AlertTriangle, Ban, Send, X,
 } from "lucide-react";
 
 const fmt = (v: number, cur = "TZS") => formatCurrency(v, cur);
@@ -258,26 +259,34 @@ export default function CustomerInvoiceDetailPage() {
   return (
     <>
       <div className="space-y-6 pb-8 pb-safe-bottom">
-        <Link href="/finance/invoicing/customer-invoices" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> All Invoices
-        </Link>
-
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-black text-foreground font-mono">{invoice.invoice_number}</h1>
-                <Badge variant="outline" className={statusMeta.className}>{statusMeta.label}</Badge>
-                {zeroRated && <Badge variant="outline" className="bg-success/10 text-success border-success/20">Zero Rated</Badge>}
-                {currency !== "TZS" && <Badge variant="outline" className="bg-info/10 text-info border-info/20">{currency}{fxRate ? ` — @ ${fxRate.toLocaleString()} TZS` : ""}</Badge>}
-                {invoice.disputed && <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1"><AlertTriangle className="size-3" /> Disputed</Badge>}
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {invoice.customer_name ?? invoice.client_name ?? "—"} · Issued {invoice.issue_date ? new Date(invoice.issue_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"} · Due {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
+        <EntityHeader
+          crumbs={[
+            { label: "Finance", href: "/finance" },
+            { label: "Invoices", href: "/finance/invoicing/customer-invoices" },
+            { label: invoice.invoice_number },
+          ]}
+          eyebrow="Invoice"
+          title={invoice.invoice_number}
+          subtitle={invoice.customer_name ?? invoice.client_name ?? "—"}
+          status={invoice.status}
+          statusLabel={statusMeta.label}
+          badges={
+            <>
+              {zeroRated && <Badge variant="outline" className="bg-success/10 text-success border-success/20">Zero Rated</Badge>}
+              {currency !== "TZS" && <Badge variant="outline" className="bg-info/10 text-info border-info/20">{currency}{fxRate ? ` — @ ${fxRate.toLocaleString()} TZS` : ""}</Badge>}
+              {invoice.disputed && <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1"><AlertTriangle className="size-3" /> Disputed</Badge>}
+            </>
+          }
+          primaryMetricLabel="Total"
+          primaryMetricValue={fmt(total, currency)}
+          metadata={[
+            { label: "Issued", value: invoice.issue_date ? new Date(invoice.issue_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
+            { label: "Due", value: invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
+          ]}
+          secondaryActions={
+            <>
               {["draft", "pending"].includes(invoice.status) && canManage && (
-                <Button size="sm" onClick={sendInvoice} disabled={busy} className="gap-2">
+                <Button size="sm" variant="outline" onClick={sendInvoice} disabled={busy} className="gap-2">
                   {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Send
                 </Button>
               )}
@@ -289,11 +298,14 @@ export default function CustomerInvoiceDetailPage() {
               {canManage && !["cancelled", "paid"].includes(invoice.status) && (
                 <Button variant="outline" size="sm" onClick={voidInvoice} disabled={busy} className="gap-2 text-destructive border-destructive/30"><Ban className="size-4" /> Void</Button>
               )}
-              <Button size="sm" onClick={() => setPrinting(true)} className="gap-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                <Download className="size-4" /> Download PDF
-              </Button>
-            </div>
-          </div>
+            </>
+          }
+          primaryAction={
+            <Button size="sm" onClick={() => setPrinting(true)} className="gap-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              <Download className="size-4" /> Download PDF
+            </Button>
+          }
+        />
 
           {disputing && (
             <div className="rounded-xl bg-warning/5 border border-warning/20 p-4 space-y-3">

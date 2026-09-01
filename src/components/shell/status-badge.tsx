@@ -22,6 +22,10 @@ const STATUS_TONE: Record<string, Tone> = {
   completed: "success",
   expired: "neutral",
   archived: "neutral",
+  confirmed: "info",
+  pending_signature: "warning",
+  suspended: "warning",
+  terminated: "danger",
   // finance
   posted: "info",
   reconciled: "success",

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Truck, Download, Edit2, Wrench, AlertCircle, ChevronRight } from 'lucide-react';
+import { Truck, Download, Edit2, Wrench, AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,9 @@ import { StatMiniCard } from '@/components/ui/stat-mini-card';
 import { GradientCard } from '@/components/ui/gradient-card';
 import { VehicleHealthBadge } from '@/components/ui/vehicle-health-badge';
 import { DocumentStatusBadge } from '@/components/ui/document-status-badge';
+import { Sidebar } from '@/components/navigation/sidebar';
+import { EntityHeader } from '@/components/shell';
+import { useRole } from '@/hooks/use-role';
 import { useVehicleDetail } from '@/hooks/use-vehicle-detail';
 import { useCurrency } from '@/hooks/use-currency';
 
@@ -19,6 +22,7 @@ export default function VehicleDetailPage() {
     const router = useRouter();
     const vehicleId = params.id as string;
     const { format } = useCurrency();
+    const { role } = useRole();
     const [activeTab, setActiveTab] = useState('overview');
 
     const {
@@ -37,41 +41,39 @@ export default function VehicleDetailPage() {
         loading,
     } = useVehicleDetail(vehicleId);
 
+    if (!role) return null;
+
     if (loading) {
         return (
-            <div className="p-6">
-                <div className="animate-pulse space-y-4">
-                    <div className="h-12 bg-muted rounded-lg"></div>
-                    <div className="h-32 bg-muted rounded-lg"></div>
-                </div>
+            <div className="flex min-h-screen bg-background">
+                <Sidebar role={role} />
+                <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
+                    <div className="max-w-7xl mx-auto animate-pulse space-y-4">
+                        <div className="h-12 bg-muted rounded-lg"></div>
+                        <div className="h-32 bg-muted rounded-lg"></div>
+                    </div>
+                </main>
             </div>
         );
     }
 
     if (!vehicle) {
         return (
-            <div className="p-6">
-                <Card className="p-8 text-center">
-                    <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold mb-2">Vehicle Not Found</h2>
-                    <p className="text-muted-foreground mb-4">The vehicle you're looking for doesn't exist.</p>
-                    <Button onClick={() => router.back()}>Go Back</Button>
-                </Card>
+            <div className="flex min-h-screen bg-background">
+                <Sidebar role={role} />
+                <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
+                    <div className="max-w-7xl mx-auto">
+                        <Card className="p-8 text-center">
+                            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+                            <h2 className="text-xl font-semibold mb-2">Vehicle Not Found</h2>
+                            <p className="text-muted-foreground mb-4">The vehicle you're looking for doesn't exist.</p>
+                            <Button onClick={() => router.back()}>Go Back</Button>
+                        </Card>
+                    </div>
+                </main>
             </div>
         );
     }
-
-    // Determine status badge color — mirrors the real `vehicles_status_check`
-    // constraint (available | in_use | maintenance | out_of_service).
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'available': return 'bg-success';
-            case 'in_use': return 'bg-info';
-            case 'maintenance': return 'bg-warning';
-            case 'out_of_service': return 'bg-destructive';
-            default: return 'bg-muted';
-        }
-    };
 
     const formatStatusLabel = (status: string) =>
         status
@@ -94,72 +96,61 @@ export default function VehicleDetailPage() {
         : [];
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="flex min-h-screen bg-background">
+            <Sidebar role={role} />
+            <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
+                <div className="max-w-7xl mx-auto space-y-6">
             {/* SECTION 1: VEHICLE HEADER */}
-            <Card className="p-6">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                        {/* Breadcrumb */}
-                        <p className="text-xs text-muted-foreground mb-3">Fleet / {vehicle.vehicle_code}</p>
-
-                        {/* Vehicle Icon & Info */}
-                        <div className="flex items-start gap-4 mb-4">
-                            {vehicle.photo_url ? (
-                                <img
-                                    src={vehicle.photo_url}
-                                    alt={vehicle.vehicle_code}
-                                    className="w-14 h-14 rounded-xl object-cover border border-border"
-                                />
-                            ) : (
-                                <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
-                                    <Truck className="w-7 h-7 text-primary-foreground" />
-                                </div>
-                            )}
-                            <div>
-                                <h1 className="text-2xl font-bold">{vehicle.vehicle_code}</h1>
-                                <p className="text-sm text-muted-foreground">
-                                    {vehicle.make} — {vehicle.model}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Status Badges */}
-                        <div className="flex flex-wrap gap-2">
-                            <Badge className={`${getStatusColor(vehicle.status)}`}>
-                                {formatStatusLabel(vehicle.status)}
+            <EntityHeader
+                crumbs={[
+                    { label: 'Fleet', href: '/fleet/vehicles' },
+                    { label: vehicle.vehicle_code },
+                ]}
+                eyebrow="Vehicle"
+                title={vehicle.vehicle_code}
+                subtitle={`${vehicle.make} — ${vehicle.model}`}
+                status={vehicle.status}
+                statusLabel={formatStatusLabel(vehicle.status)}
+                badges={
+                    <>
+                        <Badge variant={docsValid ? 'outline' : 'destructive'}>
+                            {docsValid ? '✓ Docs Valid' : '✗ Docs Expired'}
+                        </Badge>
+                        <VehicleHealthBadge score={vehicle.health_score || 100} />
+                        {vehicle.odometer_km === 0 && (
+                            <Badge variant="secondary" className="bg-warning/10 text-warning">
+                                No Odometer
                             </Badge>
-                            <Badge variant={docsValid ? 'outline' : 'destructive'}>
-                                {docsValid ? '✓ Docs Valid' : '✗ Docs Expired'}
-                            </Badge>
-                            <VehicleHealthBadge score={vehicle.health_score || 100} />
-                            <Badge variant="outline" className="font-mono">
-                                {vehicle.registration_number}
-                            </Badge>
-                            {vehicle.odometer_km === 0 && (
-                                <Badge variant="secondary" className="bg-warning/10 text-warning">
-                                    No Odometer
-                                </Badge>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-2">
-                        <Button className="bg-success hover:bg-success/90 text-success-foreground gap-2">
-                            <Download className="w-4 h-4" />
-                            Download Report
-                        </Button>
-                        <Button variant="outline" className="text-primary border-primary/20">
-                            <Edit2 className="w-4 h-4 mr-2" />
+                        )}
+                    </>
+                }
+                primaryMetricLabel="Profitability (Lifetime)"
+                primaryMetricValue={format(stats.profitability)}
+                primaryMetricTone={stats.profitability >= 0 ? 'success' : 'danger'}
+                metadata={[
+                    { label: 'Registration', value: vehicle.registration_number },
+                    { label: 'Odometer', value: `${vehicle.odometer_km} km` },
+                    { label: 'Location', value: vehicle.location || '—' },
+                ]}
+                secondaryActions={
+                    <>
+                        <Button variant="outline" size="sm" className="text-primary border-primary/20 gap-2">
+                            <Edit2 className="w-4 h-4" />
                             Edit Vehicle
                         </Button>
-                        <Button className="bg-warning hover:bg-warning/90 text-warning-foreground gap-2">
+                        <Button size="sm" className="bg-warning hover:bg-warning/90 text-warning-foreground gap-2">
                             <Wrench className="w-4 h-4" />
                             Log Maintenance
                         </Button>
-                    </div>
-                </div>
-            </Card>
+                    </>
+                }
+                primaryAction={
+                    <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground gap-2">
+                        <Download className="w-4 h-4" />
+                        Download Report
+                    </Button>
+                }
+            />
 
             {/* SECTION 2: STAT MINI CARDS */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -767,6 +758,8 @@ export default function VehicleDetailPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+                </div>
+            </main>
         </div>
     );
 }
