@@ -468,6 +468,11 @@ export default function CustomerInvoicesPage() {
         crumbs={[{ label: "Finance", href: "/finance" }, { label: "Invoices" }]}
         actions={
           <>
+            <Button asChild variant="outline" size="sm" className="h-9 gap-2">
+              <Link href="/finance/invoicing/proforma-invoices">
+                <FileText className="w-3.5 h-3.5" /> Proforma Invoices
+              </Link>
+            </Button>
             <Button variant="outline" size="sm" onClick={loadInvoices} className="h-9 gap-2">
               <RefreshCw className="w-3.5 h-3.5" /> Refresh
             </Button>

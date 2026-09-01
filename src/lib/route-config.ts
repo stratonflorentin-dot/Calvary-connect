@@ -383,6 +383,27 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     showInNavigation: false,
   },
   {
+    path: "/finance/invoicing/proforma-invoices",
+    label: "Proforma Invoices",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/invoicing/proforma-invoices/new",
+    label: "New Proforma Invoice",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/invoicing/proforma-invoices/[id]",
+    label: "Proforma Invoice Detail",
+    allowedRoles: ["CEO", "ADMIN", "SALESMAN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
     path: "/finance/invoicing/customer-invoices/[id]",
     label: "Invoice Detail",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],

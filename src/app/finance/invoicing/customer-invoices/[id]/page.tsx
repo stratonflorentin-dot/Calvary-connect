@@ -46,6 +46,7 @@ export default function CustomerInvoiceDetailPage() {
 
   const [invoice, setInvoice] = useState<any | null>(null);
   const [customer, setCustomer] = useState<any | null>(null);
+  const [sourceProforma, setSourceProforma] = useState<any | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [fxRate, setFxRate] = useState<number | null>(null);
@@ -64,6 +65,12 @@ export default function CustomerInvoiceDetailPage() {
     setLoading(true);
     const { data: inv } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle();
     setInvoice(inv);
+    if (inv?.proforma_invoice_id) {
+      const { data: pf } = await supabase.from("proforma_invoices").select("id, proforma_number").eq("id", inv.proforma_invoice_id).maybeSingle();
+      setSourceProforma(pf);
+    } else {
+      setSourceProforma(null);
+    }
     if (inv?.customer_id) {
       const { data: c } = await supabase.from("customers").select("*").eq("id", inv.customer_id).maybeSingle();
       setCustomer(c);
@@ -419,6 +426,14 @@ export default function CustomerInvoiceDetailPage() {
                 </div>
                 {invoice.trip_number && (
                   <div><p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Trip Ref</p><p className="text-foreground font-mono text-sm">{invoice.trip_number}</p></div>
+                )}
+                {sourceProforma && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Source Proforma</p>
+                    <Link href={`/finance/invoicing/proforma-invoices/${sourceProforma.id}`} className="text-primary font-mono text-sm font-bold hover:underline">
+                      {sourceProforma.proforma_number}
+                    </Link>
+                  </div>
                 )}
                 {invoice.payment_terms && (
                   <div><p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Payment Terms</p><p className="text-foreground text-sm">{invoice.payment_terms}</p></div>
