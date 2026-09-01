@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { PageHeader, SectionCard, StatCard } from "@/components/shell";
+import { PageHeader, SectionCard, StatCard, DataTable, StatusBadge } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -653,111 +653,84 @@ export default function CustomerInvoicesPage() {
 
         {/* Table */}
         {view === "table" && (
-        <div className="cv-surface overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 border-b border-border">
-                <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                  <th className="px-4 py-3">Invoice #</th>
-                  <th className="px-4 py-3">Quotation Ref</th>
-                  <th className="px-4 py-3">Customer</th>
-                  <th className="px-4 py-3">Issued</th>
-                  <th className="px-4 py-3">Due</th>
-                  <th className="px-4 py-3">Aging</th>
-                  <th className="px-4 py-3 text-right">Total</th>
-                  <th className="px-4 py-3 text-right">Paid</th>
-                  <th className="px-4 py-3 text-right">Balance</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 w-32"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={11} className="text-center py-16 text-muted-foreground">
-                      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" /> Loading…
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={11} className="text-center py-16 text-muted-foreground">
-                      <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      No invoices match the current filter.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((inv) => {
-                    const total = Number(inv.total_amount ?? inv.amount ?? 0);
-                    const paid = Number(inv.paid_amount ?? 0);
-                    const balance = total - paid;
-                    const overdue = isOpenForAging(inv.status) && daysOverdue(inv.due_date) > 0;
-                    const bucket = bucketFor(inv.due_date);
-                    const bucketMeta = AGING_BUCKETS.find((b) => b.key === bucket);
-                    const badgeStatus = overdue ? "overdue" : inv.status ?? "pending";
-                    return (
-                      <tr key={inv.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-mono text-xs font-black text-foreground">{inv.invoice_number}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{quotationById.get(inv.quotation_id)?.quotation_number ?? "—"}</td>
-                        <td className="px-4 py-3 font-medium text-foreground">{inv.customer_name ?? inv.client_name ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : "—"}</td>
-                        <td className={cn("px-4 py-3 text-xs", overdue ? "text-destructive font-bold" : "text-muted-foreground")}>
-                          {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isOpenForAging(inv.status) ? (
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-muted/40 text-muted-foreground">
-                              {overdue && <Flame className="inline w-2.5 h-2.5 mr-1 text-destructive" />}
-                              {bucketMeta?.label}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold text-foreground">{fmt(total, inv.currency)}</td>
-                        <td className="px-4 py-3 text-right text-success text-xs font-semibold">{paid > 0 ? fmt(paid, inv.currency) : "—"}</td>
-                        <td className="px-4 py-3 text-right font-black text-foreground">{fmt(balance, inv.currency)}</td>
-                        <td className="px-4 py-3">
-                          <Badge className={cn("text-[10px] uppercase font-black tracking-wider border", STATUS_BADGES[badgeStatus] ?? STATUS_BADGES.pending)}>
-                            {badgeStatus}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="View">
-                              <Link href={`/finance/invoicing/customer-invoices/${inv.id}`}><ArrowUpRight className="w-4 h-4" /></Link>
-                            </Button>
-                            {["draft", "pending"].includes(inv.status) && (
-                              <Button
-                                size="sm"
-                                className="h-8 gap-1 bg-info hover:bg-info/90 text-info-foreground text-xs"
-                                disabled={sendingId === inv.id}
-                                onClick={() => sendInvoice(inv)}
-                              >
-                                {sendingId === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />} Send
-                              </Button>
-                            )}
-                            {!["draft", "pending", "paid", "cancelled"].includes(inv.status) && (
-                              <Button
-                                size="sm"
-                                className="h-8 gap-1 bg-success hover:bg-success/90 text-success-foreground text-xs"
-                                onClick={() => {
-                                  setPaying(inv);
-                                  setPayAmount(String(balance));
-                                }}
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" /> Pay
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <DataTable
+            data={filtered}
+            getRowId={(inv) => inv.id}
+            loading={loading}
+            emptyIcon={FileText}
+            emptyTitle="No invoices found"
+            emptyDescription="No invoices match the current filter."
+            onRowClick={(inv) => { window.location.href = `/finance/invoicing/customer-invoices/${inv.id}`; }}
+            initialSort={{ key: "issued", dir: "desc" }}
+            columns={[
+              { key: "number", header: "Invoice #", accessor: (inv) => <span className="font-mono text-xs font-black text-foreground">{inv.invoice_number}</span>, sortValue: (inv) => inv.invoice_number ?? "" },
+              { key: "quotation", header: "Quotation Ref", hideBelow: "lg", accessor: (inv) => <span className="font-mono text-xs text-muted-foreground">{quotationById.get(inv.quotation_id)?.quotation_number ?? "—"}</span> },
+              { key: "customer", header: "Customer", accessor: (inv) => <span className="font-medium text-foreground">{inv.customer_name ?? inv.client_name ?? "—"}</span>, sortValue: (inv) => inv.customer_name ?? inv.client_name ?? "" },
+              { key: "issued", header: "Issued", hideBelow: "md", accessor: (inv) => <span className="text-muted-foreground text-xs">{inv.issue_date ? new Date(inv.issue_date).toLocaleDateString() : "—"}</span>, sortValue: (inv) => inv.issue_date ?? "" },
+              {
+                key: "due", header: "Due", hideBelow: "md",
+                accessor: (inv) => {
+                  const overdue = isOpenForAging(inv.status) && daysOverdue(inv.due_date) > 0;
+                  return <span className={cn("text-xs", overdue ? "text-destructive font-bold" : "text-muted-foreground")}>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—"}</span>;
+                },
+                sortValue: (inv) => inv.due_date ?? "",
+              },
+              {
+                key: "aging", header: "Aging", hideBelow: "lg",
+                accessor: (inv) => {
+                  if (!isOpenForAging(inv.status)) return <span className="text-[10px] text-muted-foreground">—</span>;
+                  const overdue = daysOverdue(inv.due_date) > 0;
+                  const bucketMeta = AGING_BUCKETS.find((b) => b.key === bucketFor(inv.due_date));
+                  return (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-muted/40 text-muted-foreground whitespace-nowrap">
+                      {overdue && <Flame className="inline w-2.5 h-2.5 mr-1 text-destructive" />}
+                      {bucketMeta?.label}
+                    </span>
+                  );
+                },
+              },
+              { key: "total", header: "Total", align: "right", accessor: (inv) => <span className="font-bold text-foreground">{fmt(Number(inv.total_amount ?? inv.amount ?? 0), inv.currency)}</span>, sortValue: (inv) => Number(inv.total_amount ?? inv.amount ?? 0) },
+              { key: "paid", header: "Paid", align: "right", hideBelow: "lg", accessor: (inv) => { const paid = Number(inv.paid_amount ?? 0); return paid > 0 ? <span className="text-success text-xs font-semibold">{fmt(paid, inv.currency)}</span> : <span className="text-muted-foreground">—</span>; } },
+              { key: "balance", header: "Balance", align: "right", accessor: (inv) => <span className="font-black text-foreground">{fmt(Number(inv.total_amount ?? inv.amount ?? 0) - Number(inv.paid_amount ?? 0), inv.currency)}</span>, sortValue: (inv) => Number(inv.total_amount ?? inv.amount ?? 0) - Number(inv.paid_amount ?? 0) },
+              {
+                key: "status", header: "Status",
+                accessor: (inv) => <StatusBadge status={isOpenForAging(inv.status) && daysOverdue(inv.due_date) > 0 ? "overdue" : inv.status ?? "pending"} />,
+                sortValue: (inv) => inv.status ?? "",
+              },
+            ]}
+            rowActions={(inv) => {
+              const balance = Number(inv.total_amount ?? inv.amount ?? 0) - Number(inv.paid_amount ?? 0);
+              return (
+                <div className="flex items-center justify-end gap-1">
+                  <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="View">
+                    <Link href={`/finance/invoicing/customer-invoices/${inv.id}`}><ArrowUpRight className="w-4 h-4" /></Link>
+                  </Button>
+                  {["draft", "pending"].includes(inv.status) && (
+                    <Button
+                      size="sm"
+                      className="h-8 gap-1 bg-info hover:bg-info/90 text-info-foreground text-xs"
+                      disabled={sendingId === inv.id}
+                      onClick={() => sendInvoice(inv)}
+                    >
+                      {sendingId === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />} Send
+                    </Button>
+                  )}
+                  {!["draft", "pending", "paid", "cancelled"].includes(inv.status) && (
+                    <Button
+                      size="sm"
+                      className="h-8 gap-1 bg-success hover:bg-success/90 text-success-foreground text-xs"
+                      onClick={() => {
+                        setPaying(inv);
+                        setPayAmount(String(balance));
+                      }}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Pay
+                    </Button>
+                  )}
+                </div>
+              );
+            }}
+          />
         )}
 
         {/* List + Detail — Finnova-style split layout, same data/actions as the table above */}

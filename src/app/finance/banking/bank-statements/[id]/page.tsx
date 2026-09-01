@@ -18,9 +18,10 @@ import { findPaymentMatches, matchConfidenceLabel, type MatchConfidence, type Pa
 import { applyTransition } from "@/lib/workflow/engine";
 import { TransitionButtons } from "@/components/workflow/transition-buttons";
 import { formatCurrency } from "@/components/ui/currency-badge";
+import { DataTable, DataTableFilterSelect, StatusBadge, type DataTableColumn } from "@/components/shell";
 import {
   ArrowLeft, ArrowRight, EyeOff, Landmark, Link2, Loader2,
-  Plus, Search, ShieldCheck, Undo2, Wallet,
+  Plus, Receipt, Search, ShieldCheck, Undo2, Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,14 +99,6 @@ interface CoaAccount {
   category: string;
 }
 
-const STATUS_META: Record<MatchStatus, { label: string; variant: any }> = {
-  unmatched: { label: "Pending", variant: "outline" },
-  matched: { label: "Reconciled", variant: "default" },
-  confirmed: { label: "Reconciled", variant: "default" },
-  posted: { label: "Posted", variant: "secondary" },
-  ignored: { label: "Ignored", variant: "outline" },
-};
-
 export default function BankStatementDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -117,6 +110,8 @@ export default function BankStatementDetailPage() {
 
   const [batch, setBatch] = useState<Batch | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
+  const [lineSearch, setLineSearch] = useState("");
+  const [lineStatusFilter, setLineStatusFilter] = useState("all");
   const [book, setBook] = useState<BookEntry[]>([]);
   const [coaAccounts, setCoaAccounts] = useState<CoaAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -311,6 +306,86 @@ export default function BankStatementDetailPage() {
   const openBook = useMemo(() => book.filter((e) => !claimedBookIds.has(e.id)), [book, claimedBookIds]);
 
   const lineNet = (l: Line) => Number(l.credit_amount) - Number(l.debit_amount);
+
+  const filteredLines = useMemo(() => {
+    const q = lineSearch.trim().toLowerCase();
+    return lines.filter((l) => {
+      if (lineStatusFilter !== "all" && l.match_status !== lineStatusFilter) return false;
+      if (!q) return true;
+      return [l.description, l.reference_number].filter(Boolean).join(" ").toLowerCase().includes(q);
+    });
+  }, [lines, lineSearch, lineStatusFilter]);
+
+  const lineColumns: DataTableColumn<Line>[] = [
+    {
+      key: "date",
+      header: "Date",
+      accessor: (l) => <span className="text-xs text-muted-foreground whitespace-nowrap">{l.transaction_date}</span>,
+      sortValue: (l) => l.transaction_date,
+    },
+    {
+      key: "description",
+      header: "Description",
+      accessor: (l) => (
+        <div className="min-w-0">
+          <p className="text-sm text-foreground truncate max-w-[280px]">{l.description || "—"}</p>
+          {l.reference_number && <p className="text-[10px] font-mono text-muted-foreground truncate">{l.reference_number}</p>}
+          {l.match_status === "ignored" && l.ignore_reason && (
+            <p className="text-[10px] text-muted-foreground italic truncate">Reason: {l.ignore_reason}</p>
+          )}
+        </div>
+      ),
+      sortValue: (l) => l.description ?? "",
+    },
+    {
+      key: "in",
+      header: "Money In",
+      align: "right",
+      accessor: (l) => (Number(l.credit_amount) > 0 ? <span className="font-bold text-success">{fmt(Number(l.credit_amount), currency)}</span> : <span className="text-muted-foreground">—</span>),
+      sortValue: (l) => Number(l.credit_amount) || 0,
+      hideBelow: "sm",
+    },
+    {
+      key: "out",
+      header: "Money Out",
+      align: "right",
+      accessor: (l) => (Number(l.debit_amount) > 0 ? <span className="font-bold text-destructive">{fmt(Number(l.debit_amount), currency)}</span> : <span className="text-muted-foreground">—</span>),
+      sortValue: (l) => Number(l.debit_amount) || 0,
+      hideBelow: "sm",
+    },
+    {
+      key: "status",
+      header: "Status",
+      accessor: (l) => <StatusBadge status={l.match_status === "unmatched" ? "pending" : l.match_status === "confirmed" || l.match_status === "matched" ? "reconciled" : l.match_status} />,
+      sortValue: (l) => l.match_status,
+    },
+    {
+      key: "matched",
+      header: "Matched Record",
+      hideBelow: "lg",
+      accessor: (l) => {
+        if (!(l.match_status === "matched" || l.match_status === "confirmed") || l.matches.length === 0) {
+          return <span className="text-xs text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="space-y-0.5">
+            {l.matches.map((m) => {
+              const matchedEntry = book.find((e) => e.reference_id === m.matched_entity_id && e.kind === m.matched_entity_type);
+              return (
+                <p key={m.id} className="text-[11px] text-muted-foreground truncate max-w-[220px]">
+                  {matchedEntry?.kind === "invoice_payment" ? (
+                    <>{matchedEntry.paymentNumber ?? "Payment"}{matchedEntry.invoiceNumber ? ` · ${matchedEntry.invoiceNumber}` : ""}</>
+                  ) : (
+                    <>{m.matched_entity_type.replace(/_/g, " ")}</>
+                  )}
+                </p>
+              );
+            })}
+          </div>
+        );
+      },
+    },
+  ];
 
   const filteredCoaAccounts = useMemo(() => {
     const q = postCoaSearch.trim().toLowerCase();
@@ -630,88 +705,71 @@ export default function BankStatementDetailPage() {
         ))}
       </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-black text-foreground">Statement lines</h2>
-          <p className="text-xs text-muted-foreground">{lines.length} line(s)</p>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-black text-foreground">Statement lines</h2>
+            <p className="text-xs text-muted-foreground">{lines.length} line(s)</p>
+          </div>
         </div>
-        <div className="divide-y divide-border">
-          {lines.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground italic">No lines yet. Add one above.</div>
-          ) : lines.map((l) => {
-            const net = lineNet(l);
-            const meta = STATUS_META[l.match_status] ?? STATUS_META.unmatched;
+        <DataTable
+          data={filteredLines}
+          columns={lineColumns}
+          getRowId={(l) => l.id}
+          search={lineSearch}
+          onSearchChange={setLineSearch}
+          searchPlaceholder="Search description or reference…"
+          filters={
+            <DataTableFilterSelect
+              value={lineStatusFilter}
+              onValueChange={setLineStatusFilter}
+              placeholder="Status"
+              options={[
+                { value: "all", label: "All statuses" },
+                { value: "unmatched", label: "Pending" },
+                { value: "posted", label: "Posted" },
+                { value: "confirmed", label: "Reconciled" },
+                { value: "ignored", label: "Ignored" },
+              ]}
+            />
+          }
+          emptyIcon={Receipt}
+          emptyTitle={lines.length === 0 ? "No lines yet" : "No lines match your filters"}
+          emptyDescription={lines.length === 0 ? "Add a line above to get started." : "Try a different search or status."}
+          initialSort={{ key: "date", dir: "desc" }}
+          rowActions={(l) => {
+            if (locked || !canManage) return null;
             const isPending = l.match_status === "unmatched";
             const isReconciled = l.match_status === "matched" || l.match_status === "confirmed";
             return (
-              <div key={l.id} className="px-5 py-4">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs text-muted-foreground">{l.transaction_date}</p>
-                      {l.reference_number && <span className="text-[10px] font-mono text-muted-foreground">{l.reference_number}</span>}
-                      <Badge variant={meta.variant}>{meta.label}</Badge>
-                    </div>
-                    <p className="text-sm text-foreground mt-0.5">{l.description || "—"}</p>
-                    {l.match_status === "ignored" && l.ignore_reason && (
-                      <p className="text-xs text-muted-foreground mt-0.5 italic">Reason: {l.ignore_reason}</p>
-                    )}
-                  </div>
-                  <p className={cn("text-sm font-black shrink-0", net >= 0 ? "text-success" : "text-destructive")}>
-                    {net >= 0 ? "+" : ""}{fmt(net, currency)}
-                  </p>
-                </div>
-
-                {isReconciled && l.matches.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {l.matches.map((m) => {
-                      const matchedEntry = book.find((e) => e.reference_id === m.matched_entity_id && e.kind === m.matched_entity_type);
-                      return (
-                      <div key={m.id} className="flex items-center justify-between text-xs bg-muted/50 rounded-lg px-3 py-1.5">
-                        <span className="text-muted-foreground">
-                          {matchedEntry?.kind === "invoice_payment" ? (
-                            <>Matched payment {matchedEntry.paymentNumber ?? ""}{matchedEntry.invoiceNumber ? ` · Invoice ${matchedEntry.invoiceNumber}` : ""} · {fmt(Number(m.matched_amount), currency)}</>
-                          ) : (
-                            <>{m.matched_entity_type.replace(/_/g, " ")} · {fmt(Number(m.matched_amount), currency)}</>
-                          )}
-                        </span>
-                      </div>
-                      );
-                    })}
-                  </div>
+              <div className="flex items-center justify-end gap-1 flex-wrap">
+                {isPending && (
+                  <>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openPost(l)}>
+                      <Wallet className="w-3 h-3" /> Post
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => { setReconcileLine(l); setReconcileSearch(""); }}>
+                      <Link2 className="w-3 h-3" /> Reconcile
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => openIgnore(l)}>
+                      <EyeOff className="w-3 h-3" /> Ignore
+                    </Button>
+                  </>
                 )}
-
-                {!locked && canManage && (
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    {isPending && (
-                      <>
-                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openPost(l)}>
-                          <Wallet className="w-3 h-3" /> Post
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => { setReconcileLine(l); setReconcileSearch(""); }}>
-                          <Link2 className="w-3 h-3" /> Reconcile
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => openIgnore(l)}>
-                          <EyeOff className="w-3 h-3" /> Ignore
-                        </Button>
-                      </>
-                    )}
-                    {isReconciled && (
-                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setUnreconcileLine(l)}>
-                        <Undo2 className="w-3 h-3" /> Un-reconcile
-                      </Button>
-                    )}
-                    {l.match_status === "ignored" && canUnignore && (
-                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => submitUnignore(l)}>
-                        <Undo2 className="w-3 h-3" /> Un-ignore
-                      </Button>
-                    )}
-                  </div>
+                {isReconciled && (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => setUnreconcileLine(l)}>
+                    <Undo2 className="w-3 h-3" /> Un-reconcile
+                  </Button>
+                )}
+                {l.match_status === "ignored" && canUnignore && (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-muted-foreground" onClick={() => submitUnignore(l)}>
+                    <Undo2 className="w-3 h-3" /> Un-ignore
+                  </Button>
                 )}
               </div>
             );
-          })}
-        </div>
+          }}
+        />
       </div>
 
       {/* Add line dialog */}

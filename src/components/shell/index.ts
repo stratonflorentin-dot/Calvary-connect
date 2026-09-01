@@ -6,3 +6,6 @@ export { SectionCard } from "./section-card";
 export { EmptyState } from "./empty-state";
 export { PageSkeleton } from "./page-skeleton";
 export { RefreshControl } from "./refresh-control";
+export { DataTable, DataTableFilterSelect } from "./data-table";
+export type { DataTableColumn } from "./data-table";
+export { StatusBadge, statusTone } from "./status-badge";

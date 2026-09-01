@@ -7,19 +7,10 @@ import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { FileText, Loader2, Plus, Search } from "lucide-react";
-
-const STATUS_BADGES: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground border-border",
-  sent: "bg-info/10 text-info border-info/20",
-  accepted: "bg-success/10 text-success border-success/20",
-  expired: "bg-muted text-muted-foreground border-border",
-  cancelled: "bg-destructive/10 text-destructive border-destructive/20",
-  converted: "bg-primary/10 text-primary border-primary/20",
-};
+import { DataTable, StatusBadge } from "@/components/shell";
+import { FileText, Plus, Search } from "lucide-react";
 
 type StatusFilter = "all" | "draft" | "sent" | "accepted" | "expired" | "cancelled" | "converted";
 
@@ -146,55 +137,34 @@ export default function ProformaInvoicesListPage() {
             </Select>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            {loading ? (
-              <div className="p-12 text-center"><Loader2 className="size-6 animate-spin mx-auto text-muted-foreground" /></div>
-            ) : filtered.length === 0 ? (
-              <div className="p-12 text-center">
-                <FileText className="size-10 mx-auto mb-3 text-muted-foreground opacity-40" />
-                <p className="font-bold text-foreground">No proforma invoices</p>
-                <p className="text-sm text-muted-foreground mb-4">Get started by creating your first proforma invoice.</p>
-                <Button asChild><Link href="/finance/invoicing/proforma-invoices/new">Create Proforma Invoice</Link></Button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 border-b border-border">
-                    <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      <th className="px-4 py-3">Proforma No.</th>
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Customer</th>
-                      <th className="px-4 py-3">Reference</th>
-                      <th className="px-4 py-3 text-right">Subtotal</th>
-                      <th className="px-4 py-3 text-right">Tax</th>
-                      <th className="px-4 py-3 text-right">Total</th>
-                      <th className="px-4 py-3">Valid Until</th>
-                      <th className="px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((p) => (
-                      <tr key={p.id} className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => (window.location.href = `/finance/invoicing/proforma-invoices/${p.id}`)}>
-                        <td className="px-4 py-3 font-mono text-xs font-black text-foreground">{p.proforma_number}</td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{p.issue_date ? new Date(p.issue_date).toLocaleDateString() : "—"}</td>
-                        <td className="px-4 py-3 font-medium text-foreground">{p.customer?.company_name ?? p.customer_name ?? "—"}</td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{p.customer_reference || "—"}</td>
-                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(Number(p.subtotal) || 0, p.currency || "TZS")}</td>
-                        <td className="px-4 py-3 text-right font-mono text-muted-foreground">{formatCurrency(Number(p.vat_amount) || 0, p.currency || "TZS")}</td>
-                        <td className="px-4 py-3 text-right font-mono font-bold">{formatCurrency(Number(p.total_amount) || 0, p.currency || "TZS")}</td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{p.valid_until ? new Date(p.valid_until).toLocaleDateString() : "—"}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline" className={STATUS_BADGES[p._status] ?? ""}>
-                            {p._status === "converted" && p.converted_invoice ? `→ ${p.converted_invoice.invoice_number}` : p._status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <DataTable
+            data={filtered}
+            getRowId={(p) => p.id}
+            loading={loading}
+            onRowClick={(p) => { window.location.href = `/finance/invoicing/proforma-invoices/${p.id}`; }}
+            emptyIcon={FileText}
+            emptyTitle="No proforma invoices"
+            emptyDescription="Get started by creating your first proforma invoice."
+            emptyAction={<Button asChild><Link href="/finance/invoicing/proforma-invoices/new">Create Proforma Invoice</Link></Button>}
+            initialSort={{ key: "date", dir: "desc" }}
+            columns={[
+              { key: "number", header: "Proforma No.", accessor: (p) => <span className="font-mono text-xs font-black text-foreground">{p.proforma_number}</span>, sortValue: (p) => p.proforma_number ?? "" },
+              { key: "date", header: "Date", hideBelow: "md", accessor: (p) => <span className="text-xs text-muted-foreground">{p.issue_date ? new Date(p.issue_date).toLocaleDateString() : "—"}</span>, sortValue: (p) => p.issue_date ?? "" },
+              { key: "customer", header: "Customer", accessor: (p) => <span className="font-medium text-foreground">{p.customer?.company_name ?? p.customer_name ?? "—"}</span>, sortValue: (p) => p.customer?.company_name ?? p.customer_name ?? "" },
+              { key: "reference", header: "Reference", hideBelow: "lg", accessor: (p) => <span className="text-xs text-muted-foreground">{p.customer_reference || "—"}</span> },
+              { key: "subtotal", header: "Subtotal", align: "right", hideBelow: "lg", accessor: (p) => formatCurrency(Number(p.subtotal) || 0, p.currency || "TZS") },
+              { key: "tax", header: "Tax", align: "right", hideBelow: "lg", accessor: (p) => <span className="text-muted-foreground">{formatCurrency(Number(p.vat_amount) || 0, p.currency || "TZS")}</span> },
+              { key: "total", header: "Total", align: "right", accessor: (p) => <span className="font-bold">{formatCurrency(Number(p.total_amount) || 0, p.currency || "TZS")}</span>, sortValue: (p) => Number(p.total_amount) || 0 },
+              { key: "valid_until", header: "Valid Until", hideBelow: "md", accessor: (p) => <span className="text-xs text-muted-foreground">{p.valid_until ? new Date(p.valid_until).toLocaleDateString() : "—"}</span>, sortValue: (p) => p.valid_until ?? "" },
+              {
+                key: "status", header: "Status",
+                accessor: (p) => p._status === "converted" && p.converted_invoice
+                  ? <StatusBadge status="converted" label={`→ ${p.converted_invoice.invoice_number}`} />
+                  : <StatusBadge status={p._status} />,
+                sortValue: (p) => p._status,
+              },
+            ]}
+          />
         </div>
       </main>
     </div>

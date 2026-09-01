@@ -6,12 +6,11 @@ import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/components/ui/currency-badge";
+import { DataTable, StatusBadge } from "@/components/shell";
 import { ArrowLeft, ArrowRightLeft, Loader2, Undo2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export default function BankTransfersHistoryPage() {
   const { role, hasPermission } = useRole();
@@ -73,52 +72,26 @@ export default function BankTransfersHistoryPage() {
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            {loading ? (
-              <div className="p-12 text-center"><Loader2 className="size-6 animate-spin mx-auto text-muted-foreground" /></div>
-            ) : rows.length === 0 ? (
-              <div className="p-12 text-center">
-                <ArrowRightLeft className="size-10 mx-auto mb-3 text-muted-foreground opacity-40" />
-                <p className="font-bold text-foreground">No transfers yet</p>
-                <p className="text-sm text-muted-foreground">Transfer funds from the Bank Accounts page to see history here.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 border-b border-border">
-                    <tr className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Transfer ID</th>
-                      <th className="px-4 py-3">From</th>
-                      <th className="px-4 py-3">To</th>
-                      <th className="px-4 py-3 text-right">Source Amount</th>
-                      <th className="px-4 py-3 text-right">Destination Amount</th>
-                      <th className="px-4 py-3 text-right">Rate</th>
-                      <th className="px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((t) => (
-                      <tr key={t.id} className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => setSelected(t)}>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(t.transfer_date).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 font-mono text-xs font-black text-foreground">{t.transfer_reference}</td>
-                        <td className="px-4 py-3 text-foreground">{t.from_account?.account_name ?? "—"}<span className="text-muted-foreground"> · {t.from_account?.bank_name}</span></td>
-                        <td className="px-4 py-3 text-foreground">{t.to_account?.account_name ?? "—"}<span className="text-muted-foreground"> · {t.to_account?.bank_name}</span></td>
-                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(Number(t.source_amount) || 0, t.from_currency)}</td>
-                        <td className="px-4 py-3 text-right font-mono">{formatCurrency(Number(t.destination_amount) || 0, t.to_currency)}</td>
-                        <td className="px-4 py-3 text-right font-mono text-muted-foreground">{t.from_currency === t.to_currency ? "—" : Number(t.exchange_rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline" className={cn(t.status === "reversed" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-success/10 text-success border-success/20")}>
-                            {t.status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <DataTable
+            data={rows}
+            getRowId={(t) => t.id}
+            loading={loading}
+            onRowClick={(t) => setSelected(t)}
+            emptyIcon={ArrowRightLeft}
+            emptyTitle="No transfers yet"
+            emptyDescription="Transfer funds from the Bank Accounts page to see history here."
+            initialSort={{ key: "date", dir: "desc" }}
+            columns={[
+              { key: "date", header: "Date", accessor: (t) => <span className="text-xs text-muted-foreground">{new Date(t.transfer_date).toLocaleDateString()}</span>, sortValue: (t) => t.transfer_date },
+              { key: "id", header: "Transfer ID", accessor: (t) => <span className="font-mono text-xs font-black text-foreground">{t.transfer_reference}</span>, sortValue: (t) => t.transfer_reference },
+              { key: "from", header: "From", hideBelow: "md", accessor: (t) => <>{t.from_account?.account_name ?? "—"}<span className="text-muted-foreground"> · {t.from_account?.bank_name}</span></> },
+              { key: "to", header: "To", hideBelow: "md", accessor: (t) => <>{t.to_account?.account_name ?? "—"}<span className="text-muted-foreground"> · {t.to_account?.bank_name}</span></> },
+              { key: "source", header: "Source Amount", align: "right", accessor: (t) => formatCurrency(Number(t.source_amount) || 0, t.from_currency), sortValue: (t) => Number(t.source_amount) || 0 },
+              { key: "destination", header: "Destination Amount", align: "right", hideBelow: "lg", accessor: (t) => formatCurrency(Number(t.destination_amount) || 0, t.to_currency), sortValue: (t) => Number(t.destination_amount) || 0 },
+              { key: "rate", header: "Rate", align: "right", hideBelow: "lg", accessor: (t) => <span className="text-muted-foreground">{t.from_currency === t.to_currency ? "—" : Number(t.exchange_rate).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span> },
+              { key: "status", header: "Status", accessor: (t) => <StatusBadge status={t.status} />, sortValue: (t) => t.status },
+            ]}
+          />
         </div>
       </main>
 
