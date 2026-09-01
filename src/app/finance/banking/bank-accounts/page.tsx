@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
-import { Landmark, ArrowLeft, Plus, Trash2, Pencil, BookOpen } from "lucide-react";
+import { Landmark, ArrowLeft, ArrowRightLeft, Plus, Trash2, Pencil, BookOpen, History } from "lucide-react";
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { ChartOfAccountsService, COAAccount } from "@/services/chart-of-accounts-service";
+import { TransferFundsDialog } from "@/components/financial/transfer-funds-dialog";
 
 interface BankAccount {
   id: string;
@@ -34,6 +35,8 @@ export default function BankAccountsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferFromId, setTransferFromId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -217,9 +220,23 @@ export default function BankAccountsPage() {
             <ArrowLeft className="size-4 mr-2" /> Back to Dashboard
           </Link>
         </Button>
-        <Button onClick={handleAddNew}>
-          <Plus className="size-4 mr-2" /> Add Account
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/finance/banking/bank-transfers">
+              <History className="size-4 mr-2" /> Transfer History
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => { setTransferFromId(null); setTransferOpen(true); }}
+            disabled={accounts.filter((a) => a.is_active).length < 2}
+          >
+            <ArrowRightLeft className="size-4 mr-2" /> Transfer Funds
+          </Button>
+          <Button onClick={handleAddNew}>
+            <Plus className="size-4 mr-2" /> Add Account
+          </Button>
+        </div>
       </div>
 
       {Object.keys(accountsByCurrency).length === 0 ? (
@@ -295,6 +312,14 @@ export default function BankAccountsPage() {
                           <div className="text-right">
                             <p className="text-lg font-semibold">{formatCurrency(account.current_balance || 0, currency)}</p>
                             <div className="flex gap-2 mt-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Transfer Funds"
+                                onClick={() => { setTransferFromId(account.id); setTransferOpen(true); }}
+                              >
+                                <ArrowRightLeft className="size-4" />
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -442,6 +467,14 @@ export default function BankAccountsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <TransferFundsDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        accounts={accounts}
+        defaultFromAccountId={transferFromId}
+        onCompleted={loadAccounts}
+      />
     </div>
   );
 }

@@ -462,6 +462,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     showInNavigation: false,
   },
   {
+    path: "/finance/banking/bank-transfers",
+    label: "Transfer History",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
     path: "/finance/banking/bank-statements/new",
     label: "New Bank Statement",
     allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
