@@ -339,7 +339,7 @@ export default function BankStatementDetailPage() {
     },
     {
       key: "in",
-      header: "Money In",
+      header: "Credit",
       align: "right",
       accessor: (l) => (Number(l.credit_amount) > 0 ? <span className="font-bold text-success">{fmt(Number(l.credit_amount), currency)}</span> : <span className="text-muted-foreground">—</span>),
       sortValue: (l) => Number(l.credit_amount) || 0,
@@ -347,7 +347,7 @@ export default function BankStatementDetailPage() {
     },
     {
       key: "out",
-      header: "Money Out",
+      header: "Debit",
       align: "right",
       accessor: (l) => (Number(l.debit_amount) > 0 ? <span className="font-bold text-destructive">{fmt(Number(l.debit_amount), currency)}</span> : <span className="text-muted-foreground">—</span>),
       sortValue: (l) => Number(l.debit_amount) || 0,
@@ -806,7 +806,7 @@ export default function BankStatementDetailPage() {
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Type</p>
                   <p className={cn("font-bold", lineNet(postLine) >= 0 ? "text-success" : "text-destructive")}>
-                    {lineNet(postLine) >= 0 ? "Money In" : "Money Out"}
+                    {lineNet(postLine) >= 0 ? "Credit" : "Debit"}
                   </p>
                 </div>
                 <div className="col-span-2">
@@ -878,7 +878,7 @@ export default function BankStatementDetailPage() {
               <div>
                 <p className="text-sm font-bold text-foreground">{reconcileLine.description || "—"}</p>
                 <p className={cn("text-lg font-black mt-0.5", lineNet(reconcileLine) >= 0 ? "text-success" : "text-destructive")}>
-                  {lineNet(reconcileLine) >= 0 ? "Money In" : "Money Out"} · {fmt(Math.abs(lineNet(reconcileLine)), currency)}
+                  {lineNet(reconcileLine) >= 0 ? "Credit" : "Debit"} · {fmt(Math.abs(lineNet(reconcileLine)), currency)}
                 </p>
               </div>
 

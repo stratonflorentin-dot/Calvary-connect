@@ -946,7 +946,7 @@ export default function BankAccountDetailPage() {
                 <div>
                   <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Type</p>
                   <p className={cn("font-bold", lineNet(postLine) >= 0 ? "text-success" : "text-destructive")}>
-                    {lineNet(postLine) >= 0 ? "Money In" : "Money Out"}
+                    {lineNet(postLine) >= 0 ? "Credit" : "Debit"}
                   </p>
                 </div>
                 <div className="col-span-2">
@@ -1016,7 +1016,7 @@ export default function BankAccountDetailPage() {
               <div>
                 <p className="text-sm font-bold text-foreground">{reconcileLine.description || "—"}</p>
                 <p className={cn("text-lg font-black mt-0.5", lineNet(reconcileLine) >= 0 ? "text-success" : "text-destructive")}>
-                  {lineNet(reconcileLine) >= 0 ? "Money In" : "Money Out"} · {formatCurrency(Math.abs(lineNet(reconcileLine)), account.currency)}
+                  {lineNet(reconcileLine) >= 0 ? "Credit" : "Debit"} · {formatCurrency(Math.abs(lineNet(reconcileLine)), account.currency)}
                 </p>
               </div>
 

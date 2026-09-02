@@ -467,8 +467,8 @@ export default function NewBankStatementPage() {
                     { key: "date", header: "Date", accessor: (r) => r.date, sortValue: (r) => r.date },
                     { key: "description", header: "Description", accessor: (r) => <span className="truncate max-w-[220px] block">{r.description || "—"}</span> },
                     { key: "reference", header: "Reference", hideBelow: "lg", accessor: (r) => <span className="font-mono text-xs">{r.reference || "—"}</span> },
-                    { key: "in", header: "Money In", align: "right", hideBelow: "sm", accessor: (r) => r.credit > 0 ? formatCurrency(r.credit, selectedAccount?.currency ?? "TZS") : "—" },
-                    { key: "out", header: "Money Out", align: "right", hideBelow: "sm", accessor: (r) => r.debit > 0 ? formatCurrency(r.debit, selectedAccount?.currency ?? "TZS") : "—" },
+                    { key: "in", header: "Credit", align: "right", hideBelow: "sm", accessor: (r) => r.credit > 0 ? formatCurrency(r.credit, selectedAccount?.currency ?? "TZS") : "—" },
+                    { key: "out", header: "Debit", align: "right", hideBelow: "sm", accessor: (r) => r.debit > 0 ? formatCurrency(r.debit, selectedAccount?.currency ?? "TZS") : "—" },
                     { key: "balance", header: "Balance", align: "right", hideBelow: "lg", accessor: (r) => r.balance !== null ? formatCurrency(r.balance, selectedAccount?.currency ?? "TZS") : "—" },
                     {
                       key: "status", header: "Import Status",
