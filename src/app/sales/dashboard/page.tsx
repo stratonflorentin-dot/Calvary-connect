@@ -73,7 +73,7 @@ export default function SalesDashboard() {
         bookingsData,
       ] = await Promise.all([
         supabase.from("leads").select("*").order("created_at", { ascending: false }),
-        supabase.from("customers").select("*"),
+        supabase.from("customers").select("*").is("deleted_at", null),
         supabase.from("quotations").select("*").eq("status", "draft").limit(5),
         supabase.from("contracts").select("*"),
         supabase.from("bookings").select("*"),

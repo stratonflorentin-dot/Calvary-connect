@@ -60,7 +60,7 @@ export default function ManagementDashboard() {
         podsData,
       ] = await Promise.all([
         supabase.from("leads").select("*"),
-        supabase.from("customers").select("*"),
+        supabase.from("customers").select("*").is("deleted_at", null),
         supabase.from("quotations").select("*"),
         supabase.from("transport_contracts").select("*"),
         supabase.from("bookings").select("*"),

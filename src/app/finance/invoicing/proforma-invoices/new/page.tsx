@@ -84,7 +84,7 @@ export default function NewProformaInvoicePage() {
   const [fxRate, setFxRate] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.from("customers").select("id, company_name, contact_person, email, phone, vrn, tax_id, address").order("company_name").then(({ data }) => setCustomers(data ?? []));
+    supabase.from("customers").select("id, company_name, contact_person, email, phone, vrn, tax_id, address").is("deleted_at", null).order("company_name").then(({ data }) => setCustomers(data ?? []));
     supabase.from("quotations").select("id, quotation_number, customer_id, subtotal, vat_rate, currency, zero_rated_vat")
       .order("created_at", { ascending: false }).limit(200).then(({ data }) => setQuotations(data ?? []));
     supabase.from("company_settings")

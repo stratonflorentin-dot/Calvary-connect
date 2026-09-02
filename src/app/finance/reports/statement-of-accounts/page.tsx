@@ -34,7 +34,7 @@ export default function StatementOfAccountsPage() {
   const [company, setCompany] = useState<any>({});
 
   useEffect(() => {
-    supabase.from("customers").select("id, company_name, contact_person, vrn, tax_id, email, phone").order("company_name").then(({ data }) => setCustomers(data ?? []));
+    supabase.from("customers").select("id, company_name, contact_person, vrn, tax_id, email, phone").is("deleted_at", null).order("company_name").then(({ data }) => setCustomers(data ?? []));
     supabase.from("company_settings")
       .select("company_name, tagline, vat_registration, tax_id, phone, email, address, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, bank_branch_code, bank_swift_code, logo_url")
       .limit(1).maybeSingle().then(async ({ data }) => {

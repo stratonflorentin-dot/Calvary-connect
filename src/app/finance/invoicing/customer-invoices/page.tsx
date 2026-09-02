@@ -108,6 +108,7 @@ export default function CustomerInvoicesPage() {
     supabase
       .from("customers")
       .select("id, company_name, tax_id")
+      .is("deleted_at", null)
       .order("company_name")
       .then(({ data }) => setCustomers(data ?? []));
 

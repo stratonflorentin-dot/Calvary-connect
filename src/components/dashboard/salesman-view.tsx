@@ -30,7 +30,7 @@ export default function SalesmanDashboard() {
 
   const load = async () => {
     const [c, b, q, i] = await Promise.all([
-      supabase.from("customers").select("*"),
+      supabase.from("customers").select("*").is("deleted_at", null),
       supabase.from("bookings").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("route_quotations").select("*, customers(company_name)").order("created_at", { ascending: false }).limit(50),
       supabase.from("invoices").select("*").eq("type", "receivable").limit(200),

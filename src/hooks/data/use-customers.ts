@@ -15,6 +15,7 @@ export function useCustomers() {
       const { data, error } = await supabase
         .from("customers")
         .select("*")
+        .is("deleted_at", null)
         .order("company_name");
       if (error) throw error;
       setCustomers(data || []);

@@ -85,7 +85,7 @@ export default function NewQuotationPage() {
   const [fxRate, setFxRate] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.from("customers").select("id, company_name, contact_person, email, phone, vrn, tax_id").order("company_name").then(({ data }) => setCustomers(data ?? []));
+    supabase.from("customers").select("id, company_name, contact_person, email, phone, vrn, tax_id").is("deleted_at", null).order("company_name").then(({ data }) => setCustomers(data ?? []));
     supabase.from("company_settings")
       .select("default_vat_rate, quotation_number_prefix, quotation_terms_conditions, company_name, tagline, vat_registration, tax_id, phone, email, address, bank_name, bank_account_name, bank_account_number_tzs, bank_account_number_usd, bank_branch_code, bank_swift_code, logo_url")
       .limit(1).maybeSingle().then(async ({ data }) => {
