@@ -202,8 +202,21 @@ function parseLinesIntoStatement(
   }
 
   if (!columns || columns.length < 2 || !columns.some((c) => c.kind === "date")) {
+    const totalLines = pageLines.reduce((s, lines) => s + lines.length, 0);
+    // A real statement export lists many transactions as table rows, so it
+    // reliably has a recognizable header row and dozens of lines of text. A
+    // single payment/transfer receipt (CRDB, M-Pesa, Airtel Money, GEPG,
+    // etc.) has neither — it's a short "label: value" slip for one
+    // transaction — so that's flagged as the likely cause here rather than
+    // just reporting the failure with no explanation.
+    const looksLikeReceipt = pageCount === 1 && totalLines > 0 && totalLines <= 20;
     return {
-      rows: [], headerErrors: ["Could not identify transaction columns in this PDF."],
+      rows: [],
+      headerErrors: [
+        looksLikeReceipt
+          ? "Could not find a transaction table in this PDF — it looks like a single payment receipt rather than a full account statement. This importer is for statements listing multiple transactions; add a one-off receipt via Manual Entry instead, or download the full statement (covering a date range) from your bank/provider's portal."
+          : "Could not identify transaction columns in this PDF.",
+      ],
       isScanned: false, pageCount, openingBalance: null, closingBalance: null,
     };
   }
