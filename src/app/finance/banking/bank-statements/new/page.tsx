@@ -18,7 +18,7 @@ import {
   parseStatementCsv, downloadCsvTemplate, type ParsedStatementRow,
 } from "@/lib/finance/bank-statement-csv";
 import { parseStatementXlsx } from "@/lib/finance/bank-statement-xlsx";
-import { extractStatementPdf } from "@/lib/finance/bank-statement-pdf";
+import { extractStatementPdf, extractStatementPdfOcr, type OcrProgress } from "@/lib/finance/bank-statement-pdf";
 import { flagDuplicateRows } from "@/lib/finance/bank-statement-duplicates";
 import { format } from "date-fns";
 import {
@@ -68,6 +68,10 @@ export default function NewBankStatementPage() {
   const [parsing, setParsing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [pendingPdfFile, setPendingPdfFile] = useState<File | null>(null);
+  const [ocrRunning, setOcrRunning] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
+  const [usedOcr, setUsedOcr] = useState(false);
 
   useEffect(() => {
     supabase.from("bank_accounts").select("id, account_name, bank_name, currency").order("account_name").then(({ data }) => {
@@ -83,6 +87,8 @@ export default function NewBankStatementPage() {
     setFileName(null);
     setIsScanned(false);
     setPageCount(null);
+    setPendingPdfFile(null);
+    setUsedOcr(false);
   };
 
   const runDuplicateCheck = async (rows: ParsedStatementRow[]) => {
@@ -111,19 +117,43 @@ export default function NewBankStatementPage() {
         setHeaderErrors(hErrs);
         setParsedRows(hErrs.length === 0 ? await runDuplicateCheck(rows) : rows);
       } else {
+        setPendingPdfFile(file);
         const result = await extractStatementPdf(file);
-        setIsScanned(result.isScanned);
-        setPageCount(result.pageCount);
-        setHeaderErrors(result.headerErrors);
-        if (result.openingBalance !== null && !openingBalance) setOpeningBalance(String(result.openingBalance));
-        if (result.closingBalance !== null && !closingBalance) setClosingBalance(String(result.closingBalance));
-        setParsedRows(result.headerErrors.length === 0 && !result.isScanned ? await runDuplicateCheck(result.rows) : result.rows);
+        await applyPdfResult(result);
       }
     } catch (err: any) {
       toast({ title: "Couldn't read file", description: err.message ?? "Unknown error", variant: "destructive" });
       setHeaderErrors([err.message ?? "Unknown error while reading this file."]);
     } finally {
       setParsing(false);
+    }
+  };
+
+  const applyPdfResult = async (result: Awaited<ReturnType<typeof extractStatementPdf>>) => {
+    setIsScanned(result.isScanned);
+    setPageCount(result.pageCount);
+    setHeaderErrors(result.headerErrors);
+    if (result.openingBalance !== null && !openingBalance) setOpeningBalance(String(result.openingBalance));
+    if (result.closingBalance !== null && !closingBalance) setClosingBalance(String(result.closingBalance));
+    setParsedRows(result.headerErrors.length === 0 && !result.isScanned ? await runDuplicateCheck(result.rows) : result.rows);
+  };
+
+  const runOcr = async () => {
+    if (!pendingPdfFile) return;
+    setOcrRunning(true);
+    setOcrProgress(null);
+    try {
+      const result = await extractStatementPdfOcr(pendingPdfFile, setOcrProgress);
+      setUsedOcr(true);
+      await applyPdfResult(result);
+      if (result.isScanned) {
+        toast({ title: "OCR found no readable text", description: "This scan may be too low-resolution or skewed for OCR to read.", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "OCR failed", description: err.message ?? "Unknown error", variant: "destructive" });
+    } finally {
+      setOcrRunning(false);
+      setOcrProgress(null);
     }
   };
 
@@ -358,10 +388,33 @@ export default function NewBankStatementPage() {
               {checkingDuplicates && <span className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Checking for duplicates…</span>}
             </div>
 
-            {isScanned && (
-              <div className="bg-warning/10 border border-warning/20 text-foreground rounded-xl p-4 text-sm space-y-1">
+            {isScanned && !ocrRunning && (
+              <div className="bg-warning/10 border border-warning/20 text-foreground rounded-xl p-4 text-sm space-y-2">
                 <p className="font-bold flex items-center gap-1.5"><ImageIcon className="w-4 h-4" /> This PDF appears to be scanned.</p>
-                <p className="text-muted-foreground">No selectable text was found across {pageCount} page(s), so transactions can&apos;t be extracted directly. Optical character recognition (OCR) isn&apos;t set up in this app yet — that would need a dedicated OCR dependency or service, which hasn&apos;t been added. Export the statement as CSV/Excel from your bank&apos;s portal, or use a text-based PDF, instead.</p>
+                <p className="text-muted-foreground">No selectable text was found across {pageCount} page(s). You can try reading it with on-device OCR (slow, and less reliable than a text-based file — every extracted row will be flagged for review), or export the statement as CSV/Excel from your bank&apos;s portal instead.</p>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={runOcr} disabled={!pendingPdfFile}>
+                  <ImageIcon className="w-3.5 h-3.5" /> Extract with OCR
+                </Button>
+              </div>
+            )}
+
+            {ocrRunning && (
+              <div className="bg-muted/30 border border-border rounded-xl p-4 text-sm space-y-2">
+                <p className="font-bold flex items-center gap-1.5"><Loader2 className="w-4 h-4 animate-spin" /> Reading with OCR…</p>
+                {ocrProgress && (
+                  <>
+                    <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${Math.round(ocrProgress.progress * 100)}%` }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Page {ocrProgress.page} of {ocrProgress.pageCount} — {Math.round(ocrProgress.progress * 100)}%</p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {usedOcr && !isScanned && parsedRows.length > 0 && (
+              <div className="bg-warning/10 border border-warning/20 text-foreground rounded-xl p-3 text-xs">
+                These rows came from OCR, not a text layer — every row is marked &quot;Needs review&quot;. Check amounts and dates against the original document before importing.
               </div>
             )}
 

@@ -1,5 +1,5 @@
 /**
- * Text-based PDF bank statement import.
+ * Text-based and OCR-based PDF bank statement import.
  *
  * There is no real sample bank statement PDF anywhere in this repository to
  * calibrate against (checked before writing this — see the audit note in
@@ -14,6 +14,17 @@
  * this file is structured (extractStatementPdf -> detectHeaderLine ->
  * assignColumns) so one can be added alongside this generic path later
  * without touching it.
+ *
+ * Scanned/image-only PDFs (no text layer) go through extractStatementPdfOcr
+ * instead: pdfjs-dist rasterizes each page to a canvas and tesseract.js
+ * (WASM, runs entirely in the browser — only its generic OCR engine/language
+ * data is fetched from tesseract.js's CDN on first use, never the user's
+ * document) reads word text + bounding boxes off that canvas. Those words
+ * are converted into the same Token shape the text path produces and fed
+ * through the identical column-detection pipeline below, so both paths stay
+ * in sync. OCR misreads digits far more often than a real text layer, so
+ * every row it produces is forced to confidence:"review" regardless of
+ * whether the row itself looked parseable.
  *
  * Every row this produces still goes through the SAME preview/duplicate
  * check/createBatch() flow as CSV and Excel rows — nothing here posts,
@@ -31,12 +42,19 @@ import {
 
 export interface ParsedPdfStatement extends ParsedStatement {
   /** true when the PDF has no extractable text at all (a scan/image) — the
-   *  caller should offer OCR (not implemented — see the final report) or a
-   *  different format instead of reporting "0 transactions found". */
+   *  caller should offer extractStatementPdfOcr or a different format
+   *  instead of reporting "0 transactions found". */
   isScanned: boolean;
   pageCount: number;
   openingBalance: number | null;
   closingBalance: number | null;
+}
+
+export interface OcrProgress {
+  page: number;
+  pageCount: number;
+  /** 0-1 progress within the current page's OCR pass. */
+  progress: number;
 }
 
 interface Token {
@@ -158,32 +176,16 @@ function stripDrCr(raw: string): { value: string; direction: "debit" | "credit" 
   return { value: trimmed, direction: null };
 }
 
-export async function extractStatementPdf(file: File): Promise<ParsedPdfStatement> {
-  const pdfjsLib = await lazyPdfjs();
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-
-  const buffer = await file.arrayBuffer();
-  const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
-
-  const pageLines: Token[][][] = [];
-  let totalChars = 0;
-  for (let p = 1; p <= doc.numPages; p++) {
-    const page = await doc.getPage(p);
-    const content = await page.getTextContent();
-    const tokens: Token[] = content.items
-      .filter((it): it is typeof it & { str: string } => "str" in it && it.str.trim().length > 0)
-      .map((it: any) => ({ text: it.str.trim(), x: it.transform[4], y: it.transform[5] }));
-    totalChars += tokens.reduce((s, t) => s + t.text.length, 0);
-    pageLines.push(toLines(tokens));
-  }
-
-  if (totalChars < 20) {
-    return {
-      rows: [], headerErrors: [], isScanned: true, pageCount: doc.numPages,
-      openingBalance: null, closingBalance: null,
-    };
-  }
-
+/** Shared by both the text-layer and OCR paths once each has produced
+ *  per-page lines of Tokens in the same top-to-bottom, left-to-right shape.
+ *  forceReview marks every resulting row confidence:"review" regardless of
+ *  whether it individually looked parseable — used for OCR output, which is
+ *  never as trustworthy as a real text layer. */
+function parseLinesIntoStatement(
+  pageLines: Token[][][],
+  pageCount: number,
+  forceReview: boolean,
+): ParsedPdfStatement {
   // Header is detected once (first page it appears on) and reused for every
   // page — later pages that repeat the header row have that repeat skipped
   // by exact-text match against it, not re-detected (a bank's continuation
@@ -202,7 +204,7 @@ export async function extractStatementPdf(file: File): Promise<ParsedPdfStatemen
   if (!columns || columns.length < 2 || !columns.some((c) => c.kind === "date")) {
     return {
       rows: [], headerErrors: ["Could not identify transaction columns in this PDF."],
-      isScanned: false, pageCount: doc.numPages, openingBalance: null, closingBalance: null,
+      isScanned: false, pageCount, openingBalance: null, closingBalance: null,
     };
   }
 
@@ -270,16 +272,116 @@ export async function extractStatementPdf(file: File): Promise<ParsedPdfStatemen
 
   const rows: ParsedStatementRow[] = buildRowsFromCells(idx, dataCellRows).map((row, i) => {
     const flagged = reviewFlags[i];
-    const needsReview = flagged || row.errors.length > 0;
+    const needsReview = forceReview || !!flagged || row.errors.length > 0;
+    const issue = flagged ?? (row.errors.length > 0 ? row.errors.join(" ") : null);
     return {
       ...row,
       confidence: needsReview ? "review" : "high",
-      issue: flagged ?? (row.errors.length > 0 ? row.errors.join(" ") : null),
+      issue: forceReview && !issue ? "OCR-extracted — verify against the original document." : issue,
     };
   });
 
   return {
-    rows, headerErrors: [], isScanned: false, pageCount: doc.numPages,
+    rows, headerErrors: [], isScanned: false, pageCount,
     openingBalance, closingBalance,
   };
+}
+
+export async function extractStatementPdf(file: File): Promise<ParsedPdfStatement> {
+  const pdfjsLib = await lazyPdfjs();
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+
+  const buffer = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+  const pageLines: Token[][][] = [];
+  let totalChars = 0;
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    const tokens: Token[] = content.items
+      .filter((it): it is typeof it & { str: string } => "str" in it && it.str.trim().length > 0)
+      .map((it: any) => ({ text: it.str.trim(), x: it.transform[4], y: it.transform[5] }));
+    totalChars += tokens.reduce((s, t) => s + t.text.length, 0);
+    pageLines.push(toLines(tokens));
+  }
+
+  if (totalChars < 20) {
+    return {
+      rows: [], headerErrors: [], isScanned: true, pageCount: doc.numPages,
+      openingBalance: null, closingBalance: null,
+    };
+  }
+
+  return parseLinesIntoStatement(pageLines, doc.numPages, false);
+}
+
+/** OCR fallback for scanned/image-only PDFs. Rasterizes each page via
+ *  pdfjs-dist and reads it with tesseract.js (WASM, runs in the browser —
+ *  it fetches its own generic engine/language-data files from a CDN on
+ *  first use, but the document image itself never leaves the browser).
+ *  Reuses one Tesseract worker across all pages rather than spinning one up
+ *  per page. onProgress reports per-page OCR progress (0-1) for a UI
+ *  progress bar, since a multi-page scan can take well over a minute. */
+export async function extractStatementPdfOcr(
+  file: File,
+  onProgress?: (info: OcrProgress) => void,
+): Promise<ParsedPdfStatement> {
+  const pdfjsLib = await lazyPdfjs();
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+  const { createWorker } = await import("tesseract.js");
+
+  const buffer = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+  const worker = await createWorker("eng", undefined, {
+    logger: (m) => {
+      if (m.status === "recognizing text") currentPageProgress = m.progress;
+    },
+  });
+
+  let currentPageProgress = 0;
+  const pageLines: Token[][][] = [];
+  try {
+    for (let p = 1; p <= doc.numPages; p++) {
+      currentPageProgress = 0;
+      onProgress?.({ page: p, pageCount: doc.numPages, progress: 0 });
+
+      const page = await doc.getPage(p);
+      const viewport = page.getViewport({ scale: 2.5 }); // upscale for OCR accuracy
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext("2d")!;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const progressTimer = onProgress
+        ? setInterval(() => onProgress({ page: p, pageCount: doc.numPages, progress: currentPageProgress }), 250)
+        : null;
+      const { data } = await worker.recognize(canvas, {}, { blocks: true });
+      if (progressTimer) clearInterval(progressTimer);
+      onProgress?.({ page: p, pageCount: doc.numPages, progress: 1 });
+
+      // Tesseract's image Y grows downward from the top; negate it so the
+      // shared toLines()/sort (which expects PDF.js's upward-growing Y) still
+      // orders lines top-to-bottom.
+      const words = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((pg) => pg.lines.flatMap((l) => l.words)));
+      const tokens: Token[] = words
+        .filter((w) => w.text.trim().length > 0)
+        .map((w) => ({ text: w.text.trim(), x: w.bbox.x0, y: -w.bbox.y0 }));
+      pageLines.push(toLines(tokens));
+    }
+  } finally {
+    await worker.terminate();
+  }
+
+  const totalChars = pageLines.reduce((s, lines) => s + lines.reduce((s2, l) => s2 + lineText(l).length, 0), 0);
+  if (totalChars < 20) {
+    return {
+      rows: [], headerErrors: ["OCR could not read any text from this PDF."], isScanned: true,
+      pageCount: doc.numPages, openingBalance: null, closingBalance: null,
+    };
+  }
+
+  return parseLinesIntoStatement(pageLines, doc.numPages, true);
 }
