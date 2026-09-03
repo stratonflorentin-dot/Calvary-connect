@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Calendar, Download, RefreshCw, Search, Filter } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
+import { normalizeCurrency } from "@/lib/finance/multi-currency";
 
 const CURRENCIES = {
   TZS: { code: "TZS", symbol: "TSh", flag: "🇹🇿" },
@@ -87,13 +88,18 @@ export default function GeneralLedgerPage() {
 
   const allLines = flattenJournalLines();
 
+  // selectedCurrency has no switcher UI (always "TZS" today) but every
+  // total below is labeled with it via formatAmount() — filtering here
+  // makes that label true instead of silently blending every currency's
+  // lines into one number labeled TZS.
   const filteredLines = allLines.filter((line) => {
     const matchesSearch = !search ||
       line.description?.toLowerCase().includes(search.toLowerCase()) ||
       line.account_code?.toLowerCase().includes(search.toLowerCase()) ||
       line.entry_description?.toLowerCase().includes(search.toLowerCase());
     const matchesAccount = filterAccount === "ALL" || line.account_code === filterAccount;
-    return matchesSearch && matchesAccount;
+    const matchesCurrency = normalizeCurrency(line.currency) === selectedCurrency;
+    return matchesSearch && matchesAccount && matchesCurrency;
   });
 
   // Calculate account balances

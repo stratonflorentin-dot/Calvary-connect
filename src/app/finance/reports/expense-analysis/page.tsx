@@ -153,8 +153,10 @@ export default function ExpenseAnalysisPage() {
     return Array.from(cats);
   }, [filteredExpenses]);
 
-  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const avgExpense = filteredExpenses.length > 0 ? totalExpenses / filteredExpenses.length : 0;
+  // The actual rendered stat cards use expenseData (grouped per currency,
+  // above) — a flat cross-currency total here would be dead code the
+  // moment it existed, same issue found and removed from the sibling
+  // revenue-analysis page.
   // "% of total" only means something within a single currency — a USD
   // expense's share of a blended TZS+USD figure is meaningless.
   const totalExpensesByCurrency = useMemo(() => {

@@ -15,6 +15,7 @@ import { Receipt, ArrowLeft, RefreshCw, Plus, Trash2, Edit2, TrendingDown, FileT
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
+import { normalizeCurrency, REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 
 type Expense = {
   id?: string;
@@ -310,9 +311,13 @@ export default function ExpensesPage() {
     }
   };
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const paidExpenses = expenses.filter((e) => e.status === "paid").reduce((sum, e) => sum + e.amount, 0);
-  const pendingExpenses = expenses.filter((e) => e.status === "pending").reduce((sum, e) => sum + e.amount, 0);
+  // formatAmount() below has no currency arg, so it always renders these as
+  // TZS — filtering to that currency here makes the label true instead of
+  // silently blending every currency's expenses into one TZS-labeled number.
+  const reportingExpenses = expenses.filter((e) => normalizeCurrency(e.currency) === REPORTING_CURRENCY);
+  const totalExpenses = reportingExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const paidExpenses = reportingExpenses.filter((e) => e.status === "paid").reduce((sum, e) => sum + e.amount, 0);
+  const pendingExpenses = reportingExpenses.filter((e) => e.status === "pending").reduce((sum, e) => sum + e.amount, 0);
   const linkedToBills = expenses.filter((e) => e.vendor_bill_id).length;
 
   return (

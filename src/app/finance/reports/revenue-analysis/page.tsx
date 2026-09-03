@@ -259,13 +259,9 @@ export default function RevenueAnalysisPage() {
     return Array.from(stats);
   }, [filteredInvoices]);
 
-  const totalRevenue = revenueEligibleInvoices.reduce((sum, i) => sum + i.amount, 0) + income.reduce((sum, i) => sum + i.amount, 0);
-  const invoiceRevenue = revenueEligibleInvoices.reduce((sum, i) => sum + i.amount, 0);
-  const otherIncome = income.reduce((sum, i) => sum + i.amount, 0);
-  const paidRevenue = revenueEligibleInvoices.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.amount, 0);
-  const pendingRevenue = revenueEligibleInvoices.filter((i) => i.status === "pending" || i.status === "sent" || i.status === "partial").reduce((sum, i) => sum + i.amount, 0);
-  const topCustomer = customerData.length > 0 ? customerData[0] : null;
-  const avgInvoice = revenueEligibleInvoices.length > 0 ? invoiceRevenue / revenueEligibleInvoices.length : 0;
+  // The actual rendered stat cards use revenueData (grouped per currency,
+  // above) — these flat cross-currency sums were dead code (never rendered
+  // anywhere) and, being unfiltered by currency, wrong the moment they were.
   // "% of total" only means something within a single currency.
   const invoiceRevenueByCurrency = useMemo(() => {
     const byCurrency: Record<string, number> = {};

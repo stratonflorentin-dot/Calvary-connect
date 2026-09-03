@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireFleetReportAccess } from '../helpers';
+import { normalizeCurrency, REPORTING_CURRENCY } from '@/lib/finance/multi-currency';
 
 export async function GET(request: NextRequest) {
   let supabase;
@@ -109,9 +110,14 @@ export async function GET(request: NextRequest) {
       const driverFuelReqs = (fuelRequests || []).filter((f) => f.driver_id === driver.id);
       const fuelFromReqs = driverFuelReqs.reduce((sum, f) => sum + parseFloat(f.amount || 0), 0);
 
-      // Get fuel from expenses
+      // Get fuel from expenses. fuel_requests.amount has no currency column
+      // (implicitly local-currency purchases) — expenses does have one, so
+      // this is scoped to match before the Math.max() below compares the
+      // two totals as if they were the same unit.
       const driverFuelExpenses = (expenses || []).filter(
-        (e) => (e.driver_id === driver.id || e.driverId === driver.id) && e.category?.toLowerCase() === 'fuel'
+        (e) => (e.driver_id === driver.id || e.driverId === driver.id)
+          && e.category?.toLowerCase() === 'fuel'
+          && normalizeCurrency(e.currency) === REPORTING_CURRENCY
       );
       const fuelFromExpenses = driverFuelExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
 

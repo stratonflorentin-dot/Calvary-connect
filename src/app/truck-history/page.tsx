@@ -19,6 +19,7 @@ import {
   Wrench, Route, History, Plus, CalendarDays, FileText, Shield, Upload, ExternalLink, Eye,
   DollarSign, TrendingUp, TrendingDown, Wallet, Receipt, Fuel, Calculator, BarChart3, Download
 } from 'lucide-react';
+import { normalizeCurrency, REPORTING_CURRENCY } from '@/lib/finance/multi-currency';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
@@ -165,15 +166,20 @@ export default function TruckHistoryPage() {
   const vehicleExpenseRecords = vehicleExpenses?.filter(e => e.vehicle_id === selectedVehicleId);
   const vehicleFuelRecords = vehicleFuel?.filter(f => f.vehicle_id === selectedVehicleId);
 
-  // Calculate financial metrics
-  const totalIncome = vehicleTripRecords?.reduce((sum: number, t: any) => 
+  // Calculate financial metrics. formatCurrency below is hardcoded to TZS,
+  // so expenses are scoped to that currency here too — trips has no
+  // currency column at all (totalIncome's fallback chain is a pre-existing,
+  // separate issue: trips.salesAmount/totalAmount don't exist as real
+  // columns either) so that part is left as-is, not a currency bug.
+  const totalIncome = vehicleTripRecords?.reduce((sum: number, t: any) =>
     sum + (t.salesAmount || t.revenue || t.price || t.totalAmount || 0), 0) || 0;
-  
-  const totalServiceCosts = vehicleServices?.reduce((sum: number, s: any) => 
+
+  const totalServiceCosts = vehicleServices?.reduce((sum: number, s: any) =>
     sum + (s.total_cost || 0), 0) || 0;
-  
-  const totalExpenses = vehicleExpenseRecords?.reduce((sum: number, e: any) => 
-    sum + (e.amount || e.total || 0), 0) || 0;
+
+  const totalExpenses = vehicleExpenseRecords
+    ?.filter((e: any) => normalizeCurrency(e.currency) === REPORTING_CURRENCY)
+    .reduce((sum: number, e: any) => sum + (e.amount || e.total || 0), 0) || 0;
   
   const totalFuelCosts = vehicleFuelRecords?.reduce((sum: number, f: any) => 
     sum + (f.cost || f.totalCost || f.amount || 0), 0) || 0;

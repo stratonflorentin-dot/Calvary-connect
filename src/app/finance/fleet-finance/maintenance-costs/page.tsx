@@ -15,6 +15,7 @@ import { Wrench, ArrowLeft, RefreshCw, Plus, Trash2, Edit2, TrendingUp, Trending
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
+import { normalizeCurrency, REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 type Vehicle = {
@@ -85,6 +86,11 @@ export default function MaintenanceCostsPage() {
   const filteredCosts = selectedVehicleId === "all"
     ? maintenanceCosts
     : maintenanceCosts.filter((c) => c.vehicle_id === selectedVehicleId);
+
+  // formatAmount() has no currency arg (always renders as TZS) — every
+  // chart/total below is built from this reporting-currency-only subset so
+  // that label is true instead of silently blending currencies.
+  const reportingCosts = filteredCosts.filter((c) => normalizeCurrency(c.currency) === REPORTING_CURRENCY);
 
   const saveMaintenanceCost = async () => {
     if (!maintenanceForm.vehicle_id || !maintenanceForm.amount || !maintenanceForm.date) {
@@ -167,34 +173,34 @@ export default function MaintenanceCostsPage() {
 
   const chartData = useMemo(() => {
     const monthlyData: Record<string, number> = {};
-    filteredCosts.forEach((cost) => {
+    reportingCosts.forEach((cost) => {
       const month = new Date(cost.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       monthlyData[month] = (monthlyData[month] || 0) + cost.amount;
     });
     return Object.entries(monthlyData).map(([month, amount]) => ({ month, amount }));
-  }, [filteredCosts]);
+  }, [reportingCosts]);
 
   const typeData = useMemo(() => {
     const typeCounts: Record<string, number> = { routine: 0, repair: 0, inspection: 0, other: 0 };
-    filteredCosts.forEach((cost) => {
+    reportingCosts.forEach((cost) => {
       const type = cost.maintenance_type || "other";
       typeCounts[type] = (typeCounts[type] || 0) + cost.amount;
     });
     return Object.entries(typeCounts).map(([name, value]) => ({ name, value }));
-  }, [filteredCosts]);
+  }, [reportingCosts]);
 
   const vehicleMaintenanceData = useMemo(() => {
     return vehicles.map((vehicle) => {
-      const vehicleCosts = filteredCosts.filter((c) => c.vehicle_id === vehicle.id);
+      const vehicleCosts = reportingCosts.filter((c) => c.vehicle_id === vehicle.id);
       const totalCost = vehicleCosts.reduce((sum, c) => sum + c.amount, 0);
       return {
         name: vehicle.plate_number,
         cost: totalCost,
       };
     });
-  }, [vehicles, filteredCosts]);
+  }, [vehicles, reportingCosts]);
 
-  const totalMaintenanceCost = filteredCosts.reduce((sum, c) => sum + c.amount, 0);
+  const totalMaintenanceCost = reportingCosts.reduce((sum, c) => sum + c.amount, 0);
   const avgCostPerVehicle = vehicles.length > 0 ? totalMaintenanceCost / vehicles.length : 0;
 
   const getMaintenanceTypeBadge = (type: string) => {

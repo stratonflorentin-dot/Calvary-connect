@@ -15,6 +15,7 @@ import { Fuel, ArrowLeft, RefreshCw, Plus, Trash2, Edit2, TrendingUp, TrendingDo
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
+import { normalizeCurrency, REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 
 type Vehicle = {
@@ -84,6 +85,11 @@ export default function FuelCostsPage() {
   const filteredCosts = selectedVehicleId === "all"
     ? fuelCosts
     : fuelCosts.filter((c) => c.vehicle_id === selectedVehicleId);
+
+  // formatAmount() has no currency arg (always renders as TZS) — every
+  // chart/total below is built from this reporting-currency-only subset so
+  // that label is true instead of silently blending currencies.
+  const reportingCosts = filteredCosts.filter((c) => normalizeCurrency(c.currency) === REPORTING_CURRENCY);
 
   const saveFuelCost = async () => {
     if (!fuelForm.vehicle_id || !fuelForm.amount || !fuelForm.date) {
@@ -166,16 +172,16 @@ export default function FuelCostsPage() {
 
   const chartData = useMemo(() => {
     const monthlyData: Record<string, number> = {};
-    filteredCosts.forEach((cost) => {
+    reportingCosts.forEach((cost) => {
       const month = new Date(cost.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       monthlyData[month] = (monthlyData[month] || 0) + cost.amount;
     });
     return Object.entries(monthlyData).map(([month, amount]) => ({ month, amount }));
-  }, [filteredCosts]);
+  }, [reportingCosts]);
 
   const vehicleFuelData = useMemo(() => {
     return vehicles.map((vehicle) => {
-      const vehicleCosts = filteredCosts.filter((c) => c.vehicle_id === vehicle.id);
+      const vehicleCosts = reportingCosts.filter((c) => c.vehicle_id === vehicle.id);
       const totalCost = vehicleCosts.reduce((sum, c) => sum + c.amount, 0);
       const totalLiters = vehicleCosts.reduce((sum, c) => sum + (c.liters || 0), 0);
       return {
@@ -184,10 +190,13 @@ export default function FuelCostsPage() {
         liters: totalLiters,
       };
     });
-  }, [vehicles, filteredCosts]);
+  }, [vehicles, reportingCosts]);
 
-  const totalFuelCost = filteredCosts.reduce((sum, c) => sum + c.amount, 0);
-  const totalLiters = filteredCosts.reduce((sum, c) => sum + (c.liters || 0), 0);
+  const totalFuelCost = reportingCosts.reduce((sum, c) => sum + c.amount, 0);
+  // Liters scoped to the same reporting-currency subset as totalFuelCost —
+  // otherwise a price-per-liter ratio would divide a TZS-only cost by a
+  // liter count that includes fuel bought in other currencies.
+  const totalLiters = reportingCosts.reduce((sum, c) => sum + (c.liters || 0), 0);
   const avgPricePerLiter = totalLiters > 0 ? totalFuelCost / totalLiters : 0;
 
   return (

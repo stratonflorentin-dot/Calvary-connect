@@ -14,6 +14,7 @@ import { MapPin, ArrowLeft, RefreshCw, TrendingUp, TrendingDown, DollarSign, Rou
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
+import { REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 
 type Trip = {
@@ -28,6 +29,7 @@ type Trip = {
   fare_amount?: number;
   total_amount?: number | null;
   sales_amount?: number | null;
+  currency?: string | null;
 };
 
 type Vehicle = {
@@ -60,6 +62,7 @@ type RouteProfitability = {
   route: string;
   origin: string;
   destination: string;
+  currency: string;
   totalTrips: number;
   totalDistance: number;
   totalRevenue: number;
@@ -111,15 +114,23 @@ export default function RouteProfitabilityPage() {
     const routeMap = new Map<string, RouteProfitability>();
 
     trips.forEach((trip) => {
-      const routeKey = `${trip.origin}-${trip.destination}`;
+      // Currency is part of the grouping key — a route run once in TZS and
+      // once in USD is two separate profitability rows, never one blended
+      // figure (matches api/reports/route-profitability/route.ts, the
+      // already currency-correct sibling this page duplicates).
+      const currency = trip.currency || "TZS";
+      const routeKey = `${trip.origin}-${trip.destination}::${currency}`;
       const existing = routeMap.get(routeKey);
 
       // trip_revenue is an empty legacy table and fare_amount doesn't exist
       // on trips — the trip's own total_amount/sales_amount is the real
       // revenue figure once there's nothing in trip_revenue for it.
-      const tripRevenue = revenues.filter((r) => r.trip_id === trip.id).reduce((sum, r) => sum + r.amount, 0)
+      const tripRevenue = revenues.filter((r) => r.trip_id === trip.id && (r.currency || "TZS") === currency).reduce((sum, r) => sum + r.amount, 0)
         || Number(trip.total_amount ?? trip.sales_amount ?? trip.fare_amount ?? 0);
-      const tripCosts = costs.filter((c) => c.trip_id === trip.id).reduce((sum, c) => sum + c.amount, 0);
+      // Only this trip's costs in the SAME currency as its revenue — a cost
+      // entry logged in a different currency belongs to a different
+      // currency's profitability figure, not this trip's.
+      const tripCosts = costs.filter((c) => c.trip_id === trip.id && (c.currency || "TZS") === currency).reduce((sum, c) => sum + c.amount, 0);
 
       if (existing) {
         existing.totalTrips += 1;
@@ -131,6 +142,7 @@ export default function RouteProfitabilityPage() {
           route: routeKey,
           origin: trip.origin,
           destination: trip.destination,
+          currency,
           totalTrips: 1,
           totalDistance: trip.distance_km || 0,
           totalRevenue: tripRevenue,
@@ -159,32 +171,39 @@ export default function RouteProfitabilityPage() {
   const filteredRoutes = selectedVehicleId === "all"
     ? calculateRouteProfitability
     : calculateRouteProfitability.filter((rp) => {
-        const routeTrips = trips.filter((t) => `${t.origin}-${t.destination}` === rp.route);
+        const routeTrips = trips.filter((t) => `${t.origin}-${t.destination}::${t.currency || "TZS"}` === rp.route);
         return routeTrips.some((t) => t.vehicle_id === selectedVehicleId);
       });
 
+  // Chart bars and the headline stat cards compare routes side by side and
+  // render amounts with no per-currency label (formatAmount() defaults to
+  // TZS) — scoped to one currency so that comparison, and that label, are
+  // both meaningful. The full table below still lists every currency's
+  // routes, each with its own currency shown per row.
+  const reportingRoutes = filteredRoutes.filter((rp) => rp.currency === REPORTING_CURRENCY);
+
   const chartData = useMemo(() => {
-    return filteredRoutes.slice(0, 10).map((rp) => ({
+    return reportingRoutes.slice(0, 10).map((rp) => ({
       name: `${rp.origin} → ${rp.destination}`,
       revenue: rp.totalRevenue,
       costs: rp.totalCosts,
       profit: rp.netProfit,
     }));
-  }, [filteredRoutes]);
+  }, [reportingRoutes]);
 
   const efficiencyData = useMemo(() => {
-    return filteredRoutes.slice(0, 10).map((rp) => ({
+    return reportingRoutes.slice(0, 10).map((rp) => ({
       name: `${rp.origin} → ${rp.destination}`,
       revenuePerKm: rp.revenuePerKm,
       costPerKm: rp.costPerKm,
       margin: rp.profitMargin,
     }));
-  }, [filteredRoutes]);
+  }, [reportingRoutes]);
 
-  const totalRevenue = filteredRoutes.reduce((sum, rp) => sum + rp.totalRevenue, 0);
-  const totalCosts = filteredRoutes.reduce((sum, rp) => sum + rp.totalCosts, 0);
+  const totalRevenue = reportingRoutes.reduce((sum, rp) => sum + rp.totalRevenue, 0);
+  const totalCosts = reportingRoutes.reduce((sum, rp) => sum + rp.totalCosts, 0);
   const totalProfit = totalRevenue - totalCosts;
-  const totalDistance = filteredRoutes.reduce((sum, rp) => sum + rp.totalDistance, 0);
+  const totalDistance = reportingRoutes.reduce((sum, rp) => sum + rp.totalDistance, 0);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -343,26 +362,26 @@ export default function RouteProfitabilityPage() {
                           <Route className="size-4 text-muted-foreground" />
                           <div>
                             <p className="font-medium">{rp.origin}</p>
-                            <p className="text-xs text-muted-foreground">→ {rp.destination}</p>
+                            <p className="text-xs text-muted-foreground">→ {rp.destination} · {rp.currency}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>{rp.totalTrips}</TableCell>
                       <TableCell>{rp.totalDistance.toLocaleString()}</TableCell>
-                      <TableCell className="text-success font-medium">{formatAmount(rp.totalRevenue)}</TableCell>
-                      <TableCell className="text-destructive font-medium">{formatAmount(rp.totalCosts)}</TableCell>
+                      <TableCell className="text-success font-medium">{formatAmount(rp.totalRevenue, rp.currency)}</TableCell>
+                      <TableCell className="text-destructive font-medium">{formatAmount(rp.totalCosts, rp.currency)}</TableCell>
                       <TableCell className={cn("font-medium", rp.netProfit >= 0 ? "text-success" : "text-destructive")}>
-                        {formatAmount(rp.netProfit)}
+                        {formatAmount(rp.netProfit, rp.currency)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={rp.profitMargin >= 0 ? "default" : "destructive"}>
                           {rp.profitMargin.toFixed(1)}%
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatAmount(rp.revenuePerKm)}</TableCell>
-                      <TableCell>{formatAmount(rp.costPerKm)}</TableCell>
-                      <TableCell>{formatAmount(rp.avgTripRevenue)}</TableCell>
-                      <TableCell>{formatAmount(rp.avgTripCost)}</TableCell>
+                      <TableCell>{formatAmount(rp.revenuePerKm, rp.currency)}</TableCell>
+                      <TableCell>{formatAmount(rp.costPerKm, rp.currency)}</TableCell>
+                      <TableCell>{formatAmount(rp.avgTripRevenue, rp.currency)}</TableCell>
+                      <TableCell>{formatAmount(rp.avgTripCost, rp.currency)}</TableCell>
                     </TableRow>
                   ))
                 )}

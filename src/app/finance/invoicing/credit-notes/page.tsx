@@ -16,6 +16,7 @@ import { FileText, ArrowLeft, RefreshCw, Plus, Receipt, Send } from "lucide-reac
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
+import { normalizeCurrency, REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 
 const VAT_RATE = 0.18;
 
@@ -162,9 +163,14 @@ export default function CreditNotesPage() {
     }
   };
 
-  const totalCreditAmount = creditNotes.reduce((sum, n) => sum + n.total_amount, 0);
-  const issuedCredit = creditNotes.filter((n) => n.status === "issued").reduce((sum, n) => sum + n.total_amount, 0);
-  const draftCredit = creditNotes.filter((n) => n.status === "draft").reduce((sum, n) => sum + n.total_amount, 0);
+  // formatAmount() below has no currency arg, so it always renders these as
+  // TZS — filtering to that currency here makes the label true instead of
+  // silently blending every currency's credit notes into one TZS-labeled
+  // number.
+  const reportingCreditNotes = creditNotes.filter((n) => normalizeCurrency(n.currency) === REPORTING_CURRENCY);
+  const totalCreditAmount = reportingCreditNotes.reduce((sum, n) => sum + n.total_amount, 0);
+  const issuedCredit = reportingCreditNotes.filter((n) => n.status === "issued").reduce((sum, n) => sum + n.total_amount, 0);
+  const draftCredit = reportingCreditNotes.filter((n) => n.status === "draft").reduce((sum, n) => sum + n.total_amount, 0);
 
   return (
     <div className="min-h-screen bg-background p-6">

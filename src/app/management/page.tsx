@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { normalizeCurrency, REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 
 export default function ManagementDashboard() {
   const { toast } = useToast();
@@ -85,7 +86,14 @@ export default function ManagementDashboard() {
         totalTrips: tripsData.data?.length || 0,
         completedTrips: tripsData.data?.filter((t: any) => t.status === "COMPLETED").length || 0,
         inProgressTrips: tripsData.data?.filter((t: any) => t.status === "IN_PROGRESS" || t.status === "in_transit").length || 0,
-        totalRevenue: tripsData.data?.reduce((sum: number, t: any) => sum + (t.totalAmount || 0), 0) || 0,
+        // trips has no totalAmount/currency column (never did — this was
+        // always silently summing `undefined` to 0). Revenue comes from
+        // invoices instead, per the finance rules ("money in enters only
+        // as an invoice"), kept in the reporting currency only — same
+        // pattern as finance/page.tsx — rather than mixing currencies.
+        totalRevenue: invoicesData.data
+          ?.filter((i: any) => normalizeCurrency(i.currency) === REPORTING_CURRENCY)
+          .reduce((sum: number, i: any) => sum + (Number(i.total_amount) || 0), 0) || 0,
         totalInvoices: invoicesData.data?.length || 0,
         pendingInvoices: invoicesData.data?.filter((i: any) => i.status === "pending" || i.status === "sent").length || 0,
         paidInvoices: invoicesData.data?.filter((i: any) => i.status === "paid").length || 0,

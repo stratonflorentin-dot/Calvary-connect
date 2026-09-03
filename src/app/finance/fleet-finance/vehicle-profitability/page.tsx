@@ -14,6 +14,7 @@ import { Truck, ArrowLeft, RefreshCw, TrendingUp, TrendingDown, DollarSign, Rout
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
+import { normalizeCurrency, REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 
 type Vehicle = {
@@ -110,10 +111,17 @@ export default function VehicleProfitabilityPage() {
     loadVehicleData();
   }, []);
 
+  // formatAmount() throughout this page has no currency arg (always renders
+  // as TZS), and per-vehicle profitability was never split by currency — so
+  // every figure here is scoped to the reporting currency at the source,
+  // same pattern as the maintenance-costs/fuel-costs sibling pages.
+  const reportingCosts = useMemo(() => costs.filter((c) => normalizeCurrency(c.currency) === REPORTING_CURRENCY), [costs]);
+  const reportingRevenues = useMemo(() => revenues.filter((r) => normalizeCurrency(r.currency) === REPORTING_CURRENCY), [revenues]);
+
   const calculateProfitability = useMemo(() => {
     return vehicles.map((vehicle) => {
-      const vehicleCosts = costs.filter((c) => c.vehicle_id === vehicle.id);
-      const vehicleRevenues = revenues.filter((r) => {
+      const vehicleCosts = reportingCosts.filter((c) => c.vehicle_id === vehicle.id);
+      const vehicleRevenues = reportingRevenues.filter((r) => {
         const relatedTrip = trips.find((t) => t.id === r.trip_id);
         return relatedTrip?.vehicle_id === vehicle.id;
       });
@@ -150,7 +158,7 @@ export default function VehicleProfitabilityPage() {
         tripCount: vehicleTrips.length,
       } as VehicleProfitability;
     });
-  }, [vehicles, costs, revenues, trips]);
+  }, [vehicles, reportingCosts, reportingRevenues, trips]);
 
   const filteredProfitability = selectedVehicleId === "all"
     ? calculateProfitability
