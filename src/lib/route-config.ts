@@ -435,7 +435,10 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: "/finance/transactions/expenses",
     label: "Expense Transactions",
-    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    // OPERATOR/HR added when /expenses (their only other expense-creation
+    // door, and a raw-insert path expenses_write RLS already didn't grant
+    // them anyway) became a read-only register.
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "OPERATOR", "HR"],
     category: "finance",
     showInNavigation: false,
   },

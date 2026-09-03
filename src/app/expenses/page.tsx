@@ -4,50 +4,19 @@ import Link from 'next/link';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
-import { AVAILABLE_CURRENCIES, formatCurrency } from '@/components/ui/currency-badge';
+import { formatCurrency } from '@/components/ui/currency-badge';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Receipt, DollarSign, BookOpen, Flame, AlertTriangle, Upload, Tags, Wallet, HandCoins } from 'lucide-react';
+import { Plus, Edit, Receipt, DollarSign, Flame, AlertTriangle, Upload, Tags, Wallet, HandCoins } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ChartOfAccountsService, COAAccount, EXPENSE_CATEGORY_COA_MAP } from '@/services/chart-of-accounts-service';
+import { EXPENSE_CATEGORY_COA_MAP } from '@/services/chart-of-accounts-service';
 import { TransitionButtons } from '@/components/workflow/transition-buttons';
 import { hoursSince, isOverdue, resolveApprovalLevel, slaHours } from '@/lib/workflow/approvals';
-
-interface Expense {
-    id: string;
-    description: string;
-    amount: number;
-    category: string;
-    date: string;
-    status: 'pending' | 'approved' | 'rejected' | 'paid';
-    createdAt: string;
-    approvedBy?: string;
-    client_reference?: string;
-    employee_id?: string;
-    account_code?: string;
-    currency?: string;
-    vendor?: string;
-    vehicle_id?: string | null;
-    payment_method?: string;
-    bank_account_id?: string | null;
-    category_id?: string | null;
-    supplier_id?: string | null;
-    vat_amount?: number | null;
-    is_zero_rated?: boolean;
-    petty_cash_transaction_id?: string | null;
-    cash_request_id?: string | null;
-}
 
 interface BankAccountOption {
     id: string;
@@ -56,33 +25,14 @@ interface BankAccountOption {
     currency: string;
 }
 
-interface ExpenseCategoryOption {
-    id: string;
-    name: string;
-    default_account_code: string | null;
-}
-
-interface SupplierOption {
-    id: string;
-    company_name: string;
-}
 
 export default function ExpensesPage() {
-    const { role, isAdmin } = useRole();
-    const { format, currency } = useCurrency();
+    const { role } = useRole();
+    const { format } = useCurrency();
     const { user } = useSupabase();
-    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const [expenses, setExpenses] = useState<any[]>([]);
     const [vehicles, setVehicles] = useState<any[]>([]);
-    const [coaAccounts, setCoaAccounts] = useState<COAAccount[]>([]);
     const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([]);
-    const [categories, setCategories] = useState<ExpenseCategoryOption[]>([]);
-    const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
-    const [addZeroRated, setAddZeroRated] = useState(false);
-    const [addCategoryId, setAddCategoryId] = useState('');
-    const [addAccountCode, setAddAccountCode] = useState('');
-    const [editZeroRated, setEditZeroRated] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -101,22 +51,15 @@ export default function ExpensesPage() {
 
             try {
                 setLoading(true);
-                // Load expenses, vehicles, and COA in parallel
-                const [expensesRes, vehiclesRes, accounts, bankAccountsRes, categoriesRes, suppliersRes] = await Promise.all([
+                const [expensesRes, vehiclesRes, bankAccountsRes] = await Promise.all([
                     supabase.from('expenses').select('*, vehicle_id').order('created_at', { ascending: false }),
                     supabase.from('vehicles').select('*'),
-                    ChartOfAccountsService.getAccounts(),
                     supabase.from('bank_accounts').select('id, account_name, bank_name, currency').eq('is_active', true).order('account_name'),
-                    supabase.from('expense_categories').select('id, name, default_account_code').eq('status', 'active').order('name'),
-                    supabase.from('suppliers').select('id, company_name').eq('status', 'active').order('company_name'),
                 ]);
 
                 setExpenses(expensesRes.data || []);
                 setVehicles(vehiclesRes.data || []);
-                setCoaAccounts(accounts);
                 setBankAccounts(bankAccountsRes.data || []);
-                setCategories(categoriesRes.data || []);
-                setSuppliers(suppliersRes.data || []);
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -127,151 +70,6 @@ export default function ExpensesPage() {
         loadData();
     }, [user, role]);
 
-    const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        if (!user) return;
-
-        // Captured synchronously, before any `await` below — React nulls out
-        // pooled SyntheticEvent fields (including currentTarget) once the
-        // handler's synchronous portion returns, so reading e.currentTarget
-        // after an await throws "Cannot read properties of null".
-        const form = e.currentTarget;
-
-        try {
-            const formData = new FormData(form);
-            const vehicleId = formData.get('vehicle_id') as string;
-            const expenseCurrency = formData.get('currency') as string || 'TZS';
-            const selectedCategory = categories.find((c) => c.id === addCategoryId);
-            const category = selectedCategory?.name || (formData.get('category') as string) || 'other';
-            const customCoaCode = addAccountCode || (formData.get('coa_account_code') as string);
-
-            // Get or map COA account code
-            const coaAccountCode = customCoaCode || ChartOfAccountsService.mapExpenseToCOA(category);
-
-            // Validate
-            if (!ChartOfAccountsService.validateAccountCode(coaAccountCode, coaAccounts)) {
-                toast({ title: 'Error', description: 'Invalid Chart of Accounts code', variant: 'destructive' });
-                return;
-            }
-
-            const supplierId = formData.get('supplier_id') as string;
-            const vatAmount = addZeroRated ? 0 : parseFloat(formData.get('vat_amount') as string) || 0;
-
-            const expenseData = {
-                description: formData.get('description') as string,
-                amount: parseFloat(formData.get('amount') as string),
-                category: category,
-                category_id: addCategoryId || null,
-                supplier_id: supplierId && supplierId !== 'none' ? supplierId : null,
-                is_zero_rated: addZeroRated,
-                vat_amount: vatAmount,
-                date: formData.get('date') as string,
-                client_reference: formData.get('clientReference') as string,
-                vendor: formData.get('vendor') as string,
-                payment_method: formData.get('payment_method') as string,
-                currency: expenseCurrency,
-                account_code: coaAccountCode,
-                bank_account_id: (formData.get('bank_account_id') as string) || null,
-                driver_id: user.id,
-                vehicle_id: vehicleId === 'none' ? null : vehicleId,
-                status: 'pending',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            };
-
-            const { data, error } = await supabase
-                .from('expenses')
-                .insert([expenseData])
-                .select()
-                .single();
-
-            if (error) {
-                console.error('Error adding expense:', error);
-                toast({ title: 'Error', description: `Failed to add expense: ${error.message}`, variant: 'destructive' });
-            } else {
-                console.log('Expense added successfully:', data);
-                toast({ title: 'Success', description: 'Expense added successfully with COA mapping' });
-                // Refresh expenses list
-                const { data: updatedExpenses } = await supabase
-                    .from('expenses')
-                    .select('*, vehicle_id')
-                    .order('created_at', { ascending: false });
-
-                setExpenses(updatedExpenses || []);
-                setIsAddDialogOpen(false);
-                setAddCategoryId('');
-                setAddAccountCode('');
-                setAddZeroRated(false);
-                form.reset();
-            }
-        } catch (error) {
-            console.error('Error adding expense:', error);
-            toast({ title: 'Error', description: 'Failed to add expense', variant: 'destructive' });
-        }
-    };
-
-    const handleUpdateExpense = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!editingExpense) return;
-
-        try {
-            const formData = new FormData(e.currentTarget);
-            const vehicleId = formData.get('vehicle_id') as string;
-            const categoryIdField = formData.get('category_id') as string;
-            const selectedCategory = categories.find((c) => c.id === categoryIdField);
-            const category = selectedCategory?.name || (formData.get('category') as string) || 'other';
-            const customCoaCode = formData.get('coa_account_code') as string;
-
-            // Get or map COA account code
-            const coaAccountCode = customCoaCode || ChartOfAccountsService.mapExpenseToCOA(category);
-
-            // Validate
-            if (!ChartOfAccountsService.validateAccountCode(coaAccountCode, coaAccounts)) {
-                toast({ title: 'Error', description: 'Invalid Chart of Accounts code', variant: 'destructive' });
-                return;
-            }
-
-            const supplierId = formData.get('supplier_id') as string;
-            const vatAmount = editZeroRated ? 0 : parseFloat(formData.get('vat_amount') as string) || 0;
-
-            const { data, error } = await supabase
-                .from('expenses')
-                .update({
-                    description: formData.get('description') as string,
-                    amount: parseFloat(formData.get('amount') as string),
-                    category: category,
-                    category_id: categoryIdField || null,
-                    supplier_id: supplierId && supplierId !== 'none' ? supplierId : null,
-                    is_zero_rated: editZeroRated,
-                    vat_amount: vatAmount,
-                    date: formData.get('date') as string,
-                    client_reference: formData.get('clientReference') as string,
-                    vendor: formData.get('vendor') as string,
-                    payment_method: formData.get('payment_method') as string,
-                    currency: formData.get('currency') as string,
-                    account_code: coaAccountCode,
-                    bank_account_id: (formData.get('bank_account_id') as string) || null,
-                    vehicle_id: vehicleId === 'none' ? null : vehicleId,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', editingExpense.id)
-                .select()
-                .single();
-
-            if (error) {
-                console.error('Error updating expense:', error);
-                toast({ title: 'Error', description: 'Failed to update expense', variant: 'destructive' });
-            } else {
-                setExpenses(prev => prev.map(e => e.id === editingExpense.id ? data : e));
-                setEditingExpense(null);
-                toast({ title: 'Success', description: 'Expense updated successfully with COA mapping' });
-            }
-        } catch (error) {
-            console.error('Error updating expense:', error);
-            toast({ title: 'Error', description: 'Failed to update expense', variant: 'destructive' });
-        }
-    };
 
     // Never summed across currencies — a $20 expense and a TSh 2,000,000
     // expense added together is a meaningless number. Grouped per currency,
@@ -295,8 +93,8 @@ export default function ExpensesPage() {
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">Expenses Management</h1>
-                            <p className="text-muted-foreground">Track and manage company expenses</p>
+                            <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">Expenses Register</h1>
+                            <p className="text-muted-foreground">Every logged expense. New and edited expenses are created on the Expense Transactions screen.</p>
                         </div>
                         <div className="flex items-center gap-2">
                         <Button variant="outline" className="gap-2" asChild>
@@ -311,183 +109,12 @@ export default function ExpensesPage() {
                                 Bulk Expenses
                             </Link>
                         </Button>
-                        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="gap-2">
-                                    <Plus className="size-4" />
-                                    Add Expense
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                    <DialogTitle>Add New Expense</DialogTitle>
-                                </DialogHeader>
-                                <form onSubmit={handleAddExpense} className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="description">Description</Label>
-                                        <Textarea id="description" name="description" required placeholder="Describe the expense" />
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="clientReference">Client / Trip Reference (Optional)</Label>
-                                        <Input id="clientReference" name="clientReference" placeholder="e.g. TRP-123 or ABC Corp" />
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <Label htmlFor="amount">Amount</Label>
-                                            <Input id="amount" name="amount" type="number" step="0.01" required />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="currency">Currency</Label>
-                                            <Select name="currency" defaultValue={currency}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select currency" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {AVAILABLE_CURRENCIES.map((cur) => (
-                                                        <SelectItem key={cur.code} value={cur.code}>
-                                                            {cur.code} - {cur.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <Label htmlFor="category">Category</Label>
-                                            <Select
-                                                value={addCategoryId}
-                                                onValueChange={(v) => {
-                                                    setAddCategoryId(v);
-                                                    const def = categories.find((c) => c.id === v)?.default_account_code;
-                                                    if (def) setAddAccountCode(def);
-                                                }}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select category" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {categories.map((c) => (
-                                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                                    ))}
-                                                    {categories.length === 0 && (
-                                                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                                                            No categories yet — <Link href="/expenses/categories" className="text-primary hover:underline">create one</Link>
-                                                        </div>
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="coa_account_code">Chart of Accounts (Optional)</Label>
-                                            <Select name="coa_account_code" value={addAccountCode} onValueChange={setAddAccountCode}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Auto-mapped" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {coaAccounts.map((account) => (
-                                                        <SelectItem key={account.code} value={account.code}>
-                                                            {account.code} - {account.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <Label htmlFor="vendor">Vendor (free text, optional)</Label>
-                                            <Input id="vendor" name="vendor" placeholder="Vendor name" />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="supplier_id">Registered Supplier (Optional)</Label>
-                                            <Select name="supplier_id" defaultValue="none">
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select supplier" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="none">No supplier</SelectItem>
-                                                    {suppliers.map((s) => (
-                                                        <SelectItem key={s.id} value={s.id}>{s.company_name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                                        <div className="flex items-center gap-2 pb-2">
-                                            <input
-                                                type="checkbox"
-                                                id="add-zero-rated"
-                                                checked={addZeroRated}
-                                                onChange={(e) => setAddZeroRated(e.target.checked)}
-                                                className="size-4"
-                                            />
-                                            <Label htmlFor="add-zero-rated" className="cursor-pointer">Zero-rated (no VAT)</Label>
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="vat_amount">VAT Amount</Label>
-                                            <Input id="vat_amount" name="vat_amount" type="number" step="0.01" defaultValue="0" disabled={addZeroRated} />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <Label htmlFor="vehicle_id">Vehicle (Optional)</Label>
-                                            <Select name="vehicle_id" defaultValue="none">
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select vehicle" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="none">No vehicle</SelectItem>
-                                                    {vehicles.map((v) => (
-                                                        <SelectItem key={v.id} value={v.id}>
-                                                            {v.plate_number || v.plateNumber}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="payment_method">Payment Method (Optional)</Label>
-                                            <Select name="payment_method" defaultValue="cash">
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select payment method" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="cash">Cash</SelectItem>
-                                                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                                                    <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                                                    <SelectItem value="credit_card">Credit Card</SelectItem>
-                                                    <SelectItem value="cheque">Cheque</SelectItem>
-                                                    <SelectItem value="other">Other</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="bank_account_id">Paid From Account (Optional)</Label>
-                                        <Select name="bank_account_id">
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Which account paid this?" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {bankAccounts.map((b) => (
-                                                    <SelectItem key={b.id} value={b.id}>
-                                                        {b.bank_name} · {b.account_name} ({b.currency})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-xs text-muted-foreground mt-1">Match this to the expense's currency above — the account you pick here is what actually gets debited once this is marked paid.</p>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor="date">Date</Label>
-                                        <Input id="date" name="date" type="date" required />
-                                    </div>
-                                    <Button type="submit" className="w-full">Add Expense</Button>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
+                        <Button className="gap-2" asChild>
+                            <Link href="/finance/transactions/expenses">
+                                <Plus className="size-4" />
+                                New Expense
+                            </Link>
+                        </Button>
                         </div>
                     </div>
 
@@ -686,198 +313,20 @@ export default function ExpensesPage() {
                                                         onError={(t, message) => {
                                                             // "More than one active TZS bank account exists — edit this
                                                             // expense to choose which one paid it" (lib/workflow/engine.ts)
-                                                            // is directly actionable from the Edit dialog already on this
-                                                            // page — open it instead of leaving the user to find it themselves.
+                                                            // is fixed by editing the expense, which now only happens on
+                                                            // /finance/transactions/expenses (this page is a read-only
+                                                            // register) — send the user there instead of leaving them to
+                                                            // find it themselves.
                                                             if (t.to === 'paid' && /bank account/i.test(message)) {
-                                                                setEditingExpense(expense);
-                                                                setEditZeroRated(!!expense.is_zero_rated);
+                                                                window.location.href = '/finance/transactions/expenses';
                                                             }
                                                         }}
                                                     />
-                                                    <Dialog
-                                                        open={editingExpense?.id === expense.id}
-                                                        onOpenChange={(open) => { if (!open) setEditingExpense(null); }}
-                                                    >
-                                                        <DialogTrigger asChild>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => { setEditingExpense(expense); setEditZeroRated(!!expense.is_zero_rated); }}
-                                                            >
-                                                                <Edit className="size-4" />
-                                                            </Button>
-                                                        </DialogTrigger>
-                                                        <DialogContent>
-                                                            <DialogHeader>
-                                                                <DialogTitle>Edit Expense</DialogTitle>
-                                                            </DialogHeader>
-                                                            <form onSubmit={handleUpdateExpense} className="space-y-4">
-                                                                <div>
-                                                                    <Label htmlFor="edit-description">Description</Label>
-                                                                    <Textarea
-                                                                        id="edit-description"
-                                                                        name="description"
-                                                                        defaultValue={editingExpense?.description}
-                                                                        required
-                                                                        placeholder="Describe the expense"
-                                                                    />
-                                                                </div>
-                                                                <div>
-                                                                    <Label htmlFor="edit-clientReference">Client / Trip Reference (Optional)</Label>
-                                                                    <Input
-                                                                        id="edit-clientReference"
-                                                                        name="clientReference"
-                                                                        defaultValue={editingExpense?.client_reference}
-                                                                        placeholder="e.g. TRP-123 or ABC Corp"
-                                                                    />
-                                                                </div>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                    <div>
-                                                                        <Label htmlFor="edit-amount">Amount</Label>
-                                                                        <Input
-                                                                            id="edit-amount"
-                                                                            name="amount"
-                                                                            type="number"
-                                                                            step="0.01"
-                                                                            defaultValue={editingExpense?.amount}
-                                                                            required
-                                                                        />
-                                                                    </div>
-                                                                    <div>
-                                                                        <Label htmlFor="edit-currency">Currency</Label>
-                                                                        <Select name="currency" defaultValue={editingExpense?.currency || currency}>
-                                                                            <SelectTrigger>
-                                                                                <SelectValue placeholder="Select currency" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                {AVAILABLE_CURRENCIES.map((cur) => (
-                                                                                    <SelectItem key={cur.code} value={cur.code}>
-                                                                                        {cur.code} - {cur.name}
-                                                                                    </SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                    <div>
-                                                                        <Label htmlFor="edit-category">Category</Label>
-                                                                        <Select name="category_id" defaultValue={editingExpense?.category_id ?? ''}>
-                                                                            <SelectTrigger>
-                                                                                <SelectValue placeholder="Select category" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                {categories.map((c) => (
-                                                                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                    <div>
-                                                                        <Label htmlFor="edit-vendor">Vendor (free text, optional)</Label>
-                                                                        <Input
-                                                                            id="edit-vendor"
-                                                                            name="vendor"
-                                                                            defaultValue={editingExpense?.vendor}
-                                                                            placeholder="Vendor name"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                    <div>
-                                                                        <Label htmlFor="edit-supplier_id">Registered Supplier (Optional)</Label>
-                                                                        <Select name="supplier_id" defaultValue={editingExpense?.supplier_id ?? 'none'}>
-                                                                            <SelectTrigger>
-                                                                                <SelectValue placeholder="Select supplier" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                <SelectItem value="none">No supplier</SelectItem>
-                                                                                {suppliers.map((s) => (
-                                                                                    <SelectItem key={s.id} value={s.id}>{s.company_name}</SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                    <div className="grid grid-cols-2 gap-2 items-end">
-                                                                        <div className="flex items-center gap-2 pb-2">
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                id="edit-zero-rated"
-                                                                                checked={editZeroRated}
-                                                                                onChange={(e) => setEditZeroRated(e.target.checked)}
-                                                                                className="size-4"
-                                                                            />
-                                                                            <Label htmlFor="edit-zero-rated" className="cursor-pointer text-xs">Zero-rated</Label>
-                                                                        </div>
-                                                                        <div>
-                                                                            <Label htmlFor="edit-vat_amount" className="text-xs">VAT Amount</Label>
-                                                                            <Input id="edit-vat_amount" name="vat_amount" type="number" step="0.01" defaultValue={editingExpense?.vat_amount ?? 0} disabled={editZeroRated} />
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                    <div>
-                                                                        <Label htmlFor="edit-vehicle_id">Vehicle (Optional)</Label>
-                                                                        <Select name="vehicle_id" defaultValue={editingExpense?.vehicle_id || 'none'}>
-                                                                            <SelectTrigger>
-                                                                                <SelectValue placeholder="Select vehicle" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                <SelectItem value="none">No vehicle</SelectItem>
-                                                                                {vehicles.map((v) => (
-                                                                                    <SelectItem key={v.id} value={v.id}>
-                                                                                        {v.plate_number || v.plateNumber}
-                                                                                    </SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                    <div>
-                                                                        <Label htmlFor="edit-payment_method">Payment Method (Optional)</Label>
-                                                                        <Select name="payment_method" defaultValue={editingExpense?.payment_method || 'cash'}>
-                                                                            <SelectTrigger>
-                                                                                <SelectValue placeholder="Select payment method" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                <SelectItem value="cash">Cash</SelectItem>
-                                                                                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                                                                                <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                                                                                <SelectItem value="credit_card">Credit Card</SelectItem>
-                                                                                <SelectItem value="cheque">Cheque</SelectItem>
-                                                                                <SelectItem value="other">Other</SelectItem>
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                </div>
-                                                                <div>
-                                                                    <Label htmlFor="edit-bank_account_id">Paid From Account (Optional)</Label>
-                                                                    <Select name="bank_account_id" defaultValue={editingExpense?.bank_account_id ?? undefined}>
-                                                                        <SelectTrigger>
-                                                                            <SelectValue placeholder="Which account paid this?" />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            {bankAccounts.map((b) => (
-                                                                                <SelectItem key={b.id} value={b.id}>
-                                                                                    {b.bank_name} · {b.account_name} ({b.currency})
-                                                                                </SelectItem>
-                                                                            ))}
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </div>
-                                                                <div>
-                                                                    <Label htmlFor="edit-date">Date</Label>
-                                                                    <Input
-                                                                        id="edit-date"
-                                                                        name="date"
-                                                                        type="date"
-                                                                        defaultValue={editingExpense?.date}
-                                                                        required
-                                                                    />
-                                                                </div>
-                                                                <Button type="submit" className="w-full">Update Expense</Button>
-                                                            </form>
-                                                        </DialogContent>
-                                                    </Dialog>
+                                                    <Button variant="outline" size="sm" asChild>
+                                                        <Link href="/finance/transactions/expenses">
+                                                            <Edit className="size-4" />
+                                                        </Link>
+                                                    </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
