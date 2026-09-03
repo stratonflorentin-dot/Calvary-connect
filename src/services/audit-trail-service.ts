@@ -283,6 +283,28 @@ export class AuditTrailService {
   }
 
   /**
+   * Get the most recent audit_trail entries across all modules/users — the
+   * general-purpose read /audit uses to show this table's entries alongside
+   * audit_logs, since they're two separate, differently-shaped tables (see
+   * that page for why they aren't merged into one write path).
+   */
+  static async getRecentLogs(limit: number = 100): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('audit_trail')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error('[AuditTrail] Error fetching recent logs:', err);
+      return [];
+    }
+  }
+
+  /**
    * Get audit logs for a module
    */
   static async getModuleLogs(

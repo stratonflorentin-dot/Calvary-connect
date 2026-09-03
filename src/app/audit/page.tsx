@@ -29,19 +29,44 @@ export default function AuditTrailPage() {
   const [clearing, setClearing] = useState(false);
   const [search, setSearch] = useState('');
   const [tableFilter, setTableFilter] = useState('all');
+  // audit_logs (AuditService, financial/CRUD trail) and audit_trail
+  // (AuditTrailService, general workflow trail — create/approve/reject/
+  // convert/verify) are two separate tables with incompatible write
+  // shapes (audit_logs' RPC requires a resolved user name+role that
+  // audit_trail's ~15 call sites don't have), so this reads and displays
+  // both — normalized into the same row shape below — rather than
+  // migrating audit_trail's writes into audit_logs. audit_trail's rows
+  // were previously written but never shown anywhere in the UI.
+  const [source, setSource] = useState<'audit_logs' | 'audit_trail'>('audit_logs');
 
   useEffect(() => {
     loadLogs();
-  }, [tableFilter]);
+  }, [tableFilter, source]);
 
   const loadLogs = async () => {
     try {
       setLoading(true);
-      const data = await AuditService.getLogs({
-        tableName: tableFilter !== 'all' ? tableFilter : undefined,
-        limit: 100
-      });
-      setLogs(data);
+      if (source === 'audit_logs') {
+        const data = await AuditService.getLogs({
+          tableName: tableFilter !== 'all' ? tableFilter : undefined,
+          limit: 100
+        });
+        setLogs(data);
+      } else {
+        const data = await AuditTrailService.getRecentLogs(100);
+        const normalized = data
+          .filter((row) => tableFilter === 'all' || row.entity_type === tableFilter)
+          .map((row) => ({
+            id: row.id,
+            created_at: row.timestamp,
+            user_name: row.user_id ? `User ${String(row.user_id).slice(0, 8)}` : 'System / Auto-Agent',
+            user_role: null,
+            action: String(row.action || '').toUpperCase(),
+            table_name: row.entity_type,
+            change_summary: row.description,
+          }));
+        setLogs(normalized);
+      }
     } catch (error) {
       console.error('Error loading audit logs:', error);
     } finally {
@@ -129,6 +154,20 @@ export default function AuditTrailPage() {
               <p className="text-muted-foreground mt-1">
                 Trace every interaction and financial activity across the organization
               </p>
+              <div className="flex gap-1 mt-3 bg-muted/50 rounded-xl p-1 w-fit">
+                <button
+                  onClick={() => setSource('audit_logs')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${source === 'audit_logs' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Financial (audit_logs)
+                </button>
+                <button
+                  onClick={() => setSource('audit_trail')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${source === 'audit_trail' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  System (audit_trail)
+                </button>
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <div className="relative">
@@ -155,7 +194,7 @@ export default function AuditTrailPage() {
                   <SelectItem value="allowances">HR (Allowances)</SelectItem>
                 </SelectContent>
               </Select>
-              {canClear && (
+              {canClear && source === 'audit_logs' && (
                 <Button
                   variant="outline"
                   onClick={clearAuditTrail}
