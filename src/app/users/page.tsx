@@ -1,20 +1,22 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, X, UserPlus, Search, Trash2, Pencil, RefreshCw, Users, Activity, Clock, User, Shield, AlertTriangle } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Camera, X, UserPlus, Search, Trash2, Pencil, RefreshCw, Users, Activity, Clock, User, Shield, AlertTriangle } from 'lucide-react';
+import { IndustryRoleShell } from '@/components/role-shell/industry-role-shell';
+import { IndustryCard, IndustryCardKicker } from '@/components/industry/card';
+import { IndustryTable, IndustryTh, IndustryTd, IndustryTr } from '@/components/industry/table';
+import { IndustryTag } from '@/components/industry/tag';
+import { IndustryButton } from '@/components/industry/button';
+import {
+  IndustryDialog,
+  IndustryDialogTrigger,
+  IndustryDialogContent,
+  IndustryDialogTitle,
+} from '@/components/industry/dialog';
 
 interface UserProfile {
   id: string;
@@ -39,6 +41,55 @@ import { uploadToBucket } from '@/lib/storage-upload';
 import { resizeImageToJpeg } from '@/lib/image-resize';
 import { effectiveUserStatus } from '@/lib/user-status-utils';
 
+const HR_PAGES = [
+  { label: "People", href: "/users" },
+  { label: "Payroll & allowances", href: "/allowances" },
+  { label: "Leave", href: "/hr/leave" },
+  { label: "Driver compliance", href: "/admin/hr/driver-compliance" },
+];
+
+const fieldClass = "w-full text-[14px] bg-transparent border border-[var(--ci-divider)] px-[10px] py-[7px] outline-none focus-visible:border-[var(--ci-accent)]";
+
+const ROLE_CONFIG: Record<string, { label: string }> = {
+  CEO: { label: 'CEO' },
+  ADMIN: { label: 'Admin' },
+  HR: { label: 'HR' },
+  OPERATOR: { label: 'Operations' },
+  DRIVER: { label: 'Driver' },
+  MECHANIC: { label: 'Mechanic' },
+  ACCOUNTANT: { label: 'Accountant' },
+  SALESMAN: { label: 'Salesman' },
+  CASHIER: { label: 'Cashier' },
+};
+
+const STATUS_CONFIG: Record<string, { variant: "accent" | "warning" | "neutral" | "danger"; label: string }> = {
+  active: { variant: 'accent', label: 'Active' },
+  invited: { variant: 'warning', label: 'Invited' },
+  dormant: { variant: 'neutral', label: 'Dormant' },
+  suspended: { variant: 'danger', label: 'Suspended' },
+  inactive: { variant: 'neutral', label: 'Inactive' },
+};
+
+function initials(name: string) {
+  return name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+}
+
+function Avatar({ url, name, size = 36 }: { url?: string | null; name: string; size?: number }) {
+  return (
+    <div
+      className="shrink-0 border border-[var(--ci-divider)] flex items-center justify-center overflow-hidden bg-[color-mix(in_srgb,var(--ci-text)_5%,transparent)]"
+      style={{ width: size, height: size }}
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={name} className="w-full h-full object-cover" />
+      ) : (
+        <span className="ci-mono text-[11px] text-[var(--ci-text-secondary)]">{initials(name)}</span>
+      )}
+    </div>
+  );
+}
+
 export default function UsersPage() {
   const { role, isAdmin } = useRole();
   const { user } = useSupabase();
@@ -53,7 +104,6 @@ export default function UsersPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Team stats
   const teamStats = {
     totalUsers: users.length,
     activeUsers: users.filter(u => effectiveUserStatus(u) === 'active').length,
@@ -63,44 +113,12 @@ export default function UsersPage() {
     operatorsCount: users.filter(u => u.role === 'OPERATOR').length,
   };
 
-  // Role configuration for enhanced badges
-  const ROLE_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
-    CEO: { label: 'CEO', color: 'text-accent-foreground', bgColor: 'bg-accent/10' },
-    ADMIN: { label: 'Admin', color: 'text-destructive', bgColor: 'bg-destructive/10' },
-    HR: { label: 'HR', color: 'text-info', bgColor: 'bg-info/10' },
-    OPERATOR: { label: 'Operations', color: 'text-primary', bgColor: 'bg-primary/10' },
-    DRIVER: { label: 'Driver', color: 'text-success', bgColor: 'bg-success/10' },
-    MECHANIC: { label: 'Mechanic', color: 'text-warning', bgColor: 'bg-warning/10' },
-    ACCOUNTANT: { label: 'Accountant', color: 'text-info', bgColor: 'bg-info/10' },
-    SALESMAN: { label: 'Salesman', color: 'text-primary', bgColor: 'bg-primary/10' },
-    CASHIER: { label: 'Cashier', color: 'text-success', bgColor: 'bg-success/10' },
-  };
-
-  const getRoleBadgeClass = (roleName: string) => {
-    const config = ROLE_CONFIG[roleName] || ROLE_CONFIG.OPERATOR;
-    return `${config.color} ${config.bgColor}`;
-  };
-
   useEffect(() => {
     const loadUsers = async () => {
-      console.log('[UsersPage] Loading users... user:', user?.email, 'isAdmin:', isAdmin);
-      
-      if (!user) {
-        console.log('[UsersPage] No user available, skipping load');
-        return;
-      }
-      
+      if (!user) return;
       try {
         setIsLoading(true);
-        console.log('[UsersPage] Fetching from user_profiles...');
-        
-        // Fetch all users using Server Action to bypass RLS
         const usersData = await getUsersAction();
-        
-        console.log('[UsersPage] Loaded users:', usersData?.length || 0);
-        if (usersData && usersData.length > 0) {
-          console.log('[UsersPage] First user:', usersData[0].email, usersData[0].name);
-        }
         setUsers(usersData || []);
       } catch (error: any) {
         console.error('[UsersPage] Exception loading users:', error);
@@ -108,9 +126,21 @@ export default function UsersPage() {
         setIsLoading(false);
       }
     };
-
     loadUsers();
   }, [user, isAdmin]);
+
+  const refresh = async () => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+      const usersData = await getUsersAction();
+      setUsers(usersData || []);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,18 +156,13 @@ export default function UsersPage() {
 
   const uploadPhoto = async (userId: string): Promise<string | null> => {
     if (!selectedPhoto) return null;
-
     try {
       setUploading(true);
-      // Re-encode to JPEG and downscale before upload: the bucket caps
-      // uploads at 2MB and only accepts jpeg/png/webp, while camera photos
-      // (esp. iPhone HEIC) routinely blow past both.
       const resized = await resizeImageToJpeg(selectedPhoto).catch(() => null);
       if (!resized) {
         console.error('Error uploading photo: unsupported image format');
         return null;
       }
-      // Server-action upload path — direct client uploads violate storage RLS
       return await uploadToBucket('profile-photos', 'avatars', resized, `${userId}.jpg`);
     } catch (error) {
       console.error('Error uploading photo:', error);
@@ -152,21 +177,6 @@ export default function UsersPage() {
     setPhotoPreview(null);
   };
 
-  const getInitials = (name: string) => {
-    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { bg: string; text: string; label: string; dot: string }> = {
-      active: { bg: 'bg-success/10', text: 'text-success', label: 'Active', dot: 'bg-success' },
-      invited: { bg: 'bg-warning/10', text: 'text-warning', label: 'Invited', dot: 'bg-warning' },
-      dormant: { bg: 'bg-muted/50', text: 'text-muted-foreground', label: 'Dormant', dot: 'bg-muted' },
-      suspended: { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Suspended', dot: 'bg-destructive' },
-      inactive: { bg: 'bg-muted/50', text: 'text-muted-foreground', label: 'Inactive', dot: 'bg-muted' },
-    };
-    return statusConfig[status] || statusConfig.active;
-  };
-
   const filteredUsers = users?.filter(u =>
     u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -175,7 +185,6 @@ export default function UsersPage() {
 
   const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
     try {
       const formData = new FormData(e.currentTarget);
       const userData = {
@@ -192,27 +201,19 @@ export default function UsersPage() {
         updated_at: new Date().toISOString(),
       };
 
-      // Only CEO and ADMIN can create CEO users
       if (userData.role === 'CEO' && role !== 'CEO' && role !== 'ADMIN') {
         console.error("You don't have permission to create CEO users.");
         return;
       }
 
-      // Use the server action to bypass RLS error
       let data;
       try {
         data = await inviteUserAction(userData);
       } catch (insertError: any) {
-        console.error('Error adding user via action:', insertError);
-        toast({ 
-          title: 'Error', 
-          description: insertError.message || 'Failed to invite user. Please try again.',
-          variant: 'destructive'
-        });
+        toast({ title: 'Error', description: insertError.message || 'Failed to invite user. Please try again.', variant: 'destructive' });
         return;
       }
 
-      // Upload photo if selected
       let avatarUrl = null;
       if (data?.id && selectedPhoto) {
         avatarUrl = await uploadPhoto(data.id);
@@ -221,14 +222,8 @@ export default function UsersPage() {
         }
       }
 
-      console.log('User added successfully:', data);
-      toast({ 
-        title: 'Success', 
-        description: `Invitation sent to ${userData.email}`
-      });
-      // Refresh users list
+      toast({ title: 'Success', description: `Invitation sent to ${userData.email}` });
       const updatedUsers = await getUsersAction();
-      
       setUsers(updatedUsers || []);
       setIsAddDialogOpen(false);
       clearPhoto();
@@ -236,43 +231,26 @@ export default function UsersPage() {
         e.currentTarget.reset();
       }
     } catch (error: any) {
-      console.error('Error adding user:', error);
-      toast({ 
-        title: 'Error', 
-        description: error?.message || 'An unexpected error occurred. Please try again.',
-        variant: 'destructive'
-      });
+      toast({ title: 'Error', description: error?.message || 'An unexpected error occurred. Please try again.', variant: 'destructive' });
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    // Find the user being deleted
     const userToDelete = users.find(u => u.id === userId);
-    
-    // No role can delete ADMIN users
     if (userToDelete?.role === 'ADMIN') {
       alert('The Admin user cannot be deleted. This account is protected.');
       return;
     }
-    
-    // HR cannot delete CEO users
     if (role === 'HR' && userToDelete?.role === 'CEO') {
       alert('HR cannot delete CEO users. Only CEO or Admin can delete CEO users.');
       return;
     }
-    
     if (!confirm('Are you sure you want to delete this user?')) return;
-    
     try {
-      // Hard delete - remove user completely using Server Action
       await deleteUserAction(userId);
-      
-      // Refresh users list
       const updatedUsers = await getUsersAction();
       setUsers(updatedUsers || []);
-      console.log('User deleted successfully');
     } catch (error: any) {
-      console.error('Error deleting user:', error);
       alert('Failed to delete user: ' + error.message);
     }
   };
@@ -280,7 +258,6 @@ export default function UsersPage() {
   const handleEditUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingUser) return;
-
     try {
       const formData = new FormData(e.currentTarget);
       const newStatus = formData.get('status') as string;
@@ -293,20 +270,16 @@ export default function UsersPage() {
         status_reason: formData.get('status_reason') as string,
         updated_at: new Date().toISOString(),
       };
-      
-      // If reactivating a user, update activity timestamp
+
       if (newStatus === 'active' && editingUser?.status !== 'active') {
         updateData.last_activity_at = new Date().toISOString();
         updateData.status_reason = updateData.status_reason || 'Manually reactivated';
       }
 
-      // Only CEO and ADMIN can change role to CEO
       if (updateData.role === 'CEO' && role !== 'CEO' && role !== 'ADMIN') {
         alert("You don't have permission to assign CEO role.");
         return;
       }
-
-      // Prevent changing ADMIN user role/status (for protection)
       if (editingUser.role === 'ADMIN' && updateData.role !== 'ADMIN') {
         alert('Cannot change the role of the system Admin.');
         return;
@@ -314,7 +287,6 @@ export default function UsersPage() {
 
       await updateUserAction(editingUser.id, updateData, user?.id);
 
-      // Upload new photo if selected
       if (selectedPhoto) {
         const avatarUrl = await uploadPhoto(editingUser.id);
         if (avatarUrl) {
@@ -322,552 +294,317 @@ export default function UsersPage() {
         }
       }
 
-      // Refresh users list
       const updatedUsers = await getUsersAction();
       setUsers(updatedUsers || []);
       setIsEditDialogOpen(false);
       setEditingUser(null);
       clearPhoto();
-      console.log('User updated successfully');
     } catch (error: any) {
-      console.error('Error updating user:', error);
       alert('Failed to update user: ' + error.message);
     }
   };
 
-  return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role!} />
-      <main className="flex-1 min-w-0 md:ml-64 p-4 md:p-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">User Management</h1>
-            <p className="text-sm md:text-base text-muted-foreground">Add and manage employee access.</p>
-          </div>
+  const canManage = role === 'CEO' || role === 'ADMIN';
 
-          <div className="flex gap-2">
-            {(role === 'CEO' || role === 'ADMIN') && (
-              <Button
-                variant="outline"
-                className="rounded-full gap-2 border-dashed border-primary text-primary hover:text-primary/80 hover:bg-primary/10"
-                onClick={async () => {
-                  const runBackfill = async (dryRun: boolean) => {
-                    try {
-                      const results = await backfillEmployeeIdsAction(dryRun);
-                      if (results.length === 0) {
-                        alert("All employees already have Employee IDs assigned!");
-                        return;
-                      }
-                      
-                      const listText = results.map(r => `${r.name} (${r.email}): ${r.oldId || 'None'} → ${r.newId} [${r.department}]`).join('\n');
-                      
-                      if (dryRun) {
-                        const confirmSave = confirm(
-                          `DRY-RUN RESULTS (Simulated Employee ID generation):\n\n${listText}\n\nWould you like to write these changes to the database?`
-                        );
-                        if (confirmSave) {
-                          await runBackfill(false);
-                        }
-                      } else {
-                        alert(`SUCCESS!\n\nSuccessfully saved the following changes to the database:\n\n${listText}`);
-                        // Refresh users list
-                        const updatedUsers = await getUsersAction();
-                        setUsers(updatedUsers || []);
-                      }
-                    } catch (err: any) {
-                      alert("Error: " + err.message);
-                    }
-                  };
-                  await runBackfill(true);
-                }}
-              >
-                <Users className="size-4" /> Backfill IDs
-              </Button>
-            )}
-            <Button 
-              variant="outline" 
-              className="rounded-full gap-2"
-              onClick={() => {
-                console.log('[UsersPage] Manual refresh triggered');
-                const loadUsers = async () => {
-                  if (!user) return;
+  return (
+    <IndustryRoleShell roleLabel="HR" pages={HR_PAGES}>
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <p className="text-[12px] text-[var(--ci-text-secondary)]">Add and manage employee access.</p>
+        <div className="flex gap-2">
+          {canManage && (
+            <IndustryButton
+              variant="secondary"
+              className="gap-1.5"
+              onClick={async () => {
+                const runBackfill = async (dryRun: boolean) => {
                   try {
-                    setIsLoading(true);
-                    const usersData = await getUsersAction();
-                    setUsers(usersData || []);
-                  } catch (error: any) {
-                    console.error('[UsersPage] Refresh exception:', error);
-                    alert('Error: ' + error.message);
-                  } finally {
-                    setIsLoading(false);
+                    const results = await backfillEmployeeIdsAction(dryRun);
+                    if (results.length === 0) {
+                      alert("All employees already have Employee IDs assigned!");
+                      return;
+                    }
+                    const listText = results.map((r: any) => `${r.name} (${r.email}): ${r.oldId || 'None'} → ${r.newId} [${r.department}]`).join('\n');
+                    if (dryRun) {
+                      const confirmSave = confirm(`DRY-RUN RESULTS (Simulated Employee ID generation):\n\n${listText}\n\nWould you like to write these changes to the database?`);
+                      if (confirmSave) await runBackfill(false);
+                    } else {
+                      alert(`SUCCESS!\n\nSuccessfully saved the following changes to the database:\n\n${listText}`);
+                      const updatedUsers = await getUsersAction();
+                      setUsers(updatedUsers || []);
+                    }
+                  } catch (err: any) {
+                    alert("Error: " + err.message);
                   }
                 };
-                loadUsers();
+                await runBackfill(true);
               }}
             >
-              <RefreshCw className="size-4" /> Refresh
-            </Button>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="rounded-full gap-2">
-                  <UserPlus className="size-4" /> Invite User
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Invite New Team Member</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddUser} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" placeholder="Full name" required />
+              <Users className="size-4" /> Backfill IDs
+            </IndustryButton>
+          )}
+          <IndustryButton variant="secondary" onClick={refresh} disabled={isLoading} className="gap-1.5">
+            <RefreshCw className={isLoading ? "size-4 animate-spin" : "size-4"} /> Refresh
+          </IndustryButton>
+          <IndustryDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <IndustryDialogTrigger asChild>
+              <IndustryButton variant="primary" className="gap-1.5">
+                <UserPlus className="size-4" /> Invite user
+              </IndustryButton>
+            </IndustryDialogTrigger>
+            <IndustryDialogContent open={isAddDialogOpen}>
+              <IndustryDialogTitle>Invite new team member</IndustryDialogTitle>
+              <form onSubmit={handleAddUser} className="flex flex-col gap-3 mt-2">
+                <div>
+                  <label className="ci-lbl block mb-1">Full name</label>
+                  <input name="name" placeholder="Full name" required className={fieldClass} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" name="email" type="email" placeholder="john@calvaryconnect.com" required />
+                <div>
+                  <label className="ci-lbl block mb-1">Email address</label>
+                  <input name="email" type="email" placeholder="john@calvaryconnect.com" required className={fieldClass} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">System Role</Label>
-                  <Select name="role" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(role === "CEO" || role === "ADMIN") && <SelectItem value="CEO">CEO</SelectItem>}
-                      <SelectItem value="HR">HR</SelectItem>
-                      <SelectItem value="OPERATOR">Operations</SelectItem>
-                      <SelectItem value="DRIVER">Driver</SelectItem>
-                      <SelectItem value="MECHANIC">Mechanic</SelectItem>
-                      <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
-                      <SelectItem value="SALESMAN">Salesman</SelectItem>
-                      <SelectItem value="CASHIER">Cashier</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <label className="ci-lbl block mb-1">System role</label>
+                  <select name="role" required defaultValue="" className={fieldClass}>
+                    <option value="" disabled>Select a role</option>
+                    {(role === "CEO" || role === "ADMIN") && <option value="CEO">CEO</option>}
+                    <option value="HR">HR</option>
+                    <option value="OPERATOR">Operations</option>
+                    <option value="DRIVER">Driver</option>
+                    <option value="MECHANIC">Mechanic</option>
+                    <option value="ACCOUNTANT">Accountant</option>
+                    <option value="SALESMAN">Salesman</option>
+                    <option value="CASHIER">Cashier</option>
+                  </select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Select name="department" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Operations">Operations (OPS)</SelectItem>
-                      <SelectItem value="Finance">Finance (FIN)</SelectItem>
-                      <SelectItem value="IT">IT</SelectItem>
-                      <SelectItem value="Administration">Administration (ADM)</SelectItem>
-                      <SelectItem value="HR">HR</SelectItem>
-                      <SelectItem value="Workshop">Workshop (WRK)</SelectItem>
-                      <SelectItem value="Sales">Sales (SAL)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <label className="ci-lbl block mb-1">Department</label>
+                  <select name="department" required defaultValue="" className={fieldClass}>
+                    <option value="" disabled>Select a department</option>
+                    <option value="Operations">Operations (OPS)</option>
+                    <option value="Finance">Finance (FIN)</option>
+                    <option value="IT">IT</option>
+                    <option value="Administration">Administration (ADM)</option>
+                    <option value="HR">HR</option>
+                    <option value="Workshop">Workshop (WRK)</option>
+                    <option value="Sales">Sales (SAL)</option>
+                  </select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="photo">Profile Photo</Label>
-                  <div className="flex items-center gap-4">
+                <div>
+                  <label className="ci-lbl block mb-1">Profile photo</label>
+                  <div className="flex items-center gap-3">
                     {photoPreview ? (
                       <div className="relative">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage src={photoPreview} />
-                          <AvatarFallback>U</AvatarFallback>
-                        </Avatar>
-                        <button
-                          type="button"
-                          onClick={clearPhoto}
-                          className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1"
-                        >
-                          <X className="h-3 w-3" />
+                        <Avatar url={photoPreview} name="U" size={56} />
+                        <button type="button" onClick={clearPhoto} className="absolute -top-1.5 -right-1.5 bg-[#8c1d18] text-white p-0.5">
+                          <X className="size-3" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="photo"
-                          name="photo"
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          onChange={handlePhotoChange}
-                          className="hidden"
-                        />
-                        <Label
-                          htmlFor="photo"
-                          className="cursor-pointer flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
-                        >
-                          <Camera className="h-4 w-4" />
-                          <span>Upload Photo</span>
-                        </Label>
+                      <div>
+                        <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} className="hidden" />
+                        <label htmlFor="photo" className="cursor-pointer inline-flex items-center gap-2 border border-[var(--ci-divider)] px-3 py-2 text-[12px] hover:bg-[var(--ci-row-hover)]">
+                          <Camera className="size-4" /> Upload photo
+                        </label>
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
+                  <p className="text-[11px] text-[var(--ci-text-tertiary)] mt-1">Max 2MB (JPEG, PNG, WebP)</p>
                 </div>
-                <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-xs text-primary">
-                  <span className="font-bold block">Employee ID Auto-Generation</span>
-                  <span>Employee ID will be auto-generated based on the selected department when you save (e.g. OPS-001, FIN-002).</span>
-                </div>
-                <Button type="submit" className="w-full" disabled={uploading}>
-                  {uploading ? 'Inviting...' : 'Send Invitation'}
-                </Button>
+                <p className="text-[11px] text-[var(--ci-text-secondary)] border border-[var(--ci-divider)] p-[10px]">
+                  Employee ID will be auto-generated based on the selected department when you save (e.g. OPS-001, FIN-002).
+                </p>
+                <IndustryButton type="submit" variant="primary" className="w-full" disabled={uploading}>
+                  {uploading ? 'Inviting…' : 'Send invitation'}
+                </IndustryButton>
               </form>
-            </DialogContent>
-          </Dialog>
-          </div>
+            </IndustryDialogContent>
+          </IndustryDialog>
         </div>
+      </div>
 
-        {/* Team Stats Cards - Responsive Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Total Users</span>
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="size-4 text-primary" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+        {[
+          { label: "Total users", value: teamStats.totalUsers, icon: Users },
+          { label: "Active", value: teamStats.activeUsers, icon: Activity },
+          { label: "Pending invites", value: teamStats.pendingInvites, icon: Clock },
+          { label: "Dormant", value: teamStats.dormantUsers, icon: User },
+          { label: "Drivers", value: teamStats.driversCount, icon: Shield },
+          { label: "Operators", value: teamStats.operatorsCount, icon: AlertTriangle },
+        ].map((s) => (
+          <IndustryCard key={s.label} className="gap-1">
+            <IndustryCardKicker>{s.label}</IndustryCardKicker>
+            <p className="ci-mono text-[22px] font-bold leading-none">{s.value}</p>
+          </IndustryCard>
+        ))}
+      </div>
+
+      <IndustryDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <IndustryDialogContent open={isEditDialogOpen}>
+          <IndustryDialogTitle>Edit user</IndustryDialogTitle>
+          <form onSubmit={handleEditUser} className="flex flex-col gap-3 mt-2">
+            {editingUser?.employee_id && (
+              <div>
+                <label className="ci-lbl block mb-1">Employee ID</label>
+                <input type="text" value={editingUser.employee_id} readOnly className={fieldClass + " ci-mono opacity-60 cursor-not-allowed"} />
+                <p className="text-[10px] text-[var(--ci-text-tertiary)] mt-1">Auto-generated. Cannot be changed.</p>
               </div>
+            )}
+            <div>
+              <label className="ci-lbl block mb-1">Full name</label>
+              <input name="name" defaultValue={editingUser?.name} placeholder="Full name" required className={fieldClass} />
             </div>
-            <p className="text-2xl font-bold text-foreground">{teamStats.totalUsers}</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Active</span>
-              <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                <Activity className="size-4 text-success" />
+            <div>
+              <label className="ci-lbl block mb-1">Email address</label>
+              <input name="email" type="email" defaultValue={editingUser?.email} placeholder="john@calvaryconnect.com" required className={fieldClass} />
+            </div>
+            <div>
+              <label className="ci-lbl block mb-1">System role</label>
+              <select name="role" defaultValue={editingUser?.role} required className={fieldClass}>
+                {(role === "CEO" || role === "ADMIN") && <option value="CEO">CEO</option>}
+                <option value="ADMIN">Admin</option>
+                <option value="HR">HR</option>
+                <option value="OPERATOR">Operations</option>
+                <option value="DRIVER">Driver</option>
+                <option value="MECHANIC">Mechanic</option>
+                <option value="ACCOUNTANT">Accountant</option>
+                <option value="SALESMAN">Salesman</option>
+                <option value="CASHIER">Cashier</option>
+              </select>
+            </div>
+            <div>
+              <label className="ci-lbl block mb-1">Department</label>
+              <select name="department" defaultValue={editingUser?.department || 'Operations'} className={fieldClass}>
+                <option value="Operations">Operations</option>
+                <option value="Finance">Finance</option>
+                <option value="IT">IT</option>
+                <option value="Administration">Administration</option>
+                <option value="HR">HR</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Sales">Sales</option>
+              </select>
+            </div>
+            <div>
+              <label className="ci-lbl block mb-1">Status</label>
+              <select name="status" defaultValue={editingUser?.status || 'active'} required className={fieldClass}>
+                <option value="active">Active — Currently using system</option>
+                <option value="invited">Invited — Pre-added, pending signup</option>
+                <option value="dormant">Dormant — No activity for 30+ days</option>
+                <option value="suspended">Suspended — Access revoked</option>
+                <option value="inactive">Inactive — Manually deactivated</option>
+              </select>
+            </div>
+            <div>
+              <label className="ci-lbl block mb-1">Status reason (optional)</label>
+              <input name="status_reason" defaultValue={editingUser?.status_reason} placeholder="e.g., No login for 45 days, left company, etc." className={fieldClass} />
+            </div>
+            <div>
+              <label className="ci-lbl block mb-1">Profile photo</label>
+              <div className="flex items-center gap-3">
+                {photoPreview ? (
+                  <div className="relative">
+                    <Avatar url={photoPreview} name={editingUser?.name || 'U'} size={56} />
+                    <button type="button" onClick={clearPhoto} className="absolute -top-1.5 -right-1.5 bg-[#8c1d18] text-white p-0.5">
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input id="edit-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} className="hidden" />
+                    <label htmlFor="edit-photo" className="cursor-pointer inline-flex items-center gap-2 border border-[var(--ci-divider)] px-3 py-2 text-[12px] hover:bg-[var(--ci-row-hover)]">
+                      <Camera className="size-4" /> Change photo
+                    </label>
+                  </div>
+                )}
               </div>
+              <p className="text-[11px] text-[var(--ci-text-tertiary)] mt-1">Max 2MB (JPEG, PNG, WebP)</p>
             </div>
-            <p className="text-2xl font-bold text-success">{teamStats.activeUsers}</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Pending Invites</span>
-              <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
-                <Clock className="size-4 text-warning" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-warning">{teamStats.pendingInvites}</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Dormant</span>
-              <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
-                <User className="size-4 text-muted-foreground" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-muted-foreground">{teamStats.dormantUsers}</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Drivers</span>
-              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Shield className="size-4 text-accent-foreground" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-accent-foreground">{teamStats.driversCount}</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted-foreground font-medium">Operators</span>
-              <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
-                <AlertTriangle className="size-4 text-info" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-info">{teamStats.operatorsCount}</p>
-          </div>
+            <IndustryButton type="submit" variant="primary" className="w-full" disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Update user'}
+            </IndustryButton>
+          </form>
+        </IndustryDialogContent>
+      </IndustryDialog>
+
+      <IndustryCard>
+        <div className="relative max-w-sm">
+          <Search className="absolute left-[10px] top-1/2 -translate-y-1/2 size-3.5 text-[var(--ci-text-tertiary)]" />
+          <input
+            placeholder="Search users…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={fieldClass + " pl-8"}
+          />
         </div>
-
-        {/* Edit User Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleEditUser} className="space-y-4 pt-4">
-              {editingUser?.employee_id && (
-                <div className="space-y-2">
-                  <Label>Employee ID</Label>
-                  <Input 
-                    type="text" 
-                    value={editingUser.employee_id}
-                    readOnly
-                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted text-muted-foreground font-mono cursor-not-allowed"
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Auto-generated. Cannot be changed.
-                  </p>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Full Name</Label>
-                <Input id="edit-name" name="name" defaultValue={editingUser?.name} placeholder="Full name" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email Address</Label>
-                <Input id="edit-email" name="email" type="email" defaultValue={editingUser?.email} placeholder="john@calvaryconnect.com" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">System Role</Label>
-                <Select name="role" defaultValue={editingUser?.role} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(role === "CEO" || role === "ADMIN") && <SelectItem value="CEO">CEO</SelectItem>}
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                    <SelectItem value="HR">HR</SelectItem>
-                    <SelectItem value="OPERATOR">Operations</SelectItem>
-                    <SelectItem value="DRIVER">Driver</SelectItem>
-                    <SelectItem value="MECHANIC">Mechanic</SelectItem>
-                    <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
-                    <SelectItem value="SALESMAN">Salesman</SelectItem>
-                    <SelectItem value="CASHIER">Cashier</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-department">Department</Label>
-                <Select name="department" defaultValue={editingUser?.department || 'Operations'}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Operations">Operations</SelectItem>
-                    <SelectItem value="Finance">Finance</SelectItem>
-                    <SelectItem value="IT">IT</SelectItem>
-                    <SelectItem value="Administration">Administration</SelectItem>
-                    <SelectItem value="HR">HR</SelectItem>
-                    <SelectItem value="Workshop">Workshop</SelectItem>
-                    <SelectItem value="Sales">Sales</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select name="status" defaultValue={editingUser?.status || 'active'} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-success"></div>
-                        <span>Active - Currently using system</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="invited">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-warning"></div>
-                        <span>Invited - Pre-added, pending signup</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="dormant">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-muted"></div>
-                        <span>Dormant - No activity for 30+ days</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="suspended">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-destructive"></div>
-                        <span>Suspended - Access revoked</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="inactive">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-muted"></div>
-                        <span>Inactive - Manually deactivated</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-status-reason">Status Reason (Optional)</Label>
-                <Input 
-                  id="edit-status-reason" 
-                  name="status_reason" 
-                  defaultValue={editingUser?.status_reason} 
-                  placeholder="e.g., No login for 45 days, left company, etc."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-photo">Profile Photo</Label>
-                <div className="flex items-center gap-4">
-                  {photoPreview ? (
-                    <div className="relative">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={photoPreview} />
-                        <AvatarFallback>{getInitials(editingUser?.name || 'U')}</AvatarFallback>
-                      </Avatar>
-                      <button
-                        type="button"
-                        onClick={clearPhoto}
-                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="edit-photo"
-                        name="photo"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handlePhotoChange}
-                        className="hidden"
-                      />
-                      <Label
-                        htmlFor="edit-photo"
-                        className="cursor-pointer flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
-                      >
-                        <Camera className="h-4 w-4" />
-                        <span>Change Photo</span>
-                      </Label>
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">Max 2MB (JPEG, PNG, WebP)</p>
-              </div>
-              <Button type="submit" className="w-full" disabled={uploading}>
-                {uploading ? 'Uploading...' : 'Update User'}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-hidden">
-          <div className="p-4 border-b">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search users..." 
-                className="pl-9 rounded-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <Table className="min-w-full">
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead className="min-w-[80px]">Employee ID</TableHead>
-                  <TableHead className="min-w-[100px]">User</TableHead>
-                  <TableHead className="min-w-[80px]">Role</TableHead>
-                  <TableHead className="min-w-[80px]">Status</TableHead>
-                  <TableHead className="min-w-[80px]">Joined</TableHead>
-                  <TableHead className="min-w-[100px] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={(role === 'CEO' || role === 'ADMIN') ? 7 : 6} className="text-center py-8">Loading users...</TableCell></TableRow>
-              ) : filteredUsers?.length === 0 ? (
-                <TableRow><TableCell colSpan={(role === 'CEO' || role === 'ADMIN') ? 7 : 6} className="text-center py-8">No users found.</TableCell></TableRow>
-              ) : filteredUsers?.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell>
-                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-info/10 text-info font-mono">
-                      {u.employee_id || '—'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={u.avatar_url} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {getInitials(u.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{u.name}</span>
-                        <span className="text-xs text-muted-foreground">{u.email}</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`font-headline tracking-tighter text-[10px] ${getRoleBadgeClass(u.role)}`}>
-                      {ROLE_CONFIG[u.role]?.label || u.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {(() => {
-                      const displayStatus = effectiveUserStatus(u);
-                      const config = getStatusBadge(displayStatus);
-                      const showReason =
-                        u.status_reason &&
-                        displayStatus !== 'active';
-                      return (
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full ${config.dot} ${displayStatus === 'active' ? 'animate-pulse' : ''}`} />
-                            <Badge className={`${config.bg} ${config.text} text-xs font-medium`}>
-                              {config.label}
-                            </Badge>
-                          </div>
-                          {showReason && (
-                            <span className="text-[10px] text-muted-foreground max-w-[150px] truncate" title={u.status_reason}>
-                              {u.status_reason}
-                            </span>
-                          )}
-                          {displayStatus === 'active' && u.last_login_at && (
-                            <span className="text-[10px] text-success">
-                              Last login {new Date(u.last_login_at).toLocaleDateString()}
-                            </span>
-                          )}
+        <IndustryTable>
+          <thead>
+            <tr>
+              <IndustryTh>Employee ID</IndustryTh>
+              <IndustryTh>User</IndustryTh>
+              <IndustryTh>Role</IndustryTh>
+              <IndustryTh>Status</IndustryTh>
+              <IndustryTh>Joined</IndustryTh>
+              <IndustryTh align="right">Actions</IndustryTh>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading users…</IndustryTd></tr>
+            ) : filteredUsers?.length === 0 ? (
+              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No users found.</IndustryTd></tr>
+            ) : (
+              filteredUsers?.map((u) => {
+                const displayStatus = effectiveUserStatus(u);
+                const statusCfg = STATUS_CONFIG[displayStatus] ?? STATUS_CONFIG.active;
+                const showReason = u.status_reason && displayStatus !== 'active';
+                return (
+                  <IndustryTr key={u.id}>
+                    <IndustryTd mono>{u.employee_id || '—'}</IndustryTd>
+                    <IndustryTd>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar url={u.avatar_url} name={u.name} />
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium">{u.name}</span>
+                          <span className="text-[11px] text-[var(--ci-text-tertiary)]">{u.email}</span>
                         </div>
-                      );
-                    })()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    <div className="flex flex-col gap-1">
-                      <span>{u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
-                      {u.last_login_at && (
-                        <span className="text-[10px] text-muted-foreground">
-                          Login: {new Date(u.last_login_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                        </span>
-                      )}
-                      {(u.login_count ?? 0) > 0 && (
-                        <span className="text-[10px] text-muted-foreground">
-                          {u.login_count} logins
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      {(role === 'CEO' || role === 'ADMIN') && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingUser(u);
-                            setIsEditDialogOpen(true);
-                          }}
-                          className="text-primary hover:text-primary/80 hover:bg-primary/10"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {u.role !== 'ADMIN' && u.role !== 'CEO' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUser(u.id)}
-                          className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </div>
-        </div>
-      </main>
-    </div>
+                      </div>
+                    </IndustryTd>
+                    <IndustryTd><IndustryTag variant="neutral">{ROLE_CONFIG[u.role]?.label || u.role}</IndustryTag></IndustryTd>
+                    <IndustryTd>
+                      <div className="flex flex-col gap-0.5">
+                        <IndustryTag variant={statusCfg.variant} pulse={displayStatus === 'active'}>{statusCfg.label}</IndustryTag>
+                        {showReason && <span className="text-[10px] text-[var(--ci-text-tertiary)] max-w-[150px] truncate" title={u.status_reason}>{u.status_reason}</span>}
+                        {displayStatus === 'active' && u.last_login_at && (
+                          <span className="text-[10px] text-[var(--ci-text-tertiary)] ci-mono">Last login {new Date(u.last_login_at).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    </IndustryTd>
+                    <IndustryTd mono className="text-[11px]">
+                      <div className="flex flex-col gap-0.5">
+                        <span>{u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                        {(u.login_count ?? 0) > 0 && <span className="text-[var(--ci-text-tertiary)]">{u.login_count} logins</span>}
+                      </div>
+                    </IndustryTd>
+                    <IndustryTd align="right">
+                      <div className="flex justify-end gap-1">
+                        {canManage && (
+                          <IndustryButton variant="ghost" onClick={() => { setEditingUser(u); setIsEditDialogOpen(true); }}>
+                            <Pencil className="size-3.5" />
+                          </IndustryButton>
+                        )}
+                        {u.role !== 'ADMIN' && u.role !== 'CEO' && (
+                          <IndustryButton variant="ghost" onClick={() => handleDeleteUser(u.id)} className="text-[#8c1d18]">
+                            <Trash2 className="size-3.5" />
+                          </IndustryButton>
+                        )}
+                      </div>
+                    </IndustryTd>
+                  </IndustryTr>
+                );
+              })
+            )}
+          </tbody>
+        </IndustryTable>
+      </IndustryCard>
+    </IndustryRoleShell>
   );
 }
-
-
-
-
