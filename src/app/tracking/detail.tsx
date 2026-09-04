@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useSupabase } from "@/components/supabase-provider";
 import { IndustryTag } from "@/components/industry/tag";
 import { IndustryCard, IndustryCardKicker, IndustryCardTitle } from "@/components/industry/card";
 import { IndustryButton } from "@/components/industry/button";
 import { IndustryTable, IndustryTh, IndustryTd, IndustryTr } from "@/components/industry/table";
 import { cn, formatAmount } from "@/lib/utils";
 import { complianceStatus, daysRemaining, STATUS_META, DOC_TYPE_LABELS } from "@/lib/compliance/status";
+import { useTripChannel } from "@/hooks/use-trip-channel";
 import type { TrackingUnit } from "@/hooks/use-tracking-units";
 
 export type DetailTab = "shipping" | "vehicle" | "docs" | "client" | "billing" | "handover";
@@ -70,12 +72,7 @@ export function TrackingDetail({ unit, tab, onTabChange, tick }: { unit: Trackin
         {tab === "docs" && <DocumentsTab unit={unit} />}
         {tab === "client" && <ClientTab unit={unit} />}
         {tab === "billing" && <BillingTab unit={unit} />}
-        {tab === "handover" && (
-          <IndustryCard>
-            <IndustryCardTitle>Sales handover</IndustryCardTitle>
-            <p className="text-[13px] text-[var(--ci-text-secondary)]">Built in the next pass of this console.</p>
-          </IndustryCard>
-        )}
+        {tab === "handover" && <HandoverTab unit={unit} />}
       </div>
     </div>
   );
@@ -579,5 +576,133 @@ function BillingTab({ unit }: { unit: TrackingUnit }) {
         </p>
       </IndustryCard>
     </>
+  );
+}
+
+interface BookingInfo {
+  quote_number: string;
+  amount: number | null;
+  currency: string | null;
+  valid_until: string | null;
+}
+
+function HandoverTab({ unit }: { unit: TrackingUnit }) {
+  const { user } = useSupabase();
+  const { messages, loading, sending, send } = useTripChannel(unit.trip?.id ?? null, user?.id ?? null);
+  const [draft, setDraft] = useState("");
+  const [booking, setBooking] = useState<BookingInfo | null>(null);
+
+  useEffect(() => {
+    if (!unit.trip) {
+      setBooking(null);
+      return;
+    }
+    (async () => {
+      const { data: trip } = await supabase.from("trips").select("quotation_id").eq("id", unit.trip!.id).maybeSingle();
+      if (!trip?.quotation_id) {
+        setBooking(null);
+        return;
+      }
+      const { data: q } = await supabase.from("quotations").select("quote_number, amount, currency, valid_until").eq("id", trip.quotation_id).maybeSingle();
+      setBooking(q ?? null);
+    })();
+  }, [unit.trip]);
+
+  if (!unit.trip) {
+    return (
+      <IndustryCard>
+        <IndustryCardTitle>Sales handover</IndustryCardTitle>
+        <p className="text-[13px] text-[var(--ci-text-secondary)]">No active trip to hand over.</p>
+      </IndustryCard>
+    );
+  }
+
+  const promisedEta = unit.trip.estimatedDurationHours
+    ? new Date(new Date(unit.trip.createdAt).getTime() + unit.trip.estimatedDurationHours * 3_600_000)
+    : null;
+  // Variance against "now" while the trip is still open — the only honest
+  // comparison available without a real delivered/POD timestamp yet.
+  const etaVarianceHours = promisedEta ? Math.round((Date.now() - promisedEta.getTime()) / 3_600_000) : null;
+
+  const handleSend = async () => {
+    if (!draft.trim()) return;
+    const text = draft;
+    setDraft("");
+    await send(text);
+  };
+
+  return (
+    <div className="flex gap-4 flex-1 min-h-0">
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 overflow-y-auto flex flex-col gap-2 pb-2">
+          {loading ? (
+            <p className="text-[12px] text-[var(--ci-text-tertiary)] p-2">Loading thread…</p>
+          ) : messages.length === 0 ? (
+            <p className="text-[12px] text-[var(--ci-text-tertiary)] p-2">No messages yet on this trip.</p>
+          ) : (
+            messages.map((m) => {
+              const isMine = m.sender_id === user?.id;
+              return (
+                <div key={m.id} className={cn("flex flex-col max-w-[70%]", isMine ? "self-end items-end" : "self-start items-start")}>
+                  <span className="ci-lbl mb-0.5">{isMine ? "You" : m.senderName ?? "Unknown"}</span>
+                  <div className={cn("px-3 py-2 text-[13px] border", isMine ? "border-[var(--ci-accent)] bg-[var(--ci-accent-100)]" : "border-[var(--ci-divider)]")}>
+                    {m.content}
+                  </div>
+                  <span className="ci-mono text-[10px] text-[var(--ci-text-tertiary)] mt-0.5">
+                    {new Date(m.created_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="flex gap-1.5 pt-2 border-t border-[var(--ci-divider)]">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Message operations about this trip…"
+            className="flex-1 text-[13px] bg-transparent border border-[var(--ci-divider)] px-[10px] py-[7px] outline-none focus-visible:border-[var(--ci-accent)]"
+          />
+          <IndustryButton variant="primary" onClick={handleSend} disabled={sending || !draft.trim()}>
+            Send
+          </IndustryButton>
+        </div>
+      </div>
+
+      <div className="w-[220px] shrink-0 flex flex-col gap-3">
+        <IndustryCard>
+          <IndustryCardKicker>Booked as sold</IndustryCardKicker>
+          {booking ? (
+            <div className="flex flex-col gap-1.5 mt-1">
+              <SpecRow label="quotation" value={booking.quote_number} mono />
+              <SpecRow label="agreed rate" value={booking.amount != null ? formatAmount(booking.amount, booking.currency ?? "TZS") : "—"} mono />
+              <SpecRow label="promised ETA" value={promisedEta ? promisedEta.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"} mono />
+            </div>
+          ) : (
+            <p className="text-[12px] text-[var(--ci-text-tertiary)] mt-1">No quotation linked to this trip.</p>
+          )}
+        </IndustryCard>
+
+        {promisedEta && (
+          <IndustryCard>
+            <IndustryCardKicker>ETA variance</IndustryCardKicker>
+            <p className={cn("ci-mono text-[18px] mt-1", etaVarianceHours! > 0 ? "text-[#8c1d18]" : "text-[var(--ci-text)]")}>
+              {etaVarianceHours! > 0 ? `+${etaVarianceHours}h late` : `${Math.abs(etaVarianceHours!)}h ahead`}
+            </p>
+            <p className="text-[11px] text-[var(--ci-text-tertiary)] mt-1">Against the current time — no delivered timestamp yet to compare against instead.</p>
+          </IndustryCard>
+        )}
+
+        {/* "Open asks either side owes" has no real data source in this
+            schema (no asks/action-items table) — omitted rather than
+            fabricated. The thread itself is where that lives today. */}
+      </div>
+    </div>
   );
 }
