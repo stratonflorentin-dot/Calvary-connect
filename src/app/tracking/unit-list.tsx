@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { IndustryTag } from "@/components/industry/tag";
 import type { TrackingUnit } from "@/hooks/use-tracking-units";
+import type { FleetMapDriver } from "@/components/fleet-map/types";
 
 type Mode = "all" | "active" | "idle";
 
@@ -51,6 +52,7 @@ export function TrackingUnitList({
   onPartnersChange,
   query,
   onQueryChange,
+  positions,
 }: {
   units: TrackingUnit[];
   loading: boolean;
@@ -62,6 +64,7 @@ export function TrackingUnitList({
   onPartnersChange: (p: string[]) => void;
   query: string;
   onQueryChange: (q: string) => void;
+  positions: FleetMapDriver[];
 }) {
   const { filtered, partnerOptions } = useTrackingFilters(units, mode, partners, query);
 
@@ -139,14 +142,31 @@ export function TrackingUnitList({
             </button>
           </div>
         ) : (
-          filtered.map((u) => <UnitCard key={u.vehicleId} unit={u} selected={u.vehicleId === sel} onClick={() => onSelect(u.vehicleId)} />)
+          filtered.map((u) => {
+            const pos =
+              positions.find((l) => l.vehiclePlate === u.plate) ??
+              (u.trip?.driverName ? positions.find((l) => l.driverName === u.trip!.driverName) : undefined) ??
+              null;
+            return <UnitCard key={u.vehicleId} unit={u} selected={u.vehicleId === sel} onClick={() => onSelect(u.vehicleId)} gpsOnline={pos?.isOnline ?? null} />;
+          })
         )}
       </div>
     </div>
   );
 }
 
-function UnitCard({ unit, selected, onClick }: { unit: TrackingUnit; selected: boolean; onClick: () => void }) {
+function UnitCard({
+  unit,
+  selected,
+  onClick,
+  gpsOnline,
+}: {
+  unit: TrackingUnit;
+  selected: boolean;
+  onClick: () => void;
+  /** null = no GPS data source found for this unit at all (not just offline). */
+  gpsOnline: boolean | null;
+}) {
   const isActive = !!unit.trip && ACTIVE_TRIP_STATUSES.has(unit.trip.status);
   return (
     <button
@@ -157,7 +177,13 @@ function UnitCard({ unit, selected, onClick }: { unit: TrackingUnit; selected: b
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="ci-mono text-[13px] font-bold">{unit.plate}</span>
+        <span className="ci-mono text-[13px] font-bold flex items-center gap-1.5">
+          {unit.plate}
+          <span
+            title={gpsOnline === null ? "No GPS source" : gpsOnline ? "GPS live" : "GPS offline"}
+            className={cn("inline-block size-1.5 rounded-full", gpsOnline === null ? "bg-[var(--ci-text-tertiary)]" : gpsOnline ? "ci-pulse bg-[var(--ci-accent)]" : "bg-[#8c1d18]")}
+          />
+        </span>
         <IndustryTag variant={isActive ? "accent" : "neutral"} pulse={isActive}>
           {isActive ? unit.trip!.status.replace("_", " ") : "idle"}
         </IndustryTag>

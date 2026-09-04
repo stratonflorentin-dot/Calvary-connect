@@ -10,7 +10,9 @@ import { IndustryTable, IndustryTh, IndustryTd, IndustryTr } from "@/components/
 import { cn, formatAmount } from "@/lib/utils";
 import { complianceStatus, daysRemaining, STATUS_META, DOC_TYPE_LABELS } from "@/lib/compliance/status";
 import { useTripChannel } from "@/hooks/use-trip-channel";
+import { TripPositionMap } from "./trip-position-map";
 import type { TrackingUnit } from "@/hooks/use-tracking-units";
+import type { FleetMapDriver } from "@/components/fleet-map/types";
 
 export type DetailTab = "shipping" | "vehicle" | "docs" | "client" | "billing" | "handover";
 
@@ -25,7 +27,19 @@ const TABS: { key: DetailTab; label: string }[] = [
 
 const ACTIVE_TRIP_STATUSES = new Set(["pending", "loading", "in_transit"]);
 
-export function TrackingDetail({ unit, tab, onTabChange, tick }: { unit: TrackingUnit; tab: DetailTab; onTabChange: (t: DetailTab) => void; tick: number }) {
+export function TrackingDetail({
+  unit,
+  tab,
+  onTabChange,
+  tick,
+  positions,
+}: {
+  unit: TrackingUnit;
+  tab: DetailTab;
+  onTabChange: (t: DetailTab) => void;
+  tick: number;
+  positions: FleetMapDriver[];
+}) {
   const isActive = !!unit.trip && ACTIVE_TRIP_STATUSES.has(unit.trip.status);
 
   return (
@@ -67,7 +81,7 @@ export function TrackingDetail({ unit, tab, onTabChange, tick }: { unit: Trackin
       </div>
 
       <div className="flex-1 overflow-y-auto p-[13.6px] flex flex-col gap-4">
-        {tab === "shipping" && <ShippingTab unit={unit} tick={tick} />}
+        {tab === "shipping" && <ShippingTab unit={unit} tick={tick} positions={positions} />}
         {tab === "vehicle" && <VehicleTab unit={unit} />}
         {tab === "docs" && <DocumentsTab unit={unit} />}
         {tab === "client" && <ClientTab unit={unit} />}
@@ -88,8 +102,17 @@ function elapsedLabel(startIso: string): string {
   return `${h}:${m}:${s}`;
 }
 
-function ShippingTab({ unit, tick }: { unit: TrackingUnit; tick: number }) {
+function ShippingTab({ unit, tick, positions }: { unit: TrackingUnit; tick: number; positions: FleetMapDriver[] }) {
   const trip = unit.trip;
+  // Vehicle-tracker rows carry a real plate (reliable match). Driver-phone
+  // GPS rows don't (tracking/actions.ts sets vehiclePlate: "—" for those),
+  // and useFleetMapLocations()'s FleetMapDriver shape doesn't expose the
+  // underlying driver id to match on either — only driverName, a
+  // best-effort fallback since two drivers could share a display name.
+  const position =
+    positions.find((l) => l.vehiclePlate === unit.plate) ??
+    (trip?.driverName ? positions.find((l) => l.driverName === trip.driverName) : undefined) ??
+    null;
 
   if (!trip) {
     return (
@@ -138,10 +161,10 @@ function ShippingTab({ unit, tick }: { unit: TrackingUnit; tick: number }) {
 
       <IndustryCard>
         <IndustryCardKicker>Route</IndustryCardKicker>
-        <div className="ci-hatch ci-blueprint h-[170px] flex items-center justify-center text-[11px] text-[var(--ci-text-tertiary)]">
-          <i className="ci-corner tl" /><i className="ci-corner tr" /><i className="ci-corner bl" /><i className="ci-corner br" />
-          route map — no waypoint data to plot yet
-        </div>
+        <TripPositionMap position={position} />
+        {/* This is the vehicle's live telematics position, not a plotted
+            route — this schema has no geocoded waypoints for origin/
+            destination to draw a path against. */}
         <div className="grid grid-cols-2 gap-3 mt-2">
           <div>
             <p className="ci-lbl">Origin</p>

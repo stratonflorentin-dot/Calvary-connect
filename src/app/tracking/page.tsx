@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { IndustryShell } from "@/components/industry/shell";
 import { useTrackingUnits } from "@/hooks/use-tracking-units";
+import { useFleetMapLocations } from "@/hooks/use-fleet-map-locations";
 import { TrackingRail } from "./rail";
 import { TrackingUnitList } from "./unit-list";
 import { TrackingDetail, type DetailTab } from "./detail";
@@ -15,6 +16,9 @@ import { TrackingDetail, type DetailTab } from "./detail";
  */
 export default function TrackingConsolePage() {
   const { units, loading } = useTrackingUnits();
+  // Fetched once here and passed down (not re-fetched per-tab or per-card)
+  // — one realtime subscription for the whole console, not one per unit.
+  const { locations: positions } = useFleetMapLocations();
 
   const [sel, setSel] = useState<string | null>(null);
   const [tab, setTab] = useState<DetailTab>("shipping");
@@ -54,9 +58,10 @@ export default function TrackingConsolePage() {
         onPartnersChange={setPartners}
         query={query}
         onQueryChange={setQuery}
+        positions={positions}
       />
       {selectedUnit ? (
-        <TrackingDetail unit={selectedUnit} tab={tab} onTabChange={setTab} tick={tick} />
+        <TrackingDetail unit={selectedUnit} tab={tab} onTabChange={setTab} tick={tick} positions={positions} />
       ) : (
         <div className="flex-1 flex items-center justify-center text-[13px] text-[var(--ci-text-tertiary)]">
           {loading ? "Loading fleet…" : "Select a unit to see its detail."}
