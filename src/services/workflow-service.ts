@@ -1,6 +1,7 @@
 import { SupabaseService } from "./supabase-service";
 import { Trip, MaintenanceRequest, Expense, Allowance } from "@/types/roles";
 import { createNotification, fetchAccountantUserIds } from "./notification-service";
+import { supabase } from "@/lib/supabase";
 
 export class WorkflowService {
   /**
@@ -107,35 +108,48 @@ export class WorkflowService {
    * Connects Maintenance -> Finance
    */
   static async completeMaintenance(requestId: string, actualCost: number) {
-    // 1. Update maintenance request
-    const request = await SupabaseService.updateMaintenanceRequest(requestId, {
-      status: "completed",
-      actual_cost: actualCost,
-      completed_at: new Date().toISOString()
+    // 1. Update the maintenance record. This has to be maintenance_records —
+    // applyTransition() (src/lib/workflow/engine.ts, maintenanceMachine)
+    // already flips this same row's status there before calling this
+    // function. It previously called SupabaseService.updateMaintenanceRequest(),
+    // which targets the *different*, legacy maintenance_requests table — a
+    // .single() update against a row that doesn't exist there throws, so
+    // every completion has been silently swallowed by runSideEffects()'s
+    // "degrades to a warning" catch: the status change stood, but the cost
+    // was never actually posted as an expense. Found while building the
+    // Mechanic Service Queue's "Complete & release vehicle" action.
+    const { data: request, error: updateError } = await supabase
+      .from("maintenance_records")
+      .update({
+        status: "completed",
+        actual_cost: actualCost,
+        completed_date: new Date().toISOString().split("T")[0],
+      })
+      .eq("id", requestId)
+      .select()
+      .single();
+    if (updateError) throw updateError;
+
+    // 2. Release the vehicle back to service — the thing this action is
+    // named for, and the one step that was never here at all before.
+    if (request.vehicle_id) {
+      await supabase.from("vehicles").update({ status: "available" }).eq("id", request.vehicle_id);
+    }
+
+    // 3. Post the real cost as an expense. createExpense() already creates
+    // its own payable invoice internally (see its own body) — the explicit
+    // createInvoice() call this function used to make right after it was a
+    // second, duplicate bill for the same cost every time; removed rather
+    // than kept as a second bug alongside the table-name one.
+    const expense = await SupabaseService.createExpense({
+      category: "Fleet Maintenance",
+      amount: actualCost,
+      description: `Maintenance: ${request.title ?? request.description ?? ""} (Vehicle: ${request.vehicle_id ?? "unknown"})`,
+      vehicle_id: request.vehicle_id,
+      status: "approved",
     } as any);
 
-    // 2. Create financial expense
-    const expense = await SupabaseService.createExpense({
-      type: "maintenance",
-      amount: actualCost,
-      description: `Maintenance: ${request.description} (Vehicle: ${request.vehicleId})`,
-      vehicleId: request.vehicleId,
-      category: "Fleet Maintenance",
-      status: "approved"
-    });
-
-    // 3. Create Payable Invoice (Bill)
-    await SupabaseService.createInvoice({
-      invoice_number: `MAINT-${request.id}`,
-      customer_name: "Service Workshop",
-      amount: actualCost,
-      due_date: new Date().toISOString(),
-      status: "pending",
-      type: "payable",
-      linked_expense: expense.id
-    });
-
-    return request;
+    return { ...request, linkedExpenseId: expense?.id };
   }
 
   /**
