@@ -1,30 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { DriverShell } from "@/components/driver/driver-shell";
 import { useDriverData } from "@/hooks/use-driver-data";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { IndustryDriverShell } from "@/components/driver/industry-driver-shell";
+import { IndustryCard } from "@/components/industry/card";
+import { IndustryTag } from "@/components/industry/tag";
+import { IndustryButton } from "@/components/industry/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  IndustryDialog,
+  IndustryDialogTrigger,
+  IndustryDialogContent,
+  IndustryDialogTitle,
+} from "@/components/industry/dialog";
 import { Plus, Receipt } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
@@ -42,16 +31,18 @@ const CATEGORIES = [
   { value: "other", label: "Other" },
 ];
 
-function expenseBadge(status: string) {
+function expenseTag(status: string) {
   const s = (status || "pending").toLowerCase();
-  if (s === "approved") return <Badge className="bg-success/10 text-success">Approved</Badge>;
-  if (s === "rejected") return <Badge variant="destructive">Rejected</Badge>;
-  return <Badge variant="secondary">Pending</Badge>;
+  if (s === "approved") return <IndustryTag variant="accent">Approved</IndustryTag>;
+  if (s === "rejected") return <IndustryTag variant="danger">Rejected</IndustryTag>;
+  return <IndustryTag variant="neutral">Pending</IndustryTag>;
 }
+
+const fieldClass = "w-full text-[14px] bg-transparent border border-[var(--ci-divider)] px-[10px] py-[7px] outline-none focus-visible:border-[var(--ci-accent)]";
 
 export default function DriverExpensesPage() {
   const { user } = useSupabase();
-  const { expenses, trips, loading, refresh } = useDriverData();
+  const { expenses, loading, refresh } = useDriverData();
   const { format } = useCurrency();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -99,106 +90,79 @@ export default function DriverExpensesPage() {
   };
 
   return (
-    <DriverShell
-      title="My Expenses"
-      description="Submit expenses with receipts. You cannot approve expenses."
-      action={
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1">
-              <Plus className="size-4" />
-              New
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-sm mx-auto max-h-[90dvh] overflow-y-auto p-4 sm:p-6">
-            <DialogHeader>
-              <DialogTitle>Submit expense</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label>Category</Label>
-                <Select value={category} onValueChange={setCategory} required>
-                  <SelectTrigger className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="amount">Amount</Label>
-                <Input id="amount" name="amount" type="number" step="0.01" min="0" required className="h-11" inputMode="decimal" />
-              </div>
-              <div>
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  name="date"
-                  type="date"
-                  defaultValue={new Date().toISOString().slice(0, 10)}
-                  required
-                  className="h-11"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" required className="min-h-[80px]" />
-              </div>
-              <div>
-                <Label htmlFor="tripRef">Trip reference (optional)</Label>
-                <Input id="tripRef" name="tripRef" placeholder="Trip # or route" className="h-11" />
-              </div>
-              <div>
-                <Label htmlFor="receipt">Receipt upload</Label>
-                <Input id="receipt" name="receipt" type="file" accept="image/*,.pdf" className="h-11" />
-              </div>
-              <Button type="submit" className="w-full h-11" disabled={submitting}>
-                {submitting ? "Submitting…" : "Submit"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      }
-    >
+    <IndustryDriverShell title="My expenses">
+      <p className="text-[12px] text-[var(--ci-text-secondary)] -mt-1">Submit expenses with receipts. You cannot approve expenses.</p>
+
+      <IndustryDialog open={open} onOpenChange={setOpen}>
+        <IndustryDialogTrigger asChild>
+          <IndustryButton variant="primary" size="driver" className="gap-1.5">
+            <Plus className="size-4" /> New expense
+          </IndustryButton>
+        </IndustryDialogTrigger>
+        <IndustryDialogContent open={open}>
+          <IndustryDialogTitle>Submit expense</IndustryDialogTitle>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-2">
+            <div>
+              <label className="ci-lbl block mb-1">Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} required className={fieldClass}>
+                {CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="amount" className="ci-lbl block mb-1">Amount</label>
+              <input id="amount" name="amount" type="number" step="0.01" min="0" required inputMode="decimal" className={fieldClass} />
+            </div>
+            <div>
+              <label htmlFor="date" className="ci-lbl block mb-1">Date</label>
+              <input id="date" name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required className={fieldClass} />
+            </div>
+            <div>
+              <label htmlFor="description" className="ci-lbl block mb-1">Description</label>
+              <textarea id="description" name="description" required rows={3} className={fieldClass} />
+            </div>
+            <div>
+              <label htmlFor="tripRef" className="ci-lbl block mb-1">Trip reference (optional)</label>
+              <input id="tripRef" name="tripRef" placeholder="Trip # or route" className={fieldClass} />
+            </div>
+            <div>
+              <label htmlFor="receipt" className="ci-lbl block mb-1">Receipt upload</label>
+              <input id="receipt" name="receipt" type="file" accept="image/*,.pdf" className="w-full text-[13px]" />
+            </div>
+            <IndustryButton type="submit" variant="primary" size="driver" className="w-full" disabled={submitting}>
+              {submitting ? "Submitting…" : "Submit"}
+            </IndustryButton>
+          </form>
+        </IndustryDialogContent>
+      </IndustryDialog>
+
       {loading ? (
-        <p className="text-center text-muted-foreground py-8">Loading…</p>
+        <p className="text-center text-[13px] text-[var(--ci-text-tertiary)] py-8">Loading…</p>
       ) : expenses.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            <Receipt className="size-10 mx-auto mb-3 opacity-40" />
-            No expenses submitted yet.
-          </CardContent>
-        </Card>
+        <IndustryCard className="items-center text-center py-8">
+          <Receipt className="size-8 mx-auto mb-2 opacity-40" />
+          <p className="text-[13px] text-[var(--ci-text-secondary)]">No expenses submitted yet.</p>
+        </IndustryCard>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {expenses.map((ex) => (
-            <Card key={String(ex.id)}>
-              <CardContent className="p-4 flex justify-between items-start gap-2">
+            <IndustryCard key={String(ex.id)}>
+              <div className="flex justify-between items-start gap-2">
                 <div>
-                  <p className="font-medium text-sm capitalize">
-                    {String(ex.category || ex.type || "Expense")}
-                  </p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {String(ex.description || "")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {String(ex.date || ex.created_at || "").slice(0, 10)}
-                  </p>
+                  <p className="text-[13px] font-semibold capitalize">{String(ex.category || ex.type || "Expense")}</p>
+                  <p className="text-[12px] text-[var(--ci-text-secondary)] line-clamp-2 mt-0.5">{String(ex.description || "")}</p>
+                  <p className="text-[11px] text-[var(--ci-text-tertiary)] ci-mono mt-1">{String(ex.date || ex.created_at || "").slice(0, 10)}</p>
                 </div>
-                <div className="text-right shrink-0 space-y-1">
-                  <p className="font-bold text-sm">{format(Number(ex.amount) || 0)}</p>
-                  {expenseBadge(String(ex.status))}
+                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                  <p className="ci-mono text-[14px] font-bold">{format(Number(ex.amount) || 0)}</p>
+                  {expenseTag(String(ex.status))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </IndustryCard>
           ))}
         </div>
       )}
-    </DriverShell>
+    </IndustryDriverShell>
   );
 }

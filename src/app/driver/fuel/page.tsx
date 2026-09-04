@@ -1,32 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DriverShell } from "@/components/driver/driver-shell";
 import { useDriverData } from "@/hooks/use-driver-data";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { IndustryDriverShell } from "@/components/driver/industry-driver-shell";
+import { IndustryCard } from "@/components/industry/card";
+import { IndustryTag } from "@/components/industry/tag";
+import { IndustryButton } from "@/components/industry/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  IndustryDialog,
+  IndustryDialogTrigger,
+  IndustryDialogContent,
+  IndustryDialogTitle,
+} from "@/components/industry/dialog";
 import { AlertTriangle, Fuel, Plus, Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
-function fuelStatusBadge(status: string) {
+function fuelStatusTag(status: string) {
   const s = (status || "pending").toLowerCase();
-  if (s === "approved") return <Badge className="bg-success/10 text-success">Approved</Badge>;
-  if (s === "rejected") return <Badge variant="destructive">Rejected</Badge>;
-  return <Badge variant="secondary">Pending</Badge>;
+  if (s === "approved") return <IndustryTag variant="accent">Approved</IndustryTag>;
+  if (s === "rejected") return <IndustryTag variant="danger">Rejected</IndustryTag>;
+  return <IndustryTag variant="neutral">Pending</IndustryTag>;
 }
 
 type FlaggedAnomaly = {
@@ -88,47 +83,46 @@ function FlaggedTransactions() {
   if (loading || anomalies.length === 0) return null;
 
   return (
-    <div className="space-y-3 mb-4">
-      <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-        <AlertTriangle className="size-3.5 text-warning" /> Flagged for review
-      </h3>
+    <div className="flex flex-col gap-3">
+      <p className="ci-lbl flex items-center gap-1.5">
+        <AlertTriangle className="size-3.5" /> Flagged for review
+      </p>
       {anomalies.map((a) => (
-        <Card key={a.id} className="border-warning/30">
-          <CardContent className="p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <Badge className={cn(a.severity === "high" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning", "capitalize")}>
-                {a.severity} severity
-              </Badge>
-              <span className="text-[10px] text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</span>
+        <IndustryCard key={a.id} className="border-[var(--ci-accent-800)]">
+          <div className="flex items-center justify-between">
+            <IndustryTag variant={a.severity === "high" ? "danger" : "warning"} className="capitalize">
+              {a.severity} severity
+            </IndustryTag>
+            <span className="text-[10px] text-[var(--ci-text-tertiary)] ci-mono">{new Date(a.created_at).toLocaleDateString()}</span>
+          </div>
+          <p className="text-[13px] mt-1.5">{a.description}</p>
+          {a.driver_response ? (
+            <div className="mt-2 border-t border-[var(--ci-cell-divider)] pt-2 text-[12px] text-[var(--ci-text-secondary)]">
+              <p className="font-semibold text-[var(--ci-text)] mb-0.5">Your explanation:</p>
+              {a.driver_response.explanation}
             </div>
-            <p className="text-sm text-foreground">{a.description}</p>
-            {a.driver_response ? (
-              <div className="bg-muted/50 rounded-lg p-2.5 text-xs text-muted-foreground">
-                <p className="font-medium text-foreground mb-0.5">Your explanation:</p>
-                {a.driver_response.explanation}
+          ) : replyingTo === a.id ? (
+            <div className="flex flex-col gap-2 mt-2">
+              <textarea
+                value={explanation}
+                onChange={(e) => setExplanation(e.target.value)}
+                placeholder="Explain this fuel transaction…"
+                rows={3}
+                className="text-[13px] bg-transparent border border-[var(--ci-divider)] px-[10px] py-[7px] outline-none focus-visible:border-[var(--ci-accent)]"
+              />
+              <div className="flex gap-2">
+                <IndustryButton variant="secondary" onClick={() => { setReplyingTo(null); setExplanation(""); }}>Cancel</IndustryButton>
+                <IndustryButton variant="primary" onClick={() => submitExplanation(a.id)} disabled={submitting || !explanation.trim()}>
+                  {submitting ? "Sending…" : "Send explanation"}
+                </IndustryButton>
               </div>
-            ) : replyingTo === a.id ? (
-              <div className="space-y-2">
-                <Textarea
-                  value={explanation}
-                  onChange={(e) => setExplanation(e.target.value)}
-                  placeholder="Explain this fuel transaction…"
-                  rows={3}
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { setReplyingTo(null); setExplanation(""); }}>Cancel</Button>
-                  <Button size="sm" onClick={() => submitExplanation(a.id)} disabled={submitting || !explanation.trim()}>
-                    {submitting ? "Sending…" : "Send explanation"}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => setReplyingTo(a.id)}>
-                Explain this transaction
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          ) : (
+            <IndustryButton variant="secondary" className="mt-2" onClick={() => setReplyingTo(a.id)}>
+              Explain this transaction
+            </IndustryButton>
+          )}
+        </IndustryCard>
       ))}
     </div>
   );
@@ -171,77 +165,63 @@ export default function DriverFuelPage() {
   };
 
   return (
-    <DriverShell
-      title="Fuel"
-      description="Request fuel, track approvals, and upload receipts."
-      action={
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1">
-              <Plus className="size-4" />
-              Request
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-sm mx-auto">
-            <DialogHeader>
-              <DialogTitle>New fuel request</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="amount">Amount (litres or TZS)</Label>
-                <Input id="amount" name="amount" type="number" min="1" required />
-              </div>
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" placeholder="Station, odometer, etc." />
-              </div>
-              <div>
-                <Label htmlFor="receipt">Receipt (optional)</Label>
-                <Input id="receipt" name="receipt" type="file" accept="image/*,.pdf" />
-              </div>
-              <Button type="submit" className="w-full" disabled={submitting}>
-                {submitting ? "Submitting…" : "Submit request"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      }
-    >
+    <IndustryDriverShell title="Fuel">
+      <p className="text-[12px] text-[var(--ci-text-secondary)] -mt-1">Request fuel, track approvals, and upload receipts.</p>
+
+      <IndustryDialog open={open} onOpenChange={setOpen}>
+        <IndustryDialogTrigger asChild>
+          <IndustryButton variant="primary" size="driver" className="gap-1.5">
+            <Plus className="size-4" /> Request fuel
+          </IndustryButton>
+        </IndustryDialogTrigger>
+        <IndustryDialogContent open={open}>
+          <IndustryDialogTitle>New fuel request</IndustryDialogTitle>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-2">
+            <div className="field">
+              <label htmlFor="amount" className="ci-lbl block mb-1">Amount (litres or TZS)</label>
+              <input id="amount" name="amount" type="number" min="1" required className="w-full text-[14px] bg-transparent border border-[var(--ci-divider)] px-[10px] py-[7px] outline-none focus-visible:border-[var(--ci-accent)]" />
+            </div>
+            <div className="field">
+              <label htmlFor="notes" className="ci-lbl block mb-1">Notes</label>
+              <textarea id="notes" name="notes" placeholder="Station, odometer, etc." className="w-full text-[14px] bg-transparent border border-[var(--ci-divider)] px-[10px] py-[7px] outline-none focus-visible:border-[var(--ci-accent)]" />
+            </div>
+            <div className="field">
+              <label htmlFor="receipt" className="ci-lbl block mb-1">Receipt (optional)</label>
+              <input id="receipt" name="receipt" type="file" accept="image/*,.pdf" className="w-full text-[13px]" />
+            </div>
+            <IndustryButton type="submit" variant="primary" size="driver" className="w-full" disabled={submitting}>
+              {submitting ? "Submitting…" : "Submit request"}
+            </IndustryButton>
+          </form>
+        </IndustryDialogContent>
+      </IndustryDialog>
+
       <FlaggedTransactions />
 
       {loading ? (
-        <p className="text-muted-foreground text-center py-8">Loading…</p>
+        <p className="text-center text-[13px] text-[var(--ci-text-tertiary)] py-8">Loading…</p>
       ) : fuelRequests.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground text-sm">
-            <Fuel className="size-10 mx-auto mb-3 opacity-40" />
-            No fuel requests yet. Tap Request to add one.
-          </CardContent>
-        </Card>
+        <IndustryCard className="items-center text-center py-8">
+          <Fuel className="size-8 mx-auto mb-2 opacity-40" />
+          <p className="text-[13px] text-[var(--ci-text-secondary)]">No fuel requests yet. Tap Request fuel to add one.</p>
+        </IndustryCard>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {fuelRequests.map((req) => (
-            <Card key={String(req.id)}>
-              <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-sm font-medium">
-                  {String(req.amount)} units
-                </CardTitle>
-                {fuelStatusBadge(String(req.status))}
-              </CardHeader>
-              <CardContent className="px-4 pb-4 pt-0 text-xs text-muted-foreground">
-                <p>
-                  {new Date(String(req.created_at)).toLocaleDateString()}
-                </p>
-              </CardContent>
-            </Card>
+            <IndustryCard key={String(req.id)}>
+              <div className="flex items-center justify-between">
+                <p className="ci-mono text-[14px] font-bold">{String(req.amount)} units</p>
+                {fuelStatusTag(String(req.status))}
+              </div>
+              <p className="text-[12px] text-[var(--ci-text-tertiary)] ci-mono mt-1">{new Date(String(req.created_at)).toLocaleDateString()}</p>
+            </IndustryCard>
           ))}
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-4">
-        <Upload className="size-3" />
-        Attach receipts when submitting or after approval.
+      <p className="text-[11px] text-[var(--ci-text-tertiary)] flex items-center gap-1 mt-1">
+        <Upload className="size-3" /> Attach receipts when submitting or after approval.
       </p>
-    </DriverShell>
+    </IndustryDriverShell>
   );
 }

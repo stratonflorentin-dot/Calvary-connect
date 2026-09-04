@@ -2,18 +2,24 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { DriverShell } from "@/components/driver/driver-shell";
 import { useDriverData } from "@/hooks/use-driver-data";
 import { useRole } from "@/hooks/use-role";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MapPin, Package, Camera } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { IndustryDriverShell } from "@/components/driver/industry-driver-shell";
+import { IndustryCard } from "@/components/industry/card";
+import { IndustryTag } from "@/components/industry/tag";
+import { IndustryButton } from "@/components/industry/button";
+import { cn } from "@/lib/utils";
 
 type TripTab = "all" | "pending" | "transit" | "delivered";
+
+const FILTERS: { key: TripTab; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "transit", label: "In transit" },
+  { key: "delivered", label: "Done" },
+];
 
 function displayStatus(status: string): string {
   const s = (status || "").toLowerCase();
@@ -23,12 +29,11 @@ function displayStatus(status: string): string {
   return "Pending";
 }
 
-function statusVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
-  const label = displayStatus(status);
-  if (label === "Delivered") return "default";
-  if (label === "In Transit") return "secondary";
-  if (label === "Delayed") return "destructive";
-  return "outline";
+function tagVariant(label: string): "accent" | "neutral" | "danger" {
+  if (label === "Delivered") return "accent";
+  if (label === "In Transit") return "accent";
+  if (label === "Delayed") return "danger";
+  return "neutral";
 }
 
 function filterTrips(trips: Record<string, unknown>[], tab: TripTab) {
@@ -41,6 +46,13 @@ function filterTrips(trips: Record<string, unknown>[], tab: TripTab) {
   });
 }
 
+/**
+ * Restyled onto IndustryDriverShell — see Home for the shell's spec
+ * rationale. The design forbids nested in-page tabs, so the status filter
+ * that was a Radix Tabs component before is now a plain segmented button
+ * row (no tab-panel semantics, just a filter), same underlying
+ * filterTrips() logic as before.
+ */
 export default function DriverTripsPage() {
   const { role } = useRole();
   const router = useRouter();
@@ -54,64 +66,61 @@ export default function DriverTripsPage() {
   const filtered = useMemo(() => filterTrips(trips, tab), [trips, tab]);
 
   return (
-    <DriverShell
-      title="My Trips"
-      description="Only trips assigned to you. You cannot create or assign trips."
-    >
-      <Tabs value={tab} onValueChange={(v) => setTab(v as TripTab)} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 xs:grid-cols-4 h-auto">
-          <TabsTrigger value="all" className="text-xs py-3">All</TabsTrigger>
-          <TabsTrigger value="pending" className="text-xs py-3">Pending</TabsTrigger>
-          <TabsTrigger value="transit" className="text-xs py-3">In transit</TabsTrigger>
-          <TabsTrigger value="delivered" className="text-xs py-3">Done</TabsTrigger>
-        </TabsList>
+    <IndustryDriverShell title="My trips">
+      <p className="text-[12px] text-[var(--ci-text-secondary)] -mt-1">
+        Only trips assigned to you. You cannot create or assign trips.
+      </p>
 
-        <TabsContent value={tab} className="mt-4 space-y-3">
-          {loading ? (
-            <p className="text-center text-muted-foreground py-8">Loading trips…</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No trips in this category.</p>
-          ) : (
-            filtered.map((trip: any) => (
-              <Card key={String(trip.id)} className="overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-sm">
-                        {String(trip.trip_number || trip.tripNumber || "Trip")}
-                      </p>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <MapPin className="size-3 shrink-0" />
-                        <span>
-                          {String(trip.origin)} → {String(trip.destination)}
-                        </span>
-                      </div>
-                    </div>
-                    <Badge variant={statusVariant(String(trip.status))}>
-                      {displayStatus(String(trip.status))}
-                    </Badge>
+      <div className="flex border border-[var(--ci-divider)] w-fit">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setTab(f.key)}
+            className={cn(
+              "text-[12px] px-3 min-h-[40px] border-l border-[var(--ci-divider)] first:border-l-0 transition-colors duration-150",
+              tab === f.key ? "bg-[var(--ci-accent)] text-[var(--ci-bg)]" : "hover:bg-[var(--ci-nav-hover)]"
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p className="text-center text-[13px] text-[var(--ci-text-tertiary)] py-8">Loading trips…</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-[13px] text-[var(--ci-text-tertiary)] py-8">No trips in this category.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {filtered.map((trip: any) => {
+            const label = displayStatus(String(trip.status));
+            return (
+              <IndustryCard key={String(trip.id)}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="ci-mono text-[14px] font-bold">{String(trip.trip_number || trip.tripNumber || "Trip")}</p>
+                    <p className="text-[12px] text-[var(--ci-text-secondary)] mt-0.5">
+                      {String(trip.origin)} → {String(trip.destination)}
+                    </p>
                   </div>
-                  {trip.cargo && (
-                    <div className="flex items-start gap-2 text-sm bg-muted/50 rounded-lg p-2">
-                      <Package className="size-4 text-primary shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Cargo</p>
-                        <p>{String(trip.cargo || trip.cargo_type || "—")}</p>
-                      </div>
-                    </div>
-                  )}
-                  <Button asChild size="sm" variant="outline" className="w-full">
-                    <Link href="/proof">
-                      <Camera className="size-4 mr-2" />
-                      Upload proof of delivery
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
-    </DriverShell>
+                  <IndustryTag variant={tagVariant(label)} pulse={label === "In Transit"}>
+                    {label}
+                  </IndustryTag>
+                </div>
+                {trip.cargo && (
+                  <div className="mt-2 border-t border-[var(--ci-cell-divider)] pt-2">
+                    <p className="ci-lbl">Cargo</p>
+                    <p className="text-[13px]">{String(trip.cargo || trip.cargo_type || "—")}</p>
+                  </div>
+                )}
+                <IndustryButton variant="secondary" size="driver" className="w-full mt-3" asChild>
+                  <Link href="/proof">Upload proof of delivery</Link>
+                </IndustryButton>
+              </IndustryCard>
+            );
+          })}
+        </div>
+      )}
+    </IndustryDriverShell>
   );
 }
