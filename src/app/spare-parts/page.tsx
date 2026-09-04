@@ -1,46 +1,64 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { SupabaseService } from '@/services/supabase-service';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Package, Plus, Clock, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { IndustryRoleShell } from '@/components/role-shell/industry-role-shell';
+import { IndustryShell } from '@/components/industry/shell';
+import { IndustryCard } from '@/components/industry/card';
+import { IndustryTable, IndustryTh, IndustryTd, IndustryTr } from '@/components/industry/table';
+import { IndustryTag } from '@/components/industry/tag';
+import { IndustryButton } from '@/components/industry/button';
+import {
+  IndustryDialog,
+  IndustryDialogTrigger,
+  IndustryDialogContent,
+  IndustryDialogTitle,
+} from '@/components/industry/dialog';
+import { Package, Plus } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
-import { cn } from '@/lib/utils';
+
+const MECHANIC_PAGES = [
+  { label: "Service queue", href: "/mechanic/service-queue" },
+  { label: "Spare parts", href: "/spare-parts" },
+  { label: "Service history", href: "/mechanic/service-history" },
+  { label: "Schedule", href: "/mechanic/schedule" },
+];
+
+const fieldClass = "w-full text-[14px] bg-transparent border border-[var(--ci-divider)] px-[10px] py-[7px] outline-none focus-visible:border-[var(--ci-accent)]";
+
+function urgencyVariant(urgency: string): "danger" | "warning" | "neutral" {
+  if (urgency === "High") return "danger";
+  if (urgency === "Medium") return "warning";
+  return "neutral";
+}
+
+function statusVariant(status: string): "accent" | "danger" | "warning" {
+  if (status === "approved") return "accent";
+  if (status === "rejected") return "danger";
+  return "warning";
+}
 
 export default function MechanicSparePartsPage() {
-  const { role, isAdmin } = useRole();
+  const { role } = useRole();
   const { user } = useSupabase();
   const { t } = useLanguage();
   const [parts, setParts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const loadParts = async () => {
       if (!user) return;
-      
       try {
         setLoading(true);
-        
-        // Load real spare parts requests from Supabase
         const { data: requests, error } = await supabase
           .from('parts_requests')
           .select('*')
           .order('created_at', { ascending: false });
-        
         if (error) throw error;
-        
         setParts(requests || []);
       } catch (error) {
         console.error('Error loading spare parts:', error);
@@ -48,7 +66,6 @@ export default function MechanicSparePartsPage() {
         setLoading(false);
       }
     };
-
     loadParts();
   }, [user]);
 
@@ -66,14 +83,14 @@ export default function MechanicSparePartsPage() {
         status: 'pending',
         requested_by: user.id
       } as any);
-      
-      // Reload parts requests list
+
       const { data: updatedRequests } = await supabase
         .from('parts_requests')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       setParts(updatedRequests || []);
+      setOpen(false);
       e.currentTarget.reset();
     } catch (error) {
       console.error('Error requesting part:', error);
@@ -82,130 +99,91 @@ export default function MechanicSparePartsPage() {
 
   if (role && role !== 'MECHANIC') {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={role!} />
-        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
-          <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
-            <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
-            <p className="text-muted-foreground text-sm">You do not have permission to view mechanic spare parts.</p>
-          </div>
-        </main>
-      </div>
+      <IndustryShell className="min-h-screen flex items-center justify-center">
+        <IndustryCard className="max-w-md text-center">
+          <h1 className="text-[22px]" style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 600, color: "#8c1d18" }}>Access denied</h1>
+          <p className="text-[13px] text-[var(--ci-text-secondary)] mt-1">You do not have permission to view mechanic spare parts.</p>
+        </IndustryCard>
+      </IndustryShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role!} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-headline tracking-tighter">{t.my_requests}</h1>
-            <p className="text-muted-foreground text-sm font-sans">Track your requested components and service approvals.</p>
-          </div>
+    <IndustryRoleShell roleLabel="Mechanic" pages={MECHANIC_PAGES}>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-[12px] text-[var(--ci-text-secondary)]">Track your requested components and service approvals.</p>
+        <IndustryDialog open={open} onOpenChange={setOpen}>
+          <IndustryDialogTrigger asChild>
+            <IndustryButton variant="primary" className="gap-1.5">
+              <Plus className="size-4" /> {t.request_parts}
+            </IndustryButton>
+          </IndustryDialogTrigger>
+          <IndustryDialogContent open={open}>
+            <IndustryDialogTitle>{t.request_parts}</IndustryDialogTitle>
+            <form onSubmit={handleCreateRequest} className="flex flex-col gap-3 mt-2">
+              <div>
+                <label htmlFor="name" className="ci-lbl block mb-1">{t.part_name}</label>
+                <input id="name" name="name" placeholder="E.g. Full Trailer Repaint or Alternator" required className={fieldClass} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="quantity" className="ci-lbl block mb-1">{t.quantity}</label>
+                  <input id="quantity" name="quantity" type="number" defaultValue="1" required className={fieldClass} />
+                </div>
+                <div>
+                  <label htmlFor="urgency" className="ci-lbl block mb-1">{t.urgency}</label>
+                  <select id="urgency" name="urgency" defaultValue="Medium" required className={fieldClass}>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High (Immediate)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="reason" className="ci-lbl block mb-1">{t.reason}</label>
+                <textarea id="reason" name="reason" placeholder="Explain why this is needed..." required rows={3} className={fieldClass} />
+              </div>
+              <IndustryButton type="submit" variant="primary" className="w-full">{t.submit_request}</IndustryButton>
+            </form>
+          </IndustryDialogContent>
+        </IndustryDialog>
+      </div>
 
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="rounded-full gap-2 shadow-lg">
-                <Plus className="size-4" /> {t.request_parts}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>{t.request_parts}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateRequest} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">{t.part_name}</Label>
-                  <Input id="name" name="name" placeholder="E.g. Full Trailer Repaint or Alternator" required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">{t.quantity}</Label>
-                    <Input id="quantity" name="quantity" type="number" defaultValue="1" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="urgency">{t.urgency}</Label>
-                    <Select name="urgency" defaultValue="Medium" required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Low">Low</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="High">High (Immediate)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reason">{t.reason}</Label>
-                  <Textarea id="reason" name="reason" placeholder="Explain why this is needed..." required />
-                </div>
-                <Button type="submit" className="w-full h-12 font-headline">{t.submit_request}</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="px-6">Item/Service</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Urgency</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right px-6">Sent Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">Loading requests...</TableCell></TableRow>
-              ) : parts?.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">No requests made yet.</TableCell></TableRow>
-              ) : parts?.map((r) => (
-                <TableRow key={r.id}>
-                  <td className="px-6 py-4 font-medium flex items-center gap-3">
-                    <Package className="size-4 text-muted-foreground" />
-                    {r.part_name}
-                  </td>
-                  <td>{r.quantity_requested}</td>
-                  <td>
-                    <Badge variant="outline" className={cn(
-                      "text-[10px]",
-                      r.urgency === 'High' ? 'border-rose-200 text-rose-600' : 'text-slate-500'
-                    )}>
-                      {r.urgency}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      {r.status === 'approved' ? <CheckCircle2 className="size-3 text-emerald-500" /> :
-                        r.status === 'rejected' ? <XCircle className="size-3 text-rose-500" /> :
-                          <Clock className="size-3 text-amber-500" />}
-                      <Badge className={cn(
-                        "text-[10px]",
-                        r.status === 'approved' ? 'bg-emerald-500' :
-                          r.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'
-                      )}>
-                        {r.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td className="text-right px-6 text-xs text-muted-foreground">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </td>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </main>
-    </div>
+      <IndustryCard>
+        <IndustryTable>
+          <thead>
+            <tr>
+              <IndustryTh>Item/Service</IndustryTh>
+              <IndustryTh align="right">Quantity</IndustryTh>
+              <IndustryTh>Urgency</IndustryTh>
+              <IndustryTh>Status</IndustryTh>
+              <IndustryTh align="right">Sent</IndustryTh>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading requests…</IndustryTd></tr>
+            ) : parts.length === 0 ? (
+              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No requests made yet.</IndustryTd></tr>
+            ) : (
+              parts.map((r) => (
+                <IndustryTr key={r.id}>
+                  <IndustryTd>
+                    <span className="flex items-center gap-2">
+                      <Package className="size-3.5 text-[var(--ci-text-tertiary)]" />
+                      {r.part_name}
+                    </span>
+                  </IndustryTd>
+                  <IndustryTd align="right" mono>{r.quantity_requested}</IndustryTd>
+                  <IndustryTd><IndustryTag variant={urgencyVariant(r.urgency)}>{r.urgency}</IndustryTag></IndustryTd>
+                  <IndustryTd><IndustryTag variant={statusVariant(r.status)}>{String(r.status).toUpperCase()}</IndustryTag></IndustryTd>
+                  <IndustryTd align="right" mono>{new Date(r.created_at).toLocaleDateString()}</IndustryTd>
+                </IndustryTr>
+              ))
+            )}
+          </tbody>
+        </IndustryTable>
+      </IndustryCard>
+    </IndustryRoleShell>
   );
 }
-
-
-
-
