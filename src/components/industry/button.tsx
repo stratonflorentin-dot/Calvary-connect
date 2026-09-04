@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
 const VARIANT_CLASSES: Record<string, string> = {
@@ -11,16 +12,22 @@ const VARIANT_CLASSES: Record<string, string> = {
  * Industry design system button — hairline border, zero radius, scale(.97)
  * on press. `size="driver"` gives the 48px+ hit target the driver screens
  * require (design_handoff README: "Driver screens need 48px+ hit targets").
+ * `asChild` forwards onto a custom child (e.g. next/link) via Radix Slot —
+ * same pattern @/components/ui/button.tsx already uses, so `<IndustryButton
+ * asChild><Link href="...">...</Link></IndustryButton>` renders one real
+ * anchor, not a button wrapping one.
  */
 export const IndustryButton = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: "primary" | "secondary" | "ghost";
     size?: "default" | "driver";
+    asChild?: boolean;
   }
->(({ children, className, variant = "secondary", size = "default", ...props }, ref) => {
+>(({ children, className, variant = "secondary", size = "default", asChild = false, ...props }, ref) => {
+  const Comp = asChild ? Slot : "button";
   return (
-    <button
+    <Comp
       ref={ref}
       className={cn(
         "inline-flex items-center justify-center gap-1.5 border text-[14px] font-semibold transition-[background,color,border-color,transform] duration-150 ease-[cubic-bezier(.16,1,.3,1)]",
@@ -33,7 +40,7 @@ export const IndustryButton = React.forwardRef<
       {...props}
     >
       {children}
-    </button>
+    </Comp>
   );
 });
 IndustryButton.displayName = "IndustryButton";
