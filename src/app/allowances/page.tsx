@@ -1,24 +1,27 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSupabase } from '@/components/supabase-provider';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Coins, Calculator, Truck, Globe, Plus, RefreshCw,
-  User, DollarSign, Calendar, Search, Trash2, CheckCircle,
-  XCircle, Info, Landmark, AlertCircle, FileText, HandCoins, Clock
-} from 'lucide-react';
+import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
 import { toast } from '@/hooks/use-toast';
-import { Sidebar } from '@/components/navigation/sidebar';
-import { useRole } from '@/hooks/use-role';
+import {
+  Coins, Calculator, Plus, RefreshCw,
+  User, DollarSign, Calendar, Search, Trash2,
+  XCircle, Info, Landmark, FileText, HandCoins, Clock
+} from 'lucide-react';
+import { IndustryRoleShell } from '@/components/role-shell/industry-role-shell';
+import { IndustryCard, IndustryCardKicker } from '@/components/industry/card';
+import { IndustryTable, IndustryTh, IndustryTd, IndustryTr } from '@/components/industry/table';
+import { IndustryTag } from '@/components/industry/tag';
+import { IndustryButton } from '@/components/industry/button';
+import {
+  IndustryDialog,
+  IndustryDialogContent,
+  IndustryDialogTitle,
+  IndustryDialogActions,
+} from '@/components/industry/dialog';
 import {
   getWorkersAction,
   savePayrollAction,
@@ -31,14 +34,19 @@ import {
   getActiveBankAccountsAction,
 } from './actions';
 
+const HR_PAGES = [
+  { label: "People", href: "/users" },
+  { label: "Payroll & allowances", href: "/allowances" },
+  { label: "Leave", href: "/hr/leave" },
+  { label: "Driver compliance", href: "/admin/hr/driver-compliance" },
+];
+
+const fieldClass = "w-full text-[13px] bg-transparent border border-[var(--ci-divider)] px-[9px] py-[6px] outline-none focus-visible:border-[var(--ci-accent)]";
+
 /**
  * Payroll periods selectable for processing — the current month plus the
- * trailing 5, oldest first. Deliberately never offers a future month: the
- * dropdown used to be a hardcoded list of hardcoded strings ("May 2026"
- * through "August 2026") with nothing stopping HR from picking a period
- * that hadn't started yet and immediately approving + paying it, i.e.
- * workers getting salary before their actual pay date. Regenerated from
- * `new Date()` so it never goes stale either.
+ * trailing 5, oldest first. Never offers a future month: workers must not
+ * be paid before their actual pay date.
  */
 function selectablePayrollPeriods(): string[] {
   const now = new Date();
@@ -80,12 +88,18 @@ interface PayrollRecord {
   loan_deduction_amount?: number;
 }
 
+const STATUS_VARIANT: Record<string, "accent" | "warning" | "danger" | "neutral"> = {
+  paid: 'accent',
+  approved: 'neutral',
+  rejected: 'danger',
+  pending: 'warning',
+};
+
 export default function AllowancesPage() {
   const { user } = useSupabase();
   const { role } = useRole();
   const { format } = useCurrency();
 
-  // State management
   const [activeTab, setActiveTab] = useState<'process' | 'history'>('process');
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [history, setHistory] = useState<PayrollRecord[]>([]);
@@ -93,15 +107,11 @@ export default function AllowancesPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Mark Paid account picker — driver_allowances has no fixed bank account,
-  // and this chart has more than one active TZS account, so the payer must
-  // be chosen explicitly rather than guessed.
   const [markPaidTarget, setMarkPaidTarget] = useState<PayrollRecord | null>(null);
   const [markPaidAccounts, setMarkPaidAccounts] = useState<{ id: string; account_name: string; currency: string }[]>([]);
   const [markPaidAccountId, setMarkPaidAccountId] = useState('');
   const [markPaidAccountsLoading, setMarkPaidAccountsLoading] = useState(false);
 
-  // Manual payroll input states (indexed by workerId)
   const [baseSalaries, setBaseSalaries] = useState<Record<string, number>>({});
   const [allowancesInputs, setAllowancesInputs] = useState<Record<string, number>>({});
   const [deductionsInputs, setDeductionsInputs] = useState<Record<string, number>>({});
@@ -109,26 +119,22 @@ export default function AllowancesPage() {
   const [paymentMethods, setPaymentMethods] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
 
-  // Regenerated once per mount rather than inline in the JSX so every
-  // worker row's dropdown shares the exact same option list.
   const [payrollPeriods] = useState<string[]>(selectablePayrollPeriods);
 
-  // Filter history
   const [historySearch, setHistorySearch] = useState('');
   const [historyFilter, setHistoryFilter] = useState<'all' | 'payroll' | 'trip'>('all');
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadData = async () => {
     if (!user) return;
     setLoading(true);
     try {
-      // 1. Fetch Workers
       const workersRes = await getWorkersAction();
       if (workersRes.success && workersRes.workers) {
-        // Initialize inputs with default values
         const initialSalaries: Record<string, number> = {};
         const initialAllowances: Record<string, number> = {};
         const initialDeductions: Record<string, number> = {};
@@ -139,7 +145,6 @@ export default function AllowancesPage() {
         const currentMonthYear = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
         workersRes.workers.forEach((w: any) => {
-          // Fallback salaries based on role if not set in database
           let defaultSalary = w.salary || 0;
           if (!defaultSalary) {
             const roleUpper = (w.role || '').toUpperCase();
@@ -170,7 +175,6 @@ export default function AllowancesPage() {
         setNotes(initialNotes);
       }
 
-      // 2. Fetch History
       await loadHistory();
     } catch (error: any) {
       console.error("Error loading payroll details:", error);
@@ -187,13 +191,11 @@ export default function AllowancesPage() {
     }
   };
 
-  // Live input changes
   const handleNumChange = (workerId: string, value: string, setter: React.Dispatch<React.SetStateAction<Record<string, number>>>) => {
     const num = parseFloat(value.replace(/,/g, '')) || 0;
     setter(prev => ({ ...prev, [workerId]: num }));
   };
 
-  // Process / Submit manual payroll for a worker
   const handleProcessPayroll = async (worker: Worker) => {
     const workerId = worker.id;
     const base = baseSalaries[workerId] || 0;
@@ -211,12 +213,10 @@ export default function AllowancesPage() {
 
     setActionLoading(workerId);
     try {
-      // 1. If base salary changed, update their profile Master Salary
       if (base !== worker.salary) {
         await updateWorkerSalaryAction(workerId, base);
       }
 
-      // 2. Save payroll record
       const res = await savePayrollAction({
         employeeId: workerId,
         employeeName: worker.name,
@@ -232,24 +232,20 @@ export default function AllowancesPage() {
 
       if (res.success) {
         toast({ title: "Payroll Submitted", description: `Manual payroll for ${worker.name} submitted successfully!` });
-        // Clear allowance/deductions/notes
         setAllowancesInputs(prev => ({ ...prev, [workerId]: 0 }));
         setDeductionsInputs(prev => ({ ...prev, [workerId]: 0 }));
         setNotes(prev => ({ ...prev, [workerId]: '' }));
-        // Reload directories
         await loadHistory();
       } else {
         toast({ title: "Submission Failed", description: res.error || "Could not submit payroll.", variant: "destructive" });
       }
     } catch (e: any) {
-      console.error(e);
       toast({ title: "Error", description: e.message || "Failed to process request.", variant: "destructive" });
     } finally {
       setActionLoading(null);
     }
   };
 
-  // Approve payroll record (triggers Professional Accounting Journal Entries & Ledger Sync)
   const handleApprovePayroll = async (id: string) => {
     if (!user) return;
     setActionLoading(id);
@@ -275,11 +271,6 @@ export default function AllowancesPage() {
     }
   };
 
-  // Mark an approved payroll record as paid — closes the loop into Finance
-  // (sets invoices.paid_at so it surfaces in Bank Reconciliation and Reports).
-  // Opens an account picker rather than paying immediately: this chart has
-  // more than one active TZS account, so which one actually gets debited
-  // has to be a real choice, not a guess.
   const openMarkPaidDialog = async (record: PayrollRecord) => {
     setMarkPaidTarget(record);
     setMarkPaidAccountId('');
@@ -316,7 +307,6 @@ export default function AllowancesPage() {
     }
   };
 
-  // Reject payroll record
   const handleRejectPayroll = async (id: string) => {
     setActionLoading(id);
     try {
@@ -334,7 +324,6 @@ export default function AllowancesPage() {
     }
   };
 
-  // Delete payroll record
   const handleDeletePayroll = async (id: string) => {
     if (!confirm("Are you sure you want to permanently delete this payroll record?")) return;
     setActionLoading(id);
@@ -353,17 +342,15 @@ export default function AllowancesPage() {
     }
   };
 
-  // Parse custom payroll breakdown from JSON reason field
   const parseReason = (reasonStr: string) => {
     try {
       if (reasonStr && reasonStr.startsWith('{')) {
         return JSON.parse(reasonStr);
       }
-    } catch (e) { }
+    } catch { /* not JSON — plain reason string */ }
     return null;
   };
 
-  // Search filter for process list
   const filteredWorkers = workers.filter(w =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     w.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -371,7 +358,6 @@ export default function AllowancesPage() {
     (w.employee_id && w.employee_id.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // Search & Type filter for history
   const filteredHistory = history.filter(item => {
     const isManual = item.type === 'payroll';
     const matchesSearch = item.employee_name?.toLowerCase().includes(historySearch.toLowerCase()) ||
@@ -384,602 +370,364 @@ export default function AllowancesPage() {
     return matchesSearch;
   });
 
-  // Calculate high-level financial summary cards (filter manual payroll paid/approved entries)
-  const statsPending = history.filter(h => h.status === 'pending').reduce((sum, h) => sum + h.amount, 0);
-  const statsApproved = history.filter(h => h.status === 'approved').reduce((sum, h) => sum + h.amount, 0);
-  const statsPaid = history.filter(h => h.status === 'paid').reduce((sum, h) => sum + h.amount, 0);
+  const statsPending = useMemo(() => history.filter(h => h.status === 'pending').reduce((sum, h) => sum + h.amount, 0), [history]);
+  const statsApproved = useMemo(() => history.filter(h => h.status === 'approved').reduce((sum, h) => sum + h.amount, 0), [history]);
+  const statsPaid = useMemo(() => history.filter(h => h.status === 'paid').reduce((sum, h) => sum + h.amount, 0), [history]);
   const statsTotalWorkers = workers.length;
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground font-sans">
-      <Sidebar role={role || 'DRIVER'} />
+    <IndustryRoleShell roleLabel="HR" pages={HR_PAGES}>
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <p className="text-[12px] text-[var(--ci-text-secondary)]">
+          Manually manage base salaries, process allowances, and track monthly staff compensation.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <IndustryButton variant="secondary" onClick={loadData} disabled={loading} className="gap-1.5">
+            <RefreshCw className={loading ? "size-4 animate-spin" : "size-4"} /> Sync
+          </IndustryButton>
+          <IndustryButton variant="secondary" asChild className="gap-1.5">
+            <Link href="/admin/hr/payroll/overtime"><Clock className="size-4" /> Overtime</Link>
+          </IndustryButton>
+          <IndustryButton variant="secondary" asChild className="gap-1.5">
+            <Link href="/admin/hr/payroll/loans"><HandCoins className="size-4" /> Loans</Link>
+          </IndustryButton>
+          <IndustryButton variant="primary" asChild className="gap-1.5">
+            <Link href="/admin/hr/payroll/statutory"><FileText className="size-4" /> Statutory reports</Link>
+          </IndustryButton>
+        </div>
+      </div>
 
-      <main className="flex-1 min-w-0 md:ml-60 p-6 md:p-8 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <IndustryCard className="gap-1">
+          <IndustryCardKicker>Pending approval</IndustryCardKicker>
+          <p className="ci-mono text-[20px] font-bold leading-none">{format(statsPending)}</p>
+          <p className="text-[10px] text-[var(--ci-text-tertiary)]">Awaiting manager process</p>
+        </IndustryCard>
+        <IndustryCard className="gap-1">
+          <IndustryCardKicker>Approved ledger</IndustryCardKicker>
+          <p className="ci-mono text-[20px] font-bold leading-none">{format(statsApproved)}</p>
+          <p className="text-[10px] text-[var(--ci-text-tertiary)]">Synced to bills & expenses</p>
+        </IndustryCard>
+        <IndustryCard className="gap-1">
+          <IndustryCardKicker>Disbursed wages</IndustryCardKicker>
+          <p className="ci-mono text-[20px] font-bold leading-none">{format(statsPaid)}</p>
+          <p className="text-[10px] text-[var(--ci-text-tertiary)]">Successfully paid workers</p>
+        </IndustryCard>
+        <IndustryCard className="gap-1">
+          <IndustryCardKicker>Active directory</IndustryCardKicker>
+          <p className="ci-mono text-[20px] font-bold leading-none">{statsTotalWorkers}</p>
+          <p className="text-[10px] text-[var(--ci-text-tertiary)]">Registered company profiles</p>
+        </IndustryCard>
+      </div>
 
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                Calvary Worker Payroll & Allowances Center
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Manually manage base salaries, process allowances, and track monthly staff compensation.
-              </p>
+      <div className="flex gap-1 border-b border-[var(--ci-divider)] mb-4">
+        <button
+          onClick={() => setActiveTab('process')}
+          className={
+            "px-3 py-[8px] text-[13px] border-b-2 flex items-center gap-1.5 transition-colors duration-150 " +
+            (activeTab === 'process' ? "border-[var(--ci-accent)] text-[var(--ci-text)] font-semibold" : "border-transparent text-[var(--ci-text-tertiary)] hover:text-[var(--ci-text)]")
+          }
+        >
+          <Coins className="size-3.5" /> Process worker payroll
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={
+            "px-3 py-[8px] text-[13px] border-b-2 flex items-center gap-1.5 transition-colors duration-150 " +
+            (activeTab === 'history' ? "border-[var(--ci-accent)] text-[var(--ci-text)] font-semibold" : "border-transparent text-[var(--ci-text-tertiary)] hover:text-[var(--ci-text)]")
+          }
+        >
+          <FileText className="size-3.5" /> Payroll ledger & history
+        </button>
+      </div>
+
+      {activeTab === 'process' && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-[9px] top-1/2 -translate-y-1/2 size-3.5 text-[var(--ci-text-tertiary)]" />
+              <input
+                placeholder="Search workers by name, role or email…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={fieldClass + " pl-8"}
+              />
             </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={loadData}
-                disabled={loading}
-                className="border-border bg-card hover:bg-muted text-foreground"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Sync System
-              </Button>
-              <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
-                <Link href="/admin/hr/payroll/overtime">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Overtime
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
-                <Link href="/admin/hr/payroll/loans">
-                  <HandCoins className="w-4 h-4 mr-2" />
-                  Loans
-                </Link>
-              </Button>
-              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Link href="/admin/hr/payroll/statutory">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Statutory Reports
-                </Link>
-              </Button>
+            <div className="flex items-center gap-1.5 text-[11px] text-[var(--ci-text-tertiary)]">
+              <Info className="size-3.5" />
+              Updating a base salary updates the worker&apos;s global master profile.
             </div>
           </div>
 
-          {/* Premium Overview Statistics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-warning/50 transition-all duration-300">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-warning">Pending Approval</p>
-                  <p className="text-2xl font-bold text-warning mt-1">{format(statsPending)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Awaiting manager process</p>
-                </div>
-                <div className="w-12 h-12 bg-warning/10 border border-warning/20 rounded-xl flex items-center justify-center">
-                  <Calculator className="w-6 h-6 text-warning animate-pulse" />
-                </div>
-              </CardContent>
-            </Card>
+          {loading ? (
+            <IndustryCard><p className="text-center text-[13px] text-[var(--ci-text-tertiary)] py-8">Analyzing worker directories…</p></IndustryCard>
+          ) : filteredWorkers.length === 0 ? (
+            <IndustryCard><p className="text-center text-[13px] text-[var(--ci-text-tertiary)] py-8">No active worker profiles match your criteria.</p></IndustryCard>
+          ) : (
+            filteredWorkers.map((worker) => {
+              const baseSalary = baseSalaries[worker.id] || 0;
+              const allowances = allowancesInputs[worker.id] || 0;
+              const deductions = deductionsInputs[worker.id] || 0;
+              const netSalary = baseSalary + allowances - deductions;
+              const isProcessing = actionLoading === worker.id;
 
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-info/50 transition-all duration-300">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-info">Approved Ledger</p>
-                  <p className="text-2xl font-bold text-info mt-1">{format(statsApproved)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Synced to bills & expenses</p>
-                </div>
-                <div className="w-12 h-12 bg-info/10 border border-info/20 rounded-xl flex items-center justify-center">
-                  <Coins className="w-6 h-6 text-info" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-success/50 transition-all duration-300">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-success">Disbursed Wages</p>
-                  <p className="text-2xl font-bold text-success mt-1">{format(statsPaid)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Successfully paid workers</p>
-                </div>
-                <div className="w-12 h-12 bg-success/10 border border-success/20 rounded-xl flex items-center justify-center">
-                  <Landmark className="w-6 h-6 text-success" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-primary/50 transition-all duration-300">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">Active Directory</p>
-                  <p className="text-2xl font-bold text-primary mt-1">{statsTotalWorkers}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Registered company profiles</p>
-                </div>
-                <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center">
-                  <User className="w-6 h-6 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="flex border-b border-border gap-1">
-            <button
-              onClick={() => setActiveTab('process')}
-              className={`px-6 py-3 font-semibold text-sm transition-all duration-200 border-b-2 flex items-center gap-2 ${activeTab === 'process'
-                  ? 'border-primary text-primary bg-card'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                }`}
-            >
-              <Coins className="w-4 h-4" />
-              Process Worker Payroll
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-6 py-3 font-semibold text-sm transition-all duration-200 border-b-2 flex items-center gap-2 ${activeTab === 'history'
-                  ? 'border-primary text-primary bg-card'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                }`}
-            >
-              <FileText className="w-4 h-4" />
-              Payroll Ledger & History
-            </button>
-          </div>
-
-          {/* Processing Grid View */}
-          {activeTab === 'process' && (
-            <div className="space-y-6">
-              {/* Directory Filter Bar */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border p-4 rounded-xl backdrop-blur-sm">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search workers by name, role or email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-background border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary"
-                  />
-                </div>
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  <Info className="w-3.5 h-3.5 text-primary" />
-                  Updating an employee's Base Salary updates their global master profile.
-                </div>
-              </div>
-
-              {/* Workers Input Grid */}
-              <div className="grid grid-cols-1 gap-6">
-                {loading ? (
-                  <div className="text-center py-16 bg-card border border-border rounded-2xl">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto" />
-                    <p className="text-muted-foreground mt-3 font-medium">Analyzing worker directories...</p>
+              return (
+                <IndustryCard key={worker.id} className="gap-3">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[var(--ci-divider)]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 border border-[var(--ci-divider)] flex items-center justify-center ci-mono text-[12px] font-bold shrink-0">
+                        {worker.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="text-[14px] font-semibold">{worker.name}</h3>
+                          <IndustryTag variant="neutral">{worker.role}</IndustryTag>
+                          {worker.employee_id && worker.employee_id !== 'N/A' && (
+                            <span className="ci-mono text-[10px] text-[var(--ci-text-tertiary)]">{worker.employee_id}</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[var(--ci-text-tertiary)] mt-0.5">{worker.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div>
+                        <label className="ci-lbl block mb-1">Period</label>
+                        <select
+                          value={periods[worker.id]}
+                          onChange={(e) => setPeriods(prev => ({ ...prev, [worker.id]: e.target.value }))}
+                          className={fieldClass}
+                        >
+                          {payrollPeriods.map((p) => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="ci-lbl block mb-1">Method</label>
+                        <select
+                          value={paymentMethods[worker.id]}
+                          onChange={(e) => setPaymentMethods(prev => ({ ...prev, [worker.id]: e.target.value }))}
+                          className={fieldClass}
+                        >
+                          <option value="Bank Transfer">Bank Transfer</option>
+                          <option value="Mobile Money">Mobile Money</option>
+                          <option value="Cash">Cash</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                ) : filteredWorkers.length === 0 ? (
-                  <div className="text-center py-16 bg-card border border-border rounded-2xl text-muted-foreground">
-                    No active worker profiles match your criteria.
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="ci-lbl flex items-center gap-1 mb-1"><DollarSign className="size-3" /> Base salary (TZS)</label>
+                      <input
+                        value={baseSalary.toLocaleString()}
+                        onChange={(e) => handleNumChange(worker.id, e.target.value, setBaseSalaries)}
+                        className={fieldClass + " ci-mono"}
+                      />
+                    </div>
+                    <div>
+                      <label className="ci-lbl flex items-center gap-1 mb-1"><Plus className="size-3" /> Allowances (TZS)</label>
+                      <input
+                        value={allowances.toLocaleString()}
+                        onChange={(e) => handleNumChange(worker.id, e.target.value, setAllowancesInputs)}
+                        className={fieldClass + " ci-mono"}
+                      />
+                    </div>
+                    <div>
+                      <label className="ci-lbl flex items-center gap-1 mb-1"><XCircle className="size-3" /> Deductions (TZS)</label>
+                      <input
+                        value={deductions.toLocaleString()}
+                        onChange={(e) => handleNumChange(worker.id, e.target.value, setDeductionsInputs)}
+                        className={fieldClass + " ci-mono"}
+                      />
+                    </div>
+                    <div className="border border-[var(--ci-divider)] p-[10px] flex items-center justify-between gap-2">
+                      <div>
+                        <p className="ci-lbl">Calculated net</p>
+                        <p className={"ci-mono text-[16px] font-bold mt-0.5 " + (netSalary >= 0 ? "" : "text-[#8c1d18]")}>{format(netSalary)}</p>
+                      </div>
+                      <IndustryButton variant="primary" onClick={() => handleProcessPayroll(worker)} disabled={isProcessing || netSalary <= 0}>
+                        {isProcessing ? 'Processing…' : 'Run payroll'}
+                      </IndustryButton>
+                    </div>
                   </div>
-                ) : (
-                  filteredWorkers.map((worker) => {
-                    const baseSalary = baseSalaries[worker.id] || 0;
-                    const allowances = allowancesInputs[worker.id] || 0;
-                    const deductions = deductionsInputs[worker.id] || 0;
-                    const netSalary = baseSalary + allowances - deductions;
-                    const isProcessing = actionLoading === worker.id;
 
-                    return (
-                      <Card
-                        key={worker.id}
-                        className="bg-card border-border hover:border-muted-foreground/30 transition-all duration-200 overflow-hidden shadow-md"
-                      >
-                        {/* Worker Identity Header */}
-                        <div className="p-4 md:p-6 bg-muted/30 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold border border-primary/20 shadow-md">
-                              {worker.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold text-foreground">{worker.name}</h3>
-                                <Badge className="bg-muted text-foreground border-border font-medium">
-                                  {worker.role}
-                                </Badge>
-                                {(worker as any).employee_id && (worker as any).employee_id !== 'N/A' && (
-                                  <Badge variant="outline" className="border-primary/50 text-primary font-mono text-[10px] tracking-wide">
-                                    {(worker as any).employee_id}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">{worker.email}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-4">
-                            <div>
-                              <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground">Period</label>
-                              <select
-                                value={periods[worker.id]}
-                                onChange={(e) => setPeriods(prev => ({ ...prev, [worker.id]: e.target.value }))}
-                                className="mt-1 block w-44 rounded-lg bg-background border border-border text-foreground py-1.5 px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                              >
-                                {payrollPeriods.map((p) => (
-                                  <option key={p} value={p}>{p}</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div>
-                              <label className="block text-[10px] uppercase font-bold tracking-wider text-foreground">Method</label>
-                              <select
-                                value={paymentMethods[worker.id]}
-                                onChange={(e) => setPaymentMethods(prev => ({ ...prev, [worker.id]: e.target.value }))}
-                                className="mt-1 block w-40 rounded-lg bg-background border border-border text-foreground py-1.5 px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                              >
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Mobile Money">Mobile Money</option>
-                                <option value="Cash">Cash</option>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Input Controls Grid */}
-                        <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
-                          {/* Base Salary */}
-                          <div>
-                            <label className="block text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                              <DollarSign className="w-3.5 h-3.5 text-primary" />
-                              Base Salary (TZS)
-                            </label>
-                            <div className="relative">
-                              <Input
-                                value={baseSalary.toLocaleString()}
-                                onChange={(e) => handleNumChange(worker.id, e.target.value, setBaseSalaries)}
-                                className="bg-background border-border text-foreground focus-visible:ring-primary font-mono text-sm pr-12"
-                              />
-                              <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">TZS</span>
-                            </div>
-                          </div>
-
-                          {/* Allowances */}
-                          <div>
-                            <label className="block text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                              <Plus className="w-3.5 h-3.5 text-success" />
-                              Allowances (TZS)
-                            </label>
-                            <div className="relative">
-                              <Input
-                                value={allowances.toLocaleString()}
-                                onChange={(e) => handleNumChange(worker.id, e.target.value, setAllowancesInputs)}
-                                className="bg-background border-border text-foreground focus-visible:ring-success font-mono text-sm pr-12"
-                              />
-                              <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">TZS</span>
-                            </div>
-                          </div>
-
-                          {/* Deductions */}
-                          <div>
-                            <label className="block text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                              <XCircle className="w-3.5 h-3.5 text-destructive" />
-                              Deductions (TZS)
-                            </label>
-                            <div className="relative">
-                              <Input
-                                value={deductions.toLocaleString()}
-                                onChange={(e) => handleNumChange(worker.id, e.target.value, setDeductionsInputs)}
-                                className="bg-background border-border text-foreground focus-visible:ring-destructive font-mono text-sm pr-12"
-                              />
-                              <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-bold">TZS</span>
-                            </div>
-                          </div>
-
-                          {/* Live Net Calculations & Action */}
-                          <div className="bg-muted/40 border border-border p-4 rounded-xl flex items-center justify-between col-span-1 sm:col-span-2 lg:col-span-1">
-                            <div>
-                              <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Calculated Net</p>
-                              <p className={`text-xl font-black mt-1 font-mono ${netSalary >= 0 ? 'text-success' : 'text-destructive'}`}>
-                                {format(netSalary)}
-                              </p>
-                            </div>
-
-                            <Button
-                              onClick={() => handleProcessPayroll(worker)}
-                              disabled={isProcessing || netSalary <= 0}
-                              className="bg-primary hover:bg-primary/95 text-primary-foreground shadow-md font-semibold px-4"
-                            >
-                              {isProcessing ? 'Processing...' : 'Run Payroll'}
-                            </Button>
-                          </div>
-
-                        </div>
-
-                        {/* Extra Notes Input */}
-                        <div className="px-4 md:px-6 pb-4 md:pb-6 border-t border-border pt-4 bg-muted/10">
-                          <div className="relative flex items-center gap-3">
-                            <Info className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            <Input
-                              placeholder="Add optional notes (e.g., 'Overtime 5 hours', 'Advance repayment')..."
-                              value={notes[worker.id]}
-                              onChange={(e) => setNotes(prev => ({ ...prev, [worker.id]: e.target.value }))}
-                              className="bg-transparent border-none p-0 text-xs text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
-                            />
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* History Ledger View */}
-          {activeTab === 'history' && (
-            <Card className="bg-card border-border shadow-xl backdrop-blur-sm overflow-hidden">
-              <CardHeader className="border-b border-border p-6 bg-muted/20">
-                <CardTitle className="text-xl font-bold text-foreground">Payroll Ledgers & Allowance Logs</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  History of manual payroll entries and automatic driver allowances processed in Supabase.
-                </CardDescription>
-
-                {/* History Filter Bar */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 mt-6">
-                  <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search history by employee name or details..."
-                      value={historySearch}
-                      onChange={(e) => setHistorySearch(e.target.value)}
-                      className="pl-9 bg-background border-border text-foreground focus-visible:ring-primary"
+                  <div className="flex items-center gap-2 pt-2 border-t border-[var(--ci-divider)]">
+                    <Info className="size-3.5 text-[var(--ci-text-tertiary)] shrink-0" />
+                    <input
+                      placeholder="Add optional notes (e.g., 'Overtime 5 hours', 'Advance repayment')…"
+                      value={notes[worker.id]}
+                      onChange={(e) => setNotes(prev => ({ ...prev, [worker.id]: e.target.value }))}
+                      className="flex-1 text-[12px] bg-transparent border-none outline-none text-[var(--ci-text-secondary)] placeholder:text-[var(--ci-text-tertiary)]"
                     />
                   </div>
-
-                  <div className="flex gap-1 bg-background p-1 border border-border rounded-lg w-full sm:w-auto">
-                    <button
-                      onClick={() => setHistoryFilter('all')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${historyFilter === 'all' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                    >
-                      All Records
-                    </button>
-                    <button
-                      onClick={() => setHistoryFilter('payroll')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${historyFilter === 'payroll' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                    >
-                      Manual Payroll
-                    </button>
-                    <button
-                      onClick={() => setHistoryFilter('trip')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 flex-1 sm:flex-none ${historyFilter === 'trip' ? 'bg-muted text-primary' : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                    >
-                      Trip Allowances
-                    </button>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-0">
-                {loading ? (
-                  <div className="text-center py-16">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-                    <p className="text-muted-foreground mt-3 text-sm">Synchronizing logs...</p>
-                  </div>
-                ) : filteredHistory.length === 0 ? (
-                  <div className="text-center py-16 text-muted-foreground">
-                    No payroll or allowance records match the active criteria.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader className="bg-muted/40 border-b border-border">
-                        <TableRow className="border-b border-border hover:bg-transparent">
-                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Employee</TableHead>
-                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Category</TableHead>
-                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Period / Route</TableHead>
-                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Breakdown</TableHead>
-                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Net Salary</TableHead>
-                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Status</TableHead>
-                          <TableHead className="text-muted-foreground font-bold text-xs uppercase py-4">Processed At</TableHead>
-                          <TableHead className="text-right text-muted-foreground font-bold text-xs uppercase py-4 pr-6">Ledger Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-
-                      <TableBody>
-                        {filteredHistory.map((item) => {
-                          const parsed = parseReason(item.reason);
-                          const isManual = item.type === 'payroll';
-                          const isActionLoading = actionLoading === item.id;
-
-                          return (
-                            <TableRow key={item.id} className="border-b border-border/80 hover:bg-muted/10">
-
-                              {/* Employee */}
-                              <TableCell className="py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 bg-muted rounded-lg flex items-center justify-center font-bold text-xs border border-border text-foreground">
-                                    {item.employee_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <p className="font-semibold text-foreground">{item.employee_name}</p>
-                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                      <Badge className="bg-muted text-muted-foreground border-border hover:bg-muted text-[10px] font-medium">
-                                        {item.worker_role || 'Employee'}
-                                      </Badge>
-                                      {item.employee_id && item.employee_id !== 'N/A' && (
-                                        <Badge variant="outline" className="border-primary/30 text-primary font-mono text-[9px] py-0 px-1.5 h-4 flex items-center">
-                                          {item.employee_id}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </TableCell>
-
-                              {/* Category */}
-                              <TableCell className="py-4">
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${isManual
-                                    ? 'bg-primary/10 border-primary/20 text-primary'
-                                    : 'bg-muted border-border text-muted-foreground'
-                                  }`}>
-                                  {isManual ? 'Manual Payroll' : 'Trip Allowance'}
-                                </span>
-                              </TableCell>
-
-                              {/* Period / Route */}
-                              <TableCell className="py-4 text-xs font-semibold text-foreground">
-                                {isManual ? (
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="w-3.5 h-3.5 text-primary" />
-                                    {parsed?.period || 'Monthly'}
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground max-w-xs truncate block">
-                                    Trip-based calculation
-                                  </span>
-                                )}
-                              </TableCell>
-
-                              {/* Breakdown details */}
-                              <TableCell className="py-4 max-w-xs text-xs">
-                                {isManual && parsed ? (
-                                  <div className="space-y-1 text-muted-foreground font-mono">
-                                    <p>Base: TZS {parsed.baseSalary?.toLocaleString()}</p>
-                                    <p>Alw: TZS {parsed.allowances?.toLocaleString()}</p>
-                                    <p>Ded: TZS {parsed.deductions?.toLocaleString()}</p>
-                                    {parsed.note && <p className="text-[10px] text-muted-foreground/60 italic">"{parsed.note}"</p>}
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground italic max-w-xs block truncate">
-                                    {item.reason}
-                                  </span>
-                                )}
-                              </TableCell>
-
-                              {/* Net Salary Amount */}
-                              <TableCell className="py-4 font-mono font-bold text-sm text-foreground">
-                                {format(item.amount)}
-                                {(item.loan_deduction_amount ?? 0) > 0 && (
-                                  <p className="text-[10px] font-normal text-destructive mt-0.5">
-                                    -{format(item.loan_deduction_amount!)} advance · net {format(item.amount - item.loan_deduction_amount!)}
-                                  </p>
-                                )}
-                              </TableCell>
-
-                              {/* Status Badge */}
-                              <TableCell className="py-4">
-                                <Badge
-                                  variant="outline"
-                                  className={`font-semibold capitalize text-[10px] ${item.status === 'paid' ? 'bg-info/10 text-info border-info/20' :
-                                      item.status === 'approved' ? 'bg-success/10 text-success border-success/20' :
-                                        item.status === 'rejected' ? 'bg-destructive/10 text-destructive border-destructive/20' :
-                                          'bg-warning/10 text-warning border-warning/20 animate-pulse'
-                                    }`}
-                                >
-                                  {item.status}
-                                </Badge>
-                              </TableCell>
-
-                              {/* Date */}
-                              <TableCell className="py-4 text-xs text-muted-foreground">
-                                {new Date(item.created_at).toLocaleDateString()}
-                              </TableCell>
-
-                              {/* Actions */}
-                              <TableCell className="py-4 text-right pr-6">
-                                <div className="flex justify-end gap-2">
-                                  {item.status === 'pending' && (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        onClick={() => handleApprovePayroll(item.id)}
-                                        disabled={isActionLoading}
-                                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] h-7 px-3 font-semibold shadow-md"
-                                      >
-                                        Approve
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleRejectPayroll(item.id)}
-                                        disabled={isActionLoading}
-                                        className="border-border hover:bg-muted text-foreground text-[10px] h-7 px-3 font-semibold"
-                                      >
-                                        Reject
-                                      </Button>
-                                    </>
-                                  )}
-
-                                  {item.status === 'approved' && (
-                                    <Button
-                                      size="sm"
-                                      onClick={() => openMarkPaidDialog(item)}
-                                      disabled={isActionLoading}
-                                      className="bg-info hover:bg-info/90 text-info-foreground text-[10px] h-7 px-3 font-semibold shadow-md"
-                                    >
-                                      Mark Paid
-                                    </Button>
-                                  )}
-
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleDeletePayroll(item.id)}
-                                    disabled={isActionLoading}
-                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0 flex items-center justify-center rounded-lg"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </IndustryCard>
+              );
+            })
           )}
-
         </div>
-      </main>
+      )}
 
-      <Dialog open={!!markPaidTarget} onOpenChange={(open) => { if (!open) setMarkPaidTarget(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mark Payroll as Paid</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              {markPaidTarget?.driver_name} — {format(markPaidTarget?.amount || 0)}
-            </p>
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground">Pay from</label>
-              {markPaidAccountsLoading ? (
-                <p className="text-sm text-muted-foreground">Loading bank accounts…</p>
-              ) : markPaidAccounts.length === 0 ? (
-                <p className="text-sm text-destructive">No active TZS bank account found to pay this from.</p>
-              ) : (
-                <Select value={markPaidAccountId} onValueChange={setMarkPaidAccountId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a bank account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {markPaidAccounts.map((acct) => (
-                      <SelectItem key={acct.id} value={acct.id}>{acct.account_name} ({acct.currency})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+      {activeTab === 'history' && (
+        <IndustryCard>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-[9px] top-1/2 -translate-y-1/2 size-3.5 text-[var(--ci-text-tertiary)]" />
+              <input
+                placeholder="Search history by employee name or details…"
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                className={fieldClass + " pl-8"}
+              />
+            </div>
+            <div className="flex gap-1">
+              {(['all', 'payroll', 'trip'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setHistoryFilter(f)}
+                  className={
+                    "px-3 py-[6px] text-[12px] border transition-colors duration-150 " +
+                    (historyFilter === f
+                      ? "bg-[var(--ci-text)] text-[var(--ci-bg)] border-[var(--ci-text)]"
+                      : "border-[var(--ci-divider)] text-[var(--ci-text-secondary)] hover:bg-[var(--ci-row-hover)]")
+                  }
+                >
+                  {f === 'all' ? 'All records' : f === 'payroll' ? 'Manual payroll' : 'Trip allowances'}
+                </button>
+              ))}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMarkPaidTarget(null)}>Cancel</Button>
-            <Button
+
+          <IndustryTable>
+            <thead>
+              <tr>
+                <IndustryTh>Employee</IndustryTh>
+                <IndustryTh>Category</IndustryTh>
+                <IndustryTh>Period / route</IndustryTh>
+                <IndustryTh>Breakdown</IndustryTh>
+                <IndustryTh align="right">Net salary</IndustryTh>
+                <IndustryTh>Status</IndustryTh>
+                <IndustryTh align="right">Processed</IndustryTh>
+                <IndustryTh align="right">Actions</IndustryTh>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Synchronizing logs…</IndustryTd></tr>
+              ) : filteredHistory.length === 0 ? (
+                <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No payroll or allowance records match the active criteria.</IndustryTd></tr>
+              ) : (
+                filteredHistory.map((item) => {
+                  const parsed = parseReason(item.reason);
+                  const isManual = item.type === 'payroll';
+                  const isActionLoading = actionLoading === item.id;
+
+                  return (
+                    <IndustryTr key={item.id}>
+                      <IndustryTd>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 border border-[var(--ci-divider)] flex items-center justify-center ci-mono text-[10px] font-bold shrink-0">
+                            {item.employee_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-medium">{item.employee_name}</p>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <IndustryTag variant="neutral">{item.worker_role || 'Employee'}</IndustryTag>
+                              {item.employee_id && item.employee_id !== 'N/A' && (
+                                <span className="ci-mono text-[9px] text-[var(--ci-text-tertiary)]">{item.employee_id}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </IndustryTd>
+                      <IndustryTd>
+                        <IndustryTag variant={isManual ? "outline" : "neutral"}>{isManual ? 'Manual payroll' : 'Trip allowance'}</IndustryTag>
+                      </IndustryTd>
+                      <IndustryTd className="text-[12px]">
+                        {isManual ? (
+                          <span className="flex items-center gap-1"><Calendar className="size-3" />{parsed?.period || 'Monthly'}</span>
+                        ) : (
+                          <span className="text-[var(--ci-text-tertiary)]">Trip-based calculation</span>
+                        )}
+                      </IndustryTd>
+                      <IndustryTd className="text-[11px] max-w-xs">
+                        {isManual && parsed ? (
+                          <div className="ci-mono text-[var(--ci-text-tertiary)] leading-relaxed">
+                            <p>Base: {parsed.baseSalary?.toLocaleString()}</p>
+                            <p>Alw: {parsed.allowances?.toLocaleString()}</p>
+                            <p>Ded: {parsed.deductions?.toLocaleString()}</p>
+                          </div>
+                        ) : (
+                          <span className="text-[var(--ci-text-tertiary)] italic truncate block max-w-xs">{item.reason}</span>
+                        )}
+                      </IndustryTd>
+                      <IndustryTd align="right" mono>
+                        {format(item.amount)}
+                        {(item.loan_deduction_amount ?? 0) > 0 && (
+                          <p className="text-[10px] text-[#8c1d18] mt-0.5">
+                            -{format(item.loan_deduction_amount!)} advance · net {format(item.amount - item.loan_deduction_amount!)}
+                          </p>
+                        )}
+                      </IndustryTd>
+                      <IndustryTd><IndustryTag variant={STATUS_VARIANT[item.status] ?? "neutral"}>{item.status}</IndustryTag></IndustryTd>
+                      <IndustryTd align="right" mono className="text-[11px]">{new Date(item.created_at).toLocaleDateString()}</IndustryTd>
+                      <IndustryTd align="right">
+                        <div className="flex justify-end gap-1">
+                          {item.status === 'pending' && (
+                            <>
+                              <IndustryButton variant="primary" onClick={() => handleApprovePayroll(item.id)} disabled={isActionLoading}>Approve</IndustryButton>
+                              <IndustryButton variant="secondary" onClick={() => handleRejectPayroll(item.id)} disabled={isActionLoading}>Reject</IndustryButton>
+                            </>
+                          )}
+                          {item.status === 'approved' && (
+                            <IndustryButton variant="primary" onClick={() => openMarkPaidDialog(item)} disabled={isActionLoading}>Mark paid</IndustryButton>
+                          )}
+                          <IndustryButton variant="ghost" onClick={() => handleDeletePayroll(item.id)} disabled={isActionLoading} className="text-[#8c1d18]">
+                            <Trash2 className="size-3.5" />
+                          </IndustryButton>
+                        </div>
+                      </IndustryTd>
+                    </IndustryTr>
+                  );
+                })
+              )}
+            </tbody>
+          </IndustryTable>
+        </IndustryCard>
+      )}
+
+      <IndustryDialog open={!!markPaidTarget} onOpenChange={(open) => { if (!open) setMarkPaidTarget(null); }}>
+        <IndustryDialogContent open={!!markPaidTarget}>
+          <IndustryDialogTitle>Mark payroll as paid</IndustryDialogTitle>
+          <p className="text-[13px] text-[var(--ci-text-secondary)] mt-1">
+            {markPaidTarget?.driver_name} — {format(markPaidTarget?.amount || 0)}
+          </p>
+          <div className="mt-2">
+            <label className="ci-lbl block mb-1">Pay from</label>
+            {markPaidAccountsLoading ? (
+              <p className="text-[13px] text-[var(--ci-text-tertiary)]">Loading bank accounts…</p>
+            ) : markPaidAccounts.length === 0 ? (
+              <p className="text-[13px] text-[#8c1d18]">No active TZS bank account found to pay this from.</p>
+            ) : (
+              <select value={markPaidAccountId} onChange={(e) => setMarkPaidAccountId(e.target.value)} className={fieldClass}>
+                <option value="" disabled>Choose a bank account</option>
+                {markPaidAccounts.map((acct) => (
+                  <option key={acct.id} value={acct.id}>{acct.account_name} ({acct.currency})</option>
+                ))}
+              </select>
+            )}
+          </div>
+          <IndustryDialogActions>
+            <IndustryButton variant="secondary" onClick={() => setMarkPaidTarget(null)}>Cancel</IndustryButton>
+            <IndustryButton
+              variant="primary"
               onClick={handleMarkPaidPayroll}
               disabled={!markPaidAccountId || actionLoading === markPaidTarget?.id}
-              className="bg-info hover:bg-info/90 text-info-foreground"
             >
-              {actionLoading === markPaidTarget?.id ? "Paying…" : "Confirm Payment"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+              {actionLoading === markPaidTarget?.id ? "Paying…" : "Confirm payment"}
+            </IndustryButton>
+          </IndustryDialogActions>
+        </IndustryDialogContent>
+      </IndustryDialog>
+    </IndustryRoleShell>
   );
 }
