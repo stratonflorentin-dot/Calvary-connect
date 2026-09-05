@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 // from under it. These routes can't move (too many existing links point at
 // them), so this layout skips its own wrapper for them instead.
 const INDUSTRY_SHELL_PATHS = [
+  "/finance",
   "/finance/invoicing/customer-invoices",
   "/finance/banking/bank-statements",
 ];
