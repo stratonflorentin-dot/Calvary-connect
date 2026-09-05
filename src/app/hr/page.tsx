@@ -7,6 +7,7 @@ import {
   Coins,
   FileSpreadsheet,
   Gavel,
+  Landmark,
   LogOut,
   Shield,
   Star,
@@ -63,6 +64,13 @@ const MODULES = [
     title: "Allowances",
     description: "Driver trip allowances and per-diem payments.",
     tone: "bg-amber-100 text-amber-700",
+  },
+  {
+    href: "/hr/loan-calculator",
+    icon: Landmark,
+    title: "Loan calculator",
+    description: "Plan a company loan — repayment schedule, fees, reducing balance vs flat rate.",
+    tone: "bg-teal-100 text-teal-700",
   },
   {
     href: "/users",
