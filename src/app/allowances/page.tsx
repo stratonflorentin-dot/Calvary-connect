@@ -612,9 +612,9 @@ export default function AllowancesPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Synchronizing logs…</IndustryTd></tr>
+                <tr><IndustryTd colSpan={8} className="text-center text-[var(--ci-text-tertiary)]">Synchronizing logs…</IndustryTd></tr>
               ) : filteredHistory.length === 0 ? (
-                <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No payroll or allowance records match the active criteria.</IndustryTd></tr>
+                <tr><IndustryTd colSpan={8} className="text-center text-[var(--ci-text-tertiary)]">No payroll or allowance records match the active criteria.</IndustryTd></tr>
               ) : (
                 filteredHistory.map((item) => {
                   const parsed = parseReason(item.reason);

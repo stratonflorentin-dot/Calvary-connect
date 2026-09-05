@@ -548,9 +548,9 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading users…</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">Loading users…</IndustryTd></tr>
             ) : filteredUsers?.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No users found.</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">No users found.</IndustryTd></tr>
             ) : (
               filteredUsers?.map((u) => {
                 const displayStatus = effectiveUserStatus(u);

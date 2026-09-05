@@ -215,9 +215,9 @@ function TripsContent() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
+              <tr><IndustryTd colSpan={8} className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
             ) : filtered.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">{trips.length === 0 ? "No trips yet. Create your first trip to start dispatching." : "No trips match this view."}</IndustryTd></tr>
+              <tr><IndustryTd colSpan={8} className="text-center text-[var(--ci-text-tertiary)]">{trips.length === 0 ? "No trips yet. Create your first trip to start dispatching." : "No trips match this view."}</IndustryTd></tr>
             ) : (
               filtered.map((t) => {
                 const overdue = t.status !== "delivered" && t.status !== "cancelled" && t.created_at && isOverdue("trip", t.created_at);

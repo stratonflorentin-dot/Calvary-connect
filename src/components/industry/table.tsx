@@ -36,15 +36,22 @@ export function IndustryTd({
   className,
   align,
   mono = false,
+  colSpan,
 }: {
   children: React.ReactNode;
   className?: string;
   align?: "left" | "right" | "center";
   /** Identifiers, quantities, dates, money — rendered tabular-nums monospace. */
   mono?: boolean;
+  /** Loading/empty-state rows must span every column — a bare single <td>
+   * only occupies column 1, leaving the table layout algorithm to spread
+   * the remaining header columns across the leftover row width with
+   * nothing under them (looks especially broken on a wide viewport). */
+  colSpan?: number;
 }) {
   return (
     <td
+      colSpan={colSpan}
       className={cn(
         "border-b border-[var(--ci-cell-divider)] px-[9px] py-[10px]",
         mono && "ci-mono",

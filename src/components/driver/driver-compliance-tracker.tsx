@@ -304,9 +304,9 @@ export function DriverComplianceDashboard() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
             ) : filteredRows.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No documents in this category.</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">No documents in this category.</IndustryTd></tr>
             ) : (
               filteredRows.map((r) => {
                 const cons = consequence(r);

@@ -129,9 +129,9 @@ export default function BankStatementsListPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
             ) : visible.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No statements yet. Import one to start reconciling.</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">No statements yet. Import one to start reconciling.</IndustryTd></tr>
             ) : (
               visible.map((b) => {
                 const meta = STATUS_VARIANT[b.status] ?? "neutral";

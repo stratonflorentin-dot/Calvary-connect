@@ -67,9 +67,9 @@ export default function ServiceHistoryPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
+              <tr><IndustryTd colSpan={7} className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
             ) : history.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No service history yet.</IndustryTd></tr>
+              <tr><IndustryTd colSpan={7} className="text-center text-[var(--ci-text-tertiary)]">No service history yet.</IndustryTd></tr>
             ) : (
               history.map((r) => (
                 <IndustryTr key={r.id}>

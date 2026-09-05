@@ -501,9 +501,9 @@ export default function CustomerInvoicesPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
+              <tr><IndustryTd colSpan={10} className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
             ) : filtered.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No invoices match the current filter.</IndustryTd></tr>
+              <tr><IndustryTd colSpan={10} className="text-center text-[var(--ci-text-tertiary)]">No invoices match the current filter.</IndustryTd></tr>
             ) : (
               filtered.map((inv) => {
                 const total = Number(inv.total_amount ?? inv.amount ?? 0);

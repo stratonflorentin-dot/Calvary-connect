@@ -181,7 +181,7 @@ export default function LiveMapPage() {
           </thead>
           <tbody>
             {locations.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">{isLoading ? "Loading…" : "No units tracked."}</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">{isLoading ? "Loading…" : "No units tracked."}</IndustryTd></tr>
             ) : (
               locations.map((l) => {
                 const mins = minutesSince(l.lastUpdate);

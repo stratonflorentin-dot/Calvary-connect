@@ -212,9 +212,9 @@ export default function LeavePage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
+                <tr><IndustryTd colSpan={5} className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
               ) : myRequests.length === 0 ? (
-                <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No leave requests yet. Submit one above.</IndustryTd></tr>
+                <tr><IndustryTd colSpan={5} className="text-center text-[var(--ci-text-tertiary)]">No leave requests yet. Submit one above.</IndustryTd></tr>
               ) : (
                 myRequests.map((r) => (
                   <IndustryTr key={r.id}>
@@ -256,7 +256,7 @@ export default function LeavePage() {
               </thead>
               <tbody>
                 {teamRequests.length === 0 ? (
-                  <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No leave requests from the team.</IndustryTd></tr>
+                  <tr><IndustryTd colSpan={7} className="text-center text-[var(--ci-text-tertiary)]">No leave requests from the team.</IndustryTd></tr>
                 ) : (
                   teamRequests.map((r) => (
                     <IndustryTr key={r.id}>

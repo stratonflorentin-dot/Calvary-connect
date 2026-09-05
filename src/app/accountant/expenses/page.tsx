@@ -223,9 +223,9 @@ function ExpensesView() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
             ) : filtered.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No expenses found.</IndustryTd></tr>
+              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">No expenses found.</IndustryTd></tr>
             ) : (
               filtered.map((expense) => {
                 const status = expenseStatus(expense);

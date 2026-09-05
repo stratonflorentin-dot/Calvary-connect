@@ -162,9 +162,9 @@ export default function MechanicSparePartsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">Loading requests…</IndustryTd></tr>
+              <tr><IndustryTd colSpan={5} className="text-center text-[var(--ci-text-tertiary)]">Loading requests…</IndustryTd></tr>
             ) : parts.length === 0 ? (
-              <tr><IndustryTd className="text-center text-[var(--ci-text-tertiary)]">No requests made yet.</IndustryTd></tr>
+              <tr><IndustryTd colSpan={5} className="text-center text-[var(--ci-text-tertiary)]">No requests made yet.</IndustryTd></tr>
             ) : (
               parts.map((r) => (
                 <IndustryTr key={r.id}>
