@@ -2,27 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useRole } from "@/hooks/use-role";
 import { formatCurrency } from "@/components/ui/currency-badge";
-import { Landmark, Plus } from "lucide-react";
-import { IndustryRoleShell } from "@/components/role-shell/industry-role-shell";
-import { IndustryCard } from "@/components/industry/card";
-import { IndustryTable, IndustryTh, IndustryTd, IndustryTr } from "@/components/industry/table";
-import { IndustryTag } from "@/components/industry/tag";
-import { IndustryButton } from "@/components/industry/button";
+import { ArrowLeft, Landmark, Loader2, Plus } from "lucide-react";
+import { EmptyState } from "@/components/shell";
 
-const ACCOUNTANT_PAGES = [
-  { label: "Dashboard", href: "/finance" },
-  { label: "Customer invoices", href: "/finance/invoicing/customer-invoices" },
-  { label: "Expenses & fuel", href: "/accountant/expenses" },
-  { label: "Reconciliation", href: "/finance/banking/bank-statements" },
-];
-
-const STATUS_VARIANT: Record<string, "accent" | "neutral"> = {
-  draft: "neutral",
-  posted: "accent",
+const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+  draft: { label: "Draft", variant: "secondary" },
+  posted: { label: "Posted", variant: "default" },
 };
 
 interface BatchRow {
@@ -46,8 +38,7 @@ interface AccountOption {
 }
 
 export default function BankStatementsListPage() {
-  const { isLoading: roleLoading } = useRole();
-  const router = useRouter();
+  const { role, isLoading: roleLoading } = useRole();
   const [batches, setBatches] = useState<BatchRow[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [accountFilter, setAccountFilter] = useState("all");
@@ -95,62 +86,90 @@ export default function BankStatementsListPage() {
   if (roleLoading) return null;
 
   return (
-    <IndustryRoleShell roleLabel="Accountant" pages={ACCOUNTANT_PAGES}>
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <p className="text-[12px] text-[var(--ci-text-secondary)]">Import bank statements and reconcile them against your books.</p>
-        <IndustryButton variant="primary" asChild className="gap-1.5">
-          <Link href="/finance/banking/bank-statements/new"><Plus className="size-4" /> New statement</Link>
-        </IndustryButton>
+    <div className="space-y-6 pb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <Link href="/finance" className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 mb-1">
+            <ArrowLeft className="w-3 h-3" /> Back to Finance
+          </Link>
+          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
+            <Landmark className="w-6 h-6 text-primary" /> Bank Statements
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Import bank statements and reconcile them against your books</p>
+        </div>
+        <Button asChild size="sm" className="h-9 gap-2 bg-primary hover:bg-primary/90">
+          <Link href="/finance/banking/bank-statements/new">
+            <Plus className="w-3.5 h-3.5" /> New statement
+          </Link>
+        </Button>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap mb-4">
-        <select value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)} className="text-[13px] bg-transparent border border-[var(--ci-divider)] px-[9px] py-[6px] outline-none focus-visible:border-[var(--ci-accent)]">
-          <option value="all">All accounts</option>
-          {accounts.map((a) => <option key={a.id} value={a.id}>{a.bank_name} · {a.account_name}</option>)}
-        </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="text-[13px] bg-transparent border border-[var(--ci-divider)] px-[9px] py-[6px] outline-none focus-visible:border-[var(--ci-accent)]">
-          <option value="all">All statuses</option>
-          <option value="draft">Draft</option>
-          <option value="posted">Posted</option>
-        </select>
+      <div className="flex items-center gap-3 flex-wrap">
+        <Select value={accountFilter} onValueChange={setAccountFilter}>
+          <SelectTrigger className="h-9 w-56"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All accounts</SelectItem>
+            {accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.bank_name} · {a.account_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="posted">Posted</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <IndustryCard>
-        <IndustryTable>
-          <thead>
-            <tr>
-              <IndustryTh>Reference</IndustryTh>
-              <IndustryTh>Bank account</IndustryTh>
-              <IndustryTh>Period</IndustryTh>
-              <IndustryTh align="right">Transactions</IndustryTh>
-              <IndustryTh align="right">Difference</IndustryTh>
-              <IndustryTh align="center">Status</IndustryTh>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">Loading…</IndustryTd></tr>
-            ) : visible.length === 0 ? (
-              <tr><IndustryTd colSpan={6} className="text-center text-[var(--ci-text-tertiary)]">No statements yet. Import one to start reconciling.</IndustryTd></tr>
-            ) : (
-              visible.map((b) => {
-                const meta = STATUS_VARIANT[b.status] ?? "neutral";
-                const diff = Number(b.difference) || 0;
-                return (
-                  <IndustryTr key={b.id} onClick={() => router.push(`/finance/banking/bank-statements/${b.id}`)}>
-                    <IndustryTd mono>{b.reference}</IndustryTd>
-                    <IndustryTd>{b.bank_account?.bank_name} · {b.bank_account?.account_name}</IndustryTd>
-                    <IndustryTd mono className="text-[12px]">{b.period_from} → {b.period_to}</IndustryTd>
-                    <IndustryTd align="right" mono>{b.line_count ?? 0}</IndustryTd>
-                    <IndustryTd align="right" mono className={diff !== 0 ? "text-[#8c1d18]" : ""}>{formatCurrency(diff, b.bank_account?.currency ?? "TZS")}</IndustryTd>
-                    <IndustryTd align="center"><IndustryTag variant={meta}>{b.status}</IndustryTag></IndustryTd>
-                  </IndustryTr>
-                );
-              })
-            )}
-          </tbody>
-        </IndustryTable>
-      </IndustryCard>
-    </IndustryRoleShell>
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={Landmark}
+            title="No statements yet"
+            description="Import a bank statement to start reconciling."
+            action={
+              <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+                <Link href="/finance/banking/bank-statements/new"><Plus className="w-4 h-4" /> New statement</Link>
+              </Button>
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Bank account</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead className="text-right">Transactions</TableHead>
+                  <TableHead className="text-right">Difference</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.map((b) => {
+                  const meta = STATUS_BADGE[b.status] ?? { label: b.status, variant: "outline" as const };
+                  return (
+                    <TableRow key={b.id} className="cursor-pointer hover:bg-muted/40" onClick={() => (window.location.href = `/finance/banking/bank-statements/${b.id}`)}>
+                      <TableCell className="font-mono text-xs font-semibold">{b.reference}</TableCell>
+                      <TableCell>{b.bank_account?.bank_name} · {b.bank_account?.account_name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{b.period_from} → {b.period_to}</TableCell>
+                      <TableCell className="text-right">{b.line_count ?? 0}</TableCell>
+                      <TableCell className={`text-right font-mono ${Number(b.difference) !== 0 ? "text-destructive" : "text-success"}`}>
+                        {formatCurrency(Number(b.difference) || 0, b.bank_account?.currency ?? "TZS")}
+                      </TableCell>
+                      <TableCell className="text-center"><Badge variant={meta.variant}>{meta.label}</Badge></TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
