@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useRole } from "@/hooks/use-role";
-import { getListStagger, listItem, TRANSITION } from "@/lib/animations";
+import { getListStagger, listItem } from "@/lib/animations";
 import { PageShell, PageHeader, StatCard, SectionCard, EmptyState, PageSkeleton, RefreshControl } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,13 @@ const STATUS_META: Record<string, { label: string; chip: string }> = {
 // — see src/lib/fleet/vehicle-status.ts for why this exists as one function
 // instead of N independent copies.
 
+const TYPE_ICON: Record<string, typeof Truck> = {
+  DUMP_TRUCK: Container,
+  TRUCK_HEAD: Truck,
+  TRAILER: Link2,
+  ESCORT_CAR: CarFront,
+};
+
 export default function FleetPage() {
   const { role, isLoading: roleLoading, isAdmin } = useRole();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -77,6 +84,7 @@ export default function FleetPage() {
   const [filter, setFilter] = useState<"all" | "available" | "in_use" | "maintenance" | "attention">("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -146,6 +154,8 @@ export default function FleetPage() {
       .slice(0, 10);
     return rows;
   }, [vehicles]);
+
+  const selected = useMemo(() => vehicles.find((v) => v.id === selectedId) ?? null, [vehicles, selectedId]);
 
   const chips: { key: typeof filter; label: string; count: number }[] = [
     { key: "all",         label: "All",           count: stats.total },
@@ -257,89 +267,138 @@ export default function FleetPage() {
                     }
                   />
                 ) : (
-                  <motion.ul
+                  <motion.div
                     variants={{ hidden: {}, visible: { transition: { staggerChildren: getListStagger(filtered.length) } } }}
                     initial="hidden"
                     animate="visible"
-                    className="divide-y divide-border"
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3"
                   >
                     {filtered.map((v) => {
                       const meta = STATUS_META[v.status ?? "available"] ?? STATUS_META.available;
-                      const ins = v.insuranceExpiry ?? v.insurance_expiry;
-                      const reg = v.registrationExpiry ?? v.registration_expiry;
-                      const insDays = daysUntil(ins);
-                      const regDays = daysUntil(reg);
                       const fuel = v.currentFuelLevel != null && v.fuelCapacity ? (Number(v.currentFuelLevel) / Number(v.fuelCapacity)) * 100 : null;
+                      const TypeIcon = (v.type && TYPE_ICON[v.type]) || Truck;
+                      const isSelected = selectedId === v.id;
                       return (
-                        <motion.li key={v.id} variants={listItem} className="px-5 py-3 hover:bg-muted/40 transition-colors">
-                          <div className="flex items-center gap-4">
+                        <motion.button
+                          key={v.id}
+                          type="button"
+                          variants={listItem}
+                          onClick={() => setSelectedId(v.id)}
+                          className={cn(
+                            "text-left rounded-2xl border p-4 transition-colors bg-card",
+                            isSelected ? "border-primary shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border hover:border-primary/40",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-3">
                             {v.photo_url ? (
-                              <img
-                                src={v.photo_url}
-                                alt={v.plate_number}
-                                className="w-10 h-10 rounded-xl object-cover shrink-0 border border-border"
-                              />
+                              <img src={v.photo_url} alt={v.plate_number} className="w-11 h-11 rounded-xl object-cover shrink-0 border border-border" />
                             ) : (
-                              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", meta.chip)}>
-                                <Truck className="w-5 h-5" />
+                              <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0", meta.chip)}>
+                                <TypeIcon className="w-5 h-5" />
                               </div>
                             )}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-baseline gap-2 flex-wrap">
-                                <p className="font-mono font-black text-sm text-foreground">{v.plate_number}</p>
-                                <span className="text-xs text-muted-foreground">{v.make} {v.model}</span>
-                                {v.type && <span className="cv-chip cv-chip-neutral">{v.type.replace(/_/g, " ").toLowerCase()}</span>}
-                              </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
-                                {v.mileage != null && <span>{Number(v.mileage).toLocaleString()} km</span>}
-                                {insDays != null && (
-                                  <span className={cn(insDays <= 14 && "text-destructive font-bold")}>
-                                    Insurance {insDays >= 0 ? `expires in ${insDays}d` : `expired ${Math.abs(insDays)}d ago`}
-                                  </span>
-                                )}
-                                {regDays != null && (
-                                  <span className={cn(regDays <= 14 && "text-destructive font-bold")}>
-                                    Reg {regDays >= 0 ? `expires in ${regDays}d` : `expired ${Math.abs(regDays)}d ago`}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 shrink-0">
-                              {fuel != null && (
-                                <div className="text-right">
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Fuel className="w-3 h-3" /> {fuel.toFixed(0)}%
-                                  </div>
-                                  <div className="w-16 h-1.5 rounded-full bg-muted mt-0.5 overflow-hidden">
-                                    <motion.div
-                                      className={cn("h-full w-full", fuel < 25 ? "bg-destructive" : fuel < 50 ? "bg-warning" : "bg-success")}
-                                      style={{ transformOrigin: "left" }}
-                                      initial={{ scaleX: 0 }}
-                                      animate={{ scaleX: fuel / 100 }}
-                                      transition={TRANSITION.modal}
-                                    />
-                                  </div>
-                                </div>
-                              )}
-                              <span className={cn("cv-chip", meta.chip)}>{meta.label}</span>
-                              <button
-                                onClick={() => { setEditing(v); setFormOpen(true); }}
-                                className="w-8 h-8 rounded-lg border border-border text-muted-foreground hover:border-primary hover:text-primary flex items-center justify-center transition-colors"
-                                title="Edit vehicle"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                            <span className={cn("cv-chip shrink-0", meta.chip)}>{meta.label}</span>
                           </div>
-                        </motion.li>
+                          <p className="font-mono font-black text-sm text-foreground">{v.plate_number}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                            {[v.make, v.model].filter(Boolean).join(" ") || "—"}
+                            {v.type && ` · ${v.type.replace(/_/g, " ").toLowerCase()}`}
+                          </p>
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/60">
+                            <span className="text-[11px] text-muted-foreground">
+                              {v.mileage != null ? `${Number(v.mileage).toLocaleString()} km` : "No mileage on file"}
+                            </span>
+                            {fuel != null && (
+                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <Fuel className="w-3 h-3" /> {fuel.toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                        </motion.button>
                       );
                     })}
-                  </motion.ul>
+                  </motion.div>
                 )}
               </SectionCard>
             </div>
 
             <div className="space-y-6">
+              {selected && (() => {
+                const meta = STATUS_META[selected.status ?? "available"] ?? STATUS_META.available;
+                const TypeIcon = (selected.type && TYPE_ICON[selected.type]) || Truck;
+                const ins = selected.insuranceExpiry ?? selected.insurance_expiry;
+                const reg = selected.registrationExpiry ?? selected.registration_expiry;
+                const insDays = daysUntil(ins);
+                const regDays = daysUntil(reg);
+                const svcDays = daysUntil(selected.next_maintenance_due);
+                const fuel = selected.currentFuelLevel != null && selected.fuelCapacity ? (Number(selected.currentFuelLevel) / Number(selected.fuelCapacity)) * 100 : null;
+                return (
+                  <SectionCard
+                    title="Vehicle detail"
+                    actions={
+                      <button onClick={() => setSelectedId(null)} className="text-xs text-muted-foreground hover:text-foreground">
+                        Close
+                      </button>
+                    }
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      {selected.photo_url ? (
+                        <img src={selected.photo_url} alt={selected.plate_number} className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border" />
+                      ) : (
+                        <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center shrink-0", meta.chip)}>
+                          <TypeIcon className="w-6 h-6" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-mono font-black text-base text-foreground">{selected.plate_number}</p>
+                        <p className="text-xs text-muted-foreground truncate">{[selected.make, selected.model].filter(Boolean).join(" ") || "—"}</p>
+                        <span className={cn("cv-chip mt-1 inline-flex", meta.chip)}>{meta.label}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                      <div className="rounded-lg bg-muted/40 p-2.5">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Mileage</p>
+                        <p className="font-bold text-foreground">{selected.mileage != null ? `${Number(selected.mileage).toLocaleString()} km` : "—"}</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-2.5">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fuel level</p>
+                        <p className="font-bold text-foreground">{fuel != null ? `${fuel.toFixed(0)}%` : "—"}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-muted/30">
+                        <span className="text-muted-foreground">Insurance</span>
+                        <span className={cn("font-semibold", insDays != null && insDays <= 14 && "text-destructive")}>
+                          {insDays == null ? "Not on file" : insDays >= 0 ? `Expires in ${insDays}d` : `Expired ${Math.abs(insDays)}d ago`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-muted/30">
+                        <span className="text-muted-foreground">Registration</span>
+                        <span className={cn("font-semibold", regDays != null && regDays <= 14 && "text-destructive")}>
+                          {regDays == null ? "Not on file" : regDays >= 0 ? `Expires in ${regDays}d` : `Expired ${Math.abs(regDays)}d ago`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between px-2.5 py-2 rounded-lg bg-muted/30">
+                        <span className="text-muted-foreground">Next service</span>
+                        <span className={cn("font-semibold", svcDays != null && svcDays <= 14 && "text-warning")}>
+                          {svcDays == null ? "Not scheduled" : svcDays >= 0 ? `Due in ${svcDays}d` : `Overdue by ${Math.abs(svcDays)}d`}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => { setEditing(selected); setFormOpen(true); }}
+                      variant="outline"
+                      className="w-full mt-4 gap-2"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit vehicle
+                    </Button>
+                  </SectionCard>
+                );
+              })()}
+
               <SectionCard title="Expiring documents & services" subtitle="Next 30 days" href="/fleet/compliance" padded={false}>
                 {expiringSoon.length === 0 ? (
                   <EmptyState icon={CheckCircle2} title="All up to date" description="No documents or services expire within 30 days." />
