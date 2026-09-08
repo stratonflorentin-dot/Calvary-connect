@@ -138,24 +138,24 @@ export default function TrackingPage() {
   const currentStep = result ? STATUS_INDEX[result.status] : -1;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* ── Hero / Search ── */}
       <div className="flex-1 flex flex-col items-center justify-start pt-16 px-4">
         {/* Logo area */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center shadow-xl shadow-indigo-900/50">
-            <Truck className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center cv-elev-md">
+            <Truck className="w-6 h-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white leading-tight tracking-tight">Calvary Connect</h1>
-            <p className="text-xs text-muted-foreground font-medium">Shipment Tracking Portal</p>
+            <h1 className="text-2xl font-black text-foreground leading-tight tracking-tight">Calvary Connect</h1>
+            <p className="text-xs text-muted-foreground font-medium">Shipment tracking portal</p>
           </div>
         </div>
 
         {/* Search box */}
         <div className="w-full max-w-xl">
-          <h2 className="text-3xl font-black text-white text-center mb-2">Track Your Shipment</h2>
-          <p className="text-muted-foreground text-center text-sm mb-8">Enter your tracking number to get real-time status updates</p>
+          <h2 className="text-3xl font-black text-foreground text-center mb-2">Track your shipment</h2>
+          <p className="text-muted-foreground text-center text-sm mb-8">Enter a tracking number for the latest delivery status</p>
 
           <form onSubmit={handleSearch} className="relative">
             <div className="flex gap-3">
@@ -165,13 +165,13 @@ export default function TrackingPage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="e.g. SH-2026-0001 or TRP-2024-001"
-                  className="w-full pl-11 pr-4 py-4 bg-white/10 backdrop-blur-sm text-white placeholder-slate-400 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm font-medium transition-all"
+                  className="w-full pl-11 pr-4 py-4 bg-card text-foreground placeholder-muted-foreground border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary text-sm font-medium transition-all"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading || !query.trim()}
-                className="px-6 py-4 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-sky-900/50 disabled:opacity-50 flex items-center gap-2 text-sm"
+                className="px-6 py-4 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl transition-all cv-elev-sm disabled:opacity-50 flex items-center gap-2 text-sm"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 Track
@@ -187,7 +187,7 @@ export default function TrackingPage() {
               { icon: RefreshCw, text: "Always Current" },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                <Icon className="w-3.5 h-3.5 text-sky-400" /> {text}
+                <Icon className="w-3.5 h-3.5 text-primary" /> {text}
               </div>
             ))}
           </div>
@@ -330,7 +330,7 @@ export default function TrackingPage() {
       </div>
 
       {/* Footer */}
-      <div className="py-6 text-center text-xs text-slate-600">
+      <div className="py-6 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} Calvary Connect · All rights reserved
       </div>
     </div>

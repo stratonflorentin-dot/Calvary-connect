@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRole } from '@/hooks/use-role';
 import { useToast } from '@/hooks/use-toast';
+import { PageShell, PageHeader, SectionCard } from '@/components/shell';
+import { FileSignature } from 'lucide-react';
 import { fetchContracts, getStatusColor } from '@/lib/contract-service';
 import type { Contract, ContractStatus } from '@/types/contract';
 import {
@@ -102,54 +104,57 @@ export default function ContractsPage() {
     }
 
     return (
-        <div className="space-y-6 p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold">Contracts</h1>
-                    <p className="text-gray-600 mt-1">Manage transportation contracts</p>
-                </div>
-                {role && ['CEO', 'ADMIN', 'SALESMAN'].includes(role) && (
-                    <Link href="/admin/contracts/new">
-                        <Button>New Contract</Button>
-                    </Link>
-                )}
-            </div>
+        <PageShell>
+            <div className="space-y-6">
+                <PageHeader
+                    eyebrow="Sales"
+                    title="Contracts"
+                    subtitle="Manage transportation contracts"
+                    icon={FileSignature}
+                    actions={
+                        role && ['CEO', 'ADMIN', 'SALESMAN'].includes(role) && (
+                            <Link href="/admin/contracts/new">
+                                <Button>New Contract</Button>
+                            </Link>
+                        )
+                    }
+                />
 
-            {/* Filters */}
-            <div className="flex gap-4">
-                <div className="w-48">
-                    <Select
-                        value={statusFilter}
-                        onValueChange={(value) =>
-                            setStatusFilter(value as ContractStatus | 'all')
-                        }
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Filter by status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Statuses</SelectItem>
-                            <SelectItem value="draft">Draft</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="expired">Expired</SelectItem>
-                            <SelectItem value="terminated">Terminated</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
+                <SectionCard title="Contract List" padded={false}>
+                    {/* Filters */}
+                    <div className="flex gap-4 p-4 border-b">
+                        <div className="w-48">
+                            <Select
+                                value={statusFilter}
+                                onValueChange={(value) =>
+                                    setStatusFilter(value as ContractStatus | 'all')
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Filter by status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Statuses</SelectItem>
+                                    <SelectItem value="draft">Draft</SelectItem>
+                                    <SelectItem value="sent">Sent</SelectItem>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="expired">Expired</SelectItem>
+                                    <SelectItem value="terminated">Terminated</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
 
-            {/* Contracts Table */}
-            {loading ? (
-                <div className="text-center py-8">Loading contracts...</div>
-            ) : contracts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                    No contracts found
-                </div>
-            ) : (
-                <div className="border rounded-lg overflow-x-auto">
-                    <Table>
+                    {/* Contracts Table */}
+                    {loading ? (
+                        <div className="text-center py-8">Loading contracts...</div>
+                    ) : contracts.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                            No contracts found
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Contract #</TableHead>
@@ -235,6 +240,8 @@ export default function ContractsPage() {
                     </Table>
                 </div>
             )}
+        </SectionCard>
         </div>
+    </PageShell>
     );
 }

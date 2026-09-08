@@ -5,8 +5,7 @@ import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
-import { Sidebar } from '@/components/navigation/sidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageShell, PageHeader, StatCard, SectionCard } from '@/components/shell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -194,75 +193,37 @@ export default function CustomersPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Customers</h1>
-            <p className="text-muted-foreground">Manage your customer database</p>
-          </div>
+    <PageShell>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Sales"
+          title="Customers"
+          subtitle="Manage your customer database"
+          icon={Building2}
+        />
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Customers</p>
-                    <p className="text-2xl font-bold">{totalCustomers}</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Building2 className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Active Customers</p>
-                    <p className="text-2xl font-bold">{activeCustomers}</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-success/10">
-                    <TrendingUp className="h-6 w-6 text-success" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Credit Limit</p>
-                    <p className="text-xl font-bold">{formatCurrency(totalCreditLimitTZS, 'TZS')}</p>
-                    <p className="text-sm font-semibold text-muted-foreground">{formatCurrency(totalCreditLimitUSD, 'USD')}</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-info/10">
-                    <DollarSign className="h-6 w-6 text-info" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">High-Risk Customers</p>
-                    <p className="text-2xl font-bold">{highRiskCustomers}</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-destructive/10">
-                    <Briefcase className="h-6 w-6 text-destructive" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <StatCard label="Total Customers" value={totalCustomers} icon={Building2} accent="bg-primary/10 text-primary" />
+          <StatCard label="Active Customers" value={activeCustomers} icon={TrendingUp} accent="bg-success/10 text-success" />
+          <StatCard
+            label="Total Credit Limit"
+            value={
+              <span>
+                {formatCurrency(totalCreditLimitTZS, 'TZS')}
+                <span className="block text-sm font-semibold text-muted-foreground">{formatCurrency(totalCreditLimitUSD, 'USD')}</span>
+              </span>
+            }
+            icon={DollarSign}
+            accent="bg-info/10 text-info"
+          />
+          <StatCard label="High-Risk Customers" value={highRiskCustomers} icon={Briefcase} accent="bg-destructive/10 text-destructive" />
+        </div>
 
-          <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <CardTitle>Customer List</CardTitle>
+          <SectionCard
+            title="Customer List"
+            padded={false}
+            actions={
+              <>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -272,8 +233,7 @@ export default function CustomersPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-              </div>
-              <Dialog open={showAddCustomer} onOpenChange={setShowAddCustomer}>
+                <Dialog open={showAddCustomer} onOpenChange={setShowAddCustomer}>
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
                 </DialogTrigger>
@@ -368,8 +328,9 @@ export default function CustomersPage() {
                   </form>
                 </DialogContent>
               </Dialog>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
+              </>
+            }
+          >
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -422,10 +383,8 @@ export default function CustomersPage() {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
+          </SectionCard>
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }

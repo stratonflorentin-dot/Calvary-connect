@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { checkCreditLimit } from '@/lib/finance/credit-check';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import { toast } from '@/hooks/use-toast';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell, PageHeader, StatCard, SectionCard } from '@/components/shell';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -772,79 +772,28 @@ function SalesModuleContent() {
   }
 
   if (loading) return (
-    <div className="flex min-h-screen bg-muted">
-      <Sidebar role={role || 'OPERATOR'} />
-      <div className="flex-1 p-8">
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+    <PageShell>
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
-    </div>
+    </PageShell>
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role || 'OPERATOR'} />
-      <div data-page-content className="flex-1 min-w-0 p-4 md:p-8 md:ml-64">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground">Sales & Commercial</h1>
-          <p className="text-base text-muted-foreground mt-2">Manage customers, quotations, contracts, and sales pipeline</p>
-        </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Sales"
+        title="Sales & Commercial"
+        subtitle="Manage customers, quotations, contracts, and the sales pipeline"
+        icon={Briefcase}
+      />
 
         {/* Stats - Responsive Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Total Customers</p>
-                  <p className="text-2xl font-bold text-foreground">{totalCustomers}</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shadow-sm flex-shrink-0">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Active Quotations</p>
-                  <p className="text-2xl font-bold text-foreground">{totalQuotations}</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center shadow-sm flex-shrink-0">
-                  <FileText className="h-6 w-6 text-warning" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Contracts</p>
-                  <p className="text-2xl font-bold text-foreground">{totalContracts}</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center shadow-sm flex-shrink-0">
-                  <FileSignature className="h-6 w-6 text-success" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wide mb-2">Pipeline Value</p>
-                  <p className="text-2xl font-bold text-foreground truncate">{formatByCurrency(pipelineValueByCurrency)}</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shadow-sm flex-shrink-0">
-                  <TrendingUp className="h-6 w-6 text-accent-foreground" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+          <StatCard label="Total Customers" value={totalCustomers} icon={Users} accent="bg-primary/10 text-primary" />
+          <StatCard label="Active Quotations" value={totalQuotations} icon={FileText} accent="bg-warning/10 text-warning" />
+          <StatCard label="Contracts" value={totalContracts} icon={FileSignature} accent="bg-success/10 text-success" />
+          <StatCard label="Pipeline Value" value={formatByCurrency(pipelineValueByCurrency)} icon={TrendingUp} accent="bg-accent/10 text-accent-foreground" />
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -860,19 +809,17 @@ function SalesModuleContent() {
 
           {/* Leads Tab */}
           <TabsContent value="leads">
-            <Card className="shadow-lg border-border">
-              <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Lead Management
-                </CardTitle>
+            <SectionCard
+              title="Lead Management"
+              icon={Building2}
+              actions={
                 <Button asChild>
                   <Link href="/sales/leads">
                     <Plus className="h-4 w-4 mr-2" /> Manage Leads
                   </Link>
                 </Button>
-              </CardHeader>
-              <CardContent>
+              }
+            >
                 <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -933,25 +880,22 @@ function SalesModuleContent() {
                     </Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </SectionCard>
           </TabsContent>
 
           {/* Sales Orders Tab (Professional Logistics Feature) */}
           <TabsContent value="sales-orders">
-            <Card className="shadow-lg border-border">
-              <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                  <Container className="h-5 w-5" />
-                  Sales Orders & Freight Billing
-                </CardTitle>
+            <SectionCard
+              title="Sales Orders & Freight Billing"
+              icon={Container}
+              actions={
                 <Button asChild>
                   <Link href="/bookings">
                     <Plus className="h-4 w-4 mr-2" /> New Sales Order
                   </Link>
                 </Button>
-              </CardHeader>
-              <CardContent>
+              }
+            >
                 {salesOrders.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Container className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -1013,19 +957,16 @@ function SalesModuleContent() {
                   </Table>
                 </div>
                 )}
-              </CardContent>
-            </Card>
+            </SectionCard>
           </TabsContent>
 
           {/* Customers Tab */}
           <TabsContent value="customers">
-            <Card className="shadow-lg border-border">
-              <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Customers
-                </CardTitle>
-                {canCreate && (
+            <SectionCard
+              title="Customers"
+              icon={Building2}
+              actions={
+                canCreate && (
                   <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
                     <DialogTrigger asChild>
                       <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"><Plus className="h-4 w-4 mr-2" /> Add Customer</Button>
@@ -1110,9 +1051,9 @@ function SalesModuleContent() {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-                )}
-              </CardHeader>
-              <CardContent>
+                )
+              }
+            >
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -1145,23 +1086,20 @@ function SalesModuleContent() {
                     </TableBody>
                   </Table>
                 </div>
-              </CardContent>
-            </Card>
+            </SectionCard>
           </TabsContent>
 
           {/* Quotations Tab */}
           <TabsContent value="quotations">
-            <Card className="shadow-lg border-border">
-              <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Quotations
-                </CardTitle>
+            <SectionCard
+              title="Quotations"
+              icon={FileText}
+              actions={
                 <Button asChild className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">
                   <Link href="/quotations"><Plus className="h-4 w-4 mr-2" /> Open Quotations</Link>
                 </Button>
-              </CardHeader>
-              <CardContent>
+              }
+            >
                 <p className="text-sm text-muted-foreground">
                   Quotations now live in their own module — full builder, PDF, email, and customer accept/reject.
                 </p>
@@ -1169,8 +1107,7 @@ function SalesModuleContent() {
                 <Button asChild variant="outline" className="mt-4">
                   <Link href="/quotations">View all quotations →</Link>
                 </Button>
-              </CardContent>
-            </Card>
+            </SectionCard>
           </TabsContent>
 
           {/* Contracts Tab */}
@@ -1209,20 +1146,20 @@ function SalesModuleContent() {
                 />
               </div>
             ) : (
-              <Card className="shadow-lg border-border">
-                <CardHeader className="flex flex-row items-center justify-between pb-4">
-                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <Briefcase className="h-5 w-5" />
-                    Transport Contracts
-                    <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">{totalContracts}</Badge>
-                  </CardTitle>
-                  {canCreate && (
-                    <Button onClick={() => setShowContractGenerator(true)} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">
-                      <Plus className="h-4 w-4 mr-2" /> New Contract
-                    </Button>
-                  )}
-                </CardHeader>
-                <CardContent>
+              <SectionCard
+                title="Transport Contracts"
+                icon={Briefcase}
+                actions={
+                  <>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{totalContracts}</Badge>
+                    {canCreate && (
+                      <Button onClick={() => setShowContractGenerator(true)} className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow">
+                        <Plus className="h-4 w-4 mr-2" /> New Contract
+                      </Button>
+                    )}
+                  </>
+                }
+              >
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
@@ -1302,8 +1239,7 @@ function SalesModuleContent() {
                       </TableBody>
                     </Table>
                   </div>
-                </CardContent>
-              </Card>
+              </SectionCard>
             )}
 
             {/* Contract Preview Dialog */}
@@ -1454,20 +1390,20 @@ function SalesModuleContent() {
               )}
 
               {/* JSONB Rate Sheets (from contract system) */}
-              <Card className="shadow-lg border-border">
-                <CardHeader className="flex flex-row items-center justify-between pb-4">
-                  <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Freight Rate Sheets
-                    <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">{jsonbRateSheets.length}</Badge>
-                  </CardTitle>
-                  {canCreate && (
-                    <Button onClick={() => openFreightSheetDialog()} className="h-10 px-4 gap-2">
-                      <Plus className="h-4 w-4" /> New Freight Rate Sheet
-                    </Button>
-                  )}
-                </CardHeader>
-                <CardContent>
+              <SectionCard
+                title="Freight Rate Sheets"
+                icon={DollarSign}
+                actions={
+                  <>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{jsonbRateSheets.length}</Badge>
+                    {canCreate && (
+                      <Button onClick={() => openFreightSheetDialog()} className="h-10 px-4 gap-2">
+                        <Plus className="h-4 w-4" /> New Freight Rate Sheet
+                      </Button>
+                    )}
+                  </>
+                }
+              >
                   {jsonbRateSheets.length === 0 ? (
                     <div className="py-8 text-center text-sm text-muted-foreground">
                       No freight rate sheets yet. {canCreate && 'Create one to get started.'}
@@ -1549,7 +1485,6 @@ function SalesModuleContent() {
                       ))}
                     </div>
                   )}
-                </CardContent>
 
                 <Dialog open={showFreightSheetDialog} onOpenChange={(open) => {
                   if (!open) {
@@ -1655,19 +1590,12 @@ function SalesModuleContent() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </Card>
+              </SectionCard>
 
               {/* Legacy flat rate sheets */}
               {rateSheets.length > 0 && (
-                <Card className="shadow-lg border-border">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                      <DollarSign className="h-5 w-5" />
-                      Route Rate Sheet
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
+                <SectionCard title="Route Rate Sheet" icon={DollarSign}>
+                  <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -1742,21 +1670,18 @@ function SalesModuleContent() {
                         </TableBody>
                       </Table>
                     </div>
-                  </CardContent>
-                </Card>
+                </SectionCard>
               )}
             </div>
           </TabsContent>
 
           {/* Opportunities Tab */}
           <TabsContent value="opportunities">
-            <Card className="shadow-lg border-border">
-              <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Sales Pipeline
-                </CardTitle>
-                {canCreate && (
+            <SectionCard
+              title="Sales Pipeline"
+              icon={TrendingUp}
+              actions={
+                canCreate && (
                   <Dialog open={showOpportunityDialog} onOpenChange={setShowOpportunityDialog}>
                     <DialogTrigger asChild>
                       <Button className="h-11 px-6 shadow-md hover:shadow-lg transition-shadow"><Plus className="h-4 w-4 mr-2" /> Add Opportunity</Button>
@@ -1833,9 +1758,9 @@ function SalesModuleContent() {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-                )}
-              </CardHeader>
-              <CardContent>
+                )
+              }
+            >
                 <div className="overflow-x-auto pb-2">
                   <div className="flex gap-4 items-start min-w-max">
                     {PIPELINE_STAGES.map(({ value, label }) => {
@@ -1891,12 +1816,10 @@ function SalesModuleContent() {
                     })}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+            </SectionCard>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+    </PageShell>
   );
 }
 
@@ -1904,14 +1827,11 @@ function SalesModuleContent() {
 export default function SalesModule() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role="OPERATOR" />
-        <div className="flex-1 p-8">
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
+      <PageShell>
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      </div>
+      </PageShell>
     }>
       <SalesModuleContent />
     </Suspense>

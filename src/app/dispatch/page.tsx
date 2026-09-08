@@ -375,18 +375,37 @@ export default function DispatchBoardPage() {
         }
       />
 
-      {/* Stat strip */}
-      <div className="flex items-center gap-3 flex-wrap mb-5">
-        {stats.map((s) => (
-          <div key={s.label} className="flex items-center gap-1.5 bg-card rounded-full px-3 py-1 border border-border">
-            <span className="text-[10px] text-muted-foreground font-medium">{s.label}</span>
-            <span className={`text-sm font-black ${s.color}`}>{s.value}</span>
-          </div>
-        ))}
+      {/* Live operations strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        {stats.map((s, index) => {
+          const Icon = [Truck, Clock, Navigation, CheckCircle2][index];
+          return (
+            <div key={s.label} className="cv-kpi flex items-center gap-3">
+              <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center bg-muted/60", s.color)}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="cv-kpi-label">{s.label}</p>
+                <p className={cn("cv-kpi-value text-xl", s.color)}>{s.value}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Board */}
-      <div className="overflow-x-auto -mx-6 px-6 pb-4">
+      <div className="cv-surface overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+          <div>
+            <p className="text-sm font-bold tracking-tight">Live dispatch queue</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Move a trip through its operational status</p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+            Live board
+          </div>
+        </div>
+        <div className="overflow-x-auto px-5 pt-5 pb-2">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -408,6 +427,7 @@ export default function DispatchBoardPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
 
       {/* Drag ghost label */}

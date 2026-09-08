@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/hooks/use-role";
-import { Sidebar } from "@/components/navigation/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageShell, PageHeader, StatCard, SectionCard } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -277,76 +276,44 @@ export default function LeadsPage() {
 
   if (role === "DRIVER") {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={role} />
-        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+      <PageShell>
+        <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
             <p className="text-muted-foreground">Access denied. Drivers cannot access Sales module.</p>
           </div>
-        </main>
-      </div>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role || "CEO"} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-4 flex items-center justify-between">
-            <Button variant="ghost" asChild>
-              <Link href="/sales">
-                <ArrowLeft className="size-4 mr-2" /> Back to Sales
-              </Link>
-            </Button>
-            <Button onClick={loadLeads} disabled={loading}>
-              <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
-            </Button>
-          </div>
-
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Lead Management</h1>
-            <p className="text-muted-foreground">Track and convert potential customers</p>
-          </div>
+    <PageShell>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Sales"
+          title="Lead Management"
+          subtitle="Track and convert potential customers"
+          icon={Building2}
+          actions={
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/sales">
+                  <ArrowLeft className="size-4 mr-2" /> Back to Sales
+                </Link>
+              </Button>
+              <Button onClick={loadLeads} disabled={loading}>
+                <RefreshCw className={cn("size-4 mr-2", loading && "animate-spin")} /> Refresh
+              </Button>
+            </>
+          }
+        />
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Building2 className="size-4 text-primary" />
-                  <p className="text-xs font-medium text-muted-foreground uppercase">Total Leads</p>
-                </div>
-                <p className="text-2xl font-bold">{totalLeads}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="size-4 text-blue-500" />
-                  <p className="text-xs font-medium text-muted-foreground uppercase">New</p>
-                </div>
-                <p className="text-2xl font-bold text-blue-500">{newLeads}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="size-4 text-cyan-500" />
-                  <p className="text-xs font-medium text-muted-foreground uppercase">Qualified</p>
-                </div>
-                <p className="text-2xl font-bold text-cyan-500">{qualifiedLeads}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="size-4 text-success" />
-                  <p className="text-xs font-medium text-muted-foreground uppercase">Avg Probability</p>
-                </div>
-                <p className="text-2xl font-bold text-success">{avgProbability}%</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <StatCard label="Total Leads" value={totalLeads} icon={Building2} accent="bg-primary/10 text-primary" />
+            <StatCard label="New" value={newLeads} icon={Clock} accent="bg-blue-500/10 text-blue-500" />
+            <StatCard label="Qualified" value={qualifiedLeads} icon={CheckCircle} accent="bg-cyan-500/10 text-cyan-500" />
+            <StatCard label="Avg Probability" value={`${avgProbability}%`} icon={TrendingUp} accent="bg-success/10 text-success" />
           </div>
 
           {/* Actions */}
@@ -543,13 +510,7 @@ export default function LeadsPage() {
           </div>
 
           {/* Leads Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="size-5" /> All Leads
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <SectionCard title="All Leads" icon={Building2} padded={false}>
               <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -624,11 +585,9 @@ export default function LeadsPage() {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
+          </SectionCard>
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }
 

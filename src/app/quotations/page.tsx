@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
+import { PageShell, PageHeader, StatCard, SectionCard } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -85,50 +85,38 @@ export default function QuotationsListPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-headline tracking-tighter flex items-center gap-2">
-                <FileText className="size-7 text-primary" /> Created Quotations
-              </h1>
-              <p className="text-muted-foreground">Manage all quotations generated in the system</p>
-            </div>
+    <PageShell>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Sales"
+          title="Created Quotations"
+          subtitle="Manage all quotations generated in the system"
+          icon={FileText}
+          actions={
             <Button asChild className="gap-2">
               <Link href="/quotations/new"><Plus className="size-4" /> New Quotation</Link>
             </Button>
-          </div>
+          }
+        />
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total</p>
-              <p className="text-2xl font-black text-foreground">{stats.total}</p>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Draft</p>
-              <p className="text-2xl font-black text-foreground">{stats.draft}</p>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sent</p>
-              <p className="text-2xl font-black text-info">{stats.sent}</p>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Accepted</p>
-              <p className="text-2xl font-black text-success">{stats.accepted}</p>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Value</p>
-              {stats.totalValueByCurrency.size === 0 ? (
-                <p className="text-lg font-black text-foreground">{formatCurrency(0, "TZS")}</p>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <StatCard label="Total" value={stats.total} />
+          <StatCard label="Draft" value={stats.draft} />
+          <StatCard label="Sent" value={stats.sent} accent="bg-info/10 text-info" />
+          <StatCard label="Accepted" value={stats.accepted} accent="bg-success/10 text-success" />
+          <StatCard
+            label="Total Value"
+            value={
+              stats.totalValueByCurrency.size === 0 ? (
+                formatCurrency(0, "TZS")
               ) : (
                 Array.from(stats.totalValueByCurrency.entries()).map(([cur, val]) => (
-                  <p key={cur} className="text-lg font-black text-foreground leading-tight">{formatCurrency(val, cur)}</p>
+                  <span key={cur} className="block leading-tight">{formatCurrency(val, cur)}</span>
                 ))
-              )}
-            </div>
-          </div>
+              )
+            }
+          />
+        </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -149,7 +137,7 @@ export default function QuotationsListPage() {
             </Select>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <SectionCard title="Quotations" subtitle={`${filtered.length} shown`} padded={false}>
             {loading ? (
               <div className="p-12 text-center"><Loader2 className="size-6 animate-spin mx-auto text-muted-foreground" /></div>
             ) : filtered.length === 0 ? (
@@ -191,9 +179,8 @@ export default function QuotationsListPage() {
                 </table>
               </div>
             )}
-          </div>
+          </SectionCard>
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }

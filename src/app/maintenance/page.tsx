@@ -6,7 +6,7 @@ import { useCurrency } from '@/hooks/use-currency';
 import { useLanguage } from '@/hooks/use-language';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader, SectionCard, StatCard } from '@/components/shell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,6 @@ import {
     Clock,
     CheckCircle2,
     Pause,
-    Trash2,
     Eye,
     Edit,
     Filter,
@@ -108,48 +107,46 @@ export default function MaintenancePage() {
     return (
         <div className="space-y-6 pb-safe-bottom">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
-                        <Wrench className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                        Maintenance
-                    </h1>
-                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Fleet servicing, repairs and inspections</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        onClick={runPreventiveScan}
-                        disabled={scanning}
-                        className="gap-2"
-                    >
-                        {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                        Preventive Scan
-                    </Button>
-                    <Link href="/maintenance/new">
-                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
-                            <Plus className="w-4 h-4" />
-                            New Record
+            <PageHeader
+                eyebrow="Fleet"
+                title="Maintenance"
+                subtitle="Fleet servicing, repairs and inspections"
+                icon={Wrench}
+                actions={
+                    <>
+                        <Button
+                            variant="outline"
+                            onClick={runPreventiveScan}
+                            disabled={scanning}
+                            className="gap-2"
+                        >
+                            {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                            Preventive Scan
                         </Button>
-                    </Link>
-                </div>
-            </div>
+                        <Link href="/maintenance/new">
+                            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">
+                                <Plus className="w-4 h-4" />
+                                New Record
+                            </Button>
+                        </Link>
+                    </>
+                }
+            />
 
             {/* Stat Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
                 {([
-                    { label: 'Total', value: stats.total, icon: ListChecks, tone: 'text-muted-foreground', chip: 'bg-muted', filterValue: 'all' as const },
-                    { label: 'Pending Review', value: stats.requested, icon: AlertTriangle, tone: 'text-info', chip: 'bg-info/10', filterValue: 'requested' as const },
-                    { label: 'Scheduled', value: stats.scheduled, icon: Clock, tone: 'text-primary', chip: 'bg-primary/10', filterValue: 'scheduled' as const },
-                    { label: 'In Progress', value: stats.in_progress, icon: Activity, tone: 'text-warning', chip: 'bg-warning/10', filterValue: 'in_progress' as const },
-                    { label: 'Completed', value: `${stats.completed} (${format(stats.totalCompletedCost)})`, icon: CheckCircle2, tone: 'text-success', chip: 'bg-success/10', filterValue: 'completed' as const },
-                    { label: 'Postponed', value: stats.postponed, icon: Pause, tone: 'text-accent-foreground', chip: 'bg-accent/10', filterValue: 'postponed' as const },
-                    { label: 'Overdue', value: stats.overdue, icon: AlertOctagon, tone: 'text-destructive', chip: 'bg-destructive/10', filterValue: null },
+                    { label: 'Total', value: stats.total, icon: ListChecks, accent: 'bg-muted text-muted-foreground', filterValue: 'all' as const },
+                    { label: 'Pending Review', value: stats.requested, icon: AlertTriangle, accent: 'bg-info/10 text-info', filterValue: 'requested' as const },
+                    { label: 'Scheduled', value: stats.scheduled, icon: Clock, accent: 'bg-primary/10 text-primary', filterValue: 'scheduled' as const },
+                    { label: 'In Progress', value: stats.in_progress, icon: Activity, accent: 'bg-warning/10 text-warning', filterValue: 'in_progress' as const },
+                    { label: 'Completed', value: `${stats.completed} (${format(stats.totalCompletedCost)})`, icon: CheckCircle2, accent: 'bg-success/10 text-success', filterValue: 'completed' as const },
+                    { label: 'Postponed', value: stats.postponed, icon: Pause, accent: 'bg-accent/10 text-accent-foreground', filterValue: 'postponed' as const },
+                    { label: 'Overdue', value: stats.overdue, icon: AlertOctagon, accent: 'bg-destructive/10 text-destructive', filterValue: null },
                 ]).map((card) => {
                     const isActive = card.filterValue !== null && statusFilter === card.filterValue;
-                    const Icon = card.icon;
                     return (
-                        <Card
+                        <div
                             key={card.label}
                             onClick={card.filterValue !== null ? () => { setStatusFilter(card.filterValue); setCurrentPage(1); } : undefined}
                             className={cn(
@@ -158,213 +155,204 @@ export default function MaintenancePage() {
                                 isActive && 'border-primary ring-1 ring-primary/30',
                             )}
                         >
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-medium text-muted-foreground truncate">{card.label}</p>
-                                        <p className="text-2xl font-bold mt-1 text-foreground">{card.value}</p>
-                                    </div>
-                                    <div className={cn('p-2 rounded-lg shrink-0', card.chip)}>
-                                        <Icon className={cn('h-5 w-5', card.tone)} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                            <StatCard
+                                label={card.label}
+                                value={card.value}
+                                icon={card.icon}
+                                accent={card.accent}
+                            />
+                        </div>
                     );
                 })}
             </div>
 
             {/* Filter Bar */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <Input
-                            placeholder="Search record #, title, technician..."
-                            value={search}
-                            onChange={(e) => {
-                                setSearch(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="sm:col-span-2 lg:col-span-1"
-                        />
-                        <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val as typeof statusFilter); setCurrentPage(1); }}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All</SelectItem>
-                                <SelectItem value="requested">Requested</SelectItem>
-                                <SelectItem value="scheduled">Scheduled</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="postponed">Postponed</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val as typeof typeFilter); setCurrentPage(1); }}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All</SelectItem>
-                                <SelectItem value="scheduled">Scheduled</SelectItem>
-                                <SelectItem value="preventive">Preventive</SelectItem>
-                                <SelectItem value="repair">Repair</SelectItem>
-                                <SelectItem value="breakdown">Breakdown</SelectItem>
-                                <SelectItem value="inspection">Inspection</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={priorityFilter} onValueChange={(val) => { setPriorityFilter(val as typeof priorityFilter); setCurrentPage(1); }}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All</SelectItem>
-                                <SelectItem value="critical">Critical</SelectItem>
-                                <SelectItem value="high">High</SelectItem>
-                                <SelectItem value="medium">Medium</SelectItem>
-                                <SelectItem value="low">Low</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Button variant="outline" className="w-full gap-2">
-                            <Filter className="w-4 h-4" />
-                            Filter
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+            <SectionCard title="Filters" padded>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Input
+                        placeholder="Search record #, title, technician..."
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="sm:col-span-2 lg:col-span-1"
+                    />
+                    <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val as typeof statusFilter); setCurrentPage(1); }}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="requested">Requested</SelectItem>
+                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="postponed">Postponed</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val as typeof typeFilter); setCurrentPage(1); }}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                            <SelectItem value="preventive">Preventive</SelectItem>
+                            <SelectItem value="repair">Repair</SelectItem>
+                            <SelectItem value="breakdown">Breakdown</SelectItem>
+                            <SelectItem value="inspection">Inspection</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={priorityFilter} onValueChange={(val) => { setPriorityFilter(val as typeof priorityFilter); setCurrentPage(1); }}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="critical">Critical</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button variant="outline" className="w-full gap-2">
+                        <Filter className="w-4 h-4" />
+                        Filter
+                    </Button>
+                </div>
+            </SectionCard>
 
             {/* Data Table */}
-            <Card className="shadow-lg">
-                <CardContent className="pt-6">
-                    {loading ? (
-                        <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
-                            <Loader2 className="w-8 h-8 animate-spin" />
-                            <p>Loading records...</p>
-                        </div>
-                    ) : paginatedRecords.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
-                            <Wrench className="w-12 h-12 opacity-20" />
-                            <p>No maintenance records found</p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="overflow-x-auto rounded-xl border border-border">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-muted/50">
-                                        <tr className="border-b border-border">
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">#</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Vehicle</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Title/Source</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Type</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Priority</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Scheduled</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Technician</th>
-                                            <th className="text-right py-3 px-4 font-semibold text-foreground">Cost</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Status</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-foreground">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border bg-card">
-                                        {paginatedRecords.map((record) => (
-                                            <tr
-                                                key={record.id}
-                                                className={cn(
-                                                    'hover:bg-muted/30 transition-colors',
-                                                    record.status === 'requested' && 'bg-accent/10'
-                                                )}
-                                            >
-                                                <td className="py-3 px-4">
-                                                    <div className="font-mono text-xs font-bold text-foreground">{record.record_number}</div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        {new Date(record.created_at).toLocaleDateString()}
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    {record.vehicles ? (
-                                                        <Link href={`/vehicles/${record.vehicle_id}`} className="text-primary hover:underline">
-                                                            <div className="font-mono text-xs font-bold text-foreground">{record.vehicles.plate_number}</div>
-                                                            <div className="text-xs text-muted-foreground">{record.vehicles.make} {record.vehicles.model}</div>
-                                                        </Link>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">N/A</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-3 px-4 text-foreground font-medium">{record.title}</td>
-                                                <td className="py-3 px-4">
-                                                    <Badge variant="outline" className="text-xs border-border">{record.type}</Badge>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <Badge className={cn('text-xs', getPriorityColor(record.priority))}>
-                                                        {record.priority}
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-3 px-4 text-xs text-muted-foreground">{record.scheduled_date ? new Date(record.scheduled_date).toLocaleDateString() : '-'}</td>
-                                                <td className="py-3 px-4 text-xs text-muted-foreground">{record.technician || '-'}</td>
-                                                <td className="py-3 px-4 text-right text-xs font-mono text-foreground">
-                                                    {record.actual_cost ? format(record.actual_cost) : (record.estimated_cost ? format(record.estimated_cost) : '-')}
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <Badge className={cn('text-xs', getStatusColor(record.status))}>
-                                                        {record.status.replace('_', ' ')}
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <Link href={`/maintenance/${record.id}`}>
-                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-muted">
-                                                            {record.status === 'requested' ? (
-                                                                <Eye className="w-4 h-4 text-primary" />
-                                                            ) : (
-                                                                <Edit className="w-4 h-4 text-primary" />
-                                                            )}
-                                                        </Button>
+            <SectionCard title="Maintenance Records" padded={false}>
+                {loading ? (
+                    <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin" />
+                        <p>Loading records...</p>
+                    </div>
+                ) : paginatedRecords.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
+                        <Wrench className="w-12 h-12 opacity-20" />
+                        <p>No maintenance records found</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto rounded-xl border border-border">
+                            <table className="w-full text-sm">
+                                <thead className="bg-muted/50">
+                                    <tr className="border-b border-border">
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">#</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">Vehicle</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">Title/Source</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">Type</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">Priority</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">Scheduled</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">Technician</th>
+                                        <th className="text-right py-3 px-4 font-semibold text-foreground">Cost</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">Status</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-foreground">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border bg-card">
+                                    {paginatedRecords.map((record) => (
+                                        <tr
+                                            key={record.id}
+                                            className={cn(
+                                                'hover:bg-muted/30 transition-colors',
+                                                record.status === 'requested' && 'bg-accent/10'
+                                            )}
+                                        >
+                                            <td className="py-3 px-4">
+                                                <div className="font-mono text-xs font-bold text-foreground">{record.record_number}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {new Date(record.created_at).toLocaleDateString()}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                {record.vehicles ? (
+                                                    <Link href={`/vehicles/${record.vehicle_id}`} className="text-primary hover:underline">
+                                                        <div className="font-mono text-xs font-bold text-foreground">{record.vehicles.plate_number}</div>
+                                                        <div className="text-xs text-muted-foreground">{record.vehicles.make} {record.vehicles.model}</div>
                                                     </Link>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground">N/A</span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4 text-foreground font-medium">{record.title}</td>
+                                            <td className="py-3 px-4">
+                                                <Badge variant="outline" className="text-xs border-border">{record.type}</Badge>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <Badge className={cn('text-xs', getPriorityColor(record.priority))}>
+                                                    {record.priority}
+                                                </Badge>
+                                            </td>
+                                            <td className="py-3 px-4 text-xs text-muted-foreground">{record.scheduled_date ? new Date(record.scheduled_date).toLocaleDateString() : '-'}</td>
+                                            <td className="py-3 px-4 text-xs text-muted-foreground">{record.technician || '-'}</td>
+                                            <td className="py-3 px-4 text-right text-xs font-mono text-foreground">
+                                                {record.actual_cost ? format(record.actual_cost) : (record.estimated_cost ? format(record.estimated_cost) : '-')}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <Badge className={cn('text-xs', getStatusColor(record.status))}>
+                                                    {record.status.replace('_', ' ')}
+                                                </Badge>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <Link href={`/maintenance/${record.id}`}>
+                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-muted">
+                                                        {record.status === 'requested' ? (
+                                                            <Eye className="w-4 h-4 text-primary" />
+                                                        ) : (
+                                                            <Edit className="w-4 h-4 text-primary" />
+                                                        )}
+                                                    </Button>
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
 
-                            {/* Pagination */}
-                            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                <div className="flex items-center gap-4">
-                                    <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setCurrentPage(1); }}>
-                                        <SelectTrigger className="w-32">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="10">10 per page</SelectItem>
-                                            <SelectItem value="20">20 per page</SelectItem>
-                                            <SelectItem value="25">25 per page</SelectItem>
-                                            <SelectItem value="50">50 per page</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <span className="text-sm text-muted-foreground">
-                                        Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, records.length)} of {records.length}
-                                    </span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        disabled={currentPage === 1}
-                                        onClick={() => setCurrentPage(p => p - 1)}
-                                    >
-                                        Previous
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => setCurrentPage(p => p + 1)}
-                                    >
-                                        Next
-                                    </Button>
-                                </div>
+                        {/* Pagination */}
+                        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 pb-4">
+                            <div className="flex items-center gap-4">
+                                <Select value={pageSize.toString()} onValueChange={(val) => { setPageSize(parseInt(val)); setCurrentPage(1); }}>
+                                    <SelectTrigger className="w-32">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10 per page</SelectItem>
+                                        <SelectItem value="20">20 per page</SelectItem>
+                                        <SelectItem value="25">25 per page</SelectItem>
+                                        <SelectItem value="50">50 per page</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <span className="text-sm text-muted-foreground">
+                                    Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, records.length)} of {records.length}
+                                </span>
                             </div>
-                        </>
-                    )}
-                </CardContent>
-            </Card>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(p => p - 1)}
+                                >
+                                    Previous
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(p => p + 1)}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </SectionCard>
         </div>
     );
 }

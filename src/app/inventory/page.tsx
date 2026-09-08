@@ -1,17 +1,17 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
+import { PageShell, PageHeader, SectionCard, StatCard } from '@/components/shell';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Package, Plus, AlertCircle } from 'lucide-react';
+import { Package, Plus, AlertCircle, Boxes, TriangleAlert } from 'lucide-react';
 
 export default function InventoryPage() {
   const { role, isAdmin, isLoading: roleLoading } = useRole();
@@ -117,86 +117,89 @@ export default function InventoryPage() {
 
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR', 'MECHANIC'].includes(role || '')) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={role!} />
-        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+      <PageShell>
+        <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
             <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
             <p className="text-muted-foreground text-sm">You do not have permission to access the warehouse inventory.</p>
           </div>
-        </main>
-      </div>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role!} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-headline tracking-tighter">Warehouse Inventory</h1>
-            <p className="text-muted-foreground text-sm">Manage spare parts and logistics consumables.</p>
-          </div>
+    <PageShell>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Operations"
+          title="Warehouse Inventory"
+          subtitle="Manage spare parts and logistics consumables."
+          icon={Boxes}
+          actions={
+            <>
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={lowStockOnly}
+                  onChange={(e) => setLowStockOnly(e.target.checked)}
+                  className="rounded border-border text-primary focus:ring-primary/50"
+                />
+                Low Stock Only
+              </label>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="rounded-full gap-2">
+                    <Plus className="size-4" /> Add Item
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Register New Stock Item</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleAddItem} className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Item Name</Label>
+                      <Input id="name" name="name" placeholder="Heavy Duty Engine Oil" required />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="quantity">Initial Quantity</Label>
+                        <Input id="quantity" name="quantity" type="number" placeholder="50" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="unit">Unit (e.g., L, pcs)</Label>
+                        <Input id="unit" name="unit" placeholder="Liters" required />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Category</Label>
+                      <Input id="category" name="category" placeholder="Consumables" required />
+                    </div>
+                    <Button type="submit" className="w-full">Update Inventory</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </>
+          }
+        />
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={lowStockOnly}
-                onChange={(e) => setLowStockOnly(e.target.checked)}
-                className="rounded border-border text-primary focus:ring-primary/50"
-              />
-              Low Stock Only
-            </label>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="rounded-full gap-2">
-                  <Plus className="size-4" /> Add Item
-                </Button>
-              </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Register New Stock Item</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddItem} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Item Name</Label>
-                  <Input id="name" name="name" placeholder="Heavy Duty Engine Oil" required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Initial Quantity</Label>
-                    <Input id="quantity" name="quantity" type="number" placeholder="50" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="unit">Unit (e.g., L, pcs)</Label>
-                    <Input id="unit" name="unit" placeholder="Liters" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Input id="category" name="category" placeholder="Consumables" required />
-                </div>
-                <Button type="submit" className="w-full">Update Inventory</Button>
-              </form>
-            </DialogContent>
-            </Dialog>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <StatCard
+            label="Total Items"
+            value={inventory.length}
+            icon={Boxes}
+            accent="bg-primary/10 text-primary"
+          />
+          <StatCard
+            label="Low Stock Items"
+            value={lowStockCount}
+            icon={TriangleAlert}
+            accent={lowStockCount > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}
+          />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="cv-kpi">
-            <p className="cv-kpi-label">Total Items</p>
-            <p className="cv-kpi-value">{inventory.length}</p>
-          </div>
-          <div className="cv-kpi">
-            <p className="cv-kpi-label">Low Stock Items</p>
-            <p className={lowStockCount > 0 ? 'cv-kpi-value text-destructive' : 'cv-kpi-value'}>{lowStockCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-card rounded-2xl shadow-sm border p-0 overflow-x-auto">
+        <SectionCard title="Stock Items" padded={false}>
           <div className="p-4 border-b border-border">
             <Input
               placeholder="Search item name..."
@@ -242,9 +245,9 @@ export default function InventoryPage() {
               ))}
             </TableBody>
           </Table>
-        </div>
-      </main>
-    </div>
+        </SectionCard>
+      </div>
+    </PageShell>
   );
 }
 
