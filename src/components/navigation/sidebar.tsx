@@ -379,7 +379,7 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
       <aside
         className={cn(
           "flex flex-col fixed inset-y-0 z-50 transition-all duration-300 ease-out",
-          "bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-r border-[hsl(var(--sidebar-border))] shadow-xl",
+          "bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] border-r border-[hsl(var(--sidebar-border))]",
           isCollapsed ? "w-20" : "w-64",
           // Mobile transition - fully hidden on mobile when closed
           "md:translate-x-0",
@@ -458,17 +458,17 @@ export function Sidebar({ role }: { role?: UserRole | null }) {
                           if (window.innerWidth < 768) close();
                         }}
                         className={cn(
-                          "relative flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl text-sm font-medium transition-colors group",
+                          "relative flex items-center gap-3 px-4 py-2.5 mx-1 border-l-2 border-transparent text-sm font-medium transition-colors group",
                           isCollapsed && "justify-center px-0",
                           active
-                            ? "text-[hsl(var(--sidebar-primary-foreground))]"
+                            ? "text-[hsl(var(--sidebar-primary-foreground))] border-l-[hsl(var(--sidebar-primary))] bg-[hsl(var(--sidebar-accent))]"
                             : "text-[hsl(var(--sidebar-foreground))] hover:text-white hover:bg-[hsl(var(--sidebar-accent))]"
                         )}
                       >
                         {active && (
                           <motion.span
                             layoutId="desktop-nav-active"
-                            className="absolute inset-0 bg-[hsl(var(--sidebar-primary))] rounded-xl shadow-md shadow-black/40"
+                            className="absolute inset-y-0 left-0 w-0.5 bg-[hsl(var(--sidebar-primary))]"
                             transition={TRANSITION.base}
                           />
                         )}

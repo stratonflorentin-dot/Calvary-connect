@@ -32,11 +32,11 @@ export function SectionCard({
 }: SectionCardProps) {
   return (
     <div className={cn("cv-surface overflow-hidden", className)}>
-      <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-3">
+      <div className="px-5 py-4 border-b border-border bg-muted/20 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
-            <h3 className="text-sm font-black text-foreground">{title}</h3>
+            <h3 className="text-base font-bold tracking-tight text-foreground">{title}</h3>
           </div>
           {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>

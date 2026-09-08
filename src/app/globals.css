@@ -178,10 +178,12 @@
   /* Universal surfaces used across the app */
   .cv-surface {
     @apply rounded-lg border border-border bg-card shadow-sm;
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
   }
 
   .cv-panel {
     @apply rounded-lg border border-border bg-card p-5 shadow-sm;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
   }
 
   .cv-header {
@@ -189,11 +191,11 @@
   }
 
   .cv-eyebrow {
-    @apply text-[10px] font-black text-primary uppercase tracking-widest px-2 py-0.5 bg-[hsl(var(--primary-soft))] rounded-full;
+    @apply text-[10px] font-black text-primary uppercase tracking-[0.18em];
   }
 
   .cv-kpi {
-    @apply cv-surface p-5 transition-all hover:border-primary/30 hover:shadow-md;
+    @apply cv-surface p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md;
   }
 
   .cv-kpi-label {
@@ -201,11 +203,36 @@
   }
 
   .cv-kpi-value {
-    @apply text-2xl font-black tracking-tight text-foreground;
+    @apply text-2xl md:text-3xl font-black tracking-tight text-foreground tabular-nums;
   }
 
   .cv-chip {
     @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider;
+  }
+
+  .cv-command-header {
+    @apply relative overflow-hidden rounded-xl border border-sidebar-border bg-gradient-to-br from-sidebar via-sidebar to-sidebar-accent text-sidebar-foreground;
+  }
+
+  .cv-command-header::after {
+    content: "";
+    position: absolute;
+    inset: auto -10% -70% 42%;
+    height: 170%;
+    transform: rotate(-18deg);
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.12), transparent);
+    pointer-events: none;
+  }
+
+  .cv-data {
+    @apply tabular-nums font-medium tracking-tight;
+  }
+
+  .cv-grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
   }
 
   .cv-chip-success {
@@ -308,6 +335,35 @@
   @keyframes shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+  }
+}
+
+/* Calvary Connect's visual finish: light technical canvas, deep-navy chrome,
+   cyan actions, restrained radii, and motion that stays out of the way. */
+body {
+  background-color: hsl(var(--background));
+}
+
+.cv-surface:hover {
+  border-color: hsl(var(--primary) / 0.28);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-surface,
+  .cv-panel,
+  button,
+  a {
+    transition: none;
   }
 }
 

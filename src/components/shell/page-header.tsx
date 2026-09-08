@@ -63,13 +63,13 @@ export function PageHeader({
         </div>
         <div className="flex items-center gap-3">
           {Icon && (
-            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center cv-elev-sm shrink-0", iconAccent)}>
+            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center cv-elev-sm shrink-0", iconAccent)}>
               <Icon className="w-5 h-5" />
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-2xl font-black text-foreground tracking-tight truncate">{title}</h1>
-            {subtitle && <p className="text-sm text-muted-foreground mt-0.5 truncate">{subtitle}</p>}
+            <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-[-0.03em] truncate">{title}</h1>
+            {subtitle && <p className="text-sm text-muted-foreground mt-1 truncate">{subtitle}</p>}
           </div>
         </div>
       </div>

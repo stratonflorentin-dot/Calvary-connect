@@ -65,6 +65,7 @@ export function StatCard({
         )}
       </div>
       <div className="space-y-0.5">
+        <p className="cv-kpi-label">{label}</p>
         {loading ? (
           <div className="cv-skeleton h-7 w-24 rounded" />
         ) : isPlainNumber ? (
@@ -72,7 +73,6 @@ export function StatCard({
         ) : (
           <p className="cv-kpi-value">{value}</p>
         )}
-        <p className="cv-kpi-label">{label}</p>
         {sub && !loading && <p className="text-[11px] text-muted-foreground mt-1">{sub}</p>}
       </div>
     </div>

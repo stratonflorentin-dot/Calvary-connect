@@ -194,7 +194,7 @@ export function CeoView() {
   return (
     <div className="space-y-6">
       {/* Command header */}
-      <div className="cv-panel bg-gradient-to-br from-sidebar via-sidebar to-sidebar-accent text-sidebar-foreground border-sidebar-border">
+      <div className="cv-command-header p-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Executive Command</p>
