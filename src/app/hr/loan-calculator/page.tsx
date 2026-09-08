@@ -7,15 +7,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { useRole } from "@/hooks/use-role";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 import {
   Banknote,
   Calculator,
   Landmark,
+  Loader2,
   Percent,
   PiggyBank,
+  Save,
   TrendingDown,
 } from "lucide-react";
+import Link from "next/link";
+
+const PURPOSES = [
+  { value: "truck", label: "Truck" },
+  { value: "trailer", label: "Trailer" },
+  { value: "land", label: "Land" },
+  { value: "business_expansion", label: "Business expansion" },
+  { value: "other", label: "Other" },
+];
 
 const CURRENCIES = ["TZS", "USD", "EUR", "KES"];
 
@@ -130,6 +145,11 @@ export default function CompanyLoanCalculatorPage() {
   const [legalFee, setLegalFee] = useState("0");
   const [insuranceAnnualPct, setInsuranceAnnualPct] = useState("0");
 
+  const { toast } = useToast();
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveForm, setSaveForm] = useState({ purpose: "truck", purpose_note: "", lender: "" });
+
   const result = useMemo(() => {
     const P = Number(principal) || 0;
     const rate = Number(annualRate) || 0;
@@ -185,6 +205,44 @@ export default function CompanyLoanCalculatorPage() {
 
   const frequencyLabel = FREQUENCIES.find((f) => f.value === frequency)?.label ?? "period";
 
+  const saveAsCompanyLoan = async () => {
+    if (!result) return;
+    if (!saveForm.purpose) {
+      toast({ title: "Pick a purpose", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.rpc("create_company_loan", {
+        p_purpose: saveForm.purpose,
+        p_purpose_note: saveForm.purpose_note || null,
+        p_lender: saveForm.lender || "Company loan",
+        p_currency: currency,
+        p_principal: Number(principal) || 0,
+        p_annual_rate_pct: Number(annualRate) || 0,
+        p_method: method,
+        p_frequency: Number(frequency),
+        p_tenure_years: Number(years) || 0,
+        p_tenure_months: Number(months) || 0,
+        p_processing_fee: result.procFee,
+        p_legal_fee: result.legFee,
+        p_insurance_annual_pct: Number(insuranceAnnualPct) || 0,
+      });
+      if (error) throw error;
+      toast({
+        variant: "success",
+        title: "Company loan saved",
+        description: "The loan and its monthly repayment schedule are now tracked. Approve each month's return from Company Loans.",
+      });
+      setSaveOpen(false);
+      setSaveForm({ purpose: "truck", purpose_note: "", lender: "" });
+    } catch (err: any) {
+      toast({ title: "Couldn't save loan", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (roleLoading) return null;
   if (!canView) {
     return (
@@ -202,8 +260,22 @@ export default function CompanyLoanCalculatorPage() {
       <PageHeader
         eyebrow="HR"
         title="Company Loan Calculator"
-        subtitle="Plan a loan the company is taking — reducing-balance vs flat rate, fees, and the full repayment schedule. Nothing here is saved."
+        subtitle="Plan a loan the company is taking — reducing-balance vs flat rate, fees, and the full repayment schedule. Save it as a company loan to track and approve each month's return."
         icon={Landmark}
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/hr/company-loans">
+                <Banknote className="size-4 mr-2" /> Company loans
+              </Link>
+            </Button>
+            {result && (
+              <Button onClick={() => setSaveOpen(true)}>
+                <Save className="size-4 mr-2" /> Save as company loan
+              </Button>
+            )}
+          </>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -377,6 +449,51 @@ export default function CompanyLoanCalculatorPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Save as company loan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              This saves the loan and generates its monthly repayment schedule. Each month's return is then submitted and approved by CEO / ADMIN / HR.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Purpose *</Label>
+              <Select value={saveForm.purpose} onValueChange={(v) => setSaveForm({ ...saveForm, purpose: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PURPOSES.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Purpose note (optional)</Label>
+              <Textarea value={saveForm.purpose_note} onChange={(e) => setSaveForm({ ...saveForm, purpose_note: e.target.value })} rows={2} placeholder="e.g. 2x Isuzu FVR trucks, 5x flatbed trailers" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Lender (optional)</Label>
+              <Input value={saveForm.lender} onChange={(e) => setSaveForm({ ...saveForm, lender: e.target.value })} placeholder="e.g. CRDB Bank" />
+            </div>
+            {result && (
+              <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+                <p><span className="font-semibold text-foreground">{fmt(Number(principal) || 0, currency)}</span> principal · {result.schedule.length} {frequencyLabel.toLowerCase()} payment(s)</p>
+                <p>Total cost: <span className="font-semibold text-foreground">{fmt(result.totalCost, currency)}</span></p>
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setSaveOpen(false)}>Cancel</Button>
+              <Button onClick={saveAsCompanyLoan} disabled={saving}>
+                {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
+                Save loan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }

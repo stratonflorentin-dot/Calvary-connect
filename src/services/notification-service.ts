@@ -364,6 +364,36 @@ export async function fetchHRUserIds(): Promise<string[]> {
   return (data || []).map((u) => u.id);
 }
 
+export async function fetchCompanyLoanApproverIds(): Promise<string[]> {
+  const { data } = await supabase
+    .from("user_profiles")
+    .select("id, role")
+    .in("role", ["CEO", "ADMIN", "HR"]);
+  return (data || []).map((u) => u.id);
+}
+
+export async function notifyCompanyLoanPaymentApproval(
+  loanNumber: string,
+  period: number,
+  amount: number,
+  currency: string,
+) {
+  const approverIds = await fetchCompanyLoanApproverIds();
+  await Promise.all(
+    approverIds.map((id) =>
+      createNotification({
+        userId: id,
+        title: "Company loan payment return awaiting approval",
+        message: `${loanNumber} period ${period} — ${currency} ${Number(amount ?? 0).toLocaleString()} has been submitted for approval.`,
+        type: "warning",
+        module: "hr",
+        entityType: "company_loan_payment",
+        actionUrl: "/hr/company-loans",
+      }),
+    ),
+  );
+}
+
 export async function fetchDriverUserIds(): Promise<string[]> {
   const { data } = await supabase
     .from("user_profiles")

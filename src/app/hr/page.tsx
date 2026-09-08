@@ -7,6 +7,7 @@ import {
   Coins,
   FileSpreadsheet,
   Gavel,
+  HandCoins,
   Landmark,
   LogOut,
   Shield,
@@ -71,6 +72,13 @@ const MODULES = [
     title: "Loan calculator",
     description: "Plan a company loan — repayment schedule, fees, reducing balance vs flat rate.",
     tone: "bg-teal-100 text-teal-700",
+  },
+  {
+    href: "/hr/company-loans",
+    icon: HandCoins,
+    title: "Company loans",
+    description: "History of loans the company has taken, with monthly payment returns approved by CEO / ADMIN / HR.",
+    tone: "bg-cyan-100 text-cyan-700",
   },
   {
     href: "/users",
