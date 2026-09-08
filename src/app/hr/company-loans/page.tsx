@@ -170,7 +170,7 @@ export default function CompanyLoansPage() {
     return { totalFinanced, totalOutstanding, totalRepaid: totalFinanced - totalOutstanding, activeLoans };
   }, [loans]);
 
-  const runRpc = async (fn: () => Promise<{ error: any }>, successMsg: string) => {
+  const runRpc = async (fn: () => PromiseLike<{ error: any }>, successMsg: string) => {
     setBusy(true);
     try {
       const { error } = await fn();
