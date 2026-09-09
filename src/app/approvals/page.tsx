@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
-import { useSidebar } from "@/hooks/use-sidebar";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -84,7 +83,6 @@ const KIND_META: Record<
 export default function ApprovalsInboxPage() {
   const { role } = useRole();
   const { user } = useSupabase();
-  const { isCollapsed } = useSidebar();
   const [items, setItems] = useState<ApprovalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "mine" | "overdue">("mine");
@@ -195,30 +193,14 @@ export default function ApprovalsInboxPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar role={(role as any) ?? "ADMIN"} />
-      <div
-        className={cn(
-          "flex-1 flex flex-col min-h-screen transition-all duration-300",
-          isCollapsed ? "md:ml-20" : "md:ml-64",
-        )}
-      >
-        <header className="bg-card border-b border-border px-6 py-4 sticky top-0 z-30 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/20">
-                <ClipboardCheck className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-lg font-black text-foreground leading-tight">
-                  Approvals Inbox
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  Items awaiting decision, routed by amount tier and role.
-                </p>
-              </div>
-            </div>
-
+    <PageShell>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Workflow"
+          title="Approvals Inbox"
+          subtitle="Items awaiting decision, routed by amount tier and role."
+          icon={ClipboardCheck}
+          actions={
             <div className="flex items-center gap-2 flex-wrap">
               {(
                 [
@@ -249,10 +231,10 @@ export default function ApprovalsInboxPage() {
                 <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
               </button>
             </div>
-          </div>
-        </header>
+          }
+        />
 
-        <main className="flex-1 px-6 py-5 space-y-3">
+        <main className="space-y-3">
           {loading ? (
             <div className="flex items-center justify-center py-24 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -335,6 +317,6 @@ export default function ApprovalsInboxPage() {
           )}
         </main>
       </div>
-    </div>
+    </PageShell>
   );
 }

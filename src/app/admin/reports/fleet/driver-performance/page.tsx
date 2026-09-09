@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, startTransition } from 'react';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -281,13 +281,10 @@ export default function DriverPerformancePage() {
   const medal = (rank: number) => (rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : null);
 
   return (
-    <div id="report-root" className="flex min-h-screen bg-background" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
-      <Sidebar role={role} />
-      
-      <main className="flex-1 min-w-0 md:ml-64 p-4 md:p-8 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-6">
-          
-          {/* Breadcrumb / Back button */}
+    <PageShell>
+      <div id="report-root" className="space-y-6" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
+
+        {/* Breadcrumb / Back button */}
           <div className="flex items-center gap-2">
             <Link href="/reports" className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary transition-colors uppercase tracking-wider">
               <ArrowLeft className="size-3.5" />
@@ -598,7 +595,7 @@ export default function DriverPerformancePage() {
           )}
 
         </div>
-      </main>
+      </div>
 
       {summaryDriver && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -621,6 +618,6 @@ export default function DriverPerformancePage() {
           </Card>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

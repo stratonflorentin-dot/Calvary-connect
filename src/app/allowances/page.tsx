@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useCurrency } from '@/hooks/use-currency';
 import { toast } from '@/hooks/use-toast';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell, PageHeader, StatCard } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import {
   getWorkersAction,
@@ -391,107 +391,78 @@ export default function AllowancesPage() {
   const statsTotalWorkers = workers.length;
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground font-sans">
-      <Sidebar role={role || 'DRIVER'} />
-
-      <main className="flex-1 min-w-0 md:ml-60 p-6 md:p-8 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-8">
+    <PageShell>
+      <div className="space-y-8">
 
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                Calvary Worker Payroll & Allowances Center
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Manually manage base salaries, process allowances, and track monthly staff compensation.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={loadData}
-                disabled={loading}
-                className="border-border bg-card hover:bg-muted text-foreground"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Sync System
-              </Button>
-              <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
-                <Link href="/admin/hr/payroll/overtime">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Overtime
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
-                <Link href="/admin/hr/payroll/loans">
-                  <HandCoins className="w-4 h-4 mr-2" />
-                  Loans
-                </Link>
-              </Button>
-              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Link href="/admin/hr/payroll/statutory">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Statutory Reports
-                </Link>
-              </Button>
-            </div>
-          </div>
+          <PageHeader
+            eyebrow="HR"
+            title="Calvary Worker Payroll & Allowances Center"
+            subtitle="Manually manage base salaries, process allowances, and track monthly staff compensation."
+            icon={HandCoins}
+            actions={
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={loadData}
+                  disabled={loading}
+                  className="border-border bg-card hover:bg-muted text-foreground"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Sync System
+                </Button>
+                <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
+                  <Link href="/admin/hr/payroll/overtime">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Overtime
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="border-border bg-card hover:bg-muted text-foreground">
+                  <Link href="/admin/hr/payroll/loans">
+                    <HandCoins className="w-4 h-4 mr-2" />
+                    Loans
+                  </Link>
+                </Button>
+                <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Link href="/admin/hr/payroll/statutory">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Statutory Reports
+                  </Link>
+                </Button>
+              </div>
+            }
+          />
 
           {/* Premium Overview Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-warning/50 transition-all duration-300">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-warning">Pending Approval</p>
-                  <p className="text-2xl font-bold text-warning mt-1">{format(statsPending)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Awaiting manager process</p>
-                </div>
-                <div className="w-12 h-12 bg-warning/10 border border-warning/20 rounded-xl flex items-center justify-center">
-                  <Calculator className="w-6 h-6 text-warning animate-pulse" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-info/50 transition-all duration-300">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-info">Approved Ledger</p>
-                  <p className="text-2xl font-bold text-info mt-1">{format(statsApproved)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Synced to bills & expenses</p>
-                </div>
-                <div className="w-12 h-12 bg-info/10 border border-info/20 rounded-xl flex items-center justify-center">
-                  <Coins className="w-6 h-6 text-info" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-success/50 transition-all duration-300">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-success">Disbursed Wages</p>
-                  <p className="text-2xl font-bold text-success mt-1">{format(statsPaid)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Successfully paid workers</p>
-                </div>
-                <div className="w-12 h-12 bg-success/10 border border-success/20 rounded-xl flex items-center justify-center">
-                  <Landmark className="w-6 h-6 text-success" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card border-border backdrop-blur-md shadow-xl hover:border-primary/50 transition-all duration-300">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">Active Directory</p>
-                  <p className="text-2xl font-bold text-primary mt-1">{statsTotalWorkers}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Registered company profiles</p>
-                </div>
-                <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center">
-                  <User className="w-6 h-6 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard
+              label="Pending Approval"
+              value={format(statsPending)}
+              icon={Calculator}
+              accent="bg-warning/10 text-warning"
+              sub="Awaiting manager process"
+            />
+            <StatCard
+              label="Approved Ledger"
+              value={format(statsApproved)}
+              icon={Coins}
+              accent="bg-info/10 text-info"
+              sub="Synced to bills & expenses"
+            />
+            <StatCard
+              label="Disbursed Wages"
+              value={format(statsPaid)}
+              icon={Landmark}
+              accent="bg-success/10 text-success"
+              sub="Successfully paid workers"
+            />
+            <StatCard
+              label="Active Directory"
+              value={statsTotalWorkers}
+              icon={User}
+              accent="bg-primary/10 text-primary"
+              sub="Registered company profiles"
+            />
           </div>
 
           {/* Navigation Tabs */}
@@ -981,5 +952,6 @@ export default function AllowancesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageShell>
   );
 }

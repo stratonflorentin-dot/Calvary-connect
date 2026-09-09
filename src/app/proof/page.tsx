@@ -2,8 +2,8 @@
 
 import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
+import { PageShell } from '@/components/shell';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/navigation/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -293,10 +293,8 @@ export default function DeliveryProofPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background pb-20 md:pb-0">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-2xl mx-auto space-y-6">
+    <PageShell>
+      <div className="max-w-2xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-headline tracking-tighter">Delivery Proof</h1>
             <p className="text-muted-foreground">Upload confirmation documents and photos for completed trips.</p>
@@ -666,8 +664,7 @@ export default function DeliveryProofPage() {
             </DialogContent>
           </Dialog>
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }
 

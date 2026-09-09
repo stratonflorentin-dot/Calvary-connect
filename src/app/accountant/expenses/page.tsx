@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell, PageHeader, StatCard } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { useCurrency } from "@/hooks/use-currency";
 import { useSupabase } from "@/components/supabase-provider";
@@ -166,70 +166,30 @@ export default function AccountantExpensesPage() {
   if (!role || !REVIEW_ROLES.includes(role)) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">
-                Expense Review
-              </h1>
-              <p className="text-muted-foreground">
-                Review, approve, reject, and export operational expenses.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => exportExpensesCsv(filtered)}
-            >
-              <Download className="size-4" />
-              Export CSV
-            </Button>
-          </div>
+    <PageShell>
+      <div className="space-y-6">
+          <PageHeader
+            eyebrow="Finance"
+            title="Expense Review"
+            subtitle="Review, approve, reject, and export operational expenses."
+            icon={Receipt}
+            actions={
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => exportExpensesCsv(filtered)}
+              >
+                <Download className="size-4" />
+                Export CSV
+              </Button>
+            }
+          />
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Clock className="size-4" /> Pending
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{pending.length}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-600" /> Approved
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{approved.length}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                  <XCircle className="size-4 text-rose-600" /> Rejected
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{rejected.length}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                  <DollarSign className="size-4" /> Total Amount
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{format(totalAmount)}</p>
-              </CardContent>
-            </Card>
+            <StatCard label="Pending" value={pending.length} icon={Clock} accent="bg-warning/10 text-warning" />
+            <StatCard label="Approved" value={approved.length} icon={CheckCircle2} accent="bg-success/10 text-success" />
+            <StatCard label="Rejected" value={rejected.length} icon={XCircle} accent="bg-destructive/10 text-destructive" />
+            <StatCard label="Total Amount" value={format(totalAmount)} icon={DollarSign} accent="bg-primary/10 text-primary" />
           </div>
 
           <div className="flex items-center gap-3">
@@ -359,7 +319,6 @@ export default function AccountantExpensesPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
 
       <Dialog open={!!commentExpense} onOpenChange={() => setCommentExpense(null)}>
         <DialogContent>
@@ -409,6 +368,6 @@ export default function AccountantExpensesPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

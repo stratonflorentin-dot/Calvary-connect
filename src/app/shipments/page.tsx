@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -81,11 +81,9 @@ export default function ShipmentsListPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <PageShell>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-headline tracking-tighter flex items-center gap-2">
                 <Ship className="size-7 text-primary" /> Shipments
@@ -161,7 +159,6 @@ export default function ShipmentsListPage() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }

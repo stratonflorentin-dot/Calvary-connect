@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
@@ -216,11 +216,9 @@ export default function FuelPerTripReportPage() {
   const avgLitersPer100km = summary.totalDistanceKm > 0 ? (totalLitersAllCurrencies / summary.totalDistanceKm) * 100 : null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-64 p-4 md:p-8 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <Link href="/admin/reports/fleet/fuel" className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors uppercase tracking-wider w-fit">
+    <PageShell>
+      <div className="space-y-6">
+        <Link href="/admin/reports/fleet/fuel" className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors uppercase tracking-wider w-fit">
             <ArrowLeft className="size-3.5" />
             Back to Fuel Consumption
           </Link>
@@ -428,8 +426,8 @@ export default function FuelPerTripReportPage() {
             </>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }
 

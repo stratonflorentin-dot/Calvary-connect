@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
+import { PageShell } from "@/components/shell";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,10 +175,8 @@ export default function BulkExpensesPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <PageShell>
+      <div className="space-y-6">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <Link href="/expenses" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
@@ -300,7 +298,7 @@ export default function BulkExpensesPage() {
             </Button>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }

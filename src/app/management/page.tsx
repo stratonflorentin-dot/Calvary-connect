@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/hooks/use-role";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -123,22 +123,19 @@ export default function ManagementDashboard() {
 
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={role || "CEO"} />
-        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+      <PageShell>
+        <div className="flex items-center justify-center">
           <div className="text-center">
             <p className="text-muted-foreground">Access denied. Management dashboard requires admin access.</p>
           </div>
-        </main>
-      </div>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role || "CEO"} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
+    <PageShell>
+      <div className="max-w-7xl mx-auto">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">Management Dashboard</h1>
@@ -383,7 +380,6 @@ export default function ManagementDashboard() {
             </Card>
           </div>
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }

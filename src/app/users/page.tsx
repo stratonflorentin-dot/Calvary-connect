@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
@@ -336,10 +336,8 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role!} />
-      <main className="flex-1 min-w-0 md:ml-64 p-4 md:p-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+    <PageShell>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-headline tracking-tighter">User Management</h1>
             <p className="text-sm md:text-base text-muted-foreground">Add and manage employee access.</p>
@@ -863,8 +861,8 @@ export default function UsersPage() {
           </Table>
           </div>
         </div>
-      </main>
-    </div>
+        </div>
+    </PageShell>
   );
 }
 

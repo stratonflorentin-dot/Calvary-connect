@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/hooks/use-role";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -274,22 +274,19 @@ export default function PODPage() {
 
   if (role === "DRIVER") {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={role} />
-        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+      <PageShell>
+        <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <p className="text-muted-foreground">Access denied. Drivers cannot access POD management.</p>
           </div>
-        </main>
-      </div>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role || "CEO"} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
+    <PageShell>
+      <div className="max-w-7xl mx-auto">
           <div className="mb-4 flex items-center justify-between">
             <Button variant="ghost" asChild>
               <Link href="/operations/dashboard">
@@ -532,8 +529,7 @@ export default function PODPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }

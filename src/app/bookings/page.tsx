@@ -6,7 +6,7 @@ import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
 import { checkCreditLimit } from '@/lib/finance/credit-check';
 import { supabase } from '@/lib/supabase';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -444,11 +444,9 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-8">
-          {/* Header */}
+    <PageShell>
+      <div className="space-y-8">
+        {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-4xl font-bold text-foreground tracking-tight">Bookings</h1>
@@ -760,7 +758,6 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
             </CardContent>
           </Card>
         </div>
-      </main>
 
       {/* Contract Dialog */}
       <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}>
@@ -902,7 +899,7 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}                         Date: ________
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }
 
@@ -916,16 +913,12 @@ export default function BookingsPage() {
 
 function BookingsLoading() {
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-8">
-            <div className="h-12 bg-muted rounded-xl w-64" />
-            <div className="h-6 bg-muted rounded-xl w-96" />
-            <div className="h-64 bg-muted rounded-xl" />
-          </div>
-        </div>
+    <PageShell>
+      <div className="animate-pulse space-y-8">
+        <div className="h-12 bg-muted rounded-xl w-64" />
+        <div className="h-6 bg-muted rounded-xl w-96" />
+        <div className="h-64 bg-muted rounded-xl" />
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
@@ -253,16 +253,14 @@ export default function ShipmentDetailPage() {
   };
 
   if (!role) return null;
-  if (loading) return <div className="flex min-h-screen bg-background"><Sidebar role={role} /><main className="flex-1 flex items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></main></div>;
-  if (!shipment) return <div className="flex min-h-screen bg-background"><Sidebar role={role} /><main className="flex-1 p-8 text-center text-muted-foreground">Shipment not found.</main></div>;
+  if (loading) return <PageShell><div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div></PageShell>;
+  if (!shipment) return <PageShell><div className="p-8 text-center text-muted-foreground">Shipment not found.</div></PageShell>;
 
   const nextStage = shipment.status === "cancelled" ? null : STAGES[currentStageIndex + 1];
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <PageShell>
+      <div className="max-w-6xl mx-auto space-y-6">
           <Link href="/shipments" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Back to Shipments
           </Link>
@@ -464,7 +462,6 @@ export default function ShipmentDetailPage() {
             </div>
           </div>
         </div>
-      </main>
 
       <TripFormDialog
         open={tripDialogOpen}
@@ -533,6 +530,6 @@ export default function ShipmentDetailPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

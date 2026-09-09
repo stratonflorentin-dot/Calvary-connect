@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell, PageHeader } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
@@ -257,19 +257,19 @@ export default function NewQuotationPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div>
-            <Link href="/quotations" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
-              <ArrowLeft className="size-4" /> Back to Quotations
-            </Link>
-            <h1 className="text-2xl md:text-3xl font-headline tracking-tighter flex items-center gap-2">
-              <FileText className="size-7 text-primary" /> Create Quotation
-            </h1>
-            <p className="text-muted-foreground">Build a professional quotation for your customer</p>
-          </div>
+    <PageShell>
+      <div className="max-w-6xl mx-auto space-y-6">
+          <PageHeader
+            eyebrow="Sales"
+            title="Create Quotation"
+            subtitle="Build a professional quotation for your customer"
+            icon={FileText}
+            actions={
+              <Link href="/quotations" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="size-4" /> Back to Quotations
+              </Link>
+            }
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left column */}
@@ -406,8 +406,7 @@ export default function NewQuotationPage() {
               </div>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }

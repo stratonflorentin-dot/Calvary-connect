@@ -5,7 +5,7 @@ import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -121,11 +121,9 @@ export default function SuppliersPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+    <PageShell>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <h1 className="text-3xl font-bold">Suppliers</h1>
               <p className="text-muted-foreground">Manage your vendor database</p>
@@ -336,7 +334,6 @@ export default function SuppliersPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }

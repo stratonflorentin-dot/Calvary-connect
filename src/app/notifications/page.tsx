@@ -1,6 +1,6 @@
 "use client";
 
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Info, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
@@ -109,24 +109,22 @@ export default function NotificationsPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <header className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-headline tracking-tighter">Notifications Center</h1>
-            <p className="text-muted-foreground text-sm font-sans">
-              Trips, fuel, expenses, maintenance, and delivery updates only.
-            </p>
-          </div>
-          {notifications.length > 0 && (
-            <Button variant="outline" size="sm" className="shrink-0 text-red-500 hover:text-red-600" onClick={clearAll}>
-              <Trash2 className="size-3.5 mr-1.5" />
-              Clear all
-            </Button>
-          )}
-        </header>
-        <div className="max-w-2xl space-y-4">
+    <PageShell>
+      <header className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-headline tracking-tighter">Notifications Center</h1>
+          <p className="text-muted-foreground text-sm font-sans">
+            Trips, fuel, expenses, maintenance, and delivery updates only.
+          </p>
+        </div>
+        {notifications.length > 0 && (
+          <Button variant="outline" size="sm" className="shrink-0 text-red-500 hover:text-red-600" onClick={clearAll}>
+            <Trash2 className="size-3.5 mr-1.5" />
+            Clear all
+          </Button>
+        )}
+      </header>
+      <div className="max-w-2xl space-y-4">
           {!notifications || notifications.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground text-sm">
@@ -170,8 +168,7 @@ export default function NotificationsPage() {
             ))
           )}
         </div>
-      </main>
-    </div>
+    </PageShell>
   );
 }
 

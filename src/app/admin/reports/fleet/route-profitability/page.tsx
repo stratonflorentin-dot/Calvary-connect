@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, startTransition } from 'react';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -140,13 +140,10 @@ export default function RouteProfitabilityPage() {
   const topRoute = routes.length > 0 ? routes[0] : null;
 
   return (
-    <div id="report-root" className="flex min-h-screen bg-background" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
-      <Sidebar role={role} />
-      
-      <main className="flex-1 min-w-0 md:ml-64 p-4 md:p-8 overflow-auto">
-        <div className="max-w-7xl mx-auto space-y-6">
-          
-          <div className="flex items-center gap-2">
+    <PageShell>
+      <div id="report-root" className="space-y-6" data-initial-from={defaultFrom} data-initial-to={defaultTo}>
+
+        <div className="flex items-center gap-2">
             <Link href="/reports" className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary transition-colors uppercase tracking-wider">
               <ArrowLeft className="size-3.5" />
               Back to Reports
@@ -375,7 +372,7 @@ export default function RouteProfitabilityPage() {
           )}
 
         </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }

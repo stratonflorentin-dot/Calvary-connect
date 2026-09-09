@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,11 +104,9 @@ export default function TripCostVariancePage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-3">
+    <PageShell>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <Link href="/reports" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2">
                 <ArrowLeft className="size-4" /> Back to Reports
@@ -268,7 +266,7 @@ export default function TripCostVariancePage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }

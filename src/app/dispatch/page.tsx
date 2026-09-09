@@ -8,7 +8,6 @@ import {
   Package, ArrowRight, Eye, Edit, X, Loader2
 } from "lucide-react";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { cn } from "@/lib/utils";

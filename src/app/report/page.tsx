@@ -2,7 +2,7 @@
 
 import { useSupabase } from '@/components/supabase-provider';
 import { useRole } from '@/hooks/use-role';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ export default function MaintenanceReportPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     // Simulate submission delay
     setTimeout(() => {
       setIsSubmitting(false);
@@ -45,10 +45,8 @@ export default function MaintenanceReportPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background pb-20 md:pb-0">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-2xl mx-auto space-y-6">
+    <PageShell>
+      <div className="max-w-2xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-headline tracking-tighter">Maintenance Report</h1>
             <p className="text-muted-foreground">Report vehicle breakdowns or request routine maintenance.</p>
@@ -90,12 +88,12 @@ export default function MaintenanceReportPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Detailed Description</Label>
-                  <Textarea 
-                    id="description" 
-                    placeholder="Describe exactly what is wrong, strange noises, apparent damage, etc..." 
-                    className="resize-none" 
-                    rows={4} 
-                    required 
+                  <Textarea
+                    id="description"
+                    placeholder="Describe exactly what is wrong, strange noises, apparent damage, etc..."
+                    className="resize-none"
+                    rows={4}
+                    required
                   />
                 </div>
 
@@ -113,7 +111,7 @@ export default function MaintenanceReportPage() {
             </CardContent>
           </Card>
         </div>
-      </main>    </div>
+    </PageShell>
   );
 }
 

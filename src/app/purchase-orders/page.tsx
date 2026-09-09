@@ -6,7 +6,7 @@ import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -262,12 +262,10 @@ function PurchaseOrdersInner() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Purchase Orders</h1>
+    <PageShell>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Purchase Orders</h1>
             <p className="text-muted-foreground">Order, send, and receive stock from suppliers</p>
           </div>
 
@@ -491,7 +489,6 @@ function PurchaseOrdersInner() {
             </CardContent>
           </Card>
         </div>
-      </main>
 
       <Dialog open={!!receiving} onOpenChange={(open) => !open && setReceiving(null)}>
         <DialogContent className="max-w-lg">
@@ -530,7 +527,7 @@ function PurchaseOrdersInner() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
@@ -35,10 +35,8 @@ export default function DriversPage() {
     }, []);
 
     return (
-        <div className="flex min-h-screen bg-background">
-            <Sidebar role={role!} />
-            <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-                <div className="max-w-4xl mx-auto">
+        <PageShell>
+            <div className="max-w-4xl mx-auto">
                     <Card>
                         <CardHeader>
                             <CardTitle>Drivers</CardTitle>
@@ -73,7 +71,6 @@ export default function DriversPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </main>
-        </div>
+        </PageShell>
     );
 }

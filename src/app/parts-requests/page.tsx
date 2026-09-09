@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Sidebar } from '@/components/navigation/sidebar';
+import { PageShell } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
@@ -127,22 +127,20 @@ export default function PartsRequestsPage() {
 
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={role!} />
-        <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8 flex items-center justify-center">
+      <PageShell>
+        <div className="flex items-center justify-center">
           <div className="text-center bg-card p-8 rounded-2xl border shadow-sm max-w-md w-full">
             <h1 className="text-2xl font-bold text-destructive mb-2">Access Denied</h1>
             <p className="text-muted-foreground text-sm">You do not have permission to review parts requests.</p>
           </div>
-        </main>
-      </div>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role!} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
+    <PageShell>
+      <div className="space-y-6">
         <header className="mb-8">
           <h1 className="text-3xl font-headline tracking-tighter">Maintenance & Parts Approvals</h1>
           <p className="text-muted-foreground text-sm font-sans">Review and authorize mechanic resource requests.</p>
@@ -275,8 +273,8 @@ export default function PartsRequestsPage() {
             </TableBody>
           </Table>
         </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }
 

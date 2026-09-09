@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sidebar } from "@/components/navigation/sidebar";
+import { PageShell } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";
@@ -190,19 +190,17 @@ export default function QuotationDetailPage() {
 
   if (!role) return null;
   if (loading) return (
-    <div className="flex min-h-screen bg-background"><Sidebar role={role} /><main className="flex-1 flex items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></main></div>
+    <PageShell><div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div></PageShell>
   );
   if (!quotation) return (
-    <div className="flex min-h-screen bg-background"><Sidebar role={role} /><main className="flex-1 p-8 text-center text-muted-foreground">Quotation not found.</main></div>
+    <PageShell><div className="p-8 text-center text-muted-foreground">Quotation not found.</div></PageShell>
   );
 
   const publicLink = typeof window !== "undefined" ? `${window.location.origin}/q/${quotation.public_token}` : "";
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+    <PageShell>
+      <div className="max-w-4xl mx-auto space-y-6">
           <Link href="/quotations" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Back to Quotations
           </Link>
@@ -365,8 +363,7 @@ export default function QuotationDetailPage() {
               <p className="text-foreground">{quotation.internal_notes}</p>
             </div>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }

@@ -5,12 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
-import { Sidebar } from "@/components/navigation/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EntityHeader, StatCard, DataTable, StatusBadge } from "@/components/shell";
+import { PageShell, EntityHeader, StatCard, DataTable, StatusBadge } from "@/components/shell";
 import { formatCurrency } from "@/components/ui/currency-badge";
 import {
   TrendingUp, TrendingDown, DollarSign, FileText,
@@ -202,10 +201,8 @@ export default function CustomerDetailPage() {
   if (!role) return null;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar role={role} />
-      <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <PageShell>
+      <div className="space-y-6">
           {loading || !customer ? (
             <p className="text-muted-foreground">Loading…</p>
           ) : (
@@ -394,8 +391,7 @@ export default function CustomerDetailPage() {
               </Tabs>
             </>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }

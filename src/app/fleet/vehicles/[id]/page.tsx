@@ -11,8 +11,7 @@ import { StatMiniCard } from '@/components/ui/stat-mini-card';
 import { GradientCard } from '@/components/ui/gradient-card';
 import { VehicleHealthBadge } from '@/components/ui/vehicle-health-badge';
 import { DocumentStatusBadge } from '@/components/ui/document-status-badge';
-import { Sidebar } from '@/components/navigation/sidebar';
-import { EntityHeader } from '@/components/shell';
+import { PageShell, EntityHeader } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { useVehicleDetail } from '@/hooks/use-vehicle-detail';
 import { useCurrency } from '@/hooks/use-currency';
@@ -45,33 +44,27 @@ export default function VehicleDetailPage() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen bg-background">
-                <Sidebar role={role} />
-                <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-                    <div className="max-w-7xl mx-auto animate-pulse space-y-4">
-                        <div className="h-12 bg-muted rounded-lg"></div>
-                        <div className="h-32 bg-muted rounded-lg"></div>
-                    </div>
-                </main>
-            </div>
+            <PageShell>
+                <div className="max-w-7xl mx-auto animate-pulse space-y-4">
+                    <div className="h-12 bg-muted rounded-lg"></div>
+                    <div className="h-32 bg-muted rounded-lg"></div>
+                </div>
+            </PageShell>
         );
     }
 
     if (!vehicle) {
         return (
-            <div className="flex min-h-screen bg-background">
-                <Sidebar role={role} />
-                <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-                    <div className="max-w-7xl mx-auto">
-                        <Card className="p-8 text-center">
-                            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-                            <h2 className="text-xl font-semibold mb-2">Vehicle Not Found</h2>
-                            <p className="text-muted-foreground mb-4">The vehicle you're looking for doesn't exist.</p>
-                            <Button onClick={() => router.back()}>Go Back</Button>
-                        </Card>
-                    </div>
-                </main>
-            </div>
+            <PageShell>
+                <div className="max-w-7xl mx-auto">
+                    <Card className="p-8 text-center">
+                        <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+                        <h2 className="text-xl font-semibold mb-2">Vehicle Not Found</h2>
+                        <p className="text-muted-foreground mb-4">The vehicle you're looking for doesn't exist.</p>
+                        <Button onClick={() => router.back()}>Go Back</Button>
+                    </Card>
+                </div>
+            </PageShell>
         );
     }
 
@@ -96,10 +89,8 @@ export default function VehicleDetailPage() {
         : [];
 
     return (
-        <div className="flex min-h-screen bg-background">
-            <Sidebar role={role} />
-            <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-                <div className="max-w-7xl mx-auto space-y-6">
+        <PageShell>
+            <div className="max-w-7xl mx-auto space-y-6">
             {/* SECTION 1: VEHICLE HEADER */}
             <EntityHeader
                 crumbs={[
@@ -758,8 +749,7 @@ export default function VehicleDetailPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
-                </div>
-            </main>
-        </div>
+            </div>
+        </PageShell>
     );
 }

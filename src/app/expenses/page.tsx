@@ -1,11 +1,11 @@
 "use client";
 
 import Link from 'next/link';
-import { Sidebar } from '@/components/navigation/sidebar';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
 import { formatCurrency } from '@/components/ui/currency-badge';
 import { useSupabase } from '@/components/supabase-provider';
+import { PageShell } from '@/components/shell';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -86,10 +86,8 @@ export default function ExpensesPage() {
     if (!role) return null;
 
     return (
-        <div className="flex min-h-screen bg-background">
-            <Sidebar role={role} />
-            <main className="flex-1 min-w-0 md:ml-60 p-4 md:p-8">
-                <div className="max-w-7xl mx-auto space-y-6">
+        <PageShell>
+            <div className="space-y-6">
                     {/* Header */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
@@ -335,9 +333,8 @@ export default function ExpensesPage() {
                             </Table>
                         </CardContent>
                     </Card>
-                </div>
-            </main>
-        </div>
+            </div>
+        </PageShell>
     );
 }
 
