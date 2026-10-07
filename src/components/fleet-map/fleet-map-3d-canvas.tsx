@@ -38,16 +38,11 @@ const MAJOR_CITIES = [
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
 const CARTO_DARK_STYLE_URL =
   "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-const MAP_STYLE_URL = MAPTILER_KEY
-  ? `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`
-  : CARTO_DARK_STYLE_URL;
+// Use CARTO as primary for reliability - MapTiler can be flaky
+const MAP_STYLE_URL = CARTO_DARK_STYLE_URL;
 
-// Fallback style if primary fails. When MapTiler is primary, CARTO is a much
-// better fallback than MapLibre's blank demo tiles; when CARTO is already
-// primary (no MapTiler key), demo tiles remain the last resort.
-const FALLBACK_STYLE_URL = MAPTILER_KEY
-  ? CARTO_DARK_STYLE_URL
-  : "https://demotiles.maplibre.org/style.json";
+// Fallback style if primary fails - use MapLibre demo tiles as last resort
+const FALLBACK_STYLE_URL = "https://demotiles.maplibre.org/style.json";
 
 // Satellite imagery style — a plain raster style (Esri World Imagery, free
 // and keyless) with a transparent place-name/border overlay on top, so it
