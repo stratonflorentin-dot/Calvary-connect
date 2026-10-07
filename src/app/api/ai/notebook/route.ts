@@ -32,7 +32,7 @@ function inRange(iso: string | null | undefined, start: string, end: string) {
  *  degrades to an error note instead of killing the whole request. */
 async function fetchLiveSource(
   key: LiveSourceKey,
-  admin: ReturnType<Awaited<ReturnType<typeof requireFleetReportAccess>>>,
+  admin: Awaited<ReturnType<typeof requireFleetReportAccess>>,
   start: string,
   end: string,
 ): Promise<string> {

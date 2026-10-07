@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { PageShell } from "@/components/shell";
+import { PageShell, PageHeader } from "@/components/shell";
 import { useRole } from "@/hooks/use-role";
 import { useSupabase } from "@/components/supabase-provider";
 import { supabase } from "@/lib/supabase";

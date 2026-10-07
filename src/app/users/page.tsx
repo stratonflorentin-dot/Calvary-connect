@@ -861,7 +861,6 @@ export default function UsersPage() {
           </Table>
           </div>
         </div>
-        </div>
     </PageShell>
   );
 }

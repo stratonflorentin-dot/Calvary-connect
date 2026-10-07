@@ -70,9 +70,14 @@ const CLOSING_RE = /(closing|carried forward|c\/f)\s*balance|balance\s*(carried 
 const DRCR_SUFFIX_RE = /\b(DR|CR|Dr|Cr)\b\.?$/;
 
 function lazyPdfjs() {
-  // Loaded on demand (browser only) — pdfjs-dist pulls in a worker script
-  // that has no meaning during a server-side build.
-  return import("pdfjs-dist");
+  // Loaded on demand (browser only). Avoid the webpack ESM worker path issue
+  // by disabling the worker; pdfjs falls back to the main thread. On modern
+  // statement PDFs this is fast enough and avoids bundling the .mjs worker.
+  return import("pdfjs-dist/legacy/build/pdf.mjs").then((m) => {
+    const lib = m as any;
+    lib.GlobalWorkerOptions.workerSrc = "";
+    return lib;
+  });
 }
 
 /** Groups a page's text items into visual lines (same Y, within tolerance)
@@ -302,8 +307,6 @@ function parseLinesIntoStatement(
 
 export async function extractStatementPdf(file: File): Promise<ParsedPdfStatement> {
   const pdfjsLib = await lazyPdfjs();
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-
   const buffer = await file.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
 
@@ -313,7 +316,7 @@ export async function extractStatementPdf(file: File): Promise<ParsedPdfStatemen
     const page = await doc.getPage(p);
     const content = await page.getTextContent();
     const tokens: Token[] = content.items
-      .filter((it): it is typeof it & { str: string } => "str" in it && it.str.trim().length > 0)
+      .filter((it: any): it is typeof it & { str: string } => "str" in it && it.str.trim().length > 0)
       .map((it: any) => ({ text: it.str.trim(), x: it.transform[4], y: it.transform[5] }));
     totalChars += tokens.reduce((s, t) => s + t.text.length, 0);
     pageLines.push(toLines(tokens));
@@ -341,7 +344,6 @@ export async function extractStatementPdfOcr(
   onProgress?: (info: OcrProgress) => void,
 ): Promise<ParsedPdfStatement> {
   const pdfjsLib = await lazyPdfjs();
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
   const { createWorker } = await import("tesseract.js");
 
   const buffer = await file.arrayBuffer();
