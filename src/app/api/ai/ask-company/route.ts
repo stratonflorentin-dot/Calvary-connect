@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import SYSTEM_PROMPT from '@/ai/flows/company-chat.server';
 import { getFleetContext } from '@/lib/ai-database-context';
 import { generateAI } from '@/lib/ai-provider';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(req: Request) {
     try {
@@ -16,16 +17,37 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
             }
         }
-        const { message, history = [], liveMetrics = {} } = body;
+        const { message, history = [], liveMetrics = {}, user = null } = body;
 
         // For security, resolve the database context server-side instead of accepting it from clients.
         const dbContext = await getFleetContext();
+
+        // Resolve the signed-in user's identity server-side (authoritative
+        // name/role from user_profiles), falling back to what the client sent.
+        let identity: any = null;
+        if (user?.email) {
+            try {
+                const admin = supabaseAdmin();
+                const { data: profile } = await admin
+                    .from('user_profiles')
+                    .select('name, role')
+                    .ilike('email', String(user.email).toLowerCase().trim())
+                    .maybeSingle();
+                identity = {
+                    email: user.email,
+                    name: profile?.name || user.name || null,
+                    role: profile?.role || user.role || null,
+                };
+            } catch {
+                identity = { email: user.email, name: user.name || null, role: user.role || null };
+            }
+        }
 
         // Short-circuit health-checks in development to allow quick local smoke tests.
         if (typeof message === 'string' && message.toLowerCase().includes('health check')) {
             return NextResponse.json({ text: 'OK' });
         }
-        const system = SYSTEM_PROMPT(liveMetrics, dbContext);
+        const system = SYSTEM_PROMPT(liveMetrics, dbContext, identity);
         const formattedHistory = (history || []).map((h: any) => ({ role: h.role, content: [{ text: h.text }] }));
 
         // Use centralized provider abstraction

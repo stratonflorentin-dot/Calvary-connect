@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/industry-cc3b9f68-d2e0-441e-9337-42c19f04e1a4/styles.css">
+<script src="_ds/industry-cc3b9f68-d2e0-441e-9337-42c19f04e1a4/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)}
+a{color:var(--color-accent-700)}a:hover{color:var(--color-accent)}
+.dv-turn{padding:44px 48px 36px;border-bottom:1px solid var(--color-divider);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:var(--color-text);color:var(--color-bg);text-decoration:none}
+.dv-tname{font-family:var(--font-heading);font-weight:600;font-size:15px;letter-spacing:.01em}
+.dv-sub{margin:0 0 26px;font-size:12px;color:color-mix(in srgb,var(--color-text) 55%,transparent);max-width:76ch}
+.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:color-mix(in srgb,var(--color-text) 8%,transparent);color:var(--color-text);text-decoration:none}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:11px;scroll-margin-top:16px}
+.dv-olabel{display:flex;align-items:baseline;gap:9px;font-size:11.5px;color:color-mix(in srgb,var(--color-text) 60%,transparent)}
+.dv-opt:target .dv-oid{background:var(--color-accent);color:var(--color-bg)}
+.dv-card{background:var(--color-bg);border:1px solid var(--color-divider);position:relative}
+.dv-note{margin:9px 0 0;font-size:11px;line-height:1.5;color:color-mix(in srgb,var(--color-text) 55%,transparent);max-width:60ch;border-left:1px solid var(--color-divider);padding-left:10px}
+.dv-next{margin:26px 0 0;font-size:12px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 50%,transparent)}
+.wf-mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.01em}
+.wf-lbl{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 52%,transparent)}
+.wf-ph{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 7%,transparent) 0 1px,transparent 1px 7px);display:grid;place-items:center;border:1px solid var(--color-divider)}
+.wf-nav a{display:block;padding:6px 10px;font-size:12.5px;color:color-mix(in srgb,var(--color-text) 62%,transparent);text-decoration:none;border-left:2px solid transparent}
+.wf-nav a:hover{background:color-mix(in srgb,var(--color-text) 5%,transparent);color:var(--color-text)}
+.wf-nav a[aria-current=page]{border-left-color:var(--color-accent);color:var(--color-text);background:color-mix(in srgb,var(--color-accent) 9%,transparent)}
+.wf-tab{padding:5px 11px;font-size:11.5px;border:1px solid var(--color-divider);background:transparent;cursor:pointer;font-family:var(--font-body);color:color-mix(in srgb,var(--color-text) 65%,transparent)}
+.wf-tab[aria-selected=true]{background:var(--color-accent);border-color:var(--color-accent);color:var(--color-bg)}
+.wf-th{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 55%,transparent);text-align:left;padding:7px 8px;border-bottom:1px solid var(--color-divider);font-weight:400}
+.wf-td{padding:9px 8px;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);font-size:12.5px;vertical-align:middle}
+.wf-tbl tbody tr:hover{background:color-mix(in srgb,var(--color-text) 4%,transparent)}
+/* Motion tokens lifted from src/lib/animations.ts — EASE [0.16,1,0.3,1], micro 150ms, base 250ms, modal 350ms, 35ms row stagger */
+@keyframes wfSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes wfListItem{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes wfBarGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes wfPulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes wfShimmer{from{background-position:-180px 0}to{background-position:180px 0}}
+.dv-card{animation:wfSlideUp .25s cubic-bezier(.16,1,.3,1) both}
+.wf-tbl tbody tr{animation:wfListItem .15s cubic-bezier(.16,1,.3,1) both}
+.wf-tbl tbody tr:nth-child(1){animation-delay:.03s}.wf-tbl tbody tr:nth-child(2){animation-delay:.065s}.wf-tbl tbody tr:nth-child(3){animation-delay:.1s}.wf-tbl tbody tr:nth-child(4){animation-delay:.135s}.wf-tbl tbody tr:nth-child(5){animation-delay:.17s}.wf-tbl tbody tr:nth-child(6){animation-delay:.205s}.wf-tbl tbody tr:nth-child(7){animation-delay:.24s}.wf-tbl tbody tr:nth-child(8){animation-delay:.275s}
+.card.blueprint{transition:transform .15s cubic-bezier(.16,1,.3,1),box-shadow .15s cubic-bezier(.16,1,.3,1)}
+.card.blueprint:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.btn{transition:background .15s cubic-bezier(.16,1,.3,1),transform .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.btn:active{transform:scale(.97)}
+.wf-tab,.wf-nav a{transition:background .15s cubic-bezier(.16,1,.3,1),color .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.wf-bar{animation:wfBarGrow .35s cubic-bezier(.16,1,.3,1) both;transform-origin:bottom}
+.wf-live{animation:wfPulse 1.8s cubic-bezier(.16,1,.3,1) infinite}
+.wf-fill{transition:width .35s cubic-bezier(.16,1,.3,1)}
+.wf-skel{background:linear-gradient(90deg,color-mix(in srgb,var(--color-text) 6%,transparent) 0,color-mix(in srgb,var(--color-text) 12%,transparent) 50%,color-mix(in srgb,var(--color-text) 6%,transparent) 100%);background-size:180px 100%;animation:wfShimmer 1.1s linear infinite}
+@media (prefers-reduced-motion:reduce){.dv-card,.wf-tbl tbody tr,.wf-bar,.wf-live,.wf-skel{animation:none!important}.card.blueprint:hover{transform:none}.btn:active{transform:none}}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Tracking, three-pane — from your reference</span></div>
+<p class="dv-sub">What the reference actually contributes is a <strong>structure</strong>: nav / filterable vehicle grid / deep detail pane, all resident at once, so an operator never loses the fleet to read one truck. I've taken that and dropped the dark chrome and the drawn trucks, because Industry is a light blueprint system — <a class="dv-oid" href="#3b">3b</a> tests the reference's dark treatment using the one dark field the system permits (accent-900), so you can judge it directly against <a class="dv-oid" href="#3a">3a</a>. Replaces the map-only pane in <a class="dv-oid" href="#2c">2c</a>.</p>
+
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a">
+<div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Tracking — three resident panes, Industry light</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:186px 340px 1fr;min-height:780px">
+
+  <div style="border-right:1px solid var(--color-divider);padding:15px 0;display:flex;flex-direction:column">
+    <div style="padding:0 13px 16px"><div style="font-family:var(--font-heading);font-weight:600;font-size:15px;line-height:1.1">Calvary Connect</div><div class="wf-lbl" style="margin-top:2px">Since 2011</div></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#2c">Dashboard</a><a href="#3a">Chats</a><a href="#3a">Partners</a><a href="#3a" aria-current="page">Tracking</a>
+      <div class="wf-lbl" style="padding:10px 12px 4px">Requests</div>
+      <a href="#1a" style="padding-left:20px">Trucks <span class="tag tag-neutral" style="margin-left:6px">6</span></a>
+      <a href="#3a" style="padding-left:20px">Cargo <span class="tag tag-neutral" style="margin-left:6px">3</span></a>
+      <a href="#2g" style="padding-left:20px">Repair <span class="tag tag-accent" style="margin-left:6px">2</span></a>
+      <a href="#2f" style="padding-left:20px">Drivers <span class="tag tag-neutral" style="margin-left:6px">1</span></a>
+      <a href="#3a" style="padding-left:20px">Reports <span class="tag tag-neutral" style="margin-left:6px">4</span></a>
+      <a href="#2d">Analysis</a><a href="#1c">History</a>
+    </nav>
+    <div style="margin-top:auto;padding:14px 12px 0;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:5px">
+        <div class="wf-ph" style="width:26px;height:26px"></div><div class="wf-ph" style="width:26px;height:26px"></div><div class="wf-ph" style="width:26px;height:26px"></div><div class="wf-ph" style="width:26px;height:26px"></div>
+      </div>
+      <div class="blueprint" style="padding:13px 11px;display:flex;flex-direction:column;gap:7px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="width:30px;height:30px;background:var(--color-accent);color:var(--color-bg);display:grid;place-items:center;font-family:var(--font-heading);font-size:18px">+</div>
+        <div style="font-size:12.5px;line-height:1.25">Create new request</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="border-right:1px solid var(--color-divider);display:flex;flex-direction:column">
+    <div style="padding:15px 14px 12px;display:flex;flex-direction:column;gap:11px;border-bottom:1px solid var(--color-divider)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <h3 style="margin:0">Tracking</h3><input class="input" placeholder="Search plate or trip" style="max-width:130px">
+      </div>
+      <div>
+        <div class="wf-lbl" style="margin-bottom:6px">Filter by partner</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          <span class="tag tag-outline">Dangote Cement <span style="opacity:.6;margin-left:5px">9</span></span>
+          <span class="tag tag-outline">Yara Tanzania <span style="opacity:.6;margin-left:5px">6</span></span>
+          <span class="tag tag-outline">Kilimanjaro Bev. <span style="opacity:.6;margin-left:5px">5</span></span>
+          <span class="tag tag-outline">Tanga Cement <span style="opacity:.6;margin-left:5px">4</span></span>
+          <span class="tag tag-outline">Bakhresa <span style="opacity:.6;margin-left:5px">3</span></span>
+        </div>
+      </div>
+      <div>
+        <div class="wf-lbl" style="margin-bottom:6px">Show</div>
+        <div class="seg"><label class="seg-opt"><input type="radio" name="trk" checked>All <span style="opacity:.6;margin-left:4px">30</span></label><label class="seg-opt"><input type="radio" name="trk">Active <span style="opacity:.6;margin-left:4px">27</span></label><label class="seg-opt"><input type="radio" name="trk">Idle <span style="opacity:.6;margin-left:4px">3</span></label></div>
+      </div>
+    </div>
+
+    <div style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start">
+      <div class="card blueprint" style="padding:9px;gap:5px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:5px"><span class="wf-mono" style="font-size:11px;font-weight:700">T 889 BXR</span><span class="tag tag-outline" style="font-size:9.5px;padding:2px 6px">Loading</span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 7px;font-size:10px;color:color-mix(in srgb,var(--color-text) 58%,transparent)"><span class="wf-mono">08:20</span><span>Ubungo yard</span><span class="wf-mono">—</span><span>Morogoro</span></div>
+        <div class="wf-ph" style="height:44px"><span class="wf-lbl" style="font-size:8px">dump truck</span></div>
+      </div>
+      <div class="card blueprint" style="padding:9px;gap:5px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:5px"><span class="wf-mono" style="font-size:11px;font-weight:700">T 655 NDA</span><span class="tag tag-accent" style="font-size:9.5px;padding:2px 6px">On route</span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 7px;font-size:10px;color:color-mix(in srgb,var(--color-text) 58%,transparent)"><span class="wf-mono">19:10</span><span>Dar es Salaam</span><span class="wf-mono">412 km</span><span>Tunduma</span></div>
+        <div class="wf-ph" style="height:44px"><span class="wf-lbl" style="font-size:8px">truck head</span></div>
+      </div>
+      <div class="card blueprint" style="padding:9px;gap:5px;border-color:var(--color-accent);background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:5px"><span class="wf-mono" style="font-size:11px;font-weight:700">T 412 DKA</span><span class="tag tag-accent" style="font-size:9.5px;padding:2px 6px">On route</span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 7px;font-size:10px;color:color-mix(in srgb,var(--color-text) 58%,transparent)"><span class="wf-mono">06:35</span><span>Dar es Salaam</span><span class="wf-mono">413 km</span><span>Mwanza</span></div>
+        <div class="wf-ph" style="height:44px"><span class="wf-lbl" style="font-size:8px">truck head + trailer</span></div>
+      </div>
+      <div class="card blueprint" style="padding:9px;gap:5px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:5px"><span class="wf-mono" style="font-size:11px;font-weight:700">T 104 MWZ</span><span class="tag tag-accent" style="font-size:9.5px;padding:2px 6px">On route</span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 7px;font-size:10px;color:color-mix(in srgb,var(--color-text) 58%,transparent)"><span class="wf-mono">05:00</span><span>Dar es Salaam</span><span class="wf-mono">88 km</span><span>Dodoma</span></div>
+        <div class="wf-ph" style="height:44px"><span class="wf-lbl" style="font-size:8px">trailer</span></div>
+      </div>
+      <div class="card blueprint" style="padding:9px;gap:5px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:5px"><span class="wf-mono" style="font-size:11px;font-weight:700">T 347 PLK</span><span class="tag tag-accent" style="font-size:9.5px;padding:2px 6px">On route</span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 7px;font-size:10px;color:color-mix(in srgb,var(--color-text) 58%,transparent)"><span class="wf-mono">08:15</span><span>Kinyerezi pit</span><span class="wf-mono">12 km</span><span>Ubungo site</span></div>
+        <div class="wf-ph" style="height:44px"><span class="wf-lbl" style="font-size:8px">dump truck</span></div>
+      </div>
+      <div class="card blueprint" style="padding:9px;gap:5px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:5px"><span class="wf-mono" style="font-size:11px;font-weight:700">T 530 GBX</span><span class="tag tag-outline" style="font-size:9.5px;padding:2px 6px">Workshop</span></div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 7px;font-size:10px;color:color-mix(in srgb,var(--color-text) 58%,transparent)"><span class="wf-mono">—</span><span>Ubungo workshop</span><span class="wf-mono">—</span><span>Service overdue</span></div>
+        <div class="wf-ph" style="height:44px"><span class="wf-lbl" style="font-size:8px">truck head</span></div>
+      </div>
+      <div class="card blueprint" style="padding:9px;gap:5px;grid-column:span 2;flex-direction:row;align-items:center;justify-content:space-between"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <span class="wf-mono" style="font-size:11px">T 018 KRW · idle 3 days</span><span class="tag tag-neutral" style="font-size:9.5px;padding:2px 6px">Idle</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column">
+    <div style="padding:15px 16px 0;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--color-divider)">
+      <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap">
+        <h3 style="margin:0" class="wf-mono">TRP-2418</h3>
+        <span class="tag tag-accent wf-live">On route</span>
+        <span class="wf-lbl">T 412 DKA · Juma Hassan</span>
+        <div style="display:flex;gap:7px;margin-left:auto"><button class="btn btn-secondary">Call driver</button><button class="btn btn-primary">Chat with driver</button></div>
+      </div>
+      <div style="display:flex;gap:0">
+        <button class="wf-tab" aria-selected="true" style="border:0;border-bottom:2px solid var(--color-accent);background:transparent;color:var(--color-text)">Shipping info</button>
+        <button class="wf-tab" style="border:0;background:transparent">Vehicle info</button>
+        <button class="wf-tab" style="border:0;background:transparent">Documents</button>
+        <button class="wf-tab" style="border:0;background:transparent">Client</button>
+        <button class="wf-tab" style="border:0;background:transparent">Billing</button>
+      </div>
+    </div>
+
+    <div style="padding:16px;display:flex;flex-direction:column;gap:16px">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><h5 style="margin:0">Current load</h5><span class="wf-lbl">30 t of 51 t permitted · axle-legal</span></div>
+        <div class="blueprint" style="display:grid;grid-template-columns:150px 1fr;gap:0;min-height:132px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="wf-ph" style="border:0;border-right:1px solid var(--color-divider)"><span class="wf-lbl" style="text-align:center;line-height:1.4">truck side<br>elevation</span></div>
+          <div style="position:relative;display:grid;place-items:center;padding:12px">
+            <div class="wf-fill" style="position:absolute;left:0;top:0;bottom:0;width:59%;background:var(--color-accent);display:flex;align-items:center;justify-content:flex-end;padding-right:14px;overflow:hidden"><span style="font-family:var(--font-heading);font-size:44px;line-height:1;color:var(--color-bg);white-space:nowrap">59%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+          <h5 style="margin:0">Route</h5>
+          <div style="display:flex;gap:11px;align-items:center"><span class="wf-mono" style="font-size:12px">18:23:05 elapsed</span><span class="wf-lbl">413 km left</span><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Change route</button></div>
+        </div>
+        <div class="wf-ph blueprint" style="height:230px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="wf-lbl wf-live">live map · Dar es Salaam → Singida → Mwanza · marker rotates to heading</span></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px">
+          <div style="border:1px solid var(--color-divider);padding:8px 9px"><div class="wf-lbl">Departed</div><div class="wf-mono" style="font-size:12px">03 Sep 06:35</div></div>
+          <div style="border:1px solid var(--color-divider);padding:8px 9px"><div class="wf-lbl">Last ping</div><div class="wf-mono" style="font-size:12px">12:58 · Singida</div></div>
+          <div style="border:1px solid var(--color-divider);padding:8px 9px"><div class="wf-lbl">ETA</div><div class="wf-mono" style="font-size:12px">04 Sep 08:20</div></div>
+          <div style="border:1px solid var(--color-divider);padding:8px 9px"><div class="wf-lbl">Fuel</div><div class="wf-mono" style="font-size:12px">62% · 2.9 km/L</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><h5 style="margin:0">Cargo photo reports</h5><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Request photo</button></div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+          <figure><div class="wf-ph blueprint duotone" style="height:78px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="wf-lbl" style="font-size:8.5px">loading bay</span></div><figcaption>Load sealed · 06:20</figcaption></figure>
+          <figure><div class="wf-ph blueprint duotone" style="height:78px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="wf-lbl" style="font-size:8.5px">weighbridge</span></div><figcaption>WB-4471 · 07:58</figcaption></figure>
+          <figure><div class="wf-ph blueprint duotone" style="height:78px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="wf-lbl" style="font-size:8.5px">tarpaulin</span></div><figcaption>Cover check · 08:04</figcaption></figure>
+          <figure><div class="wf-ph blueprint duotone" style="height:78px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="wf-lbl" style="font-size:8.5px">odometer</span></div><figcaption>Fuel stop · 11:12</figcaption></figure>
+          <div class="blueprint" style="height:78px;display:grid;place-items:center"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="wf-lbl" style="text-align:center;line-height:1.4">POD<br>pending</span></div>
+        </div>
+      </div>
+
+      <div>
+        <h5 style="margin:0 0 8px">Route requests</h5>
+        <div class="blueprint" style="padding:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <table class="wf-tbl" style="width:100%;border-collapse:collapse">
+            <tbody>
+              <tr><td class="wf-td wf-mono">11:12</td><td class="wf-td">Fuel · 480 L at Morogoro depot</td><td class="wf-td wf-mono">TSh 1,392,000</td><td class="wf-td"><span class="tag tag-outline">Awaiting accounts</span></td><td class="wf-td" style="text-align:right"><a href="#2d" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td class="wf-td wf-mono">07:58</td><td class="wf-td">Weighbridge fee · Kibaha</td><td class="wf-td wf-mono">TSh 84,000</td><td class="wf-td"><span class="tag tag-neutral">Approved</span></td><td class="wf-td" style="text-align:right"><a href="#2d" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td class="wf-td wf-mono">06:35</td><td class="wf-td">Route deviation · Chalinze bypass</td><td class="wf-td wf-mono">+18 km</td><td class="wf-td"><span class="tag tag-neutral">Accepted</span></td><td class="wf-td" style="text-align:right"><a href="#3a" style="font-size:11.5px">Open</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Three things the reference gets right and I kept: the fleet stays on screen while one truck is read; the detail pane is tabbed so shipping / vehicle / documents / billing don't become four screens; and driver contact sits in the header, not buried. Two things I changed: capacity is stated against the legal axle limit rather than as a bare percentage, and cargo photos are the POD chain your driver app already captures — so this pane is a view of existing data, not a new collection burden.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="3b">
+<div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Same panes on the dark field — the reference's treatment</div>
+<div class="dv-card blueprint" style="width:760px;background:var(--color-accent-900)">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:300px 1fr;min-height:600px;color:var(--color-bg)">
+  <div style="border-right:1px solid rgba(255,255,255,.16);display:flex;flex-direction:column">
+    <div style="padding:14px 13px 11px;border-bottom:1px solid rgba(255,255,255,.16);display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0;color:var(--color-bg)">Tracking</h3><span class="wf-lbl" style="color:rgba(255,255,255,.55)">30 units</span></div>
+      <div class="seg" style="border-color:rgba(255,255,255,.24)">
+        <label class="seg-opt" style="background:var(--color-accent-400);color:var(--color-accent-900)">All 30</label>
+        <label class="seg-opt" style="border-left-color:rgba(255,255,255,.24)">Active 27</label>
+        <label class="seg-opt" style="border-left-color:rgba(255,255,255,.24)">Idle 3</label>
+      </div>
+    </div>
+    <div style="padding:11px;display:grid;grid-template-columns:1fr 1fr;gap:9px;align-content:start">
+      <div style="border:1px solid rgba(255,255,255,.18);padding:9px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-size:11px;font-weight:700">T 889 BXR</span><span class="tag" style="font-size:9.5px;padding:2px 6px;background:rgba(255,255,255,.14);color:var(--color-bg)">Loading</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.6)">Ubungo → Morogoro</div>
+        <div style="height:44px;border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)"><span class="wf-lbl" style="font-size:8px;color:rgba(255,255,255,.5)">dump truck</span></div>
+      </div>
+      <div style="border:1px solid rgba(255,255,255,.18);padding:9px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-size:11px;font-weight:700">T 655 NDA</span><span class="tag" style="font-size:9.5px;padding:2px 6px;background:var(--color-accent-400);color:var(--color-accent-900)">On route</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.6)">Dar → Tunduma · 412 km</div>
+        <div style="height:44px;border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)"><span class="wf-lbl" style="font-size:8px;color:rgba(255,255,255,.5)">truck head</span></div>
+      </div>
+      <div style="border:1px solid var(--color-accent-400);padding:9px;display:flex;flex-direction:column;gap:5px;background:rgba(255,255,255,.07)">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-size:11px;font-weight:700">T 412 DKA</span><span class="tag" style="font-size:9.5px;padding:2px 6px;background:var(--color-accent-400);color:var(--color-accent-900)">On route</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.6)">Dar → Mwanza · 413 km</div>
+        <div style="height:44px;border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)"><span class="wf-lbl" style="font-size:8px;color:rgba(255,255,255,.5)">head + trailer</span></div>
+      </div>
+      <div style="border:1px solid rgba(255,255,255,.18);padding:9px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-size:11px;font-weight:700">T 104 MWZ</span><span class="tag" style="font-size:9.5px;padding:2px 6px;background:var(--color-accent-400);color:var(--color-accent-900)">On route</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.6)">Dar → Dodoma · 88 km</div>
+        <div style="height:44px;border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)"><span class="wf-lbl" style="font-size:8px;color:rgba(255,255,255,.5)">trailer</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column">
+    <div style="padding:14px 15px 0;border-bottom:1px solid rgba(255,255,255,.16);display:flex;flex-direction:column;gap:11px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h3 class="wf-mono" style="margin:0;color:var(--color-bg)">TRP-2418</h3>
+        <span class="tag wf-live" style="background:var(--color-accent-400);color:var(--color-accent-900)">On route</span>
+        <div style="display:flex;gap:7px;margin-left:auto"><button class="btn" style="border-color:rgba(255,255,255,.28);color:var(--color-bg)">Call driver</button><button class="btn" style="background:var(--color-accent-400);border-color:var(--color-accent-400);color:var(--color-accent-900)">Chat</button></div>
+      </div>
+      <div style="display:flex;gap:14px;font-size:12.5px;font-family:var(--font-heading)">
+        <span style="border-bottom:2px solid var(--color-accent-400);padding-bottom:7px">Shipping info</span>
+        <span style="color:rgba(255,255,255,.55);padding-bottom:7px">Vehicle info</span>
+        <span style="color:rgba(255,255,255,.55);padding-bottom:7px">Documents</span>
+        <span style="color:rgba(255,255,255,.55);padding-bottom:7px">Client</span>
+        <span style="color:rgba(255,255,255,.55);padding-bottom:7px">Billing</span>
+      </div>
+    </div>
+    <div style="padding:15px;display:flex;flex-direction:column;gap:15px">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><h5 style="margin:0;color:var(--color-bg)">Current load</h5><span class="wf-lbl" style="color:rgba(255,255,255,.55)">30 t of 51 t permitted</span></div>
+        <div style="display:grid;grid-template-columns:130px 1fr;border:1px solid rgba(255,255,255,.18);min-height:120px">
+          <div style="border-right:1px solid rgba(255,255,255,.18);display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)"><span class="wf-lbl" style="font-size:8.5px;color:rgba(255,255,255,.5);text-align:center;line-height:1.4">truck side<br>elevation</span></div>
+          <div style="position:relative;display:grid;place-items:center">
+            <div class="wf-fill" style="position:absolute;left:0;top:0;bottom:0;width:59%;background:var(--color-accent-400);display:flex;align-items:center;justify-content:flex-end;padding-right:13px;overflow:hidden"><span style="font-family:var(--font-heading);font-size:40px;line-height:1;color:var(--color-accent-900);white-space:nowrap">59%</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><h5 style="margin:0;color:var(--color-bg)">Route</h5><span class="wf-mono" style="font-size:12px;color:rgba(255,255,255,.6)">18:23:05 · 413 km left</span></div>
+        <div style="height:180px;border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 1px,transparent 1px 7px)"><span class="wf-lbl wf-live" style="color:rgba(255,255,255,.55)">live map · dark tiles</span></div>
+      </div>
+      <div>
+        <h5 style="margin:0 0 8px;color:var(--color-bg)">Cargo photo reports</h5>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px">
+          <div style="height:66px;border:1px solid rgba(255,255,255,.18);background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)"></div>
+          <div style="height:66px;border:1px solid rgba(255,255,255,.18);background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)"></div>
+          <div style="height:66px;border:1px solid rgba(255,255,255,.18);background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 1px,transparent 1px 7px)"></div>
+          <div style="height:66px;border:1px solid rgba(255,255,255,.28);display:grid;place-items:center"><span class="wf-lbl" style="font-size:8.5px;color:rgba(255,255,255,.6);text-align:center;line-height:1.4">POD<br>pending</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Cropped to the two panes that carry the treatment. Honest read: the dark field looks better in a portfolio shot and worse in a Dar es Salaam dispatch office at midday — and Industry only sanctions one dark field (accent-900), so going dark here means every other role screen either follows or clashes. My recommendation is <a class="dv-oid" href="#3a">3a</a> for the product and this reserved for a wall display.</p>
+</sc-if>
+</div>
+
+</div>
+<p class="dv-next">Try next: "go with <a class="dv-oid" href="#3a">3a</a> and make it the Operator landing instead of <a class="dv-oid" href="#2c">2c</a>" · "show the Vehicle info and Billing tabs of <a class="dv-oid" href="#3a">3a</a>" · "commit the whole app to the dark field from <a class="dv-oid" href="#3b">3b</a>"</p>
+</section>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">All roles, redesigned — plus a new finance logic</span></div>
+<p class="dv-sub">Every role in the README gets a home screen: same shell, different payload, and the one number that role is accountable for set largest. <a class="dv-oid" href="#2e">2e</a> is the finance proposal — read against your own two audits (`FINANCE_MODULE_AUDIT_REPORT.md`, `docs/finance-erp-audit.md`), not invented. Turn 1 (<a class="dv-oid" href="#1a">1a</a>–<a class="dv-oid" href="#1i">1i</a>) is unchanged and sits behind Fleet / Dispatch / Driver.</p>
+
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>CEO — executive dashboard</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:200px 1fr;min-height:700px">
+  <div style="border-right:1px solid var(--color-divider);padding:16px 0;display:flex;flex-direction:column">
+    <div style="padding:0 14px 16px"><div style="font-family:var(--font-heading);font-weight:600;font-size:16px">Calvary Connect</div><div class="wf-lbl" style="margin-top:3px">CEO · J. Calvary</div></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#2a" aria-current="page">Executive</a><a href="#2d">Financial performance</a><a href="#1b">Fleet performance</a><a href="#2c">Operations</a><a href="#2a">AI insights</a><a href="#2a">Reports</a><a href="#2a">Approvals</a><a href="#2b">Users</a>
+    </nav>
+    <div style="margin-top:auto;padding:14px 14px 0;border-top:1px solid var(--color-divider)"><div class="wf-lbl">Read + approve</div><div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent);margin-top:2px">No operational data entry</div></div>
+  </div>
+  <div style="padding:18px 20px 22px;display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div><div class="wf-lbl">Company · September 2026</div><h3 style="margin:2px 0 0">Executive dashboard</h3></div>
+      <div style="display:flex;gap:8px;align-items:center"><div class="seg"><label class="seg-opt"><input type="radio" name="ceop" checked>MTD</label><label class="seg-opt"><input type="radio" name="ceop">QTD</label><label class="seg-opt"><input type="radio" name="ceop">YTD</label></div><button class="btn btn-primary">Export board pack</button></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:11px">
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Revenue</div><div style="font-family:var(--font-heading);font-size:25px;line-height:1.05">412.6<span style="font-size:13px">M</span></div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">TSh · +8% vs Aug</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Net profit</div><div style="font-family:var(--font-heading);font-size:25px;line-height:1.05">144.3<span style="font-size:13px">M</span></div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">35% margin</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Active trips</div><div style="font-family:var(--font-heading);font-size:25px;line-height:1.05">27</div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">3 delayed</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Trucks</div><div style="font-family:var(--font-heading);font-size:25px;line-height:1.05">142</div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">63% utilized</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Drivers online</div><div style="font-family:var(--font-heading);font-size:25px;line-height:1.05">34<span style="font-size:13px">/61</span></div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">2 GPS offline</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px;border-color:var(--color-accent)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl" style="color:var(--color-accent-700)">Awaiting you</div><div style="font-family:var(--font-heading);font-size:25px;line-height:1.05;color:var(--color-accent-700)">9</div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">approvals</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:15px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:15px">
+        <div class="card blueprint" style="padding:13px;gap:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Income vs expenses</h5><span class="wf-lbl">TSh M · converted at booking rate</span></div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;height:140px;align-items:end">
+            <div style="display:flex;gap:4px;align-items:end;height:100%"><div class="wf-bar" style="flex:1;height:62%;background:var(--color-accent)"></div><div style="flex:1;height:44%;border:1px solid var(--color-divider);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 16%,transparent) 0 1px,transparent 1px 5px)"></div></div>
+            <div style="display:flex;gap:4px;align-items:end;height:100%"><div class="wf-bar" style="flex:1;height:70%;background:var(--color-accent)"></div><div style="flex:1;height:49%;border:1px solid var(--color-divider);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 16%,transparent) 0 1px,transparent 1px 5px)"></div></div>
+            <div style="display:flex;gap:4px;align-items:end;height:100%"><div class="wf-bar" style="flex:1;height:58%;background:var(--color-accent)"></div><div style="flex:1;height:52%;border:1px solid var(--color-divider);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 16%,transparent) 0 1px,transparent 1px 5px)"></div></div>
+            <div style="display:flex;gap:4px;align-items:end;height:100%"><div class="wf-bar" style="flex:1;height:81%;background:var(--color-accent)"></div><div style="flex:1;height:54%;border:1px solid var(--color-divider);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 16%,transparent) 0 1px,transparent 1px 5px)"></div></div>
+            <div style="display:flex;gap:4px;align-items:end;height:100%"><div class="wf-bar" style="flex:1;height:88%;background:var(--color-accent)"></div><div style="flex:1;height:57%;border:1px solid var(--color-divider);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 16%,transparent) 0 1px,transparent 1px 5px)"></div></div>
+            <div style="display:flex;gap:4px;align-items:end;height:100%"><div class="wf-bar" style="flex:1;height:96%;background:var(--color-accent)"></div><div class="wf-bar" style="flex:1;height:62%;border:1px solid var(--color-divider);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 16%,transparent) 0 1px,transparent 1px 5px)"></div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px" class="wf-lbl"><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span></div>
+        </div>
+
+        <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider);display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Active trips</h5><a href="#1e" style="font-size:11.5px">Dispatch board →</a></div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr><th class="wf-th">Trip</th><th class="wf-th">Driver</th><th class="wf-th">Route</th><th class="wf-th">Truck</th><th class="wf-th">Status</th><th class="wf-th">Started</th></tr></thead>
+            <tbody>
+              <tr><td class="wf-td wf-mono">TRP-2418</td><td class="wf-td">Juma Hassan</td><td class="wf-td">Dar es Salaam → Mwanza</td><td class="wf-td wf-mono">T 412 DKA</td><td class="wf-td"><span class="tag tag-accent">In transit</span></td><td class="wf-td wf-mono">03 Sep 06:35</td></tr>
+              <tr><td class="wf-td wf-mono">TRP-2419</td><td class="wf-td">Amina Said</td><td class="wf-td">Dar es Salaam → Tunduma</td><td class="wf-td wf-mono">T 655 NDA</td><td class="wf-td"><span class="tag tag-accent">In transit</span></td><td class="wf-td wf-mono">02 Sep 19:10</td></tr>
+              <tr><td class="wf-td wf-mono">TRP-2417</td><td class="wf-td">Salum Kibwana</td><td class="wf-td">Dar es Salaam → Dodoma</td><td class="wf-td wf-mono">T 104 MWZ</td><td class="wf-td"><span class="tag tag-outline">Delayed 6h</span></td><td class="wf-td wf-mono">02 Sep 05:00</td></tr>
+              <tr><td class="wf-td wf-mono">TRP-2414</td><td class="wf-td">Godfrey Nyerere</td><td class="wf-td">Kinyerezi pit → Ubungo</td><td class="wf-td wf-mono">T 347 PLK</td><td class="wf-td"><span class="tag tag-accent">Loading</span></td><td class="wf-td wf-mono">03 Sep 08:15</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:15px">
+        <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">AI insights</h5><span class="wf-lbl">06:02</span></div>
+          <div style="font-size:12px;line-height:1.55;display:flex;flex-direction:column;gap:9px">
+            <div style="border-left:2px solid var(--color-accent);padding-left:9px"><div class="wf-lbl" style="color:var(--color-accent-700)">Highlight</div>Mwanza corridor margin up 11% — Dangote volumes carried the month.</div>
+            <div style="border-left:2px solid var(--color-divider);padding-left:9px"><div class="wf-lbl">Concern</div>12 truck heads idle over 5 days — an estimated TSh 34.2M of unearned capacity.</div>
+            <div style="border-left:2px solid var(--color-divider);padding-left:9px"><div class="wf-lbl">Recommend</div>Re-rate the Tunduma transit run: fuel per km is 18% above Mwanza at a lower tariff.</div>
+          </div>
+          <button class="btn btn-secondary btn-block">Ask a follow-up</button>
+        </div>
+        <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider);display:flex;justify-content:space-between;align-items:center"><h5 style="margin:0">Awaiting your approval</h5><span class="tag tag-accent">9</span></div>
+          <div style="padding:11px;display:flex;flex-direction:column;gap:9px;font-size:12px">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--color-divider);padding:9px"><span>Fuel advance · TRP-2421<br><span class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">TSh 1,450,000</span></span><button class="btn btn-primary" style="padding:3px 10px;font-size:12px">Approve</button></div>
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--color-divider);padding:9px"><span>Vehicle purchase · Scania G460<br><span class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">TSh 186,000,000</span></span><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Review</button></div>
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--color-divider);padding:9px"><span>Spare parts · gearbox T 530 GBX<br><span class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">TSh 9,300,000</span></span><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Review</button></div>
+            <a href="#2a" style="font-size:11.5px">See all 9 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Answers three questions and stops: are we making money, is the fleet moving, what needs my signature. AI insights keep the highlight / concern / recommendation shape the blueprint specifies, with a follow-up affordance instead of a dead paragraph.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Administrator — users, roles &amp; permissions</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:200px 1fr;min-height:660px">
+  <div style="border-right:1px solid var(--color-divider);padding:16px 0">
+    <div style="padding:0 14px 16px"><div style="font-family:var(--font-heading);font-weight:600;font-size:16px">Calvary Connect</div><div class="wf-lbl" style="margin-top:3px">Admin · A. Mtenga</div></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#2b" aria-current="page">Users &amp; roles</a><a href="#2b">Permissions</a><a href="#2b">System settings</a><a href="#2b">Audit trail</a><a href="#2b">Data administration</a><a href="#2b">Integrations</a><a href="#2b">Notifications</a>
+    </nav>
+  </div>
+  <div style="padding:18px 20px 22px;display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div><div class="wf-lbl">Administration</div><h3 style="margin:2px 0 0">Users &amp; roles</h3><div style="font-size:12.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent);margin-top:3px">78 accounts · 7 roles · 3 invitations pending</div></div>
+      <div style="display:flex;gap:8px"><button class="btn btn-secondary">Audit trail</button><button class="btn btn-primary">+ Invite user</button></div>
+    </div>
+
+    <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider);display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Role permission matrix</h5><span class="wf-lbl">Edited here, enforced by row-level security</span></div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th class="wf-th">Module</th><th class="wf-th" style="text-align:center">CEO</th><th class="wf-th" style="text-align:center">Admin</th><th class="wf-th" style="text-align:center">Operator</th><th class="wf-th" style="text-align:center">Driver</th><th class="wf-th" style="text-align:center">Accountant</th><th class="wf-th" style="text-align:center">HR</th><th class="wf-th" style="text-align:center">Mechanic</th></tr></thead>
+        <tbody>
+          <tr><td class="wf-td">Fleet &amp; vehicles</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center">Full</td><td class="wf-td" style="text-align:center">Edit</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center">Edit</td></tr>
+          <tr><td class="wf-td">Trips &amp; dispatch</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center">Full</td><td class="wf-td" style="text-align:center"><strong>Full</strong></td><td class="wf-td" style="text-align:center">Own only</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center">View</td></tr>
+          <tr><td class="wf-td">Finance &amp; invoicing</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center">Full</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center"><strong>Full</strong></td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td></tr>
+          <tr><td class="wf-td">Expenses &amp; fuel</td><td class="wf-td" style="text-align:center">Approve</td><td class="wf-td" style="text-align:center">Full</td><td class="wf-td" style="text-align:center">Submit</td><td class="wf-td" style="text-align:center">Submit</td><td class="wf-td" style="text-align:center"><strong>Approve</strong></td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center">Submit</td></tr>
+          <tr><td class="wf-td">Employees &amp; payroll</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center">Full</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center">Own only</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center"><strong>Full</strong></td><td class="wf-td" style="text-align:center;opacity:.4">—</td></tr>
+          <tr><td class="wf-td">Inventory &amp; parts</td><td class="wf-td" style="text-align:center">Approve</td><td class="wf-td" style="text-align:center">Full</td><td class="wf-td" style="text-align:center">Approve</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center">Request</td></tr>
+          <tr><td class="wf-td">Users &amp; system</td><td class="wf-td" style="text-align:center">View</td><td class="wf-td" style="text-align:center"><strong>Full</strong></td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td></tr>
+          <tr><td class="wf-td">Post to ledger</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center"><strong>Yes</strong></td><td class="wf-td" style="text-align:center;opacity:.4">—</td><td class="wf-td" style="text-align:center;opacity:.4">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:15px;align-items:start">
+      <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider);display:flex;gap:10px;align-items:center">
+          <h5 style="margin:0">Accounts</h5>
+          <input class="input" placeholder="Search name, email, role…" style="max-width:220px;margin-left:auto">
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr><th class="wf-th">Name</th><th class="wf-th">Role</th><th class="wf-th">Department</th><th class="wf-th">Last active</th><th class="wf-th">Status</th><th class="wf-th"></th></tr></thead>
+          <tbody>
+            <tr><td class="wf-td">J. Calvary</td><td class="wf-td"><span class="tag tag-accent">CEO</span></td><td class="wf-td">Executive</td><td class="wf-td wf-mono">2 min ago</td><td class="wf-td"><span class="tag tag-neutral">Active</span></td><td class="wf-td" style="text-align:right"><a href="#2b" style="font-size:11.5px">Edit</a></td></tr>
+            <tr><td class="wf-td">S. Mwinyi</td><td class="wf-td"><span class="tag tag-accent">Accountant</span></td><td class="wf-td">Finance</td><td class="wf-td wf-mono">18 min ago</td><td class="wf-td"><span class="tag tag-neutral">Active</span></td><td class="wf-td" style="text-align:right"><a href="#2b" style="font-size:11.5px">Edit</a></td></tr>
+            <tr><td class="wf-td">Juma Hassan</td><td class="wf-td"><span class="tag tag-neutral">Driver</span></td><td class="wf-td">Operations</td><td class="wf-td wf-mono">4 min ago</td><td class="wf-td"><span class="tag tag-neutral">Active</span></td><td class="wf-td" style="text-align:right"><a href="#2b" style="font-size:11.5px">Edit</a></td></tr>
+            <tr><td class="wf-td">P. Mahenge</td><td class="wf-td"><span class="tag tag-neutral">Mechanic</span></td><td class="wf-td">Workshop</td><td class="wf-td wf-mono">1 h ago</td><td class="wf-td"><span class="tag tag-neutral">Active</span></td><td class="wf-td" style="text-align:right"><a href="#2b" style="font-size:11.5px">Edit</a></td></tr>
+            <tr><td class="wf-td">L. Kimaro</td><td class="wf-td"><span class="tag tag-neutral">HR</span></td><td class="wf-td">People</td><td class="wf-td wf-mono">3 d ago</td><td class="wf-td"><span class="tag tag-outline">Invited</span></td><td class="wf-td" style="text-align:right"><a href="#2b" style="font-size:11.5px">Resend</a></td></tr>
+            <tr style="opacity:.6"><td class="wf-td">E. Nyoni</td><td class="wf-td"><span class="tag tag-neutral">Operator</span></td><td class="wf-td">Dispatch</td><td class="wf-td wf-mono">62 d ago</td><td class="wf-td"><span class="tag tag-outline">Deactivated</span></td><td class="wf-td" style="text-align:right"><a href="#2b" style="font-size:11.5px">Restore</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <h5 style="margin:0">Audit trail · today</h5>
+        <div style="display:flex;flex-direction:column;font-size:12px">
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:9px;padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)"><span class="wf-mono" style="opacity:.6">09:41</span><span>S. Mwinyi posted journal JV-1188 · TSh 4,150,000</span></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:9px;padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)"><span class="wf-mono" style="opacity:.6">08:52</span><span>A. Mtenga changed Operator permissions on Inventory</span></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:9px;padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)"><span class="wf-mono" style="opacity:.6">07:15</span><span>Failed sign-in · 4 attempts · driver account</span></div>
+          <div style="display:grid;grid-template-columns:52px 1fr;gap:9px;padding:7px 0"><span class="wf-mono" style="opacity:.6">06:35</span><span>Trip TRP-2418 status set by Juma Hassan (mobile)</span></div>
+        </div>
+        <button class="btn btn-secondary btn-block">Open full audit log</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">The matrix is the screen, not a settings sub-page — an admin's real job here is answering "who can do what". The last row makes posting to the ledger an explicit privilege, which the finance audit flags as currently unenforced.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="2c">
+<div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Operator — dispatch console home</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:200px 1fr;min-height:640px">
+  <div style="border-right:1px solid var(--color-divider);padding:16px 0">
+    <div style="padding:0 14px 16px"><div style="font-family:var(--font-heading);font-weight:600;font-size:16px">Calvary Connect</div><div class="wf-lbl" style="margin-top:3px">Operator · E. Nyoni</div></div>
+    <div style="padding:0 10px 14px"><button class="btn btn-primary btn-block" style="margin:0">+ New trip</button></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#2c" aria-current="page">Console</a><a href="#1e">Dispatch board</a><a href="#1h">Trips</a><a href="#1a">Fleet</a><a href="#2c">Live map</a><a href="#2c">Inventory</a><a href="#2c">Parts requests</a><a href="#2c">Proof of delivery</a>
+    </nav>
+  </div>
+  <div style="padding:18px 20px 22px;display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div><div class="wf-lbl">Operations · Thu 03 Sep</div><h3 style="margin:2px 0 0">Dispatch console</h3></div>
+      <div style="display:flex;gap:8px"><button class="btn btn-secondary">Route optimizer</button><button class="btn btn-secondary">Message drivers</button></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:11px">
+      <div class="card blueprint" style="padding:11px;gap:2px;border-color:var(--color-accent)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl" style="color:var(--color-accent-700)">Unassigned</div><div style="font-family:var(--font-heading);font-size:26px;line-height:1.05;color:var(--color-accent-700)">3</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">In transit</div><div style="font-family:var(--font-heading);font-size:26px;line-height:1.05">27</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Delayed</div><div style="font-family:var(--font-heading);font-size:26px;line-height:1.05">3</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Trucks idle</div><div style="font-family:var(--font-heading);font-size:26px;line-height:1.05">89</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl wf-live">GPS offline</div><div style="font-family:var(--font-heading);font-size:26px;line-height:1.05">2</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:15px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:15px">
+        <div class="wf-ph blueprint" style="height:250px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="wf-lbl wf-live">live map · 27 trucks, truck markers rotate to heading</span></div>
+        <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider);display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Needs a decision now</h5><a href="#1e" style="font-size:11.5px">Full board →</a></div>
+          <table style="width:100%;border-collapse:collapse">
+            <tbody>
+              <tr><td class="wf-td wf-mono">TRP-2421</td><td class="wf-td">Dar → Mwanza · Dangote · 04 Sep 06:00</td><td class="wf-td"><span class="tag tag-accent">Unassigned</span></td><td class="wf-td" style="text-align:right"><a href="#1e" class="btn btn-primary" style="padding:3px 10px;font-size:12px;text-decoration:none">Assign</a></td></tr>
+              <tr><td class="wf-td wf-mono">TRP-2417</td><td class="wf-td">Delayed 6h at Chalinze · driver reports queue</td><td class="wf-td"><span class="tag tag-outline">Delayed</span></td><td class="wf-td" style="text-align:right"><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Notify client</button></td></tr>
+              <tr><td class="wf-td wf-mono">T 889 BXR</td><td class="wf-td">Breakdown reported · Morogoro · gearbox</td><td class="wf-td"><span class="tag tag-outline">Breakdown</span></td><td class="wf-td" style="text-align:right"><a href="#2g" class="btn btn-secondary" style="padding:3px 10px;font-size:12px;text-decoration:none">Workshop</a></td></tr>
+              <tr><td class="wf-td wf-mono">TRP-2391</td><td class="wf-td">Delivered 22 Aug · POD still missing</td><td class="wf-td"><span class="tag tag-outline">POD</span></td><td class="wf-td" style="text-align:right"><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Chase driver</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:15px">
+        <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <h5 style="margin:0">Parts requests to approve</h5>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+            <div style="border:1px solid var(--color-divider);padding:9px"><div style="display:flex;justify-content:space-between"><strong>Brake pads ×4</strong><span class="tag tag-accent">Urgent</span></div><div style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">P. Mahenge · T 530 GBX · stock 6</div></div>
+            <div style="border:1px solid var(--color-divider);padding:9px"><div style="display:flex;justify-content:space-between"><strong>Oil filter ×2</strong><span class="tag tag-neutral">Normal</span></div><div style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">P. Mahenge · T 412 DKA · stock 14</div></div>
+          </div>
+          <button class="btn btn-secondary btn-block">Open queue</button>
+        </div>
+        <div class="card blueprint" style="padding:12px;gap:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <h5 style="margin:0">Low stock</h5>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+            <div style="display:flex;justify-content:space-between"><span>Tyres 315/80 R22.5</span><span class="wf-mono">2 left</span></div>
+            <div style="height:1px;background:var(--color-divider)"></div>
+            <div style="display:flex;justify-content:space-between"><span>Engine oil 20L</span><span class="wf-mono">3 left</span></div>
+            <div style="height:1px;background:var(--color-divider)"></div>
+            <div style="display:flex;justify-content:space-between"><span>Air filter HOWO</span><span class="wf-mono">1 left</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">An operator's console is a queue of decisions, not a report. "Needs a decision now" merges unassigned bookings, delays, breakdowns and missing PODs into one list, each row carrying the action that clears it.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="2d">
+<div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Accountant — one merged finance dashboard</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:210px 1fr;min-height:700px">
+  <div style="border-right:1px solid var(--color-divider);padding:16px 0">
+    <div style="padding:0 14px 16px"><div style="font-family:var(--font-heading);font-weight:600;font-size:16px">Calvary Connect</div><div class="wf-lbl" style="margin-top:3px">Accountant · S. Mwinyi</div></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#2d" aria-current="page">Dashboard</a>
+      <div class="wf-lbl" style="padding:9px 12px 3px">General ledger</div>
+      <a href="#2d">Chart of accounts</a><a href="#2d">Journal entries</a><a href="#2d">Trial balance</a><a href="#2d">Periods &amp; close</a>
+      <div class="wf-lbl" style="padding:9px 12px 3px">Receivables</div>
+      <a href="#2d">Customer invoices</a><a href="#2d">Receipts</a><a href="#2d">Aging</a>
+      <div class="wf-lbl" style="padding:9px 12px 3px">Payables</div>
+      <a href="#2d">Vendor bills</a><a href="#2d">Payments</a>
+      <div class="wf-lbl" style="padding:9px 12px 3px">Treasury</div>
+      <a href="#2d">Bank &amp; mobile money</a><a href="#2d">Reconciliation</a>
+      <div class="wf-lbl" style="padding:9px 12px 3px">Fleet finance</div>
+      <a href="#2d">Vehicle &amp; route P&amp;L</a><a href="#2d">Fuel &amp; maintenance cost</a>
+    </nav>
+  </div>
+  <div style="padding:18px 20px 22px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div><div class="wf-lbl">Finance · period Sep 2026 <span class="tag tag-neutral" style="margin-left:6px">Open</span></div><h3 style="margin:4px 0 0">Finance dashboard</h3></div>
+      <div style="display:flex;gap:8px"><button class="btn btn-secondary">Reconcile</button><button class="btn btn-secondary">New journal</button><button class="btn btn-primary">+ New invoice</button></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:11px">
+      <div class="card blueprint" style="padding:11px;gap:3px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Cash on hand</div><div style="font-family:var(--font-heading);font-size:24px;line-height:1.05">TSh 88.4M</div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">+ USD 41,200 · + KES 0 · shown per currency</div></div>
+      <div class="card blueprint" style="padding:11px;gap:3px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Receivables</div><div style="font-family:var(--font-heading);font-size:24px;line-height:1.05">TSh 214.9M</div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">31% over 60 days</div></div>
+      <div class="card blueprint" style="padding:11px;gap:3px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Payables</div><div style="font-family:var(--font-heading);font-size:24px;line-height:1.05">TSh 96.1M</div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">TSh 22.4M due this week</div></div>
+      <div class="card blueprint" style="padding:11px;gap:3px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">VAT payable</div><div style="font-family:var(--font-heading);font-size:24px;line-height:1.05">TSh 31.7M</div><div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">Filing due 20 Oct</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:11px">
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Revenue MTD</div><div style="font-family:var(--font-heading);font-size:22px">412.6M</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Expenses MTD</div><div style="font-family:var(--font-heading);font-size:22px">268.3M</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Operating profit</div><div style="font-family:var(--font-heading);font-size:22px">144.3M</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Net margin</div><div style="font-family:var(--font-heading);font-size:22px">35%</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 330px;gap:15px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider);display:flex;justify-content:space-between;align-items:center"><h5 style="margin:0">Waiting on you</h5><span class="tag tag-accent">14</span></div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr><th class="wf-th">Item</th><th class="wf-th">Source</th><th class="wf-th" style="text-align:right">Amount</th><th class="wf-th">Age</th><th class="wf-th"></th></tr></thead>
+            <tbody>
+              <tr><td class="wf-td">Fuel request · 480 L</td><td class="wf-td">Juma Hassan · TRP-2418</td><td class="wf-td wf-mono" style="text-align:right">TSh 1,392,000</td><td class="wf-td wf-mono">4 h</td><td class="wf-td" style="text-align:right"><button class="btn btn-primary" style="padding:3px 10px;font-size:12px">Approve &amp; post</button></td></tr>
+              <tr><td class="wf-td">Expense claim · tolls</td><td class="wf-td">Salum Kibwana · TRP-2417</td><td class="wf-td wf-mono" style="text-align:right">TSh 84,000</td><td class="wf-td wf-mono">1 d</td><td class="wf-td" style="text-align:right"><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Review</button></td></tr>
+              <tr><td class="wf-td">Draft invoice · auto from POD</td><td class="wf-td">TRP-2402 · Kilimanjaro Bev.</td><td class="wf-td wf-mono" style="text-align:right">TSh 3,180,000</td><td class="wf-td wf-mono">2 d</td><td class="wf-td" style="text-align:right"><button class="btn btn-primary" style="padding:3px 10px;font-size:12px">Approve &amp; post</button></td></tr>
+              <tr><td class="wf-td">Unmatched bank line</td><td class="wf-td">CRDB · 01 Sep</td><td class="wf-td wf-mono" style="text-align:right">TSh 4,150,000</td><td class="wf-td wf-mono">2 d</td><td class="wf-td" style="text-align:right"><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Match</button></td></tr>
+              <tr><td class="wf-td">Vendor bill · tyres</td><td class="wf-td">Superdoll Ltd</td><td class="wf-td wf-mono" style="text-align:right">TSh 12,600,000</td><td class="wf-td wf-mono">3 d</td><td class="wf-td" style="text-align:right"><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Review</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0">Expense breakdown</h5>
+            <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Fuel</span><span class="wf-mono">148.2M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:55%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Maintenance</span><span class="wf-mono">44.7M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:17%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Driver allowances</span><span class="wf-mono">31.9M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:12%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Tolls &amp; permits</span><span class="wf-mono">22.4M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:8%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Other</span><span class="wf-mono">21.1M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:8%;background:var(--color-accent)"></div></div></div>
+            </div>
+            <div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 50%,transparent)">Reads the expense_by_category view</div>
+          </div>
+          <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0">Most / least profitable routes</h5>
+            <table style="width:100%;border-collapse:collapse">
+              <tbody>
+                <tr><td class="wf-td" style="padding:6px 0;font-size:12px">Dar → Mwanza</td><td class="wf-td wf-mono" style="padding:6px 0;text-align:right;font-size:12px">+38%</td></tr>
+                <tr><td class="wf-td" style="padding:6px 0;font-size:12px">Dar → Dodoma</td><td class="wf-td wf-mono" style="padding:6px 0;text-align:right;font-size:12px">+29%</td></tr>
+                <tr><td class="wf-td" style="padding:6px 0;font-size:12px">Kinyerezi → Ubungo</td><td class="wf-td wf-mono" style="padding:6px 0;text-align:right;font-size:12px">+21%</td></tr>
+                <tr><td class="wf-td" style="padding:6px 0;font-size:12px">Dar → Tunduma (transit)</td><td class="wf-td wf-mono" style="padding:6px 0;text-align:right;font-size:12px;color:var(--color-accent-800)">+4%</td></tr>
+              </tbody>
+            </table>
+            <div style="font-size:10.5px;color:color-mix(in srgb,var(--color-text) 50%,transparent)">Per-trip profit from trip_accounting</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <h5 style="margin:0">Period close · Sep 2026</h5>
+          <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
+            <div style="display:flex;justify-content:space-between"><span>Unposted journals</span><span class="wf-mono">2</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Unreconciled bank lines</span><span class="wf-mono">7</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Draft invoices</span><span class="wf-mono">4</span></div>
+            <div style="display:flex;justify-content:space-between"><span>Trips delivered, not invoiced</span><span class="wf-mono">3</span></div>
+          </div>
+          <button class="btn btn-secondary btn-block" disabled>Close period · 16 items open</button>
+        </div>
+        <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <h5 style="margin:0">Aging · receivables</h5>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr><th class="wf-th">Bucket</th><th class="wf-th" style="text-align:right">TSh</th></tr></thead>
+            <tbody>
+              <tr><td class="wf-td" style="font-size:12px">Current</td><td class="wf-td wf-mono" style="text-align:right;font-size:12px">104.2M</td></tr>
+              <tr><td class="wf-td" style="font-size:12px">31–60</td><td class="wf-td wf-mono" style="text-align:right;font-size:12px">44.1M</td></tr>
+              <tr><td class="wf-td" style="font-size:12px">61–90</td><td class="wf-td wf-mono" style="text-align:right;font-size:12px">38.9M</td></tr>
+              <tr><td class="wf-td" style="font-size:12px;color:var(--color-accent-800)">90+</td><td class="wf-td wf-mono" style="text-align:right;font-size:12px;color:var(--color-accent-800)">27.7M</td></tr>
+            </tbody>
+          </table>
+          <button class="btn btn-secondary btn-block">Send statements</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">One dashboard replacing `/finance`, `/finance/dashboard`, `/finance/cfo-dashboard` and `/premium-dashboard` — your audit's finding was that three of them compute the same KPIs differently and disagree. Cash shows per currency rather than one summed figure, nav is grouped by accounting workflow, and period close is a visible gate with a blocking count. The logic behind it is <a class="dv-oid" href="#2e">2e</a>.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="2e">
+<div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Finance logic — current vs proposed</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:16px">
+  <div>
+    <div class="wf-lbl">Proposal · derived from FINANCE_MODULE_AUDIT_REPORT.md and docs/finance-erp-audit.md</div>
+    <h3 style="margin:3px 0 0">A single-ledger finance logic</h3>
+    <p style="margin:6px 0 0;font-size:13px;max-width:88ch;color:color-mix(in srgb,var(--color-text) 65%,transparent)">The current module is not short of pages — it has 40+. It is short of a single source of truth: money can enter three ways, balances live in mutable columns, and posting is not a privilege. The proposal below changes the logic, not the page count.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card blueprint" style="padding:13px;gap:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Logic today</h5><span class="wf-lbl">As audited</span></div>
+      <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px;line-height:1.5">
+        <div style="border-left:2px solid var(--color-divider);padding-left:10px"><strong>Three ways in.</strong> Revenue can be created at <span class="wf-mono">/income</span>, <span class="wf-mono">/finance/income</span> or via invoices; expenses at <span class="wf-mono">/expenses</span>, <span class="wf-mono">/accountant/expenses</span> and <span class="wf-mono">/finance/transactions/expenses</span>. AR can't be trusted because it depends which door was used.</div>
+        <div style="border-left:2px solid var(--color-divider);padding-left:10px"><strong>Duplicate masters.</strong> <span class="wf-mono">accounts</span> (157 rows) and <span class="wf-mono">chart_of_accounts</span> (12); three fuel tables; <span class="wf-mono">income</span>/<span class="wf-mono">sales</span>/<span class="wf-mono">revenue</span>; two audit systems.</div>
+        <div style="border-left:2px solid var(--color-divider);padding-left:10px"><strong>Ambiguous truth.</strong> Journals carry <span class="wf-mono">is_posted</span> and <span class="wf-mono">status</span>, <span class="wf-mono">date</span> and <span class="wf-mono">entry_date</span>; invoices carry <span class="wf-mono">amount</span>, <span class="wf-mono">total_amount</span> and <span class="wf-mono">total_payable</span>.</div>
+        <div style="border-left:2px solid var(--color-divider);padding-left:10px"><strong>Payment state as columns.</strong> Paid-ness sits on the invoice, so partial payments and allocation don't exist. Balances are mutable columns, not views.</div>
+        <div style="border-left:2px solid var(--color-divider);padding-left:10px"><strong>Counterparties as free text.</strong> <span class="wf-mono">client_name</span> / <span class="wf-mono">vendor_name</span> strings instead of keys — aging and statements are unreliable.</div>
+        <div style="border-left:2px solid var(--color-divider);padding-left:10px"><strong>Currencies summed blindly.</strong> TZS, USD, EUR and KES added together on several dashboards despite seeded FX rates.</div>
+        <div style="border-left:2px solid var(--color-divider);padding-left:10px"><strong>No period, no privilege.</strong> Nothing closes; any authenticated writer can set <span class="wf-mono">status='posted'</span> straight from the browser.</div>
+      </div>
+    </div>
+
+    <div class="card blueprint" style="padding:13px;gap:10px;border-color:var(--color-accent)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Proposed logic</h5><span class="wf-lbl" style="color:var(--color-accent-700)">Seven rules</span></div>
+      <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px;line-height:1.5">
+        <div style="border-left:2px solid var(--color-accent);padding-left:10px"><strong>1 · One door per direction.</strong> Money in enters only as an invoice; money out only as a bill or an expense claim. The old income pages become read-only registers of what the ledger already holds.</div>
+        <div style="border-left:2px solid var(--color-accent);padding-left:10px"><strong>2 · Everything lands in the ledger.</strong> No document is "financial" until it posts a balanced journal. <span class="wf-mono">accounts</span> is the only chart; the duplicates are retired.</div>
+        <div style="border-left:2px solid var(--color-accent);padding-left:10px"><strong>3 · Status is the single truth.</strong> <span class="wf-mono">draft → posted → reversed</span>. Posted documents are immutable; corrections are auto-generated reversals, never edits.</div>
+        <div style="border-left:2px solid var(--color-accent);padding-left:10px"><strong>4 · Payments are their own object.</strong> A receipt or payment allocates across invoices, so partial settlement is ordinary. Customer and vendor balances are views over invoices minus allocations.</div>
+        <div style="border-left:2px solid var(--color-accent);padding-left:10px"><strong>5 · Every amount carries its currency.</strong> Aggregates group by currency and convert at the booking rate. No screen shows a mixed-currency total.</div>
+        <div style="border-left:2px solid var(--color-accent);padding-left:10px"><strong>6 · Periods close.</strong> A month is open, closed or locked; posting into a closed period is refused, and the close gate lists what still blocks it (see <a class="dv-oid" href="#2d">2d</a>).</div>
+        <div style="border-left:2px solid var(--color-accent);padding-left:10px"><strong>7 · Posting is a server privilege.</strong> Approve and post run behind an API route with the accountant role, not a browser write. Numbering is issued by the database, so two users can't mint the same invoice number.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card blueprint" style="padding:14px;gap:12px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Trip to cash — the flow this business actually runs on</h5><span class="wf-lbl">Operations event → ledger, with no re-typing</span></div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:stretch">
+      <div style="border:1px solid var(--color-divider);padding:10px;display:flex;flex-direction:column;gap:5px"><div class="wf-lbl">Operations</div><div style="font-size:12.5px;font-weight:500">Trip delivered + POD uploaded</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Driver app · <a href="#1g">1g</a></div></div>
+      <div style="border:1px solid var(--color-divider);padding:10px;display:flex;flex-direction:column;gap:5px"><div class="wf-lbl">System</div><div style="font-size:12.5px;font-weight:500">Invoice auto-drafted</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">From trip rate + VAT rate</div></div>
+      <div style="border:1px solid var(--color-accent);padding:10px;display:flex;flex-direction:column;gap:5px;background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><div class="wf-lbl" style="color:var(--color-accent-700)">Accountant</div><div style="font-size:12.5px;font-weight:500">Approve &amp; post</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">DR 1200 AR · CR 4000 Revenue · CR 2200 VAT</div></div>
+      <div style="border:1px solid var(--color-divider);padding:10px;display:flex;flex-direction:column;gap:5px"><div class="wf-lbl">Treasury</div><div style="font-size:12.5px;font-weight:500">Receipt recorded</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">DR 1000 Bank · CR 1200 AR</div></div>
+      <div style="border:1px solid var(--color-divider);padding:10px;display:flex;flex-direction:column;gap:5px"><div class="wf-lbl">System</div><div style="font-size:12.5px;font-weight:500">Allocated to invoice</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Partial allowed · balance is a view</div></div>
+      <div style="border:1px solid var(--color-divider);padding:10px;display:flex;flex-direction:column;gap:5px"><div class="wf-lbl">Reporting</div><div style="font-size:12.5px;font-weight:500">Per-trip profit</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Revenue − fuel − allowance − tolls</div></div>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">
+      <span>Fuel advance and driver expenses attach to the same trip, so cost per km and route margin fall out of the ledger instead of a spreadsheet.</span>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+    <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h5 style="margin:0">What gets retired</h5>
+      <div style="font-size:12px;line-height:1.55;display:flex;flex-direction:column;gap:5px">
+        <span>· <span class="wf-mono">chart_of_accounts</span> → <span class="wf-mono">accounts</span></span>
+        <span>· <span class="wf-mono">income</span>, <span class="wf-mono">sales</span> → invoices + receipts</span>
+        <span>· <span class="wf-mono">fuel_records</span>, <span class="wf-mono">fuel_tracking</span> → <span class="wf-mono">fuel_logs</span></span>
+        <span>· <span class="wf-mono">audit_trail</span> → <span class="wf-mono">audit_logs</span></span>
+        <span>· <span class="wf-mono">client_balances</span> table → view</span>
+        <span>· <span class="wf-mono">professional-accounting.tsx</span> (3,300-line embedded app)</span>
+        <span>· three dashboards → one (<a href="#2d">2d</a>)</span>
+      </div>
+    </div>
+    <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h5 style="margin:0">What gets added</h5>
+      <div style="font-size:12px;line-height:1.55;display:flex;flex-direction:column;gap:5px">
+        <span>· <span class="wf-mono">fiscal_periods</span> — open / closed / locked</span>
+        <span>· <span class="wf-mono">payments</span> + <span class="wf-mono">payment_allocations</span></span>
+        <span>· document numbering sequences in the database</span>
+        <span>· <span class="wf-mono">/api/finance/*</span> for approve, post, reverse</span>
+        <span>· mobile money as a first-class treasury account</span>
+        <span>· counterparty keys replacing name strings</span>
+      </div>
+    </div>
+    <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h5 style="margin:0">Deliberately not building</h5>
+      <div style="font-size:12px;line-height:1.55;display:flex;flex-direction:column;gap:5px;color:color-mix(in srgb,var(--color-text) 62%,transparent)">
+        <span>· cheque management</span>
+        <span>· a petty-cash sub-module (use a cash-type account)</span>
+        <span>· fixed-asset register (no asset data yet)</span>
+        <span>· cost centres and projects until someone budgets by department</span>
+        <span>· debit notes — credit notes and bills suffice at this size</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">This is the one option that is an argument rather than a screen — worth reviewing before <a class="dv-oid" href="#2d">2d</a> gets built, because the dashboard is only trustworthy if rules 1, 4 and 5 hold. Everything cited here comes from your own two audit documents.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="2f">
+<div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a>Human resources — people &amp; driver compliance</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:200px 1fr;min-height:620px">
+  <div style="border-right:1px solid var(--color-divider);padding:16px 0">
+    <div style="padding:0 14px 16px"><div style="font-family:var(--font-heading);font-weight:600;font-size:16px">Calvary Connect</div><div class="wf-lbl" style="margin-top:3px">HR · L. Kimaro</div></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#2f" aria-current="page">People</a><a href="#2f">Driver compliance</a><a href="#2f">Leave</a><a href="#2f">Allowances &amp; payroll</a><a href="#2f">Performance reviews</a><a href="#2f">Disciplinary</a><a href="#2f">Medical &amp; insurance</a><a href="#2f">Separation</a>
+    </nav>
+  </div>
+  <div style="padding:18px 20px 22px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div><div class="wf-lbl">People</div><h3 style="margin:2px 0 0">Employee directory</h3><div style="font-size:12.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent);margin-top:3px">78 employees · 61 drivers · 7 documents expiring in 30 days</div></div>
+      <div style="display:flex;gap:8px"><button class="btn btn-secondary">Run payroll</button><button class="btn btn-primary">+ Add employee</button></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:11px">
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Headcount</div><div style="font-family:var(--font-heading);font-size:26px">78</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">On trip today</div><div style="font-family:var(--font-heading);font-size:26px">27</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">On leave</div><div style="font-family:var(--font-heading);font-size:26px">5</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px;border-color:var(--color-accent)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl" style="color:var(--color-accent-700)">Docs expiring</div><div style="font-family:var(--font-heading);font-size:26px;color:var(--color-accent-700)">7</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Allowances MTD</div><div style="font-family:var(--font-heading);font-size:26px">31.9M</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:15px;align-items:start">
+      <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider);display:flex;gap:10px;align-items:center">
+          <div style="display:flex"><button class="wf-tab" aria-selected="true">All 78</button><button class="wf-tab" style="border-left:0">Drivers 61</button><button class="wf-tab" style="border-left:0">Workshop 8</button><button class="wf-tab" style="border-left:0">Office 9</button></div>
+          <input class="input" placeholder="Search name or ID…" style="max-width:180px;margin-left:auto">
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr><th class="wf-th">Employee</th><th class="wf-th">Role</th><th class="wf-th">Licence</th><th class="wf-th">Medical</th><th class="wf-th">Status today</th><th class="wf-th"></th></tr></thead>
+          <tbody>
+            <tr><td class="wf-td">Juma Hassan<div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">EMP-0142 · joined 2021</div></td><td class="wf-td">Driver</td><td class="wf-td wf-mono">C · 14 Mar 27</td><td class="wf-td wf-mono">12 Jun 27</td><td class="wf-td"><span class="tag tag-accent">On trip</span></td><td class="wf-td" style="text-align:right"><a href="#2f" style="font-size:11.5px">Open</a></td></tr>
+            <tr><td class="wf-td">Rehema Mwakasege<div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">EMP-0188 · joined 2023</div></td><td class="wf-td">Driver</td><td class="wf-td wf-mono">C · 02 Nov 28</td><td class="wf-td wf-mono">30 Jan 27</td><td class="wf-td"><span class="tag tag-neutral">Available</span></td><td class="wf-td" style="text-align:right"><a href="#2f" style="font-size:11.5px">Open</a></td></tr>
+            <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="wf-td">Godfrey Nyerere<div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">EMP-0090 · joined 2019</div></td><td class="wf-td">Driver</td><td class="wf-td wf-mono">C · 08 Aug 27</td><td class="wf-td wf-mono" style="color:var(--color-accent-800)"><strong>29 Sep 26 · 26d</strong></td><td class="wf-td"><span class="tag tag-outline">Grounded soon</span></td><td class="wf-td" style="text-align:right"><a href="#2f" style="font-size:11.5px">Book medical</a></td></tr>
+            <tr><td class="wf-td">P. Mahenge<div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">EMP-0033 · joined 2017</div></td><td class="wf-td">Mechanic</td><td class="wf-td" style="opacity:.5">—</td><td class="wf-td wf-mono">04 Apr 27</td><td class="wf-td"><span class="tag tag-neutral">Workshop</span></td><td class="wf-td" style="text-align:right"><a href="#2f" style="font-size:11.5px">Open</a></td></tr>
+            <tr><td class="wf-td">Amina Said<div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">EMP-0201 · joined 2024</div></td><td class="wf-td">Driver</td><td class="wf-td wf-mono">C · 19 Dec 27</td><td class="wf-td wf-mono">11 Nov 26</td><td class="wf-td"><span class="tag tag-accent">On trip</span></td><td class="wf-td" style="text-align:right"><a href="#2f" style="font-size:11.5px">Open</a></td></tr>
+            <tr><td class="wf-td">Salum Kibwana<div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">EMP-0117 · joined 2020</div></td><td class="wf-td">Driver</td><td class="wf-td wf-mono">C · 27 Feb 27</td><td class="wf-td wf-mono">18 Jul 27</td><td class="wf-td"><span class="tag tag-neutral">On leave · 3d</span></td><td class="wf-td" style="text-align:right"><a href="#2f" style="font-size:11.5px">Open</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <h5 style="margin:0">Requests</h5>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+            <div style="border:1px solid var(--color-divider);padding:9px;display:flex;justify-content:space-between;align-items:center"><span>Leave · Salum Kibwana<br><span style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">05–08 Sep · annual</span></span><button class="btn btn-primary" style="padding:3px 10px;font-size:12px">Approve</button></div>
+            <div style="border:1px solid var(--color-divider);padding:9px;display:flex;justify-content:space-between;align-items:center"><span>Advance · Amina Said<br><span class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">TSh 300,000</span></span><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Review</button></div>
+          </div>
+        </div>
+        <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <h5 style="margin:0">Driver documents expiring</h5>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between"><span>Medical certificates</span><span class="wf-mono">4</span></div>
+            <div style="height:1px;background:var(--color-divider)"></div>
+            <div style="display:flex;justify-content:space-between"><span>Licences</span><span class="wf-mono">2</span></div>
+            <div style="height:1px;background:var(--color-divider)"></div>
+            <div style="display:flex;justify-content:space-between"><span>Dangerous-goods permit</span><span class="wf-mono">1</span></div>
+          </div>
+          <a href="#1d" style="font-size:11.5px">See on the compliance horizon →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">HR and fleet compliance are the same problem seen from two sides, so driver documents appear here <em>and</em> on the horizon in <a class="dv-oid" href="#1d">1d</a> — one record, two audiences. "Grounded soon" states the operational consequence rather than just a date.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="2g">
+<div class="dv-olabel"><a class="dv-oid" href="#2g">2g</a>Mechanic — workshop queue</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:200px 1fr;min-height:600px">
+  <div style="border-right:1px solid var(--color-divider);padding:16px 0">
+    <div style="padding:0 14px 16px"><div style="font-family:var(--font-heading);font-weight:600;font-size:16px">Calvary Connect</div><div class="wf-lbl" style="margin-top:3px">Mechanic · P. Mahenge</div></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#2g" aria-current="page">Service queue</a><a href="#2g">My jobs</a><a href="#2g">Spare parts</a><a href="#2g">Inventory</a><a href="#1a">Vehicles</a><a href="#2g">Service history</a>
+    </nav>
+  </div>
+  <div style="padding:18px 20px 22px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div><div class="wf-lbl">Workshop · Ubungo</div><h3 style="margin:2px 0 0">Service requests</h3></div>
+      <div style="display:flex;gap:8px"><button class="btn btn-secondary">Request parts</button><button class="btn btn-primary">+ Log service</button></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:11px">
+      <div class="card blueprint" style="padding:11px;gap:2px;border-color:var(--color-accent)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl" style="color:var(--color-accent-700)">Breakdowns open</div><div style="font-family:var(--font-heading);font-size:26px;color:var(--color-accent-700)">2</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">In workshop</div><div style="font-family:var(--font-heading);font-size:26px">6</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Services due 7d</div><div style="font-family:var(--font-heading);font-size:26px">11</div></div>
+      <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Parts awaiting approval</div><div style="font-family:var(--font-heading);font-size:26px">2</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 330px;gap:15px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex"><button class="wf-tab" aria-selected="true">Queue 19</button><button class="wf-tab" style="border-left:0">Mine 4</button><button class="wf-tab" style="border-left:0">Awaiting parts 3</button><button class="wf-tab" style="border-left:0">Done today 2</button></div>
+        <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <table style="width:100%;border-collapse:collapse">
+            <thead><tr><th class="wf-th">Vehicle</th><th class="wf-th">Reported</th><th class="wf-th">Fault</th><th class="wf-th">Source</th><th class="wf-th">Priority</th><th class="wf-th"></th></tr></thead>
+            <tbody>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="wf-td wf-mono">T 889 BXR</td><td class="wf-td wf-mono">03 Sep 07:20</td><td class="wf-td">Gearbox — will not select 4th<div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent)">Stranded at Morogoro · 2 photos</div></td><td class="wf-td">Driver report</td><td class="wf-td"><span class="tag tag-accent">Breakdown</span></td><td class="wf-td" style="text-align:right"><button class="btn btn-primary" style="padding:3px 10px;font-size:12px">Start job</button></td></tr>
+              <tr><td class="wf-td wf-mono">T 530 GBX</td><td class="wf-td wf-mono">01 Sep</td><td class="wf-td">50,000 km service overdue by 1,200 km</td><td class="wf-td">Schedule</td><td class="wf-td"><span class="tag tag-outline">Overdue</span></td><td class="wf-td" style="text-align:right"><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Open</button></td></tr>
+              <tr><td class="wf-td wf-mono">T 347 PLK</td><td class="wf-td wf-mono">31 Aug</td><td class="wf-td">Front left tyre worn past limit</td><td class="wf-td">Inspection</td><td class="wf-td"><span class="tag tag-neutral">Normal</span></td><td class="wf-td" style="text-align:right"><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Open</button></td></tr>
+              <tr><td class="wf-td wf-mono">T 104 MWZ</td><td class="wf-td wf-mono">29 Aug</td><td class="wf-td">Trailer brake air leak</td><td class="wf-td">Driver report</td><td class="wf-td"><span class="tag tag-neutral">Awaiting parts</span></td><td class="wf-td" style="text-align:right"><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Open</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card blueprint" style="padding:12px;gap:10px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Job card · T 889 BXR</h5><span class="tag tag-accent">In progress</span></div>
+        <div class="field"><label>Work performed</label><textarea class="input" style="min-height:64px">Removed gearbox, inspected synchro rings on 4th.</textarea></div>
+        <div>
+          <div class="wf-lbl" style="margin-bottom:6px">Parts used (from inventory)</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+            <div style="display:flex;justify-content:space-between;border:1px solid var(--color-divider);padding:7px 9px"><span>Synchro ring set</span><span class="wf-mono">×1 · stock 2</span></div>
+            <div style="display:flex;justify-content:space-between;border:1px solid var(--color-divider);padding:7px 9px"><span>Gear oil 80W-90</span><span class="wf-mono">×12 L</span></div>
+          </div>
+          <button class="btn btn-secondary btn-block">+ Add part</button>
+        </div>
+        <div class="field"><label>Truck condition after service</label><div class="seg" style="width:100%"><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="cond">Good</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="cond" checked>Fair</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="cond">Poor</label></div></div>
+        <div class="field"><label>Next service due</label><input class="input" value="462,000 km"></div>
+        <button class="btn btn-primary btn-block">Complete &amp; release vehicle</button>
+        <div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent);text-align:center">Cost posts to the vehicle and to maintenance expense</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Queue on the left, the open job card on the right — a mechanic works one vehicle at a time and shouldn't navigate away to log parts. Completing the card is what returns the truck to <a class="dv-oid" href="#1a">1a</a> as available and posts the cost to <a class="dv-oid" href="#2d">2d</a>.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="2h">
+<div class="dv-olabel"><a class="dv-oid" href="#2h">2h</a>Sign-in — role routing</div>
+<div class="dv-card blueprint" style="width:390px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:flex;flex-direction:column;min-height:640px">
+  <div class="wf-ph duotone" style="height:170px"><span class="wf-lbl">brand still · truck at Ubungo yard</span></div>
+  <div style="padding:18px 16px;display:flex;flex-direction:column;gap:14px;flex:1">
+    <div>
+      <div style="font-family:var(--font-heading);font-weight:600;font-size:26px;line-height:1.1">Calvary Connect</div>
+      <div class="wf-lbl" style="margin-top:4px">Calvary Investment Company Ltd · Dar es Salaam</div>
+    </div>
+    <div class="field"><label>Email or staff ID</label><input class="input" placeholder="juma.hassan@calvary.co.tz" style="min-height:46px"></div>
+    <div class="field"><label>Password</label><input class="input" type="password" value="········" style="min-height:46px"></div>
+    <button class="btn btn-primary btn-block" style="min-height:48px">Sign in</button>
+    <a href="#2h" style="font-size:12px;text-align:center">Forgot password</a>
+
+    <div style="height:1px;background:var(--color-divider);margin:4px 0"></div>
+    <div>
+      <div class="wf-lbl" style="margin-bottom:8px">Your role decides where you land</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+        <a href="#2a" style="display:flex;justify-content:space-between;border:1px solid var(--color-divider);padding:9px 10px;text-decoration:none;color:inherit"><span>CEO</span><span class="wf-lbl">Executive dashboard</span></a>
+        <a href="#2b" style="display:flex;justify-content:space-between;border:1px solid var(--color-divider);padding:9px 10px;text-decoration:none;color:inherit"><span>Administrator</span><span class="wf-lbl">Users &amp; roles</span></a>
+        <a href="#2c" style="display:flex;justify-content:space-between;border:1px solid var(--color-divider);padding:9px 10px;text-decoration:none;color:inherit"><span>Operator</span><span class="wf-lbl">Dispatch console</span></a>
+        <a href="#2d" style="display:flex;justify-content:space-between;border:1px solid var(--color-divider);padding:9px 10px;text-decoration:none;color:inherit"><span>Accountant</span><span class="wf-lbl">Finance dashboard</span></a>
+        <a href="#2f" style="display:flex;justify-content:space-between;border:1px solid var(--color-divider);padding:9px 10px;text-decoration:none;color:inherit"><span>Human resources</span><span class="wf-lbl">People</span></a>
+        <a href="#2g" style="display:flex;justify-content:space-between;border:1px solid var(--color-divider);padding:9px 10px;text-decoration:none;color:inherit"><span>Mechanic</span><span class="wf-lbl">Workshop queue</span></a>
+        <a href="#1f" style="display:flex;justify-content:space-between;border:1px solid var(--color-accent);padding:9px 10px;text-decoration:none;color:inherit;background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><span>Driver</span><span class="wf-lbl" style="color:var(--color-accent-700)">Mobile only · location gate</span></a>
+      </div>
+    </div>
+    <div style="border:1px solid var(--color-divider);padding:10px;font-size:11.5px;line-height:1.5;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Drivers must grant GPS permission before the trip screen opens. Dispatch is alerted if a driver on an active trip goes offline.</div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">The role list is shown here as a wireframe key so you can click through to every role home — in the real product it isn't a picker; the account's role routes it, and drivers hit the mandatory location gate before anything else.</p>
+</sc-if>
+</div>
+
+</div>
+<p class="dv-next">Try next: "build out the finance screens from <a class="dv-oid" href="#2e">2e</a> — invoice, receipt, reconciliation" · "add the internal chat and notification screens" · "storyboard trip delivered → POD → invoice posted as one flow"</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Calvary Connect — fleet &amp; driver screens, first pass</span></div>
+<p class="dv-sub">Nine wireframes on the Industry blueprint system. Data is lifted from the repo: real vehicle types (dump truck / truck head / trailer / escort car), the Dar&nbsp;es&nbsp;Salaam corridor routes, driver names and TSh amounts. Two competing approaches for both key screens — fleet overview (<a class="dv-oid" href="#1a">1a</a> vs <a class="dv-oid" href="#1b">1b</a>) and driver home (<a class="dv-oid" href="#1f">1f</a> vs <a class="dv-oid" href="#1g">1g</a>).</p>
+
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Fleet overview — register + attention rail (closest to what exists)</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:200px 1fr;min-height:700px">
+  <div style="border-right:1px solid var(--color-divider);padding:16px 0;display:flex;flex-direction:column">
+    <div style="padding:0 14px 18px">
+      <div style="font-family:var(--font-heading);font-weight:600;font-size:16px;line-height:1.1">Calvary Connect</div>
+      <div class="wf-lbl" style="margin-top:3px">Logistics engine</div>
+    </div>
+    <div style="padding:0 10px 14px"><button class="btn btn-primary btn-block" style="margin:0">+ New trip</button></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#1a">Dashboard</a>
+      <a href="#1e">Dispatch</a>
+      <a href="#1a" aria-current="page">Fleet</a>
+      <a href="#1d">Compliance</a>
+      <a href="#1a">Maintenance</a>
+      <a href="#1a">Drivers</a>
+      <a href="#1a">Live map</a>
+      <a href="#1a">Finance</a>
+      <a href="#1a">Reports</a>
+    </nav>
+    <div style="margin-top:auto;padding:14px 14px 0;border-top:1px solid var(--color-divider)">
+      <div class="wf-lbl">Signed in</div>
+      <div style="font-size:12.5px;margin-top:2px">Operations · A. Mtenga</div>
+    </div>
+  </div>
+
+  <div style="padding:18px 20px 22px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+      <div>
+        <div class="wf-lbl">Fleet</div>
+        <h3 style="margin:2px 0 3px">Fleet Management</h3>
+        <div style="font-size:12.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">142 vehicles · 63% utilization · 2 need attention</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary">Maintenance</button>
+        <button class="btn btn-secondary">Export</button>
+        <button class="btn btn-primary">+ Add vehicle</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ showKpiRow }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+        <div class="card blueprint" style="gap:2px;padding:11px 12px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Vehicles</div><div style="font-family:var(--font-heading);font-size:30px;line-height:1.05">142</div></div>
+        <div class="card blueprint" style="gap:2px;padding:11px 12px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Utilization</div><div style="font-family:var(--font-heading);font-size:30px;line-height:1.05">63%</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 50%,transparent)">45 in use</div></div>
+        <div class="card blueprint" style="gap:2px;padding:11px 12px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Available</div><div style="font-family:var(--font-heading);font-size:30px;line-height:1.05">89</div></div>
+        <div class="card blueprint" style="gap:2px;padding:11px 12px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">In maintenance</div><div style="font-family:var(--font-heading);font-size:30px;line-height:1.05">6</div></div>
+        <div class="card blueprint" style="gap:2px;padding:11px 12px;border-color:var(--color-accent)"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl" style="color:var(--color-accent-700)">Needs attention</div><div style="font-family:var(--font-heading);font-size:30px;line-height:1.05;color:var(--color-accent-700)">2</div></div>
+      </div>
+    </sc-if>
+
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="display:flex">
+            <button class="wf-tab" aria-selected="true">All 142</button>
+            <button class="wf-tab" style="border-left:0">Available 89</button>
+            <button class="wf-tab" style="border-left:0">In use 45</button>
+            <button class="wf-tab" style="border-left:0">Maintenance 6</button>
+            <button class="wf-tab" style="border-left:0">Attention 2</button>
+          </div>
+          <input class="input" placeholder="Search plate, make, model…" style="max-width:230px;margin-left:auto">
+        </div>
+
+        <div class="blueprint" style="padding:0">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <table class="wf-tbl" style="width:100%;border-collapse:collapse">
+            <thead><tr>
+              <th class="wf-th">Plate</th><th class="wf-th">Make &amp; model</th><th class="wf-th">Type</th>
+              <th class="wf-th" style="text-align:right">Mileage</th><th class="wf-th">Driver</th>
+              <th class="wf-th">Status</th><th class="wf-th">Document flags</th><th class="wf-th"></th>
+            </tr></thead>
+            <tbody>
+              <tr><td class="wf-td wf-mono">T 412 DKA</td><td class="wf-td">Scania G460</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">Truck head</td><td class="wf-td wf-mono" style="text-align:right">412,050</td><td class="wf-td">Juma Hassan</td><td class="wf-td"><span class="tag tag-accent">In use</span></td><td class="wf-td" style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">All clear</td><td class="wf-td" style="text-align:right"><a href="#1c" style="font-size:11.5px">Open</a></td></tr>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="wf-td wf-mono">T 889 BXR</td><td class="wf-td">Howo ZZ3257</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">Dump truck</td><td class="wf-td wf-mono" style="text-align:right">289,112</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 50%,transparent)">—</td><td class="wf-td"><span class="tag tag-outline">Maintenance</span></td><td class="wf-td" style="font-size:11.5px"><strong style="color:var(--color-accent-800)">Insurance 4d</strong> · Reg 42d</td><td class="wf-td" style="text-align:right"><a href="#1c" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td class="wf-td wf-mono">T 221 CLP</td><td class="wf-td">Sinotruk HOWO 371</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">Dump truck</td><td class="wf-td wf-mono" style="text-align:right">156,800</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 50%,transparent)">—</td><td class="wf-td"><span class="tag tag-neutral">Available</span></td><td class="wf-td" style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Service 12d</td><td class="wf-td" style="text-align:right"><a href="#1c" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td class="wf-td wf-mono">T 104 MWZ</td><td class="wf-td">Fuwa 3-axle flatbed</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">Trailer</td><td class="wf-td wf-mono" style="text-align:right">88,205</td><td class="wf-td">Salum Kibwana</td><td class="wf-td"><span class="tag tag-accent">In use</span></td><td class="wf-td" style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">All clear</td><td class="wf-td" style="text-align:right"><a href="#1c" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td class="wf-td wf-mono">T 776 ESC</td><td class="wf-td">Toyota Land Cruiser</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">Escort car</td><td class="wf-td wf-mono" style="text-align:right">62,340</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 50%,transparent)">—</td><td class="wf-td"><span class="tag tag-neutral">Available</span></td><td class="wf-td" style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">All clear</td><td class="wf-td" style="text-align:right"><a href="#1c" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td class="wf-td wf-mono">T 530 GBX</td><td class="wf-td">Scania R500</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 60%,transparent)">Truck head</td><td class="wf-td wf-mono" style="text-align:right">338,900</td><td class="wf-td" style="color:color-mix(in srgb,var(--color-text) 50%,transparent)">—</td><td class="wf-td"><span class="tag tag-outline">Out of service</span></td><td class="wf-td" style="font-size:11.5px"><strong style="color:var(--color-accent-800)">Service overdue 1,200 km</strong></td><td class="wf-td" style="text-align:right"><a href="#1c" style="font-size:11.5px">Open</a></td></tr>
+            </tbody>
+          </table>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-top:1px solid var(--color-divider);font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">
+            <span>Showing 1–6 of 142 vehicles</span>
+            <div style="display:flex;gap:6px"><button class="btn btn-secondary" style="padding:3px 9px;font-size:12px">Prev</button><button class="btn btn-secondary" style="padding:3px 9px;font-size:12px">Next</button></div>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ showAttentionRail }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="card blueprint" style="padding:0;gap:0">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--color-divider);background:color-mix(in srgb,var(--color-accent) 9%,transparent)">
+              <h5 style="margin:0">Needs attention</h5><span class="tag tag-accent">2</span>
+            </div>
+            <div style="padding:11px;display:flex;flex-direction:column;gap:10px">
+              <div style="border:1px solid var(--color-divider);padding:10px;display:flex;flex-direction:column;gap:5px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 889 BXR</span><span class="wf-lbl" style="color:var(--color-accent-700)">Compliance</span></div>
+                <p style="margin:0;font-size:12px;line-height:1.45">Insurance expires in <strong>4 days</strong>. Vehicle is not dispatch-eligible after 07 Sep.</p>
+                <div style="display:flex;justify-content:flex-end"><button class="btn btn-ghost" style="font-size:12px">Renew policy</button></div>
+              </div>
+              <div style="border:1px solid var(--color-divider);padding:10px;display:flex;flex-direction:column;gap:5px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 530 GBX</span><span class="wf-lbl">Maintenance</span></div>
+                <p style="margin:0;font-size:12px;line-height:1.45">50,000 km service overdue by 1,200 km.</p>
+                <div style="display:flex;justify-content:flex-end"><button class="btn btn-ghost" style="font-size:12px">Schedule service</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="card blueprint" style="padding:12px;gap:8px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0">Composition</h5>
+            <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
+              <div style="display:flex;justify-content:space-between"><span>Dump trucks</span><span class="wf-mono">54</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between"><span>Truck heads</span><span class="wf-mono">46</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between"><span>Trailers</span><span class="wf-mono">33</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between"><span>Escort cars</span><span class="wf-mono">9</span></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Keeps today's structure but cuts the two KPI rows to one and moves document expiry into a real table column instead of a separate page — the compliance flag is the reason an operator opens this screen, so it should be scannable in the register itself.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Fleet overview — utilization board (cards, no table)</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:grid;grid-template-columns:200px 1fr;min-height:660px">
+  <div style="border-right:1px solid var(--color-divider);padding:16px 0;display:flex;flex-direction:column">
+    <div style="padding:0 14px 18px"><div style="font-family:var(--font-heading);font-weight:600;font-size:16px">Calvary Connect</div><div class="wf-lbl" style="margin-top:3px">Logistics engine</div></div>
+    <nav class="wf-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#1b">Dashboard</a><a href="#1e">Dispatch</a><a href="#1b" aria-current="page">Fleet</a><a href="#1d">Compliance</a><a href="#1b">Maintenance</a><a href="#1b">Drivers</a><a href="#1b">Live map</a><a href="#1b">Reports</a>
+    </nav>
+  </div>
+  <div style="padding:18px 20px 22px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px">
+      <div><div class="wf-lbl">Fleet · today</div><h3 style="margin:2px 0 0">Utilization board</h3></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="seg"><label class="seg-opt"><input type="radio" name="wfb" checked>Board</label><label class="seg-opt"><input type="radio" name="wfb">Register</label><label class="seg-opt"><input type="radio" name="wfb">Map</label></div>
+        <button class="btn btn-primary">+ Add vehicle</button>
+      </div>
+    </div>
+
+    <div class="card blueprint" style="padding:14px 16px;gap:10px">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:var(--font-heading);font-size:38px;line-height:1">63%</span><span class="wf-lbl">Fleet utilization · 45 of 142 moving</span></div>
+        <span style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Target 70%</span>
+      </div>
+      <div style="display:flex;height:16px;border:1px solid var(--color-divider)">
+        <div style="flex:45;background:var(--color-accent)"></div>
+        <div style="flex:89;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 14%,transparent) 0 1px,transparent 1px 6px)"></div>
+        <div style="flex:6;background:color-mix(in srgb,var(--color-text) 22%,transparent)"></div>
+        <div style="flex:2;background:var(--color-accent-900)"></div>
+      </div>
+      <div style="display:flex;gap:20px;font-size:11px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">
+        <span>■ In use 45</span><span>▨ Available 89</span><span>■ Maintenance 6</span><span>■ Out of service 2</span>
+      </div>
+    </div>
+
+    <div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:9px"><h5 style="margin:0">Truck heads</h5><span class="wf-lbl">46 units · 21 moving</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div class="card blueprint" style="padding:11px;gap:6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 412 DKA</span><span class="tag tag-accent">In use</span></div>
+          <div class="wf-ph" style="height:52px"><span class="wf-lbl">vehicle photo</span></div>
+          <div style="font-size:12px">Scania G460</div>
+          <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Juma Hassan · Dar → Mwanza</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)"><span>412,050 km</span><span>Fuel 62%</span></div>
+        </div>
+        <div class="card blueprint" style="padding:11px;gap:6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 530 GBX</span><span class="tag tag-outline">Out of service</span></div>
+          <div class="wf-ph" style="height:52px"><span class="wf-lbl">vehicle photo</span></div>
+          <div style="font-size:12px">Scania R500</div>
+          <div style="font-size:11.5px;color:var(--color-accent-800)">Service overdue 1,200 km</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)"><span>338,900 km</span><span>Fuel 18%</span></div>
+        </div>
+        <div class="card blueprint" style="padding:11px;gap:6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 018 KRW</span><span class="tag tag-neutral">Available</span></div>
+          <div class="wf-ph" style="height:52px"><span class="wf-lbl">vehicle photo</span></div>
+          <div style="font-size:12px">Shacman X3000</div>
+          <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Idle 3 days · Ubungo yard</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)"><span>204,760 km</span><span>Fuel 91%</span></div>
+        </div>
+        <div class="card blueprint" style="padding:11px;gap:6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 655 NDA</span><span class="tag tag-accent">In use</span></div>
+          <div class="wf-ph" style="height:52px"><span class="wf-lbl">vehicle photo</span></div>
+          <div style="font-size:12px">Scania G410</div>
+          <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Amina Said · Dar → Tunduma</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)"><span>151,300 km</span><span>Fuel 47%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:9px"><h5 style="margin:0">Dump trucks</h5><span class="wf-lbl">54 units · 19 moving</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div class="card blueprint" style="padding:11px;gap:6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 889 BXR</span><span class="tag tag-outline">Maintenance</span></div><div style="font-size:12px">Howo ZZ3257</div><div style="font-size:11.5px;color:var(--color-accent-800)">Insurance expires in 4 days</div></div>
+        <div class="card blueprint" style="padding:11px;gap:6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 221 CLP</span><span class="tag tag-neutral">Available</span></div><div style="font-size:12px">Sinotruk HOWO 371</div><div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Service due in 12 days</div></div>
+        <div class="card blueprint" style="padding:11px;gap:6px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">T 347 PLK</span><span class="tag tag-accent">In use</span></div><div style="font-size:12px">Howo ZZ3257</div><div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Godfrey Nyerere · Kinyerezi pit</div></div>
+        <div class="wf-ph" style="min-height:96px"><span class="wf-lbl">+ 51 more</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Same data, opposite premise: grouped by vehicle type with a utilization bar as the headline, because "what is idle and why" is a different question than "find this plate". Register/board/map are one segmented control, so the table from <a class="dv-oid" href="#1a">1a</a> becomes a view, not a separate screen.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Vehicle detail — spec sheet</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:16px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid var(--color-divider);padding-bottom:14px">
+    <div>
+      <div class="wf-lbl"><a href="#1a">Fleet</a> / Truck head</div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:4px">
+        <h3 class="wf-mono" style="margin:0;font-size:28px">T 412 DKA</h3>
+        <span style="font-family:var(--font-heading);font-size:20px;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Scania G460 · 2019</span>
+        <span class="tag tag-accent">In use</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px"><button class="btn btn-secondary">Assign driver</button><button class="btn btn-secondary">Log service</button><button class="btn btn-primary">Edit vehicle</button></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="wf-ph blueprint duotone" style="height:180px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="wf-lbl">vehicle photograph</span></div>
+      <div class="card blueprint" style="padding:12px;gap:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <h5 style="margin:0">Specification</h5>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:12px">
+          <span class="wf-lbl">Chassis</span><span class="wf-mono">YS2G4X20005412001</span>
+          <span class="wf-lbl">Engine</span><span class="wf-mono">DC13 · 460 hp</span>
+          <span class="wf-lbl">Axles</span><span class="wf-mono">6×4</span>
+          <span class="wf-lbl">Tare</span><span class="wf-mono">9,200 kg</span>
+          <span class="wf-lbl">Tank</span><span class="wf-mono">600 L</span>
+          <span class="wf-lbl">Odometer</span><span class="wf-mono">412,050 km</span>
+        </div>
+      </div>
+      <div class="card blueprint" style="padding:12px;gap:8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <h5 style="margin:0">Assigned</h5>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="wf-ph" style="width:40px;height:40px"></div>
+          <div><div style="font-size:13px">Juma Hassan</div><div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Licence C · expires 14 Mar 2027</div></div>
+        </div>
+        <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Trailer T 104 MWZ coupled</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Trips ytd</div><div style="font-family:var(--font-heading);font-size:26px">48</div></div>
+        <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Fuel avg</div><div style="font-family:var(--font-heading);font-size:26px">2.9<span style="font-size:14px"> km/L</span></div></div>
+        <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Cost / km</div><div style="font-family:var(--font-heading);font-size:26px">TSh 1,840</div></div>
+        <div class="card blueprint" style="padding:11px;gap:2px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="wf-lbl">Downtime</div><div style="font-family:var(--font-heading);font-size:26px">6<span style="font-size:14px"> days</span></div></div>
+      </div>
+
+      <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--color-divider)">
+          <button class="wf-tab" aria-selected="true" style="border:0;border-bottom:2px solid var(--color-accent);background:transparent;color:var(--color-text)">Documents</button>
+          <button class="wf-tab" style="border:0;background:transparent">Maintenance</button>
+          <button class="wf-tab" style="border:0;background:transparent">Fuel</button>
+          <button class="wf-tab" style="border:0;background:transparent">Trips</button>
+          <button class="wf-tab" style="border:0;background:transparent">Costs</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr><th class="wf-th">Document</th><th class="wf-th">Number</th><th class="wf-th">Issued</th><th class="wf-th">Expires</th><th class="wf-th">Remaining</th><th class="wf-th">File</th></tr></thead>
+          <tbody>
+            <tr><td class="wf-td">Insurance</td><td class="wf-td wf-mono">POL-88421</td><td class="wf-td wf-mono">12 Oct 2025</td><td class="wf-td wf-mono">11 Oct 2026</td><td class="wf-td"><span class="tag tag-neutral">403 days</span></td><td class="wf-td"><a href="#1c" style="font-size:11.5px">View PDF</a></td></tr>
+            <tr><td class="wf-td">Road licence</td><td class="wf-td wf-mono">RL-2026-0417</td><td class="wf-td wf-mono">01 Jan 2026</td><td class="wf-td wf-mono">31 Dec 2026</td><td class="wf-td"><span class="tag tag-neutral">119 days</span></td><td class="wf-td"><a href="#1c" style="font-size:11.5px">View PDF</a></td></tr>
+            <tr><td class="wf-td">Inspection (TBS)</td><td class="wf-td wf-mono">INS-55190</td><td class="wf-td wf-mono">04 Mar 2026</td><td class="wf-td wf-mono">03 Sep 2026</td><td class="wf-td"><span class="tag tag-accent">Expires today</span></td><td class="wf-td"><a href="#1c" style="font-size:11.5px">Upload new</a></td></tr>
+            <tr><td class="wf-td">SUMATRA permit</td><td class="wf-td wf-mono">SP-77302</td><td class="wf-td wf-mono">20 Feb 2026</td><td class="wf-td wf-mono">19 Feb 2027</td><td class="wf-td"><span class="tag tag-neutral">169 days</span></td><td class="wf-td"><a href="#1c" style="font-size:11.5px">View PDF</a></td></tr>
+            <tr><td class="wf-td">Transit bond</td><td class="wf-td wf-mono">TB-01298</td><td class="wf-td wf-mono">—</td><td class="wf-td wf-mono">—</td><td class="wf-td"><span class="tag tag-outline">Missing</span></td><td class="wf-td"><a href="#1c" style="font-size:11.5px">Upload</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <h5 style="margin:0">Recent activity</h5>
+        <div style="display:flex;flex-direction:column;gap:0;font-size:12px">
+          <div style="display:grid;grid-template-columns:88px 1fr auto;gap:10px;padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)"><span class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">03 Sep</span><span>Trip TRP-2418 started · Dar es Salaam → Mwanza</span><span class="wf-lbl">Dispatch</span></div>
+          <div style="display:grid;grid-template-columns:88px 1fr auto;gap:10px;padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)"><span class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">02 Sep</span><span>Fuel 480 L · TSh 1,392,000 · Morogoro depot</span><span class="wf-lbl">Approved</span></div>
+          <div style="display:grid;grid-template-columns:88px 1fr auto;gap:10px;padding:7px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)"><span class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">28 Aug</span><span>Service · brake pads, oil filter · 8 parts issued</span><span class="wf-lbl">Mechanic</span></div>
+          <div style="display:grid;grid-template-columns:88px 1fr auto;gap:10px;padding:7px 0"><span class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent)">21 Aug</span><span>Driver reassigned to Juma Hassan</span><span class="wf-lbl">HR</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">One page per vehicle, tabbed rather than scrolling: identity and cost on the left, the document register up top because that is what blocks dispatch. Missing documents get a row, not silence.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Compliance — expiry horizon</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:16px">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between">
+    <div><div class="wf-lbl">Fleet</div><h3 style="margin:2px 0 0">Document &amp; compliance horizon</h3><div style="font-size:12.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent);margin-top:3px">Next 90 days · 11 items · 2 blocking dispatch</div></div>
+    <div style="display:flex;gap:8px"><div class="seg"><label class="seg-opt"><input type="radio" name="wfd" checked>30d</label><label class="seg-opt"><input type="radio" name="wfd">90d</label><label class="seg-opt"><input type="radio" name="wfd">1y</label></div><button class="btn btn-primary">Bulk renew</button></div>
+  </div>
+
+  <div class="card blueprint" style="padding:14px;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;border-bottom:1px solid var(--color-divider);padding-bottom:7px">
+      <span class="wf-lbl">Vehicle</span>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr)"><span class="wf-lbl">Sep</span><span class="wf-lbl">Oct</span><span class="wf-lbl">Nov</span><span class="wf-lbl">Dec</span><span class="wf-lbl">Jan</span><span class="wf-lbl">Feb</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)">
+      <span class="wf-mono">T 889 BXR</span>
+      <div style="position:relative;height:22px;background:repeating-linear-gradient(90deg,var(--color-divider) 0 1px,transparent 1px 16.66%)">
+        <div style="position:absolute;left:2%;top:0;height:22px;padding:0 8px;background:var(--color-accent);color:var(--color-bg);font-size:11px;display:flex;align-items:center;white-space:nowrap">Insurance · 4d</div>
+        <div style="position:absolute;left:36%;top:0;height:22px;padding:0 8px;border:1px solid var(--color-divider);font-size:11px;display:flex;align-items:center;white-space:nowrap">Reg · 42d</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)">
+      <span class="wf-mono">T 412 DKA</span>
+      <div style="position:relative;height:22px;background:repeating-linear-gradient(90deg,var(--color-divider) 0 1px,transparent 1px 16.66%)">
+        <div style="position:absolute;left:0;top:0;height:22px;padding:0 8px;background:var(--color-accent-900);color:var(--color-bg);font-size:11px;display:flex;align-items:center;white-space:nowrap">TBS inspection · today</div>
+        <div style="position:absolute;left:64%;top:0;height:22px;padding:0 8px;border:1px solid var(--color-divider);font-size:11px;display:flex;align-items:center;white-space:nowrap">Road licence · 119d</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)">
+      <span class="wf-mono">T 221 CLP</span>
+      <div style="position:relative;height:22px;background:repeating-linear-gradient(90deg,var(--color-divider) 0 1px,transparent 1px 16.66%)">
+        <div style="position:absolute;left:12%;top:0;height:22px;padding:0 8px;border:1px solid var(--color-divider);font-size:11px;display:flex;align-items:center;white-space:nowrap">Service · 12d</div>
+        <div style="position:absolute;left:52%;top:0;height:22px;padding:0 8px;border:1px solid var(--color-divider);font-size:11px;display:flex;align-items:center;white-space:nowrap">Insurance · 78d</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent)">
+      <span class="wf-mono">Juma Hassan</span>
+      <div style="position:relative;height:22px;background:repeating-linear-gradient(90deg,var(--color-divider) 0 1px,transparent 1px 16.66%)">
+        <div style="position:absolute;left:22%;top:0;height:22px;padding:0 8px;border:1px solid var(--color-divider);font-size:11px;display:flex;align-items:center;white-space:nowrap">Medical certificate · 26d</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;padding:9px 0">
+      <span class="wf-mono">T 530 GBX</span>
+      <div style="position:relative;height:22px;background:repeating-linear-gradient(90deg,var(--color-divider) 0 1px,transparent 1px 16.66%)">
+        <div style="position:absolute;left:6%;top:0;height:22px;padding:0 8px;background:var(--color-accent);color:var(--color-bg);font-size:11px;display:flex;align-items:center;white-space:nowrap">Service overdue · 1,200 km</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider)"><h5 style="margin:0">Blocking dispatch now</h5></div>
+      <table style="width:100%;border-collapse:collapse">
+        <tbody>
+          <tr><td class="wf-td wf-mono">T 889 BXR</td><td class="wf-td">Insurance lapses 07 Sep</td><td class="wf-td" style="text-align:right"><button class="btn btn-primary" style="padding:3px 10px;font-size:12px">Renew</button></td></tr>
+          <tr><td class="wf-td wf-mono">T 412 DKA</td><td class="wf-td">TBS inspection expires today</td><td class="wf-td" style="text-align:right"><button class="btn btn-primary" style="padding:3px 10px;font-size:12px">Book</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h5 style="margin:0">Coverage</h5>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Insurance on file</span><span class="wf-mono">139 / 142</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:98%;background:var(--color-accent)"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Road licence on file</span><span class="wf-mono">142 / 142</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:100%;background:var(--color-accent)"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Transit bonds on file</span><span class="wf-mono">31 / 46</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:67%;background:var(--color-accent)"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span>Driver medicals valid</span><span class="wf-mono">54 / 61</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="wf-fill" style="height:100%;width:88%;background:var(--color-accent)"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Expiry is a date problem, so the primary view is a time axis, not a list. Vehicles and drivers share the same horizon — a lapsed driver medical grounds a truck exactly like a lapsed insurance policy does.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="1e">
+<div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Dispatch — assign trip to vehicle + driver</div>
+<div class="dv-card blueprint" style="width:1180px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:14px">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between">
+    <div><div class="wf-lbl">Operations</div><h3 style="margin:2px 0 0">Dispatch board · Thu 03 Sep</h3></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-secondary">Live map</button><button class="btn btn-primary">+ New trip</button></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 300px 300px;gap:16px;align-items:start">
+    <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--color-divider)"><h5 style="margin:0">Unassigned bookings</h5><span class="tag tag-accent">3</span></div>
+      <div style="padding:11px;display:flex;flex-direction:column;gap:10px">
+        <div style="border:1px solid var(--color-accent);padding:11px;display:flex;flex-direction:column;gap:7px;background:color-mix(in srgb,var(--color-accent) 7%,transparent)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">TRP-2421</span><span class="wf-lbl">Selected</span></div>
+          <div style="font-family:var(--font-heading);font-size:19px;line-height:1.15">Dar es Salaam → Mwanza</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
+            <div><div class="wf-lbl">Client</div>Dangote Cement</div>
+            <div><div class="wf-lbl">Cargo</div>Cement · 30 t</div>
+            <div><div class="wf-lbl">Load window</div>04 Sep 06:00</div>
+            <div><div class="wf-lbl">Rate</div>TSh 4,150,000</div>
+          </div>
+          <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Needs: truck head + trailer · 1,180 km · 2 days</div>
+        </div>
+        <div style="border:1px solid var(--color-divider);padding:11px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between"><span class="wf-mono" style="font-weight:700">TRP-2422</span><span class="tag tag-neutral">Transit</span></div>
+          <div style="font-size:13px">Dar es Salaam → Tunduma</div>
+          <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Yara · Fertiliser 28 t · 05 Sep</div>
+        </div>
+        <div style="border:1px solid var(--color-divider);padding:11px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between"><span class="wf-mono" style="font-weight:700">TRP-2423</span><span class="tag tag-neutral">Local</span></div>
+          <div style="font-size:13px">Kinyerezi pit → Ubungo site</div>
+          <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Kilimanjaro Beverages · Aggregate 18 t · 04 Sep</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider)"><h5 style="margin:0">Eligible vehicles</h5><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent);margin-top:2px">Filtered to truck heads, documents valid</div></div>
+      <div style="padding:11px;display:flex;flex-direction:column;gap:9px">
+        <label class="radio" style="border:1px solid var(--color-accent);padding:9px;align-items:flex-start;width:100%"><input type="radio" name="wfveh" checked><span class="dot" style="margin-top:2px"></span><span><span class="wf-mono" style="font-weight:700">T 018 KRW</span><br><span style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Shacman X3000 · idle 3 days · fuel 91%</span></span></label>
+        <label class="radio" style="border:1px solid var(--color-divider);padding:9px;align-items:flex-start;width:100%"><input type="radio" name="wfveh"><span class="dot" style="margin-top:2px"></span><span><span class="wf-mono" style="font-weight:700">T 902 JLN</span><br><span style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Scania G410 · idle 1 day · fuel 74%</span></span></label>
+        <label class="radio" style="border:1px solid var(--color-divider);padding:9px;align-items:flex-start;width:100%;opacity:.55"><input type="radio" name="wfveh" disabled><span class="dot" style="margin-top:2px"></span><span><span class="wf-mono" style="font-weight:700">T 889 BXR</span><br><span style="font-size:11.5px;color:var(--color-accent-800)">Blocked · insurance expires in 4 days</span></span></label>
+        <div style="height:1px;background:var(--color-divider)"></div>
+        <div class="wf-lbl">Trailer</div>
+        <label class="radio" style="border:1px solid var(--color-divider);padding:9px;width:100%"><input type="radio" name="wftr" checked><span class="dot"></span><span class="wf-mono" style="font-weight:700">T 104 MWZ</span></label>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card blueprint" style="padding:0;gap:0"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div style="padding:10px 12px;border-bottom:1px solid var(--color-divider)"><h5 style="margin:0">Available drivers</h5></div>
+        <div style="padding:11px;display:flex;flex-direction:column;gap:9px">
+          <label class="radio" style="border:1px solid var(--color-accent);padding:9px;align-items:flex-start;width:100%"><input type="radio" name="wfdrv" checked><span class="dot" style="margin-top:2px"></span><span><span style="font-size:13px;font-weight:500">Rehema Mwakasege</span><br><span style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Rested 26h · 4 Mwanza runs · licence valid</span></span></label>
+          <label class="radio" style="border:1px solid var(--color-divider);padding:9px;align-items:flex-start;width:100%"><input type="radio" name="wfdrv"><span class="dot" style="margin-top:2px"></span><span><span style="font-size:13px;font-weight:500">Salum Kibwana</span><br><span style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Rested 9h · returns tonight</span></span></label>
+          <label class="radio" style="border:1px solid var(--color-divider);padding:9px;align-items:flex-start;width:100%;opacity:.55"><input type="radio" name="wfdrv" disabled><span class="dot" style="margin-top:2px"></span><span><span style="font-size:13px;font-weight:500">Godfrey Nyerere</span><br><span style="font-size:11.5px;color:var(--color-accent-800)">Medical certificate expires in 26 days</span></span></label>
+        </div>
+      </div>
+      <div class="card blueprint" style="padding:12px;gap:9px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <h5 style="margin:0">Assignment summary</h5>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:12px">
+          <span class="wf-lbl">Trip</span><span class="wf-mono">TRP-2421</span>
+          <span class="wf-lbl">Unit</span><span class="wf-mono">T 018 KRW + T 104 MWZ</span>
+          <span class="wf-lbl">Driver</span><span>Rehema Mwakasege</span>
+          <span class="wf-lbl">Fuel advance</span><span class="wf-mono">TSh 1,450,000</span>
+          <span class="wf-lbl">Est. margin</span><span class="wf-mono">TSh 1,120,000</span>
+        </div>
+        <div class="field"><label>Note to driver</label><input class="input" placeholder="Load bay 4, ask for Mr. Kaaya"></div>
+        <button class="btn btn-primary btn-block">Assign &amp; notify driver</button>
+        <div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent);text-align:center">Push notification + trip appears in driver app</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Three columns, one decision: booking → unit → driver, with a summary that commits. Ineligible options stay visible but disabled with the reason attached, so dispatch learns why a truck can't go instead of wondering where it went.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="1f">
+<div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Driver home — one active trip, everything else secondary</div>
+<div class="dv-card blueprint" style="width:390px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:flex;flex-direction:column;min-height:800px">
+  <div style="background:var(--color-accent-900);color:var(--color-bg);padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font-family:var(--font-heading);font-weight:600;font-size:18px;line-height:1.1">Driver Console</div><div style="font-size:12px;opacity:.75">Juma Hassan · T 412 DKA</div></div>
+    <div style="border:1px solid rgba(255,255,255,.3);width:34px;height:34px;display:grid;place-items:center;font-size:11px">3</div>
+  </div>
+
+  <div style="padding:14px;display:flex;flex-direction:column;gap:14px;flex:1">
+    <div class="blueprint" style="padding:0">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div style="padding:12px 13px;border-bottom:1px solid var(--color-divider);display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <span class="tag tag-accent">In transit</span>
+          <div style="font-family:var(--font-heading);font-weight:600;font-size:21px;line-height:1.15;margin-top:6px">Dar es Salaam<br>→ Mwanza</div>
+          <div class="wf-mono" style="color:color-mix(in srgb,var(--color-text) 55%,transparent);margin-top:3px">TRP-2418</div>
+        </div>
+        <button class="btn btn-secondary" style="width:44px;height:44px;padding:0;font-size:10px">MAP</button>
+      </div>
+      <div style="padding:13px;display:flex;flex-direction:column;gap:13px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:5px"><span class="wf-lbl">Route progress</span><span class="wf-mono">65% · 767 / 1,180 km</span></div>
+          <div style="height:12px;border:1px solid var(--color-divider);display:flex"><div class="wf-fill" style="width:65%;background:var(--color-accent)"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:color-mix(in srgb,var(--color-text) 52%,transparent);margin-top:4px"><span>Singida passed 11:40</span><span>ETA 04 Sep 08:20</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;font-size:12.5px">
+          <div style="border:1px solid var(--color-divider);padding:8px 9px"><div class="wf-lbl">Client</div>Dangote Cement</div>
+          <div style="border:1px solid var(--color-divider);padding:8px 9px"><div class="wf-lbl">Cargo</div>Cement · 30 t</div>
+          <div style="border:1px solid var(--color-divider);padding:8px 9px;grid-column:span 2"><div class="wf-lbl">Deliver to</div>Nyakato depot, Mwanza · Mr. Kaaya +255 754 118 902</div>
+        </div>
+        <div style="display:grid;gap:9px">
+          <button class="btn btn-primary" style="min-height:48px">Update status → Arrived</button>
+          <button class="btn btn-secondary" style="min-height:48px">Upload proof of delivery</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="wf-lbl" style="margin-bottom:8px">Quick actions</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <button class="btn btn-secondary" style="min-height:64px;flex-direction:column;gap:3px;font-size:13px">Request fuel<span style="font-family:var(--font-body);font-size:10.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">1 pending</span></button>
+        <button class="btn btn-secondary" style="min-height:64px;flex-direction:column;gap:3px;font-size:13px">Log expense<span style="font-family:var(--font-body);font-size:10.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">TSh 84,000 today</span></button>
+        <button class="btn btn-secondary" style="min-height:64px;grid-column:span 2;border-color:var(--color-accent);color:var(--color-accent-800);font-size:13px">Report breakdown or incident</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="wf-lbl" style="margin-bottom:8px">Next up</div>
+      <div style="border:1px solid var(--color-divider);padding:11px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:13px">Mwanza → Dar es Salaam</div><div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">TRP-2426 · empty return · 05 Sep</div></div>
+        <span class="tag tag-neutral">Pending</span>
+      </div>
+    </div>
+
+    <div style="border:1px solid var(--color-divider);padding:10px 11px;font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent);line-height:1.5">
+      Trips are assigned by dispatch. Location sharing is on — required while a trip is in transit.
+    </div>
+  </div>
+
+  <div style="border-top:1px solid var(--color-divider);display:grid;grid-template-columns:repeat(5,1fr);height:64px">
+    <a href="#1f" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:var(--color-accent);border-top:2px solid var(--color-accent);letter-spacing:.06em">HOME</a>
+    <a href="#1h" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">TRIPS</a>
+    <a href="#1i" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">FUEL</a>
+    <a href="#1f" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">MONEY</a>
+    <a href="#1f" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">ME</a>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">A driver has exactly one job in progress, so the home screen is that job. 48px+ targets, no nested tabs, and the two actions that generate the company's data — status and POD — are the only filled buttons.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="1g">
+<div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Driver trip — step checklist instead of a card</div>
+<div class="dv-card blueprint" style="width:390px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:flex;flex-direction:column;min-height:800px">
+  <div style="padding:13px 15px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:11px">
+    <a href="#1h" style="font-size:12px;text-decoration:none">← Trips</a>
+    <div style="margin-left:auto;text-align:right"><div class="wf-mono" style="font-size:13px;font-weight:700">TRP-2418</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Dar → Mwanza · 30 t cement</div></div>
+  </div>
+
+  <div class="wf-ph" style="height:150px;border-left:0;border-right:0;border-top:0"><span class="wf-lbl wf-live">live map · route + current position</span></div>
+
+  <div style="padding:14px;display:flex;flex-direction:column;gap:14px;flex:1">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <h4 style="margin:0">Trip steps</h4><span class="wf-lbl">4 of 7 done</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:0">
+      <div style="display:grid;grid-template-columns:26px 1fr auto;gap:11px;padding:11px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);align-items:center">
+        <div style="width:22px;height:22px;background:var(--color-accent);color:var(--color-bg);display:grid;place-items:center;font-size:11px">✓</div>
+        <div><div style="font-size:13px">Vehicle check &amp; odometer</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">412,050 km · 03 Sep 05:42</div></div>
+        <span class="wf-lbl">Done</span>
+      </div>
+      <div style="display:grid;grid-template-columns:26px 1fr auto;gap:11px;padding:11px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);align-items:center">
+        <div style="width:22px;height:22px;background:var(--color-accent);color:var(--color-bg);display:grid;place-items:center;font-size:11px">✓</div>
+        <div><div style="font-size:13px">Loaded at Ubungo</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">30 t · 3 photos · 06:20</div></div>
+        <span class="wf-lbl">Done</span>
+      </div>
+      <div style="display:grid;grid-template-columns:26px 1fr auto;gap:11px;padding:11px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);align-items:center">
+        <div style="width:22px;height:22px;background:var(--color-accent);color:var(--color-bg);display:grid;place-items:center;font-size:11px">✓</div>
+        <div><div style="font-size:13px">Trip started</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">06:35 · location sharing on</div></div>
+        <span class="wf-lbl">Done</span>
+      </div>
+      <div style="display:grid;grid-template-columns:26px 1fr auto;gap:11px;padding:11px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);align-items:center">
+        <div style="width:22px;height:22px;background:var(--color-accent);color:var(--color-bg);display:grid;place-items:center;font-size:11px">✓</div>
+        <div><div style="font-size:13px">Weighbridge · Kibaha</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Ticket WB-4471 · 07:58</div></div>
+        <span class="wf-lbl">Done</span>
+      </div>
+      <div style="display:grid;grid-template-columns:26px 1fr auto;gap:11px;padding:13px 11px;border:1px solid var(--color-accent);background:color-mix(in srgb,var(--color-accent) 7%,transparent);align-items:center;margin:6px 0">
+        <div style="width:22px;height:22px;border:1px solid var(--color-accent);display:grid;place-items:center;font-size:11px">5</div>
+        <div><div style="font-size:13px;font-weight:500">Arrived at Nyakato depot</div><div style="font-size:11px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Tap when you reach the gate</div></div>
+        <button class="btn btn-primary" style="min-height:40px">Mark</button>
+      </div>
+      <div style="display:grid;grid-template-columns:26px 1fr auto;gap:11px;padding:11px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);align-items:center;opacity:.5">
+        <div style="width:22px;height:22px;border:1px solid var(--color-divider);display:grid;place-items:center;font-size:11px">6</div>
+        <div><div style="font-size:13px">Unloaded</div><div style="font-size:11px">Requires signature from receiver</div></div>
+        <span class="wf-lbl">Locked</span>
+      </div>
+      <div style="display:grid;grid-template-columns:26px 1fr auto;gap:11px;padding:11px 0;align-items:center;opacity:.5">
+        <div style="width:22px;height:22px;border:1px solid var(--color-divider);display:grid;place-items:center;font-size:11px">7</div>
+        <div><div style="font-size:13px">Proof of delivery uploaded</div><div style="font-size:11px">2 photos + delivery note</div></div>
+        <span class="wf-lbl">Locked</span>
+      </div>
+    </div>
+
+    <div style="border:1px solid var(--color-divider);padding:11px;display:flex;flex-direction:column;gap:8px">
+      <div class="wf-lbl">Trip money so far</div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:12.5px">
+        <span>Fuel advance</span><span class="wf-mono">TSh 1,392,000</span>
+        <span>Weighbridge + tolls</span><span class="wf-mono">TSh 84,000</span>
+        <span>Allowance</span><span class="wf-mono">TSh 120,000</span>
+      </div>
+      <button class="btn btn-secondary btn-block" style="min-height:44px">Add expense</button>
+    </div>
+  </div>
+
+  <div style="border-top:1px solid var(--color-divider);display:grid;grid-template-columns:repeat(5,1fr);height:64px">
+    <a href="#1f" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">HOME</a>
+    <a href="#1h" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:var(--color-accent);border-top:2px solid var(--color-accent);letter-spacing:.06em">TRIPS</a>
+    <a href="#1i" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">FUEL</a>
+    <a href="#1g" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">MONEY</a>
+    <a href="#1g" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">ME</a>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">The alternative to <a class="dv-oid" href="#1f">1f</a>: the trip is a checklist, and steps unlock in order. Every step the driver taps is a timestamped record the office currently has to phone for — and locked steps make the sequence obvious without training.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="1h">
+<div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Driver — my trips</div>
+<div class="dv-card blueprint" style="width:390px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:flex;flex-direction:column;min-height:740px">
+  <div style="padding:14px 15px;border-bottom:1px solid var(--color-divider)">
+    <h4 style="margin:0">My trips</h4>
+    <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">Assigned to you only · you cannot create trips</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--color-divider)">
+    <button class="wf-tab" aria-selected="true" style="border:0;min-height:44px">All 12</button>
+    <button class="wf-tab" style="border:0;min-height:44px">Pending 2</button>
+    <button class="wf-tab" style="border:0;min-height:44px">Transit 1</button>
+    <button class="wf-tab" style="border:0;min-height:44px">Done 9</button>
+  </div>
+  <div style="padding:13px;display:flex;flex-direction:column;gap:11px;flex:1">
+    <a href="#1g" style="text-decoration:none;color:inherit;border:1px solid var(--color-accent);padding:12px;display:flex;flex-direction:column;gap:7px;background:color-mix(in srgb,var(--color-accent) 7%,transparent)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">TRP-2418</span><span class="tag tag-accent">In transit</span></div>
+      <div style="font-family:var(--font-heading);font-weight:600;font-size:17px">Dar es Salaam → Mwanza</div>
+      <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Dangote · Cement 30 t · 65% complete</div>
+      <div style="height:8px;border:1px solid var(--color-divider);display:flex"><div class="wf-fill" style="width:65%;background:var(--color-accent)"></div></div>
+    </a>
+    <div style="border:1px solid var(--color-divider);padding:12px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">TRP-2426</span><span class="tag tag-neutral">Pending</span></div>
+      <div style="font-size:14px">Mwanza → Dar es Salaam</div>
+      <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Empty return · load window 05 Sep 07:00</div>
+      <button class="btn btn-secondary" style="min-height:44px;margin-top:3px">Accept trip</button>
+    </div>
+    <div style="border:1px solid var(--color-divider);padding:12px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">TRP-2402</span><span class="tag tag-neutral">Delivered</span></div>
+      <div style="font-size:14px">Dar es Salaam → Dodoma</div>
+      <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Kilimanjaro Beverages · 28 Aug · POD uploaded</div>
+    </div>
+    <div style="border:1px solid var(--color-divider);padding:12px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="wf-mono" style="font-weight:700">TRP-2391</span><span class="tag tag-outline">POD missing</span></div>
+      <div style="font-size:14px">Dar es Salaam → Tunduma</div>
+      <div style="font-size:11.5px;color:var(--color-accent-800)">Delivered 22 Aug · finance is waiting on your photos</div>
+      <button class="btn btn-primary" style="min-height:44px;margin-top:3px">Upload proof of delivery</button>
+    </div>
+  </div>
+  <div style="border-top:1px solid var(--color-divider);display:grid;grid-template-columns:repeat(5,1fr);height:64px">
+    <a href="#1f" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">HOME</a>
+    <a href="#1h" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:var(--color-accent);border-top:2px solid var(--color-accent);letter-spacing:.06em">TRIPS</a>
+    <a href="#1i" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">FUEL</a>
+    <a href="#1h" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">MONEY</a>
+    <a href="#1h" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">ME</a>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Today's tab labels are kept, but a delivered trip with no POD gets its own state and a filled button — that gap is what stalls invoicing, and the list is the only place the driver will see it.</p>
+</sc-if>
+</div>
+
+<div class="dv-opt" id="1i">
+<div class="dv-olabel"><a class="dv-oid" href="#1i">1i</a>Driver — fuel request &amp; breakdown report</div>
+<div class="dv-card blueprint" style="width:390px">
+<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+<div style="display:flex;flex-direction:column;min-height:740px">
+  <div style="padding:14px 15px;border-bottom:1px solid var(--color-divider)"><h4 style="margin:0">Request fuel</h4><div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">T 412 DKA · TRP-2418</div></div>
+  <div style="padding:14px;display:flex;flex-direction:column;gap:13px;flex:1">
+    <div style="border:1px solid var(--color-divider);padding:11px;display:flex;justify-content:space-between;align-items:center">
+      <div><div class="wf-lbl">Tank now</div><div style="font-family:var(--font-heading);font-size:24px;line-height:1.1">62%</div></div>
+      <div style="text-align:right;font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">600 L capacity<br>~372 L on board</div>
+    </div>
+    <div class="field"><label>Litres requested</label><input class="input" value="480" style="min-height:44px"></div>
+    <div class="field"><label>Station</label><input class="input" value="Morogoro depot — company account" style="min-height:44px"></div>
+    <div class="field"><label>Odometer reading</label><input class="input" value="412,050" style="min-height:44px"></div>
+    <div>
+      <label class="wf-lbl" style="display:block;margin-bottom:6px">Odometer photo (required)</label>
+      <div class="wf-ph" style="height:96px"><span class="wf-lbl">tap to capture</span></div>
+    </div>
+    <div style="border:1px solid var(--color-divider);padding:11px;display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:12.5px">
+      <span class="wf-lbl">Est. cost</span><span class="wf-mono">TSh 1,392,000</span>
+      <span class="wf-lbl">Approver</span><span>Accounts · S. Mwinyi</span>
+      <span class="wf-lbl">Last request</span><span>02 Sep · approved</span>
+    </div>
+    <button class="btn btn-primary btn-block" style="min-height:48px">Submit for approval</button>
+
+    <div style="height:1px;background:var(--color-divider);margin:2px 0"></div>
+
+    <div style="border:1px solid var(--color-accent);padding:12px;display:flex;flex-direction:column;gap:9px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><h5 style="margin:0">Something wrong?</h5><span class="wf-lbl" style="color:var(--color-accent-700)">Goes to mechanic</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-secondary" style="min-height:44px;font-size:12.5px">Breakdown</button>
+        <button class="btn btn-secondary" style="min-height:44px;font-size:12.5px">Tyre</button>
+        <button class="btn btn-secondary" style="min-height:44px;font-size:12.5px">Accident</button>
+        <button class="btn btn-secondary" style="min-height:44px;font-size:12.5px">Police / customs</button>
+      </div>
+      <div style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent);line-height:1.5">Your GPS position and vehicle are attached automatically. Dispatch and the duty mechanic are alerted immediately.</div>
+    </div>
+  </div>
+  <div style="border-top:1px solid var(--color-divider);display:grid;grid-template-columns:repeat(5,1fr);height:64px">
+    <a href="#1f" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">HOME</a>
+    <a href="#1h" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">TRIPS</a>
+    <a href="#1i" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:var(--color-accent);border-top:2px solid var(--color-accent);letter-spacing:.06em">FUEL</a>
+    <a href="#1i" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">MONEY</a>
+    <a href="#1i" style="display:grid;place-items:center;font-size:10.5px;text-decoration:none;color:color-mix(in srgb,var(--color-text) 55%,transparent);letter-spacing:.06em">ME</a>
+  </div>
+</div>
+</div>
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<p class="dv-note">Fuel and incident reporting share a screen because they share a moment — the driver has stopped. Four incident types instead of a free-text form: the mechanic gets a triageable record and the driver taps once.</p>
+</sc-if>
+</div>
+
+</div>
+<p class="dv-next">Try next: "take <a class="dv-oid" href="#1a">1a</a> forward and drop <a class="dv-oid" href="#1b">1b</a>" · "wireframe the live tracking map and the maintenance queue" · "storyboard dispatch assigns → driver delivers → finance invoices as one flow"</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showNotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Wireframe board&quot;},&quot;showKpiRow&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Fleet overview&quot;},&quot;showAttentionRail&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Fleet overview&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showNotes: this.props.showNotes ?? true,
+      showKpiRow: this.props.showKpiRow ?? true,
+      showAttentionRail: this.props.showAttentionRail ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

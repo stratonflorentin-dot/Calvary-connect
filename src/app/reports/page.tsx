@@ -4,8 +4,9 @@ import { PageShell, PageHeader } from '@/components/shell';
 import { useRole } from '@/hooks/use-role';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, TrendingUp, PieChart, BarChart3, Users, Scale, ArrowRight, BriefcaseBusiness, Route, WalletCards } from 'lucide-react';
+import { FileText, TrendingUp, PieChart, BarChart3, Users, Scale, ArrowRight, BriefcaseBusiness, Route, WalletCards, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import ExecutiveSummary from './executive-summary';
 import { ProfessionalFinancialReport } from '@/components/financial/professional-financial-report';
 
@@ -23,6 +24,15 @@ export default function ReportsPage() {
                 title="Reports & Analytics"
                 subtitle="Financial reports and business analytics across the fleet"
                 icon={BarChart3}
+                actions={
+                    ["CEO", "ADMIN", "ACCOUNTANT", "HR"].includes(role) ? (
+                        <Button variant="outline" asChild>
+                            <Link href="/reports/notebook">
+                                <Sparkles className="size-4 mr-2" /> AI Notebook
+                            </Link>
+                        </Button>
+                    ) : undefined
+                }
             />
             <div className="space-y-6">
                     <section className="border border-border bg-card rounded-xl overflow-hidden">

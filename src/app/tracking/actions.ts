@@ -11,6 +11,10 @@ function getAdminClient() {
 
 const MANAGER_ROLES = ["CEO", "ADMIN", "HR", "OPERATOR"];
 
+/** Driver-phone GPS entries older than this are treated as inactive and
+ *  excluded from the fleet map entirely (6 days). */
+const DRIVER_ACTIVE_CUTOFF_MS = 6 * 24 * 60 * 60 * 1000;
+
 function isDriverRole(role: unknown) {
   return String(role || "").toUpperCase() === "DRIVER";
 }
@@ -225,7 +229,14 @@ function buildLocationRows(
 
     const lastUpdatedTime = new Date(String(loc.last_updated || 0)).getTime();
     const staleMs = Date.now() - lastUpdatedTime;
-    
+
+    // Drop driver-phone entries that haven't reported for more than 6 days —
+    // they're inactive drivers, not fleet units, and shouldn't appear on the
+    // map or in the Active Fleet list. Rows are ordered last_updated desc, so
+    // the freshest row per driver is evaluated first and dropping stale ones
+    // here can't hide a driver who reported recently elsewhere in the set.
+    if (Number.isFinite(staleMs) && staleMs > DRIVER_ACTIVE_CUTOFF_MS) continue;
+
     // Freshness status rules
     let status: "LIVE" | "DELAYED" | "STALE" | "OFFLINE" = "OFFLINE";
     if (loc.is_active) {

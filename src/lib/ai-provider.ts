@@ -4,8 +4,8 @@
 type Msg = { role: string; content: Array<{ text: string }> };
 type Usage = { tokensIn: number; tokensOut: number } | null;
 
-export async function generateAI(opts: { system: string; messages: Msg[] }): Promise<{ text: string; provider: string; usage: Usage }> {
-    const { system, messages } = opts;
+export async function generateAI(opts: { system: string; messages: Msg[]; maxTokens?: number }): Promise<{ text: string; provider: string; usage: Usage }> {
+    const { system, messages, maxTokens = 1000 } = opts;
     const preferred = (process.env.AI_PROVIDER || '').toLowerCase();
     const openKey = process.env.OPENROUTER_API_KEY;
 
@@ -32,7 +32,7 @@ export async function generateAI(opts: { system: string; messages: Msg[] }): Pro
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${openKey}`,
             },
-            body: JSON.stringify({ model, messages: orMessages, max_tokens: 1000 }),
+            body: JSON.stringify({ model, messages: orMessages, max_tokens: maxTokens }),
         });
 
         const raw = await resp.text();
@@ -80,7 +80,7 @@ export async function generateAI(opts: { system: string; messages: Msg[] }): Pro
         const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` },
-            body: JSON.stringify({ model, messages: groqMessages, max_tokens: 1000 }),
+            body: JSON.stringify({ model, messages: groqMessages, max_tokens: maxTokens }),
         });
         const raw = await resp.text();
         if (!resp.ok) throw new Error(`Groq error status=${resp.status} body=${raw.slice(0, 1000)}`);

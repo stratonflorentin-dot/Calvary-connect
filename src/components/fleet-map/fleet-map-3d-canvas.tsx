@@ -179,6 +179,8 @@ export type FleetMapCanvasHandle = {
   zoomOut: () => void;
   fitDrivers: () => void;
   flyToDriver: (lat: number, lng: number, zoom?: number) => void;
+  /** Render the map as a 3D globe (MapLibre globe projection) or flat mercator. */
+  setGlobe: (on: boolean) => void;
 };
 
 type Props = {
@@ -427,6 +429,9 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       zoomIn:  () => mapRef.current?.zoomIn(),
       zoomOut: () => mapRef.current?.zoomOut(),
       fitDrivers: fitAll,
+      setGlobe: (on: boolean) => {
+        mapRef.current?.setProjection(on ? { type: "globe" } : { type: "mercator" });
+      },
       flyToDriver: (lat, lng, zoom = 14.5) => {
         userPannedRef.current = false;
         mapRef.current?.flyTo({
@@ -482,6 +487,10 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           pitch: isFallback ? 0 : 48, // Disable 3D for fallback
           bearing: 0,
         });
+
+        // Default to globe projection — renders as a planet at low zoom and
+        // MapLibre blends back to flat mercator automatically as you zoom in.
+        map.setProjection({ type: "globe" });
 
         mapRef.current = map;
         mapInstance = map;

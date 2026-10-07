@@ -37,6 +37,25 @@ export default function CompanyAiPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Sparkles className="size-5 text-primary shrink-0" />
+                Report Notebook
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">
+                NotebookLM-style analysis — pick live reports or upload Excel / PDF files and ask AI to analyse them together.
+              </p>
+              <Button asChild size="sm" variant="outline" className="mt-auto">
+                <Link href="/reports/notebook">
+                  Open Report Notebook <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="size-5 text-primary shrink-0" />
                 General Analyst
               </CardTitle>
             </CardHeader>

@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // pdfjs-dist legacy build is loaded dynamically inside the notebook file
+  // upload route — keep it external so webpack doesn't try to bundle its
+  // Node canvas/worker shims.
+  serverExternalPackages: ['pdfjs-dist'],
   eslint: {
     ignoreDuringBuilds: false,
   },

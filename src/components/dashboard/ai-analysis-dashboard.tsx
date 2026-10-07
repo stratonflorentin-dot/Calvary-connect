@@ -42,6 +42,8 @@ import {
   Lightbulb,
   Gauge,
   Trash2,
+  Volume2,
+  Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -61,10 +63,59 @@ import {
   Bar,
 } from 'recharts';
 import { askCompanyAI } from '@/ai/flows/company-chat';
+import { useSupabase } from '@/components/supabase-provider';
 import { vehicleStatusBucket } from '@/lib/fleet/vehicle-status';
 
 export default function AIAnalysisDashboard() {
   const { format } = useCurrency();
+  const { user } = useSupabase();
+
+  // ── Voice playback (ElevenLabs "Mino") ──────────────────────────────────
+  const [speakingId, setSpeakingId] = useState<number | null>(null);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopSpeaking = () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setSpeakingId(null);
+  };
+
+  // Stop playback when leaving the dashboard so audio doesn't linger.
+  useEffect(() => () => stopSpeaking(), []);
+
+  const speak = async (index: number, text: string) => {
+    if (speakingId === index) {
+      stopSpeaking();
+      return;
+    }
+    stopSpeaking();
+    setVoiceError(null);
+    try {
+      const resp = await fetch('/api/ai/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => null);
+        throw new Error(data?.error || 'Voice unavailable');
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setSpeakingId(index);
+      audio.onended = () => {
+        setSpeakingId(null);
+        URL.revokeObjectURL(url);
+      };
+      await audio.play();
+    } catch (err: any) {
+      setVoiceError(err.message || 'Voice unavailable');
+      setSpeakingId(null);
+    }
+  };
 
   // Data hooks
   const { vehicles, loading: vehiclesLoading } = useFleetVehicles();
@@ -169,6 +220,7 @@ export default function AIAnalysisDashboard() {
         body: JSON.stringify({
           message: userMsg,
           history,
+          user: user ? { name: user.name, email: user.email, role: user.role } : null,
           liveMetrics: {
             fleetSize: vehicles.length,
             activeTrips: activeTrips.length,
@@ -1184,9 +1236,25 @@ export default function AIAnalysisDashboard() {
                       "font-bold block text-[10px] uppercase mb-1.5 tracking-wider",
                       msg.role === 'user' ? "text-primary-foreground/80" : "text-primary"
                     )}>
-                      {msg.role === 'user' ? 'Board Member / CEO' : 'Calvary AI Analyst'}
+                      {msg.role === 'user' ? (user?.name || 'You') : 'Calvary AI Analyst'}
                     </span>
                     <div className="whitespace-pre-line text-[13px]">{msg.text}</div>
+                    {msg.role === 'ai' && index > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => speak(index, msg.text)}
+                        title={speakingId === index ? 'Stop voice' : 'Listen (ElevenLabs voice: Mino)'}
+                        className={cn(
+                          "mt-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                          speakingId === index
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-background/70 text-muted-foreground hover:text-primary border border-border"
+                        )}
+                      >
+                        {speakingId === index ? <Square className="size-3" /> : <Volume2 className="size-3" />}
+                        {speakingId === index ? 'Stop' : 'Listen'}
+                      </button>
+                    )}
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -1202,6 +1270,9 @@ export default function AIAnalysisDashboard() {
                 </motion.div>
               )}
               <div ref={chatEndRef} />
+              {voiceError && (
+                <p className="text-[11px] text-warning">{voiceError}</p>
+              )}
             </div>
 
             {/* Input Console */}

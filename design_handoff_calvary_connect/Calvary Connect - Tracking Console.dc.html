@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="stylesheet" href="_ds/industry-cc3b9f68-d2e0-441e-9337-42c19f04e1a4/styles.css">
+<script src="_ds/industry-cc3b9f68-d2e0-441e-9337-42c19f04e1a4/_ds_bundle.js"></script>
+<style>
+html,body{height:100%}
+body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);overflow:hidden}
+a{color:var(--color-accent-700)}a:hover{color:var(--color-accent)}
+@keyframes ccIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ccRow{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes ccPulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes ccSweep{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+.cc-pane{animation:ccIn .25s cubic-bezier(.16,1,.3,1) both}
+.cc-p2{animation-delay:.05s}.cc-p3{animation-delay:.1s}
+.cc-stag>*{animation:ccRow .15s cubic-bezier(.16,1,.3,1) both}
+.cc-stag>*:nth-child(1){animation-delay:.11s}.cc-stag>*:nth-child(2){animation-delay:.145s}.cc-stag>*:nth-child(3){animation-delay:.18s}.cc-stag>*:nth-child(4){animation-delay:.215s}.cc-stag>*:nth-child(5){animation-delay:.25s}.cc-stag>*:nth-child(6){animation-delay:.285s}.cc-stag>*:nth-child(7){animation-delay:.32s}
+.cc-lbl{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 50%,transparent)}
+.cc-nowrap{white-space:nowrap}
+.cc-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;background:var(--color-bg);border:1px solid var(--color-divider)}
+.cc-metrics>*{background:var(--color-bg);padding:12px 13px;min-width:0;box-shadow:0 0 0 1px var(--color-divider)}
+.cc-photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:12px}
+.cc-mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.cc-fig{font-family:var(--font-heading);line-height:.92;letter-spacing:-.02em}
+.cc-nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 13px;font-size:13px;color:color-mix(in srgb,var(--color-text) 62%,transparent);text-decoration:none;border-left:2px solid transparent;transition:background .15s cubic-bezier(.16,1,.3,1),color .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.cc-nav a:hover{background:color-mix(in srgb,var(--color-text) 5%,transparent);color:var(--color-text)}
+.cc-nav a[aria-current=page]{border-left-color:var(--color-accent);color:var(--color-text);background:color-mix(in srgb,var(--color-accent) 10%,transparent)}
+.cc-card{min-width:0;border:1px solid var(--color-divider);padding:10px;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:transparent;text-align:left;font:inherit;color:inherit;transition:transform .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1),background .15s cubic-bezier(.16,1,.3,1)}
+.cc-card:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--color-accent) 60%,transparent)}
+.cc-chip{font-size:11px;padding:4px 9px;border:1px solid var(--color-divider);background:transparent;cursor:pointer;font-family:var(--font-body);color:color-mix(in srgb,var(--color-text) 65%,transparent);transition:background .15s cubic-bezier(.16,1,.3,1),color .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.cc-chip:hover{border-color:var(--color-accent);color:var(--color-accent-800)}
+.cc-chip[aria-pressed=true]{background:var(--color-accent);border-color:var(--color-accent);color:var(--color-bg)}
+.cc-tabs{display:flex;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.cc-tabs::-webkit-scrollbar{display:none;width:0;height:0}
+.cc-tab{white-space:nowrap;padding:9px 0;margin-right:12px;font-family:var(--font-heading);font-weight:600;font-size:13.5px;letter-spacing:.01em;background:none;border:0;border-bottom:2px solid transparent;cursor:pointer;color:color-mix(in srgb,var(--color-text) 52%,transparent);transition:color .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.cc-tab:hover{color:var(--color-text)}
+.cc-tab[aria-selected=true]{color:var(--color-text);border-bottom-color:var(--color-accent)}
+.cc-ph{border:1px solid var(--color-divider);display:grid;place-items:center;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 7%,transparent) 0 1px,transparent 1px 7px)}
+.cc-live{animation:ccPulse 1.9s cubic-bezier(.16,1,.3,1) infinite}
+.cc-fill{transition:width .35s cubic-bezier(.16,1,.3,1)}
+.cc-scan{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cc-scan::after{content:"";position:absolute;top:0;bottom:0;width:22%;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--color-accent) 14%,transparent),transparent);animation:ccSweep 5.5s linear infinite}
+.cc-btn{transition:background .15s cubic-bezier(.16,1,.3,1),transform .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.cc-btn:active{transform:scale(.97)}
+.cc-t th{text-align:left;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:400;color:color-mix(in srgb,var(--color-text) 55%,transparent);padding:8px 9px;border-bottom:1px solid var(--color-divider)}
+.cc-t td{padding:10px 9px;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);font-size:13px}
+.cc-t tbody tr{transition:background .15s cubic-bezier(.16,1,.3,1)}
+.cc-t tbody tr:hover{background:color-mix(in srgb,var(--color-text) 4%,transparent)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--color-text) 18%,transparent)}
+@media (prefers-reduced-motion:reduce){.cc-pane,.cc-stag>*,.cc-live{animation:none!important}.cc-scan::after{animation:none;opacity:0}.cc-card:hover{transform:none}.cc-btn:active{transform:none}}
+</style>
+</helmet>
+
+<div style="position:relative;height:100vh;display:grid;grid-template-columns:196px minmax(264px,340px) minmax(430px,1fr);overflow:hidden">
+
+  <sc-if value="{{ showGridLines }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--color-text) 4%,transparent) 0 1px,transparent 1px 48px),repeating-linear-gradient(90deg,color-mix(in srgb,var(--color-text) 4%,transparent) 0 1px,transparent 1px 48px)"></div>
+  </sc-if>
+
+  <aside class="cc-pane" style="position:relative;z-index:1;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;padding:16px 0;min-height:0">
+    <div style="padding:0 13px 18px;display:flex;flex-direction:column;gap:9px">
+      <div class="blueprint duotone" style="padding:6px 8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <img src="assets/logo-full.png" alt="Calvary Investment Co. Ltd" style="width:100%;height:auto;display:block;filter:grayscale(1) contrast(1.05)">
+      </div>
+      <div>
+        <div style="font-family:var(--font-heading);font-weight:600;font-size:16px;line-height:1.05;letter-spacing:-.01em">Calvary Connect</div>
+        <div class="cc-lbl" style="margin-top:3px">Dar es Salaam · since 2011</div>
+      </div>
+    </div>
+    <nav class="cc-nav" style="display:flex;flex-direction:column;gap:1px">
+      <a href="#">Dashboard</a>
+      <a href="#">Dispatch</a>
+      <a href="#" aria-current="page">Tracking <span class="cc-mono" style="font-size:11px;opacity:.55">30</span></a>
+      <a href="#">Live fleet map <span class="tag tag-neutral">27</span></a>
+      <a href="#">Sales handover <span class="tag tag-accent">{{ unread }}</span></a>
+      <a href="#">Trips</a>
+      <a href="#">Fleet</a>
+      <div class="cc-lbl" style="padding:14px 13px 5px">Requests</div>
+      <a href="#" style="padding-left:21px">Fuel <span class="tag tag-accent">3</span></a>
+      <a href="#" style="padding-left:21px">Repair <span class="tag tag-accent">2</span></a>
+      <a href="#" style="padding-left:21px">Parts <span class="tag tag-neutral">2</span></a>
+      <div class="cc-lbl" style="padding:14px 13px 5px">Insight</div>
+      <a href="#" style="padding-left:21px">Analysis</a>
+      <a href="#" style="padding-left:21px">History</a>
+    </nav>
+    <div style="margin-top:auto;padding:16px 13px 0;border-top:1px solid var(--color-divider);display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span class="cc-live" style="width:7px;height:7px;background:var(--color-accent);display:block"></span>
+        <span class="cc-lbl">Telematics live</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px">
+        <div class="cc-ph" style="width:30px;height:30px"></div>
+        <div style="min-width:0"><div style="font-size:12.5px;line-height:1.2">E. Nyoni</div><div class="cc-lbl" style="margin-top:1px">Operator</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <section class="cc-pane cc-p2" style="position:relative;z-index:1;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;min-height:0">
+    <header style="padding:16px 15px 13px;border-bottom:1px solid var(--color-divider);display:flex;flex-direction:column;gap:13px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+        <h2 style="margin:0;font-size:27px">Tracking</h2>
+        <span class="cc-mono cc-nowrap" style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 50%,transparent)">{{ shownCount }} shown</span>
+      </div>
+      <input class="input" placeholder="Search plate, trip, driver" value="{{ query }}" onInput="{{ onQuery }}">
+      <div>
+        <div class="cc-lbl" style="margin-bottom:7px">Filter by partner</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          <sc-for list="{{ partners }}" as="p" hint-placeholder-count="5">
+            <button class="cc-chip" aria-pressed="{{ p.on }}" onClick="{{ p.toggle }}">{{ p.name }} <span style="opacity:.55;margin-left:5px">{{ p.count }}</span></button>
+          </sc-for>
+        </div>
+      </div>
+      <div>
+        <div class="cc-lbl" style="margin-bottom:7px">Show</div>
+        <div style="display:flex">
+          <sc-for list="{{ modes }}" as="m" hint-placeholder-count="3">
+            <button class="cc-chip" aria-pressed="{{ m.on }}" onClick="{{ m.pick }}" style="margin-left:-1px">{{ m.label }} <span style="opacity:.55;margin-left:4px">{{ m.count }}</span></button>
+          </sc-for>
+        </div>
+      </div>
+    </header>
+
+    <div class="cc-stag" style="padding:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start;overflow-y:auto;overflow-x:hidden;min-height:0">
+      <sc-for list="{{ list }}" as="v" hint-placeholder-count="6">
+        <button class="cc-card" onClick="{{ v.select }}" style="border-color:{{ v.bdr }};background:{{ v.bg }}">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">
+            <span class="cc-mono cc-nowrap" style="font-size:11.5px;font-weight:700">{{ v.plate }}</span>
+            <span class="tag {{ v.tagClass }} cc-nowrap" style="font-size:9.5px;padding:2px 6px">{{ v.state }}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 8px;font-size:10.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">
+            <span class="cc-mono">{{ v.departed }}</span><span>{{ v.origin }}</span>
+            <span class="cc-mono">{{ v.leftLabel }}</span><span>{{ v.destination }}</span>
+          </div>
+          <div class="cc-ph" style="height:46px;min-width:0;overflow:hidden"><span class="cc-lbl" style="font-size:7.5px;padding:0 4px;text-align:center;line-height:1.3">{{ v.kind }}</span></div>
+          <div style="height:4px;border:1px solid var(--color-divider);display:flex">
+            <div class="cc-fill" style="width:{{ v.pct }}%;background:var(--color-accent)"></div>
+          </div>
+        </button>
+      </sc-for>
+      <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="grid-column:span 2;border:1px solid var(--color-divider);padding:26px 14px;text-align:center">
+          <div class="cc-lbl">No units match</div>
+          <p style="margin:8px 0 12px;font-size:12.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Clear the partner filters or widen the status.</p>
+          <button class="btn btn-secondary cc-btn" onClick="{{ clearFilters }}">Reset filters</button>
+        </div>
+      </sc-if>
+    </div>
+  </section>
+
+  <section class="cc-pane cc-p3" style="position:relative;z-index:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto">
+    <header style="padding:16px 20px 0;border-bottom:1px solid var(--color-divider);position:sticky;top:0;background:var(--color-bg);z-index:2">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:13px">
+        <h2 class="cc-mono cc-nowrap" style="margin:0;font-size:26px;letter-spacing:-.01em">{{ sel.trip }}</h2>
+        <span class="tag {{ sel.tagClass }} cc-live cc-nowrap">{{ sel.state }}</span>
+        <span class="cc-lbl cc-nowrap">{{ sel.plate }} · {{ sel.driver }}</span>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="btn btn-secondary cc-btn">Call driver</button>
+          <button class="btn btn-primary cc-btn">Chat with driver</button>
+        </div>
+      </div>
+      <div class="cc-tabs">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+          <button class="cc-tab" aria-selected="{{ t.on }}" onClick="{{ t.pick }}">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <sc-if value="{{ isShipping }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:18px 20px 24px;display:flex;flex-direction:column;gap:20px">
+        <div class="cc-metrics">
+          <div><div class="cc-lbl">Elapsed</div><div class="cc-fig" style="font-size:27px;margin-top:5px">{{ clock }}</div></div>
+          <div><div class="cc-lbl">Distance left</div><div class="cc-fig" style="font-size:27px;margin-top:5px">{{ sel.kmLeft }}<span style="font-size:14px"> km</span></div></div>
+          <div><div class="cc-lbl">ETA</div><div class="cc-fig" style="font-size:27px;margin-top:5px">{{ sel.etaShort }}</div><div class="cc-lbl" style="margin-top:3px">{{ sel.etaDay }}</div></div>
+          <div><div class="cc-lbl">Fuel on board</div><div class="cc-fig" style="font-size:27px;margin-top:5px">{{ sel.fuel }}%</div><div class="cc-lbl" style="margin-top:3px">{{ sel.kmpl }} km/L</div></div>
+        </div>
+
+        <sc-if value="{{ showLoadGauge }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
+              <h4 style="margin:0">Current load</h4>
+              <span class="cc-lbl">{{ sel.loadTons }} t of {{ sel.maxTons }} t permitted · axle-legal</span>
+            </div>
+            <div class="blueprint" style="display:grid;grid-template-columns:170px 1fr;min-height:140px">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div class="cc-ph" style="border:0;border-right:1px solid var(--color-divider)"><span class="cc-lbl" style="text-align:center;line-height:1.5">{{ sel.kind }}<br>side elevation</span></div>
+              <div style="position:relative;display:grid;place-items:center;overflow:hidden">
+                <div class="cc-fill" style="position:absolute;left:0;top:0;bottom:0;width:{{ sel.loadPct }}%;background:var(--color-accent);display:flex;align-items:center;justify-content:flex-end;padding-right:16px;overflow:hidden">
+                  <span class="cc-fig cc-nowrap" style="font-size:52px;color:var(--color-bg)">{{ sel.loadPct }}%</span>
+                </div>
+                <div class="cc-scan"></div>
+                <div class="cc-lbl cc-nowrap" style="position:absolute;right:16px;bottom:12px">{{ sel.loadTons }} t laden</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
+            <h4 style="margin:0">Route</h4>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span class="cc-lbl">{{ sel.origin }} → {{ sel.destination }}</span>
+              <button class="btn btn-secondary cc-btn" style="padding:3px 10px;font-size:12px">Change route</button>
+            </div>
+          </div>
+          <div class="cc-ph blueprint" style="height:248px;position:relative">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div class="cc-scan"></div>
+            <span class="cc-lbl cc-live" style="position:relative">live map · marker rotates to heading {{ sel.heading }}°</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0;margin-top:12px">
+            <sc-for list="{{ sel.legs }}" as="l" hint-placeholder-count="4">
+              <div style="flex:1;border-top:1px solid var(--color-divider);padding-top:9px;padding-right:12px">
+                <div class="cc-mono" style="font-size:11.5px;color:color-mix(in srgb,var(--color-text) 55%,transparent)">{{ l.time }}</div>
+                <div style="font-size:12.5px;margin-top:2px">{{ l.place }}</div>
+                <div class="cc-lbl" style="margin-top:2px">{{ l.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
+            <h4 style="margin:0">Cargo photo reports</h4>
+            <button class="btn btn-secondary cc-btn" style="padding:3px 10px;font-size:12px">Request photo</button>
+          </div>
+          <div class="cc-photos">
+            <figure><div class="cc-ph blueprint duotone" style="height:86px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="cc-lbl" style="font-size:8.5px">loading bay</span></div><figcaption>Load sealed · 06:20</figcaption></figure>
+            <figure><div class="cc-ph blueprint duotone" style="height:86px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="cc-lbl" style="font-size:8.5px">weighbridge</span></div><figcaption>WB-4471 · 07:58</figcaption></figure>
+            <figure><div class="cc-ph blueprint duotone" style="height:86px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="cc-lbl" style="font-size:8.5px">tarpaulin</span></div><figcaption>Cover check · 08:04</figcaption></figure>
+            <figure><div class="cc-ph blueprint duotone" style="height:86px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="cc-lbl" style="font-size:8.5px">odometer</span></div><figcaption>Fuel stop · 11:12</figcaption></figure>
+            <div class="blueprint" style="height:86px;display:grid;place-items:center"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="cc-lbl" style="text-align:center;line-height:1.5">POD<br>pending</span></div>
+          </div>
+        </div>
+
+        <div>
+          <h4 style="margin:0 0 9px">Route requests</h4>
+          <div class="blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <table class="cc-t" style="width:100%;border-collapse:collapse">
+              <thead><tr><th>Time</th><th>Request</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                <tr><td class="cc-mono">11:12</td><td>Fuel · 480 L · Morogoro depot</td><td class="cc-mono" style="text-align:right">TSh 1,392,000</td><td><span class="tag tag-outline">Awaiting accounts</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+                <tr><td class="cc-mono">07:58</td><td>Weighbridge fee · Kibaha</td><td class="cc-mono" style="text-align:right">TSh 84,000</td><td><span class="tag tag-neutral">Approved</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+                <tr><td class="cc-mono">06:35</td><td>Route deviation · Chalinze bypass</td><td class="cc-mono" style="text-align:right">+18 km</td><td><span class="tag tag-neutral">Accepted</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isVehicle }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 20px 24px;display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="cc-ph blueprint duotone" style="height:190px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><span class="cc-lbl">vehicle photograph</span></div>
+          <div class="blueprint" style="padding:13px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0 0 9px">Specification</h5>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:7px 12px;font-size:12.5px">
+              <span class="cc-lbl">plate_number</span><span class="cc-mono cc-nowrap">{{ sel.plate }}</span>
+              <span class="cc-lbl">make · model</span><span class="cc-nowrap">{{ sel.model }}</span>
+              <span class="cc-lbl">type</span><span class="cc-mono cc-nowrap">{{ sel.dbType }}</span>
+              <span class="cc-lbl">status</span><span class="cc-mono cc-nowrap">{{ sel.dbStatus }}</span>
+              <span class="cc-lbl">mileage</span><span class="cc-mono cc-nowrap">{{ sel.odo }}</span>
+              <span class="cc-lbl">next_maintenance_due</span><span class="cc-mono cc-nowrap">{{ sel.nextService }}</span>
+              <span class="cc-lbl">insurance_expiry</span><span class="cc-mono cc-nowrap">{{ sel.insuranceExpiry }}</span>
+              <span class="cc-lbl">current_fuel_level</span><span class="cc-mono cc-nowrap">{{ sel.fuel }} / 100</span>
+            </div>
+            <div class="cc-lbl" style="margin-top:10px;padding-top:9px;border-top:1px solid var(--color-divider);line-height:1.5">Source · public.vehicles</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="cc-metrics">
+            <div><div class="cc-lbl">Trips YTD</div><div class="cc-fig" style="font-size:26px;margin-top:5px">48</div></div>
+            <div><div class="cc-lbl">Fuel avg</div><div class="cc-fig" style="font-size:26px;margin-top:5px">{{ sel.kmpl }}</div><div class="cc-lbl" style="margin-top:3px">km / L</div></div>
+            <div><div class="cc-lbl">Cost per km</div><div class="cc-fig" style="font-size:26px;margin-top:5px">1,840</div><div class="cc-lbl" style="margin-top:3px">TSh</div></div>
+            <div><div class="cc-lbl">Downtime</div><div class="cc-fig" style="font-size:26px;margin-top:5px">6</div><div class="cc-lbl" style="margin-top:3px">days YTD</div></div>
+          </div>
+          <div class="blueprint" style="padding:13px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0 0 9px">Maintenance</h5>
+            <table class="cc-t" style="width:100%;border-collapse:collapse">
+              <tbody>
+                <tr><td class="cc-mono" style="width:90px">28 Aug</td><td>Service · brake pads, oil filter</td><td class="cc-mono" style="text-align:right">TSh 2,140,000</td></tr>
+                <tr><td class="cc-mono">02 Jul</td><td>Tyres ×2 · 315/80 R22.5</td><td class="cc-mono" style="text-align:right">TSh 3,600,000</td></tr>
+                <tr><td class="cc-mono">14 May</td><td>Clutch overhaul</td><td class="cc-mono" style="text-align:right">TSh 5,900,000</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="blueprint" style="padding:13px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0 0 9px">Assigned crew</h5>
+            <div style="display:flex;align-items:center;gap:11px">
+              <div class="cc-ph" style="width:42px;height:42px"></div>
+              <div><div style="font-size:13px">{{ sel.driver }}</div><div class="cc-lbl" style="margin-top:2px">Licence C · medical valid</div></div>
+              <button class="btn btn-secondary cc-btn" style="margin-left:auto">Reassign</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDocs }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 20px 24px;display:flex;flex-direction:column;gap:14px">
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <table class="cc-t" style="width:100%;border-collapse:collapse">
+            <thead><tr><th>Document</th><th>Number</th><th>Expires</th><th>Remaining</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Insurance</td><td class="cc-mono">POL-88421</td><td class="cc-mono">11 Oct 2026</td><td><span class="tag tag-neutral">403 days</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">View PDF</a></td></tr>
+              <tr><td>Road licence</td><td class="cc-mono">RL-2026-0417</td><td class="cc-mono">31 Dec 2026</td><td><span class="tag tag-neutral">119 days</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">View PDF</a></td></tr>
+              <tr><td>Inspection (TBS)</td><td class="cc-mono">INS-55190</td><td class="cc-mono">03 Sep 2026</td><td><span class="tag tag-accent">Expires today</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Upload new</a></td></tr>
+              <tr><td>SUMATRA permit</td><td class="cc-mono">SP-77302</td><td class="cc-mono">19 Feb 2027</td><td><span class="tag tag-neutral">169 days</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">View PDF</a></td></tr>
+              <tr><td>Transit bond</td><td class="cc-mono">—</td><td class="cc-mono">—</td><td><span class="tag tag-outline">Missing</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Upload</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="blueprint" style="padding:13px;display:flex;align-items:center;gap:14px">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div><h5 style="margin:0 0 3px">Trip paperwork</h5><div style="font-size:12.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">Delivery note, weighbridge ticket and POD travel with the trip, not the vehicle.</div></div>
+          <button class="btn btn-primary cc-btn" style="margin-left:auto">Open trip file</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isClient }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+        <div class="blueprint" style="padding:14px">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="cc-lbl">Consignor</div>
+          <h3 style="margin:5px 0 12px">{{ sel.client }}</h3>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:12.5px">
+            <span class="cc-lbl">Contract</span><span class="cc-mono">CT-2026-014</span>
+            <span class="cc-lbl">Rate basis</span><span>Per tonne · corridor</span>
+            <span class="cc-lbl">Trips this month</span><span class="cc-mono">9</span>
+            <span class="cc-lbl">Open balance</span><span class="cc-mono">TSh 44,100,000</span>
+            <span class="cc-lbl">Contact</span><span>Mr. Kaaya · +255 754 118 902</span>
+          </div>
+        </div>
+        <div class="blueprint" style="padding:14px">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <h5 style="margin:0 0 10px">Delivery instructions</h5>
+          <p style="margin:0 0 12px;font-size:13px;line-height:1.6">Nyakato depot, Mwanza. Gate opens 07:00. Weighbridge ticket must be presented before unloading; receiver signs the delivery note and two photos are required for the POD chain.</p>
+          <div style="display:flex;gap:8px"><button class="btn btn-secondary cc-btn">Notify receiver</button><button class="btn btn-secondary cc-btn">Print delivery note</button></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isHandover }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 20px 24px;display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:20px;align-items:start">
+        <div class="blueprint" style="display:flex;flex-direction:column;min-height:0">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 13px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px">
+            <div class="cc-ph" style="width:30px;height:30px"></div>
+            <div style="min-width:0"><div style="font-size:13px;line-height:1.2">R. Mushi <span class="cc-lbl" style="margin-left:5px">Sales</span></div><div class="cc-lbl" style="margin-top:2px">Thread pinned to {{ sel.trip }}</div></div>
+            <span class="tag tag-accent cc-live cc-nowrap" style="margin-left:auto">Online</span>
+          </div>
+          <div style="padding:13px;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ thread }}" as="m" hint-placeholder-count="5">
+              <div style="display:flex;flex-direction:column;align-items:{{ m.align }}">
+                <div class="cc-lbl cc-nowrap" style="margin-bottom:4px">{{ m.who }} · {{ m.role }} · {{ m.time }}</div>
+                <div style="max-width:74%;border:1px solid {{ m.bdr }};background:{{ m.bg }};padding:10px 12px;font-size:13px;line-height:1.55">{{ m.body }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:auto;padding:12px 13px;border-top:1px solid var(--color-divider);display:flex;gap:9px;align-items:flex-start">
+            <input class="input" placeholder="Reply to sales…" value="{{ draft }}" onInput="{{ onDraft }}">
+            <button class="btn btn-primary cc-btn cc-nowrap" onClick="{{ send }}">Send</button>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="blueprint" style="padding:13px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0 0 9px">Booking as sold</h5>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:7px 10px;font-size:12.5px">
+              <span class="cc-lbl">Sold by</span><span class="cc-nowrap">R. Mushi</span>
+              <span class="cc-lbl">Quotation</span><span class="cc-mono">QT-2026-0311</span>
+              <span class="cc-lbl">Agreed rate</span><span class="cc-mono">4,150,000</span>
+              <span class="cc-lbl">Tonnage</span><span class="cc-mono">30 t</span>
+              <span class="cc-lbl">Collection</span><span class="cc-mono">03 Sep 06:00</span>
+              <span class="cc-lbl">Promised ETA</span><span class="cc-mono">04 Sep 08:00</span>
+            </div>
+          </div>
+          <div class="blueprint" style="padding:13px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0 0 6px">Variance from the sale</h5>
+            <p style="margin:0 0 10px;font-size:12.5px;line-height:1.55;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Current ETA is <strong>20 minutes later</strong> than promised. Sales sees this the moment it changes — no phone call.</p>
+            <button class="btn btn-secondary cc-btn btn-block" style="margin:0">Notify sales of new ETA</button>
+          </div>
+          <div class="blueprint" style="padding:13px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h5 style="margin:0 0 9px">Open asks from sales</h5>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px">
+              <div style="border:1px solid var(--color-divider);padding:9px"><div class="cc-lbl">Awaiting you</div>ETA update to client by 18:00</div>
+              <div style="border:1px solid var(--color-divider);padding:9px"><div class="cc-lbl">Done</div>Weighbridge photo · WB-4471</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBilling }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 20px 24px;display:flex;flex-direction:column;gap:18px">
+        <div class="cc-metrics">
+          <div><div class="cc-lbl">Trip revenue</div><div class="cc-fig" style="font-size:25px;margin-top:5px">4,150,000</div><div class="cc-lbl" style="margin-top:3px">TSh · ex VAT</div></div>
+          <div><div class="cc-lbl">Cost to date</div><div class="cc-fig" style="font-size:25px;margin-top:5px">2,976,000</div><div class="cc-lbl" style="margin-top:3px">fuel · tolls · allowance</div></div>
+          <div><div class="cc-lbl">Margin</div><div class="cc-fig" style="font-size:25px;margin-top:5px">28%</div></div>
+          <div><div class="cc-lbl">Invoice</div><div class="cc-fig" style="font-size:25px;margin-top:5px">Draft</div><div class="cc-lbl" style="margin-top:3px">auto on POD</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <table class="cc-t" style="width:100%;border-collapse:collapse">
+            <thead><tr><th>Line</th><th>Basis</th><th style="text-align:right">Amount</th><th>Posts to</th></tr></thead>
+            <tbody>
+              <tr><td>Freight · Dar → Mwanza</td><td class="cc-mono">30 t × TSh 138,333</td><td class="cc-mono" style="text-align:right">4,150,000</td><td class="cc-mono">4000 Revenue</td></tr>
+              <tr><td>VAT 18%</td><td class="cc-mono">on freight</td><td class="cc-mono" style="text-align:right">747,000</td><td class="cc-mono">2200 VAT</td></tr>
+              <tr><td>Fuel advance</td><td class="cc-mono">480 L</td><td class="cc-mono" style="text-align:right">(1,392,000)</td><td class="cc-mono">5100 Fuel</td></tr>
+              <tr><td>Driver allowance</td><td class="cc-mono">2 days</td><td class="cc-mono" style="text-align:right">(120,000)</td><td class="cc-mono">5300 Allowances</td></tr>
+              <tr><td>Tolls &amp; weighbridge</td><td class="cc-mono">3 stops</td><td class="cc-mono" style="text-align:right">(84,000)</td><td class="cc-mono">5400 Tolls</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="blueprint" style="padding:14px;display:flex;align-items:center;gap:14px">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div><h5 style="margin:0 0 3px">Invoice posts when the POD lands</h5><div style="font-size:12.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent)">DR 1200 Receivables · CR 4000 Revenue · CR 2200 VAT — the accountant approves, the ledger records.</div></div>
+          <button class="btn btn-primary cc-btn" style="margin-left:auto">Preview invoice</button>
+        </div>
+      </div>
+    </sc-if>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showGridLines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Console&quot;},&quot;showLoadGauge&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Console&quot;}}">
+const VEHICLES = [
+  { id:"v1", plate:"T 412 DKA", trip:"TRP-2418", model:"Scania G460", kind:"truck head + trailer", state:"On route",
+    dbType:"TRUCK_HEAD", dbStatus:"in_use", dbTripStatus:"in_transit", nextService:"2026-11-02", insuranceExpiry:"2026-10-11",
+    driver:"Juma Hassan", client:"Dangote Cement", partner:"Dangote Cement", origin:"Dar es Salaam", destination:"Mwanza",
+    departed:"06:35", kmLeft:"413", pct:65, fuel:62, kmpl:"2.9", loadTons:30, maxTons:51, odo:"412,050",
+    heading:294, etaShort:"08:20", etaDay:"04 Sep", elapsedSec:66185,
+    legs:[{time:"06:35",place:"Ubungo yard",note:"Departed · sealed"},{time:"07:58",place:"Kibaha",note:"Weighbridge WB-4471"},{time:"12:58",place:"Singida",note:"Last ping · on route"},{time:"08:20",place:"Nyakato depot",note:"ETA 04 Sep"}] },
+  { id:"v2", plate:"T 655 NDA", trip:"TRP-2419", model:"Scania G410", kind:"truck head", state:"On route",
+    driver:"Amina Said", client:"Yara Tanzania", partner:"Yara Tanzania", origin:"Dar es Salaam", destination:"Tunduma",
+    departed:"19:10", kmLeft:"412", pct:58, fuel:47, kmpl:"3.1", loadTons:28, maxTons:51, odo:"151,300",
+    heading:212, etaShort:"16:40", etaDay:"03 Sep", elapsedSec:78420,
+    legs:[{time:"19:10",place:"Ubungo yard",note:"Departed · transit bond"},{time:"22:05",place:"Chalinze",note:"Rest 45 min"},{time:"11:30",place:"Mbeya",note:"Last ping"},{time:"16:40",place:"Tunduma border",note:"ETA today"}] },
+  { id:"v3", plate:"T 104 MWZ", trip:"TRP-2417", model:"Fuwa 3-axle flatbed", kind:"trailer", state:"Delayed",
+    driver:"Salum Kibwana", client:"Kilimanjaro Beverages", partner:"Kilimanjaro Bev.", origin:"Dar es Salaam", destination:"Dodoma",
+    departed:"05:00", kmLeft:"88", pct:82, fuel:34, kmpl:"2.6", loadTons:24, maxTons:44, odo:"88,205",
+    heading:271, etaShort:"14:10", etaDay:"03 Sep", elapsedSec:114300,
+    legs:[{time:"05:00",place:"Ubungo yard",note:"Departed"},{time:"09:12",place:"Chalinze",note:"Queue · 6 h delay"},{time:"12:40",place:"Morogoro",note:"Last ping"},{time:"14:10",place:"Dodoma depot",note:"Revised ETA"}] },
+  { id:"v4", plate:"T 347 PLK", trip:"TRP-2414", model:"Howo ZZ3257", kind:"dump truck", state:"On route",
+    driver:"Godfrey Nyerere", client:"Tanga Cement", partner:"Tanga Cement", origin:"Kinyerezi pit", destination:"Ubungo site",
+    departed:"08:15", kmLeft:"12", pct:71, fuel:78, kmpl:"2.2", loadTons:18, maxTons:26, odo:"96,410",
+    heading:38, etaShort:"09:05", etaDay:"03 Sep", elapsedSec:2760,
+    legs:[{time:"08:15",place:"Kinyerezi pit",note:"Loaded 18 t"},{time:"08:41",place:"Kigamboni road",note:"Last ping"},{time:"09:05",place:"Ubungo site",note:"ETA"},{time:"—",place:"Return",note:"Empty leg"}] },
+  { id:"v5", plate:"T 889 BXR", trip:"TRP-2422", model:"Howo ZZ3257", kind:"dump truck", state:"Loading",
+    driver:"Unassigned", client:"Bakhresa", partner:"Bakhresa", origin:"Ubungo yard", destination:"Morogoro",
+    departed:"08:20", kmLeft:"196", pct:8, fuel:91, kmpl:"2.4", loadTons:11, maxTons:26, odo:"289,112",
+    heading:0, etaShort:"15:30", etaDay:"03 Sep", elapsedSec:1080,
+    legs:[{time:"08:20",place:"Ubungo yard",note:"Loading · 11 of 26 t"},{time:"—",place:"Kibaha",note:"Weighbridge pending"},{time:"—",place:"Morogoro",note:"ETA 15:30"},{time:"—",place:"—",note:"—"}] },
+  { id:"v6", plate:"T 530 GBX", trip:"—", model:"Scania R500", kind:"truck head", state:"Workshop",
+    driver:"Unassigned", client:"—", partner:"Dangote Cement", origin:"Ubungo workshop", destination:"Service overdue",
+    departed:"—", kmLeft:"0", pct:0, fuel:18, kmpl:"2.7", loadTons:0, maxTons:51, odo:"338,900",
+    heading:0, etaShort:"—", etaDay:"—", elapsedSec:0,
+    legs:[{time:"01 Sep",place:"Ubungo workshop",note:"50,000 km service overdue"},{time:"—",place:"—",note:"—"},{time:"—",place:"—",note:"—"},{time:"—",place:"—",note:"—"}] },
+];
+
+const PARTNERS = ["Dangote Cement","Yara Tanzania","Kilimanjaro Bev.","Tanga Cement","Bakhresa"];
+const PARTNER_COUNTS = { "Dangote Cement":9, "Yara Tanzania":6, "Kilimanjaro Bev.":5, "Tanga Cement":4, "Bakhresa":3 };
+const TABS = [["shipping","Shipping info"],["vehicle","Vehicle info"],["docs","Documents"],["client","Client"],["billing","Billing"],["handover","Sales handover"]];
+
+const THREAD = [
+  { id:"m1", who:"R. Mushi", role:"Sales", mine:false, time:"02 Sep 16:40",
+    body:"Dangote confirmed 30 t cement for Mwanza, collection 03 Sep 06:00. Rate TSh 4,150,000 per the corridor sheet. Please allocate a head + trailer." },
+  { id:"m2", who:"E. Nyoni", role:"Operator", mine:true, time:"02 Sep 17:02",
+    body:"Allocated T 412 DKA with trailer T 104 MWZ, Juma Hassan driving. Fuel advance requested from accounts." },
+  { id:"m3", who:"R. Mushi", role:"Sales", mine:false, time:"03 Sep 07:15",
+    body:"Client asks for a photo at the weighbridge — they had a short-weight dispute last month. Can the driver send one?" },
+  { id:"m4", who:"E. Nyoni", role:"Operator", mine:true, time:"03 Sep 08:02",
+    body:"Requested through the driver app. Ticket WB-4471 attached to the trip already." },
+  { id:"m5", who:"R. Mushi", role:"Sales", mine:false, time:"03 Sep 12:10",
+    body:"Perfect. Client wants an ETA update by 18:00 — they are staffing the depot gate for the morning." },
+];
+
+function pad(n){ return String(n).padStart(2,"0"); }
+
+class Component extends DCLogic {
+  state = { sel:"v1", tab:"shipping", mode:"all", partners:[], query:"", tick:0, thread:THREAD, draft:"" };
+
+  send = () => {
+    const body = this.state.draft.trim();
+    if (!body) return;
+    this.setState(s => ({
+      draft: "",
+      thread: [...s.thread, { id:"m" + (s.thread.length + 1), who:"E. Nyoni", role:"Operator", mine:true, time:"now", body }],
+    }));
+  };
+
+  componentDidMount(){
+    this.timer = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 1000);
+  }
+  componentWillUnmount(){ clearInterval(this.timer); }
+
+  matches(v){
+    const { mode, partners, query } = this.state;
+    if (mode === "active" && !["On route","Loading","Delayed"].includes(v.state)) return false;
+    if (mode === "idle" && ["On route","Loading","Delayed"].includes(v.state)) return false;
+    if (partners.length && !partners.includes(v.partner)) return false;
+    const q = query.trim().toLowerCase();
+    if (q) {
+      const hay = [v.plate, v.trip, v.driver, v.origin, v.destination, v.model].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }
+
+  tagFor(state){
+    if (state === "On route") return "tag-accent";
+    if (state === "Delayed" || state === "Workshop") return "tag-outline";
+    return "tag-neutral";
+  }
+
+  renderVals(){
+    const { sel, tab, mode, partners, query, tick } = this.state;
+    const shown = VEHICLES.filter(v => this.matches(v));
+    const selected = VEHICLES.find(v => v.id === sel) || VEHICLES[0];
+
+    const total = selected.elapsedSec + (selected.elapsedSec ? tick : 0);
+    const clock = selected.elapsedSec
+      ? `${pad(Math.floor(total/3600))}:${pad(Math.floor((total%3600)/60))}:${pad(total%60)}`
+      : "—";
+
+    const activeCount = VEHICLES.filter(v => ["On route","Loading","Delayed"].includes(v.state)).length;
+
+    return {
+      showGridLines: this.props.showGridLines ?? true,
+      showLoadGauge: this.props.showLoadGauge ?? true,
+      query,
+      shownCount: shown.length,
+      isEmpty: shown.length === 0,
+      clock,
+      onQuery: e => this.setState({ query: e.target.value }),
+      clearFilters: () => this.setState({ partners: [], mode: "all", query: "" }),
+      partners: PARTNERS.map(name => ({
+        name,
+        count: PARTNER_COUNTS[name],
+        on: partners.includes(name),
+        toggle: () => this.setState(s => ({
+          partners: s.partners.includes(name) ? s.partners.filter(p => p !== name) : [...s.partners, name],
+        })),
+      })),
+      modes: [
+        { key:"all",    label:"All",    count: VEHICLES.length },
+        { key:"active", label:"Active", count: activeCount },
+        { key:"idle",   label:"Idle",   count: VEHICLES.length - activeCount },
+      ].map(m => ({ ...m, on: mode === m.key, pick: () => this.setState({ mode: m.key }) })),
+      list: shown.map(v => ({
+        ...v,
+        leftLabel: v.kmLeft === "0" ? "—" : `${v.kmLeft} km`,
+        tagClass: this.tagFor(v.state),
+        bdr: v.id === sel ? "var(--color-accent)" : "var(--color-divider)",
+        bg: v.id === sel ? "color-mix(in srgb, var(--color-accent) 8%, transparent)" : "transparent",
+        select: () => this.setState({ sel: v.id }),
+      })),
+      sel: {
+        ...selected,
+        tagClass: this.tagFor(selected.state),
+        loadPct: Math.round((selected.loadTons / selected.maxTons) * 100),
+        dbType: selected.dbType || (selected.kind.indexOf("dump") > -1 ? "DUMP_TRUCK" : selected.kind.indexOf("trailer") === 0 ? "TRAILER" : "TRUCK_HEAD"),
+        dbStatus: selected.dbStatus || (selected.state === "Workshop" ? "maintenance" : selected.state === "On route" || selected.state === "Loading" || selected.state === "Delayed" ? "in_use" : "available"),
+        nextService: selected.nextService || "—",
+        insuranceExpiry: selected.insuranceExpiry || "—",
+      },
+      tabs: TABS.map(([key,label]) => ({ label, on: tab === key, pick: () => this.setState({ tab: key }) })),
+      isShipping: tab === "shipping",
+      isVehicle: tab === "vehicle",
+      isDocs: tab === "docs",
+      isClient: tab === "client",
+      isBilling: tab === "billing",
+      isHandover: tab === "handover",
+      thread: this.state.thread.map(m => ({
+        ...m,
+        align: m.mine ? "flex-end" : "flex-start",
+        bdr: m.mine ? "var(--color-accent)" : "var(--color-divider)",
+        bg: m.mine ? "color-mix(in srgb, var(--color-accent) 8%, transparent)" : "transparent",
+      })),
+      draft: this.state.draft,
+      onDraft: e => this.setState({ draft: e.target.value }),
+      send: this.send,
+      unread: 2,
+    };
+  }
+}
+</script>
+</body>
+</html>

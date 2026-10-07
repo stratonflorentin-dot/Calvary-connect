@@ -30,6 +30,7 @@ import {
   Gauge,
   Clock,
   Crosshair,
+  Globe,
   Key,
   Square,
   HelpCircle,
@@ -254,8 +255,16 @@ export default function FleetMapView({
   const [desktopListOpen, setDesktopListOpen] = useState(true);
   const [cameraMode, setCameraMode] = useState<"overview" | "follow" | "follow-3d" | "north-up" | "heading-up">("follow-3d");
   const [mapEngine, setMapEngine] = useState<"3d" | "2d">("3d");
+  const [globeOn, setGlobeOn] = useState(true);
   const [engineNotice, setEngineNotice] = useState<string | null>(null);
   const [satellite, setSatellite] = useState(false);
+
+  const toggleGlobe = useCallback(() => {
+    setGlobeOn((on) => {
+      canvasRef.current?.setGlobe(!on);
+      return !on;
+    });
+  }, []);
 
   // If the MapLibre style/tiles cannot load, fall back to the Leaflet 2D map
   // instead of leaving a blank canvas.
@@ -534,6 +543,9 @@ export default function FleetMapView({
               )}
               onClick={() => {
                 setEngineNotice(null);
+                // The 3D canvas re-initializes with globe projection on, so
+                // keep the toggle in sync with what a remount will actually show.
+                if (engine === "3d") setGlobeOn(true);
                 setMapEngine(engine);
               }}
             >
@@ -578,6 +590,25 @@ export default function FleetMapView({
                 <Icon className="h-3.5 w-3.5" />
               </Button>
             ))}
+          </div>
+        )}
+
+        {/* Globe / Flat projection toggle (3D engine only) */}
+        {mapEngine === "3d" && (
+          <div className={cn(glass, "flex flex-col gap-1 p-1 rounded-xl shadow-md")}>
+            <p className="text-[7.5px] font-extrabold text-center uppercase tracking-wider text-muted-foreground pt-1 pb-0.5">View</p>
+            <Button
+              variant={globeOn ? "default" : "ghost"}
+              size="icon"
+              title={globeOn ? "Globe view — click for flat map" : "Flat map — click for globe view"}
+              className={cn(
+                "h-8 w-8 rounded-lg transition-all",
+                globeOn ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:bg-muted"
+              )}
+              onClick={toggleGlobe}
+            >
+              <Globe className="h-3.5 w-3.5" />
+            </Button>
           </div>
         )}
       </div>
@@ -648,7 +679,10 @@ export default function FleetMapView({
 
           <div
             className={cn(
-              "transition-all flex-col min-h-0",
+              // flex-1 + min-h-0 bound this wrapper to the panel's max-h so the
+              // ScrollArea inside actually scrolls instead of the overflow being
+              // clipped (which made the last units unreachable when scrolling).
+              "transition-all flex-1 min-h-0 flex-col",
               mobileSheetOpen ? "flex" : "hidden",
               desktopListOpen ? "md:flex" : "md:hidden",
             )}

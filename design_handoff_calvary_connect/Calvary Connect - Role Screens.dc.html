@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="stylesheet" href="_ds/industry-cc3b9f68-d2e0-441e-9337-42c19f04e1a4/styles.css">
+<script src="_ds/industry-cc3b9f68-d2e0-441e-9337-42c19f04e1a4/_ds_bundle.js"></script>
+<style>
+html,body{height:100%}
+body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);overflow:hidden}
+a{color:var(--color-accent-700)}a:hover{color:var(--color-accent)}
+@keyframes rsIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes rsRow{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes rsBar{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes rsPulse{0%,100%{opacity:1}50%{opacity:.4}}
+.rs-pane{animation:rsIn .25s cubic-bezier(.16,1,.3,1) both}
+.rs-stag>*{animation:rsRow .15s cubic-bezier(.16,1,.3,1) both}
+.rs-stag>*:nth-child(1){animation-delay:.04s}.rs-stag>*:nth-child(2){animation-delay:.075s}.rs-stag>*:nth-child(3){animation-delay:.11s}.rs-stag>*:nth-child(4){animation-delay:.145s}.rs-stag>*:nth-child(5){animation-delay:.18s}.rs-stag>*:nth-child(6){animation-delay:.215s}
+.rs-lbl{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 50%,transparent)}
+.rs-mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.rs-fig{font-family:var(--font-heading);line-height:.92;letter-spacing:-.02em}
+.rs-nw{white-space:nowrap}
+.rs-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;background:var(--color-bg);border:1px solid var(--color-divider)}
+.rs-metrics>*{background:var(--color-bg);padding:13px 14px;min-width:0;box-shadow:0 0 0 1px var(--color-divider)}
+.rs-nav button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 13px;font:inherit;font-size:13px;text-align:left;color:color-mix(in srgb,var(--color-text) 62%,transparent);background:none;border:0;border-left:2px solid transparent;cursor:pointer;transition:background .15s cubic-bezier(.16,1,.3,1),color .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.rs-nav button:hover{background:color-mix(in srgb,var(--color-text) 5%,transparent);color:var(--color-text)}
+.rs-nav button[aria-current=page]{border-left-color:var(--color-accent);color:var(--color-text);background:color-mix(in srgb,var(--color-accent) 10%,transparent)}
+.rs-ph{border:1px solid var(--color-divider);display:grid;place-items:center;background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 7%,transparent) 0 1px,transparent 1px 7px)}
+.rs-live{animation:rsPulse 1.9s cubic-bezier(.16,1,.3,1) infinite}
+.rs-bar{animation:rsBar .35s cubic-bezier(.16,1,.3,1) both;transform-origin:bottom}
+.rs-fill{transition:width .35s cubic-bezier(.16,1,.3,1)}
+.rs-btn{transition:background .15s cubic-bezier(.16,1,.3,1),transform .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.rs-btn:active{transform:scale(.97)}
+.rs-t{width:100%;border-collapse:collapse}
+.rs-t th{text-align:left;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:400;color:color-mix(in srgb,var(--color-text) 55%,transparent);padding:8px 9px;border-bottom:1px solid var(--color-divider)}
+.rs-t td{padding:10px 9px;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);font-size:13px}
+.rs-t tbody tr{transition:background .15s cubic-bezier(.16,1,.3,1)}
+.rs-t tbody tr:hover{background:color-mix(in srgb,var(--color-text) 4%,transparent)}
+.rs-frame{border:1px solid var(--color-divider);padding:13px 14px}
+.rs-tabs{display:flex;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;margin-top:14px;margin-bottom:-15px}
+.rs-tabs::-webkit-scrollbar{display:none;width:0;height:0}
+.rs-tab{white-space:nowrap;padding:9px 0;margin-right:14px;font-family:var(--font-heading);font-weight:600;font-size:13px;background:none;border:0;border-bottom:2px solid transparent;cursor:pointer;color:color-mix(in srgb,var(--color-text) 52%,transparent);transition:color .15s cubic-bezier(.16,1,.3,1),border-color .15s cubic-bezier(.16,1,.3,1)}
+.rs-tab:hover{color:var(--color-text)}
+.rs-tab[aria-selected=true]{color:var(--color-text);border-bottom-color:var(--color-accent)}
+.rs-scroll{overflow-y:auto;overflow-x:hidden;min-height:0}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--color-text) 18%,transparent)}
+@media (prefers-reduced-motion:reduce){.rs-pane,.rs-stag>*,.rs-bar,.rs-live{animation:none!important}.rs-btn:active{transform:none}}
+</style>
+</helmet>
+
+<div style="position:relative;height:100vh;display:grid;grid-template-columns:210px minmax(560px,1fr);overflow:hidden">
+  <sc-if value="{{ showGridLines }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--color-text) 4%,transparent) 0 1px,transparent 1px 48px),repeating-linear-gradient(90deg,color-mix(in srgb,var(--color-text) 4%,transparent) 0 1px,transparent 1px 48px)"></div>
+  </sc-if>
+
+  <aside class="rs-pane" style="position:relative;z-index:1;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;padding:16px 0;min-height:0">
+    <div style="padding:0 13px 16px;display:flex;flex-direction:column;gap:9px">
+      <div class="blueprint duotone" style="padding:6px 8px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <img src="assets/logo-full.png" alt="Calvary Investment Co. Ltd" style="width:100%;height:auto;display:block;filter:grayscale(1) contrast(1.05)">
+      </div>
+      <div>
+        <div style="font-family:var(--font-heading);font-weight:600;font-size:16px;line-height:1.05">Calvary Connect</div>
+        <div class="rs-lbl" style="margin-top:3px">{{ roleLabel }} view</div>
+      </div>
+    </div>
+    <div class="rs-lbl" style="padding:6px 13px 6px">Role screens</div>
+    <nav class="rs-nav" style="display:flex;flex-direction:column;gap:1px">
+      <sc-for list="{{ screens }}" as="s" hint-placeholder-count="6">
+        <button aria-current="{{ s.cur }}" onClick="{{ s.pick }}">{{ s.label }} <span class="tag {{ s.tagClass }} rs-nw">{{ s.badge }}</span></button>
+      </sc-for>
+    </nav>
+    <div style="margin-top:auto;padding:16px 13px 0;border-top:1px solid var(--color-divider);display:flex;align-items:center;gap:9px">
+      <span class="rs-live" style="width:7px;height:7px;background:var(--color-accent);display:block;flex:none"></span>
+      <span class="rs-lbl">Realtime on · 30 units</span>
+    </div>
+  </aside>
+
+  <main class="rs-pane rs-scroll" style="position:relative;z-index:1;display:flex;flex-direction:column">
+    <header style="padding:17px 22px 15px;border-bottom:1px solid var(--color-divider);display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;position:sticky;top:0;background:var(--color-bg);z-index:2">
+      <div style="min-width:0">
+        <div class="rs-lbl">{{ head.kicker }}</div>
+        <h2 style="margin:3px 0 0;font-size:28px">{{ head.title }}</h2>
+        <div style="font-size:12.5px;color:color-mix(in srgb,var(--color-text) 58%,transparent);margin-top:4px">{{ head.sub }}</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn btn-secondary rs-btn rs-nw">{{ head.action2 }}</button>
+        <button class="btn btn-primary rs-btn rs-nw">{{ head.action1 }}</button>
+      </div>
+      <div class="rs-tabs" style="width:100%">
+        <sc-for list="{{ pages }}" as="p" hint-placeholder-count="4">
+          <button class="rs-tab" aria-selected="{{ p.on }}" onClick="{{ p.pick }}">{{ p.label }}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <sc-if value="{{ isCeo }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:18px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Revenue MTD</div><div class="rs-fig" style="font-size:29px;margin-top:6px">412.6<span style="font-size:14px">M</span></div><div class="rs-lbl" style="margin-top:4px">TSh · +8% vs Aug</div></div>
+          <div><div class="rs-lbl">Net profit</div><div class="rs-fig" style="font-size:29px;margin-top:6px">144.3<span style="font-size:14px">M</span></div><div class="rs-lbl" style="margin-top:4px">35% margin</div></div>
+          <div><div class="rs-lbl">Active trips</div><div class="rs-fig" style="font-size:29px;margin-top:6px">27</div><div class="rs-lbl" style="margin-top:4px">3 delayed</div></div>
+          <div><div class="rs-lbl">Utilization</div><div class="rs-fig" style="font-size:29px;margin-top:6px">63%</div><div class="rs-lbl" style="margin-top:4px">45 of 142 moving</div></div>
+          <div><div class="rs-lbl">Drivers online</div><div class="rs-fig" style="font-size:29px;margin-top:6px">34<span style="font-size:14px">/61</span></div><div class="rs-lbl" style="margin-top:4px">2 GPS offline</div></div>
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Awaiting you</div><div class="rs-fig" style="font-size:29px;margin-top:6px;color:var(--color-accent-700)">9</div><div class="rs-lbl" style="margin-top:4px">approvals</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px;align-items:start">
+          <div class="blueprint" style="padding:15px 16px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px"><h4 style="margin:0">Income vs expenses</h4><span class="rs-lbl rs-nw">TSh M · booking rate</span></div>
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;height:158px;align-items:end">
+              <sc-for list="{{ chart }}" as="c" hint-placeholder-count="6">
+                <div style="display:flex;gap:4px;align-items:end;height:100%">
+                  <div class="rs-bar rs-fill" style="flex:1;height:{{ c.inc }}%;background:var(--color-accent)"></div>
+                  <div class="rs-bar" style="flex:1;height:{{ c.exp }}%;border:1px solid var(--color-divider);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--color-text) 16%,transparent) 0 1px,transparent 1px 5px)"></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:9px" class="rs-lbl"><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span></div>
+          </div>
+
+          <div class="blueprint" style="padding:15px 16px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px"><h4 style="margin:0">AI insights</h4><span class="rs-lbl">06:02</span></div>
+            <div style="display:flex;flex-direction:column;gap:11px;font-size:12.5px;line-height:1.6">
+              <div style="border-left:2px solid var(--color-accent);padding-left:11px"><div class="rs-lbl" style="color:var(--color-accent-700)">Highlight</div>Mwanza corridor margin up 11% — Dangote volumes carried the month.</div>
+              <div style="border-left:2px solid var(--color-divider);padding-left:11px"><div class="rs-lbl">Concern</div>12 truck heads idle over 5 days — roughly TSh 34.2M of unearned capacity.</div>
+              <div style="border-left:2px solid var(--color-divider);padding-left:11px"><div class="rs-lbl">Recommend</div>Re-rate the Tunduma transit run: fuel per km runs 18% above Mwanza at a lower tariff.</div>
+            </div>
+            <button class="btn btn-secondary rs-btn btn-block">Ask a follow-up</button>
+          </div>
+        </div>
+
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:baseline;justify-content:space-between"><h4 style="margin:0">Active trips</h4><span class="rs-lbl">public.trips · status in_transit / loading</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Trip</th><th>Driver</th><th>Route</th><th>Truck</th><th>Status</th><th class="rs-nw">Started</th></tr></thead>
+            <tbody>
+              <tr><td class="rs-mono rs-nw">TRP-2418</td><td class="rs-nw">Juma Hassan</td><td>Dar es Salaam → Mwanza</td><td class="rs-mono rs-nw">T 412 DKA</td><td><span class="tag tag-accent rs-nw">In transit</span></td><td class="rs-mono rs-nw">03 Sep 06:35</td></tr>
+              <tr><td class="rs-mono rs-nw">TRP-2419</td><td class="rs-nw">Amina Said</td><td>Dar es Salaam → Tunduma</td><td class="rs-mono rs-nw">T 655 NDA</td><td><span class="tag tag-accent rs-nw">In transit</span></td><td class="rs-mono rs-nw">02 Sep 19:10</td></tr>
+              <tr><td class="rs-mono rs-nw">TRP-2417</td><td class="rs-nw">Salum Kibwana</td><td>Dar es Salaam → Dodoma</td><td class="rs-mono rs-nw">T 104 MWZ</td><td><span class="tag tag-outline rs-nw">Delayed 6h</span></td><td class="rs-mono rs-nw">02 Sep 05:00</td></tr>
+              <tr><td class="rs-mono rs-nw">TRP-2414</td><td class="rs-nw">Godfrey Nyerere</td><td>Kinyerezi pit → Ubungo</td><td class="rs-mono rs-nw">T 347 PLK</td><td><span class="tag tag-accent rs-nw">Loading</span></td><td class="rs-mono rs-nw">03 Sep 08:15</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isOps }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:18px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Unassigned</div><div class="rs-fig" style="font-size:29px;margin-top:6px;color:var(--color-accent-700)">3</div></div>
+          <div><div class="rs-lbl">In transit</div><div class="rs-fig" style="font-size:29px;margin-top:6px">27</div></div>
+          <div><div class="rs-lbl">Delayed</div><div class="rs-fig" style="font-size:29px;margin-top:6px">3</div></div>
+          <div><div class="rs-lbl">Idle trucks</div><div class="rs-fig" style="font-size:29px;margin-top:6px">89</div></div>
+          <div><div class="rs-lbl">GPS offline</div><div class="rs-fig" style="font-size:29px;margin-top:6px">2</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:minmax(340px,1fr) minmax(280px,340px);gap:18px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div class="rs-ph blueprint" style="height:260px;position:relative">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <span class="rs-lbl rs-live">live fleet map · 27 units · markers rotate to heading</span>
+            </div>
+            <div class="blueprint">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:baseline;justify-content:space-between"><h4 style="margin:0">Needs a decision now</h4><span class="tag tag-accent">4</span></div>
+              <table class="rs-t">
+                <tbody>
+                  <tr><td class="rs-mono rs-nw">TRP-2421</td><td>Dar → Mwanza · Dangote · 04 Sep 06:00</td><td><span class="tag tag-accent rs-nw">Unassigned</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Assign</button></td></tr>
+                  <tr><td class="rs-mono rs-nw">TRP-2417</td><td>Delayed 6 h at Chalinze · driver reports queue</td><td><span class="tag tag-outline rs-nw">Delayed</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Notify client</button></td></tr>
+                  <tr><td class="rs-mono rs-nw">T 889 BXR</td><td>Breakdown · Morogoro · gearbox</td><td><span class="tag tag-outline rs-nw">Breakdown</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Workshop</button></td></tr>
+                  <tr><td class="rs-mono rs-nw">TRP-2391</td><td>Delivered 22 Aug · POD still missing</td><td><span class="tag tag-outline rs-nw">POD</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Chase driver</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div class="blueprint" style="display:flex;flex-direction:column">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:9px">
+                <h4 style="margin:0">Sales channel</h4><span class="tag tag-accent rs-live rs-nw" style="margin-left:auto">R. Mushi online</span>
+              </div>
+              <div style="padding:13px;display:flex;flex-direction:column;gap:11px">
+                <sc-for list="{{ thread }}" as="m" hint-placeholder-count="4">
+                  <div style="display:flex;flex-direction:column;align-items:{{ m.align }}">
+                    <div class="rs-lbl rs-nw" style="margin-bottom:4px">{{ m.who }} · {{ m.time }}</div>
+                    <div style="max-width:84%;border:1px solid {{ m.bdr }};background:{{ m.bg }};padding:9px 11px;font-size:12.5px;line-height:1.55">{{ m.body }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:auto;padding:12px 13px;border-top:1px solid var(--color-divider);display:flex;gap:9px">
+                <input class="input" placeholder="Reply to sales…" value="{{ draft }}" onInput="{{ onDraft }}">
+                <button class="btn btn-primary rs-btn rs-nw" onClick="{{ send }}">Send</button>
+              </div>
+            </div>
+            <div class="blueprint rs-frame">
+              <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+              <h4 style="margin:0 0 10px">Low stock</h4>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px">
+                <div style="display:flex;justify-content:space-between;gap:10px"><span>Tyres 315/80 R22.5</span><span class="rs-mono rs-nw">2 left</span></div>
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="display:flex;justify-content:space-between;gap:10px"><span>Engine oil 20 L</span><span class="rs-mono rs-nw">3 left</span></div>
+                <div style="height:1px;background:var(--color-divider)"></div>
+                <div style="display:flex;justify-content:space-between;gap:10px"><span>Air filter HOWO</span><span class="rs-mono rs-nw">1 left</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isFin }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:18px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Cash · TSh</div><div class="rs-fig" style="font-size:27px;margin-top:6px">88.4M</div><div class="rs-lbl" style="margin-top:4px">+ USD 41,200 held separately</div></div>
+          <div><div class="rs-lbl">Receivables</div><div class="rs-fig" style="font-size:27px;margin-top:6px">214.9M</div><div class="rs-lbl" style="margin-top:4px">31% over 60 days</div></div>
+          <div><div class="rs-lbl">Payables</div><div class="rs-fig" style="font-size:27px;margin-top:6px">96.1M</div><div class="rs-lbl" style="margin-top:4px">22.4M due this week</div></div>
+          <div><div class="rs-lbl">VAT payable</div><div class="rs-fig" style="font-size:27px;margin-top:6px">31.7M</div><div class="rs-lbl" style="margin-top:4px">filing due 20 Oct</div></div>
+        </div>
+
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Waiting on you</h4><span class="tag tag-accent rs-nw">14</span><span class="rs-lbl rs-nw" style="margin-left:auto">approve → posts a balanced journal</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Item</th><th>Source</th><th style="text-align:right">Amount</th><th>Age</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Fuel request · 480 L</td><td class="rs-nw">Juma Hassan · TRP-2418</td><td class="rs-mono rs-nw" style="text-align:right">TSh 1,392,000</td><td class="rs-mono">4 h</td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Approve &amp; post</button></td></tr>
+              <tr><td>Draft invoice · auto from POD</td><td class="rs-nw">TRP-2402 · Kilimanjaro Bev.</td><td class="rs-mono rs-nw" style="text-align:right">TSh 3,180,000</td><td class="rs-mono">2 d</td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Approve &amp; post</button></td></tr>
+              <tr><td>Expense claim · tolls</td><td class="rs-nw">Salum Kibwana · TRP-2417</td><td class="rs-mono rs-nw" style="text-align:right">TSh 84,000</td><td class="rs-mono">1 d</td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Review</button></td></tr>
+              <tr><td>Unmatched bank line</td><td class="rs-nw">CRDB · 01 Sep</td><td class="rs-mono rs-nw" style="text-align:right">TSh 4,150,000</td><td class="rs-mono">2 d</td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Match</button></td></tr>
+              <tr><td>Vendor bill · tyres</td><td class="rs-nw">Superdoll Ltd</td><td class="rs-mono rs-nw" style="text-align:right">TSh 12,600,000</td><td class="rs-mono">3 d</td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Review</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;align-items:start">
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px"><h4 style="margin:0">Expense breakdown</h4><span class="rs-lbl rs-nw">expense_by_category</span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <sc-for list="{{ expenses }}" as="e" hint-placeholder-count="5">
+                <div>
+                  <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>{{ e.name }}</span><span class="rs-mono rs-nw">{{ e.amount }}</span></div>
+                  <div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:{{ e.pct }}%;background:var(--color-accent)"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px"><h4 style="margin:0">Period close · Sep 2026</h4><span class="tag tag-neutral rs-nw">Open</span></div>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Unposted journals</span><span class="rs-mono">2</span></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Unreconciled bank lines</span><span class="rs-mono">7</span></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Draft invoices</span><span class="rs-mono">4</span></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Delivered, not invoiced</span><span class="rs-mono">3</span></div>
+            </div>
+            <button class="btn btn-secondary rs-btn btn-block" disabled>Close period · 16 items open</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isHr }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:18px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Headcount</div><div class="rs-fig" style="font-size:29px;margin-top:6px">78</div></div>
+          <div><div class="rs-lbl">On trip today</div><div class="rs-fig" style="font-size:29px;margin-top:6px">27</div></div>
+          <div><div class="rs-lbl">On leave</div><div class="rs-fig" style="font-size:29px;margin-top:6px">5</div></div>
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Docs expiring</div><div class="rs-fig" style="font-size:29px;margin-top:6px;color:var(--color-accent-700)">7</div></div>
+          <div><div class="rs-lbl">Allowances MTD</div><div class="rs-fig" style="font-size:29px;margin-top:6px">31.9<span style="font-size:14px">M</span></div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px">
+            <h4 style="margin:0">People</h4>
+            <input class="input" placeholder="Search name or staff ID…" style="max-width:220px;margin-left:auto">
+          </div>
+          <table class="rs-t">
+            <thead><tr><th>Employee</th><th>Role</th><th class="rs-nw">Licence</th><th class="rs-nw">Medical</th><th>Status today</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><div class="rs-nw">Juma Hassan</div><div class="rs-lbl" style="margin-top:2px">EMP-0142 · 2021</div></td><td>Driver</td><td class="rs-mono rs-nw">C · 14 Mar 27</td><td class="rs-mono rs-nw">12 Jun 27</td><td><span class="tag tag-accent rs-nw">On trip</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td><div class="rs-nw">Rehema Mwakasege</div><div class="rs-lbl" style="margin-top:2px">EMP-0188 · 2023</div></td><td>Driver</td><td class="rs-mono rs-nw">C · 02 Nov 28</td><td class="rs-mono rs-nw">30 Jan 27</td><td><span class="tag tag-neutral rs-nw">Available</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td><div class="rs-nw">Godfrey Nyerere</div><div class="rs-lbl" style="margin-top:2px">EMP-0090 · 2019</div></td><td>Driver</td><td class="rs-mono rs-nw">C · 08 Aug 27</td><td class="rs-mono rs-nw" style="color:var(--color-accent-800)"><strong>29 Sep 26 · 26 d</strong></td><td><span class="tag tag-outline rs-nw">Grounded soon</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Book medical</a></td></tr>
+              <tr><td><div class="rs-nw">P. Mahenge</div><div class="rs-lbl" style="margin-top:2px">EMP-0033 · 2017</div></td><td>Mechanic</td><td style="opacity:.45">—</td><td class="rs-mono rs-nw">04 Apr 27</td><td><span class="tag tag-neutral rs-nw">Workshop</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td><div class="rs-nw">Amina Said</div><div class="rs-lbl" style="margin-top:2px">EMP-0201 · 2024</div></td><td>Driver</td><td class="rs-mono rs-nw">C · 19 Dec 27</td><td class="rs-mono rs-nw">11 Nov 26</td><td><span class="tag tag-accent rs-nw">On trip</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td><div class="rs-nw">Salum Kibwana</div><div class="rs-lbl" style="margin-top:2px">EMP-0117 · 2020</div></td><td>Driver</td><td class="rs-mono rs-nw">C · 27 Feb 27</td><td class="rs-mono rs-nw">18 Jul 27</td><td><span class="tag tag-neutral rs-nw">On leave · 3 d</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMech }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:18px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Breakdowns open</div><div class="rs-fig" style="font-size:29px;margin-top:6px;color:var(--color-accent-700)">2</div></div>
+          <div><div class="rs-lbl">In workshop</div><div class="rs-fig" style="font-size:29px;margin-top:6px">6</div></div>
+          <div><div class="rs-lbl">Services due 7 d</div><div class="rs-fig" style="font-size:29px;margin-top:6px">11</div></div>
+          <div><div class="rs-lbl">Parts awaiting approval</div><div class="rs-fig" style="font-size:29px;margin-top:6px">2</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(340px,1fr) minmax(280px,330px);gap:18px;align-items:start">
+          <div class="blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:baseline;justify-content:space-between"><h4 style="margin:0">Service queue</h4><span class="rs-lbl">19 open</span></div>
+            <table class="rs-t">
+              <thead><tr><th>Vehicle</th><th class="rs-nw">Reported</th><th>Fault</th><th>Priority</th><th></th></tr></thead>
+              <tbody>
+                <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-mono rs-nw">T 889 BXR</td><td class="rs-mono rs-nw">03 Sep 07:20</td><td>Gearbox — will not select 4th<div class="rs-lbl" style="margin-top:3px">Stranded at Morogoro · 2 photos</div></td><td><span class="tag tag-accent rs-nw">Breakdown</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Start job</button></td></tr>
+                <tr><td class="rs-mono rs-nw">T 530 GBX</td><td class="rs-mono rs-nw">01 Sep</td><td>50,000 km service overdue by 1,200 km</td><td><span class="tag tag-outline rs-nw">Overdue</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Open</button></td></tr>
+                <tr><td class="rs-mono rs-nw">T 347 PLK</td><td class="rs-mono rs-nw">31 Aug</td><td>Front left tyre worn past limit</td><td><span class="tag tag-neutral rs-nw">Normal</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Open</button></td></tr>
+                <tr><td class="rs-mono rs-nw">T 104 MWZ</td><td class="rs-mono rs-nw">29 Aug</td><td>Trailer brake air leak</td><td><span class="tag tag-neutral rs-nw">Awaiting parts</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Open</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="blueprint rs-frame" style="display:flex;flex-direction:column;gap:11px">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><h4 style="margin:0">Job card · T 889 BXR</h4><span class="tag tag-accent rs-nw">In progress</span></div>
+            <div class="field"><label>Work performed</label><textarea class="input" style="min-height:66px">Removed gearbox, inspected synchro rings on 4th.</textarea></div>
+            <div>
+              <div class="rs-lbl" style="margin-bottom:7px">Parts used · from inventory</div>
+              <div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px">
+                <div style="display:flex;justify-content:space-between;gap:10px;border:1px solid var(--color-divider);padding:8px 10px"><span>Synchro ring set</span><span class="rs-mono rs-nw">×1 · stock 2</span></div>
+                <div style="display:flex;justify-content:space-between;gap:10px;border:1px solid var(--color-divider);padding:8px 10px"><span>Gear oil 80W-90</span><span class="rs-mono rs-nw">×12 L</span></div>
+              </div>
+            </div>
+            <div class="field"><label>Condition after service</label><div class="seg" style="width:100%"><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rscond">Good</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rscond" checked>Fair</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rscond">Poor</label></div></div>
+            <div class="field"><label>Next service due · mileage</label><input class="input" value="462,000"></div>
+            <button class="btn btn-primary rs-btn btn-block">Complete &amp; release vehicle</button>
+            <div class="rs-lbl" style="text-align:center;line-height:1.5">Sets vehicles.status = available · posts maintenance expense</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgCeoFin }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:18px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Revenue YTD</div><div class="rs-fig" style="font-size:27px;margin-top:6px">3.14<span style="font-size:14px">B</span></div><div class="rs-lbl" style="margin-top:4px">TSh</div></div>
+          <div><div class="rs-lbl">Gross margin</div><div class="rs-fig" style="font-size:27px;margin-top:6px">38%</div><div class="rs-lbl" style="margin-top:4px">target 40%</div></div>
+          <div><div class="rs-lbl">Cost per km</div><div class="rs-fig" style="font-size:27px;margin-top:6px">1,840</div><div class="rs-lbl" style="margin-top:4px">TSh · fleet average</div></div>
+          <div><div class="rs-lbl">Revenue per km</div><div class="rs-fig" style="font-size:27px;margin-top:6px">2,970</div><div class="rs-lbl" style="margin-top:4px">TSh</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:baseline;justify-content:space-between"><h4 style="margin:0">Corridor profitability</h4><span class="rs-lbl">trip_accounting · September</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Corridor</th><th style="text-align:right">Trips</th><th style="text-align:right">Revenue</th><th style="text-align:right">Cost</th><th style="text-align:right">Margin</th><th>Trend</th></tr></thead>
+            <tbody>
+              <tr><td class="rs-nw">Dar es Salaam → Mwanza</td><td class="rs-mono" style="text-align:right">31</td><td class="rs-mono rs-nw" style="text-align:right">128.6M</td><td class="rs-mono rs-nw" style="text-align:right">79.7M</td><td class="rs-mono" style="text-align:right"><strong>38%</strong></td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:95%;background:var(--color-accent)"></div></div></td></tr>
+              <tr><td class="rs-nw">Dar es Salaam → Dodoma</td><td class="rs-mono" style="text-align:right">44</td><td class="rs-mono rs-nw" style="text-align:right">96.2M</td><td class="rs-mono rs-nw" style="text-align:right">68.3M</td><td class="rs-mono" style="text-align:right"><strong>29%</strong></td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:72%;background:var(--color-accent)"></div></div></td></tr>
+              <tr><td class="rs-nw">Kinyerezi pit → Ubungo</td><td class="rs-mono" style="text-align:right">118</td><td class="rs-mono rs-nw" style="text-align:right">61.4M</td><td class="rs-mono rs-nw" style="text-align:right">48.5M</td><td class="rs-mono" style="text-align:right"><strong>21%</strong></td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:52%;background:var(--color-accent)"></div></div></td></tr>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-nw">Dar es Salaam → Tunduma</td><td class="rs-mono" style="text-align:right">22</td><td class="rs-mono rs-nw" style="text-align:right">126.4M</td><td class="rs-mono rs-nw" style="text-align:right">121.3M</td><td class="rs-mono" style="text-align:right;color:var(--color-accent-800)"><strong>4%</strong></td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:10%;background:var(--color-accent)"></div></div></td></tr>
+            </tbody>
+          </table>
+          <div style="padding:11px 14px;border-top:1px solid var(--color-divider)" class="rs-lbl">Transit corridor carries bond and escort cost the local tariff does not — re-rate or drop</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;align-items:start">
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 11px">Revenue by client</h4>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <div><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>Dangote Cement</span><span class="rs-mono rs-nw">148.9M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:88%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>Yara Tanzania</span><span class="rs-mono rs-nw">96.4M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:57%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>Kilimanjaro Beverages</span><span class="rs-mono rs-nw">78.2M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:46%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>Tanga Cement</span><span class="rs-mono rs-nw">54.1M</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:32%;background:var(--color-accent)"></div></div></div>
+            </div>
+            <div class="rs-lbl" style="margin-top:11px;padding-top:9px;border-top:1px solid var(--color-divider)">revenue_by_customer view · concentration risk 36% on one client</div>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 11px">Currency exposure</h4>
+            <table class="rs-t">
+              <thead><tr><th>Currency</th><th style="text-align:right">Balance</th><th style="text-align:right">Rate</th></tr></thead>
+              <tbody>
+                <tr><td class="rs-mono">TZS</td><td class="rs-mono rs-nw" style="text-align:right">88,400,000</td><td class="rs-mono" style="text-align:right">1.00</td></tr>
+                <tr><td class="rs-mono">USD</td><td class="rs-mono rs-nw" style="text-align:right">41,200</td><td class="rs-mono" style="text-align:right">2,610</td></tr>
+                <tr><td class="rs-mono">KES</td><td class="rs-mono rs-nw" style="text-align:right">0</td><td class="rs-mono" style="text-align:right">20.1</td></tr>
+              </tbody>
+            </table>
+            <div class="rs-lbl" style="margin-top:11px;padding-top:9px;border-top:1px solid var(--color-divider);line-height:1.5">Never summed into one figure — converted at the booking rate only where a total is unavoidable</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgOpsTrips }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div class="seg"><label class="seg-opt"><input type="radio" name="rstrip" checked>All 312</label><label class="seg-opt"><input type="radio" name="rstrip">In transit 27</label><label class="seg-opt"><input type="radio" name="rstrip">Delayed 3</label><label class="seg-opt"><input type="radio" name="rstrip">Delivered 279</label><label class="seg-opt"><input type="radio" name="rstrip">POD missing 3</label></div>
+          <input class="input" placeholder="Search trip, client, plate…" style="max-width:230px;margin-left:auto">
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <table class="rs-t">
+            <thead><tr><th>Trip</th><th>Client</th><th>Route</th><th>Unit</th><th>Driver</th><th style="text-align:right">Rate</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="rs-mono rs-nw">TRP-2421</td><td class="rs-nw">Dangote Cement</td><td>Dar → Mwanza</td><td class="rs-mono rs-nw">—</td><td class="rs-nw" style="opacity:.5">—</td><td class="rs-mono rs-nw" style="text-align:right">4,150,000</td><td><span class="tag tag-accent rs-nw">Unassigned</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Assign</button></td></tr>
+              <tr><td class="rs-mono rs-nw">TRP-2418</td><td class="rs-nw">Dangote Cement</td><td>Dar → Mwanza</td><td class="rs-mono rs-nw">T 412 DKA</td><td class="rs-nw">Juma Hassan</td><td class="rs-mono rs-nw" style="text-align:right">4,150,000</td><td><span class="tag tag-accent rs-nw">In transit</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Track</a></td></tr>
+              <tr><td class="rs-mono rs-nw">TRP-2419</td><td class="rs-nw">Yara Tanzania</td><td>Dar → Tunduma</td><td class="rs-mono rs-nw">T 655 NDA</td><td class="rs-nw">Amina Said</td><td class="rs-mono rs-nw" style="text-align:right">5,740,000</td><td><span class="tag tag-accent rs-nw">In transit</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Track</a></td></tr>
+              <tr><td class="rs-mono rs-nw">TRP-2417</td><td class="rs-nw">Kilimanjaro Bev.</td><td>Dar → Dodoma</td><td class="rs-mono rs-nw">T 104 MWZ</td><td class="rs-nw">Salum Kibwana</td><td class="rs-mono rs-nw" style="text-align:right">3,180,000</td><td><span class="tag tag-outline rs-nw">Delayed 6 h</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Track</a></td></tr>
+              <tr><td class="rs-mono rs-nw">TRP-2414</td><td class="rs-nw">Tanga Cement</td><td>Kinyerezi → Ubungo</td><td class="rs-mono rs-nw">T 347 PLK</td><td class="rs-nw">Godfrey Nyerere</td><td class="rs-mono rs-nw" style="text-align:right">520,000</td><td><span class="tag tag-accent rs-nw">Loading</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Track</a></td></tr>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-mono rs-nw">TRP-2391</td><td class="rs-nw">Yara Tanzania</td><td>Dar → Tunduma</td><td class="rs-mono rs-nw">T 655 NDA</td><td class="rs-nw">Amina Said</td><td class="rs-mono rs-nw" style="text-align:right">5,740,000</td><td><span class="tag tag-outline rs-nw">POD missing</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Chase</button></td></tr>
+              <tr><td class="rs-mono rs-nw">TRP-2402</td><td class="rs-nw">Kilimanjaro Bev.</td><td>Dar → Dodoma</td><td class="rs-mono rs-nw">T 104 MWZ</td><td class="rs-nw">Salum Kibwana</td><td class="rs-mono rs-nw" style="text-align:right">3,180,000</td><td><span class="tag tag-neutral rs-nw">Delivered</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Invoice</a></td></tr>
+            </tbody>
+          </table>
+          <div style="padding:10px 14px;border-top:1px solid var(--color-divider);display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span class="rs-lbl">Showing 1–7 of 312 · public.trips</span>
+            <div style="display:flex;gap:7px"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Prev</button><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Next</button></div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgFinInv }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Draft</div><div class="rs-fig" style="font-size:27px;margin-top:6px">4</div><div class="rs-lbl" style="margin-top:4px">TSh 14.2M</div></div>
+          <div><div class="rs-lbl">Posted, unpaid</div><div class="rs-fig" style="font-size:27px;margin-top:6px">37</div><div class="rs-lbl" style="margin-top:4px">TSh 214.9M</div></div>
+          <div><div class="rs-lbl">Partially paid</div><div class="rs-fig" style="font-size:27px;margin-top:6px">6</div><div class="rs-lbl" style="margin-top:4px">allocations open</div></div>
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Over 90 days</div><div class="rs-fig" style="font-size:27px;margin-top:6px;color:var(--color-accent-700)">27.7<span style="font-size:14px">M</span></div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px">
+            <h4 style="margin:0">Invoices</h4>
+            <span class="rs-lbl rs-nw" style="margin-left:auto">status: draft · posted · part-paid · paid · reversed</span>
+          </div>
+          <table class="rs-t">
+            <thead><tr><th>Number</th><th>Client</th><th>Trip</th><th>Issued</th><th style="text-align:right">Total</th><th style="text-align:right">Allocated</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="rs-mono rs-nw">—</td><td class="rs-nw">Kilimanjaro Bev.</td><td class="rs-mono rs-nw">TRP-2402</td><td class="rs-mono rs-nw">auto</td><td class="rs-mono rs-nw" style="text-align:right">3,752,400</td><td class="rs-mono rs-nw" style="text-align:right">—</td><td><span class="tag tag-outline rs-nw">Draft · from POD</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Approve &amp; post</button></td></tr>
+              <tr><td class="rs-mono rs-nw">INV-2026-0418</td><td class="rs-nw">Dangote Cement</td><td class="rs-mono rs-nw">TRP-2404</td><td class="rs-mono rs-nw">28 Aug</td><td class="rs-mono rs-nw" style="text-align:right">4,897,000</td><td class="rs-mono rs-nw" style="text-align:right">4,897,000</td><td><span class="tag tag-neutral rs-nw">Paid</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+              <tr><td class="rs-mono rs-nw">INV-2026-0417</td><td class="rs-nw">Yara Tanzania</td><td class="rs-mono rs-nw">TRP-2391</td><td class="rs-mono rs-nw">24 Aug</td><td class="rs-mono rs-nw" style="text-align:right">6,773,200</td><td class="rs-mono rs-nw" style="text-align:right">3,000,000</td><td><span class="tag tag-accent rs-nw">Part-paid</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Allocate</a></td></tr>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-mono rs-nw">INV-2026-0388</td><td class="rs-nw">Tanga Cement</td><td class="rs-mono rs-nw">TRP-2310</td><td class="rs-mono rs-nw">02 Jun</td><td class="rs-mono rs-nw" style="text-align:right">9,410,000</td><td class="rs-mono rs-nw" style="text-align:right">—</td><td><span class="tag tag-outline rs-nw">93 days overdue</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Statement</button></td></tr>
+              <tr><td class="rs-mono rs-nw">INV-2026-0402</td><td class="rs-nw">Dangote Cement</td><td class="rs-mono rs-nw">TRP-2355</td><td class="rs-mono rs-nw">14 Jul</td><td class="rs-mono rs-nw" style="text-align:right">4,150,000</td><td class="rs-mono rs-nw" style="text-align:right">4,150,000</td><td><span class="tag tag-neutral rs-nw">Paid</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Open</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="blueprint rs-frame" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="min-width:240px;flex:1"><h4 style="margin:0 0 3px">Posting a draft is not an edit</h4><div style="font-size:12.5px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 62%,transparent)">Approve writes DR 1200 Receivables · CR 4000 Revenue · CR 2200 VAT and locks the document. Corrections are reversals, never edits.</div></div>
+          <button class="btn btn-secondary rs-btn rs-nw">View journal</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgHrPay }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Gross pay</div><div class="rs-fig" style="font-size:27px;margin-top:6px">118.4<span style="font-size:14px">M</span></div><div class="rs-lbl" style="margin-top:4px">TSh · 78 employees</div></div>
+          <div><div class="rs-lbl">Allowances</div><div class="rs-fig" style="font-size:27px;margin-top:6px">31.9<span style="font-size:14px">M</span></div><div class="rs-lbl" style="margin-top:4px">trip-linked</div></div>
+          <div><div class="rs-lbl">Statutory</div><div class="rs-fig" style="font-size:27px;margin-top:6px">26.1<span style="font-size:14px">M</span></div><div class="rs-lbl" style="margin-top:4px">PAYE · NSSF · WCF · SDL</div></div>
+          <div><div class="rs-lbl">Net payable</div><div class="rs-fig" style="font-size:27px;margin-top:6px">124.2<span style="font-size:14px">M</span></div><div class="rs-lbl" style="margin-top:4px">due 28 Sep</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">September run</h4><span class="tag tag-outline rs-nw" style="margin-left:auto">Not yet posted</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Employee</th><th>Basis</th><th style="text-align:right">Base</th><th style="text-align:right">Allowance</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net</th></tr></thead>
+            <tbody>
+              <tr><td class="rs-nw">Juma Hassan</td><td class="rs-lbl rs-nw">Driver · 9 trips</td><td class="rs-mono rs-nw" style="text-align:right">720,000</td><td class="rs-mono rs-nw" style="text-align:right">540,000</td><td class="rs-mono rs-nw" style="text-align:right">(214,200)</td><td class="rs-mono rs-nw" style="text-align:right"><strong>1,045,800</strong></td></tr>
+              <tr><td class="rs-nw">Rehema Mwakasege</td><td class="rs-lbl rs-nw">Driver · 7 trips</td><td class="rs-mono rs-nw" style="text-align:right">720,000</td><td class="rs-mono rs-nw" style="text-align:right">420,000</td><td class="rs-mono rs-nw" style="text-align:right">(193,800)</td><td class="rs-mono rs-nw" style="text-align:right"><strong>946,200</strong></td></tr>
+              <tr><td class="rs-nw">Salum Kibwana</td><td class="rs-lbl rs-nw">Driver · 6 trips · 3 d leave</td><td class="rs-mono rs-nw" style="text-align:right">720,000</td><td class="rs-mono rs-nw" style="text-align:right">360,000</td><td class="rs-mono rs-nw" style="text-align:right">(183,600)</td><td class="rs-mono rs-nw" style="text-align:right"><strong>896,400</strong></td></tr>
+              <tr><td class="rs-nw">P. Mahenge</td><td class="rs-lbl rs-nw">Mechanic · salaried</td><td class="rs-mono rs-nw" style="text-align:right">980,000</td><td class="rs-mono rs-nw" style="text-align:right">—</td><td class="rs-mono rs-nw" style="text-align:right">(166,600)</td><td class="rs-mono rs-nw" style="text-align:right"><strong>813,400</strong></td></tr>
+              <tr><td class="rs-nw">S. Mwinyi</td><td class="rs-lbl rs-nw">Accountant · salaried</td><td class="rs-mono rs-nw" style="text-align:right">1,650,000</td><td class="rs-mono rs-nw" style="text-align:right">—</td><td class="rs-mono rs-nw" style="text-align:right">(346,500)</td><td class="rs-mono rs-nw" style="text-align:right"><strong>1,303,500</strong></td></tr>
+            </tbody>
+          </table>
+          <div style="padding:11px 14px;border-top:1px solid var(--color-divider);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span class="rs-lbl">Allowances read from driver_allowances · trip-linked, not estimated</span>
+            <button class="btn btn-primary rs-btn rs-nw" style="margin-left:auto">Post run to ledger</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgMechParts }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:grid;grid-template-columns:minmax(340px,1fr) minmax(270px,320px);gap:18px;align-items:start">
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Stock on hand</h4><input class="input" placeholder="Search part…" style="max-width:180px;margin-left:auto"></div>
+          <table class="rs-t">
+            <thead><tr><th>Part</th><th>Fits</th><th style="text-align:right">On hand</th><th style="text-align:right">Reorder at</th><th>State</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-nw">Tyre 315/80 R22.5</td><td class="rs-lbl rs-nw">All heads</td><td class="rs-mono" style="text-align:right">2</td><td class="rs-mono" style="text-align:right">8</td><td><span class="tag tag-accent rs-nw">Low stock</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Request</button></td></tr>
+              <tr><td class="rs-nw">Air filter HOWO</td><td class="rs-lbl rs-nw">Dump trucks</td><td class="rs-mono" style="text-align:right">1</td><td class="rs-mono" style="text-align:right">6</td><td><span class="tag tag-accent rs-nw">Low stock</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Request</button></td></tr>
+              <tr><td class="rs-nw">Engine oil 20 L</td><td class="rs-lbl rs-nw">All</td><td class="rs-mono" style="text-align:right">3</td><td class="rs-mono" style="text-align:right">10</td><td><span class="tag tag-accent rs-nw">Low stock</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 10px;font-size:12px">Request</button></td></tr>
+              <tr><td class="rs-nw">Brake pad set</td><td class="rs-lbl rs-nw">Scania G/R</td><td class="rs-mono" style="text-align:right">6</td><td class="rs-mono" style="text-align:right">4</td><td><span class="tag tag-neutral rs-nw">In stock</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Issue</a></td></tr>
+              <tr><td class="rs-nw">Synchro ring set</td><td class="rs-lbl rs-nw">Howo ZZ3257</td><td class="rs-mono" style="text-align:right">2</td><td class="rs-mono" style="text-align:right">1</td><td><span class="tag tag-neutral rs-nw">In stock</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Issue</a></td></tr>
+              <tr><td class="rs-nw">Gear oil 80W-90</td><td class="rs-lbl rs-nw">All</td><td class="rs-mono" style="text-align:right">48 L</td><td class="rs-mono" style="text-align:right">20 L</td><td><span class="tag tag-neutral rs-nw">In stock</span></td><td style="text-align:right"><a href="#" style="font-size:11.5px">Issue</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 10px">My requests</h4>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <div style="border:1px solid var(--color-divider);padding:10px"><div style="display:flex;justify-content:space-between;gap:8px"><strong class="rs-nw">Brake pads ×4</strong><span class="tag tag-accent rs-nw">Urgent</span></div><div class="rs-lbl" style="margin-top:4px">T 530 GBX · with operator</div></div>
+              <div style="border:1px solid var(--color-divider);padding:10px"><div style="display:flex;justify-content:space-between;gap:8px"><strong class="rs-nw">Oil filter ×2</strong><span class="tag tag-neutral rs-nw">Normal</span></div><div class="rs-lbl" style="margin-top:4px">T 412 DKA · approved</div></div>
+            </div>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 10px">New request</h4>
+            <div class="field"><label>Part</label><input class="input" value="Tyre 315/80 R22.5"></div>
+            <div class="field"><label>Quantity</label><input class="input" value="6"></div>
+            <div class="field"><label>Urgency</label><div class="seg" style="width:100%"><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rsurg">Low</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rsurg" checked>Normal</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rsurg">Urgent</label></div></div>
+            <div class="field"><label>Reason</label><textarea class="input" style="min-height:58px">Two heads below legal tread; stock at 2 against a reorder point of 8.</textarea></div>
+            <button class="btn btn-primary rs-btn btn-block">Submit to operator</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgDriverTrips }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:20px 22px 30px;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
+        <div class="blueprint" style="width:390px;flex:none">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:15px 16px;border-bottom:1px solid var(--color-divider)">
+            <h4 style="margin:0">My trips</h4>
+            <div class="rs-lbl" style="margin-top:3px">Assigned to you only</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--color-divider)">
+            <button class="rs-tab" aria-selected="true" style="margin:0;min-height:44px;justify-content:center;font-size:12px">All 12</button>
+            <button class="rs-tab" style="margin:0;min-height:44px;font-size:12px">Pending 2</button>
+            <button class="rs-tab" style="margin:0;min-height:44px;font-size:12px">Transit 1</button>
+            <button class="rs-tab" style="margin:0;min-height:44px;font-size:12px">Done 9</button>
+          </div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:11px">
+            <div style="border:1px solid var(--color-accent);background:color-mix(in srgb,var(--color-accent) 7%,transparent);padding:13px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;justify-content:space-between;gap:8px"><span class="rs-mono rs-nw" style="font-weight:700">TRP-2418</span><span class="tag tag-accent rs-nw">In transit</span></div>
+              <div style="font-family:var(--font-heading);font-weight:600;font-size:17px">Dar es Salaam → Mwanza</div>
+              <div class="rs-lbl">Dangote · cement 30 t · 65% complete</div>
+              <div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:65%;background:var(--color-accent)"></div></div>
+            </div>
+            <div style="border:1px solid var(--color-divider);padding:13px;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;justify-content:space-between;gap:8px"><span class="rs-mono rs-nw" style="font-weight:700">TRP-2426</span><span class="tag tag-neutral rs-nw">Pending</span></div>
+              <div style="font-size:14px">Mwanza → Dar es Salaam</div>
+              <div class="rs-lbl">Empty return · load window 05 Sep 07:00</div>
+              <button class="btn btn-secondary rs-btn" style="min-height:44px;margin-top:3px">Accept trip</button>
+            </div>
+            <div style="border:1px solid var(--color-divider);padding:13px;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;justify-content:space-between;gap:8px"><span class="rs-mono rs-nw" style="font-weight:700">TRP-2391</span><span class="tag tag-outline rs-nw">POD missing</span></div>
+              <div style="font-size:14px">Dar es Salaam → Tunduma</div>
+              <div class="rs-lbl" style="color:var(--color-accent-800)">Delivered 22 Aug · finance is waiting on your photos</div>
+              <button class="btn btn-primary rs-btn" style="min-height:44px;margin-top:3px">Upload proof of delivery</button>
+            </div>
+            <div style="border:1px solid var(--color-divider);padding:13px;display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;justify-content:space-between;gap:8px"><span class="rs-mono rs-nw" style="font-weight:700">TRP-2402</span><span class="tag tag-neutral rs-nw">Delivered</span></div>
+              <div style="font-size:14px">Dar es Salaam → Dodoma</div>
+              <div class="rs-lbl">Kilimanjaro Beverages · 28 Aug · POD uploaded</div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px">
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 9px">One state earns its own treatment</h4>
+            <p style="margin:0;font-size:13px;line-height:1.65;color:color-mix(in srgb,var(--color-text) 68%,transparent)">A trip delivered without a proof of delivery is the single gap that stalls invoicing, so it gets an explicit status and the only filled button in the list. Everything else the driver can safely ignore.</p>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 10px">Earnings this month</h4>
+            <table class="rs-t">
+              <tbody>
+                <tr><td>Trips completed</td><td class="rs-mono" style="text-align:right">9</td></tr>
+                <tr><td>Allowance accrued</td><td class="rs-mono rs-nw" style="text-align:right">TSh 540,000</td></tr>
+                <tr><td>Expenses reimbursed</td><td class="rs-mono rs-nw" style="text-align:right">TSh 168,000</td></tr>
+                <tr><td>Awaiting approval</td><td class="rs-mono rs-nw" style="text-align:right">TSh 84,000</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgCeoFleet }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:18px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Fleet size</div><div class="rs-fig" style="font-size:27px;margin-top:6px">142</div></div>
+          <div><div class="rs-lbl">Utilization</div><div class="rs-fig" style="font-size:27px;margin-top:6px">63%</div><div class="rs-lbl" style="margin-top:4px">target 70%</div></div>
+          <div><div class="rs-lbl">Availability</div><div class="rs-fig" style="font-size:27px;margin-top:6px">94%</div><div class="rs-lbl" style="margin-top:4px">6 in maintenance</div></div>
+          <div><div class="rs-lbl">Downtime days</div><div class="rs-fig" style="font-size:27px;margin-top:6px">218</div><div class="rs-lbl" style="margin-top:4px">YTD, all units</div></div>
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Idle over 5 days</div><div class="rs-fig" style="font-size:27px;margin-top:6px;color:var(--color-accent-700)">12</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:baseline;justify-content:space-between"><h4 style="margin:0">By unit type</h4><span class="rs-lbl">vehicles.type · September</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Type</th><th style="text-align:right">Units</th><th style="text-align:right">Moving</th><th>Utilization</th><th style="text-align:right">Cost / km</th><th style="text-align:right">Downtime</th></tr></thead>
+            <tbody>
+              <tr><td class="rs-mono rs-nw">DUMP_TRUCK</td><td class="rs-mono" style="text-align:right">54</td><td class="rs-mono" style="text-align:right">19</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:35%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw" style="text-align:right">1,210</td><td class="rs-mono" style="text-align:right">64 d</td></tr>
+              <tr><td class="rs-mono rs-nw">TRUCK_HEAD</td><td class="rs-mono" style="text-align:right">46</td><td class="rs-mono" style="text-align:right">21</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:46%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw" style="text-align:right">1,840</td><td class="rs-mono" style="text-align:right">96 d</td></tr>
+              <tr><td class="rs-mono rs-nw">TRAILER</td><td class="rs-mono" style="text-align:right">33</td><td class="rs-mono" style="text-align:right">4</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:12%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw" style="text-align:right">340</td><td class="rs-mono" style="text-align:right">41 d</td></tr>
+              <tr><td class="rs-mono rs-nw">ESCORT_CAR</td><td class="rs-mono" style="text-align:right">9</td><td class="rs-mono" style="text-align:right">1</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:11%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw" style="text-align:right">610</td><td class="rs-mono" style="text-align:right">17 d</td></tr>
+            </tbody>
+          </table>
+          <div style="padding:11px 14px;border-top:1px solid var(--color-divider)" class="rs-lbl">Trailers read low by design — they only move coupled to a head</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;align-items:start">
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 11px">Worst five by cost per km</h4>
+            <table class="rs-t">
+              <tbody>
+                <tr><td class="rs-mono rs-nw">T 530 GBX</td><td class="rs-lbl">Scania R500 · 338,900 km</td><td class="rs-mono rs-nw" style="text-align:right">2,940</td></tr>
+                <tr><td class="rs-mono rs-nw">T 889 BXR</td><td class="rs-lbl">Howo · gearbox open</td><td class="rs-mono rs-nw" style="text-align:right">2,610</td></tr>
+                <tr><td class="rs-mono rs-nw">T 412 DKA</td><td class="rs-lbl">Scania G460</td><td class="rs-mono rs-nw" style="text-align:right">1,840</td></tr>
+                <tr><td class="rs-mono rs-nw">T 655 NDA</td><td class="rs-lbl">Scania G410</td><td class="rs-mono rs-nw" style="text-align:right">1,720</td></tr>
+                <tr><td class="rs-mono rs-nw">T 018 KRW</td><td class="rs-lbl">Shacman X3000</td><td class="rs-mono rs-nw" style="text-align:right">1,690</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 11px">Idle capacity cost</h4>
+            <p style="margin:0 0 12px;font-size:13px;line-height:1.65;color:color-mix(in srgb,var(--color-text) 66%,transparent)">Twelve heads idle more than five days. At the fleet's average revenue per km and a typical 900 km round trip, that is roughly <strong>TSh 34.2M</strong> of capacity not earning this month.</p>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Idle 5–10 days</span><span class="rs-mono">7 units</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Idle 11–20 days</span><span class="rs-mono">4 units</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Idle over 20 days</span><span class="rs-mono">1 unit</span></div>
+            </div>
+            <button class="btn btn-secondary rs-btn btn-block">See the idle list</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgCeoAppr }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div class="seg"><label class="seg-opt"><input type="radio" name="rsap" checked>All 9</label><label class="seg-opt"><input type="radio" name="rsap">Capital 2</label><label class="seg-opt"><input type="radio" name="rsap">Operating 5</label><label class="seg-opt"><input type="radio" name="rsap">People 2</label></div>
+          <span class="rs-lbl" style="margin-left:auto">Threshold above TSh 5M reaches the CEO</span>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <table class="rs-t">
+            <thead><tr><th>Request</th><th>Raised by</th><th style="text-align:right">Amount</th><th>Age</th><th>Prior approval</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><div class="rs-nw">Vehicle purchase · Scania G460</div><div class="rs-lbl" style="margin-top:3px">Replaces T 530 GBX · 338,900 km</div></td><td class="rs-nw">Operations</td><td class="rs-mono rs-nw" style="text-align:right">186,000,000</td><td class="rs-mono">3 d</td><td><span class="tag tag-neutral rs-nw">Finance ✓</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Decline</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+              <tr><td><div class="rs-nw">Spare parts · gearbox rebuild</div><div class="rs-lbl" style="margin-top:3px">T 889 BXR · stranded at Morogoro</div></td><td class="rs-nw">P. Mahenge</td><td class="rs-mono rs-nw" style="text-align:right">9,300,000</td><td class="rs-mono">6 h</td><td><span class="tag tag-neutral rs-nw">Operator ✓</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Decline</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+              <tr><td><div class="rs-nw">Tyre order · 12 × 315/80 R22.5</div><div class="rs-lbl" style="margin-top:3px">Stock at 2 against reorder point 8</div></td><td class="rs-nw">Workshop</td><td class="rs-mono rs-nw" style="text-align:right">21,600,000</td><td class="rs-mono">1 d</td><td><span class="tag tag-neutral rs-nw">Finance ✓</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Decline</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+              <tr><td><div class="rs-nw">Corridor re-rate · Tunduma transit</div><div class="rs-lbl" style="margin-top:3px">Margin 4% · proposal +14% tariff</div></td><td class="rs-nw">R. Mushi · Sales</td><td class="rs-mono rs-nw" style="text-align:right">—</td><td class="rs-mono">2 d</td><td><span class="tag tag-outline rs-nw">Needs you first</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Discuss</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+              <tr><td><div class="rs-nw">New driver · permanent</div><div class="rs-lbl" style="margin-top:3px">Two heads idle for want of a driver</div></td><td class="rs-nw">L. Kimaro · HR</td><td class="rs-mono rs-nw" style="text-align:right">720,000 / mo</td><td class="rs-mono">5 d</td><td><span class="tag tag-neutral rs-nw">HR ✓</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Decline</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+            </tbody>
+          </table>
+          <div style="padding:11px 14px;border-top:1px solid var(--color-divider);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span class="rs-lbl">Every decision is written to audit_logs with your user id and a timestamp</span>
+            <button class="btn btn-secondary rs-btn rs-nw" style="margin-left:auto">Approve selected</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgOpsMap }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:grid;grid-template-columns:minmax(360px,1fr) minmax(280px,330px);gap:18px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+            <div class="seg"><label class="seg-opt"><input type="radio" name="rsmap" checked>All units</label><label class="seg-opt"><input type="radio" name="rsmap">In transit</label><label class="seg-opt"><input type="radio" name="rsmap">Offline</label></div>
+            <span class="rs-lbl" style="margin-left:auto">Positions from telematics · 30 s interval</span>
+          </div>
+          <div class="rs-ph blueprint" style="height:430px;position:relative">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <span class="rs-lbl rs-live">live fleet map · Tanzania corridors · markers rotate to heading</span>
+          </div>
+          <div class="rs-metrics">
+            <div><div class="rs-lbl">Transmitting</div><div class="rs-fig" style="font-size:24px;margin-top:5px">27</div></div>
+            <div><div class="rs-lbl">Stopped over 1 h</div><div class="rs-fig" style="font-size:24px;margin-top:5px">4</div></div>
+            <div><div class="rs-lbl" style="color:var(--color-accent-700)">GPS offline</div><div class="rs-fig" style="font-size:24px;margin-top:5px;color:var(--color-accent-700)">2</div></div>
+            <div><div class="rs-lbl">Off route</div><div class="rs-fig" style="font-size:24px;margin-top:5px">1</div></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Attention</h4><span class="tag tag-accent rs-nw" style="margin-left:auto">3</span></div>
+            <div style="padding:12px;display:flex;flex-direction:column;gap:10px;font-size:12.5px">
+              <div style="border:1px solid var(--color-accent);background:color-mix(in srgb,var(--color-accent) 7%,transparent);padding:10px"><div style="display:flex;justify-content:space-between;gap:8px"><strong class="rs-mono rs-nw">T 347 PLK</strong><span class="rs-lbl" style="color:var(--color-accent-700)">Offline 46 min</span></div><div class="rs-lbl" style="margin-top:4px">Last seen Kigamboni road · driver phone unreachable</div><button class="btn btn-secondary rs-btn btn-block" style="min-height:36px">Call driver</button></div>
+              <div style="border:1px solid var(--color-divider);padding:10px"><div style="display:flex;justify-content:space-between;gap:8px"><strong class="rs-mono rs-nw">T 104 MWZ</strong><span class="rs-lbl">Stopped 2 h 10 m</span></div><div class="rs-lbl" style="margin-top:4px">Chalinze · driver reports weighbridge queue</div></div>
+              <div style="border:1px solid var(--color-divider);padding:10px"><div style="display:flex;justify-content:space-between;gap:8px"><strong class="rs-mono rs-nw">T 655 NDA</strong><span class="rs-lbl">Off route +18 km</span></div><div class="rs-lbl" style="margin-top:4px">Chalinze bypass · deviation accepted</div></div>
+            </div>
+          </div>
+          <div class="blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider)"><h4 style="margin:0">Units on the map</h4></div>
+            <table class="rs-t">
+              <tbody>
+                <tr><td class="rs-mono rs-nw">T 412 DKA</td><td class="rs-lbl">Singida</td><td class="rs-mono" style="text-align:right">294°</td></tr>
+                <tr><td class="rs-mono rs-nw">T 655 NDA</td><td class="rs-lbl">Mbeya road</td><td class="rs-mono" style="text-align:right">212°</td></tr>
+                <tr><td class="rs-mono rs-nw">T 104 MWZ</td><td class="rs-lbl">Chalinze</td><td class="rs-mono" style="text-align:right">271°</td></tr>
+                <tr><td class="rs-mono rs-nw">T 889 BXR</td><td class="rs-lbl">Ubungo yard</td><td class="rs-mono" style="text-align:right">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgOpsParts }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Requests to approve</div><div class="rs-fig" style="font-size:27px;margin-top:6px;color:var(--color-accent-700)">2</div></div>
+          <div><div class="rs-lbl">Below reorder point</div><div class="rs-fig" style="font-size:27px;margin-top:6px">3</div></div>
+          <div><div class="rs-lbl">Stock value</div><div class="rs-fig" style="font-size:27px;margin-top:6px">64.8<span style="font-size:14px">M</span></div><div class="rs-lbl" style="margin-top:4px">TSh</div></div>
+          <div><div class="rs-lbl">Issued this month</div><div class="rs-fig" style="font-size:27px;margin-top:6px">118</div><div class="rs-lbl" style="margin-top:4px">line items</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Requests from the workshop</h4><span class="rs-lbl rs-nw" style="margin-left:auto">approve → issues stock and logs usage against the vehicle</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Part</th><th>Vehicle</th><th>Raised by</th><th style="text-align:right">Qty</th><th style="text-align:right">On hand</th><th>Urgency</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td><div class="rs-nw">Brake pad set</div><div class="rs-lbl" style="margin-top:3px">Two heads below legal tread</div></td><td class="rs-mono rs-nw">T 530 GBX</td><td class="rs-nw">P. Mahenge</td><td class="rs-mono" style="text-align:right">4</td><td class="rs-mono" style="text-align:right">6</td><td><span class="tag tag-accent rs-nw">Urgent</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Reject</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+              <tr><td class="rs-nw">Oil filter</td><td class="rs-mono rs-nw">T 412 DKA</td><td class="rs-nw">P. Mahenge</td><td class="rs-mono" style="text-align:right">2</td><td class="rs-mono" style="text-align:right">14</td><td><span class="tag tag-neutral rs-nw">Normal</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Reject</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Inventory</h4><input class="input" placeholder="Search part…" style="max-width:200px;margin-left:auto"></div>
+          <table class="rs-t">
+            <thead><tr><th>Part</th><th>Fits</th><th style="text-align:right">On hand</th><th style="text-align:right">Reorder at</th><th style="text-align:right">Unit cost</th><th>State</th></tr></thead>
+            <tbody>
+              <tr><td class="rs-nw">Tyre 315/80 R22.5</td><td class="rs-lbl rs-nw">All heads</td><td class="rs-mono" style="text-align:right">2</td><td class="rs-mono" style="text-align:right">8</td><td class="rs-mono rs-nw" style="text-align:right">1,800,000</td><td><span class="tag tag-accent rs-nw">Low stock</span></td></tr>
+              <tr><td class="rs-nw">Air filter HOWO</td><td class="rs-lbl rs-nw">Dump trucks</td><td class="rs-mono" style="text-align:right">1</td><td class="rs-mono" style="text-align:right">6</td><td class="rs-mono rs-nw" style="text-align:right">96,000</td><td><span class="tag tag-accent rs-nw">Low stock</span></td></tr>
+              <tr><td class="rs-nw">Engine oil 20 L</td><td class="rs-lbl rs-nw">All</td><td class="rs-mono" style="text-align:right">3</td><td class="rs-mono" style="text-align:right">10</td><td class="rs-mono rs-nw" style="text-align:right">184,000</td><td><span class="tag tag-accent rs-nw">Low stock</span></td></tr>
+              <tr><td class="rs-nw">Brake pad set</td><td class="rs-lbl rs-nw">Scania G/R</td><td class="rs-mono" style="text-align:right">6</td><td class="rs-mono" style="text-align:right">4</td><td class="rs-mono rs-nw" style="text-align:right">535,000</td><td><span class="tag tag-neutral rs-nw">In stock</span></td></tr>
+              <tr><td class="rs-nw">Synchro ring set</td><td class="rs-lbl rs-nw">Howo ZZ3257</td><td class="rs-mono" style="text-align:right">2</td><td class="rs-mono" style="text-align:right">1</td><td class="rs-mono rs-nw" style="text-align:right">2,150,000</td><td><span class="tag tag-neutral rs-nw">In stock</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgFinAppr }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Fuel requests</div><div class="rs-fig" style="font-size:27px;margin-top:6px;color:var(--color-accent-700)">3</div><div class="rs-lbl" style="margin-top:4px">TSh 4.1M</div></div>
+          <div><div class="rs-lbl">Expense claims</div><div class="rs-fig" style="font-size:27px;margin-top:6px">8</div><div class="rs-lbl" style="margin-top:4px">TSh 1.2M</div></div>
+          <div><div class="rs-lbl">Cash requests</div><div class="rs-fig" style="font-size:27px;margin-top:6px">2</div><div class="rs-lbl" style="margin-top:4px">TSh 600,000</div></div>
+          <div><div class="rs-lbl">Approved today</div><div class="rs-fig" style="font-size:27px;margin-top:6px">11</div><div class="rs-lbl" style="margin-top:4px">all posted</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Fuel requests</h4><span class="rs-lbl rs-nw" style="margin-left:auto">approve → creates the expense and its journal in one step</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Driver</th><th>Trip / vehicle</th><th style="text-align:right">Litres</th><th style="text-align:right">Amount</th><th>Odometer photo</th><th>Station</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-nw">Juma Hassan</td><td class="rs-mono rs-nw">TRP-2418 · T 412 DKA</td><td class="rs-mono" style="text-align:right">480</td><td class="rs-mono rs-nw" style="text-align:right">1,392,000</td><td><span class="tag tag-neutral rs-nw">412,050 km ✓</span></td><td class="rs-lbl rs-nw">Morogoro depot</td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Reject</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve &amp; post</button></div></td></tr>
+              <tr><td class="rs-nw">Amina Said</td><td class="rs-mono rs-nw">TRP-2419 · T 655 NDA</td><td class="rs-mono" style="text-align:right">520</td><td class="rs-mono rs-nw" style="text-align:right">1,508,000</td><td><span class="tag tag-neutral rs-nw">151,300 km ✓</span></td><td class="rs-lbl rs-nw">Mbeya depot</td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Reject</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve &amp; post</button></div></td></tr>
+              <tr><td class="rs-nw">Godfrey Nyerere</td><td class="rs-mono rs-nw">TRP-2414 · T 347 PLK</td><td class="rs-mono" style="text-align:right">420</td><td class="rs-mono rs-nw" style="text-align:right">1,218,000</td><td><span class="tag tag-outline rs-nw">Photo missing</span></td><td class="rs-lbl rs-nw">Ubungo pump</td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Ask for photo</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider)"><h4 style="margin:0">Expense claims</h4></div>
+          <table class="rs-t">
+            <thead><tr><th>Claim</th><th>Claimant</th><th>Category</th><th>Trip</th><th style="text-align:right">Amount</th><th>Receipt</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="rs-mono rs-nw">EXP-1188</td><td class="rs-nw">Salum Kibwana</td><td class="rs-lbl rs-nw">Tolls &amp; weighbridge</td><td class="rs-mono rs-nw">TRP-2417</td><td class="rs-mono rs-nw" style="text-align:right">84,000</td><td><span class="tag tag-neutral rs-nw">2 photos</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve &amp; post</button></td></tr>
+              <tr><td class="rs-mono rs-nw">EXP-1187</td><td class="rs-nw">Juma Hassan</td><td class="rs-lbl rs-nw">Meals &amp; lodging</td><td class="rs-mono rs-nw">TRP-2418</td><td class="rs-mono rs-nw" style="text-align:right">60,000</td><td><span class="tag tag-neutral rs-nw">1 photo</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve &amp; post</button></td></tr>
+              <tr><td class="rs-mono rs-nw">EXP-1186</td><td class="rs-nw">Amina Said</td><td class="rs-lbl rs-nw">Border &amp; bond fees</td><td class="rs-mono rs-nw">TRP-2419</td><td class="rs-mono rs-nw" style="text-align:right">312,000</td><td><span class="tag tag-outline rs-nw">No receipt</span></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Query</button></td></tr>
+              <tr><td class="rs-mono rs-nw">EXP-1185</td><td class="rs-nw">P. Mahenge</td><td class="rs-lbl rs-nw">Workshop consumables</td><td class="rs-mono rs-nw">—</td><td class="rs-mono rs-nw" style="text-align:right">148,000</td><td><span class="tag tag-neutral rs-nw">1 photo</span></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve &amp; post</button></td></tr>
+            </tbody>
+          </table>
+          <div style="padding:11px 14px;border-top:1px solid var(--color-divider)" class="rs-lbl">All three capture paths write to one expenses table — capture, approve, register</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgFinRec }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Statement balance</div><div class="rs-fig" style="font-size:25px;margin-top:6px">88,412,600</div><div class="rs-lbl" style="margin-top:4px">TSh · CRDB · 01 Sep</div></div>
+          <div><div class="rs-lbl">Ledger balance</div><div class="rs-fig" style="font-size:25px;margin-top:6px">84,262,600</div><div class="rs-lbl" style="margin-top:4px">account 1000</div></div>
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Difference</div><div class="rs-fig" style="font-size:25px;margin-top:6px;color:var(--color-accent-700)">4,150,000</div><div class="rs-lbl" style="margin-top:4px">1 unmatched line</div></div>
+          <div><div class="rs-lbl">Auto-matched</div><div class="rs-fig" style="font-size:25px;margin-top:6px">31<span style="font-size:14px">/38</span></div><div class="rs-lbl" style="margin-top:4px">amount + date ±3 d</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px">
+            <h4 style="margin:0">Unmatched lines</h4>
+            <div class="seg" style="margin-left:auto"><label class="seg-opt"><input type="radio" name="rsrec" checked>Unmatched 7</label><label class="seg-opt"><input type="radio" name="rsrec">Matched 31</label></div>
+          </div>
+          <table class="rs-t">
+            <thead><tr><th>Date</th><th>Statement narrative</th><th style="text-align:right">Amount</th><th>Suggested match</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-mono rs-nw">01 Sep</td><td><div class="rs-nw">TRF DANGOTE CEMENT LTD</div><div class="rs-lbl" style="margin-top:3px">ref INV0402</div></td><td class="rs-mono rs-nw" style="text-align:right">4,150,000</td><td><div class="rs-nw">INV-2026-0402 · Dangote</div><div class="rs-lbl" style="margin-top:3px">exact amount · reference hit</div></td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Match &amp; post receipt</button></td></tr>
+              <tr><td class="rs-mono rs-nw">31 Aug</td><td class="rs-nw">MPESA B2C SALUM KIBWANA</td><td class="rs-mono rs-nw" style="text-align:right">(120,000)</td><td><div class="rs-nw">Driver allowance · TRP-2417</div><div class="rs-lbl" style="margin-top:3px">amount match</div></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Match</button></td></tr>
+              <tr><td class="rs-mono rs-nw">30 Aug</td><td class="rs-nw">PUMA ENERGY MOROGORO</td><td class="rs-mono rs-nw" style="text-align:right">(1,392,000)</td><td><div class="rs-nw">Fuel · TRP-2418</div><div class="rs-lbl" style="margin-top:3px">amount match</div></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Match</button></td></tr>
+              <tr><td class="rs-mono rs-nw">29 Aug</td><td class="rs-nw">BANK CHARGES</td><td class="rs-mono rs-nw" style="text-align:right">(18,400)</td><td><div class="rs-lbl">No candidate · book to 6200 Bank charges</div></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Create journal</button></td></tr>
+              <tr><td class="rs-mono rs-nw">28 Aug</td><td class="rs-nw">TRF UNKNOWN 255754118902</td><td class="rs-mono rs-nw" style="text-align:right">300,000</td><td><div class="rs-lbl">No candidate · needs investigation</div></td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Flag</button></td></tr>
+            </tbody>
+          </table>
+          <div style="padding:11px 14px;border-top:1px solid var(--color-divider);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span class="rs-lbl">Reconciling locks the statement lines and stamps bank_statements.reconciled</span>
+            <button class="btn btn-primary rs-btn rs-nw" style="margin-left:auto" disabled>Complete reconciliation · 7 open</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgHrLeave }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:grid;grid-template-columns:minmax(340px,1fr) minmax(280px,320px);gap:18px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Requests</h4><span class="tag tag-accent rs-nw" style="margin-left:auto">2 pending</span></div>
+            <table class="rs-t">
+              <thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th style="text-align:right">Days</th><th style="text-align:right">Balance after</th><th>Cover</th><th></th></tr></thead>
+              <tbody>
+                <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-nw">Salum Kibwana</td><td class="rs-lbl rs-nw">Annual</td><td class="rs-mono rs-nw">05–08 Sep</td><td class="rs-mono" style="text-align:right">4</td><td class="rs-mono" style="text-align:right">14</td><td><span class="tag tag-neutral rs-nw">T 104 MWZ free</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Decline</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+                <tr><td class="rs-nw">P. Mahenge</td><td class="rs-lbl rs-nw">Compassionate</td><td class="rs-mono rs-nw">11–12 Sep</td><td class="rs-mono" style="text-align:right">2</td><td class="rs-mono" style="text-align:right">—</td><td><span class="tag tag-outline rs-nw">Only mechanic on duty</span></td><td style="text-align:right"><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Decline</button><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Approve</button></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider)"><h4 style="margin:0">Who is off this week</h4></div>
+            <div style="padding:13px 14px;display:flex;flex-direction:column;gap:11px">
+              <div style="display:grid;grid-template-columns:130px 1fr;gap:11px;align-items:center">
+                <span class="rs-lbl rs-nw">Mon 01 – Sun 07</span>
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">
+                  <div style="height:22px;border:1px solid var(--color-divider)"></div><div style="height:22px;border:1px solid var(--color-divider)"></div><div style="height:22px;border:1px solid var(--color-divider)"></div><div style="height:22px;border:1px solid var(--color-divider)"></div><div style="height:22px;background:var(--color-accent)"></div><div style="height:22px;background:var(--color-accent)"></div><div style="height:22px;background:var(--color-accent)"></div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px">
+                <div style="display:flex;justify-content:space-between;gap:10px;border:1px solid var(--color-divider);padding:9px 10px"><span class="rs-nw">Salum Kibwana · driver</span><span class="rs-lbl rs-nw">05–08 Sep · pending</span></div>
+                <div style="display:flex;justify-content:space-between;gap:10px;border:1px solid var(--color-divider);padding:9px 10px"><span class="rs-nw">E. Nyoni · operator</span><span class="rs-lbl rs-nw">02–03 Sep · approved</span></div>
+                <div style="display:flex;justify-content:space-between;gap:10px;border:1px solid var(--color-divider);padding:9px 10px"><span class="rs-nw">Three drivers · rest days</span><span class="rs-lbl rs-nw">rolling</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 10px">Leave liability</h4>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Days accrued, untaken</span><span class="rs-mono">614</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Provision</span><span class="rs-mono rs-nw">TSh 18.4M</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Over 30 days owed</span><span class="rs-mono">6 staff</span></div>
+            </div>
+            <div class="rs-lbl" style="margin-top:11px;padding-top:9px;border-top:1px solid var(--color-divider);line-height:1.5">Untaken leave is a real balance-sheet number — it belongs in the accountant's provision, not a spreadsheet</div>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 10px">Cover check</h4>
+            <p style="margin:0;font-size:12.5px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 64%,transparent)">Approving leave for a driver checks whether their unit has another qualified driver, and whether the workshop keeps a mechanic on duty. Two absences that ground a truck are refused before they reach the roster.</p>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgHrComp }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Drivers</div><div class="rs-fig" style="font-size:27px;margin-top:6px">61</div></div>
+          <div><div class="rs-lbl">Fully compliant</div><div class="rs-fig" style="font-size:27px;margin-top:6px">54</div></div>
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Expiring 30 days</div><div class="rs-fig" style="font-size:27px;margin-top:6px;color:var(--color-accent-700)">7</div></div>
+          <div><div class="rs-lbl">Grounded now</div><div class="rs-fig" style="font-size:27px;margin-top:6px">0</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Expiring next 30 days</h4><span class="rs-lbl rs-nw" style="margin-left:auto">a lapsed medical grounds a truck exactly like a lapsed policy</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Driver</th><th>Document</th><th>Number</th><th>Expires</th><th>Remaining</th><th>Consequence</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-nw">Godfrey Nyerere</td><td class="rs-nw">Medical certificate</td><td class="rs-mono rs-nw">MED-4471</td><td class="rs-mono rs-nw">29 Sep 2026</td><td><span class="tag tag-accent rs-nw">26 days</span></td><td class="rs-lbl rs-nw">Cannot be dispatched</td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Book medical</button></td></tr>
+              <tr><td class="rs-nw">Amina Said</td><td class="rs-nw">Medical certificate</td><td class="rs-mono rs-nw">MED-4402</td><td class="rs-mono rs-nw">11 Nov 2026</td><td><span class="tag tag-neutral rs-nw">69 days</span></td><td class="rs-lbl rs-nw">Cannot be dispatched</td><td style="text-align:right"><a href="#" style="font-size:11.5px">Schedule</a></td></tr>
+              <tr><td class="rs-nw">Rehema Mwakasege</td><td class="rs-nw">Medical certificate</td><td class="rs-mono rs-nw">MED-4388</td><td class="rs-mono rs-nw">30 Jan 2027</td><td><span class="tag tag-neutral rs-nw">149 days</span></td><td class="rs-lbl rs-nw">Cannot be dispatched</td><td style="text-align:right"><a href="#" style="font-size:11.5px">Schedule</a></td></tr>
+              <tr><td class="rs-nw">Salum Kibwana</td><td class="rs-nw">Licence class C</td><td class="rs-mono rs-nw">DL-880214</td><td class="rs-mono rs-nw">27 Feb 2027</td><td><span class="tag tag-neutral rs-nw">177 days</span></td><td class="rs-lbl rs-nw">Cannot drive</td><td style="text-align:right"><a href="#" style="font-size:11.5px">Schedule</a></td></tr>
+              <tr><td class="rs-nw">Juma Hassan</td><td class="rs-nw">Dangerous goods permit</td><td class="rs-mono rs-nw">DG-1102</td><td class="rs-mono rs-nw">18 Sep 2026</td><td><span class="tag tag-accent rs-nw">15 days</span></td><td class="rs-lbl rs-nw">Fuel &amp; chemical loads only</td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Renew</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;align-items:start">
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 11px">Coverage</h4>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <div><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>Licences valid</span><span class="rs-mono rs-nw">59 / 61</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:97%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>Medicals valid</span><span class="rs-mono rs-nw">54 / 61</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:88%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>Dangerous goods permits</span><span class="rs-mono rs-nw">18 / 24</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:75%;background:var(--color-accent)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>Contracts signed</span><span class="rs-mono rs-nw">61 / 61</span></div><div style="height:8px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:100%;background:var(--color-accent)"></div></div></div>
+            </div>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 8px">Same record, two audiences</h4>
+            <p style="margin:0 0 12px;font-size:12.5px;line-height:1.65;color:color-mix(in srgb,var(--color-text) 64%,transparent)">These documents also appear on the fleet compliance horizon, because dispatch needs the same fact HR needs: this driver cannot take a load after this date. One record, one expiry, two screens.</p>
+            <button class="btn btn-secondary rs-btn btn-block" style="margin:0">Open fleet compliance horizon</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgMechHist }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input class="input" placeholder="Filter by plate, part or mechanic…" style="max-width:260px">
+          <div class="seg" style="margin-left:auto"><label class="seg-opt"><input type="radio" name="rsh" checked>All</label><label class="seg-opt"><input type="radio" name="rsh">Scheduled</label><label class="seg-opt"><input type="radio" name="rsh">Breakdown</label><label class="seg-opt"><input type="radio" name="rsh">Tyres</label></div>
+        </div>
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl">Jobs YTD</div><div class="rs-fig" style="font-size:27px;margin-top:6px">412</div></div>
+          <div><div class="rs-lbl">Maintenance spend</div><div class="rs-fig" style="font-size:27px;margin-top:6px">44.7<span style="font-size:14px">M</span></div><div class="rs-lbl" style="margin-top:4px">TSh · this month</div></div>
+          <div><div class="rs-lbl">Mean time to repair</div><div class="rs-fig" style="font-size:27px;margin-top:6px">1.8<span style="font-size:14px">d</span></div></div>
+          <div><div class="rs-lbl">Repeat faults</div><div class="rs-fig" style="font-size:27px;margin-top:6px">4</div><div class="rs-lbl" style="margin-top:4px">same fault within 60 d</div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <table class="rs-t">
+            <thead><tr><th>Date</th><th>Vehicle</th><th>Job</th><th>Parts issued</th><th>Mechanic</th><th style="text-align:right">Cost</th><th>Outcome</th></tr></thead>
+            <tbody>
+              <tr><td class="rs-mono rs-nw">28 Aug</td><td class="rs-mono rs-nw">T 412 DKA</td><td class="rs-nw">Scheduled service · 400,000 km</td><td class="rs-lbl rs-nw">Brake pads, oil filter</td><td class="rs-nw">P. Mahenge</td><td class="rs-mono rs-nw" style="text-align:right">2,140,000</td><td><span class="tag tag-neutral rs-nw">Released · good</span></td></tr>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-mono rs-nw">21 Aug</td><td class="rs-mono rs-nw">T 889 BXR</td><td class="rs-nw">Gearbox · 4th gear slipping</td><td class="rs-lbl rs-nw">Synchro ring set</td><td class="rs-nw">P. Mahenge</td><td class="rs-mono rs-nw" style="text-align:right">2,150,000</td><td><span class="tag tag-outline rs-nw">Recurred 03 Sep</span></td></tr>
+              <tr><td class="rs-mono rs-nw">14 Aug</td><td class="rs-mono rs-nw">T 347 PLK</td><td class="rs-nw">Tyres ×2 · front axle</td><td class="rs-lbl rs-nw">315/80 R22.5 ×2</td><td class="rs-nw">J. Massawe</td><td class="rs-mono rs-nw" style="text-align:right">3,600,000</td><td><span class="tag tag-neutral rs-nw">Released · good</span></td></tr>
+              <tr><td class="rs-mono rs-nw">09 Aug</td><td class="rs-mono rs-nw">T 104 MWZ</td><td class="rs-nw">Trailer brake air leak</td><td class="rs-lbl rs-nw">Air line, coupling</td><td class="rs-nw">J. Massawe</td><td class="rs-mono rs-nw" style="text-align:right">418,000</td><td><span class="tag tag-outline rs-nw">Recurred 29 Aug</span></td></tr>
+              <tr><td class="rs-mono rs-nw">02 Jul</td><td class="rs-mono rs-nw">T 530 GBX</td><td class="rs-nw">Clutch overhaul</td><td class="rs-lbl rs-nw">Clutch kit, gear oil</td><td class="rs-nw">P. Mahenge</td><td class="rs-mono rs-nw" style="text-align:right">5,900,000</td><td><span class="tag tag-neutral rs-nw">Released · fair</span></td></tr>
+            </tbody>
+          </table>
+          <div style="padding:11px 14px;border-top:1px solid var(--color-divider)" class="rs-lbl">Recurrence within 60 days is flagged — it usually means the part, not the repair</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgMechSched }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 26px;display:flex;flex-direction:column;gap:16px">
+        <div class="rs-metrics rs-stag">
+          <div><div class="rs-lbl" style="color:var(--color-accent-700)">Overdue</div><div class="rs-fig" style="font-size:27px;margin-top:6px;color:var(--color-accent-700)">2</div></div>
+          <div><div class="rs-lbl">Due this week</div><div class="rs-fig" style="font-size:27px;margin-top:6px">5</div></div>
+          <div><div class="rs-lbl">Due in 30 days</div><div class="rs-fig" style="font-size:27px;margin-top:6px">11</div></div>
+          <div><div class="rs-lbl">Workshop capacity</div><div class="rs-fig" style="font-size:27px;margin-top:6px">4<span style="font-size:14px">/day</span></div></div>
+        </div>
+        <div class="blueprint">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:10px"><h4 style="margin:0">Due by mileage and by date</h4><span class="rs-lbl rs-nw" style="margin-left:auto">whichever comes first · vehicles.next_maintenance_due</span></div>
+          <table class="rs-t">
+            <thead><tr><th>Vehicle</th><th>Service</th><th style="text-align:right">Odometer</th><th style="text-align:right">Due at</th><th>Progress</th><th>Due date</th><th></th></tr></thead>
+            <tbody>
+              <tr style="background:color-mix(in srgb,var(--color-accent) 7%,transparent)"><td class="rs-mono rs-nw">T 530 GBX</td><td class="rs-nw">50,000 km major</td><td class="rs-mono rs-nw" style="text-align:right">338,900</td><td class="rs-mono rs-nw" style="text-align:right">337,700</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:100%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw">overdue 1,200 km</td><td style="text-align:right"><button class="btn btn-primary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Book in</button></td></tr>
+              <tr><td class="rs-mono rs-nw">T 889 BXR</td><td class="rs-nw">Gearbox follow-up</td><td class="rs-mono rs-nw" style="text-align:right">289,112</td><td class="rs-mono rs-nw" style="text-align:right">—</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:100%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw">in workshop</td><td style="text-align:right"><a href="#" style="font-size:11.5px">Job card</a></td></tr>
+              <tr><td class="rs-mono rs-nw">T 221 CLP</td><td class="rs-nw">10,000 km routine</td><td class="rs-mono rs-nw" style="text-align:right">156,800</td><td class="rs-mono rs-nw" style="text-align:right">160,000</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:68%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw">15 Sep</td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Schedule</button></td></tr>
+              <tr><td class="rs-mono rs-nw">T 412 DKA</td><td class="rs-nw">10,000 km routine</td><td class="rs-mono rs-nw" style="text-align:right">412,050</td><td class="rs-mono rs-nw" style="text-align:right">420,000</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:41%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw">02 Nov</td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Schedule</button></td></tr>
+              <tr><td class="rs-mono rs-nw">T 104 MWZ</td><td class="rs-nw">Trailer inspection</td><td class="rs-mono rs-nw" style="text-align:right">88,205</td><td class="rs-mono rs-nw" style="text-align:right">—</td><td><div style="height:7px;border:1px solid var(--color-divider)"><div class="rs-fill" style="height:100%;width:82%;background:var(--color-accent)"></div></div></td><td class="rs-mono rs-nw">21 Sep</td><td style="text-align:right"><button class="btn btn-secondary rs-btn rs-nw" style="padding:3px 9px;font-size:12px">Schedule</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="blueprint rs-frame" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="min-width:240px;flex:1"><h4 style="margin:0 0 3px">Book against dispatch, not against hope</h4><div style="font-size:12.5px;line-height:1.6;color:color-mix(in srgb,var(--color-text) 64%,transparent)">Scheduling checks the trip board first — a service slot is only offered on a day the unit has no assigned load, so the workshop and dispatch stop competing for the same truck.</div></div>
+          <button class="btn btn-secondary rs-btn rs-nw">Open trip board</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgDriverFuel }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:20px 22px 30px;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
+        <div class="blueprint" style="width:390px;flex:none">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:15px 16px;border-bottom:1px solid var(--color-divider)"><h4 style="margin:0">Request fuel</h4><div class="rs-lbl" style="margin-top:3px">T 412 DKA · TRP-2418</div></div>
+          <div style="padding:15px;display:flex;flex-direction:column;gap:13px">
+            <div style="border:1px solid var(--color-divider);padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+              <div><div class="rs-lbl">Tank now</div><div class="rs-fig" style="font-size:26px;margin-top:5px">62%</div></div>
+              <div class="rs-lbl" style="text-align:right;line-height:1.5">600 L capacity<br>≈372 L on board</div>
+            </div>
+            <div class="field"><label>Litres requested</label><input class="input" value="480" style="min-height:44px"></div>
+            <div class="field"><label>Station</label><input class="input" value="Morogoro depot — company account" style="min-height:44px"></div>
+            <div class="field"><label>Odometer reading</label><input class="input" value="412,050" style="min-height:44px"></div>
+            <div>
+              <div class="rs-lbl" style="margin-bottom:7px">Odometer photo · required</div>
+              <div class="rs-ph" style="height:96px"><span class="rs-lbl">tap to capture</span></div>
+            </div>
+            <div style="border:1px solid var(--color-divider);padding:12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:12.5px">
+              <span class="rs-lbl">Est. cost</span><span class="rs-mono rs-nw">TSh 1,392,000</span>
+              <span class="rs-lbl">Approver</span><span class="rs-nw">Accounts · S. Mwinyi</span>
+              <span class="rs-lbl">Typical turnaround</span><span class="rs-nw">under 2 hours</span>
+            </div>
+            <button class="btn btn-primary rs-btn btn-block" style="min-height:48px">Submit for approval</button>
+          </div>
+        </div>
+        <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px">
+          <div class="blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider)"><h4 style="margin:0">Your last five requests</h4></div>
+            <table class="rs-t">
+              <thead><tr><th>Date</th><th>Trip</th><th style="text-align:right">Litres</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td class="rs-mono rs-nw">03 Sep</td><td class="rs-mono rs-nw">TRP-2418</td><td class="rs-mono" style="text-align:right">480</td><td class="rs-mono rs-nw" style="text-align:right">1,392,000</td><td><span class="tag tag-accent rs-nw">Pending</span></td></tr>
+                <tr><td class="rs-mono rs-nw">02 Sep</td><td class="rs-mono rs-nw">TRP-2418</td><td class="rs-mono" style="text-align:right">300</td><td class="rs-mono rs-nw" style="text-align:right">870,000</td><td><span class="tag tag-neutral rs-nw">Approved</span></td></tr>
+                <tr><td class="rs-mono rs-nw">28 Aug</td><td class="rs-mono rs-nw">TRP-2404</td><td class="rs-mono" style="text-align:right">460</td><td class="rs-mono rs-nw" style="text-align:right">1,334,000</td><td><span class="tag tag-neutral rs-nw">Approved</span></td></tr>
+                <tr><td class="rs-mono rs-nw">22 Aug</td><td class="rs-mono rs-nw">TRP-2391</td><td class="rs-mono" style="text-align:right">500</td><td class="rs-mono rs-nw" style="text-align:right">1,450,000</td><td><span class="tag tag-neutral rs-nw">Approved</span></td></tr>
+                <tr><td class="rs-mono rs-nw">15 Aug</td><td class="rs-mono rs-nw">TRP-2355</td><td class="rs-mono" style="text-align:right">440</td><td class="rs-mono rs-nw" style="text-align:right">1,276,000</td><td><span class="tag tag-outline rs-nw">Queried · photo</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 9px">Your consumption</h4>
+            <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Your average</span><span class="rs-mono rs-nw">2.9 km / L</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Fleet average, same unit type</span><span class="rs-mono rs-nw">2.8 km / L</span></div>
+              <div style="height:1px;background:var(--color-divider)"></div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span>Queried requests this year</span><span class="rs-mono">1</span></div>
+            </div>
+            <div class="rs-lbl" style="margin-top:11px;padding-top:9px;border-top:1px solid var(--color-divider);line-height:1.5">Shown to you, not just to the office — a driver who can see the number can move it</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgDriverMoney }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:20px 22px 30px;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
+        <div class="blueprint" style="width:390px;flex:none">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="padding:15px 16px;border-bottom:1px solid var(--color-divider)"><h4 style="margin:0">Log an expense</h4><div class="rs-lbl" style="margin-top:3px">Attaches to TRP-2418</div></div>
+          <div style="padding:15px;display:flex;flex-direction:column;gap:13px">
+            <div class="field"><label>Category</label><div class="seg" style="width:100%"><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rsex" checked>Tolls</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rsex">Meals</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="rsex">Other</label></div></div>
+            <div class="field"><label>Amount · TSh</label><input class="input" value="84,000" style="min-height:44px"></div>
+            <div class="field"><label>Where</label><input class="input" value="Kibaha weighbridge" style="min-height:44px"></div>
+            <div>
+              <div class="rs-lbl" style="margin-bottom:7px">Receipt photo</div>
+              <div class="rs-ph" style="height:96px"><span class="rs-lbl">tap to capture</span></div>
+            </div>
+            <button class="btn btn-primary rs-btn btn-block" style="min-height:48px">Submit claim</button>
+            <div class="rs-lbl" style="text-align:center;line-height:1.5">No receipt means a query, not a rejection — photograph what you can</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px">
+          <div class="rs-metrics rs-stag">
+            <div><div class="rs-lbl">Claimed this month</div><div class="rs-fig" style="font-size:25px;margin-top:6px">252,000</div><div class="rs-lbl" style="margin-top:4px">TSh</div></div>
+            <div><div class="rs-lbl">Reimbursed</div><div class="rs-fig" style="font-size:25px;margin-top:6px">168,000</div><div class="rs-lbl" style="margin-top:4px">paid 28 Aug</div></div>
+            <div><div class="rs-lbl" style="color:var(--color-accent-700)">Awaiting approval</div><div class="rs-fig" style="font-size:25px;margin-top:6px;color:var(--color-accent-700)">84,000</div></div>
+            <div><div class="rs-lbl">Allowance accrued</div><div class="rs-fig" style="font-size:25px;margin-top:6px">540,000</div><div class="rs-lbl" style="margin-top:4px">9 trips · pays 28 Sep</div></div>
+          </div>
+          <div class="blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--color-divider)"><h4 style="margin:0">Your claims</h4></div>
+            <table class="rs-t">
+              <thead><tr><th>Date</th><th>Category</th><th>Trip</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td class="rs-mono rs-nw">03 Sep</td><td class="rs-lbl rs-nw">Tolls &amp; weighbridge</td><td class="rs-mono rs-nw">TRP-2418</td><td class="rs-mono rs-nw" style="text-align:right">84,000</td><td><span class="tag tag-accent rs-nw">Pending</span></td></tr>
+                <tr><td class="rs-mono rs-nw">02 Sep</td><td class="rs-lbl rs-nw">Meals &amp; lodging</td><td class="rs-mono rs-nw">TRP-2418</td><td class="rs-mono rs-nw" style="text-align:right">60,000</td><td><span class="tag tag-accent rs-nw">Pending</span></td></tr>
+                <tr><td class="rs-mono rs-nw">28 Aug</td><td class="rs-lbl rs-nw">Tolls &amp; weighbridge</td><td class="rs-mono rs-nw">TRP-2404</td><td class="rs-mono rs-nw" style="text-align:right">108,000</td><td><span class="tag tag-neutral rs-nw">Reimbursed</span></td></tr>
+                <tr><td class="rs-mono rs-nw">22 Aug</td><td class="rs-lbl rs-nw">Meals &amp; lodging</td><td class="rs-mono rs-nw">TRP-2391</td><td class="rs-mono rs-nw" style="text-align:right">60,000</td><td><span class="tag tag-neutral rs-nw">Reimbursed</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 8px">Why a driver sees money at all</h4>
+            <p style="margin:0;font-size:12.5px;line-height:1.65;color:color-mix(in srgb,var(--color-text) 64%,transparent)">Claims and allowances are the part of the ledger a driver has a legitimate stake in. Showing accrual and payment dates ends the most common question the office fields, and every claim here is a row in the same expenses table finance approves.</p>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pgSoon }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:34px 22px;display:grid;place-items:center">
+        <div class="blueprint" style="max-width:460px;padding:26px 24px;text-align:center">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div class="rs-lbl">Next in the build</div>
+          <h4 style="margin:8px 0 8px">{{ head.title }}</h4>
+          <p style="margin:0 0 16px;font-size:13px;line-height:1.65;color:color-mix(in srgb,var(--color-text) 62%,transparent)">The shell, nav and data model for this page are in place. Say the word and I'll build it to the same finish as the pages already done.</p>
+          <button class="btn btn-primary rs-btn">Build this page next</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDriver }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:20px 22px 30px;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
+        <div class="blueprint" style="width:390px;flex:none">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <div style="display:flex;flex-direction:column">
+            <div style="background:var(--color-accent-900);color:var(--color-bg);padding:15px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+              <div style="min-width:0"><div style="font-family:var(--font-heading);font-weight:600;font-size:18px;line-height:1.1">Driver Console</div><div style="font-size:12px;opacity:.75" class="rs-nw">Juma Hassan · T 412 DKA</div></div>
+              <div style="border:1px solid rgba(255,255,255,.3);width:34px;height:34px;display:grid;place-items:center;font-size:11px;flex:none">3</div>
+            </div>
+            <div style="padding:15px;display:flex;flex-direction:column;gap:15px">
+              <div style="border:1px solid var(--color-divider)">
+                <div style="padding:13px 14px;border-bottom:1px solid var(--color-divider)">
+                  <span class="tag tag-accent rs-live rs-nw">In transit</span>
+                  <div style="font-family:var(--font-heading);font-weight:600;font-size:22px;line-height:1.15;margin-top:8px">Dar es Salaam<br>→ Mwanza</div>
+                  <div class="rs-mono rs-lbl" style="margin-top:4px">TRP-2418</div>
+                </div>
+                <div style="padding:14px;display:flex;flex-direction:column;gap:14px">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px"><span class="rs-lbl">Route progress</span><span class="rs-mono rs-nw" style="font-size:11.5px">65% · 767 / 1,180 km</span></div>
+                    <div style="height:12px;border:1px solid var(--color-divider);display:flex"><div class="rs-fill" style="width:65%;background:var(--color-accent)"></div></div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;margin-top:5px" class="rs-lbl"><span>Singida 11:40</span><span>ETA 04 Sep 08:20</span></div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;font-size:12.5px">
+                    <div style="border:1px solid var(--color-divider);padding:9px 10px"><div class="rs-lbl">Client</div>Dangote</div>
+                    <div style="border:1px solid var(--color-divider);padding:9px 10px"><div class="rs-lbl">Cargo</div>Cement · 30 t</div>
+                    <div style="border:1px solid var(--color-divider);padding:9px 10px;grid-column:span 2"><div class="rs-lbl">Deliver to</div>Nyakato depot, Mwanza · Mr. Kaaya</div>
+                  </div>
+                  <div style="display:grid;gap:9px">
+                    <button class="btn btn-primary rs-btn" style="min-height:48px">Update status → Arrived</button>
+                    <button class="btn btn-secondary rs-btn" style="min-height:48px">Upload proof of delivery</button>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="rs-lbl" style="margin-bottom:9px">Quick actions</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                  <button class="btn btn-secondary rs-btn" style="min-height:64px;flex-direction:column;gap:3px;font-size:13px">Request fuel<span style="font-family:var(--font-body);font-size:10.5px;opacity:.6">1 pending</span></button>
+                  <button class="btn btn-secondary rs-btn" style="min-height:64px;flex-direction:column;gap:3px;font-size:13px">Log expense<span style="font-family:var(--font-body);font-size:10.5px;opacity:.6">TSh 84,000 today</span></button>
+                  <button class="btn btn-secondary rs-btn" style="min-height:64px;grid-column:span 2;border-color:var(--color-accent);color:var(--color-accent-800);font-size:13px">Report breakdown or incident</button>
+                </div>
+              </div>
+              <div style="border:1px solid var(--color-divider);padding:11px" class="rs-lbl">Trips are assigned by dispatch · location sharing required in transit</div>
+            </div>
+            <div style="border-top:1px solid var(--color-divider);display:grid;grid-template-columns:repeat(5,1fr);height:64px">
+              <span style="display:grid;place-items:center;font-size:10.5px;letter-spacing:.06em;color:var(--color-accent);border-top:2px solid var(--color-accent)">HOME</span>
+              <span style="display:grid;place-items:center;font-size:10.5px;letter-spacing:.06em;opacity:.55">TRIPS</span>
+              <span style="display:grid;place-items:center;font-size:10.5px;letter-spacing:.06em;opacity:.55">FUEL</span>
+              <span style="display:grid;place-items:center;font-size:10.5px;letter-spacing:.06em;opacity:.55">MONEY</span>
+              <span style="display:grid;place-items:center;font-size:10.5px;letter-spacing:.06em;opacity:.55">ME</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px">
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 9px">Why this screen is one job</h4>
+            <p style="margin:0;font-size:13px;line-height:1.65;color:color-mix(in srgb,var(--color-text) 68%,transparent)">A driver has exactly one trip in progress, so the home screen is that trip. Targets are 48px and above, there are no nested tabs, and the only filled buttons are the two actions that generate the company's data — status and proof of delivery. Everything else is secondary by construction.</p>
+          </div>
+          <div class="blueprint rs-frame">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h4 style="margin:0 0 10px">What each tap writes</h4>
+            <table class="rs-t">
+              <tbody>
+                <tr><td class="rs-nw">Update status</td><td class="rs-mono">trips.status</td><td class="rs-lbl">timestamped, GPS attached</td></tr>
+                <tr><td class="rs-nw">Upload POD</td><td class="rs-mono">pod_id → invoice draft</td><td class="rs-lbl">unblocks invoicing</td></tr>
+                <tr><td class="rs-nw">Request fuel</td><td class="rs-mono">fuel_logs → approval</td><td class="rs-lbl">accountant posts it</td></tr>
+                <tr><td class="rs-nw">Log expense</td><td class="rs-mono">expenses · trip_id</td><td class="rs-lbl">feeds per-trip profit</td></tr>
+                <tr><td class="rs-nw">Report breakdown</td><td class="rs-mono">service_requests</td><td class="rs-lbl">alerts dispatch + mechanic</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showGridLines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Shell&quot;}}">
+const SCREENS = [
+  { key:"ceo",    label:"CEO · Executive",    badge:"9",  tagClass:"tag-accent",  role:"CEO",
+    kicker:"Company · September 2026", title:"Executive dashboard", sub:"Revenue, fleet and what needs your signature",
+    action1:"Export board pack", action2:"AI insights" },
+  { key:"ops",    label:"Operator · Dispatch", badge:"3", tagClass:"tag-accent",  role:"Operator",
+    kicker:"Operations · Thu 03 Sep", title:"Dispatch console", sub:"3 unassigned · 27 in transit · 2 GPS offline",
+    action1:"+ New trip", action2:"Route optimizer" },
+  { key:"fin",    label:"Accountant · Finance", badge:"14", tagClass:"tag-accent", role:"Accountant",
+    kicker:"Finance · period Sep 2026 · open", title:"Finance dashboard", sub:"One dashboard, one ledger, currency kept apart",
+    action1:"+ New invoice", action2:"Reconcile" },
+  { key:"hr",     label:"HR · People",        badge:"7",  tagClass:"tag-accent",  role:"Human resources",
+    kicker:"People", title:"Employee directory", sub:"78 employees · 61 drivers · 7 documents expiring in 30 days",
+    action1:"+ Add employee", action2:"Run payroll" },
+  { key:"mech",   label:"Mechanic · Workshop", badge:"2", tagClass:"tag-accent",  role:"Mechanic",
+    kicker:"Workshop · Ubungo", title:"Service requests", sub:"2 breakdowns · 6 in workshop · 11 services due this week",
+    action1:"+ Log service", action2:"Request parts" },
+  { key:"driver", label:"Driver · Mobile",    badge:"1",  tagClass:"tag-neutral", role:"Driver",
+    kicker:"Driver · mobile only", title:"Driver console", sub:"One trip in progress · location sharing required",
+    action1:"Open on device", action2:"Send message" },
+];
+
+const CHART = [
+  { inc:62, exp:44 }, { inc:70, exp:49 }, { inc:58, exp:52 },
+  { inc:81, exp:54 }, { inc:88, exp:57 }, { inc:96, exp:62 },
+];
+
+const EXPENSES = [
+  { name:"Fuel",              amount:"148.2M", pct:55 },
+  { name:"Maintenance",       amount:"44.7M",  pct:17 },
+  { name:"Driver allowances", amount:"31.9M",  pct:12 },
+  { name:"Tolls & permits",   amount:"22.4M",  pct:8 },
+  { name:"Other",             amount:"21.1M",  pct:8 },
+];
+
+const THREAD = [
+  { id:"m1", who:"R. Mushi · Sales", mine:false, time:"02 Sep 16:40", body:"Dangote confirmed 30 t cement for Mwanza, collection 06:00. Rate TSh 4,150,000. Please allocate a head + trailer." },
+  { id:"m2", who:"You · Operator",   mine:true,  time:"17:02", body:"Allocated T 412 DKA + trailer T 104 MWZ, Juma Hassan driving." },
+  { id:"m3", who:"R. Mushi · Sales", mine:false, time:"12:10", body:"Client wants an ETA update by 18:00 — they are staffing the depot gate." },
+];
+
+const PAGES = {
+  ceo:    [["main","Executive"],["fin","Financial performance"],["fleet","Fleet performance"],["appr","Approvals"]],
+  ops:    [["main","Dispatch"],["trips","Trips register"],["map","Live map"],["parts","Inventory & parts"]],
+  fin:    [["main","Dashboard"],["inv","Customer invoices"],["appr","Expenses & fuel"],["rec","Reconciliation"]],
+  hr:     [["main","People"],["pay","Payroll & allowances"],["leave","Leave"],["comp","Compliance"]],
+  mech:   [["main","Service queue"],["parts","Spare parts"],["hist","Service history"],["sched","Schedule"]],
+  driver: [["main","Home"],["trips","My trips"],["fuel","Fuel"],["money","Expenses"]],
+};
+
+const SUBTITLES = {
+  "ceo:fin":     { title:"Financial performance", sub:"Revenue, margin and cost per km by corridor" },
+  "ops:trips":   { title:"Trips register", sub:"Every trip, filterable by status, corridor and client" },
+  "fin:inv":     { title:"Customer invoices", sub:"Draft → approved → posted → settled, with allocations" },
+  "hr:pay":      { title:"Payroll & allowances", sub:"September run · 78 employees · statutory deductions" },
+  "mech:parts":  { title:"Spare parts", sub:"Stock on hand, requests and reorder points" },
+  "driver:trips":{ title:"My trips", sub:"Assigned to you only · you cannot create trips" },
+  "ceo:fleet":   { title:"Fleet performance", sub:"Utilization, downtime and cost by unit type" },
+  "ceo:appr":    { title:"Approvals", sub:"9 items awaiting your signature" },
+  "ops:map":     { title:"Live fleet map", sub:"27 units transmitting · 2 offline over 30 minutes" },
+  "ops:parts":   { title:"Inventory & parts requests", sub:"Approve mechanic requests · 3 items below reorder point" },
+  "fin:appr":    { title:"Expenses & fuel approvals", sub:"Approve once, post once — nothing enters twice" },
+  "fin:rec":     { title:"Bank reconciliation", sub:"CRDB current account · statement of 01 Sep" },
+  "hr:leave":    { title:"Leave", sub:"Requests, balances and who is off this week" },
+  "hr:comp":     { title:"Driver compliance", sub:"Licences, medicals and permits — expiry is a grounding event" },
+  "mech:hist":   { title:"Service history", sub:"Every job card, part issued and cost, by vehicle" },
+  "mech:sched":  { title:"Service schedule", sub:"Due by mileage and by date, next 30 days" },
+  "driver:fuel": { title:"Fuel", sub:"Request fuel · your last five requests" },
+  "driver:money":{ title:"Expenses", sub:"What you have claimed and what is approved" },
+};
+
+const BUILT = [
+  "ceo:main","ceo:fin","ceo:fleet","ceo:appr",
+  "ops:main","ops:trips","ops:map","ops:parts",
+  "fin:main","fin:inv","fin:appr","fin:rec",
+  "hr:main","hr:pay","hr:leave","hr:comp",
+  "mech:main","mech:parts","mech:hist","mech:sched",
+  "driver:main","driver:trips","driver:fuel","driver:money",
+];
+
+class Component extends DCLogic {
+  state = { screen:"ceo", page:"main", thread:THREAD, draft:"" };
+
+  send = () => {
+    const body = this.state.draft.trim();
+    if (!body) return;
+    this.setState(s => ({
+      draft: "",
+      thread: [...s.thread, { id:"m" + (s.thread.length + 1), who:"You · Operator", mine:true, time:"now", body }],
+    }));
+  };
+
+  renderVals(){
+    const { screen, page, thread, draft } = this.state;
+    const cur = SCREENS.find(s => s.key === screen) || SCREENS[0];
+    const k = screen + ":" + page;
+    const over = SUBTITLES[k];
+    return {
+      showGridLines: this.props.showGridLines ?? true,
+      roleLabel: cur.role,
+      head: over ? { ...cur, title: over.title, sub: over.sub } : cur,
+      screens: SCREENS.map(s => ({
+        label: s.label, badge: s.badge, tagClass: s.tagClass,
+        cur: s.key === screen ? "page" : "false",
+        pick: () => this.setState({ screen: s.key, page: "main" }),
+      })),
+      pages: (PAGES[screen] || []).map(([key,label]) => ({
+        label, on: page === key, pick: () => this.setState({ page: key }),
+      })),
+      pgCeoFin:      k === "ceo:fin",
+      pgOpsTrips:    k === "ops:trips",
+      pgFinInv:      k === "fin:inv",
+      pgHrPay:       k === "hr:pay",
+      pgMechParts:   k === "mech:parts",
+      pgDriverTrips: k === "driver:trips",
+      pgSoon: BUILT.indexOf(k) === -1,
+      pgCeoFleet:    k === "ceo:fleet",
+      pgCeoAppr:     k === "ceo:appr",
+      pgOpsMap:      k === "ops:map",
+      pgOpsParts:    k === "ops:parts",
+      pgFinAppr:     k === "fin:appr",
+      pgFinRec:      k === "fin:rec",
+      pgHrLeave:     k === "hr:leave",
+      pgHrComp:      k === "hr:comp",
+      pgMechHist:    k === "mech:hist",
+      pgMechSched:   k === "mech:sched",
+      pgDriverFuel:  k === "driver:fuel",
+      pgDriverMoney: k === "driver:money",
+      chart: CHART,
+      expenses: EXPENSES,
+      thread: thread.map(m => ({
+        ...m,
+        align: m.mine ? "flex-end" : "flex-start",
+        bdr: m.mine ? "var(--color-accent)" : "var(--color-divider)",
+        bg: m.mine ? "color-mix(in srgb, var(--color-accent) 8%, transparent)" : "transparent",
+      })),
+      draft,
+      onDraft: e => this.setState({ draft: e.target.value }),
+      send: this.send,
+      isCeo: screen === "ceo" && page === "main",
+      isOps: screen === "ops" && page === "main",
+      isFin: screen === "fin" && page === "main",
+      isHr: screen === "hr" && page === "main",
+      isMech: screen === "mech" && page === "main",
+      isDriver: screen === "driver" && page === "main",
+    };
+  }
+}
+</script>
+</body>
+</html>
