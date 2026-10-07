@@ -29,6 +29,27 @@ import {
   Save,
   RotateCcw,
   FileDown,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Heading1,
+  Heading2,
+  Heading3,
+  Code,
+  Quote,
+  Undo,
+  Redo,
+  Link,
+  Image as ImageIcon,
+  Table,
+  Share2,
+  Star,
+  Search,
+  Edit3,
+  Folder,
+  Archive,
+  MoreHorizontal,
 } from "lucide-react";
 
 const ALLOWED_ROLES = ["CEO", "ADMIN", "ACCOUNTANT", "HR"];
@@ -53,7 +74,23 @@ type FileSource = {
   created_at: string;
 };
 
-type Msg = { role: "user" | "ai"; text: string };
+type Msg = { 
+  role: "user" | "ai"; 
+  text: string;
+  id: string;
+  timestamp: Date;
+  starred?: boolean;
+  tags?: string[];
+};
+
+type Notebook = {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messages: Msg[];
+  sources: string[];
+};
 
 export default function ReportNotebookPage() {
   const { role, isLoading: roleLoading } = useRole();
@@ -74,6 +111,14 @@ export default function ReportNotebookPage() {
   const [asking, setAsking] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // New features
+  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
+  const [currentNotebook, setCurrentNotebook] = useState<Notebook | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFormatting, setShowFormatting] = useState(false);
+  const [history, setHistory] = useState<{ action: string; state: any }[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   const authHeader = useCallback(async (): Promise<Record<string, string>> => {
     const { data } = await supabase.auth.getSession();
@@ -212,6 +257,92 @@ export default function ReportNotebookPage() {
     window.print();
   };
 
+  const toggleStar = (msgId: string) => {
+    setMessages(prev => prev.map(m => 
+      m.id === msgId ? { ...m, starred: !m.starred } : m
+    ));
+  };
+
+  const addTag = (msgId: string, tag: string) => {
+    setMessages(prev => prev.map(m => 
+      m.id === msgId ? { ...m, tags: [...(m.tags || []), tag] } : m
+    ));
+  };
+
+  const createNewNotebook = () => {
+    const newNotebook: Notebook = {
+      id: crypto.randomUUID(),
+      title: `Notebook ${notebooks.length + 1}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      messages: [...messages],
+      sources: [...liveSelected, ...includedIds],
+    };
+    setNotebooks(prev => [...prev, newNotebook]);
+    setCurrentNotebook(newNotebook);
+  };
+
+  const saveCurrentNotebook = () => {
+    if (!currentNotebook) return;
+    setCurrentNotebook({
+      ...currentNotebook,
+      updatedAt: new Date(),
+      messages,
+      sources: [...liveSelected, ...includedIds],
+    });
+    setNotebooks(prev => prev.map(n => 
+      n.id === currentNotebook.id ? { ...n, messages, sources: [...liveSelected, ...includedIds], updatedAt: new Date() } : n
+    ));
+  };
+
+  const loadNotebook = (notebook: Notebook) => {
+    setCurrentNotebook(notebook);
+    setMessages(notebook.messages);
+    setLiveSelected(notebook.sources.filter(s => LIVE_SOURCES.some(ls => ls.key === s)));
+    setIncludedIds(new Set(notebook.sources.filter(s => !LIVE_SOURCES.some(ls => ls.key === s))));
+  };
+
+  const deleteNotebook = (id: string) => {
+    setNotebooks(prev => prev.filter(n => n.id !== id));
+    if (currentNotebook?.id === id) {
+      setCurrentNotebook(null);
+      setMessages([]);
+    }
+  };
+
+  const filteredMessages = messages.filter(m => 
+    m.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const insertFormatting = (format: string) => {
+    const textarea = document.querySelector('textarea[name="message"]') as HTMLTextAreaElement;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+    
+    let formatted = "";
+    switch (format) {
+      case "bold": formatted = `**${selected}**`; break;
+      case "italic": formatted = `*${selected}*`; break;
+      case "h1": formatted = `# ${selected}`; break;
+      case "h2": formatted = `## ${selected}`; break;
+      case "h3": formatted = `### ${selected}`; break;
+      case "code": formatted = `\`${selected}\``; break;
+      case "quote": formatted = `> ${selected}`; break;
+      case "list": formatted = `- ${selected}`; break;
+      case "ordered": formatted = `1. ${selected}`; break;
+    }
+    
+    textarea.value = text.substring(0, start) + formatted + text.substring(end);
+    setInputVal(textarea.value);
+    textarea.focus();
+    textarea.setSelectionRange(start + formatted.length, start + formatted.length);
+  };
+
   if (roleLoading) return null;
   if (!allowed) {
     return (
@@ -229,26 +360,77 @@ export default function ReportNotebookPage() {
         subtitle="Pick live company reports and upload Excel / PDF files, then ask Gemini to analyse them together — answers are grounded in the real data."
         icon={Sparkles}
         actions={
-          messages.length > 0 ? (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={copyToClipboard}>
-                <Copy className="size-4 mr-2" /> Copy
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={createNewNotebook}>
+              <Plus className="size-4 mr-2" /> New Notebook
+            </Button>
+            {currentNotebook && (
+              <Button variant="outline" size="sm" onClick={saveCurrentNotebook}>
+                <Save className="size-4 mr-2" /> Save
               </Button>
-              <Button variant="outline" size="sm" onClick={downloadChat}>
-                <Download className="size-4 mr-2" /> Export
-              </Button>
-              <Button variant="outline" size="sm" onClick={saveAsPDF}>
-                <FileDown className="size-4 mr-2" /> PDF
-              </Button>
-              <Button variant="outline" size="sm" onClick={clearChat}>
-                <RotateCcw className="size-4 mr-2" /> Clear
-              </Button>
-            </div>
-          ) : undefined
+            )}
+            {messages.length > 0 && (
+              <>
+                <Button variant="outline" size="sm" onClick={copyToClipboard}>
+                  <Copy className="size-4 mr-2" /> Copy
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadChat}>
+                  <Download className="size-4 mr-2" /> Export
+                </Button>
+                <Button variant="outline" size="sm" onClick={saveAsPDF}>
+                  <FileDown className="size-4 mr-2" /> PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={clearChat}>
+                  <RotateCcw className="size-4 mr-2" /> Clear
+                </Button>
+              </>
+            )}
+          </div>
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_380px_1fr] gap-4 items-start">
+        {/* ── Notebooks sidebar ── */}
+        <div className="space-y-4">
+          <SectionCard title="Notebooks" icon={Folder}>
+            <div className="space-y-2">
+              <Button variant="outline" size="sm" className="w-full" onClick={createNewNotebook}>
+                <Plus className="size-3 mr-2" /> New
+              </Button>
+              <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                {notebooks.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">No notebooks yet</p>
+                )}
+                {notebooks.map((nb) => (
+                  <button
+                    key={nb.id}
+                    onClick={() => loadNotebook(nb)}
+                    className={cn(
+                      "w-full text-left rounded-lg px-2.5 py-2 text-xs transition-colors",
+                      currentNotebook?.id === nb.id ? "bg-primary/10 border border-primary/30" : "hover:bg-muted/50 border border-transparent"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold truncate">{nb.title}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 hover:bg-destructive/10 hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); deleteNotebook(nb.id); }}
+                      >
+                        <Trash2 className="size-3" />
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {nb.messages.length} messages · {new Date(nb.updatedAt).toLocaleDateString()}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+
         {/* ── Sources column ── */}
         <div className="space-y-4">
           <SectionCard title="Add source" icon={Plus}>
