@@ -51,6 +51,9 @@ async function fetchLiveSource(
         .lte('created_at', `${end}T23:59:59`)
         .limit(2000);
       if (error) throw error;
+      if (!data || data.length === 0) {
+        return `Revenue by vehicle: No delivered trips found between ${start} and ${end}. Try expanding the date range or checking for trips with different statuses.`;
+      }
       const byVehicle = new Map<string, { trips: number; byCur: Record<string, number> }>();
       for (const t of data ?? []) {
         const plate = (t as any).vehicles?.plate_number ?? 'Unassigned';
@@ -299,11 +302,47 @@ ${user?.name ? `\nYou are speaking with ${user.name}${user.role ? ` (role: ${use
 === SOURCES (fetched ${new Date().toISOString()}) ===
 ${sections.join('\n\n')}
 
-=== RULES ===
-- Cite which source(s) each claim comes from, e.g. (revenue_by_vehicle) or ("Q1 petty cash.xlsx").
+=== FORMATTING RULES ===
+- Use PROFESSIONAL BUSINESS ANALYSIS FORMAT with clear section headers (###, ####)
+- Create markdown tables for all numerical data summaries
+- Use the format: | Column 1 | Column 2 | Column 3 |
+- Include table headers and align numbers to the right when appropriate
+- Use bullet points for observations and recommendations
+- Separate major sections with horizontal lines (---)
+- Start with a title: "**${user?.name ? user.name + ' – ' : ''}Business Analysis (as of ${new Date().toLocaleDateString('en-GB')})**"
+- Structure your response: Executive Summary → Detailed Analysis by Section → Key Observations → Recommendations
+
+=== ANALYSIS RULES ===
+- Cite which source(s) each claim comes from, e.g. (revenue_by_vehicle) or ("Q1 petty cash.xlsx")
 - Show the numbers you base conclusions on. Compare uploaded-file figures against live figures when both are present and call out mismatches.
-- Be concise; markdown with headers and bullets; always state currency.
-- End with "Next step:" and one concrete action.`;
+- Always state currency (TZS, USD, etc.) for all monetary values
+- Calculate percentages and averages when relevant
+- Be thorough but focused on actionable insights
+- End with "Next step:" and one concrete action
+
+=== EXAMPLE FORMAT ===
+**Executive Summary**
+[2-3 sentence overview of key findings]
+
+### 1. Fleet Overview
+| Metric | Value |
+|--------|-------|
+| Total Vehicles | 43 |
+| Active | 12 (28%) |
+| Available | 31 (72%) |
+
+### 2. Revenue Analysis
+[Detailed table with revenue data]
+
+### 3. Key Observations
+- Observation 1
+- Observation 2
+
+### 4. Recommendations
+1. Recommendation 1
+2. Recommendation 2
+
+**Next step:** [Specific action item]`;
 
     const result = await generateAI({
       system,
