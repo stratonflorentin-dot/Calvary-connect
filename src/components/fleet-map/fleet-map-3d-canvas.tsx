@@ -26,11 +26,11 @@ const MAJOR_CITIES = [
   { name: "Dodoma",        coords: [-6.163,  35.7516] as [number, number] },
 ];
 
-// Use MapLibre demo tiles as primary - most reliable for globe projection
-const MAP_STYLE_URL = "https://demotiles.maplibre.org/style.json";
+// Use CARTO Dark Matter as primary - known to work with globe projection
+const MAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 // Fallback style if primary fails
-const FALLBACK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const FALLBACK_STYLE_URL = "https://demotiles.maplibre.org/style.json";
 
 // Satellite imagery style — a plain raster style (Esri World Imagery, free
 // and keyless) with a transparent place-name/border overlay on top, so it
@@ -75,7 +75,7 @@ const SATELLITE_STYLE: maplibregl.StyleSpecification = {
  *  would just duplicate it with a mismatched color scheme. Only CARTO Dark
  *  Matter, which has no building layer of its own, needs the custom one. */
 function styleHasNativeBuildings(styleUrl: string): boolean {
-  return styleUrl.includes("api.maptiler.com") || styleUrl.includes("demotiles.maplibre.org");
+  return styleUrl.includes("api.maptiler.com");
 }
 
 /** GPS accuracy circle source + layers — style-dependent (setStyle() wipes
@@ -193,6 +193,9 @@ function describeMapFailure(e: { error?: Error; status?: number; url?: string })
   }
   if (/Failed to fetch|NetworkError|load failed/i.test(msg)) {
     return "The map style could not be downloaded (provider unreachable or blocked).";
+  }
+  if (/style.*not.*done.*loading/i.test(msg)) {
+    return "Style loading timed out - will retry with fallback.";
   }
   return msg || "The map style failed to load.";
 }
@@ -462,6 +465,18 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       ) => {
         console.log(`[MapLibre] Initializing map with ${isFallback ? 'fallback' : 'primary'} style:`, styleUrl);
 
+        // Add timeout to force fallback if style takes too long
+        const styleLoadTimeout = setTimeout(() => {
+          if (!mapReady.current && !usingFallback) {
+            console.warn("[MapLibre] Style loading timed out, forcing fallback");
+            if (mapInstance) {
+              mapInstance.remove();
+              mapRef.current = null;
+            }
+            initMap(FALLBACK_STYLE_URL, true, isSatellite);
+          }
+        }, 15000); // 15 second timeout
+
         const map = new maplibregl.Map({
           container: el,
           style: styleUrl,
@@ -480,6 +495,11 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         usingFallback = isFallback;
         currentSatelliteRef.current = isSatellite;
         if (!isSatellite) activeVectorStyleRef.current = styleUrl as string;
+
+        // Clear timeout on successful load
+        map.on('load', () => {
+          clearTimeout(styleLoadTimeout);
+        });
 
         map.addControl(
           new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }),
