@@ -14,8 +14,16 @@
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    if (process.env.DISABLE_OTEL === '1') {
-      console.log('[OpenTelemetry] Disabled via DISABLE_OTEL');
+    const skipOtel =
+      process.env.DISABLE_OTEL === '1' ||
+      process.env.VERCEL === '1' ||
+      process.env.NODE_ENV !== 'development' && !process.env.OTEL_EXPORTER_JAEGER_ENDPOINT;
+    if (skipOtel) {
+      if (process.env.DISABLE_OTEL === '1' || process.env.VERCEL === '1' || process.env.NEXT_TELEMETRY_DISABLED === '1') {
+        // Silent on known-disabled envs (Vercel, CI, explicit flag) — no log spam in production.
+      } else {
+        console.log('[OpenTelemetry] Skipped (no Jaeger endpoint configured) — set OTEL_EXPORTER_JAEGER_ENDPOINT to enable.');
+      }
       return;
     }
     const dynamicImport = (specifier: string) => import(specifier) as Promise<any>;

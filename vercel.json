@@ -3,8 +3,19 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
+  "nodeVersion": "20.x",
+  "build": {
+    "env": {
+      "DISABLE_OTEL": "1",
+      "PUPPETEER_SKIP_DOWNLOAD": "true",
+      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
+      "NEXT_TELEMETRY_DISABLED": "1",
+      "NODE_OPTIONS": "--max-old-space-size=6144"
+    }
+  },
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://qaqonhjeqtlatqsrqcnx.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhcW9uaGplcXRsYXRxc3JxY254Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwOTQxMDAsImV4cCI6MjA4OTY3MDEwMH0.xQmnJmGyZK-yTMS2MYIzerxzpYikipnhbEq-sXoP8jE"
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhcW9uaGplcXRsYXRxc3JxY254Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwOTQxMDAsImV4cCI6MjA4OTY3MDEwMH0.xQmnJmGyZK-yTMS2MYIzerxzpYikipnhbEq-sXoP8jE",
+    "DISABLE_OTEL": "1"
   }
 }
