@@ -908,7 +908,6 @@ export default function AllowancesPage() {
           )}
 
         </div>
-      </main>
 
       <Dialog open={!!markPaidTarget} onOpenChange={(open) => { if (!open) setMarkPaidTarget(null); }}>
         <DialogContent>
@@ -951,7 +950,6 @@ export default function AllowancesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
     </PageShell>
   );
 }

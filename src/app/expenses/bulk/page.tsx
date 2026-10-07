@@ -298,7 +298,6 @@ export default function BulkExpensesPage() {
             </Button>
           </div>
         </div>
-      </div>
     </PageShell>
   );
 }

@@ -431,7 +431,6 @@ export default function VehicleRevenuePage() {
           )}
 
         </div>
-      </div>
     </PageShell>
   );
 }

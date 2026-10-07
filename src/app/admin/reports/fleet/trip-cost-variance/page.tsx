@@ -266,7 +266,6 @@ export default function TripCostVariancePage() {
             </CardContent>
           </Card>
         </div>
-      </div>
     </PageShell>
   );
 }

@@ -372,7 +372,6 @@ export default function RouteProfitabilityPage() {
           )}
 
         </div>
-      </div>
     </PageShell>
   );
 }

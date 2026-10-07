@@ -174,8 +174,6 @@ export default function ExpenseCategoriesPage() {
             )}
           </div>
         </div>
-      </div>
-    </PageShell>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[420px]">
@@ -203,5 +201,6 @@ export default function ExpenseCategoriesPage() {
           </div>
         </DialogContent>
       </Dialog>
+    </PageShell>
   );
 }

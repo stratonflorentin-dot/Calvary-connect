@@ -425,7 +425,6 @@ export default function FuelPerTripReportPage() {
               </div>
             </>
           )}
-        </div>
       </div>
     </PageShell>
   );

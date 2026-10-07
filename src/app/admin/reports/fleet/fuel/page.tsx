@@ -441,7 +441,6 @@ export default function FuelConsumptionPage() {
           )}
 
         </div>
-      </div>
     </PageShell>
   );
 }
