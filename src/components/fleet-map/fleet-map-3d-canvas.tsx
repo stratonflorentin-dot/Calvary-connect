@@ -26,23 +26,11 @@ const MAJOR_CITIES = [
   { name: "Dodoma",        coords: [-6.163,  35.7516] as [number, number] },
 ];
 
-// MapTiler's "Streets Dark" vector style — full-detail roads (hierarchy,
-// casings, labels), buildings, water, parks and POIs (90 style layers vs. 42
-// on "Dataviz Dark", which is an intentionally minimal analytics style, not
-// a realistic basemap), used when a key is configured. It also ships its
-// own "Building 3D" fill-extrusion layer, so the hand-rolled one below is
-// only needed for the CARTO fallback, which has no 3D buildings of its own.
-// CARTO Dark Matter (free, no key, same dark palette) stays as the fallback
-// so the map keeps working even if the MapTiler key is ever missing,
-// rate-limited, or the request fails.
-const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
-const CARTO_DARK_STYLE_URL =
-  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-// Use CARTO as primary for reliability - MapTiler can be flaky
-const MAP_STYLE_URL = CARTO_DARK_STYLE_URL;
+// Use MapLibre demo tiles as primary - most reliable for globe projection
+const MAP_STYLE_URL = "https://demotiles.maplibre.org/style.json";
 
-// Fallback style if primary fails - use MapLibre demo tiles as last resort
-const FALLBACK_STYLE_URL = "https://demotiles.maplibre.org/style.json";
+// Fallback style if primary fails
+const FALLBACK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 // Satellite imagery style — a plain raster style (Esri World Imagery, free
 // and keyless) with a transparent place-name/border overlay on top, so it
@@ -87,7 +75,7 @@ const SATELLITE_STYLE: maplibregl.StyleSpecification = {
  *  would just duplicate it with a mismatched color scheme. Only CARTO Dark
  *  Matter, which has no building layer of its own, needs the custom one. */
 function styleHasNativeBuildings(styleUrl: string): boolean {
-  return styleUrl.includes("api.maptiler.com");
+  return styleUrl.includes("api.maptiler.com") || styleUrl.includes("demotiles.maplibre.org");
 }
 
 /** GPS accuracy circle source + layers — style-dependent (setStyle() wipes

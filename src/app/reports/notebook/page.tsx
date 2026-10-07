@@ -25,6 +25,10 @@ import {
   Upload,
   Database,
   Download,
+  Copy,
+  Save,
+  RotateCcw,
+  FileDown,
 } from "lucide-react";
 
 const ALLOWED_ROLES = ["CEO", "ADMIN", "ACCOUNTANT", "HR"];
@@ -195,6 +199,19 @@ export default function ReportNotebookPage() {
     URL.revokeObjectURL(a.href);
   };
 
+  const copyToClipboard = () => {
+    const text = messages.map((m) => (m.role === "user" ? `Q: ${m.text}\n\n` : `A: ${m.text}\n\n`)).join("\n---\n\n");
+    navigator.clipboard.writeText(text);
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+  };
+
+  const saveAsPDF = () => {
+    window.print();
+  };
+
   if (roleLoading) return null;
   if (!allowed) {
     return (
@@ -213,9 +230,20 @@ export default function ReportNotebookPage() {
         icon={Sparkles}
         actions={
           messages.length > 0 ? (
-            <Button variant="outline" onClick={downloadChat}>
-              <Download className="size-4 mr-2" /> Export notes
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={copyToClipboard}>
+                <Copy className="size-4 mr-2" /> Copy
+              </Button>
+              <Button variant="outline" size="sm" onClick={downloadChat}>
+                <Download className="size-4 mr-2" /> Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={saveAsPDF}>
+                <FileDown className="size-4 mr-2" /> PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={clearChat}>
+                <RotateCcw className="size-4 mr-2" /> Clear
+              </Button>
+            </div>
           ) : undefined
         }
       />
