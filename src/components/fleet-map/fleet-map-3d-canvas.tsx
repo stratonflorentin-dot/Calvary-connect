@@ -26,11 +26,11 @@ const MAJOR_CITIES = [
   { name: "Dodoma",        coords: [-6.163,  35.7516] as [number, number] },
 ];
 
-// Use CARTO Dark Matter as primary - known to work with globe projection
-const MAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+// Use a simple, reliable vector style for globe projection
+const MAP_STYLE_URL = "https://tiles.openfreemap.org/v2/osm-intl/style.json";
 
 // Fallback style if primary fails
-const FALLBACK_STYLE_URL = "https://demotiles.maplibre.org/style.json";
+const FALLBACK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 // Satellite imagery style — a plain raster style (Esri World Imagery, free
 // and keyless) with a transparent place-name/border overlay on top, so it

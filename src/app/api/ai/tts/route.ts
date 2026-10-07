@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 // ElevenLabs voice "Mino" — the company AI Analyst's voice.
-const VOICE_ID = 'j35KNI2SpLGja5intw4L';
+// Use the user's custom voice ID if provided, otherwise use default
+const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'; // Default: Rachel
 const MAX_CHARS = 2500;
 
 export async function POST(req: Request) {
