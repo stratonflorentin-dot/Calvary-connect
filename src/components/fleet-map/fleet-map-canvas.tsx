@@ -42,9 +42,6 @@ export type FleetMapCanvasHandle = {
   zoomOut: () => void;
   fitDrivers: () => void;
   flyToDriver: (lat: number, lng: number, zoom?: number) => void;
-  /** No-op on the 2D Leaflet engine — only the 3D MapLibre canvas can render
-   *  a globe. Kept in the type so the shared ref works for both engines. */
-  setGlobe: (on: boolean) => void;
 };
 
 type Props = {
@@ -135,9 +132,6 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       zoomIn: () => mapInstanceRef.current?.zoomIn(),
       zoomOut: () => mapInstanceRef.current?.zoomOut(),
       fitDrivers: fitAllDrivers,
-      setGlobe: () => {
-        // Leaflet has no globe projection — intentionally a no-op here.
-      },
       flyToDriver: (lat, lng, zoom = 15) => {
         mapInstanceRef.current?.flyTo([lat, lng], zoom, { duration: 0.8 });
       },

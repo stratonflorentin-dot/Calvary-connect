@@ -254,23 +254,15 @@ export default function FleetMapView({
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [desktopListOpen, setDesktopListOpen] = useState(true);
   const [cameraMode, setCameraMode] = useState<"overview" | "follow" | "follow-3d" | "north-up" | "heading-up">("follow-3d");
-  const [mapEngine, setMapEngine] = useState<"3d" | "2d">("3d");
-  const [globeOn, setGlobeOn] = useState(true);
+  const [mapMode, setMapMode] = useState<"2d" | "3d" | "globe">("globe");
   const [engineNotice, setEngineNotice] = useState<string | null>(null);
   const [satellite, setSatellite] = useState(false);
-
-  const toggleGlobe = useCallback(() => {
-    setGlobeOn((on) => {
-      canvasRef.current?.setGlobe(!on);
-      return !on;
-    });
-  }, []);
 
   // If the MapLibre style/tiles cannot load, fall back to the Leaflet 2D map
   // instead of leaving a blank canvas.
   const handle3DFatalError = useCallback((message: string) => {
     console.warn("[FleetMap] 3D engine failed, falling back to 2D:", message);
-    setMapEngine("2d");
+    setMapMode("2d");
     setEngineNotice("3D map unavailable — showing 2D map. " + message);
   }, []);
 
@@ -347,7 +339,7 @@ export default function FleetMapView({
 
   return (
     <div className="fleet-map-root relative h-full w-full min-h-[calc(100dvh-0px)] overflow-hidden bg-muted">
-      {mapEngine === "3d" ? (
+      {(mapMode === "3d" || mapMode === "globe") ? (
         <FleetMap3D
           ref={canvasRef}
           locations={locations}
@@ -356,6 +348,7 @@ export default function FleetMapView({
           onSelectDriver={handleSelect}
           cameraMode={cameraMode}
           satellite={satellite}
+          mapMode={mapMode}
           onFatalError={handle3DFatalError}
         />
       ) : (
@@ -528,30 +521,29 @@ export default function FleetMapView({
           </Button>
         </div>
 
-        {/* Map engine: 3D (MapLibre vector) vs 2D (Leaflet raster) */}
+        {/* Map mode: 2D / 3D / Globe */}
         <div className={cn(glass, "flex flex-col gap-1 p-1 rounded-xl shadow-md")}>
           <p className="text-[7.5px] font-extrabold text-center uppercase tracking-wider text-muted-foreground pt-1 pb-0.5">Map</p>
-          {(["3d", "2d"] as const).map((engine) => (
-            <Button
-              key={engine}
-              variant={mapEngine === engine ? "default" : "ghost"}
-              size="icon"
-              title={engine === "3d" ? "3D vector map" : "2D map"}
-              className={cn(
-                "h-8 w-8 rounded-lg text-[10px] font-black transition-all",
-                mapEngine === engine ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:bg-muted"
-              )}
-              onClick={() => {
-                setEngineNotice(null);
-                // The 3D canvas re-initializes with globe projection on, so
-                // keep the toggle in sync with what a remount will actually show.
-                if (engine === "3d") setGlobeOn(true);
-                setMapEngine(engine);
-              }}
-            >
-              {engine.toUpperCase()}
-            </Button>
-          ))}
+          <div className="flex gap-1">
+            {(["2d", "3d", "globe"] as const).map((mode) => (
+              <Button
+                key={mode}
+                variant={mapMode === mode ? "default" : "ghost"}
+                size="icon"
+                title={mode === "2d" ? "2D map" : mode === "3d" ? "3D vector map" : "Globe view"}
+                className={cn(
+                  "h-8 w-8 rounded-lg text-[10px] font-black transition-all",
+                  mapMode === mode ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:bg-muted"
+                )}
+                onClick={() => {
+                  setEngineNotice(null);
+                  setMapMode(mode);
+                }}
+              >
+                {mode.toUpperCase()}
+              </Button>
+            ))}
+          </div>
           <div className="h-px bg-border/60 mx-1 my-0.5" />
           <Button
             variant={satellite ? "default" : "ghost"}
@@ -567,8 +559,8 @@ export default function FleetMapView({
           </Button>
         </div>
 
-        {/* 3D Smart Camera Mode Controls */}
-        {mapEngine === "3d" && (
+        {/* 3D Smart Camera Mode Controls (only for 3D/Globe modes) */}
+        {(mapMode === "3d" || mapMode === "globe") && (
           <div className={cn(glass, "flex flex-col gap-1.5 p-1 rounded-xl shadow-md")}>
             <p className="text-[7.5px] font-extrabold text-center uppercase tracking-wider text-muted-foreground pt-1 pb-0.5">Cam</p>
             {[
@@ -590,25 +582,6 @@ export default function FleetMapView({
                 <Icon className="h-3.5 w-3.5" />
               </Button>
             ))}
-          </div>
-        )}
-
-        {/* Globe / Flat projection toggle (3D engine only) */}
-        {mapEngine === "3d" && (
-          <div className={cn(glass, "flex flex-col gap-1 p-1 rounded-xl shadow-md")}>
-            <p className="text-[7.5px] font-extrabold text-center uppercase tracking-wider text-muted-foreground pt-1 pb-0.5">View</p>
-            <Button
-              variant={globeOn ? "default" : "ghost"}
-              size="icon"
-              title={globeOn ? "Globe view — click for flat map" : "Flat map — click for globe view"}
-              className={cn(
-                "h-8 w-8 rounded-lg transition-all",
-                globeOn ? "bg-primary text-primary-foreground hover:bg-primary/90" : "text-muted-foreground hover:bg-muted"
-              )}
-              onClick={toggleGlobe}
-            >
-              <Globe className="h-3.5 w-3.5" />
-            </Button>
           </div>
         )}
       </div>

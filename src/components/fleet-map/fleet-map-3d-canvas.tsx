@@ -162,8 +162,6 @@ export type FleetMapCanvasHandle = {
   zoomOut: () => void;
   fitDrivers: () => void;
   flyToDriver: (lat: number, lng: number, zoom?: number) => void;
-  /** Render the map as a 3D globe (MapLibre globe projection) or flat mercator. */
-  setGlobe: (on: boolean) => void;
 };
 
 type Props = {
@@ -173,6 +171,7 @@ type Props = {
   onSelectDriver: (driver: FleetMapDriver) => void;
   cameraMode?: "overview" | "follow" | "follow-3d" | "north-up" | "heading-up";
   satellite?: boolean;
+  mapMode?: "2d" | "3d" | "globe";
   /** Called when both the primary and fallback styles fail — the parent
    *  should switch to the 2D Leaflet engine instead of showing a blank map. */
   onFatalError?: (message: string) => void;
@@ -372,7 +371,7 @@ function popupHtml(d: FleetMapDriver): string {
 
 export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
   function FleetMap3DCanvas(
-    { locations, defaultCenter, selectedId, onSelectDriver, cameraMode = "follow-3d", satellite = false, onFatalError },
+    { locations, defaultCenter, selectedId, onSelectDriver, cameraMode = "follow-3d", satellite = false, mapMode = "globe", onFatalError },
     ref,
   ) {
     const containerRef  = useRef<HTMLDivElement>(null);
@@ -415,9 +414,6 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       zoomIn:  () => mapRef.current?.zoomIn(),
       zoomOut: () => mapRef.current?.zoomOut(),
       fitDrivers: fitAll,
-      setGlobe: (on: boolean) => {
-        mapRef.current?.setProjection(on ? { type: "globe" } : { type: "mercator" });
-      },
       flyToDriver: (lat, lng, zoom = 14.5) => {
         userPannedRef.current = false;
         mapRef.current?.flyTo({
@@ -551,11 +547,13 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           mapReady.current = true;
           setStyleLoaded(true);
 
-          // Apply globe projection for vector styles (not satellite, not fallback
-          // with native buildings). The fallback CARTO Dark Matter style supports
-          // globe projection and should use it.
+          // Apply projection based on mapMode prop (globe/3d)
           if (!isSatellite) {
-            map.setProjection({ type: "globe" });
+            if (mapMode === "globe") {
+              map.setProjection({ type: "globe" });
+            } else {
+              map.setProjection({ type: "mercator" });
+            }
           }
 
           // 3D building extrusions — only needed for styles without their
@@ -677,6 +675,30 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         }
       });
     }, [satellite]);
+
+    // ── Map mode (2D / 3D / Globe) projection ──────────────────────────────
+    // Mirrors the my-view pattern: globe mode uses globe projection with
+    // pitch 0 and low zoom; 3D mode uses mercator with pitch; 2D mode is
+    // handled by the parent switching to Leaflet.
+    useEffect(() => {
+      const map = mapRef.current;
+      if (!map || !mapReady.current) return;
+      if (mapMode === "globe") {
+        map.setProjection({ type: "globe" });
+        map.easeTo({
+          pitch: 0,
+          zoom: Math.min(map.getZoom(), 2.6),
+          duration: 1200,
+        });
+      } else {
+        map.setProjection({ type: "mercator" });
+        map.easeTo({
+          pitch: 62,
+          zoom: Math.max(map.getZoom(), 11),
+          duration: 900,
+        });
+      }
+    }, [mapMode, mapReady.current]);
 
     // ── Driver markers sync ────────────────────────────────────────────────
     useEffect(() => {
