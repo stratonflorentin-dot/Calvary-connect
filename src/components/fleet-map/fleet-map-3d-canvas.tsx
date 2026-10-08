@@ -551,6 +551,13 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           mapReady.current = true;
           setStyleLoaded(true);
 
+          // Apply globe projection for vector styles (not satellite, not fallback
+          // with native buildings). The fallback CARTO Dark Matter style supports
+          // globe projection and should use it.
+          if (!isSatellite) {
+            map.setProjection({ type: "globe" });
+          }
+
           // 3D building extrusions — only needed for styles without their
           // own (CARTO Dark Matter); MapTiler's Streets Dark already ships
           // a properly-colored "Building 3D" layer, so adding this one on
@@ -651,6 +658,11 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
       map.setStyle(satellite ? SATELLITE_STYLE : activeVectorStyleRef.current);
       map.once("style.load", () => {
+        // Re-apply globe projection after style change (satellite style is
+        // raster-only and doesn't support globe; vector styles do).
+        if (!satellite) {
+          map.setProjection({ type: "globe" });
+        }
         addAccuracyLayers(map);
         if (!satellite && !styleHasNativeBuildings(activeVectorStyleRef.current)) {
           addBuildingsLayer(map);
