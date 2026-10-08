@@ -353,6 +353,7 @@ export default function FleetMapView({
         />
       ) : (
         <FleetMap2D
+          key={`2d-${satellite}`}
           ref={canvasRef}
           locations={locations}
           defaultCenter={defaultCenter}

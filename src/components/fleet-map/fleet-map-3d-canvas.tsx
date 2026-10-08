@@ -453,6 +453,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
       let mapInstance: maplibregl.Map | null = null;
       let usingFallback = false;
+      let fallbackAttempted = false;
 
       const initMap = (
         styleUrl: string | maplibregl.StyleSpecification,
@@ -463,8 +464,9 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
         // Add timeout to force fallback if style takes too long
         const styleLoadTimeout = setTimeout(() => {
-          if (!mapReady.current && !usingFallback) {
+          if (!mapReady.current && !usingFallback && !fallbackAttempted) {
             console.warn("[MapLibre] Style loading timed out, forcing fallback");
+            fallbackAttempted = true;
             if (mapInstance) {
               mapInstance.remove();
               mapRef.current = null;
@@ -482,9 +484,13 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           bearing: 0,
         });
 
-        // Default to globe projection — renders as a planet at low zoom and
-        // MapLibre blends back to flat mercator automatically as you zoom in.
-        map.setProjection({ type: "globe" });
+        // Apply projection based on mapMode prop (globe/3d) — only for vector styles
+        // Satellite and fallback (CARTO Dark Matter) are raster and don't support globe.
+        if (!isSatellite && !isFallback && mapMode === "globe") {
+          map.setProjection({ type: "globe" });
+        } else {
+          map.setProjection({ type: "mercator" });
+        }
 
         mapRef.current = map;
         mapInstance = map;
@@ -535,7 +541,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
               mapInstance.remove();
               mapRef.current = null;
             }
-            initMap(FALLBACK_STYLE_URL, true);
+            initMap(FALLBACK_STYLE_URL, true, isSatellite);
           } else {
             setLoadErr(reason);
             // Both styles failed — hand control back to the parent for 2D fallback
@@ -547,8 +553,9 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           mapReady.current = true;
           setStyleLoaded(true);
 
-          // Apply projection based on mapMode prop (globe/3d)
-          if (!isSatellite) {
+          // Apply projection based on mapMode prop (globe/3d) — only for vector styles
+          // Satellite and fallback (CARTO Dark Matter) are raster and don't support globe.
+          if (!isSatellite && !isFallback) {
             if (mapMode === "globe") {
               map.setProjection({ type: "globe" });
             } else {
@@ -656,13 +663,17 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
 
       map.setStyle(satellite ? SATELLITE_STYLE : activeVectorStyleRef.current);
       map.once("style.load", () => {
-        // Re-apply globe projection after style change (satellite style is
-        // raster-only and doesn't support globe; vector styles do).
-        if (!satellite) {
+        // Re-apply projection after style change.
+        // Satellite is raster-only (no globe). Fallback (CARTO Dark Matter) is also raster.
+        // Only primary vector style supports globe projection.
+        const isFallbackStyle = activeVectorStyleRef.current === FALLBACK_STYLE_URL;
+        if (!satellite && !isFallbackStyle && mapMode === "globe") {
           map.setProjection({ type: "globe" });
+        } else {
+          map.setProjection({ type: "mercator" });
         }
         addAccuracyLayers(map);
-        if (!satellite && !styleHasNativeBuildings(activeVectorStyleRef.current)) {
+        if (!satellite && !isFallbackStyle && !styleHasNativeBuildings(activeVectorStyleRef.current)) {
           addBuildingsLayer(map);
         }
 
@@ -680,9 +691,21 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     // Mirrors the my-view pattern: globe mode uses globe projection with
     // pitch 0 and low zoom; 3D mode uses mercator with pitch; 2D mode is
     // handled by the parent switching to Leaflet.
+    // Only applies to primary vector style (not satellite, not fallback).
     useEffect(() => {
       const map = mapRef.current;
       if (!map || !mapReady.current) return;
+      const isFallbackStyle = activeVectorStyleRef.current === FALLBACK_STYLE_URL;
+      if (currentSatelliteRef.current || isFallbackStyle) {
+        // Satellite and fallback are raster — force mercator
+        map.setProjection({ type: "mercator" });
+        map.easeTo({
+          pitch: mapMode === "globe" ? 0 : 62,
+          zoom: mapMode === "globe" ? Math.min(map.getZoom(), 2.6) : Math.max(map.getZoom(), 11),
+          duration: 900,
+        });
+        return;
+      }
       if (mapMode === "globe") {
         map.setProjection({ type: "globe" });
         map.easeTo({
@@ -698,7 +721,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           duration: 900,
         });
       }
-    }, [mapMode, mapReady.current]);
+    }, [mapMode, mapReady.current, currentSatelliteRef.current]);
 
     // ── Driver markers sync ────────────────────────────────────────────────
     useEffect(() => {

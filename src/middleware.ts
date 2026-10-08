@@ -122,12 +122,13 @@ export function middleware(request: NextRequest) {
     // MapLibre fetches its style.json, vector tiles, glyphs and sprites via
     // fetch() — all governed by connect-src. basemaps.cartocdn.com (apex)
     // hosts the Voyager GL style; demotiles.maplibre.org is the fallback style.
+    // tiles.openfreemap.org is the primary vector style source.
     // stun: entries are WebRTC ICE candidate gathering for voice/video calls.
     // wss://ws-*.pusher.com / sockjs-mt*.pusher.com: nothing in this app's
     // own code calls Pusher — it's the Vercel Live toolbar's own realtime
     // comments connection (vercel.live is already allowed above/below for
     // that same toolbar), blocked here without this.
-    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com https://server.arcgisonline.com wss://*.pusher.com https://*.pusher.com stun: turn:",
+    "connect-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseio.com wss://*.firebaseio.com https://*.supabase.co wss://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://vercel.live https://v6.exchangerate-api.com https://api.exchangerate-api.com https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://demotiles.maplibre.org https://api.maptiler.com https://server.arcgisonline.com https://tiles.openfreemap.org wss://*.pusher.com https://*.pusher.com stun: turn:",
     // MapLibre GL spawns its tile workers from blob: URLs; without worker-src
     // the default-src 'self' fallback blocks them and the canvas stays blank.
     "worker-src 'self' blob:",
