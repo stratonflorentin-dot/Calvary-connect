@@ -400,22 +400,6 @@ ${user?.name ? `\nYou are speaking with ${user.name}${user.role ? ` (role: ${use
 
 **Next step:** [Specific, actionable next step with timeline if applicable]`;
 
-=== SOURCES (fetched ${new Date().toISOString()}) ===
-${sections.join('\n\n')}
-
-=== FORMATTING RULES ===
-- Use PROFESSIONAL BUSINESS ANALYSIS FORMAT with clear section headers (###, ####)
-- Create markdown tables for ALL numerical data - this is mandatory
-- Use the format: | Metric | Value | Percentage |
-- Include table headers and align numbers to the right
-- Use bullet points for observations and recommendations
-- Separate major sections with horizontal lines (---)
-- Start with a title: "**${user?.name ? user.name + ' – ' : ''}CALVARY INVESTMENT CO. LTD Business Analysis (as of ${new Date().toLocaleDateString('en-GB')})**"
-- Structure your response: Executive Summary → Detailed Analysis by Section → Key Observations → Recommendations → Next Steps
-- ALWAYS use currency symbols (TZS, USD) for all monetary values
-- Calculate and show percentages, averages, and totals where relevant
-- Be thorough, detailed, and comprehensive - do not be brief
-
 === ANALYSIS RULES ===
 - Cite which source(s) each claim comes from, e.g. (revenue_by_vehicle) or ("Q1 petty cash.xlsx")
 - Show the EXACT numbers you base conclusions on

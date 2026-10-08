@@ -175,7 +175,14 @@ export default function ReportNotebookPage() {
       setIncludedIds((prev) => new Set([...prev, data.source.id]));
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: `Added source **${data.source.name}** (${data.source.kind}) and ran a full analysis — open it on the left to read it, then ask me anything about it.` },
+        { 
+          role: "ai", 
+          text: `Added source **${data.source.name}** (${data.source.kind}) and ran a full analysis — open it on the left to read it, then ask me anything about it.`,
+          id: crypto.randomUUID(),
+          timestamp: new Date(),
+          starred: false,
+          tags: []
+        },
       ]);
     } catch (err: any) {
       setUploadError(err.message || "Upload failed");
@@ -204,11 +211,25 @@ export default function ReportNotebookPage() {
     const question = (rawQuestion ?? inputVal).trim();
     if (!question || asking) return;
     if (!liveSelected.length && !includedIds.size) {
-      setMessages((prev) => [...prev, { role: "ai", text: "Select at least one source on the left first — a live report or an uploaded Excel/PDF." }]);
+      setMessages((prev) => [...prev, { 
+        role: "ai", 
+        text: "Select at least one source on the left first — a live report or an uploaded Excel/PDF.",
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        starred: false,
+        tags: []
+      }]);
       return;
     }
     setInputVal("");
-    setMessages((prev) => [...prev, { role: "user", text: question }]);
+    setMessages((prev) => [...prev, { 
+      role: "user", 
+      text: question,
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      starred: false,
+      tags: []
+    }]);
     setAsking(true);
     try {
       const headers = { "Content-Type": "application/json", ...(await authHeader()) };
@@ -226,9 +247,23 @@ export default function ReportNotebookPage() {
         }),
       });
       const data = await resp.json();
-      setMessages((prev) => [...prev, { role: "ai", text: data?.text || data?.error || "No response." }]);
+      setMessages((prev) => [...prev, { 
+        role: "ai", 
+        text: data?.text || data?.error || "No response.",
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        starred: false,
+        tags: []
+      }]);
     } catch (err: any) {
-      setMessages((prev) => [...prev, { role: "ai", text: `Notebook error: ${err.message || "server timeout"}` }]);
+      setMessages((prev) => [...prev, { 
+        role: "ai", 
+        text: `Notebook error: ${err.message || "server timeout"}`,
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        starred: false,
+        tags: []
+      }]);
     } finally {
       setAsking(false);
     }
