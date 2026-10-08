@@ -639,7 +639,7 @@ export default function FleetMapView({
 
         <motion.div
           layout
-          className={cn(glass, "rounded-2xl pointer-events-auto overflow-hidden flex flex-col max-h-[80vh] w-full md:w-[340px] md:self-start")}
+          className={cn(glass, "rounded-2xl pointer-events-auto flex flex-col max-h-[80vh] w-full md:w-[340px] md:self-start")}
         >
           <button
             type="button"
