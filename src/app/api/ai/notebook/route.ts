@@ -326,15 +326,33 @@ ${user?.name ? `\nYou are speaking with ${user.name}${user.role ? ` (role: ${use
 ${sections.join('\n\n')}
 
 **Response Format Guidelines:**
-- For simple questions or conversational queries: Give direct, natural answers like ChatGPT would
-- For analysis or report requests: Use structured format with tables, sections, and clear organization
-- For follow-up questions: Continue the conversation naturally, don't restart with a full report format
-- Use markdown tables when showing numerical data
+- Use NUMBERED SECTIONS (1., 2., 3.) for organization
+- Start each section with a clear title like "1. Fleet Status (as recorded in the source)"
+- Create markdown tables for ALL numerical data with proper headers
+- Include footnotes (†, ‡, etc.) to explain definitions, assumptions, and data issues
+- Structure your responses like professional business feedback reports
+- Use horizontal lines (---) to separate major sections
 - ALWAYS use currency symbols (TZS, USD) for all monetary values
 - Calculate and show percentages, averages, and totals where relevant
 - When providing analysis, cite which source(s) your information comes from
+- End with a clear conclusion or recommendation section
 
-Remember: You are a conversational AI, not a report generator. Adapt your style to match the user's question. If they ask a simple question, give a simple answer. If they ask for analysis, provide a structured response. Be natural and helpful.`;
+**Example Structure:**
+1. [Section Title with source reference]
+   | Metric | Value | Percentage |
+   |--------|-------|------------|
+   | [Data] | [Data] | [Data] |
+
+   **Analysis:** [Explanation of what the data means]
+
+   † [Footnote explaining definitions or assumptions]
+
+---
+
+2. [Next Section Title]
+   [Continue with more tables and analysis]
+
+Remember: You are providing structured business feedback. Organize your responses clearly with numbered sections, tables, and explanatory footnotes like a professional business analyst would.`;
 
     const result = await generateAI({
       system,
