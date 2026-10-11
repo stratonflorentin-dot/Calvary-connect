@@ -645,11 +645,9 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     }, []);
 
     // ── Satellite toggle ──────────────────────────────────────────────────
-    // Swaps the whole style via setStyle() rather than tearing down the map,
-    // so camera position, driver markers (DOM overlays, unaffected by style)
-    // and event listeners all survive. setStyle() does wipe style-owned
-    // sources/layers (accuracy circle, 3D buildings), so those are re-added
-    // once the new style finishes loading.
+    // Instead of swapping the whole style (which loses globe projection),
+    // we keep the vector style and add/remove Esri satellite raster layers
+    // on top. This preserves globe/3D projection while showing satellite imagery.
     const isFirstSatelliteRunRef = useRef(true);
     useEffect(() => {
       const map = mapRef.current;
@@ -661,30 +659,38 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       if (currentSatelliteRef.current === satellite) return;
       currentSatelliteRef.current = satellite;
 
-      map.setStyle(satellite ? SATELLITE_STYLE : activeVectorStyleRef.current);
-      map.once("style.load", () => {
-        // Re-apply projection after style change.
-        // Satellite is raster-only (no globe). Fallback (CARTO Dark Matter) is also raster.
-        // Only primary vector style supports globe projection.
-        const isFallbackStyle = activeVectorStyleRef.current === FALLBACK_STYLE_URL;
-        if (!satellite && !isFallbackStyle && mapMode === "globe") {
-          map.setProjection({ type: "globe" });
+      if (satellite) {
+        // Add Esri satellite + labels as raster layers on top of current vector style
+        if (!map.getSource("esri-satellite")) {
+          map.addSource("esri-satellite", {
+            type: "raster",
+            tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+            tileSize: 256,
+            maxzoom: 17,
+            attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+          });
+          map.addLayer({ id: "esri-satellite", type: "raster", source: "esri-satellite" });
         } else {
-          map.setProjection({ type: "mercator" });
+          map.setLayoutProperty("esri-satellite", "visibility", "visible");
         }
-        addAccuracyLayers(map);
-        if (!satellite && !isFallbackStyle && !styleHasNativeBuildings(activeVectorStyleRef.current)) {
-          addBuildingsLayer(map);
+        if (!map.getSource("esri-labels")) {
+          map.addSource("esri-labels", {
+            type: "raster",
+            tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"],
+            tileSize: 256,
+          });
+          map.addLayer({ id: "esri-labels", type: "raster", source: "esri-labels" });
+        } else {
+          map.setLayoutProperty("esri-labels", "visibility", "visible");
         }
-
-        const sel = latestLocationsRef.current.find(
-          (l) => l.id === latestSelectedIdRef.current,
-        );
-        if (sel && sel.accuracy && sel.accuracy > 0 && sel.accuracy <= 5000) {
-          const source = map.getSource("accuracy-src") as maplibregl.GeoJSONSource | undefined;
-          source?.setData(makeAccuracyCircle(sel.latitude, sel.longitude, sel.accuracy) as any);
-        }
-      });
+        // Move satellite layers to bottom of layer stack (satellite first, then labels)
+        if (map.getLayer("esri-satellite")) map.moveLayer("esri-satellite", "esri-labels");
+        if (map.getLayer("esri-labels")) map.moveLayer("esri-labels", "esri-satellite");
+      } else {
+        // Hide satellite layers
+        if (map.getLayer("esri-satellite")) map.setLayoutProperty("esri-satellite", "visibility", "none");
+        if (map.getLayer("esri-labels")) map.setLayoutProperty("esri-labels", "visibility", "none");
+      }
     }, [satellite]);
 
     // ── Map mode (2D / 3D / Globe) projection ──────────────────────────────
