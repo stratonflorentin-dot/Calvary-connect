@@ -12,6 +12,13 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { FleetMapDriver } from "@/components/fleet-map/types";
 import { calculateGeodesicDistance } from "@/lib/geo-utils";
 
+// MapLibre v6 requires bundlers to point explicitly at the packaged worker.
+// Without this, the map shell renders but the worker fails and the basemap
+// remains blank (especially with Next's split client chunks and CSP).
+maplibregl.setWorkerUrl(
+  new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString(),
+);
+
 type MapProjection = Parameters<maplibregl.Map["setProjection"]>[0];
 
 function setProjectionWhenReady(

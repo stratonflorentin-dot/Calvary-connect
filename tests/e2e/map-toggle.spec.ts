@@ -2,10 +2,19 @@ import { expect, test } from "@playwright/test";
 import { authenticateAndMock } from "./helpers";
 
 test("map layers open from controls and keyboard shortcuts, and remain selected after reload", async ({ page }, testInfo) => {
+  const mapWorkerErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && /Worker failed to load/i.test(message.text())) {
+      mapWorkerErrors.push(message.text());
+    }
+  });
   await authenticateAndMock(page);
   await page.route("https://api.maptiler.com/**", (route) => route.abort());
   await page.goto("/map", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Fleet tracking" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".maplibregl-canvas")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Loading map…")).toHaveCount(0, { timeout: 20_000 });
+  expect(mapWorkerErrors).toEqual([]);
 
   const globeMode = page.locator('[title="Globe view"]');
   await expect(globeMode).toHaveAttribute("aria-pressed", "true");
