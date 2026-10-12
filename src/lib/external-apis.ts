@@ -136,8 +136,20 @@ const SITE_RATE_LIMITS_PER_MINUTE: Record<string, number> = {
 const RATE_WINDOW_MS = 60_000;
 const REDIS_SOCKET_TIMEOUT_MS = 350;
 const REDIS_RETRY_DELAY_MS = 15_000;
-const CLI_TIMEOUT_MS = 20_000;
+const CLI_TIMEOUT_MS = 35_000;
 const MAX_CLI_OUTPUT_BYTES = 2 * 1024 * 1024;
+
+export function resolveApiAnythingNodeExecutable(
+  runtimeExecutable = process.execPath,
+  configuredExecutable = process.env.API_ANYTHING_NODE_PATH,
+): string {
+  const configured = configuredExecutable?.trim();
+  if (configured) return configured;
+  // Some serverless runtimes expose a build-time/runtime shim in execPath that
+  // is not present as an executable in the function filesystem. Fall back to
+  // resolving the node binary from PATH in those environments.
+  return existsSync(runtimeExecutable) ? runtimeExecutable : "node";
+}
 
 function makeMeta(source: string, cached: boolean, fetchedAt: string, expiresAt: string): ApiResponseMeta {
   return { source, cached, fetchedAt, expiresAt };
@@ -458,7 +470,7 @@ async function runApiAnything(
 
   let stdout = "";
   try {
-    const result = await execFile(process.execPath, cliArgs, {
+    const result = await execFile(resolveApiAnythingNodeExecutable(), cliArgs, {
       cwd: apiAnythingRoot,
       env: { ...process.env, API_ANYTHING_HOME: apiAnythingHome },
       timeout: CLI_TIMEOUT_MS,

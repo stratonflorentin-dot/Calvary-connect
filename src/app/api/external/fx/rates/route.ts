@@ -4,6 +4,7 @@ import { callExternalApi, type ExchangeRates } from "@/lib/external-apis";
 import { EXTERNAL_API_ROLES, externalApiJson, invalidExternalRequest } from "@/lib/external-api-routes";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export const GET = withAuthAndRateLimit(async (request: NextRequest) => {
   const base = request.nextUrl.searchParams.get("base")?.trim().toUpperCase() || "TZS";

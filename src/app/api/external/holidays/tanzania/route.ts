@@ -4,6 +4,7 @@ import { callExternalApi, type PublicHoliday } from "@/lib/external-apis";
 import { EXTERNAL_API_ROLES, externalApiJson, invalidExternalRequest } from "@/lib/external-api-routes";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export const GET = withAuthAndRateLimit(async (request: NextRequest) => {
   const rawYear = request.nextUrl.searchParams.get("year")?.trim();

@@ -9,6 +9,7 @@ import {
 import { externalApiJson, invalidExternalRequest } from "@/lib/external-api-routes";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 const ADMIN_ROLES = ["CEO", "ADMIN"];
 
 export const GET = withAuthAndRateLimit(async (_request: NextRequest) =>

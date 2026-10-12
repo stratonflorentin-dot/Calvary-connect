@@ -4,6 +4,7 @@ import { callExternalApi } from "@/lib/external-apis";
 import { EXTERNAL_API_ROLES, externalApiJson } from "@/lib/external-api-routes";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export const GET = withAuthAndRateLimit(async (_request: NextRequest) => {
   // TPA publishes the current snapshot without date query parameters.

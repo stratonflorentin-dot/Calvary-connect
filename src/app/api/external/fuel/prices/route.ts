@@ -12,6 +12,7 @@ import {
 import { EXTERNAL_API_ROLES, externalApiJson } from "@/lib/external-api-routes";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const COUNTRY_REGIONS = new Set(["", "tz", "tanzania", "country"]);
 const KENYA_REGIONS = new Set(["ke", "kenya"]);
