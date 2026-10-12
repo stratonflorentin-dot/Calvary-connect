@@ -53,7 +53,12 @@ export async function POST(req: Request) {
         // Use centralized provider abstraction
         try {
             const result = await generateAI({ system, messages: [...formattedHistory, { role: 'user', content: [{ text: message }] }] as any });
-            return NextResponse.json({ text: result.text, provider: result.provider, generatedAt: new Date().toISOString() });
+            return NextResponse.json({
+                text: result.text,
+                provider: result.provider,
+                generatedAt: new Date().toISOString(),
+                source: 'current fleet, trip, finance and operations records',
+            });
         } catch (err: any) {
             console.error('AI provider failed:', err);
             return NextResponse.json({ error: 'AI provider is unavailable. Check OPENROUTER_API_KEY or GROQ_API_KEY and retry.', code: 'AI_PROVIDER_UNAVAILABLE' }, { status: 502 });

@@ -81,6 +81,73 @@ function AiRunMeta({ result }: { result: any }) {
   );
 }
 
+function renderInlineReportText(value: string) {
+  return value.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={index}>{part.slice(2, -2)}</strong>
+      : part,
+  );
+}
+
+function FormattedAiReport({ text }: { text: string }) {
+  const lines = text.replace(/\r/g, '').split('\n');
+  const blocks: React.ReactNode[] = [];
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index].trim();
+    if (!line || /^---+$/.test(line)) { index += 1; continue; }
+
+    if (line.startsWith('|') && index + 1 < lines.length && /^\|?\s*:?-{3,}/.test(lines[index + 1].trim())) {
+      const rows = [line];
+      let tableRowIndex = index + 2;
+      while (tableRowIndex < lines.length && lines[tableRowIndex].trim().startsWith('|')) {
+        rows.push(lines[tableRowIndex].trim());
+        tableRowIndex += 1;
+      }
+      const cells = rows.map((row) => row.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim()));
+      const [header, ...body] = cells;
+      blocks.push(
+        <div key={`table-${index}`} className="my-3 overflow-x-auto rounded-lg border border-border">
+          <table className="w-full min-w-max border-collapse text-left text-xs">
+            <thead className="bg-background/80"><tr>{header.map((cell, cellIndex) => <th key={cellIndex} className="border-b border-border px-3 py-2 font-semibold">{renderInlineReportText(cell)}</th>)}</tr></thead>
+            <tbody>{body.map((row, rowIndex) => <tr key={rowIndex} className="odd:bg-background/30">{header.map((_, cellIndex) => <td key={cellIndex} className="border-b border-border/60 px-3 py-2 align-top">{renderInlineReportText(row[cellIndex] || '—')}</td>)}</tr>)}</tbody>
+          </table>
+        </div>,
+      );
+      index = tableRowIndex;
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,4})\s+(.+)$/);
+    if (heading) {
+      blocks.push(<h3 key={`heading-${index}`} className="mt-3 text-sm font-bold text-foreground">{renderInlineReportText(heading[2])}</h3>);
+      index += 1;
+      continue;
+    }
+
+    const listType = /^\s*(?:[-*•]\s+|\d+[.)]\s+)/.test(lines[index]) ? 'list' : null;
+    if (listType) {
+      const items: string[] = [];
+      while (index < lines.length && /^\s*(?:[-*•]\s+|\d+[.)]\s+)/.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*(?:[-*•]\s+|\d+[.)]\s+)/, '').trim());
+        index += 1;
+      }
+      blocks.push(<ul key={`list-${index}`} className="my-2 list-disc space-y-1 pl-5">{items.map((item, itemIndex) => <li key={itemIndex}>{renderInlineReportText(item)}</li>)}</ul>);
+      continue;
+    }
+
+    const paragraph = [line];
+    index += 1;
+    while (index < lines.length && lines[index].trim() && !/^(#{1,4})\s+/.test(lines[index].trim()) && !/^\s*(?:[-*•]\s+|\d+[.)]\s+)/.test(lines[index]) && !(lines[index].trim().startsWith('|') && index + 1 < lines.length && /^\|?\s*:?-{3,}/.test(lines[index + 1].trim()))) {
+      paragraph.push(lines[index].trim());
+      index += 1;
+    }
+    blocks.push(<p key={`paragraph-${index}`} className="my-2">{renderInlineReportText(paragraph.join(' '))}</p>);
+  }
+
+  return <div className="space-y-1 text-[13px] leading-relaxed">{blocks}</div>;
+}
+
 export default function AIAnalysisDashboard() {
   const { format } = useCurrency();
   const { user } = useSupabase();
@@ -195,7 +262,7 @@ export default function AIAnalysisDashboard() {
 
   // Chat State
   const WELCOME_MESSAGE = { role: 'ai' as const, text: "Welcome to Calvary Command Center AI. I have fully indexed our fleet logs, active transit pipelines, and financial reports. Ask me to run operational audits, summarize profitability, or outline logistics strategies." };
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string; provider?: string; generatedAt?: string; source?: string; error?: boolean }>>([WELCOME_MESSAGE]);
   const [inputVal, setInputVal] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [dbContext, setDbContext] = useState<any | null>(null);
@@ -251,11 +318,11 @@ export default function AIAnalysisDashboard() {
       });
 
       const data = await resp.json();
-      const answer = data?.text || data?.error || 'No response from AI.';
-
-      setMessages(prev => [...prev, { role: 'ai', text: answer }]);
+      if (!resp.ok) throw new Error(data?.error || 'AI request failed. Try again.');
+      const answer = data?.text || 'No response from AI.';
+      setMessages(prev => [...prev, { role: 'ai', text: answer, provider: data.provider, generatedAt: data.generatedAt, source: data.source || 'current company and fleet data' }]);
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'ai', text: `Failed to compile analysis: ${err.message || 'Server timeout'}` }]);
+      setMessages(prev => [...prev, { role: 'ai', text: err.message || 'AI request failed. Try again.', error: true }]);
     } finally {
       setAiLoading(false);
     }
@@ -285,9 +352,9 @@ export default function AIAnalysisDashboard() {
       const promptContext = `Scenario: trips=${monthlyTrips}, avgRate=${avgRate}, costRatio=${costRatio}, growth=${growthRate}, horizon=${horizon}`;
       const msg = `${userMsg}\n\n${promptContext}`;
       const answer = await askCompanyAI(msg, history, liveMetricsPayload, dbContext);
-      setMessages(prev => [...prev, { role: 'ai', text: answer }]);
+      setMessages(prev => [...prev, { role: 'ai', text: answer.text, provider: answer.provider, generatedAt: answer.generatedAt, source: answer.source || 'current company and fleet data' }]);
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'ai', text: `AI error: ${err.message || err}` }]);
+      setMessages(prev => [...prev, { role: 'ai', text: err.message || 'AI request failed. Try again.', error: true }]);
     } finally {
       setAiLoading(false);
     }
@@ -1064,9 +1131,9 @@ export default function AIAnalysisDashboard() {
                               profit: netProfit,
                               utilization: `${fleetUtilization.toFixed(1)}%`,
                             });
-                            setMessages(prev => [...prev, { role: 'ai', text: answer }]);
+                            setMessages(prev => [...prev, { role: 'ai', text: answer.text, provider: answer.provider, generatedAt: answer.generatedAt, source: answer.source || 'current company and fleet data' }]);
                           } catch (err: any) {
-                            setMessages(prev => [...prev, { role: 'ai', text: `AI error: ${err?.message || err}` }]);
+                            setMessages(prev => [...prev, { role: 'ai', text: err?.message || 'AI request failed. Try again.', error: true }]);
                           } finally {
                             setAiLoading(false);
                           }
@@ -1269,7 +1336,9 @@ export default function AIAnalysisDashboard() {
                       "max-w-[90%] rounded-2xl p-4 leading-relaxed shadow-sm",
                       msg.role === 'user'
                         ? "ml-auto bg-primary text-primary-foreground rounded-tr-sm"
-                        : "mr-auto bg-muted/80 text-foreground border border-border rounded-tl-sm"
+                        : msg.error
+                          ? "mr-auto bg-destructive/5 text-foreground border border-destructive/30 rounded-tl-sm"
+                          : "mr-auto bg-muted/80 text-foreground border border-border rounded-tl-sm"
                     )}
                   >
                     <span className={cn(
@@ -1278,7 +1347,16 @@ export default function AIAnalysisDashboard() {
                     )}>
                       {msg.role === 'user' ? (user?.name || 'You') : 'Calvary AI Analyst'}
                     </span>
-                    <div className="whitespace-pre-line text-[13px]">{msg.text}</div>
+                    {msg.role === 'ai' ? (
+                      <FormattedAiReport text={msg.text} />
+                    ) : (
+                      <div className="whitespace-pre-line text-[13px]">{msg.text}</div>
+                    )}
+                    {msg.role === 'ai' && msg.generatedAt && (
+                      <p className="mt-3 border-t border-border/70 pt-2 text-[10px] text-muted-foreground">
+                        {[msg.provider ? `AI via ${msg.provider}` : 'AI analysis', msg.source, new Date(msg.generatedAt).toLocaleString()].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                     {msg.role === 'ai' && index > 0 && (
                       <button
                         type="button"

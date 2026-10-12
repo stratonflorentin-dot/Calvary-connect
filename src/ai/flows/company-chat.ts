@@ -22,5 +22,5 @@ export async function askCompanyAI(
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || `AI request failed (${res.status})`);
-  return data.text;
+  return data;
 }
