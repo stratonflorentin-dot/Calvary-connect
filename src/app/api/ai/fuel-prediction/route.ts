@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getFuelPrediction, FuelPredictionInputSchema } from '@/ai/flows/fuel-prediction';
+import { getFuelPredictionWithMeta, FuelPredictionInputSchema } from '@/ai/flows/fuel-prediction';
 
 export async function POST(req: Request) {
     try {
@@ -13,8 +13,8 @@ export async function POST(req: Request) {
             );
         }
 
-        const result = await getFuelPrediction(validation.data);
-        return NextResponse.json({ success: true, result });
+        const { output: result, provider } = await getFuelPredictionWithMeta(validation.data);
+        return NextResponse.json({ success: true, result, provider, generatedAt: new Date().toISOString(), source: 'route, vehicle efficiency, load and fuel price inputs' });
     } catch (error: any) {
         console.error('Fuel Prediction API Error:', error);
         return NextResponse.json(

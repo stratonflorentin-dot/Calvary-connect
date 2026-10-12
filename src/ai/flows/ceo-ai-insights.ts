@@ -6,7 +6,7 @@
  * - CeoAiInsightsOutput - The return type for the getCeoAiInsights function.
  */
 
-import { createGenkit } from '@/ai/genkit';
+import { generateStructuredAI } from '@/lib/ai-provider';
 import { z } from 'zod';
 
 export const CeoAiInsightsInputSchema = z.object({
@@ -35,45 +35,21 @@ const CeoAiInsightsOutputSchema = z.object({
 export type CeoAiInsightsOutput = z.infer<typeof CeoAiInsightsOutputSchema>;
 
 async function createCeoAiInsightsFlow() {
-  const ai = await createGenkit();
-
-  const ceoAiInsightsPrompt = ai.definePrompt({
-    name: 'ceoAiInsightsPrompt',
-    input: { schema: CeoAiInsightsInputSchema },
-    output: { schema: CeoAiInsightsOutputSchema },
-    prompt: `You are a senior logistics operations analyst.
-
-Analyze this FleetCommand data, presented as a JSON object:
-
-${'```json'}
-{{{json this}}}
-${'```'}
-
-Provide:
-1. KEY HIGHLIGHTS (2-3 bullets of what is going well)
-2. AREAS OF CONCERN (2-3 bullets of risks/issues)
-3. ACTIONABLE RECOMMENDATIONS (2-3 specific actions for today)
-
-Use real numbers from the data. The total response should be under 250 words total. The output should be a JSON object conforming to the CeoAiInsightsOutputSchema.`,
-  });
-
-  return ai.defineFlow(
-    {
-      name: 'ceoAiInsightsFlow',
-      inputSchema: CeoAiInsightsInputSchema,
-      outputSchema: CeoAiInsightsOutputSchema,
-    },
-    async (input: CeoAiInsightsInput) => {
-      const { output } = await ceoAiInsightsPrompt(input);
-      if (!output) {
-        throw new Error('Failed to generate AI insights.');
-      }
-      return output;
-    }
-  );
+  return async (input: CeoAiInsightsInput) => {
+    const { output, provider } = await generateStructuredAI({
+      system: 'You are a senior logistics operations analyst. Analyze the supplied live fleet metrics only; do not invent data. Provide 2-3 key highlights, 2-3 concerns, and 2-3 actionable recommendations. Keep the response under 250 words and return JSON matching the required schema.',
+      messages: [{ role: 'user', content: [{ text: JSON.stringify(input) }] }],
+    }, CeoAiInsightsOutputSchema);
+    return { output, provider };
+  };
 }
 
 export async function getCeoAiInsights(input: CeoAiInsightsInput): Promise<CeoAiInsightsOutput> {
+  const ceoAiInsightsFlow = await createCeoAiInsightsFlow();
+  return (await ceoAiInsightsFlow(input)).output;
+}
+
+export async function getCeoAiInsightsWithMeta(input: CeoAiInsightsInput) {
   const ceoAiInsightsFlow = await createCeoAiInsightsFlow();
   return ceoAiInsightsFlow(input);
 }

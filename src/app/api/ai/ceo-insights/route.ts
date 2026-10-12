@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCeoAiInsights, CeoAiInsightsInputSchema } from '@/ai/flows/ceo-ai-insights';
+import { getCeoAiInsightsWithMeta, CeoAiInsightsInputSchema } from '@/ai/flows/ceo-ai-insights';
 
 export async function POST(req: Request) {
     try {
@@ -13,8 +13,8 @@ export async function POST(req: Request) {
             );
         }
 
-        const result = await getCeoAiInsights(validation.data);
-        return NextResponse.json({ success: true, result });
+        const { output: result, provider } = await getCeoAiInsightsWithMeta(validation.data);
+        return NextResponse.json({ success: true, result, provider, generatedAt: new Date().toISOString(), source: 'current fleet, trip, revenue and maintenance metrics' });
     } catch (error: any) {
         console.error('CEO Insights API Error:', error);
         return NextResponse.json(

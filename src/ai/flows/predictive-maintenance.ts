@@ -10,7 +10,7 @@
  * Called asynchronously (returns jobId immediately, polls for result).
  */
 
-import { createGenkit } from '@/ai/genkit';
+import { generateStructuredAI } from '@/lib/ai-provider';
 import { z } from 'zod';
 
 // ─── Input Schema ─────────────────────────────────────────────────────────────
@@ -48,21 +48,14 @@ export type PredictiveMaintenanceOutput = z.infer<typeof PredictiveMaintenanceOu
 // ─── Flow ─────────────────────────────────────────────────────────────────────
 
 async function createPredictiveMaintenanceFlow() {
-  const ai = await createGenkit();
-  return ai.defineFlow(
-    {
-      name: 'predictiveMaintenanceFlow',
-      inputSchema: PredictiveMaintenanceInputSchema,
-      outputSchema: PredictiveMaintenanceOutputSchema,
-    },
-    async (input: PredictiveMaintenanceInput) => {
+  return async (input: PredictiveMaintenanceInput) => {
       const kmSinceService = input.currentOdometerKm - input.lastServiceOdometerKm;
       const daysSinceService = Math.floor(
         (Date.now() - new Date(input.lastServiceDate).getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      const { output } = await ai.generate({
-        prompt: `You are a senior fleet maintenance engineer with 20 years of experience in heavy logistics.
+      const { output, provider } = await generateStructuredAI({
+        system: `You are a senior fleet maintenance engineer with 20 years of experience in heavy logistics.
 
 Analyse this vehicle data and predict maintenance needs for the next ${input.daysAhead} days:
 
@@ -80,13 +73,11 @@ Based on standard ${input.fuelType} diesel fleet maintenance intervals (every 10
 provide a precise maintenance prediction. Output valid JSON matching the schema exactly.
 
 IMPORTANT: failureProbability must be between 0.0 and 1.0. estimatedRepairCostUSD must be a realistic number.`,
-        output: { schema: PredictiveMaintenanceOutputSchema },
-      });
+        messages: [{ role: 'user', content: [{ text: 'Return the maintenance prediction as valid JSON only.' }] }],
+      }, PredictiveMaintenanceOutputSchema);
 
-      if (!output) throw new Error('Predictive maintenance AI failed to generate output.');
-      return output;
-    }
-  );
+      return { output, provider };
+  };
 }
 
 /**
@@ -95,6 +86,11 @@ IMPORTANT: failureProbability must be between 0.0 and 1.0. estimatedRepairCostUS
 export async function getPredictiveMaintenance(
   input: PredictiveMaintenanceInput
 ): Promise<PredictiveMaintenanceOutput> {
+  const predictiveMaintenanceFlow = await createPredictiveMaintenanceFlow();
+  return (await predictiveMaintenanceFlow(input)).output;
+}
+
+export async function getPredictiveMaintenanceWithMeta(input: PredictiveMaintenanceInput) {
   const predictiveMaintenanceFlow = await createPredictiveMaintenanceFlow();
   return predictiveMaintenanceFlow(input);
 }

@@ -11,7 +11,7 @@
  * routed through fuelAnomalyMachine (src/lib/workflow/state-machines.ts).
  */
 
-import { createGenkit } from '@/ai/genkit';
+import { generateStructuredAI } from '@/lib/ai-provider';
 import { z } from 'zod';
 
 const FindingSchema = z.object({
@@ -55,16 +55,9 @@ const FuelInvestigationOutputSchema = z.object({
 export type FuelInvestigationOutput = z.infer<typeof FuelInvestigationOutputSchema>;
 
 async function createFuelInvestigationFlow() {
-  const ai = await createGenkit();
-  return ai.defineFlow(
-    {
-      name: 'fuelInvestigationFlow',
-      inputSchema: FuelInvestigationInputSchema,
-      outputSchema: FuelInvestigationOutputSchema,
-    },
-    async (input: FuelInvestigationInput) => {
-      const { output } = await ai.generate({
-        prompt: `You are a fraud investigation analyst for Calvary Investment Co. Ltd, a road freight company in Tanzania. You are reviewing ONE flagged fuel transaction. Every number below was already calculated deterministically by the application — do not recompute or second-guess the arithmetic, only interpret it.
+  return async (input: FuelInvestigationInput) => {
+      const { output } = await generateStructuredAI({
+        system: `You are a fraud investigation analyst for Calvary Investment Co. Ltd, a road freight company in Tanzania. You are reviewing ONE flagged fuel transaction. Every number below was already calculated deterministically by the application — do not recompute or second-guess the arithmetic, only interpret it.
 
 HARD RULES — do not break these:
 1. Never state that fraud is "confirmed". At most, say this is a "high-risk anomaly requiring investigation". Only a human, through the existing approval workflow, can confirm fraud.
@@ -93,12 +86,10 @@ ${input.tripSummary ? `Linked trip: ${input.tripSummary.origin} → ${input.trip
 ${input.dataQualityNotes.length > 0 ? `Data quality gaps: ${input.dataQualityNotes.join('; ')}` : 'No data quality gaps noted.'}
 
 Produce your investigation report as JSON matching the output schema.`,
-        output: { schema: FuelInvestigationOutputSchema },
-      });
-      if (!output) throw new Error('Fuel investigation AI failed to generate output.');
+        messages: [{ role: 'user', content: [{ text: 'Return the investigation report as valid JSON only.' }] }],
+      }, FuelInvestigationOutputSchema);
       return output;
-    },
-  );
+  };
 }
 
 export async function investigateFuelAnomaly(input: FuelInvestigationInput): Promise<FuelInvestigationOutput> {

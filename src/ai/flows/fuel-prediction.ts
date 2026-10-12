@@ -9,7 +9,7 @@
  * - Current fuel price
  */
 
-import { createGenkit } from '@/ai/genkit';
+import { generateStructuredAI } from '@/lib/ai-provider';
 import { z } from 'zod';
 
 // ─── Input ────────────────────────────────────────────────────────────────────
@@ -50,15 +50,7 @@ export type FuelPredictionOutput = z.infer<typeof FuelPredictionOutputSchema>;
 // ─── Flow ─────────────────────────────────────────────────────────────────────
 
 async function createFuelPredictionFlow() {
-  const ai = await createGenkit();
-
-  return ai.defineFlow(
-    {
-      name: 'fuelPredictionFlow',
-      inputSchema: FuelPredictionInputSchema,
-      outputSchema: FuelPredictionOutputSchema,
-    },
-    async (input: FuelPredictionInput) => {
+  return async (input: FuelPredictionInput) => {
       // Load adjustment factor (heavier load = worse efficiency)
       const loadFactor = 1 + input.loadWeightTons * 0.02; // 2% per ton
       const terrainFactors = { flat: 1.0, hilly: 1.15, mountainous: 1.30, mixed: 1.10 };
@@ -71,8 +63,8 @@ async function createFuelPredictionFlow() {
 
       const estimatedLiters = input.distanceKm / adjustedEfficiency;
 
-      const { output } = await ai.generate({
-        prompt: `You are a fuel efficiency analyst for a large fleet company.
+      const { output, provider } = await generateStructuredAI({
+        system: `You are a fuel efficiency analyst for a large fleet company.
 
 Predict fuel consumption for this trip:
 Route: ${input.origin} → ${input.destination} (${input.distanceKm} km)
@@ -88,16 +80,19 @@ Pre-calculated estimate: ~${estimatedLiters.toFixed(1)} L
 Validate and refine the estimate. Provide actionable optimisation tips.
 For CO2, use: Diesel = 2.68 kg/L, Petrol = 2.31 kg/L.
 Output valid JSON matching the schema.`,
-        output: { schema: FuelPredictionOutputSchema },
-      });
+        messages: [{ role: 'user', content: [{ text: 'Return the fuel prediction as valid JSON only.' }] }],
+      }, FuelPredictionOutputSchema);
 
-      if (!output) throw new Error('Fuel prediction AI failed to generate output.');
-      return output;
-    }
-  );
+      return { output, provider };
+  };
 }
 
 export async function getFuelPrediction(input: FuelPredictionInput): Promise<FuelPredictionOutput> {
+  const fuelPredictionFlow = await createFuelPredictionFlow();
+  return (await fuelPredictionFlow(input)).output;
+}
+
+export async function getFuelPredictionWithMeta(input: FuelPredictionInput) {
   const fuelPredictionFlow = await createFuelPredictionFlow();
   return fuelPredictionFlow(input);
 }

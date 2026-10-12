@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
-    getPredictiveMaintenance,
+    getPredictiveMaintenanceWithMeta,
     PredictiveMaintenanceInputSchema,
 } from '@/ai/flows/predictive-maintenance';
 
@@ -16,8 +16,8 @@ export async function POST(req: Request) {
             );
         }
 
-        const result = await getPredictiveMaintenance(validation.data);
-        return NextResponse.json({ success: true, result });
+        const { output: result, provider } = await getPredictiveMaintenanceWithMeta(validation.data);
+        return NextResponse.json({ success: true, result, provider, generatedAt: new Date().toISOString(), source: 'vehicle odometer, condition and maintenance inputs' });
     } catch (error: any) {
         console.error('Predictive Maintenance API Error:', error);
         return NextResponse.json(

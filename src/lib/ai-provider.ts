@@ -1,5 +1,5 @@
 // Server-side AI provider abstraction.
-// Chooses provider by `AI_PROVIDER` env (openrouter|genkit) or falls back.
+// Chooses provider by `AI_PROVIDER` env (openrouter|groq) or falls back.
 
 type Msg = { role: string; content: Array<{ text: string }> };
 type Usage = { tokensIn: number; tokensOut: number } | null;
@@ -58,7 +58,7 @@ export async function generateAI(opts: { system: string; messages: Msg[]; maxTok
         }
     };
 
-    const tryGenkit = async () => {
+    const tryGroq = async () => {
         // genkitx-groq (the genkit plugin previously used here) ships its own
         // small, hardcoded model allowlist that hasn't kept up with Groq's
         // actual catalog — confirmed live: of every model that plugin
@@ -99,15 +99,15 @@ export async function generateAI(opts: { system: string; messages: Msg[]; maxTok
             return await tryOpenRouter();
         } catch (err) {
             console.error('OpenRouter preferred but failed:', err);
-            return await tryGenkit();
+            return await tryGroq();
         }
     }
 
-    if (preferred === 'genkit') {
+    if (preferred === 'groq' || preferred === 'genkit') {
         try {
-            return await tryGenkit();
+            return await tryGroq();
         } catch (err) {
-            console.error('Genkit preferred but failed:', err);
+            console.error('Groq preferred but failed:', err);
             if (openKey) return await tryOpenRouter();
             throw err;
         }
@@ -118,13 +118,34 @@ export async function generateAI(opts: { system: string; messages: Msg[]; maxTok
         try {
             return await tryOpenRouter();
         } catch (err: any) {
-            console.warn('OpenRouter failed, falling back to genkit:', err?.message || err);
-            return await tryGenkit();
+            console.warn('OpenRouter failed, falling back to Groq:', err?.message || err);
+            return await tryGroq();
         }
     }
 
-    // Last resort genkit
-    return await tryGenkit();
+    // Last resort Groq
+    return await tryGroq();
+}
+
+export async function generateStructuredAI<T>(
+    opts: { system: string; messages: Msg[]; maxTokens?: number },
+    schema: { safeParse(value: unknown): { success: boolean; data?: T; error?: { message?: string } } },
+): Promise<{ output: T; provider: string }> {
+    const generated = await generateAI(opts);
+    const cleaned = generated.text.trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/```\s*$/i, '');
+    let candidate: unknown;
+    try {
+        candidate = JSON.parse(cleaned);
+    } catch {
+        throw new Error('AI response was not valid JSON. Retry the request.');
+    }
+    const parsed = schema.safeParse(candidate);
+    if (!parsed.success || parsed.data === undefined) {
+        throw new Error(`AI response did not match the expected format${parsed.error?.message ? `: ${parsed.error.message}` : '.'}`);
+    }
+    return { output: parsed.data, provider: generated.provider };
 }
 
 export function ensureServer() {
