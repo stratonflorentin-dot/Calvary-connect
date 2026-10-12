@@ -28,6 +28,7 @@ import {
 import { Plus, Receipt } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
+import { uploadToBucket } from "@/lib/storage-upload";
 import {
   fetchAccountantUserIds,
   notifyAccountantsExpenseSubmitted,
@@ -56,14 +57,22 @@ export default function DriverExpensesPage() {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState("fuel");
+  const [tripId, setTripId] = useState("none");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
     setSubmitting(true);
     const form = new FormData(e.currentTarget);
+    const selectedTrip = trips.find((trip) => String(trip.id) === tripId);
 
     try {
+      let receiptUrl: string | null = null;
+      const receipt = form.get("receipt");
+      if (receipt instanceof File && receipt.size > 0) {
+        receiptUrl = await uploadToBucket("documents", `driver-expenses/${user.id}`, receipt, `${Date.now()}-${receipt.name.replace(/[^\w.-]/g, "_")}`);
+        if (!receiptUrl) throw new Error("Receipt upload failed. Please try again.");
+      }
       const { error } = await supabase.from("expenses").insert([
         {
           description: String(form.get("description") || ""),
@@ -71,6 +80,9 @@ export default function DriverExpensesPage() {
           category,
           date: String(form.get("date") || new Date().toISOString().slice(0, 10)),
           client_reference: String(form.get("tripRef") || ""),
+          trip_id: selectedTrip?.id ?? null,
+          vehicle_id: (selectedTrip?.vehicle_id || selectedTrip?.truck_id || null) as string | null,
+          receipt_url: receiptUrl,
           driver_id: user.id,
           status: "pending",
           created_at: new Date().toISOString(),
@@ -88,6 +100,7 @@ export default function DriverExpensesPage() {
       );
       toast({ variant: "success", title: "Expense submitted", description: "Pending approval." });
       setOpen(false);
+      setTripId("none");
       (e.target as HTMLFormElement).reset();
       refresh();
     } catch (err: unknown) {
@@ -150,8 +163,17 @@ export default function DriverExpensesPage() {
                 <Textarea id="description" name="description" required className="min-h-[80px]" />
               </div>
               <div>
-                <Label htmlFor="tripRef">Trip reference (optional)</Label>
-                <Input id="tripRef" name="tripRef" placeholder="Trip # or route" className="h-11" />
+                <Label>Trip / truck (optional)</Label>
+                <Select value={tripId} onValueChange={setTripId}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Choose an assigned trip" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No trip</SelectItem>
+                    {trips.map((trip) => <SelectItem key={String(trip.id)} value={String(trip.id)}>
+                      {String(trip.trip_number || `Trip ${String(trip.id).slice(0, 8)}`)} · {String(trip.origin || "")} → {String(trip.destination || "")}
+                    </SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="tripRef" value={selectedTripLabel(trips, tripId)} />
               </div>
               <div>
                 <Label htmlFor="receipt">Receipt upload</Label>
@@ -187,8 +209,9 @@ export default function DriverExpensesPage() {
                     {String(ex.description || "")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {String(ex.date || ex.created_at || "").slice(0, 10)}
+                    {String(ex.date || ex.created_at || "").slice(0, 10)}{ex.client_reference ? ` · ${String(ex.client_reference)}` : ""}
                   </p>
+                  {ex.receipt_url ? <a href={String(ex.receipt_url)} target="_blank" rel="noreferrer" className="text-xs text-primary underline">View receipt</a> : null}
                 </div>
                 <div className="text-right shrink-0 space-y-1">
                   <p className="font-bold text-sm">{format(Number(ex.amount) || 0)}</p>
@@ -201,4 +224,9 @@ export default function DriverExpensesPage() {
       )}
     </DriverShell>
   );
+}
+
+function selectedTripLabel(trips: Record<string, unknown>[], id: string) {
+  const trip = trips.find((item) => String(item.id) === id);
+  return trip ? String(trip.trip_number || `${trip.origin || ""} - ${trip.destination || ""}`) : "";
 }
