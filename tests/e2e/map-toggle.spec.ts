@@ -7,6 +7,12 @@ test("map layers open from controls and keyboard shortcuts, and remain selected 
   await page.goto("/map", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Fleet tracking" })).toBeVisible({ timeout: 30_000 });
 
+  const globeMode = page.locator('[title="Globe view"]');
+  await expect(globeMode).toHaveAttribute("aria-pressed", "true");
+  await page.locator('[title="2D map"]').click();
+  await page.locator('[title="Globe view"]').click();
+  await expect(globeMode).toHaveAttribute("aria-pressed", "true");
+
   await page.locator('[title="Fuel prices"]').click();
   await expect(page.getByRole("heading", { name: "Fuel prices by hub" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Show Tanga hub fuel trend" })).toBeVisible();

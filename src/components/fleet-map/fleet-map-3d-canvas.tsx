@@ -405,6 +405,8 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     const staticRef     = useRef<maplibregl.Marker[]>([]);
     const prevPos       = useRef<Map<string, [number, number]>>(new Map());
     const mapReady      = useRef(false);
+    const latestMapModeRef = useRef(mapMode);
+    latestMapModeRef.current = mapMode;
     const [loadErr, setLoadErr] = useState<string | null>(null);
     const [styleLoaded, setStyleLoaded] = useState(false);
     // Set once the user drags/scrolls the map by hand — while true, the
@@ -559,6 +561,18 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           // Individual tile errors are transient — only style-level failures
           // (no source id) warrant fallback or escalation.
           if (e.source?.id) return;
+
+          // MapLibre can emit this while a projection is being changed during
+          // a style transition. The style-load/idle handlers retry the
+          // projection; treating it as a fatal basemap error incorrectly
+          // forces the entire map back to Leaflet 2D.
+          if (/style is not done loading/i.test(e.error?.message ?? "")) {
+            const projection = latestMapModeRef.current === "globe"
+              ? { type: "globe" as const }
+              : { type: "mercator" as const };
+            setProjectionWhenReady(map, projection, () => map === mapRef.current);
+            return;
+          }
 
           const reason = describeMapFailure(e);
 

@@ -322,6 +322,19 @@ export default function FleetMapView({
     });
   }, [locations, search, listFilter]);
 
+  // A truck can contribute both a vehicle-tracker row and a driver-phone row.
+  // Keep both feeds in the list, but report unique identifiable vehicles
+  // separately so the panel count doesn't imply that each feed is a truck.
+  const filteredVehicleCount = useMemo(() => {
+    const plates = new Set<string>();
+    for (const location of filtered) {
+      const plate = location.vehiclePlate.trim();
+      if (!plate || ["—", "-", "unknown vehicle", "vehicle tbd"].includes(plate.toLowerCase())) continue;
+      plates.add(plate.toUpperCase());
+    }
+    return plates.size;
+  }, [filtered]);
+
   const selected = useMemo(
     () => locations.find((l) => l.id === selectedId) ?? null,
     [locations, selectedId],
@@ -587,6 +600,7 @@ export default function FleetMapView({
             {(["2d", "3d", "globe"] as const).map((mode) => (
               <Button
                 key={mode}
+                aria-pressed={mapMode === mode}
                 variant={mapMode === mode ? "default" : "ghost"}
                 size="icon"
                 title={mode === "2d" ? "2D map" : mode === "3d" ? "3D vector map" : "Globe view"}
@@ -679,7 +693,7 @@ export default function FleetMapView({
             onClick={() => setMobileSheetOpen((o) => !o)}
           >
             <span className="text-sm font-semibold text-foreground">
-              Drivers ({filtered.length})
+              {filteredVehicleCount} vehicles · {filtered.length} feeds
             </span>
             <ChevronUp
               className={cn(
@@ -691,7 +705,7 @@ export default function FleetMapView({
 
           <div className="hidden md:flex w-full items-center justify-between px-3 py-2 border-b border-border/80 shrink-0">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground pl-1">
-              Active fleet · {filtered.length}
+              {filteredVehicleCount} vehicles · {filtered.length} location feeds
             </span>
             <button
               type="button"
