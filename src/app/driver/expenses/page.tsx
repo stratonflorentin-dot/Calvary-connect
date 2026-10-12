@@ -66,9 +66,23 @@ export default function DriverExpensesPage() {
       .filter((request) => request.table === "expenses" && request.data?.driver_id === user?.id)
       .map((request) => ({ ...request.data, id: `offline-${request.id}`, _offline_pending: true })));
     refreshPending();
-    window.addEventListener("fleet:offline-sync-complete", refreshPending);
-    return () => window.removeEventListener("fleet:offline-sync-complete", refreshPending);
-  }, [user?.id]);
+    const onSynced = () => { refreshPending(); refresh(); };
+    window.addEventListener("fleet:offline-sync-complete", onSynced);
+    return () => window.removeEventListener("fleet:offline-sync-complete", onSynced);
+  }, [user?.id, refresh]);
+
+  const attachReceipt = async (expenseId: string, file?: File) => {
+    if (!user || !file) return;
+    if (!SyncManager.isOnline()) {
+      toast({ title: "You are offline", description: "Reconnect before uploading this receipt.", variant: "destructive" });
+      return;
+    }
+    const receiptUrl = await uploadToBucket("documents", `driver-expenses/${user.id}`, file, `${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`);
+    if (!receiptUrl) { toast({ title: "Receipt upload failed", description: "Please try again.", variant: "destructive" }); return; }
+    const { error } = await supabase.rpc("attach_driver_expense_receipt", { p_expense_id: expenseId, p_receipt_url: receiptUrl });
+    if (error) { toast({ title: "Could not attach receipt", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Receipt attached" }); refresh();
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -95,7 +109,7 @@ export default function DriverExpensesPage() {
     try {
       if (!SyncManager.isOnline()) {
         await SyncManager.queueRequest("expenses", "INSERT", expenseData, true, false);
-        toast({ title: "Expense saved on this device", description: "It will sync when the connection returns. Upload its receipt when you are back online." });
+        toast({ title: "Expense saved on this device", description: "It will sync when the connection returns. You can attach its receipt after sync." });
         setPendingExpenses(SyncManager.getPending().filter((request) => request.table === "expenses" && request.data?.driver_id === user.id).map((request) => ({ ...request.data, id: `offline-${request.id}`, _offline_pending: true })));
         setOpen(false); setTripId("none"); (e.target as HTMLFormElement).reset(); refresh();
         return;
@@ -105,7 +119,7 @@ export default function DriverExpensesPage() {
         const receiptUrl = await uploadToBucket("documents", `driver-expenses/${user.id}`, receipt, `${Date.now()}-${receipt.name.replace(/[^\w.-]/g, "_")}`);
         if (!receiptUrl && !SyncManager.isOnline()) {
           await SyncManager.queueRequest("expenses", "INSERT", expenseData, true, false);
-          toast({ title: "Expense saved on this device", description: "The receipt could not upload offline. It will sync with the expense when your connection returns." });
+          toast({ title: "Expense saved on this device", description: "It will sync when the connection returns. You can attach its receipt after sync." });
           setPendingExpenses(SyncManager.getPending().filter((request) => request.table === "expenses" && request.data?.driver_id === user.id).map((request) => ({ ...request.data, id: `offline-${request.id}`, _offline_pending: true })));
           setOpen(false); setTripId("none"); (e.target as HTMLFormElement).reset(); refresh();
           return;
@@ -119,7 +133,7 @@ export default function DriverExpensesPage() {
       if (error && /failed to fetch|network|fetch error/i.test(error.message)) {
         expenseData.receipt_url = null;
         await SyncManager.queueRequest("expenses", "INSERT", expenseData, true, false);
-        toast({ title: "Expense saved on this device", description: "It will sync when the connection returns. Upload its receipt when you are back online." });
+        toast({ title: "Expense saved on this device", description: "It will sync when the connection returns. You can attach its receipt after sync." });
         setPendingExpenses(SyncManager.getPending().filter((request) => request.table === "expenses" && request.data?.driver_id === user.id).map((request) => ({ ...request.data, id: `offline-${request.id}`, _offline_pending: true })));
         setOpen(false); setTripId("none"); (e.target as HTMLFormElement).reset(); refresh();
         return;
@@ -246,7 +260,7 @@ export default function DriverExpensesPage() {
                   <p className="text-xs text-muted-foreground mt-1">
                     {String(ex.date || ex.created_at || "").slice(0, 10)}{ex.client_reference ? ` · ${String(ex.client_reference)}` : ""}{ex._offline_pending ? " · Waiting to sync" : ""}
                   </p>
-                  {ex.receipt_url ? <a href={String(ex.receipt_url)} target="_blank" rel="noreferrer" className="text-xs text-primary underline">View receipt</a> : null}
+                  {ex.receipt_url ? <a href={String(ex.receipt_url)} target="_blank" rel="noreferrer" className="text-xs text-primary underline">View receipt</a> : !ex._offline_pending ? <label className="text-xs text-primary underline cursor-pointer">Attach receipt<input className="sr-only" type="file" accept="image/*,.pdf" onChange={(event) => { const file = event.currentTarget.files?.[0]; void attachReceipt(String(ex.id), file); event.currentTarget.value = ""; }} /></label> : <span className="text-xs text-muted-foreground">Receipt can be attached after sync</span>}
                 </div>
                 <div className="text-right shrink-0 space-y-1">
                   <p className="font-bold text-sm">{format(Number(ex.amount) || 0)}</p>
