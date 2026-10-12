@@ -120,7 +120,8 @@ function FormattedAiReport({ text }: { text: string }) {
 
     const heading = line.match(/^(#{1,4})\s+(.+)$/);
     if (heading) {
-      blocks.push(<h3 key={`heading-${index}`} className="mt-3 text-sm font-bold text-foreground">{renderInlineReportText(heading[2])}</h3>);
+      const Heading = heading[1].length <= 2 ? 'h2' : 'h3';
+      blocks.push(<Heading key={`heading-${index}`} className={cn("mt-3 font-bold text-foreground", Heading === 'h2' ? 'text-base' : 'text-sm')}>{renderInlineReportText(heading[2])}</Heading>);
       index += 1;
       continue;
     }
@@ -128,11 +129,13 @@ function FormattedAiReport({ text }: { text: string }) {
     const listType = /^\s*(?:[-*•]\s+|\d+[.)]\s+)/.test(lines[index]) ? 'list' : null;
     if (listType) {
       const items: string[] = [];
+      const ordered = /^\s*\d+[.)]\s+/.test(lines[index]);
       while (index < lines.length && /^\s*(?:[-*•]\s+|\d+[.)]\s+)/.test(lines[index])) {
         items.push(lines[index].replace(/^\s*(?:[-*•]\s+|\d+[.)]\s+)/, '').trim());
         index += 1;
       }
-      blocks.push(<ul key={`list-${index}`} className="my-2 list-disc space-y-1 pl-5">{items.map((item, itemIndex) => <li key={itemIndex}>{renderInlineReportText(item)}</li>)}</ul>);
+      const List = ordered ? 'ol' : 'ul';
+      blocks.push(<List key={`list-${index}`} className={cn("my-2 space-y-1 pl-5", ordered ? 'list-decimal' : 'list-disc')}>{items.map((item, itemIndex) => <li key={itemIndex}>{renderInlineReportText(item)}</li>)}</List>);
       continue;
     }
 
