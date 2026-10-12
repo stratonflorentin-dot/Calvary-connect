@@ -53,14 +53,10 @@ export async function POST(req: Request) {
         // Use centralized provider abstraction
         try {
             const result = await generateAI({ system, messages: [...formattedHistory, { role: 'user', content: [{ text: message }] }] as any });
-            return NextResponse.json({ text: result.text, provider: result.provider });
+            return NextResponse.json({ text: result.text, provider: result.provider, generatedAt: new Date().toISOString() });
         } catch (err: any) {
             console.error('AI provider failed:', err);
-            if (process.env.NODE_ENV !== 'production') {
-                const mock = 'Mock AI: Top actions — 1) Reduce fuel use via route optimization (~$2,400/mo). 2) Preventive maintenance to cut repairs (~$1,200/mo). 3) Adjust payroll/driver scheduling (~$1,800/mo). Next step: run detailed audit on fuel and maintenance.';
-                return NextResponse.json({ text: mock, fallback: 'mock' });
-            }
-            return NextResponse.json({ error: err?.message || 'AI provider error' }, { status: 502 });
+            return NextResponse.json({ error: 'AI provider is unavailable. Check OPENROUTER_API_KEY or GROQ_API_KEY and retry.', code: 'AI_PROVIDER_UNAVAILABLE' }, { status: 502 });
         }
     } catch (err: any) {
         console.error('API ask-company error:', err);

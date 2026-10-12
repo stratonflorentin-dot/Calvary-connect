@@ -21,7 +21,9 @@ export default function DriversPage() {
         const loadDrivers = async () => {
             setLoading(true);
             try {
-                const allUsers = await getUsersAction();
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) throw new Error("Sign in to view drivers.");
+                const allUsers = await getUsersAction(session.access_token);
                 const driversData = allUsers?.filter((u: any) => u.role === 'DRIVER') || [];
                 setDrivers(driversData);
             } catch (error) {

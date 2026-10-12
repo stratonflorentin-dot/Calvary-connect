@@ -36,7 +36,7 @@ and set confidence to "low" rather than fabricating a trend.
       } catch {
         forecast = { forecast: result.text, confidence: 'low', insights: [] };
       }
-      return NextResponse.json({ success: true, forecast, provider: result.provider });
+      return NextResponse.json({ success: true, forecast, provider: result.provider, generatedAt: new Date().toISOString(), source: 'fleet trip and expense history' });
     } catch (err: any) {
       console.error('AI provider failed:', err);
       return NextResponse.json({ error: err?.message || 'AI provider error' }, { status: 502 });

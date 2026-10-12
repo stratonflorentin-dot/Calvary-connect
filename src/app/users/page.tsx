@@ -39,6 +39,12 @@ import { uploadToBucket } from '@/lib/storage-upload';
 import { resizeImageToJpeg } from '@/lib/image-resize';
 import { effectiveUserStatus } from '@/lib/user-status-utils';
 
+async function requireAccessToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Your session expired. Please sign in again.');
+  return session.access_token;
+}
+
 export default function UsersPage() {
   const { role, isAdmin } = useRole();
   const { user } = useSupabase();
@@ -95,7 +101,7 @@ export default function UsersPage() {
         console.log('[UsersPage] Fetching from user_profiles...');
         
         // Fetch all users using Server Action to bypass RLS
-        const usersData = await getUsersAction();
+        const usersData = await getUsersAction(await requireAccessToken());
         
         console.log('[UsersPage] Loaded users:', usersData?.length || 0);
         if (usersData && usersData.length > 0) {
@@ -187,7 +193,7 @@ export default function UsersPage() {
         status: 'invited',
         status_reason: 'Waiting for user to complete signup',
         invited_at: new Date().toISOString(),
-        invited_by: (await supabase.auth.getUser()).data?.user?.id,
+        invited_by: user?.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -201,7 +207,8 @@ export default function UsersPage() {
       // Use the server action to bypass RLS error
       let data;
       try {
-        data = await inviteUserAction(userData);
+        const accessToken = await requireAccessToken();
+        data = await inviteUserAction(userData, accessToken);
       } catch (insertError: any) {
         console.error('Error adding user via action:', insertError);
         toast({ 
@@ -217,7 +224,7 @@ export default function UsersPage() {
       if (data?.id && selectedPhoto) {
         avatarUrl = await uploadPhoto(data.id);
         if (avatarUrl) {
-          await updateUserAction(data.id, { avatar_url: avatarUrl }, user?.id);
+          await updateUserAction(data.id, { avatar_url: avatarUrl }, await requireAccessToken());
         }
       }
 
@@ -227,7 +234,7 @@ export default function UsersPage() {
         description: `Invitation sent to ${userData.email}`
       });
       // Refresh users list
-      const updatedUsers = await getUsersAction();
+      const updatedUsers = await getUsersAction(await requireAccessToken());
       
       setUsers(updatedUsers || []);
       setIsAddDialogOpen(false);
@@ -246,31 +253,26 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    // Find the user being deleted
     const userToDelete = users.find(u => u.id === userId);
-    
-    // No role can delete ADMIN users
-    if (userToDelete?.role === 'ADMIN') {
-      alert('The Admin user cannot be deleted. This account is protected.');
+    if (!isAdmin) {
+      toast({ title: 'Administrator access required', description: 'Only an administrator can remove a user.', variant: 'destructive' });
       return;
     }
-    
-    // HR cannot delete CEO users
-    if (role === 'HR' && userToDelete?.role === 'CEO') {
-      alert('HR cannot delete CEO users. Only CEO or Admin can delete CEO users.');
+    if (userId === user?.id) {
+      toast({ title: 'Cannot remove your current account', description: 'Use a different administrator account to remove this user.', variant: 'destructive' });
       return;
     }
-    
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    
+    const label = userToDelete?.name || userToDelete?.email || 'this user';
+    if (!confirm(`Remove access for ${label}? They will be unable to sign in. Existing records will be retained if they are linked to this account.`)) return;
+
     try {
-      // Hard delete - remove user completely using Server Action
-      await deleteUserAction(userId);
-      
-      // Refresh users list
-      const updatedUsers = await getUsersAction();
+      const result = await deleteUserAction(userId, await requireAccessToken());
+      const updatedUsers = await getUsersAction(await requireAccessToken());
       setUsers(updatedUsers || []);
-      console.log('User deleted successfully');
+      toast({
+        title: result.hardDeleted ? 'User deleted' : 'User access removed',
+        description: result.archived ? 'The account was blocked and archived because records still reference it.' : 'The account and sign-in access were removed.',
+      });
     } catch (error: any) {
       console.error('Error deleting user:', error);
       alert('Failed to delete user: ' + error.message);
@@ -312,18 +314,18 @@ export default function UsersPage() {
         return;
       }
 
-      await updateUserAction(editingUser.id, updateData, user?.id);
+      await updateUserAction(editingUser.id, updateData, await requireAccessToken());
 
       // Upload new photo if selected
       if (selectedPhoto) {
         const avatarUrl = await uploadPhoto(editingUser.id);
         if (avatarUrl) {
-          await updateUserAction(editingUser.id, { avatar_url: avatarUrl }, user?.id);
+          await updateUserAction(editingUser.id, { avatar_url: avatarUrl }, await requireAccessToken());
         }
       }
 
       // Refresh users list
-      const updatedUsers = await getUsersAction();
+      const updatedUsers = await getUsersAction(await requireAccessToken());
       setUsers(updatedUsers || []);
       setIsEditDialogOpen(false);
       setEditingUser(null);
@@ -351,7 +353,7 @@ export default function UsersPage() {
                 onClick={async () => {
                   const runBackfill = async (dryRun: boolean) => {
                     try {
-                      const results = await backfillEmployeeIdsAction(dryRun);
+                      const results = await backfillEmployeeIdsAction(dryRun, await requireAccessToken());
                       if (results.length === 0) {
                         alert("All employees already have Employee IDs assigned!");
                         return;
@@ -369,7 +371,7 @@ export default function UsersPage() {
                       } else {
                         alert(`SUCCESS!\n\nSuccessfully saved the following changes to the database:\n\n${listText}`);
                         // Refresh users list
-                        const updatedUsers = await getUsersAction();
+                        const updatedUsers = await getUsersAction(await requireAccessToken());
                         setUsers(updatedUsers || []);
                       }
                     } catch (err: any) {
@@ -391,7 +393,7 @@ export default function UsersPage() {
                   if (!user) return;
                   try {
                     setIsLoading(true);
-                    const usersData = await getUsersAction();
+                    const usersData = await getUsersAction(await requireAccessToken());
                     setUsers(usersData || []);
                   } catch (error: any) {
                     console.error('[UsersPage] Refresh exception:', error);
@@ -843,7 +845,7 @@ export default function UsersPage() {
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
-                      {u.role !== 'ADMIN' && u.role !== 'CEO' && (
+                      {isAdmin && u.id !== user?.id && (
                         <Button
                           variant="ghost"
                           size="sm"

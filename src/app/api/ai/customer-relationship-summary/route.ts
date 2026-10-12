@@ -34,13 +34,10 @@ export async function POST(req: Request) {
         system: buildPrompt(customer),
         messages: [{ role: 'user', content: [{ text: 'Write the relationship summary now.' }] }],
       });
-      return NextResponse.json({ summary: result.text.trim(), provider: result.provider });
+      return NextResponse.json({ summary: result.text.trim(), provider: result.provider, generatedAt: new Date().toISOString(), source: 'customer records supplied by the application' });
     } catch (err: any) {
       console.error('AI provider failed:', err);
-      if (process.env.NODE_ENV !== 'production') {
-        return NextResponse.json({ summary: 'Mock summary — AI provider unavailable in this environment.', fallback: 'mock' });
-      }
-      return NextResponse.json({ error: err?.message || 'AI provider error' }, { status: 502 });
+      return NextResponse.json({ error: 'AI provider is unavailable. Check OPENROUTER_API_KEY or GROQ_API_KEY and retry.', code: 'AI_PROVIDER_UNAVAILABLE' }, { status: 502 });
     }
   } catch (err: any) {
     console.error('API customer-relationship-summary error:', err);

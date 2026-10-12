@@ -122,7 +122,9 @@ export function FleetDashboard() {
   const openAssignDialog = async () => {
     try {
       // Load available drivers using server action to bypass RLS
-      const allUsers = await getUsersAction();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Sign in to load driver accounts.");
+      const allUsers = await getUsersAction(session.access_token);
       const driversData = allUsers?.filter((u: any) => u.role === 'DRIVER') || [];
       setDrivers(driversData);
       setAssignOpen(true);

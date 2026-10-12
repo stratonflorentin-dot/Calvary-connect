@@ -57,17 +57,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'AI returned an unexpected response shape' }, { status: 502 });
       }
 
-      return NextResponse.json({ ...parsed.data, provider: result.provider });
+      return NextResponse.json({ ...parsed.data, provider: result.provider, generatedAt: new Date().toISOString(), source: 'live fleet and driver availability' });
     } catch (err: any) {
       console.error('AI provider failed:', err);
-      if (process.env.NODE_ENV !== 'production') {
-        return NextResponse.json({
-          suggestions: [],
-          caveats: ['Mock response — AI provider unavailable in this environment.'],
-          fallback: 'mock',
-        });
-      }
-      return NextResponse.json({ error: err?.message || 'AI provider error' }, { status: 502 });
+      return NextResponse.json({ error: 'AI provider is unavailable. Check OPENROUTER_API_KEY or GROQ_API_KEY and retry.', code: 'AI_PROVIDER_UNAVAILABLE' }, { status: 502 });
     }
   } catch (err: any) {
     console.error('API dispatch-suggestion error:', err);

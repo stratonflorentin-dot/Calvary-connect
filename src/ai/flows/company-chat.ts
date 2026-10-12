@@ -20,7 +20,7 @@ export async function askCompanyAI(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: userMessage, history, liveMetrics })
   });
-  if (!res.ok) throw new Error('AI request failed');
   const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || `AI request failed (${res.status})`);
   return data.text;
 }

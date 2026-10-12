@@ -66,6 +66,21 @@ import { askCompanyAI } from '@/ai/flows/company-chat';
 import { useSupabase } from '@/components/supabase-provider';
 import { vehicleStatusBucket } from '@/lib/fleet/vehicle-status';
 
+function AiRunMeta({ result }: { result: any }) {
+  const generatedAt = result?._feedback?.generatedAt;
+  const details = [
+    result?._feedback?.provider ? `AI via ${result._feedback.provider}` : 'AI analysis',
+    result?._feedback?.source,
+    generatedAt ? new Date(generatedAt).toLocaleString() : null,
+  ].filter(Boolean);
+
+  return (
+    <p className="text-[11px] text-muted-foreground border-t border-border pt-2">
+      {details.join(' · ')}
+    </p>
+  );
+}
+
 export default function AIAnalysisDashboard() {
   const { format } = useCurrency();
   const { user } = useSupabase();
@@ -423,7 +438,15 @@ export default function AIAnalysisDashboard() {
       if (!resp.ok) {
         throw new Error(data.error || 'AI request failed');
       }
-      setResult(data.result || data);
+      const result = data.result || data;
+      setResult({
+        ...result,
+        _feedback: {
+          provider: data.provider || result.provider || null,
+          source: data.source || result.source || 'current vehicle, trip and fleet data',
+          generatedAt: data.generatedAt || new Date().toISOString(),
+        },
+      });
     } catch (error: any) {
       setResult({ error: error?.message || 'Request failed' });
     } finally {
@@ -748,7 +771,11 @@ export default function AIAnalysisDashboard() {
 
               {predictiveMaintenanceResult && (
                 predictiveMaintenanceResult.error ? (
-                  <p className="text-sm text-destructive">{predictiveMaintenanceResult.error}</p>
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                    <p className="text-sm text-destructive">{predictiveMaintenanceResult.error}</p>
+                    <p className="text-xs text-muted-foreground">Check the AI provider configuration or try again.</p>
+                    <Button size="sm" variant="outline" onClick={runPredictiveMaintenance} disabled={apiLoading.predictiveMaintenance}>Try again</Button>
+                  </div>
                 ) : (
                   <div className="rounded-xl border border-border p-4 space-y-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -794,6 +821,7 @@ export default function AIAnalysisDashboard() {
                       </div>
                     )}
                     <p className="text-xs text-muted-foreground pt-1 border-t border-border">Estimated repair cost: <strong className="text-foreground">{format(predictiveMaintenanceResult.estimatedRepairCostUSD || 0)}</strong></p>
+                    <AiRunMeta result={predictiveMaintenanceResult} />
                   </div>
                 )
               )}
@@ -876,7 +904,11 @@ export default function AIAnalysisDashboard() {
 
               {fuelPredictionResult && (
                 fuelPredictionResult.error ? (
-                  <p className="text-sm text-destructive">{fuelPredictionResult.error}</p>
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                    <p className="text-sm text-destructive">{fuelPredictionResult.error}</p>
+                    <p className="text-xs text-muted-foreground">Check the AI provider configuration or try again.</p>
+                    <Button size="sm" variant="outline" onClick={runFuelPrediction} disabled={apiLoading.fuelPrediction}>Try again</Button>
+                  </div>
                 ) : (
                   <div className="rounded-xl border border-border p-4 space-y-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -916,6 +948,7 @@ export default function AIAnalysisDashboard() {
                         </ul>
                       </div>
                     )}
+                    <AiRunMeta result={fuelPredictionResult} />
                   </div>
                 )
               )}
@@ -941,9 +974,14 @@ export default function AIAnalysisDashboard() {
 
               {ceoInsightsResult && (
                 ceoInsightsResult.error ? (
-                  <p className="text-sm text-destructive">{ceoInsightsResult.error}</p>
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                    <p className="text-sm text-destructive">{ceoInsightsResult.error}</p>
+                    <p className="text-xs text-muted-foreground">Check the AI provider configuration or try again.</p>
+                    <Button size="sm" variant="outline" onClick={runCeoInsights} disabled={apiLoading.ceoInsights}>Try again</Button>
+                  </div>
                 ) : (
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                       <p className="text-xs font-bold uppercase text-emerald-700 mb-2 flex items-center gap-1"><TrendingUp className="size-3.5" /> Highlights</p>
                       <ul className="text-xs space-y-1.5 text-emerald-900">
@@ -962,6 +1000,8 @@ export default function AIAnalysisDashboard() {
                         {(ceoInsightsResult.actionableRecommendations || []).map((r: string, i: number) => <li key={i}>• {r}</li>)}
                       </ul>
                     </div>
+                    </div>
+                    <AiRunMeta result={ceoInsightsResult} />
                   </div>
                 )
               )}

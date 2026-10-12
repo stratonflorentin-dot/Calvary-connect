@@ -74,6 +74,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (profile && !profileError) {
+        if (String(profile.status || '').toLowerCase() === 'deleted') {
+          console.warn('[SupabaseProvider] Refusing access for a deleted profile:', userId);
+          return null;
+        }
         console.log('[SupabaseProvider] Profile found by ID:', profile.role);
         const wasInvite = await recordLoginAndActivate(profile.id, profile.status, normalizedEmail);
         if (wasInvite) profile.status = 'active';
@@ -91,6 +95,10 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (!emailError && existingByEmail) {
+          if (String(existingByEmail.status || '').toLowerCase() === 'deleted') {
+            console.warn('[SupabaseProvider] Refusing access for a deleted profile email:', normalizedEmail);
+            return null;
+          }
           console.log('[SupabaseProvider] Found profile by email, linking to auth ID:', userId);
 
           // Update the pre-added profile with the real auth UUID

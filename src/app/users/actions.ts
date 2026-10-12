@@ -16,6 +16,22 @@ function getAdminClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+async function requireUserManager(accessToken: string, allowedRoles: string[]) {
+  if (!accessToken) throw new Error("Sign in again to continue.");
+  const admin = getAdminClient();
+  const { data: { user }, error: authError } = await admin.auth.getUser(accessToken);
+  if (authError || !user) throw new Error("Your session is invalid or expired. Sign in again.");
+  const { data: profile, error: profileError } = await admin
+    .from("user_profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError || !profile) throw new Error("Your user profile could not be verified.");
+  const role = String(profile.role || "").toUpperCase();
+  if (!allowedRoles.includes(role)) throw new Error("You are not authorized to manage users.");
+  return { admin, user, role };
+}
+
 /** After login/signup: mark invited profiles active (bypasses RLS). */
 export async function activateUserOnLoginAction(
   authUserId: string,
@@ -110,8 +126,12 @@ async function syncInvitedProfilesWithAuth(supabaseAdmin: any) {
   }
 }
 
-export async function inviteUserAction(userData: any) {
-  const supabaseAdmin = getAdminClient();
+export async function inviteUserAction(userData: any, accessToken: string) {
+  const { admin: supabaseAdmin, role } = await requireUserManager(accessToken, ["CEO", "ADMIN", "HR"]);
+  if (role === "HR" && ["CEO", "ADMIN"].includes(String(userData.role).toUpperCase())) {
+    throw new Error("HR cannot invite users with CEO or ADMIN access.");
+  }
+  userData = { ...userData };
 
   // Generate Employee ID based on department (or role fallback) if not provided
   if (!userData.employee_id) {
@@ -131,34 +151,88 @@ export async function inviteUserAction(userData: any) {
   return data;
 }
 
-export async function getUsersAction() {
-  const supabaseAdmin = getAdminClient();
+export async function getUsersAction(accessToken: string) {
+  const { admin: supabaseAdmin } = await requireUserManager(accessToken, ["CEO", "ADMIN", "HR", "OPERATOR", "MECHANIC"]);
 
   await syncInvitedProfilesWithAuth(supabaseAdmin);
 
   const { data, error } = await supabaseAdmin
     .from("user_profiles")
     .select("*")
+    .neq("status", "deleted")
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
   return data;
 }
 
-export async function deleteUserAction(userId: string) {
-  const supabaseAdmin = getAdminClient();
+export async function deleteUserAction(userId: string, accessToken: string) {
+  const { admin: supabaseAdmin, user: actor } = await requireUserManager(accessToken, ["CEO", "ADMIN"]);
+  if (actor.id === userId) throw new Error("You cannot delete the account you are currently using.");
 
-  const { error } = await supabaseAdmin
+  const { data: target, error: targetError } = await supabaseAdmin
     .from("user_profiles")
-    .delete()
-    .eq("id", userId);
+    .select("id, name, email, role, status")
+    .eq("id", userId)
+    .maybeSingle();
+  if (targetError) throw new Error(targetError.message);
+  if (!target) throw new Error("User was not found.");
 
-  if (error) throw new Error(error.message);
-  return true;
+  const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  let hardDeleted = !authDeleteError;
+  if (authDeleteError?.status === 404) {
+    const { error } = await supabaseAdmin.from("user_profiles").delete().eq("id", userId);
+    hardDeleted = !error;
+  } else if (authDeleteError) {
+    // Preserve historical foreign-key relationships when a hard delete is
+    // blocked, while immediately preventing another login.
+    const { error: banError } = await supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
+    if (banError && banError.status !== 404) {
+      throw new Error(`Could not revoke this user's access: ${banError.message}`);
+    }
+    hardDeleted = false;
+  }
+
+  if (!hardDeleted) {
+    const { error } = await supabaseAdmin
+      .from("user_profiles")
+      .update({ status: "deleted", status_reason: "Access removed by an administrator; history retained.", updated_at: new Date().toISOString() })
+      .eq("id", userId);
+    if (error) throw new Error(`Access was revoked, but the user profile could not be archived: ${error.message}`);
+  } else if (hardDeleted) {
+    // Pre-invited profiles may not have an auth.users record; remove that row
+    // directly. Auth-backed profiles are normally removed by the FK cascade.
+    const { error } = await supabaseAdmin.from("user_profiles").delete().eq("id", userId);
+    if (error) {
+      const { error: archiveError } = await supabaseAdmin
+        .from("user_profiles")
+        .update({ status: "deleted", status_reason: "Access removed by an administrator; history retained.", updated_at: new Date().toISOString() })
+        .eq("id", userId);
+      if (archiveError) throw new Error(`User access was removed, but the profile could not be archived: ${archiveError.message}`);
+      hardDeleted = false;
+    }
+  }
+
+  try {
+    await supabaseAdmin.from("audit_trail").insert({
+      user_id: actor.id,
+      module: "management",
+      action: "delete",
+      entity_type: "user",
+      entity_id: userId,
+      old_value: target,
+      new_value: hardDeleted ? null : { status: "deleted", history_retained: true },
+      description: `${hardDeleted ? "Deleted" : "Removed access for"} user ${target.name || target.email || userId}`,
+    });
+  } catch (auditError) {
+    console.warn("Could not write user deletion audit record:", auditError);
+  }
+
+  return { hardDeleted, archived: !hardDeleted };
 }
 
-export async function updateUserAction(userId: string, updateData: any, actorId?: string) {
-  const supabaseAdmin = getAdminClient();
+export async function updateUserAction(userId: string, updateData: any, accessToken: string) {
+  const { admin: supabaseAdmin, user: actor, role } = await requireUserManager(accessToken, ["CEO", "ADMIN", "HR"]);
 
   // Whitelist of columns that are safe to update on user_profiles
   const ALLOWED_COLUMNS = [
@@ -173,6 +247,10 @@ export async function updateUserAction(userId: string, updateData: any, actorId?
   if (updateData) {
     delete updateData.employee_id;
     delete updateData.employeeId;
+  }
+
+  if (role === "HR" && updateData?.role !== undefined && ["CEO", "ADMIN"].includes(String(updateData.role).toUpperCase())) {
+    throw new Error("HR cannot assign CEO or ADMIN access.");
   }
 
   // Only keep whitelisted fields
@@ -210,7 +288,7 @@ export async function updateUserAction(userId: string, updateData: any, actorId?
   );
   if (changedFields.length > 0) {
     await supabaseAdmin.from("audit_trail").insert({
-      user_id: actorId ?? null,
+      user_id: actor.id,
       module: "management",
       action: "update",
       entity_type: "user",
@@ -340,8 +418,8 @@ async function generateEmployeeId(departmentName?: string, roleName?: string): P
   return `${prefix}-${String(nextNumber).padStart(3, '0')}`;
 }
 
-export async function backfillEmployeeIdsAction(dryRun: boolean = true) {
-  const supabaseAdmin = getAdminClient();
+export async function backfillEmployeeIdsAction(dryRun: boolean, accessToken: string) {
+  const { admin: supabaseAdmin } = await requireUserManager(accessToken, ["CEO", "ADMIN"]);
 
   // Fetch all profiles without employee_id, ordered by created_at ASC
   const { data: profiles, error } = await supabaseAdmin

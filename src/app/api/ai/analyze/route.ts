@@ -43,7 +43,7 @@ in "insights" rather than fabricating a conclusion.
       } catch {
         analysis = { insights: [result.text], recommendations: [], risks: [] };
       }
-      return NextResponse.json({ success: true, analysis, provider: result.provider });
+      return NextResponse.json({ success: true, analysis, provider: result.provider, generatedAt: new Date().toISOString(), source: 'fleet, trip and expense records' });
     } catch (err: any) {
       console.error('AI provider failed:', err);
       return NextResponse.json({ error: err?.message || 'AI provider error' }, { status: 502 });
