@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { hoursSince, isOverdue, slaHours } from "@/lib/workflow/approvals";
 import { hydrateTrips } from "@/lib/trips/hydrate";
 import { TripFormDialog } from "@/components/trip/trip-form-dialog";
+import { TripFuelProgress } from "@/components/trip/trip-fuel-progress";
 import {
   CheckCircle2,
   ClipboardList,
@@ -216,6 +217,8 @@ function TripsContent() {
             <motion.div variants={listItem}><StatCard label="Delivered" value={stats.delivered} icon={CheckCircle2} accent="bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" /></motion.div>
             <motion.div variants={listItem}><StatCard label="Revenue (delivered)" value={Object.keys(stats.revenueByCurrency).length ? Object.entries(stats.revenueByCurrency).map(([cur, amt]) => format(amt, cur)).join(" · ") : format(0)} icon={Package} accent="bg-success/10 text-success" /></motion.div>
           </motion.div>
+
+          <TripFuelProgress />
 
           {/* Filter chips */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">

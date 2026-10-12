@@ -38,6 +38,8 @@ export interface CartrackVehicleTelemetry {
 
 function normalizeItem(item: any): CartrackVehicleTelemetry {
   const loc = item.location ?? {};
+  const rawFuelPercent = item.fuel?.precentage_left;
+  const fuelPercent = rawFuelPercent == null ? null : Number(String(rawFuelPercent).replace("%", "").trim());
   return {
     vehicleId: String(item.vehicle_id),
     registration: item.registration ?? "",
@@ -48,7 +50,9 @@ function normalizeItem(item: any): CartrackVehicleTelemetry {
     heading: item.bearing ?? null,
     engineOn: typeof item.ignition === "boolean" ? item.ignition : null,
     odometerKm: item.odometer != null ? Number(item.odometer) / 1000 : null,
-    fuelPercent: item.fuel?.precentage_left ?? null,
+    fuelPercent: fuelPercent !== null && Number.isFinite(fuelPercent) && fuelPercent >= 0 && fuelPercent <= 100
+      ? fuelPercent
+      : null,
     raw: item,
   };
 }

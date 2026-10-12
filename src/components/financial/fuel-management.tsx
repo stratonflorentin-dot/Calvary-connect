@@ -71,7 +71,7 @@ export function FuelManagement() {
 
   const loadData = async () => {
     setLoading(true);
-    const [{ data: logsData }, { data: vehiclesData }, { data: tripsData }, { data: stationsData }, { data: cardsData }] = await Promise.all([
+    const [{ data: logsData }, { data: vehiclesData }, { data: tripsData }, { data: assignmentsData }, { data: stationsData }, { data: cardsData }] = await Promise.all([
       supabase
         .from("fuel_logs")
         .select("*, vehicles(plate_number, make, model)")
@@ -82,13 +82,27 @@ export function FuelManagement() {
       // only "in_transit" excluded every trip still in pending/loading,
       // which is exactly when a fill-up commonly happens. Only delivered/
       // cancelled trips are genuinely done and excluded here.
-      supabase.from("trips").select("id, trip_number, origin, destination").in("status", ["pending", "loading", "in_transit"]).order("created_at", { ascending: false }).limit(50),
+      supabase.from("trips").select("id, trip_number, origin, destination, truck_id, vehicle_id, status").in("status", ["pending", "loading", "in_transit"]).order("created_at", { ascending: false }).limit(50),
+      supabase.from("trip_assignments").select("trip_id, truck_id"),
       supabase.from("fuel_stations").select("id, name").eq("is_active", true).order("name"),
       supabase.from("fuel_cards").select("id, card_number, status").eq("status", "active").order("card_number"),
     ]);
     setLogs(logsData || []);
     setVehicles(vehiclesData || []);
-    setTrips(tripsData || []);
+    const vehicleIdsByTrip = new Map<string, Set<string>>();
+    for (const trip of tripsData || []) {
+      const assigned = new Set<string>();
+      if (trip.truck_id) assigned.add(trip.truck_id);
+      if (trip.vehicle_id) assigned.add(trip.vehicle_id);
+      if (assigned.size) vehicleIdsByTrip.set(trip.id, assigned);
+    }
+    for (const assignment of assignmentsData || []) {
+      if (!assignment.truck_id) continue;
+      const vehicleIds = vehicleIdsByTrip.get(assignment.trip_id) ?? new Set<string>();
+      vehicleIds.add(assignment.truck_id);
+      vehicleIdsByTrip.set(assignment.trip_id, vehicleIds);
+    }
+    setTrips((tripsData || []).map((trip) => ({ ...trip, vehicle_ids: [...(vehicleIdsByTrip.get(trip.id) ?? [])] })));
     setStations(stationsData || []);
     setCards(cardsData || []);
     setLoading(false);
@@ -303,7 +317,14 @@ export function FuelManagement() {
               <form onSubmit={handleSubmit} className="space-y-4 pt-2">
                 <div className="space-y-1">
                   <Label>Vehicle *</Label>
-                  <Select value={form.vehicle_id} onValueChange={v => setForm(p => ({ ...p, vehicle_id: v }))}>
+                  <Select value={form.vehicle_id} onValueChange={v => setForm(p => {
+                    const assignedTrips = trips.filter(t => t.vehicle_ids?.includes(v));
+                    return {
+                      ...p,
+                      vehicle_id: v,
+                      trip_id: editingId ? p.trip_id : assignedTrips.length === 1 ? assignedTrips[0].id : "",
+                    };
+                  })}>
                     <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
                     <SelectContent>
                       {vehicles.map(v => (
@@ -331,6 +352,10 @@ export function FuelManagement() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {form.trip_id && (() => {
+                      const linkedTrip = trips.find(t => t.id === form.trip_id);
+                      return linkedTrip ? <p className="text-xs text-muted-foreground">Linked route: {linkedTrip.origin} â†’ {linkedTrip.destination}</p> : null;
+                    })()}
                   </div>
                 </div>
 

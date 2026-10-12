@@ -4,6 +4,44 @@ import { wialonLogin, wialonFetchUnitsTelemetry } from "@/lib/telematics/wialon-
 import { cartrackFetchVehiclesTelemetry } from "@/lib/telematics/cartrack-client";
 
 const ALLOWED_ROLES = ["CEO", "ADMIN", "OPERATOR"];
+const ACTIVE_TRIP_STATUSES = ["in_transit", "IN_TRANSIT", "in progress", "IN PROGRESS", "in_progress", "IN_PROGRESS"];
+
+async function getActiveTripByVehicle(admin: ReturnType<typeof supabaseAdmin>) {
+  const { data: trips, error } = await admin
+    .from("trips")
+    .select("id, truck_id, vehicle_id")
+    .in("status", ACTIVE_TRIP_STATUSES);
+  if (error) throw error;
+
+  const tripIds = (trips ?? []).map((trip: any) => trip.id);
+  const { data: assignments, error: assignmentError } = tripIds.length
+    ? await admin.from("trip_assignments").select("trip_id, truck_id").in("trip_id", tripIds)
+    : { data: [], error: null };
+  // Older installs may not have the multi-vehicle assignments table yet;
+  // primary truck assignments still provide a safe match in that case.
+  if (assignmentError) console.warn("[telematics] Could not load trip assignments:", assignmentError.message);
+
+  const candidateTrips = new Map<string, Set<string>>();
+  const attach = (vehicleId: string | null | undefined, tripId: string) => {
+    if (!vehicleId) return;
+    const ids = candidateTrips.get(vehicleId) ?? new Set<string>();
+    ids.add(tripId);
+    candidateTrips.set(vehicleId, ids);
+  };
+  for (const trip of trips ?? []) {
+    attach(trip.truck_id, trip.id);
+    attach(trip.vehicle_id, trip.id);
+  }
+  for (const assignment of assignments ?? []) attach(assignment.truck_id, assignment.trip_id);
+
+  // Ambiguous assignments stay unlinked rather than attributing distance to
+  // the wrong trip.
+  return new Map(
+    [...candidateTrips.entries()]
+      .filter(([, ids]) => ids.size === 1)
+      .map(([vehicleId, ids]) => [vehicleId, [...ids][0]]),
+  );
+}
 
 /**
  * Two callers are allowed to trigger a sync:
@@ -64,6 +102,7 @@ export async function POST(request: NextRequest) {
 
     let synced = 0;
     const errors: string[] = [];
+    const activeTripByVehicle = await getActiveTripByVehicle(admin);
 
     if (wialonVehicles.length > 0) {
       try {
@@ -103,6 +142,9 @@ export async function POST(request: NextRequest) {
               longitude: reading.longitude,
               speed_kmh: reading.speedKmh,
               engine_on: reading.engineOn,
+              odometer_km: null,
+              fuel_level_pct: null,
+              trip_id: activeTripByVehicle.get(vehicle.id) ?? null,
               raw: reading.raw,
             },
             { onConflict: "vehicle_id,source,recorded_at", ignoreDuplicates: true },
@@ -153,6 +195,9 @@ export async function POST(request: NextRequest) {
               longitude: reading.longitude,
               speed_kmh: reading.speedKmh,
               engine_on: reading.engineOn,
+              odometer_km: reading.odometerKm,
+              fuel_level_pct: reading.fuelPercent,
+              trip_id: activeTripByVehicle.get(vehicle.id) ?? null,
               raw: reading.raw,
             },
             { onConflict: "vehicle_id,source,recorded_at", ignoreDuplicates: true },
