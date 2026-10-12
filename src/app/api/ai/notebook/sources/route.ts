@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireFleetReportAccess } from '@/app/api/reports/helpers';
 import { generateAI } from '@/lib/ai-provider';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -26,25 +26,38 @@ function capCell(v: unknown): string | number | null {
   return s.length > MAX_CELL_CHARS ? s.slice(0, MAX_CELL_CHARS) : s;
 }
 
-function parseExcel(buf: Buffer): { sheets: StoredSheet[]; rowCount: number } {
-  const wb = XLSX.read(buf, { type: 'buffer', cellDates: true });
+async function parseExcel(buf: Buffer): Promise<{ sheets: StoredSheet[]; rowCount: number }> {
+  const workbook = new ExcelJS.Workbook();
   const sheets: StoredSheet[] = [];
   let rowCount = 0;
-  for (const name of wb.SheetNames.slice(0, MAX_SHEETS)) {
-    const ws = wb.Sheets[name];
-    const grid = XLSX.utils.sheet_to_json<SheetRow>(ws, {
-      header: 1,
-      raw: false,
-      defval: null,
-      blankrows: false,
-    });
-    const rows = grid
-      .slice(0, MAX_ROWS_PER_SHEET)
-      .map((r) => r.slice(0, MAX_COLS).map(capCell));
-    rowCount += rows.length;
-    sheets.push({ name, rows, total_rows: grid.length, truncated: grid.length > MAX_ROWS_PER_SHEET });
+  
+  // ExcelJS loads from buffer
+  const excelBuffer = new Uint8Array(buf) as unknown as Parameters<typeof workbook.xlsx.load>[0];
+  await workbook.xlsx.load(excelBuffer);
+  {
+    for (const name of workbook.worksheets.slice(0, MAX_SHEETS).map(w => w.name)) {
+      const ws = workbook.getWorksheet(name);
+      if (!ws) continue;
+      
+      const grid: SheetRow[] = [];
+      ws.eachRow({ includeEmpty: false }, (row) => {
+        const rowData: SheetRow = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          if (colNumber <= MAX_COLS) {
+            rowData.push(capCell(cell.value));
+          }
+        });
+        grid.push(rowData);
+      });
+      
+      const rows = grid
+        .slice(0, MAX_ROWS_PER_SHEET)
+        .map((r) => r.slice(0, MAX_COLS).map(capCell));
+      rowCount += rows.length;
+      sheets.push({ name, rows, total_rows: grid.length, truncated: grid.length > MAX_ROWS_PER_SHEET });
+    }
+    return { sheets, rowCount };
   }
-  return { sheets, rowCount };
 }
 
 async function parsePdf(buf: Buffer): Promise<{ pages: StoredPage[]; pageCount: number }> {
@@ -158,7 +171,7 @@ export async function POST(request: Request) {
 
     if (isExcel) {
       kind = 'excel';
-      const parsed = parseExcel(buf);
+      const parsed = await parseExcel(buf);
       sheets = parsed.sheets;
       rowCount = parsed.rowCount;
       if (!sheets.length) return NextResponse.json({ error: 'Workbook has no readable sheets' }, { status: 400 });

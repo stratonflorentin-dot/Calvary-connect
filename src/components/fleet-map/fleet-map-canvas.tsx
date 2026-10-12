@@ -75,8 +75,6 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map());
     const tileLayerRef = useRef<import("leaflet").TileLayer | null>(null);
     const labelsLayerRef = useRef<import("leaflet").TileLayer | null>(null);
-    const streetFallbackIndexRef = useRef(0);
-    const streetSwitchedRef = useRef(false);
     const initRef = useRef(false);
     const [mapReady, setMapReady] = useState(false);
     const lastFitCountRef = useRef(0);
@@ -90,30 +88,37 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       if (!map || index >= FLEET_MAP_TILE_LAYERS.length) return;
       const cfg = FLEET_MAP_TILE_LAYERS[index];
       if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
+      if (labelsLayerRef.current) {
+        map.removeLayer(labelsLayerRef.current);
+        labelsLayerRef.current = null;
+      }
 
       const layer = L.tileLayer(cfg.url, cfg.options);
       layer.on("tileerror", () => {
-        if (streetSwitchedRef.current) return;
-        streetFallbackIndexRef.current += 1;
-        if (streetFallbackIndexRef.current < FLEET_MAP_TILE_LAYERS.length) {
-          streetSwitchedRef.current = true;
-          applyStreetLayer(L, streetFallbackIndexRef.current);
-        }
+        // Ignore late errors from a removed layer. Each active provider gets
+        // one chance; a failing fallback advances to the next source.
+        if (tileLayerRef.current !== layer) return;
+        applyStreetLayer(L, index + 1);
       });
       layer.addTo(map);
       tileLayerRef.current = layer;
     };
 
-    const applySatelliteLayer = (L: typeof import("leaflet")) => {
+    const applySatelliteLayer = (L: typeof import("leaflet"), index = 0) => {
       const map = mapInstanceRef.current;
-      if (!map) return;
+      if (!map || index >= FLEET_MAP_SATELLITE_LAYERS.length) return;
       if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
-
-      const cfg = FLEET_MAP_SATELLITE_LAYERS[0];
-      tileLayerRef.current = L.tileLayer(cfg.url, cfg.options).addTo(map);
-      labelsLayerRef.current = L.tileLayer(FLEET_MAP_SATELLITE_LABELS_URL, {
-        maxZoom: 19,
-      }).addTo(map);
+      const cfg = FLEET_MAP_SATELLITE_LAYERS[index];
+      const layer = L.tileLayer(cfg.url, cfg.options);
+      layer.on("tileerror", () => {
+        if (tileLayerRef.current !== layer) return;
+        applySatelliteLayer(L, index + 1);
+      });
+      layer.addTo(map);
+      tileLayerRef.current = layer;
+      if (!labelsLayerRef.current) {
+        labelsLayerRef.current = L.tileLayer(FLEET_MAP_SATELLITE_LABELS_URL, { maxZoom: 19 }).addTo(map);
+      }
     };
 
     const fitAllDrivers = () => {
@@ -268,8 +273,6 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         if (satellite) {
           applySatelliteLayer(L);
         } else {
-          streetFallbackIndexRef.current = 0;
-          streetSwitchedRef.current = false;
           applyStreetLayer(L, 0);
         }
       });
@@ -384,7 +387,7 @@ export const FleetMapCanvas = forwardRef<FleetMapCanvasHandle, Props>(
             <p className="text-sm font-medium text-muted-foreground">Starting map…</p>
           </div>
         )}
-        <div ref={mapRef} className="h-full w-full min-h-[400px]" />
+        <div key={satellite ? "sat" : "street"} ref={mapRef} className="h-full w-full min-h-[400px]" />
         <style jsx global>{`
           @keyframes fleet-pulse {
             0% {

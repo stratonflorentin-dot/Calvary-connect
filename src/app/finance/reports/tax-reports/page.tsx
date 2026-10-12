@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import * as ExcelJS from 'exceljs';
 import { loadRateMap, convertSync } from "@/lib/finance/fx";
 import { REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 
@@ -222,34 +222,77 @@ export default function TaxReportsPage() {
   };
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-
+    const workbook = new ExcelJS.Workbook();
+    
     // Tax calculations sheet
-    const calcSheet = XLSX.utils.json_to_sheet([
-      { Metric: "Total Tax Due (TZS, consolidated)", Value: taxCalculations.totalTaxDue },
-      { Metric: "VAT Collected (TZS, consolidated)", Value: taxCalculations.vatCollected },
-      { Metric: "VAT Paid Deductible (TZS, consolidated)", Value: taxCalculations.vatPaid },
-      { Metric: "Net VAT Liability (TZS, consolidated)", Value: taxCalculations.netVat },
-      { Metric: "Corporate Tax Est (TZS, consolidated)", Value: taxCalculations.corporateTax },
-      { Metric: "Withholding Tax (TZS, consolidated)", Value: taxCalculations.witholdingTax },
+    const calcSheet = workbook.addWorksheet('Calculations');
+    calcSheet.columns = [
+      { header: 'Metric', key: 'metric', width: 50 },
+      { header: 'Value', key: 'value', width: 25 },
+    ];
+    
+    calcSheet.addRows([
+      { metric: 'Total Tax Due (TZS, consolidated)', value: taxCalculations.totalTaxDue },
+      { metric: 'VAT Collected (TZS, consolidated)', value: taxCalculations.vatCollected },
+      { metric: 'VAT Paid Deductible (TZS, consolidated)', value: taxCalculations.vatPaid },
+      { metric: 'Net VAT Liability (TZS, consolidated)', value: taxCalculations.netVat },
+      { metric: 'Corporate Tax Est (TZS, consolidated)', value: taxCalculations.corporateTax },
+      { metric: 'Withholding Tax (TZS, consolidated)', value: taxCalculations.witholdingTax },
     ]);
-    XLSX.utils.book_append_sheet(workbook, calcSheet, "Calculations");
-
+    
+    // Style header row
+    calcSheet.getRow(1).font = { bold: true };
+    calcSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    calcSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
     // Tax records sheet
-    const taxSheet = XLSX.utils.json_to_sheet(
-      filteredTaxes.map((t) => ({
-        TaxType: t.tax_type,
-        Period: t.period,
-        DueDate: t.due_date,
-        Description: t.description,
-        Status: t.status,
-        Amount: t.amount,
-        Currency: t.currency,
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, taxSheet, "Tax Records");
-
-    XLSX.writeFile(workbook, `tax-report-${new Date().toISOString().split("T")[0]}.xlsx`);
+    const taxSheet = workbook.addWorksheet('Tax Records');
+    taxSheet.columns = [
+      { header: 'Tax Type', key: 'taxType', width: 20 },
+      { header: 'Period', key: 'period', width: 15 },
+      { header: 'Due Date', key: 'dueDate', width: 15 },
+      { header: 'Description', key: 'description', width: 30 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Amount', key: 'amount', width: 18 },
+      { header: 'Currency', key: 'currency', width: 12 },
+    ];
+    
+    filteredTaxes.forEach((t) => {
+      taxSheet.addRow({
+        taxType: t.tax_type,
+        period: t.period,
+        dueDate: t.due_date,
+        description: t.description,
+        status: t.status,
+        amount: t.amount,
+        currency: t.currency,
+      });
+    });
+    
+    // Style header row
+    taxSheet.getRow(1).font = { bold: true };
+    taxSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    taxSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Write file
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tax-report-${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    
     toast({ variant: "success", title: "Success", description: "Excel exported successfully" });
   };
 

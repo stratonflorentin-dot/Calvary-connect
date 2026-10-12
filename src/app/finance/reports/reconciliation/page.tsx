@@ -11,7 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { RefreshCcw, Download, FileText, AlertTriangle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { ChartOfAccountsService } from '@/services/chart-of-accounts-service';
 import { formatCurrency } from '@/components/ui/currency-badge';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 
 export default function ReconciliationReport() {
   const { role } = useRole();
@@ -80,42 +80,104 @@ export default function ReconciliationReport() {
 
   const handleExport = () => {
     if (!report) return;
-    const workbook = XLSX.utils.book_new();
-
-    const summarySheet = XLSX.utils.json_to_sheet([
-      { Metric: "Total Expenses", Value: report.totalExpenses },
-      { Metric: "Total Invoices", Value: report.totalInvoices },
-      { Metric: "Mapped Entries", Value: report.mappedExpenses + report.mappedInvoices },
-      { Metric: "Unmapped Entries", Value: report.unmappedItems.length },
+    const workbook = new ExcelJS.Workbook();
+    
+    // Summary sheet
+    const summarySheet = workbook.addWorksheet('Summary');
+    summarySheet.columns = [
+      { header: 'Metric', key: 'metric', width: 30 },
+      { header: 'Value', key: 'value', width: 20 },
+    ];
+    
+    summarySheet.addRows([
+      { metric: 'Total Expenses', value: report.totalExpenses },
+      { metric: 'Total Invoices', value: report.totalInvoices },
+      { metric: 'Mapped Entries', value: report.mappedExpenses + report.mappedInvoices },
+      { metric: 'Unmapped Entries', value: report.unmappedItems.length },
     ]);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
-
-    const accountsSheet = XLSX.utils.json_to_sheet(
-      report.accountsSummary.map((acc: any) => ({
-        Code: acc.code,
-        Name: acc.name,
-        Category: acc.category,
-        Transactions: acc.transactionCount,
-        Amount: acc.totalAmount,
-        Currency: acc.currency,
-      })),
-    );
-    XLSX.utils.book_append_sheet(workbook, accountsSheet, "Accounts Summary");
-
+    
+    // Style header row
+    summarySheet.getRow(1).font = { bold: true };
+    summarySheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    summarySheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Accounts Summary sheet
+    const accountsSheet = workbook.addWorksheet('Accounts Summary');
+    accountsSheet.columns = [
+      { header: 'Code', key: 'code', width: 15 },
+      { header: 'Name', key: 'name', width: 30 },
+      { header: 'Category', key: 'category', width: 20 },
+      { header: 'Transactions', key: 'transactions', width: 15 },
+      { header: 'Amount', key: 'amount', width: 18 },
+      { header: 'Currency', key: 'currency', width: 12 },
+    ];
+    
+    report.accountsSummary.forEach((acc: any) => {
+      accountsSheet.addRow({
+        code: acc.code,
+        name: acc.name,
+        category: acc.category,
+        transactions: acc.transactionCount,
+        amount: acc.totalAmount,
+        currency: acc.currency,
+      });
+    });
+    
+    // Style header row
+    accountsSheet.getRow(1).font = { bold: true };
+    accountsSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    accountsSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Unmapped Entries sheet (if any)
     if (report.unmappedItems.length > 0) {
-      const unmappedSheet = XLSX.utils.json_to_sheet(
-        report.unmappedItems.map((item: any) => ({
-          Type: item.type,
-          ID: item.id,
-          Date: item.date || item.issue_date,
-          Amount: item.amount ?? "",
-          Currency: item.currency || "TZS",
-        })),
-      );
-      XLSX.utils.book_append_sheet(workbook, unmappedSheet, "Unmapped Entries");
+      const unmappedSheet = workbook.addWorksheet('Unmapped Entries');
+      unmappedSheet.columns = [
+        { header: 'Type', key: 'type', width: 15 },
+        { header: 'ID', key: 'id', width: 20 },
+        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Amount', key: 'amount', width: 18 },
+        { header: 'Currency', key: 'currency', width: 12 },
+      ];
+      
+      report.unmappedItems.forEach((item: any) => {
+        unmappedSheet.addRow({
+          type: item.type,
+          id: item.id,
+          date: item.date || item.issue_date,
+          amount: item.amount ?? "",
+          currency: item.currency || "TZS",
+        });
+      });
+      
+      // Style header row
+      unmappedSheet.getRow(1).font = { bold: true };
+      unmappedSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0369A1' },
+      };
+      unmappedSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     }
-
-    XLSX.writeFile(workbook, `coa-reconciliation-${new Date().toISOString().split("T")[0]}.xlsx`);
+    
+    // Write file
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `coa-reconciliation-${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    
     toast({ title: 'Success', description: 'Reconciliation report exported' });
   };
 

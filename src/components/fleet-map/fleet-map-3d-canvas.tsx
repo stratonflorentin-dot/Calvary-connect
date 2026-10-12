@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FleetMapDriver } from "@/components/fleet-map/types";
 import { calculateGeodesicDistance } from "@/lib/geo-utils";
@@ -27,10 +27,11 @@ const MAJOR_CITIES = [
 ];
 
 // Use a simple, reliable vector style for globe projection
-const MAP_STYLE_URL = "https://tiles.openfreemap.org/v2/osm-intl/style.json";
+// CARTO Dark Matter is more reliable than openfreemap.org
+const MAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 // Fallback style if primary fails
-const FALLBACK_STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const FALLBACK_STYLE_URL = "https://demotiles.maplibre.org/style.json";
 
 // Satellite imagery style — a plain raster style (Esri World Imagery, free
 // and keyless) with a transparent place-name/border overlay on top, so it
@@ -72,8 +73,9 @@ const SATELLITE_STYLE: maplibregl.StyleSpecification = {
 
 /** True for styles that ship their own 3D building layer (MapTiler's
  *  "Building 3D") — adding the hand-rolled extrusion layer on top of those
- *  would just duplicate it with a mismatched color scheme. Only CARTO Dark
- *  Matter, which has no building layer of its own, needs the custom one. */
+ *  would just duplicate it with a mismatched color scheme. CARTO Dark
+ *  Matter and demotiles have no building layer of their own, so they need
+ *  the custom one. */
 function styleHasNativeBuildings(styleUrl: string): boolean {
   return styleUrl.includes("api.maptiler.com");
 }
@@ -484,14 +486,6 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           bearing: 0,
         });
 
-        // Apply projection based on mapMode prop (globe/3d) — only for vector styles
-        // Satellite and fallback (CARTO Dark Matter) are raster and don't support globe.
-        if (!isSatellite && !isFallback && mapMode === "globe") {
-          map.setProjection({ type: "globe" });
-        } else {
-          map.setProjection({ type: "mercator" });
-        }
-
         mapRef.current = map;
         mapInstance = map;
         usingFallback = isFallback;
@@ -501,6 +495,13 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         // Clear timeout on successful load
         map.on('load', () => {
           clearTimeout(styleLoadTimeout);
+
+          // Apply projection AFTER style loads
+          if (!isSatellite && !isFallback && mapMode === "globe") {
+            map.setProjection({ type: "globe" });
+          } else {
+            map.setProjection({ type: "mercator" });
+          }
         });
 
         map.addControl(
@@ -552,16 +553,6 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         map.on("load", () => {
           mapReady.current = true;
           setStyleLoaded(true);
-
-          // Apply projection based on mapMode prop (globe/3d) — only for vector styles
-          // Satellite and fallback (CARTO Dark Matter) are raster and don't support globe.
-          if (!isSatellite && !isFallback) {
-            if (mapMode === "globe") {
-              map.setProjection({ type: "globe" });
-            } else {
-              map.setProjection({ type: "mercator" });
-            }
-          }
 
           // 3D building extrusions — only needed for styles without their
           // own (CARTO Dark Matter); MapTiler's Streets Dark already ships
@@ -697,13 +688,12 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     // Mirrors the my-view pattern: globe mode uses globe projection with
     // pitch 0 and low zoom; 3D mode uses mercator with pitch; 2D mode is
     // handled by the parent switching to Leaflet.
-    // Only applies to primary vector style (not satellite, not fallback).
+    // Only applies to vector styles (not satellite).
     useEffect(() => {
       const map = mapRef.current;
       if (!map || !mapReady.current) return;
-      const isFallbackStyle = activeVectorStyleRef.current === FALLBACK_STYLE_URL;
-      if (currentSatelliteRef.current || isFallbackStyle) {
-        // Satellite and fallback are raster — force mercator
+      if (currentSatelliteRef.current) {
+        // Satellite is raster — force mercator
         map.setProjection({ type: "mercator" });
         map.easeTo({
           pitch: mapMode === "globe" ? 0 : 62,
@@ -712,6 +702,7 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         });
         return;
       }
+      // Both primary (CARTO) and fallback (demotiles) are vector styles supporting globe
       if (mapMode === "globe") {
         map.setProjection({ type: "globe" });
         map.easeTo({

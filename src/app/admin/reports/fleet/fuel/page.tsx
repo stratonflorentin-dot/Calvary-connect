@@ -30,7 +30,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -149,21 +149,52 @@ export default function FuelConsumptionPage() {
     : null;
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-    const sheet = XLSX.utils.json_to_sheet(
-      vehicles.map((v) => ({
-        Plate: v.plateNumber,
-        Vehicle: v.makeModel,
-        Currency: v.currency,
-        MixedCurrencies: v.mixedCurrencies ? 'Yes' : 'No',
-        LitersDispensed: v.totalLitresDispensed,
-        TotalFuelCost: v.totalFuelCost,
-        DistanceKm: v.kmDriven,
-        LitersPer100km: v.litresPer100km,
-      })),
-    );
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Fuel Consumption');
-    XLSX.writeFile(workbook, `fuel-consumption-${appliedFrom}_${appliedTo}.xlsx`);
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Fuel Consumption');
+    
+    sheet.columns = [
+      { header: 'Plate', key: 'plate', width: 15 },
+      { header: 'Vehicle', key: 'vehicle', width: 20 },
+      { header: 'Currency', key: 'currency', width: 12 },
+      { header: 'Mixed Currencies', key: 'mixed', width: 15 },
+      { header: 'Liters Dispensed', key: 'liters', width: 18 },
+      { header: 'Total Fuel Cost', key: 'cost', width: 18 },
+      { header: 'Distance (km)', key: 'distance', width: 15 },
+      { header: 'L/100km', key: 'lPer100km', width: 12 },
+    ];
+    
+    vehicles.forEach((v) => {
+      sheet.addRow({
+        plate: v.plateNumber,
+        vehicle: v.makeModel,
+        currency: v.currency,
+        mixed: v.mixedCurrencies ? 'Yes' : 'No',
+        liters: v.totalLitresDispensed,
+        cost: v.totalFuelCost,
+        distance: v.kmDriven,
+        lPer100km: v.litresPer100km,
+      });
+    });
+    
+    // Style header row
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Write file
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fuel-consumption-${appliedFrom}_${appliedTo}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   };
 
   const exportPDF = () => {

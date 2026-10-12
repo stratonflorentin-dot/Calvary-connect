@@ -11,7 +11,7 @@ import { formatCurrency } from "@/components/ui/currency-badge";
 import { fetchLogoDataUrl } from "@/lib/finance/document-pdf";
 import { downloadStatementPdf, type StatementLine } from "@/lib/finance/statement-pdf";
 import { ArrowLeft, Download, FileText, Loader2, ScrollText, Table as TableIcon } from "lucide-react";
-import * as XLSX from "xlsx";
+import * as ExcelJS from 'exceljs';
 
 const fmt = (v: number, cur: string) => formatCurrency(v, cur);
 
@@ -159,22 +159,73 @@ export default function StatementOfAccountsPage() {
 
   const downloadExcel = (currency: string, openingBalance: number, lines: StatementLine[], closingBalance: number) => {
     if (!selectedCustomer) return;
-    const workbook = XLSX.utils.book_new();
-    const rows = [
-      { Date: "", Description: "Opening Balance", Reference: "", Debit: "", Credit: "", Balance: openingBalance },
-      ...lines.map((l) => ({
-        Date: l.date,
-        Description: l.description,
-        Reference: l.reference,
-        Debit: l.debit || "",
-        Credit: l.credit || "",
-        Balance: l.balance,
-      })),
-      { Date: "", Description: "Closing Balance", Reference: "", Debit: "", Credit: "", Balance: closingBalance },
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet(currency);
+    
+    sheet.columns = [
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Description', key: 'description', width: 40 },
+      { header: 'Reference', key: 'reference', width: 20 },
+      { header: 'Debit', key: 'debit', width: 18 },
+      { header: 'Credit', key: 'credit', width: 18 },
+      { header: 'Balance', key: 'balance', width: 18 },
     ];
-    const sheet = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(workbook, sheet, currency);
-    XLSX.writeFile(workbook, `Statement-${selectedCustomer.company_name}-${currency}-${toDate}.xlsx`);
+    
+    // Opening balance row
+    sheet.addRow({
+      date: '',
+      description: 'Opening Balance',
+      reference: '',
+      debit: '',
+      credit: '',
+      balance: openingBalance,
+    });
+    
+    // Data rows
+    lines.forEach((l) => {
+      sheet.addRow({
+        date: l.date,
+        description: l.description,
+        reference: l.reference,
+        debit: l.debit || '',
+        credit: l.credit || '',
+        balance: l.balance,
+      });
+    });
+    
+    // Closing balance row
+    sheet.addRow({
+      date: '',
+      description: 'Closing Balance',
+      reference: '',
+      debit: '',
+      credit: '',
+      balance: closingBalance,
+    });
+    
+    // Style header row
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Style opening/closing balance rows
+    sheet.getRow(2).font = { bold: true, italic: true };
+    sheet.getRow(sheet.rowCount).font = { bold: true, italic: true };
+    
+    // Write file
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Statement-${selectedCustomer.company_name}-${currency}-${toDate}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   };
 
   return (

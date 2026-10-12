@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback } from "react";
+import { useMemo, useRef, useState, useCallback, lazy, Suspense, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -36,8 +36,17 @@ import {
   HelpCircle,
   ArrowRight,
   Satellite,
+  Fuel,
+  Anchor,
   // AlertCircle used via dynamic fallback to avoid runtime import errors
 } from "lucide-react";
+import { ExternalErrorBoundary } from "@/components/external-apis/ExternalErrorBoundary";
+import { ExternalPanelSkeleton } from "@/components/external-apis/ExternalPanel";
+
+const FuelPriceMap = lazy(() => import("@/components/external-apis/FuelPriceMap"));
+const BorderWaitTimes = lazy(() => import("@/components/external-apis/BorderWaitTimes"));
+const PortCongestion = lazy(() => import("@/components/external-apis/PortCongestion"));
+const MarketRates = lazy(() => import("@/components/external-apis/MarketRates"));
 
 const mapLoading = (label: string) =>
   function MapLoading() {
@@ -257,6 +266,29 @@ export default function FleetMapView({
   const [mapMode, setMapMode] = useState<"2d" | "3d" | "globe">("globe");
   const [engineNotice, setEngineNotice] = useState<string | null>(null);
   const [satellite, setSatellite] = useState(false);
+  const [externalPanel, setExternalPanel] = useState<"fuel" | "port" | "border" | "market" | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = window.localStorage.getItem("fleet-map:external-panel:v1");
+    return saved === "fuel" || saved === "port" || saved === "border" || saved === "market" ? saved : null;
+  });
+
+  useEffect(() => {
+    if (externalPanel) window.localStorage.setItem("fleet-map:external-panel:v1", externalPanel);
+    else window.localStorage.removeItem("fleet-map:external-panel:v1");
+  }, [externalPanel]);
+
+  useEffect(() => {
+    const shortcuts: Record<string, "fuel" | "port" | "border" | "market"> = { f: "fuel", p: "port", b: "border", m: "market" };
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
+      if (event.key === "Escape") { setExternalPanel(null); return; }
+      const next = shortcuts[event.key.toLowerCase()];
+      if (next) setExternalPanel((current) => current === next ? null : next);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // If the MapLibre style/tiles cannot load, fall back to the Leaflet 2D map
   // instead of leaving a blank canvas.
@@ -493,7 +525,33 @@ export default function FleetMapView({
       </div>
 
       {/* Map Controls & Camera modes */}
+      {externalPanel && (
+        <div className="absolute left-4 top-[22%] z-[1000] pointer-events-auto">
+          <ExternalErrorBoundary key={externalPanel}>
+            <Suspense fallback={<ExternalPanelSkeleton title={externalPanel} />}>
+              {externalPanel === "fuel" && <FuelPriceMap onClose={() => setExternalPanel(null)} />}
+              {externalPanel === "port" && <PortCongestion onClose={() => setExternalPanel(null)} />}
+              {externalPanel === "border" && <BorderWaitTimes onClose={() => setExternalPanel(null)} />}
+              {externalPanel === "market" && <MarketRates onClose={() => setExternalPanel(null)} />}
+            </Suspense>
+          </ExternalErrorBoundary>
+        </div>
+      )}
       <div className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-3 pointer-events-auto">
+        <div className={cn(glass, "flex flex-col gap-1 rounded-xl p-1 shadow-md")}>
+          {([
+            ["fuel", "Fuel prices", Fuel],
+            ["port", "Port status", Anchor],
+            ["border", "Borders", Globe],
+            ["market", "Market rates", Clock],
+          ] as const).map(([panel, label, Icon]) => (
+            <Button key={panel} variant={externalPanel === panel ? "default" : "ghost"} size="sm" title={label}
+              className={cn("h-8 justify-start gap-2 rounded-lg px-2 text-[10px]", externalPanel === panel && "bg-primary text-primary-foreground")}
+              onClick={() => setExternalPanel((current) => current === panel ? null : panel)}>
+              <Icon className="h-3.5 w-3.5" /><span className="hidden lg:inline">{label}</span>
+            </Button>
+          ))}
+        </div>
         {/* Navigation & Zoom controls */}
         <div className="flex flex-col gap-1.5">
           <Button

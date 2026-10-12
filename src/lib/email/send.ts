@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
 /**
  * Sends mail as info@calvary.co.tz via Gmail SMTP (the mailbox is Google
@@ -9,7 +9,7 @@ import nodemailer from "nodemailer";
  * from client code.
  */
 
-let cachedTransporter: nodemailer.Transporter | null = null;
+let cachedTransporter: Transporter | null = null;
 
 function getTransporter() {
   if (cachedTransporter) return cachedTransporter;

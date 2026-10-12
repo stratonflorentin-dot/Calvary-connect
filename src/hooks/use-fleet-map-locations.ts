@@ -2,14 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSupabase } from "@/components/supabase-provider";
-import { useRole } from "@/hooks/use-role";
 import { supabase } from "@/lib/supabase";
-import { getDriverLocationsForMapAction } from "@/app/tracking/actions";
 import type { FleetMapDriver } from "@/components/fleet-map/types";
 
 export function useFleetMapLocations() {
   const { user, isLoading: authLoading } = useSupabase();
-  const { role, actualRole, isAdmin } = useRole();
   const [locations, setLocations] = useState<FleetMapDriver[]>([]);
   const [driversWithoutGps, setDriversWithoutGps] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -30,25 +27,27 @@ export function useFleetMapLocations() {
         token = refreshed.session?.access_token ?? null;
       }
 
-      const managerRole = actualRole || role || user.role || "";
-
-      const { locations: rows, error, driversWithoutGps: noGps } =
-        await getDriverLocationsForMapAction(
-          token,
-          user.email,
-          managerRole,
-          isAdmin,
-        );
-
-      if (error) {
-        setLoadError(error);
+      if (!token) {
+        setLoadError("Your sign-in session expired. Sign in again to load fleet locations.");
         setLocations([]);
-        setDriversWithoutGps(noGps || []);
+        setDriversWithoutGps([]);
         return;
       }
 
+      const response = await fetch("/api/map/locations", {
+        headers: { authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || `Fleet locations request failed (${response.status}).`);
+      const rows = payload.locations as Array<{
+        id: string; driverName: string; latitude: number; longitude: number; speed: number; status: FleetMapDriver["status"];
+        isOnline: boolean; vehiclePlate: string; lastUpdate: string; heading: number; accuracy: number | null;
+        altitude: number | null; altitudeAccuracy: number | null; vehicleType: string; vehiclePhotoUrl: string | null; engineOn: boolean | null;
+      }>;
+
       setLoadError(null);
-      setDriversWithoutGps(noGps || []);
+      setDriversWithoutGps(payload.driversWithoutGps || []);
       setLocations(
         rows.map((loc) => ({
           id: loc.id,
@@ -75,7 +74,7 @@ export function useFleetMapLocations() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, actualRole, role, isAdmin]);
+  }, [user]);
 
   useEffect(() => {
     if (authLoading || !user?.email) return;

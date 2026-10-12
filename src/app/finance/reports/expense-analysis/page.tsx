@@ -17,7 +17,7 @@ import { formatAmount, formatDate } from "@/lib/utils";
 import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import * as ExcelJS from 'exceljs';
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 
 type Expense = {
@@ -249,34 +249,79 @@ export default function ExpenseAnalysisPage() {
   };
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-
+    const workbook = new ExcelJS.Workbook();
+    
     // Category breakdown sheet
-    const categorySheet = XLSX.utils.json_to_sheet(
-      categoryData.map((item) => ({
-        Category: item.name,
-        Amount: item.amount,
-        Currency: item.currency,
-        Percentage: pctOfCurrencyTotal(item.amount, item.currency).toFixed(1) + "%",
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, categorySheet, "Category Breakdown");
-
+    const categorySheet = workbook.addWorksheet('Category Breakdown');
+    categorySheet.columns = [
+      { header: 'Category', key: 'category', width: 30 },
+      { header: 'Amount', key: 'amount', width: 18 },
+      { header: 'Currency', key: 'currency', width: 12 },
+      { header: 'Percentage', key: 'percentage', width: 15 },
+    ];
+    
+    categoryData.forEach((item) => {
+      categorySheet.addRow({
+        category: item.name,
+        amount: item.amount,
+        currency: item.currency,
+        percentage: pctOfCurrencyTotal(item.amount, item.currency).toFixed(1) + "%",
+      });
+    });
+    
+    // Style header row
+    categorySheet.getRow(1).font = { bold: true };
+    categorySheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    categorySheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
     // Detailed expenses sheet
-    const expenseSheet = XLSX.utils.json_to_sheet(
-      filteredExpenses.map((e) => ({
-        Date: e.date,
-        Description: e.description,
-        Category: e.category,
-        Vendor: e.vendor || "-",
-        Status: e.status,
-        Amount: e.amount,
-        Currency: e.currency,
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, expenseSheet, "Expenses");
-
-    XLSX.writeFile(workbook, `expense-analysis-${new Date().toISOString().split("T")[0]}.xlsx`);
+    const expenseSheet = workbook.addWorksheet('Expenses');
+    expenseSheet.columns = [
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Description', key: 'description', width: 30 },
+      { header: 'Category', key: 'category', width: 20 },
+      { header: 'Vendor', key: 'vendor', width: 20 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Amount', key: 'amount', width: 18 },
+      { header: 'Currency', key: 'currency', width: 12 },
+    ];
+    
+    filteredExpenses.forEach((e) => {
+      expenseSheet.addRow({
+        date: e.date,
+        description: e.description,
+        category: e.category,
+        vendor: e.vendor || "-",
+        status: e.status,
+        amount: e.amount,
+        currency: e.currency,
+      });
+    });
+    
+    // Style header row
+    expenseSheet.getRow(1).font = { bold: true };
+    expenseSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    expenseSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Write file
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `expense-analysis-${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    
     toast({ variant: "success", title: "Success", description: "Excel exported successfully" });
   };
 

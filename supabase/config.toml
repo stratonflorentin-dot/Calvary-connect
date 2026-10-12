@@ -412,3 +412,8 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[functions.scheduled-health-check]
+# The function authenticates scheduled invocations with a dedicated random
+# x-cron-secret shared with the app route; it does not accept user JWTs.
+verify_jwt = false

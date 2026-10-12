@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowDown, ArrowUp, Calendar, Download, FileText, RefreshCw, TrendingUp, Wallet, DollarSign } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
-import * as XLSX from "xlsx";
+import * as ExcelJS from 'exceljs';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -143,19 +143,44 @@ export default function CashFlowPage() {
     Array.from(cashFlowByCurrency.entries()).filter(([, v]) => v.cashFromOperations !== 0 || v.cashFromFinancing !== 0 || v.beginningCash !== 0 || v.endingCash !== 0);
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
+    
     for (const [currency, v] of activeCurrencies()) {
-      const sheet = XLSX.utils.json_to_sheet([
-        { Line: "Cash from Operations", Amount: v.cashFromOperations },
-        { Line: "Cash from Investing", Amount: v.cashFromInvesting },
-        { Line: "Cash from Financing", Amount: v.cashFromFinancing },
-        { Line: "Net Cash Flow", Amount: v.netCashFlow },
-        { Line: "Beginning Cash", Amount: v.beginningCash },
-        { Line: "Ending Cash", Amount: v.endingCash },
+      const sheet = workbook.addWorksheet(currency);
+      
+      sheet.columns = [
+        { header: 'Line', key: 'line', width: 30 },
+        { header: 'Amount', key: 'amount', width: 25 },
+      ];
+      
+      sheet.addRows([
+        { line: 'Cash from Operations', amount: v.cashFromOperations },
+        { line: 'Cash from Investing', amount: v.cashFromInvesting },
+        { line: 'Cash from Financing', amount: v.cashFromFinancing },
+        { line: 'Net Cash Flow', amount: v.netCashFlow },
+        { line: 'Beginning Cash', amount: v.beginningCash },
+        { line: 'Ending Cash', amount: v.endingCash },
       ]);
-      XLSX.utils.book_append_sheet(workbook, sheet, currency);
+      
+      // Style header row
+      sheet.getRow(1).font = { bold: true };
+      sheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0369A1' },
+      };
+      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     }
-    XLSX.writeFile(workbook, `cash-flow-${startDate}-to-${endDate}.xlsx`);
+    
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cash-flow-${startDate}-to-${endDate}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   };
 
   const exportPDF = () => {

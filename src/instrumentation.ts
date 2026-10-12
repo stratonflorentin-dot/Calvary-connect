@@ -17,7 +17,7 @@ export async function register() {
     const skipOtel =
       process.env.DISABLE_OTEL === '1' ||
       process.env.VERCEL === '1' ||
-      process.env.NODE_ENV !== 'development' && !process.env.OTEL_EXPORTER_JAEGER_ENDPOINT;
+      !process.env.OTEL_EXPORTER_JAEGER_ENDPOINT;
     if (skipOtel) {
       if (process.env.DISABLE_OTEL === '1' || process.env.VERCEL === '1' || process.env.NEXT_TELEMETRY_DISABLED === '1') {
         // Silent on known-disabled envs (Vercel, CI, explicit flag) — no log spam in production.
@@ -26,7 +26,9 @@ export async function register() {
       }
       return;
     }
-    const dynamicImport = (specifier: string) => import(specifier) as Promise<any>;
+    // Keep optional OpenTelemetry SDK modules runtime-loaded so Webpack does
+    // not turn this variable import into an unresolvable context dependency.
+    const dynamicImport = (specifier: string) => import(/* webpackIgnore: true */ specifier) as Promise<any>;
     try {
       const { NodeSDK } = await dynamicImport('@opentelemetry/sdk-node');
       const { Resource } = await dynamicImport('@opentelemetry/resources');

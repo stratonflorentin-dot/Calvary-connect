@@ -3,11 +3,9 @@
  * and column-detection/row-building the CSV importer uses (bank-statement-csv.ts),
  * just fed from a parsed worksheet instead of split CSV lines, so the New
  * Bank Statement page's preview table and createBatch() need no changes to
- * support it. Uses `xlsx` (SheetJS) — already a dependency, used elsewhere
- * in the app for report exports (e.g. finance/reports/cash-flow) — reading
- * an uploaded file is the same library, not a new one.
+ * support it. Uses `exceljs` — replacing xlsx (SheetJS) for security.
  */
-import * as XLSX from "xlsx";
+import * as ExcelJS from "exceljs";
 import {
   type ParsedStatement,
   detectColumnIndexes,
@@ -17,15 +15,24 @@ import {
 
 export async function parseStatementXlsx(file: File): Promise<ParsedStatement> {
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: "array", cellDates: false });
-  const sheetName = workbook.SheetNames[0];
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  
+  const sheetName = workbook.worksheets[0]?.name;
   if (!sheetName) return { rows: [], headerErrors: ["The workbook has no sheets."] };
 
-  const sheet = workbook.Sheets[sheetName];
-  // header: 1 -> array-of-arrays of raw cell values, blank rows dropped so a
-  // stray spacer row between the header and the first transaction doesn't
-  // get read as the header itself.
-  const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false, defval: "" });
+  const sheet = workbook.getWorksheet(sheetName);
+  if (!sheet) return { rows: [], headerErrors: ["The sheet is empty."] };
+
+  const raw: unknown[][] = [];
+  sheet.eachRow({ includeEmpty: false }, (row) => {
+    const rowData: unknown[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      rowData[colNumber - 1] = cell.value;
+    });
+    raw.push(rowData);
+  });
+  
   if (raw.length === 0) return { rows: [], headerErrors: ["The sheet is empty."] };
 
   const toCell = (v: unknown): string => {

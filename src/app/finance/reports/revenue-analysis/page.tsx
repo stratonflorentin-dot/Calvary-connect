@@ -17,7 +17,7 @@ import { formatAmount, formatDate } from "@/lib/utils";
 import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import * as ExcelJS from 'exceljs';
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
 import { getRate } from "@/lib/finance/fx";
 import { Loader2 } from "lucide-react";
@@ -356,46 +356,108 @@ export default function RevenueAnalysisPage() {
   };
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-
+    const workbook = new ExcelJS.Workbook();
+    
     // Customer breakdown sheet
-    const customerSheet = XLSX.utils.json_to_sheet(
-      customerData.map((item) => ({
-        Customer: item.name,
-        Revenue: item.amount,
-        Currency: item.currency,
-        Percentage: pctOfCurrencyTotal(item.amount, item.currency).toFixed(1) + "%",
-        InvoiceCount: filteredInvoices.filter((i) => i.customer_name === item.name && (i.currency || "TZS") === item.currency).length,
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, customerSheet, "Customer Breakdown");
-
+    const customerSheet = workbook.addWorksheet('Customer Breakdown');
+    customerSheet.columns = [
+      { header: 'Customer', key: 'customer', width: 30 },
+      { header: 'Revenue', key: 'revenue', width: 18 },
+      { header: 'Currency', key: 'currency', width: 12 },
+      { header: 'Percentage', key: 'percentage', width: 15 },
+      { header: 'Invoice Count', key: 'invoiceCount', width: 15 },
+    ];
+    
+    customerData.forEach((item) => {
+      customerSheet.addRow({
+        customer: item.name,
+        revenue: item.amount,
+        currency: item.currency,
+        percentage: pctOfCurrencyTotal(item.amount, item.currency).toFixed(1) + "%",
+        invoiceCount: filteredInvoices.filter((i) => i.customer_name === item.name && (i.currency || "TZS") === item.currency).length,
+      });
+    });
+    
+    // Style header row
+    customerSheet.getRow(1).font = { bold: true };
+    customerSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    customerSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
     // Detailed invoices sheet
-    const invoiceSheet = XLSX.utils.json_to_sheet(
-      filteredInvoices.map((i) => ({
-        InvoiceNumber: i.invoice_number,
-        Customer: i.customer_name,
-        DueDate: i.due_date,
-        Status: i.status,
-        Type: i.type,
-        Amount: i.amount,
-        Currency: i.currency,
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, invoiceSheet, "Invoices");
-
+    const invoiceSheet = workbook.addWorksheet('Invoices');
+    invoiceSheet.columns = [
+      { header: 'Invoice Number', key: 'invoiceNumber', width: 20 },
+      { header: 'Customer', key: 'customer', width: 25 },
+      { header: 'Due Date', key: 'dueDate', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Type', key: 'type', width: 15 },
+      { header: 'Amount', key: 'amount', width: 18 },
+      { header: 'Currency', key: 'currency', width: 12 },
+    ];
+    
+    filteredInvoices.forEach((i) => {
+      invoiceSheet.addRow({
+        invoiceNumber: i.invoice_number,
+        customer: i.customer_name,
+        dueDate: i.due_date,
+        status: i.status,
+        type: i.type,
+        amount: i.amount,
+        currency: i.currency,
+      });
+    });
+    
+    // Style header row
+    invoiceSheet.getRow(1).font = { bold: true };
+    invoiceSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    invoiceSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
     // Income sheet
-    const incomeSheet = XLSX.utils.json_to_sheet(
-      income.map((i) => ({
-        Description: i.description,
-        Amount: i.amount,
-        Currency: i.currency,
-        Date: i.date,
-      }))
-    );
-    XLSX.utils.book_append_sheet(workbook, incomeSheet, "Income");
-
-    XLSX.writeFile(workbook, `revenue-analysis-${new Date().toISOString().split("T")[0]}.xlsx`);
+    const incomeSheet = workbook.addWorksheet('Income');
+    incomeSheet.columns = [
+      { header: 'Description', key: 'description', width: 30 },
+      { header: 'Amount', key: 'amount', width: 18 },
+      { header: 'Currency', key: 'currency', width: 12 },
+      { header: 'Date', key: 'date', width: 15 },
+    ];
+    
+    income.forEach((i) => {
+      incomeSheet.addRow({
+        description: i.description,
+        amount: i.amount,
+        currency: i.currency,
+        date: i.date,
+      });
+    });
+    
+    // Style header row
+    incomeSheet.getRow(1).font = { bold: true };
+    incomeSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    incomeSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Write file
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `revenue-analysis-${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    
     toast({ variant: "success", title: "Success", description: "Excel exported successfully" });
   };
 

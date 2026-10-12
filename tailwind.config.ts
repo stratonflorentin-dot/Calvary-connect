@@ -1,12 +1,17 @@
 import type { Config } from 'tailwindcss';
 import tailwindAnimate from 'tailwindcss-animate';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+const contentGlob = (pattern: string) => path.join(projectRoot, pattern).replace(/\\/g, '/');
 
 export default {
   darkMode: ['class'],
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    contentGlob('src/pages/**/*.{js,ts,jsx,tsx,mdx}'),
+    contentGlob('src/components/**/*.{js,ts,jsx,tsx,mdx}'),
+    contentGlob('src/app/**/*.{js,ts,jsx,tsx,mdx}'),
   ],
   theme: {
     screens: {

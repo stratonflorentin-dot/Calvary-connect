@@ -28,7 +28,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -144,22 +144,56 @@ export default function VehicleRevenuePage() {
   const topVehicle = vehicles.length > 0 ? vehicles[0] : null;
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-    const sheet = XLSX.utils.json_to_sheet(
-      vehicles.map((v) => ({
-        Plate: v.plateNumber,
-        Vehicle: v.makeModel,
-        Currency: v.currency,
-        MixedCurrencies: v.mixedCurrencies ? 'Yes' : 'No',
-        Trips: v.tripsCount,
-        Revenue: v.totalRevenue,
-        Expenses: v.totalExpenses,
-        NetProfit: v.netProfit,
-        ProfitMarginPercent: v.profitMarginPercent,
-      })),
-    );
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Vehicle Revenue');
-    XLSX.writeFile(workbook, `vehicle-revenue-${appliedFrom}_${appliedTo}.xlsx`);
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Vehicle Revenue');
+    
+    // Add headers
+    sheet.columns = [
+      { header: 'Plate', key: 'plate', width: 15 },
+      { header: 'Vehicle', key: 'vehicle', width: 20 },
+      { header: 'Currency', key: 'currency', width: 12 },
+      { header: 'Mixed Currencies', key: 'mixed', width: 15 },
+      { header: 'Trips', key: 'trips', width: 10 },
+      { header: 'Revenue', key: 'revenue', width: 18 },
+      { header: 'Expenses', key: 'expenses', width: 18 },
+      { header: 'Net Profit', key: 'netProfit', width: 18 },
+      { header: 'Profit Margin %', key: 'margin', width: 15 },
+    ];
+    
+    // Add data rows
+    vehicles.forEach((v) => {
+      sheet.addRow({
+        plate: v.plateNumber,
+        vehicle: v.makeModel,
+        currency: v.currency,
+        mixed: v.mixedCurrencies ? 'Yes' : 'No',
+        trips: v.tripsCount,
+        revenue: v.totalRevenue,
+        expenses: v.totalExpenses,
+        netProfit: v.netProfit,
+        margin: v.profitMarginPercent,
+      });
+    });
+    
+    // Style header row
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Write file
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vehicle-revenue-${appliedFrom}_${appliedTo}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   };
 
   const exportPDF = () => {

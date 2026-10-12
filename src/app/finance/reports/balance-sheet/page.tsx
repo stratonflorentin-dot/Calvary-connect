@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Calendar, Download, FileText, RefreshCw, Scale, Wallet, Building2, TrendingUp } from "lucide-react";
 import { formatDate, formatAmount } from "@/lib/utils";
 import { CurrencyBadge, formatCurrency, AVAILABLE_CURRENCIES } from "@/components/ui/currency-badge";
-import * as XLSX from "xlsx";
+import * as ExcelJS from 'exceljs';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -138,22 +138,47 @@ export default function BalanceSheetPage() {
     Array.from(balanceSheetByCurrency.entries()).filter(([, v]) => v.totalAssets !== 0 || v.totalLiabilities !== 0 || v.totalEquity !== 0);
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
+    
     for (const [currency, v] of activeCurrencies()) {
-      const sheet = XLSX.utils.json_to_sheet([
-        { Line: "Cash & Equivalents", Amount: v.cashAndEquivalents },
-        { Line: "Accounts Receivable", Amount: v.accountsReceivable },
-        { Line: "Total Assets", Amount: v.totalAssets },
-        { Line: "Accounts Payable", Amount: v.accountsPayable },
-        { Line: "Accrued Expenses", Amount: v.accruedExpenses },
-        { Line: "Total Liabilities", Amount: v.totalLiabilities },
-        { Line: "Retained Earnings", Amount: v.retainedEarnings },
-        { Line: "Total Equity", Amount: v.totalEquity },
-        { Line: "Total Liabilities & Equity", Amount: v.totalLiabilitiesAndEquity },
+      const sheet = workbook.addWorksheet(currency);
+      
+      sheet.columns = [
+        { header: 'Line', key: 'line', width: 35 },
+        { header: 'Amount', key: 'amount', width: 25 },
+      ];
+      
+      sheet.addRows([
+        { line: 'Cash & Equivalents', amount: v.cashAndEquivalents },
+        { line: 'Accounts Receivable', amount: v.accountsReceivable },
+        { line: 'Total Assets', amount: v.totalAssets },
+        { line: 'Accounts Payable', amount: v.accountsPayable },
+        { line: 'Accrued Expenses', amount: v.accruedExpenses },
+        { line: 'Total Liabilities', amount: v.totalLiabilities },
+        { line: 'Retained Earnings', amount: v.retainedEarnings },
+        { line: 'Total Equity', amount: v.totalEquity },
+        { line: 'Total Liabilities & Equity', amount: v.totalLiabilitiesAndEquity },
       ]);
-      XLSX.utils.book_append_sheet(workbook, sheet, currency);
+      
+      // Style header row
+      sheet.getRow(1).font = { bold: true };
+      sheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0369A1' },
+      };
+      sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     }
-    XLSX.writeFile(workbook, `balance-sheet-${new Date().toISOString().split("T")[0]}.xlsx`);
+    
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `balance-sheet-${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   };
 
   const exportPDF = () => {

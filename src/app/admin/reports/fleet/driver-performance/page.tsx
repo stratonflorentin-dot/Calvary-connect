@@ -32,7 +32,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -219,25 +219,60 @@ export default function DriverPerformancePage() {
   };
 
   const exportExcel = () => {
-    const workbook = XLSX.utils.book_new();
-    const sheet = XLSX.utils.json_to_sheet(
-      rankedDrivers.map((d) => ({
-        Driver: d.name,
-        EmployeeId: d.employeeId,
-        Trips: d.completedTripsCount,
-        DistanceKm: d.distanceTracked ? d.totalDistanceKm : '',
-        Currency: d.currency,
-        MixedCurrencies: d.mixedRevenueCurrencies ? 'Yes' : 'No',
-        Revenue: d.totalRevenue,
-        FuelCostTZS: d.totalFuelCostTZS,
-        FuelLiters: d.totalFuelLiters,
-        OnTimePercent: d.onTimeDeliveryRate ?? '',
-        Score: scorecards[d.id]?.overall_score ?? '',
-        Rating: d.hasReviews ? d.averagePerformanceScore : '',
-      })),
-    );
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Driver Performance');
-    XLSX.writeFile(workbook, `driver-performance-${appliedFrom}_${appliedTo}.xlsx`);
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Driver Performance');
+    
+    sheet.columns = [
+      { header: 'Driver', key: 'driver', width: 25 },
+      { header: 'Employee ID', key: 'employeeId', width: 15 },
+      { header: 'Trips', key: 'trips', width: 10 },
+      { header: 'Distance (km)', key: 'distance', width: 15 },
+      { header: 'Currency', key: 'currency', width: 12 },
+      { header: 'Mixed Currencies', key: 'mixed', width: 15 },
+      { header: 'Revenue', key: 'revenue', width: 18 },
+      { header: 'Fuel Cost (TZS)', key: 'fuelCost', width: 18 },
+      { header: 'Fuel Liters', key: 'fuelLiters', width: 15 },
+      { header: 'On-Time %', key: 'onTime', width: 12 },
+      { header: 'Score', key: 'score', width: 10 },
+      { header: 'Rating', key: 'rating', width: 10 },
+    ];
+    
+    rankedDrivers.forEach((d) => {
+      sheet.addRow({
+        driver: d.name,
+        employeeId: d.employeeId,
+        trips: d.completedTripsCount,
+        distance: d.distanceTracked ? d.totalDistanceKm : '',
+        currency: d.currency,
+        mixed: d.mixedRevenueCurrencies ? 'Yes' : 'No',
+        revenue: d.totalRevenue,
+        fuelCost: d.totalFuelCostTZS,
+        fuelLiters: d.totalFuelLiters,
+        onTime: d.onTimeDeliveryRate ?? '',
+        score: scorecards[d.id]?.overall_score ?? '',
+        rating: d.hasReviews ? d.averagePerformanceScore : '',
+      });
+    });
+    
+    // Style header row
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0369A1' },
+    };
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    
+    // Write file
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `driver-performance-${appliedFrom}_${appliedTo}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   };
 
   const exportPDF = () => {
