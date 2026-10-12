@@ -18,6 +18,9 @@ import { calculateGeodesicDistance } from "@/lib/geo-utils";
 maplibregl.setWorkerUrl(
   new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString(),
 );
+// Globe/imagery views need many small raster requests at once. Raising
+// MapLibre's default request cap lets the visible tile ring fill sooner.
+maplibregl.setMaxParallelImageRequests(24);
 
 type MapProjection = Parameters<maplibregl.Map["setProjection"]>[0];
 
@@ -516,6 +519,8 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           zoom: locations.length > 0 ? 10 : 6.5,
           pitch: isFallback ? 0 : 48, // Disable 3D for fallback
           bearing: 0,
+          fadeDuration: 0,
+          maxTileCacheSize: 256,
         });
 
         mapRef.current = map;
@@ -607,7 +612,12 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
           // top would just duplicate it with a mismatched color scheme.
           // The satellite raster style has neither vector buildings nor a
           // "carto" source to extrude, so it's skipped there too.
-          if (!isFallback && !isSatellite && !styleHasNativeBuildings(styleUrl as string)) {
+          if (
+            !isFallback &&
+            !isSatellite &&
+            latestMapModeRef.current !== "globe" &&
+            !styleHasNativeBuildings(styleUrl as string)
+          ) {
             addBuildingsLayer(map);
           }
 

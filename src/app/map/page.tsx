@@ -87,10 +87,10 @@ export default function LiveMapPage() {
           page mounts, instead of waiting for MapLibre/Leaflet's JS to issue
           the first fetch — shaves a full round trip off first tile paint,
           which matters most on the very first visit to a new origin. */}
-      <link rel="preconnect" href="https://api.maptiler.com" crossOrigin="anonymous" />
-      <link rel="dns-prefetch" href="https://api.maptiler.com" />
       <link rel="preconnect" href="https://basemaps.cartocdn.com" crossOrigin="anonymous" />
       <link rel="dns-prefetch" href="https://basemaps.cartocdn.com" />
+      <link rel="preconnect" href="https://server.arcgisonline.com" crossOrigin="anonymous" />
+      <link rel="dns-prefetch" href="https://server.arcgisonline.com" />
       <div className="relative w-full h-[calc(100vh-0px)] md:h-[calc(100vh-0px)]">
         <FleetMapView
           locations={locations}
