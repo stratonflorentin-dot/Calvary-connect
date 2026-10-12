@@ -11,14 +11,13 @@
 
 export async function askCompanyAI(
   userMessage: string,
-  history: Array<{ role: string; content: string }> = [],
-  liveMetrics: any = {},
-  dbContext?: any
+  accessToken: string,
+  history: Array<{ role: string; text: string }> = [],
 ) {
   const res = await fetch('/api/ai/ask-company', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: userMessage, history, liveMetrics })
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ message: userMessage, history })
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || `AI request failed (${res.status})`);

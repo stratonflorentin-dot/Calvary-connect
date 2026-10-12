@@ -65,6 +65,22 @@ import {
 import { askCompanyAI } from '@/ai/flows/company-chat';
 import { useSupabase } from '@/components/supabase-provider';
 import { vehicleStatusBucket } from '@/lib/fleet/vehicle-status';
+import { supabase } from '@/lib/supabase';
+
+async function getAiAccessToken() {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session?.access_token) throw new Error('Your session expired. Sign in again to continue.');
+  return session.access_token;
+}
+
+function summarizeDataHealth(dataHealth: any) {
+  const tables = Object.entries(dataHealth?.tables || {}) as Array<[string, { ok?: boolean }] >;
+  if (!tables.length) return null;
+  const unavailable = tables.filter(([, status]) => !status.ok).map(([name]) => name);
+  return unavailable.length
+    ? `Data connectivity ${tables.length - unavailable.length}/${tables.length}; unavailable: ${unavailable.join(', ')}`
+    : `Data connectivity ${tables.length}/${tables.length} sources`;
+}
 
 function AiRunMeta({ result }: { result: any }) {
   const generatedAt = result?._feedback?.generatedAt;
@@ -265,7 +281,7 @@ export default function AIAnalysisDashboard() {
 
   // Chat State
   const WELCOME_MESSAGE = { role: 'ai' as const, text: "Welcome to Calvary Command Center AI. I have fully indexed our fleet logs, active transit pipelines, and financial reports. Ask me to run operational audits, summarize profitability, or outline logistics strategies." };
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string; provider?: string; generatedAt?: string; source?: string; error?: boolean }>>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'ai'; text: string; provider?: string; generatedAt?: string; source?: string; dataHealth?: any; error?: boolean }>>([WELCOME_MESSAGE]);
   const [inputVal, setInputVal] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [dbContext, setDbContext] = useState<any | null>(null);
@@ -301,29 +317,14 @@ export default function AIAnalysisDashboard() {
 
       const resp = await fetch('/api/ai/ask-company', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMsg,
-          history,
-          user: user ? { name: user.name, email: user.email, role: user.role } : null,
-          liveMetrics: {
-            fleetSize: vehicles.length,
-            activeTrips: activeTrips.length,
-            revenue: format(totalRevenue),
-            expenses: format(totalExpenses),
-            profit: format(netProfit),
-            utilization: `${fleetUtilization.toFixed(1)}%`,
-            crossBorder: crossBorderTrips,
-            coldChain: coldChainTrips,
-          },
-          dbContext,
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAiAccessToken()}` },
+        body: JSON.stringify({ message: userMsg, history }),
       });
 
       const data = await resp.json();
       if (!resp.ok) throw new Error(data?.error || 'AI request failed. Try again.');
       const answer = data?.text || 'No response from AI.';
-      setMessages(prev => [...prev, { role: 'ai', text: answer, provider: data.provider, generatedAt: data.generatedAt, source: data.source || 'current company and fleet data' }]);
+      setMessages(prev => [...prev, { role: 'ai', text: answer, provider: data.provider, generatedAt: data.generatedAt, source: data.source || 'current company and fleet data', dataHealth: data.dataHealth }]);
     } catch (err: any) {
       setMessages(prev => [...prev, { role: 'ai', text: err.message || 'AI request failed. Try again.', error: true }]);
     } finally {
@@ -343,19 +344,11 @@ export default function AIAnalysisDashboard() {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setAiLoading(true);
     try {
-      const history = messages.slice(1).map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', content: m.text }));
-      const liveMetricsPayload = {
-        fleetSize: vehicles.length,
-        activeTrips: activeTrips.length,
-        revenue: totalRevenue,
-        expenses: totalExpenses,
-        profit: netProfit,
-        utilization: fleetUtilization,
-      };
+      const history = messages.slice(1).map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', text: m.text }));
       const promptContext = `Scenario: trips=${monthlyTrips}, avgRate=${avgRate}, costRatio=${costRatio}, growth=${growthRate}, horizon=${horizon}`;
       const msg = `${userMsg}\n\n${promptContext}`;
-      const answer = await askCompanyAI(msg, history, liveMetricsPayload, dbContext);
-      setMessages(prev => [...prev, { role: 'ai', text: answer.text, provider: answer.provider, generatedAt: answer.generatedAt, source: answer.source || 'current company and fleet data' }]);
+      const answer = await askCompanyAI(msg, await getAiAccessToken(), history);
+      setMessages(prev => [...prev, { role: 'ai', text: answer.text, provider: answer.provider, generatedAt: answer.generatedAt, source: answer.source || 'current company and fleet data', dataHealth: answer.dataHealth }]);
     } catch (err: any) {
       setMessages(prev => [...prev, { role: 'ai', text: err.message || 'AI request failed. Try again.', error: true }]);
     } finally {
@@ -501,7 +494,7 @@ export default function AIAnalysisDashboard() {
     try {
       const resp = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAiAccessToken()}` },
         body: JSON.stringify(payload),
       });
       const data = await resp.json();
@@ -1123,18 +1116,11 @@ export default function AIAnalysisDashboard() {
                           if (aiLoading) return;
                           setAiLoading(true);
                           try {
-                            const history = messages.slice(1).map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', content: m.text }));
+                            const history = messages.slice(1).map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', text: m.text }));
                             const scenario = `Scenario: monthlyTrips=${monthlyTrips}, avgRate=${avgRate}, costRatio=${costRatio}, growth=${growthRate}`;
                             const prompt = `Analyze cost breakdown and propose the top 3 cost-reduction actions with estimated savings (short, <=120 words). Use metrics: ${JSON.stringify(businessMetrics || {})} and scenario: ${scenario}`;
-                            const answer = await askCompanyAI(prompt, history, {
-                              fleetSize: vehicles.length,
-                              activeTrips: activeTrips.length,
-                              revenue: totalRevenue,
-                              expenses: totalExpenses,
-                              profit: netProfit,
-                              utilization: `${fleetUtilization.toFixed(1)}%`,
-                            });
-                            setMessages(prev => [...prev, { role: 'ai', text: answer.text, provider: answer.provider, generatedAt: answer.generatedAt, source: answer.source || 'current company and fleet data' }]);
+                            const answer = await askCompanyAI(prompt, await getAiAccessToken(), history);
+                            setMessages(prev => [...prev, { role: 'ai', text: answer.text, provider: answer.provider, generatedAt: answer.generatedAt, source: answer.source || 'current company and fleet data', dataHealth: answer.dataHealth }]);
                           } catch (err: any) {
                             setMessages(prev => [...prev, { role: 'ai', text: err?.message || 'AI request failed. Try again.', error: true }]);
                           } finally {
@@ -1357,7 +1343,7 @@ export default function AIAnalysisDashboard() {
                     )}
                     {msg.role === 'ai' && msg.generatedAt && (
                       <p className="mt-3 border-t border-border/70 pt-2 text-[10px] text-muted-foreground">
-                        {[msg.provider ? `AI via ${msg.provider}` : 'AI analysis', msg.source, new Date(msg.generatedAt).toLocaleString()].filter(Boolean).join(' · ')}
+                        {[msg.provider ? `AI via ${msg.provider}` : 'AI analysis', msg.source, summarizeDataHealth(msg.dataHealth), new Date(msg.generatedAt).toLocaleString()].filter(Boolean).join(' · ')}
                       </p>
                     )}
                     {msg.role === 'ai' && index > 0 && (

@@ -207,39 +207,39 @@ async function safeQuery(queryFn: () => any, fallbackKey = 'data') {
     const res = await Promise.resolve(queryFn());
     if (res && res.error) {
       console.warn('Supabase query error:', res.error.message || res.error);
-      return { [fallbackKey]: [] };
+      return { [fallbackKey]: [], _connection: { ok: false, error: String(res.error.message || 'Query failed') } };
     }
-    return res || { [fallbackKey]: [] };
+    const result = res || { [fallbackKey]: [] };
+    return { ...result, _connection: { ok: true, rowCount: Array.isArray(result.data) ? result.data.length : 0 } };
   } catch (err) {
     console.warn('Supabase query threw:', err);
-    return { [fallbackKey]: [] };
+    return { [fallbackKey]: [], _connection: { ok: false, error: err instanceof Error ? err.message : 'Query failed' } };
   }
 }
 
-export async function getFleetContext() {
+export async function getFleetContext(queryClient: any = supabase) {
   const [
     vehicles, trips, expenses, users, contracts, customers, fuelLogs, maintenance,
     rateSheets, inventory, quotations, invoices, bookings, shipments, bankAccounts,
   ] = await Promise.all([
-    safeQuery(() => supabase.from('vehicles').select('*').limit(200)),
-    safeQuery(() => supabase.from('trips').select('*').order('created_at', { ascending: false }).limit(200)),
-    safeQuery(() => supabase.from('expenses').select('*').order('date', { ascending: false }).limit(200)),
-    safeQuery(() => supabase.from('user_profiles').select('*').limit(200)),
+    safeQuery(() => queryClient.from('vehicles').select('*').limit(200)),
+    safeQuery(() => queryClient.from('trips').select('*').order('created_at', { ascending: false }).limit(200)),
+    safeQuery(() => queryClient.from('expenses').select('*').order('date', { ascending: false }).limit(200)),
+    safeQuery(() => queryClient.from('user_profiles').select('*').limit(200)),
     // contracts, not transport_contracts — confirmed dead (zero rows,
     // nothing writes to it) elsewhere this session. customer_id is the
     // real FK this table is linked by.
     safeQuery(async () => {
-      let r = await supabase.from('contracts').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
-      if (r.error) return { data: [] };
+      let r = await queryClient.from('contracts').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
       return r;
     }),
-    safeQuery(() => supabase.from('customers').select('*').limit(200)),
+    safeQuery(() => queryClient.from('customers').select('*').limit(200)),
     // Relationship selects can fail if FK relationship missing; try vehicles(plate_number) then fallback to '*'
     safeQuery(async () => {
       try {
-        let r = await supabase.from('fuel_logs').select('*,vehicles(plate_number)').order('fuel_date', { ascending: false }).limit(200);
+        let r = await queryClient.from('fuel_logs').select('*,vehicles(plate_number)').order('fuel_date', { ascending: false }).limit(200);
         if (r.error) {
-          r = await supabase.from('fuel_logs').select('*').order('fuel_date', { ascending: false }).limit(200);
+          r = await queryClient.from('fuel_logs').select('*').order('fuel_date', { ascending: false }).limit(200);
         }
         return r;
       } catch (e) {
@@ -247,43 +247,38 @@ export async function getFleetContext() {
       }
     }),
     safeQuery(async () => {
-      try {
-        let r = await supabase.from('maintenance_records').select('*,vehicles(plate_number)').order('created_at', { ascending: false }).limit(200);
-        if (r.error) {
-          r = await supabase.from('maintenance_records').select('*').order('created_at', { ascending: false }).limit(200);
-        }
-        return r;
-      } catch (e) {
-        return { data: [] };
-      }
+      let r = await queryClient.from('maintenance_records').select('*,vehicles(plate_number)').order('created_at', { ascending: false }).limit(200);
+      if (r.error) r = await queryClient.from('maintenance_records').select('*').order('created_at', { ascending: false }).limit(200);
+      return r;
     }),
-    safeQuery(() => supabase.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50)),
-    safeQuery(() => supabase.from('inventory').select('*').limit(500)),
+    safeQuery(() => queryClient.from('rate_sheets').select('*').eq('is_active', true).order('effective_date', { ascending: false }).limit(50)),
+    safeQuery(() => queryClient.from('inventory').select('*').limit(500)),
     // Sales pipeline — the AI previously had no visibility into quotations
     // at all, so it couldn't answer anything about pipeline/conversion.
     safeQuery(async () => {
-      let r = await supabase.from('quotations').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
-      if (r.error) return { data: [] };
+      let r = await queryClient.from('quotations').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
       return r;
     }),
     // Real revenue/AR — trips.revenue is a dead legacy column (always 0);
     // invoices is the actual billing/receivable record, and the AI
     // previously had zero visibility into it.
     safeQuery(async () => {
-      let r = await supabase.from('invoices').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
-      if (r.error) return { data: [] };
+      let r = await queryClient.from('invoices').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
       return r;
     }),
-    safeQuery(() => supabase.from('bookings').select('*').order('created_at', { ascending: false }).limit(200)),
+    safeQuery(() => queryClient.from('bookings').select('*').order('created_at', { ascending: false }).limit(200)),
     safeQuery(async () => {
-      let r = await supabase.from('shipments').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
-      if (r.error) return { data: [] };
+      let r = await queryClient.from('shipments').select('*, customers:customer_id(company_name)').order('created_at', { ascending: false }).limit(200);
       return r;
     }),
-    safeQuery(() => supabase.from('bank_accounts').select('*')),
+    safeQuery(() => queryClient.from('bank_accounts').select('*')),
   ]);
 
   return {
+    dataHealth: {
+      connectedAt: new Date().toISOString(),
+      tables: Object.fromEntries(Object.entries({ vehicles, trips, expenses, users, contracts, customers, fuelLogs, maintenance, rateSheets, inventory, quotations, invoices, bookings, shipments, bankAccounts }).map(([name, result]: [string, any]) => [name, result._connection || { ok: false, error: 'Connection status unavailable' }])),
+    },
     vehicles: vehicles.data || [],
     trips: trips.data || [],
     expenses: expenses.data || [],

@@ -95,6 +95,9 @@ Standard: POD + empty container interchange + Tax Invoice (EFD).
 DRC adds: OCC, whiskey parking fees, IM4 entry, customs release.
 
 === DATABASE CONTEXT ===
+Data retrieval status: ${dbContext?.dataHealth?.connectedAt ? `connected at ${dbContext.dataHealth.connectedAt}` : 'connection timestamp unavailable'}.
+Table retrieval checks: ${Object.entries(dbContext?.dataHealth?.tables || {}).map(([table, state]: [string, any]) => `${table}=${state.ok ? `connected (${state.rowCount} rows)` : 'unavailable'}`).join('; ') || 'no per-table status available'}.
+If a required table is unavailable, state that limitation and do not interpret its empty result as zero activity. Separate incomplete data from confirmed zero values.
 ${dbContext ? `
 Vehicles: ${JSON.stringify(dbContext.vehicles.slice(0, 8))}
 Recent trips (10): ${JSON.stringify((dbContext.trips || []).slice(0, 10).map((t: any) => ({
