@@ -12,6 +12,29 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { FleetMapDriver } from "@/components/fleet-map/types";
 import { calculateGeodesicDistance } from "@/lib/geo-utils";
 
+type MapProjection = Parameters<maplibregl.Map["setProjection"]>[0];
+
+function setProjectionWhenReady(
+  map: maplibregl.Map,
+  projection: MapProjection,
+  isCurrent: () => boolean,
+) {
+  const apply = () => {
+    if (!isCurrent()) return;
+    if (!map.isStyleLoaded()) {
+      map.once("idle", apply);
+      return;
+    }
+    try {
+      map.setProjection(projection);
+    } catch (error) {
+      console.warn("[MapLibre] Projection could not be applied; keeping the current projection.", error);
+    }
+  };
+
+  apply();
+}
+
 // ─── Static reference locations ──────────────────────────────────────────────
 const BORDER_POINTS = [
   { name: "Namanga",  coords: [-2.5276,  36.7873] as [number, number] },
@@ -492,17 +515,20 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
         currentSatelliteRef.current = isSatellite;
         if (!isSatellite) activeVectorStyleRef.current = styleUrl as string;
 
-        // Clear timeout on successful load
-        map.on('load', () => {
-          clearTimeout(styleLoadTimeout);
-
-          // Apply projection AFTER style loads
-          if (!isSatellite && !isFallback && mapMode === "globe") {
-            map.setProjection({ type: "globe" });
-          } else {
-            map.setProjection({ type: "mercator" });
-          }
+        // Projection updates require a fully initialized style. MapLibre's
+        // general `load` event can run before Style._loaded is true during
+        // startup/style swaps, which throws "Style is not done loading" and
+        // incorrectly sends the whole map into the 2D fallback. Use the
+        // explicit style event and keep projection failures non-fatal.
+        map.once("style.load", () => {
+          const projection = !isSatellite && !isFallback && mapMode === "globe"
+            ? { type: "globe" as const }
+            : { type: "mercator" as const };
+          setProjectionWhenReady(map, projection, () => map === mapRef.current);
         });
+
+        // Clear timeout once MapLibre has completed its initial render.
+        map.once("load", () => clearTimeout(styleLoadTimeout));
 
         map.addControl(
           new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }),
@@ -692,9 +718,11 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
     useEffect(() => {
       const map = mapRef.current;
       if (!map || !mapReady.current) return;
+      const applyProjection = (projection: MapProjection) =>
+        setProjectionWhenReady(map, projection, () => map === mapRef.current);
       if (currentSatelliteRef.current) {
         // Satellite is raster — force mercator
-        map.setProjection({ type: "mercator" });
+        applyProjection({ type: "mercator" });
         map.easeTo({
           pitch: mapMode === "globe" ? 0 : 62,
           zoom: mapMode === "globe" ? Math.min(map.getZoom(), 2.6) : Math.max(map.getZoom(), 11),
@@ -704,14 +732,14 @@ export const FleetMap3DCanvas = forwardRef<FleetMapCanvasHandle, Props>(
       }
       // Both primary (CARTO) and fallback (demotiles) are vector styles supporting globe
       if (mapMode === "globe") {
-        map.setProjection({ type: "globe" });
+        applyProjection({ type: "globe" });
         map.easeTo({
           pitch: 0,
           zoom: Math.min(map.getZoom(), 2.6),
           duration: 1200,
         });
       } else {
-        map.setProjection({ type: "mercator" });
+        applyProjection({ type: "mercator" });
         map.easeTo({
           pitch: 62,
           zoom: Math.max(map.getZoom(), 11),
