@@ -3,8 +3,9 @@
 import { supabase } from './supabase';
 import { toast } from '@/hooks/use-toast';
 
-interface PendingRequest {
+export interface PendingRequest {
   id: string;
+  userId?: string;
   table: string;
   action: 'INSERT' | 'UPDATE' | 'DELETE';
   data: any;
@@ -18,14 +19,18 @@ class OfflineSyncManager {
     return typeof window !== 'undefined' && navigator.onLine;
   }
 
-  static async queueRequest(table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', data: any) {
-    if (this.isOnline()) {
+  static async queueRequest(table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', data: any, force = false, notify = true) {
+    if (this.isOnline() && !force) {
       return null; // Should have been handled by direct call
     }
 
     const pending = this.getPending();
+    const { data: { session } } = await supabase.auth.getSession();
     const newRequest: PendingRequest = {
-      id: crypto.randomUUID(),
+      id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      userId: session?.user.id,
       table,
       action,
       data,
@@ -35,10 +40,12 @@ class OfflineSyncManager {
     pending.push(newRequest);
     localStorage.setItem(this.PENDING_KEY, JSON.stringify(pending));
     
-    toast({
-      title: "Working Offline",
-      description: "Changes saved locally and will sync when you're back online.",
-    });
+    if (notify) {
+      toast({
+        title: "Working Offline",
+        description: "Changes saved locally and will sync when you're back online.",
+      });
+    }
 
     return newRequest;
   }
@@ -55,15 +62,27 @@ class OfflineSyncManager {
     const pending = this.getPending();
     if (pending.length === 0) return;
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user.id) return;
+
     console.log(`[OfflineSync] Syncing ${pending.length} pending requests...`);
     
     const remaining: PendingRequest[] = [];
 
     for (const request of pending) {
+      if (request.userId && request.userId !== session.user.id) {
+        remaining.push(request);
+        continue;
+      }
       try {
         let error;
         if (request.action === 'INSERT') {
-          ({ error } = await supabase.from(request.table).insert(request.data));
+          // Offline creates carry a client-generated primary key so retrying
+          // after a lost response does not create duplicate business records.
+          ({ error } = await supabase.from(request.table).upsert(request.data, {
+            onConflict: 'id',
+            ignoreDuplicates: true,
+          }));
         } else if (request.action === 'UPDATE') {
           ({ error } = await supabase.from(request.table).update(request.data).eq('id', request.data.id));
         } else if (request.action === 'DELETE') {
@@ -78,6 +97,9 @@ class OfflineSyncManager {
     }
 
     localStorage.setItem(this.PENDING_KEY, JSON.stringify(remaining));
+    window.dispatchEvent(new CustomEvent('fleet:offline-sync-complete', {
+      detail: { remaining: remaining.length },
+    }));
 
     if (remaining.length === 0) {
       toast({

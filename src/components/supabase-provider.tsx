@@ -200,6 +200,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           const profile = await fetchUserProfile(session.user.id, session.user.email!);
           if (profile) {
             applyProfile(profile);
+            if (typeof navigator !== 'undefined' && navigator.onLine) void SyncManager.sync();
           } else {
             console.log('[SupabaseProvider] No profile after auth state change — signing out');
             await supabase.auth.signOut();
@@ -238,6 +239,7 @@ export function SupabaseProvider({ children }: { children: ReactNode }) {
           const profile = await fetchUserProfile(session.user.id, session.user.email!);
           if (profile) {
             applyProfile(profile);
+            if (typeof navigator !== 'undefined' && navigator.onLine) void SyncManager.sync();
           } else {
             await supabase.auth.signOut();
             setUser(null);

@@ -67,13 +67,21 @@ export function useDriverData() {
         .maybeSingle();
       setProfile(profileRow || null);
 
-      const { data: tripsData } = await supabase
+      const { data: tripsData, error: tripsError } = await supabase
         .from("trips")
         .select("*")
         .eq("driver_id", user.id)
         .order("created_at", { ascending: false });
 
-      const myTrips = tripsData || [];
+      const tripsCacheKey = `fleet_offline_driver_trips_${user.id}`;
+      let cachedTrips: Record<string, unknown>[] = [];
+      if (typeof window !== "undefined") {
+        try { cachedTrips = JSON.parse(localStorage.getItem(tripsCacheKey) || "[]"); } catch { cachedTrips = []; }
+      }
+      const myTrips = tripsError ? cachedTrips : tripsData || [];
+      if (!tripsError && typeof window !== "undefined") {
+        localStorage.setItem(tripsCacheKey, JSON.stringify(myTrips));
+      }
       setTrips(myTrips);
 
       const pending = myTrips.filter((t) =>

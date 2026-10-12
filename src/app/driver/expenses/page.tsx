@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DriverShell } from "@/components/driver/driver-shell";
 import { useDriverData } from "@/hooks/use-driver-data";
 import { useSupabase } from "@/components/supabase-provider";
@@ -29,6 +29,7 @@ import { Plus, Receipt } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
 import { uploadToBucket } from "@/lib/storage-upload";
+import { SyncManager } from "@/lib/offline-sync";
 import {
   fetchAccountantUserIds,
   notifyAccountantsExpenseSubmitted,
@@ -58,6 +59,16 @@ export default function DriverExpensesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [category, setCategory] = useState("fuel");
   const [tripId, setTripId] = useState("none");
+  const [pendingExpenses, setPendingExpenses] = useState<Record<string, unknown>[]>([]);
+
+  useEffect(() => {
+    const refreshPending = () => setPendingExpenses(SyncManager.getPending()
+      .filter((request) => request.table === "expenses" && request.data?.driver_id === user?.id)
+      .map((request) => ({ ...request.data, id: `offline-${request.id}`, _offline_pending: true })));
+    refreshPending();
+    window.addEventListener("fleet:offline-sync-complete", refreshPending);
+    return () => window.removeEventListener("fleet:offline-sync-complete", refreshPending);
+  }, [user?.id]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -65,30 +76,54 @@ export default function DriverExpensesPage() {
     setSubmitting(true);
     const form = new FormData(e.currentTarget);
     const selectedTrip = trips.find((trip) => String(trip.id) === tripId);
+    const expenseData: Record<string, unknown> = {
+      id: crypto.randomUUID(),
+      description: String(form.get("description") || ""),
+      amount: parseFloat(String(form.get("amount") || "0")),
+      category,
+      date: String(form.get("date") || new Date().toISOString().slice(0, 10)),
+      client_reference: String(form.get("tripRef") || ""),
+      trip_id: selectedTrip?.id ?? null,
+      vehicle_id: (selectedTrip?.vehicle_id || selectedTrip?.truck_id || null) as string | null,
+      receipt_url: null,
+      driver_id: user.id,
+      status: "pending",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
     try {
-      let receiptUrl: string | null = null;
+      if (!SyncManager.isOnline()) {
+        await SyncManager.queueRequest("expenses", "INSERT", expenseData, true, false);
+        toast({ title: "Expense saved on this device", description: "It will sync when the connection returns. Upload its receipt when you are back online." });
+        setPendingExpenses(SyncManager.getPending().filter((request) => request.table === "expenses" && request.data?.driver_id === user.id).map((request) => ({ ...request.data, id: `offline-${request.id}`, _offline_pending: true })));
+        setOpen(false); setTripId("none"); (e.target as HTMLFormElement).reset(); refresh();
+        return;
+      }
       const receipt = form.get("receipt");
       if (receipt instanceof File && receipt.size > 0) {
-        receiptUrl = await uploadToBucket("documents", `driver-expenses/${user.id}`, receipt, `${Date.now()}-${receipt.name.replace(/[^\w.-]/g, "_")}`);
+        const receiptUrl = await uploadToBucket("documents", `driver-expenses/${user.id}`, receipt, `${Date.now()}-${receipt.name.replace(/[^\w.-]/g, "_")}`);
+        if (!receiptUrl && !SyncManager.isOnline()) {
+          await SyncManager.queueRequest("expenses", "INSERT", expenseData, true, false);
+          toast({ title: "Expense saved on this device", description: "The receipt could not upload offline. It will sync with the expense when your connection returns." });
+          setPendingExpenses(SyncManager.getPending().filter((request) => request.table === "expenses" && request.data?.driver_id === user.id).map((request) => ({ ...request.data, id: `offline-${request.id}`, _offline_pending: true })));
+          setOpen(false); setTripId("none"); (e.target as HTMLFormElement).reset(); refresh();
+          return;
+        }
         if (!receiptUrl) throw new Error("Receipt upload failed. Please try again.");
+        expenseData.receipt_url = receiptUrl;
       }
-      const { error } = await supabase.from("expenses").insert([
-        {
-          description: String(form.get("description") || ""),
-          amount: parseFloat(String(form.get("amount") || "0")),
-          category,
-          date: String(form.get("date") || new Date().toISOString().slice(0, 10)),
-          client_reference: String(form.get("tripRef") || ""),
-          trip_id: selectedTrip?.id ?? null,
-          vehicle_id: (selectedTrip?.vehicle_id || selectedTrip?.truck_id || null) as string | null,
-          receipt_url: receiptUrl,
-          driver_id: user.id,
-          status: "pending",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ]);
+      let error: { message: string } | null = null;
+      try { ({ error } = await supabase.from("expenses").insert(expenseData)); }
+      catch (err) { error = { message: err instanceof Error ? err.message : "Network request failed" }; }
+      if (error && /failed to fetch|network|fetch error/i.test(error.message)) {
+        expenseData.receipt_url = null;
+        await SyncManager.queueRequest("expenses", "INSERT", expenseData, true, false);
+        toast({ title: "Expense saved on this device", description: "It will sync when the connection returns. Upload its receipt when you are back online." });
+        setPendingExpenses(SyncManager.getPending().filter((request) => request.table === "expenses" && request.data?.driver_id === user.id).map((request) => ({ ...request.data, id: `offline-${request.id}`, _offline_pending: true })));
+        setOpen(false); setTripId("none"); (e.target as HTMLFormElement).reset(); refresh();
+        return;
+      }
 
       if (error) throw error;
       const accountantIds = await fetchAccountantUserIds();
@@ -189,7 +224,7 @@ export default function DriverExpensesPage() {
     >
       {loading ? (
         <p className="text-center text-muted-foreground py-8">Loading…</p>
-      ) : expenses.length === 0 ? (
+      ) : expenses.length + pendingExpenses.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
             <Receipt className="size-10 mx-auto mb-3 opacity-40" />
@@ -198,7 +233,7 @@ export default function DriverExpensesPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {expenses.map((ex) => (
+          {[...pendingExpenses, ...expenses].map((ex) => (
             <Card key={String(ex.id)}>
               <CardContent className="p-4 flex justify-between items-start gap-2">
                 <div>
@@ -209,7 +244,7 @@ export default function DriverExpensesPage() {
                     {String(ex.description || "")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {String(ex.date || ex.created_at || "").slice(0, 10)}{ex.client_reference ? ` · ${String(ex.client_reference)}` : ""}
+                    {String(ex.date || ex.created_at || "").slice(0, 10)}{ex.client_reference ? ` · ${String(ex.client_reference)}` : ""}{ex._offline_pending ? " · Waiting to sync" : ""}
                   </p>
                   {ex.receipt_url ? <a href={String(ex.receipt_url)} target="_blank" rel="noreferrer" className="text-xs text-primary underline">View receipt</a> : null}
                 </div>

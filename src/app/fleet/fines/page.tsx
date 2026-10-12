@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { SyncManager } from "@/lib/offline-sync";
 import { AlertTriangle, Plus, RefreshCw } from "lucide-react";
 
 type Fine = Record<string, any>;
@@ -28,6 +29,7 @@ export default function FleetFinesPage() {
   const { format } = useCurrency();
   const { toast } = useToast();
   const [fines, setFines] = useState<Fine[]>([]);
+  const [pendingFines, setPendingFines] = useState<Fine[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -49,14 +51,34 @@ export default function FleetFinesPage() {
       supabase.from("user_profiles").select("id, name, email").eq("role", "DRIVER").order("name"),
       supabase.from("trips").select("id, trip_number, origin, destination, vehicle_id, truck_id, driver_id").order("created_at", { ascending: false }).limit(250),
     ]);
-    if (f.error) toast({ title: "Could not load fines", description: f.error.message, variant: "destructive" });
-    setFines(f.data ?? []); setVehicles(v.data ?? []); setDrivers(d.data ?? []); setTrips(t.data ?? []); setLoading(false);
-  }, [toast]);
+    const fromCache = <T,>(key: string, result: { data: T[] | null; error: { message?: string } | null }) => {
+      const cacheKey = `fleet_offline_${key}_${user?.id || "anonymous"}`;
+      if (!result.error && result.data) {
+        try { localStorage.setItem(cacheKey, JSON.stringify(result.data)); } catch { /* storage may be full */ }
+        return result.data;
+      }
+      try { return JSON.parse(localStorage.getItem(cacheKey) || "[]") as T[]; } catch { return []; }
+    };
+    if (f.error && typeof navigator !== "undefined" && navigator.onLine) toast({ title: "Showing saved data", description: "Some records could not refresh from the server.", variant: "destructive" });
+    const localFines = fromCache<Fine>("traffic_fines", f);
+    setFines(localFines);
+    setVehicles(fromCache<Vehicle>("vehicles", v));
+    setDrivers(fromCache<Driver>("drivers", d));
+    setTrips(fromCache<Trip>("trips", t));
+    setPendingFines(SyncManager.getPending().filter((r) => r.table === "traffic_fines" && r.data?.created_by === user?.id).map((r) => ({ ...r.data, id: `offline-${r.id}`, _offline_pending: true })));
+    setLoading(false);
+  }, [toast, user?.id]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    const synced = () => { void load(); };
+    window.addEventListener("fleet:offline-sync-complete", synced);
+    return () => window.removeEventListener("fleet:offline-sync-complete", synced);
+  }, [load]);
   const vehicleName = (id: string) => vehicles.find((v) => v.id === id)?.plate_number ?? "Unknown truck";
   const driverName = (id: string) => { const d = drivers.find((x) => x.id === id); return d?.name || d?.email || "Unknown driver"; };
-  const filtered = statusFilter === "all" ? fines : fines.filter((f) => f.status === statusFilter);
+  const visibleFines = [...pendingFines, ...fines];
+  const filtered = statusFilter === "all" ? visibleFines : visibleFines.filter((f) => f.status === statusFilter);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -65,17 +87,32 @@ export default function FleetFinesPage() {
     const linkedTrip = tripId === "none" ? null : trips.find((trip) => trip.id === tripId);
     const actualVehicleId = linkedTrip?.vehicle_id || linkedTrip?.truck_id || vehicleId;
     const actualDriverId = linkedTrip?.driver_id || driverId;
-    setSaving(true);
-    const { error } = await supabase.from("traffic_fines").insert({
+    const fineData = {
+      id: crypto.randomUUID(),
       vehicle_id: actualVehicleId, driver_id: actualDriverId, trip_id: tripId === "none" ? null : tripId,
       fine_date: String(form.get("fine_date")), location: String(form.get("location") || "") || null,
       issuing_authority: String(form.get("authority") || "Traffic Police"), notice_number: String(form.get("notice_number") || "") || null,
       offence: String(form.get("offence") || ""), amount: Number(form.get("amount")), currency,
       status: "unpaid", notes: String(form.get("notes") || "") || null, created_by: user.id,
-    });
+    };
+    setSaving(true);
+    const offline = !SyncManager.isOnline();
+    let error: { message: string } | null = null;
+    if (offline) await SyncManager.queueRequest("traffic_fines", "INSERT", fineData, true, false);
+    else {
+      try { ({ error } = await supabase.from("traffic_fines").insert(fineData)); }
+      catch (err) { error = { message: err instanceof Error ? err.message : "Network request failed" }; }
+    }
     setSaving(false);
-    if (error) { toast({ title: "Could not save fine", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Traffic fine recorded" }); setOpen(false); setVehicleId(""); setDriverId(""); setTripId("none"); setCurrency("TZS"); void load();
+    if (error) {
+      if (/failed to fetch|network|fetch error/i.test(error.message)) {
+        await SyncManager.queueRequest("traffic_fines", "INSERT", fineData, true, false);
+        toast({ title: "Fine saved on this device", description: "It will sync when the connection returns." });
+      } else { toast({ title: "Could not save fine", description: error.message, variant: "destructive" }); return; }
+    } else if (offline) {
+      toast({ title: "Fine saved on this device", description: "It will sync when the connection returns." });
+    } else toast({ title: "Traffic fine recorded" });
+    setOpen(false); setVehicleId(""); setDriverId(""); setTripId("none"); setCurrency("TZS"); void load();
   }
 
   async function updateStatus(fine: Fine, status: string) {
@@ -94,7 +131,7 @@ export default function FleetFinesPage() {
       <div className="mb-4 max-w-xs"><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="paid">Paid</SelectItem><SelectItem value="disputed">Disputed</SelectItem><SelectItem value="waived">Waived</SelectItem></SelectContent></Select></div>
       {loading ? <p className="py-8 text-center text-muted-foreground">Loading fines…</p> : filtered.length === 0 ? <div className="py-10 text-center text-muted-foreground"><AlertTriangle className="mx-auto mb-2 size-8"/><p>No fines recorded.</p></div> : <div className="space-y-3">{filtered.map((fine) => <article key={fine.id} className="rounded-lg border p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1"><div className="flex flex-wrap items-center gap-2"><strong>{fine.offence}</strong><Badge variant={fine.status === "unpaid" ? "destructive" : "secondary"}>{fine.status}</Badge></div>
-          <p className="text-sm text-muted-foreground">{vehicleName(fine.vehicle_id)} · Driver: {driverName(fine.driver_id)}{fine.trip_id ? ` · Trip ${trips.find((t) => t.id === fine.trip_id)?.trip_number || fine.trip_id.slice(0, 8)}` : ""}</p>
+          <p className="text-sm text-muted-foreground">{vehicleName(fine.vehicle_id)} · Driver: {driverName(fine.driver_id)}{fine.trip_id ? ` · Trip ${trips.find((t) => t.id === fine.trip_id)?.trip_number || fine.trip_id.slice(0, 8)}` : ""}{fine._offline_pending ? " · Saved offline — waiting to sync" : ""}</p>
           <p className="text-xs text-muted-foreground">{fine.fine_date}{fine.location ? ` · ${fine.location}` : ""}{fine.notice_number ? ` · Notice ${fine.notice_number}` : ""}{fine.issuing_authority ? ` · ${fine.issuing_authority}` : ""}</p>
           {fine.notes && <p className="text-sm">{fine.notes}</p>}
         </div><div className="sm:text-right"><p className="font-bold">{format(Number(fine.amount), fine.currency || "TZS")}</p>{canManage && <div className="mt-2 flex gap-2 sm:justify-end">{fine.status !== "paid" && <Button size="sm" variant="outline" onClick={() => void updateStatus(fine, "paid")}>Mark paid</Button>}{fine.status !== "disputed" && fine.status === "unpaid" && <Button size="sm" variant="ghost" onClick={() => void updateStatus(fine, "disputed")}>Dispute</Button>}</div>}</div>
