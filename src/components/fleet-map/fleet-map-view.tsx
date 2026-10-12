@@ -685,7 +685,10 @@ export default function FleetMapView({
 
         <motion.div
           layout
-          className={cn(glass, "rounded-2xl pointer-events-auto flex flex-col max-h-[80vh] w-full md:w-[340px] md:self-start")}
+          className={cn(glass, "rounded-2xl pointer-events-auto flex flex-col max-h-[80dvh] w-full md:w-[340px] md:self-start")}
+          onWheelCapture={(e) => e.stopPropagation()}
+          onTouchStartCapture={(e) => e.stopPropagation()}
+          onTouchMoveCapture={(e) => e.stopPropagation()}
         >
           <button
             type="button"
@@ -809,10 +812,9 @@ export default function FleetMapView({
                 </button>
               ))}
             </div>
-            <ScrollArea className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 max-h-[calc(80dvh-140px)] overflow-y-auto overscroll-y-contain touch-pan-y scrollbar-thin">
               <div
                 className="flex gap-2 p-3 overflow-x-auto overscroll-x-contain md:flex-col md:gap-1.5 md:p-2 md:overflow-x-visible"
-                onWheel={(e) => e.stopPropagation()}
               >
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground px-2 py-4 text-center w-full">
@@ -875,7 +877,7 @@ export default function FleetMapView({
                   ))
                 )}
               </div>
-            </ScrollArea>
+            </div>
             </>
             )}
           </div>
