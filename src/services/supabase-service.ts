@@ -41,8 +41,15 @@ export class SupabaseService {
   // Utility for offline-aware requests
   private static async performAction(table: string, action: 'INSERT' | 'UPDATE' | 'DELETE', data: any, id?: string) {
     if (!SyncManager.isOnline()) {
-      await SyncManager.queueRequest(table, action, data);
-      return data;
+      // Preserve a stable UUID while offline so replay is idempotent and
+      // updates/deletes still know which row they target.
+      const queuedData = action === 'INSERT'
+        ? { ...data, id: data?.id ?? crypto.randomUUID() }
+        : action === 'UPDATE'
+          ? { ...data, id: id ?? data?.id }
+          : { id: id ?? data?.id };
+      await SyncManager.queueRequest(table, action, queuedData);
+      return queuedData;
     }
 
     let error;
@@ -164,30 +171,8 @@ export class SupabaseService {
 
     if (error) throw error;
 
-    // Automatically create a Sale and Invoice when a trip is created
-    try {
-      const sale = await this.createSale({
-        client: trip.client_name || 'Trip Customer',
-        description: `Revenue for Trip ${data.trip_number || data.id}`,
-        total_amount: trip.revenue || trip.price || 0,
-        date: new Date().toISOString().split('T')[0],
-        status: 'pending'
-      });
-
-      await this.createInvoice({
-        invoice_number: `INV-${Date.now()}`,
-        customer_name: trip.client_name || 'Trip Customer',
-        amount: trip.revenue || trip.price || 0,
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: 'pending',
-        type: 'receivable',
-        trip_id: data.id,
-        linked_revenue: sale.id
-      });
-    } catch (e) {
-      console.error("Failed to auto-create financial records for trip:", e);
-    }
-
+    // Revenue invoicing is triggered by verified POD, not by trip creation.
+    // This avoids billing before delivery and duplicate invoices.
     if (user && SyncManager.isOnline()) {
       await AuditService.logCRUD(user, 'CREATE', 'trips', data.id, null, data,
         `Created trip for ${trip.vehicle_id || trip.driver_id}`);
