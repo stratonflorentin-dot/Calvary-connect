@@ -1,6 +1,8 @@
-◇ injected env (12) from .env // tip: ⌘ suppress logs { quiet: true }
- ⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\fleet management\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
-\\?\D:\fleet management\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+
+> nextn@0.1.0 build
+> node scripts/run-next.cjs build
+
+◇ injected env (11) from .env // tip: ⌘ suppress logs { quiet: true }
    ▲ Next.js 15.5.18
    - Environments: .env.local, .env.production, .env
    - Experiments (use with caution):
@@ -8,54 +10,3 @@
      ✓ scrollRestoration
 
    Creating an optimized production build ...
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: Unable to snapshot resolve dependencies
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: Unable to snapshot resolve dependencies
-Failed to compile.
-
-./src/lib/finance/bank-statement-pdf.ts
-Module not found: Can't resolve 'pdfjs-dist'
-
-https://nextjs.org/docs/messages/module-not-found
-
-Import trace for requested module:
-./src/app/finance/banking/bank-statements/new/page.tsx
-
-./src/lib/finance/bank-statement-pdf.ts
-Module not found: Can't resolve 'pdfjs-dist/build/pdf.worker.min.mjs'
-
-https://nextjs.org/docs/messages/module-not-found
-
-Import trace for requested module:
-./src/app/finance/banking/bank-statements/new/page.tsx
-
-./node_modules/framer-motion/dist/es/animation/animate/index.mjs
-Module not found: Can't resolve 'motion-utils'
-
-https://nextjs.org/docs/messages/module-not-found
-
-Import trace for requested module:
-./node_modules/framer-motion/dist/es/index.mjs
-./src/app/template.tsx
-
-./node_modules/framer-motion/dist/es/animation/animate/subject.mjs
-Module not found: Can't resolve 'motion-utils'
-
-https://nextjs.org/docs/messages/module-not-found
-
-Import trace for requested module:
-./node_modules/framer-motion/dist/es/animation/animate/index.mjs
-./node_modules/framer-motion/dist/es/index.mjs
-./src/app/template.tsx
-
-./node_modules/framer-motion/dist/es/animation/animators/waapi/animate-elements.mjs
-Module not found: Can't resolve 'motion-utils'
-
-https://nextjs.org/docs/messages/module-not-found
-
-Import trace for requested module:
-./node_modules/framer-motion/dist/es/animation/animators/waapi/animate-style.mjs
-./node_modules/framer-motion/dist/es/index.mjs
-./src/app/template.tsx
-
-
-> Build failed because of webpack errors
