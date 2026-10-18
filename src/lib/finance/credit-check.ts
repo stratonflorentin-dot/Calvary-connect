@@ -17,7 +17,7 @@ import { supabase } from "@/lib/supabase";
 import { normalizeCurrency } from "@/lib/finance/multi-currency";
 
 /** Roles allowed to proceed past a credit-limit block with explicit confirmation. */
-export const CREDIT_OVERRIDE_ROLES = ["CEO", "ADMIN", "ACCOUNTANT"];
+const CREDIT_OVERRIDE_ROLES = ["CEO", "ADMIN", "ACCOUNTANT"];
 
 const OPEN_INVOICE_STATUSES = ["pending", "sent", "partial", "overdue", "unpaid"];
 

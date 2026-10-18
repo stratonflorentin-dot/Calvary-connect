@@ -90,7 +90,7 @@ export type TripState =
   | "delivered"
   | "cancelled";
 
-export const tripMachine: StateMachine<TripState> = {
+const tripMachine: StateMachine<TripState> = {
   kind: "trip",
   table: "trips",
   auditModule: "operations",
@@ -160,7 +160,7 @@ export type MaintenanceState =
   | "postponed"
   | "cancelled";
 
-export const maintenanceMachine: StateMachine<MaintenanceState> = {
+const maintenanceMachine: StateMachine<MaintenanceState> = {
   kind: "maintenance_request",
   table: "maintenance_records",
   auditModule: "maintenance",
@@ -250,7 +250,7 @@ export const maintenanceMachine: StateMachine<MaintenanceState> = {
 // ─────────────────────────────────────────────────────────────────────────────
 export type FuelRequestState = "pending" | "approved" | "rejected" | "paid";
 
-export const fuelRequestMachine: StateMachine<FuelRequestState> = {
+const fuelRequestMachine: StateMachine<FuelRequestState> = {
   kind: "fuel_request",
   table: "fuel_requests",
   auditModule: "operations",
@@ -292,7 +292,7 @@ export const fuelRequestMachine: StateMachine<FuelRequestState> = {
 // ─────────────────────────────────────────────────────────────────────────────
 export type ExpenseState = "pending" | "approved" | "rejected" | "paid";
 
-export const expenseMachine: StateMachine<ExpenseState> = {
+const expenseMachine: StateMachine<ExpenseState> = {
   kind: "expense",
   table: "expenses",
   auditModule: "finance",
@@ -333,7 +333,7 @@ export const expenseMachine: StateMachine<ExpenseState> = {
 // ─────────────────────────────────────────────────────────────────────────────
 export type LeaveRequestState = "pending" | "approved" | "rejected";
 
-export const leaveRequestMachine: StateMachine<LeaveRequestState> = {
+const leaveRequestMachine: StateMachine<LeaveRequestState> = {
   kind: "leave_request",
   table: "leave_requests",
   auditModule: "hr",
@@ -375,7 +375,7 @@ export type FuelAnomalyState =
 
 const FRAUD_REVIEW_ROLES: UserRole[] = ["OPERATOR", "ACCOUNTANT", "ADMIN", "CEO"];
 
-export const fuelAnomalyMachine: StateMachine<FuelAnomalyState> = {
+const fuelAnomalyMachine: StateMachine<FuelAnomalyState> = {
   kind: "fuel_anomaly",
   table: "fuel_anomalies",
   auditModule: "operations",
@@ -468,7 +468,7 @@ export type PurchaseOrderState =
   | "fully_received"
   | "cancelled";
 
-export const purchaseOrderMachine: StateMachine<PurchaseOrderState> = {
+const purchaseOrderMachine: StateMachine<PurchaseOrderState> = {
   kind: "purchase_order",
   table: "purchase_orders",
   auditModule: "procurement",
@@ -527,7 +527,7 @@ export type DisciplinaryCaseState = "reported" | "investigating" | "hearing" | "
 
 const HR_CASE_ROLES: UserRole[] = ["HR", "ADMIN", "CEO"];
 
-export const disciplinaryCaseMachine: StateMachine<DisciplinaryCaseState> = {
+const disciplinaryCaseMachine: StateMachine<DisciplinaryCaseState> = {
   kind: "disciplinary_case",
   table: "disciplinary_cases",
   auditModule: "hr",
@@ -584,7 +584,7 @@ export type SeparationCaseState =
   | "completed"
   | "cancelled";
 
-export const separationCaseMachine: StateMachine<SeparationCaseState> = {
+const separationCaseMachine: StateMachine<SeparationCaseState> = {
   kind: "separation_case",
   table: "separation_cases",
   auditModule: "hr",
@@ -640,7 +640,7 @@ export const separationCaseMachine: StateMachine<SeparationCaseState> = {
 // ─────────────────────────────────────────────────────────────────────────────
 export type PerformanceReviewState = "draft" | "submitted" | "acknowledged";
 
-export const performanceReviewMachine: StateMachine<PerformanceReviewState> = {
+const performanceReviewMachine: StateMachine<PerformanceReviewState> = {
   kind: "performance_review",
   table: "performance_reviews",
   auditModule: "hr",
@@ -693,7 +693,7 @@ export type BankStatementBatchState = "draft" | "posted";
 
 const BANK_RECONCILIATION_ROLES: UserRole[] = ["CEO", "ADMIN", "ACCOUNTANT"];
 
-export const bankStatementBatchMachine: StateMachine<BankStatementBatchState> = {
+const bankStatementBatchMachine: StateMachine<BankStatementBatchState> = {
   kind: "bank_statement_batch",
   table: "bank_statement_batches",
   auditModule: "finance",
@@ -741,7 +741,7 @@ export const bankStatementBatchMachine: StateMachine<BankStatementBatchState> = 
 // ─────────────────────────────────────────────────────────────────────────────
 export type CashRequestState = "draft" | "pending" | "approved" | "rejected" | "disbursed" | "retired";
 
-export const cashRequestMachine: StateMachine<CashRequestState> = {
+const cashRequestMachine: StateMachine<CashRequestState> = {
   kind: "cash_request",
   table: "cash_requests",
   auditModule: "finance",
@@ -800,7 +800,7 @@ export const cashRequestMachine: StateMachine<CashRequestState> = {
   },
 };
 
-export const machines: Record<EntityKind, StateMachine<any>> = {
+const machines: Record<EntityKind, StateMachine<any>> = {
   trip: tripMachine,
   maintenance_request: maintenanceMachine,
   fuel_request: fuelRequestMachine,

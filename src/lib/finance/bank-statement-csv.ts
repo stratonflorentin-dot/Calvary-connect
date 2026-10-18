@@ -48,7 +48,7 @@ export interface ColumnIndex {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-export function normalizeDate(raw: string): string {
+function normalizeDate(raw: string): string {
   const trimmed = raw.trim();
   if (DATE_RE.test(trimmed)) return trimmed;
   // Common bank export formats: dd/mm/yyyy or mm/dd/yyyy — dd/mm/yyyy assumed
@@ -163,7 +163,7 @@ export function parseStatementCsv(text: string): ParsedStatement {
   return { rows: buildRowsFromCells(idx, dataCellRows), headerErrors: [] };
 }
 
-export const CSV_TEMPLATE = "date,description,reference,debit,credit,balance\n2026-08-01,Example withdrawal,CHQ001,50000,,1200000\n2026-08-02,Example deposit,REF002,,150000,1350000\n";
+const CSV_TEMPLATE = "date,description,reference,debit,credit,balance\n2026-08-01,Example withdrawal,CHQ001,50000,,1200000\n2026-08-02,Example deposit,REF002,,150000,1350000\n";
 
 export function downloadCsvTemplate() {
   const blob = new Blob([CSV_TEMPLATE], { type: "text/csv" });

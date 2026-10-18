@@ -79,7 +79,7 @@ const RATE_TABLES: StatutoryRateTable[] = [
   },
 ];
 
-export function getActiveRateTable(asOfDate: string | Date = new Date()): StatutoryRateTable {
+function getActiveRateTable(asOfDate: string | Date = new Date()): StatutoryRateTable {
   const target = typeof asOfDate === 'string' ? asOfDate : asOfDate.toISOString().slice(0, 10);
   const applicable = RATE_TABLES
     .filter((t) => t.effectiveFrom <= target)
@@ -118,12 +118,12 @@ export function calcPaye(grossPay: number, asOfDate?: string | Date): number {
   return Math.round(tax);
 }
 
-export function calcNssfEmployee(grossPay: number, asOfDate?: string | Date): number {
+function calcNssfEmployee(grossPay: number, asOfDate?: string | Date): number {
   const table = getActiveRateTable(asOfDate);
   return Math.round(grossPay * table.nssf.employeeRate);
 }
 
-export function calcNssfEmployer(grossPay: number, asOfDate?: string | Date): number {
+function calcNssfEmployer(grossPay: number, asOfDate?: string | Date): number {
   const table = getActiveRateTable(asOfDate);
   return Math.round(grossPay * table.nssf.employerRate);
 }

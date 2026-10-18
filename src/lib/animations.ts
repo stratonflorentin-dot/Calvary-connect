@@ -20,14 +20,14 @@ import type { Transition, Variants } from "framer-motion";
 
 // ─── Timing tokens ──────────────────────────────────────────────────────────
 
-export const DURATION = {
+const DURATION = {
   micro: 0.15,
   base: 0.25,
   modal: 0.35,
 } as const;
 
 /** One cubic-bezier for the whole app — a crisp "ease-out-expo" feel. */
-export const EASE = [0.16, 1, 0.3, 1] as const;
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 export const TRANSITION = {
   micro: { duration: DURATION.micro, ease: EASE } satisfies Transition,
@@ -51,7 +51,7 @@ export function getListStagger(count: number, perItem = STAGGER_PER_ROW, maxTota
 
 // ─── Core variants ──────────────────────────────────────────────────────────
 
-export const fadeIn: Variants = {
+const fadeIn: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: TRANSITION.base },
   exit: { opacity: 0, transition: TRANSITION.micro },
@@ -115,7 +115,7 @@ export const statusChange: Variants = {
 
 // ─── Toasts ─────────────────────────────────────────────────────────────────
 
-export const toastSlideIn: Variants = {
+const toastSlideIn: Variants = {
   hidden: { opacity: 0, x: 24, scale: 0.98 },
   visible: { opacity: 1, x: 0, scale: 1, transition: TRANSITION.base },
   exit: { opacity: 0, scale: 0.96, transition: TRANSITION.micro },
@@ -123,7 +123,7 @@ export const toastSlideIn: Variants = {
 
 // ─── Form feedback ──────────────────────────────────────────────────────────
 
-export const formMessage: Variants = {
+const formMessage: Variants = {
   hidden: { opacity: 0, height: 0, y: -4 },
   visible: { opacity: 1, height: "auto", y: 0, transition: TRANSITION.micro },
   exit: { opacity: 0, height: 0, y: -4, transition: { duration: 0.12, ease: EASE } },

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  // temp-api-anything is a separate git repo checked out inside this folder
+  "ignorePatterns": ["temp-api-anything/**"],
+  // Loaded via dynamicImport() in src/instrumentation.ts and via "next/*" in .eslintrc.json
+  "ignoreDependencies": ["@opentelemetry/exporter-jaeger", "eslint-config-next"],
+  "ignoreExports": [
+    {
+      "file": "src/components/fleet-map/fleet-map-3d-canvas.tsx",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/components/fleet-map/fleet-map-canvas.tsx",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/services/notification-service.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/types/roles.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/app/api/admin/hr/payroll/statutory/helpers.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/lib/finance/payroll/statutory-rates.ts",
+      "exports": ["*"]
+    }
+  ]
+}

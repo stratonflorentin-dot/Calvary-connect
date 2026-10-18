@@ -207,7 +207,7 @@ export async function verifyWebhook(request: NextRequest, secret: string): Promi
 }
 
 // Request validation
-export function validateRequest<T>(schema: { parse: (data: any) => T }) {
+function validateRequest<T>(schema: { parse: (data: any) => T }) {
   return async (request: NextRequest): Promise<{ data: T; error?: string }> => {
     try {
       const body = await request.json();

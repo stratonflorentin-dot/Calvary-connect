@@ -82,7 +82,7 @@ export async function deleteRateSheet(id: string) {
 /**
  * Get formatted rate sheet for contracts
  */
-export async function getFormattedRateSheet() {
+async function getFormattedRateSheet() {
     try {
         const routes = await fetchRateSheets();
         const formatted: Record<string, any> = {};
@@ -108,7 +108,7 @@ export async function getFormattedRateSheet() {
 /**
  * Get a specific route's details
  */
-export async function getRateByRoute(routeName: string) {
+async function getRateByRoute(routeName: string) {
     try {
         const { data, error } = await supabase
             .from('rate_sheets')

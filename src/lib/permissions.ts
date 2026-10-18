@@ -52,7 +52,7 @@ export type Module =
 
 // ─── Permission Matrix ───────────────────────────────────────────────────────
 
-export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>> = {
+const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>> = {
   trips: {
     CEO:       'FULL',
     ADMIN:     'FULL',
@@ -260,7 +260,7 @@ export const PERMISSION_MATRIX: Record<Module, Record<UserRole, PermissionLevel>
 /**
  * Returns the permission level a role has for a module.
  */
-export function getPermission(role: UserRole, module: Module): PermissionLevel {
+function getPermission(role: UserRole, module: Module): PermissionLevel {
   return PERMISSION_MATRIX[module]?.[role] ?? 'NONE';
 }
 
@@ -275,7 +275,7 @@ export function canRead(role: UserRole, module: Module): boolean {
 /**
  * Returns true if the role can write (create/update/delete) on the module.
  */
-export function canWrite(role: UserRole, module: Module): boolean {
+function canWrite(role: UserRole, module: Module): boolean {
   const level = getPermission(role, module);
   return level === 'FULL' || level === 'CREATE';
 }
@@ -283,14 +283,14 @@ export function canWrite(role: UserRole, module: Module): boolean {
 /**
  * Returns true if the role has full admin access on the module.
  */
-export function canAdmin(role: UserRole, module: Module): boolean {
+function canAdmin(role: UserRole, module: Module): boolean {
   return getPermission(role, module) === 'FULL';
 }
 
 /**
  * Returns true if the role can approve/reject items in the module.
  */
-export function canApprove(role: UserRole, module: Module): boolean {
+function canApprove(role: UserRole, module: Module): boolean {
   const level = getPermission(role, module);
   return level === 'FULL' || level === 'APPROVE';
 }
@@ -298,14 +298,14 @@ export function canApprove(role: UserRole, module: Module): boolean {
 /**
  * Returns true if the role can only access their own records.
  */
-export function isOwnOnly(role: UserRole, module: Module): boolean {
+function isOwnOnly(role: UserRole, module: Module): boolean {
   return getPermission(role, module) === 'OWN';
 }
 
 /**
  * Returns an array of modules a role can access at all.
  */
-export function getAccessibleModules(role: UserRole): Module[] {
+function getAccessibleModules(role: UserRole): Module[] {
   return (Object.keys(PERMISSION_MATRIX) as Module[]).filter(
     (module) => getPermission(role, module) !== 'NONE'
   );

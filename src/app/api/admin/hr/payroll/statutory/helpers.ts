@@ -60,7 +60,7 @@ export async function requireStatutoryAccess(request: Request) {
     return admin;
 }
 
-export const parseReason = (reason: unknown) => {
+const parseReason = (reason: unknown) => {
     if (!reason) return {};
     if (typeof reason === 'string') {
         try {
@@ -93,12 +93,12 @@ export const getPayrollPeriod = (record: any) => {
 // instead of taxing each band progressively, and WCF was a hardcoded
 // placeholder — both fixed in the shared module. Re-exported here so this
 // file's existing call sites don't need to change.
-export const calcPaye = calcPayeStatutory;
-export const calcNhif = calcNhifStatutory;
-export const calcSdl = calcSdlStatutory;
-export const calcWcf = calcWcfStatutory;
+const calcPaye = calcPayeStatutory;
+const calcNhif = calcNhifStatutory;
+const calcSdl = calcSdlStatutory;
+const calcWcf = calcWcfStatutory;
 
-export const getStatusLabel = (status: string) => {
+const getStatusLabel = (status: string) => {
     if (status === 'paid') return 'Filed';
     if (status === 'approved') return 'Submitted';
     return 'Pending';

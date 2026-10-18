@@ -63,7 +63,7 @@ export function getWebRTCConfig(): WebRTCConfig {
   return { iceServers };
 }
 
-export const DEFAULT_WEBRTC_CONFIG: WebRTCConfig = {
+const DEFAULT_WEBRTC_CONFIG: WebRTCConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
@@ -280,7 +280,7 @@ export function formatCallDuration(seconds: number): string {
 }
 
 // Get call status display text
-export function getCallStatusText(status: CallSession['status']): string {
+function getCallStatusText(status: CallSession['status']): string {
   const statusMap: Record<CallSession['status'], string> = {
     initiated: 'Calling...',
     ringing: 'Ringing...',
@@ -304,6 +304,6 @@ export function isWebRTCSupported(): boolean {
 }
 
 // Check if browser supports camera switching
-export function supportsCameraSwitching(): boolean {
+function supportsCameraSwitching(): boolean {
   return navigator.mediaDevices && 'enumerateDevices' in navigator.mediaDevices;
 }

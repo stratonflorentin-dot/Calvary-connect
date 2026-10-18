@@ -1,5 +1,5 @@
 // 28 Contract Clauses - Exact text from LogiPRO specifications
-export const CONTRACT_CLAUSES = [
+const CONTRACT_CLAUSES = [
     {
         number: 1,
         title: "Purpose of the agreement",

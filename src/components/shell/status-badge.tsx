@@ -56,7 +56,7 @@ const STATUS_TONE: Record<string, Tone> = {
   in_progress: "info",
 };
 
-export function statusTone(status: string | null | undefined): Tone {
+function statusTone(status: string | null | undefined): Tone {
   if (!status) return "neutral";
   return STATUS_TONE[status.toLowerCase().trim()] ?? "neutral";
 }

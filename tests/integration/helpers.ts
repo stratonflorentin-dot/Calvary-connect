@@ -74,7 +74,7 @@ export async function deleteTestUser(userId: string): Promise<void> {
 }
 
 /** Safety-net sweep: deletes every user_profiles/auth row this test suite has ever created, in case an individual test's own cleanup didn't run (a thrown assertion, a crashed run). Call from a global afterAll if you want a fully clean slate. */
-export async function sweepAllTestUsers(): Promise<void> {
+async function sweepAllTestUsers(): Promise<void> {
   const svc = getServiceClient();
   const { data } = await svc.from('user_profiles').select('id').like('email', `${TEST_PREFIX}%`);
   for (const row of data ?? []) {

@@ -1,7 +1,7 @@
 // Server-safe SYSTEM_PROMPT builder for AI routes
 // This file is intentionally NOT a client module and can be imported from server code.
 
-export const SYSTEM_PROMPT = (liveMetrics: any = {}, dbContext: any = {}, user: any = null) => `
+const SYSTEM_PROMPT = (liveMetrics: any = {}, dbContext: any = {}, user: any = null) => `
 You are the Calvary AI Analyst — the intelligent business assistant
 for CALVARY INVESTMENT CO. LTD, a road freight company based in
 Dar es Salaam, Tanzania.

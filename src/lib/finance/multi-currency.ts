@@ -20,7 +20,7 @@ export function normalizeCurrency(c: string | null | undefined): string {
  * Group a list of items by `currency`. Items without a currency are bucketed
  * under the reporting currency (with a note that they need cleanup).
  */
-export function groupByCurrency<T extends { currency?: string | null }>(
+function groupByCurrency<T extends { currency?: string | null }>(
   items: T[],
 ): Record<string, T[]> {
   const buckets: Record<string, T[]> = {};

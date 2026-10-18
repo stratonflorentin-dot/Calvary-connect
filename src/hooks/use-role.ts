@@ -6,7 +6,7 @@ import { useSupabase } from '@/components/supabase-provider';
 import { resolveUserRole } from '@/lib/user-role-utils';
 
 // Department-based permission mapping
-export const DEPARTMENT_PERMISSIONS = {
+const DEPARTMENT_PERMISSIONS = {
   // Sales Department
   SALES: {
     roles: ['CEO', 'ADMIN', 'SALESMAN'],

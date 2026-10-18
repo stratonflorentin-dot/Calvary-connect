@@ -148,6 +148,6 @@ export async function generateStructuredAI<T>(
     return { output: parsed.data, provider: generated.provider };
 }
 
-export function ensureServer() {
+function ensureServer() {
     if (typeof window !== 'undefined') throw new Error('ai-provider must be used on server');
 }

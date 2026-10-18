@@ -31,7 +31,7 @@ export const EXPENSE_CATEGORY_COA_MAP: Record<string, string> = {
   'other': '6501'
 };
 
-export const REVENUE_CATEGORY_COA_MAP: Record<string, string> = {
+const REVENUE_CATEGORY_COA_MAP: Record<string, string> = {
   'local_transport': '4101',
   'cross_border': '4102',
   'container': '4103',

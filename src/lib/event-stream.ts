@@ -3,7 +3,7 @@ import { createClient } from 'redis';
 // Redis client for event streaming
 let redisClient: ReturnType<typeof createClient> | null = null;
 
-export async function getRedisClient() {
+async function getRedisClient() {
   if (!redisClient) {
     redisClient = createClient({
       url: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -162,7 +162,7 @@ function getStreamForEvent(eventType: EventType): string {
 }
 
 // Publish event to Redis Stream
-export async function publishEvent(event: AppEvent): Promise<string | null> {
+async function publishEvent(event: AppEvent): Promise<string | null> {
   try {
     const client = await getRedisClient();
     const stream = getStreamForEvent(event.eventType);
@@ -220,7 +220,7 @@ export async function emitEvent(
 }
 
 // Consumer group management
-export async function createConsumerGroup(stream: string, groupName: string): Promise<void> {
+async function createConsumerGroup(stream: string, groupName: string): Promise<void> {
   try {
     const client = await getRedisClient();
     await client.xGroupCreate(stream, groupName, '0', { MKSTREAM: true });
@@ -232,7 +232,7 @@ export async function createConsumerGroup(stream: string, groupName: string): Pr
 }
 
 // Consume events from stream
-export async function consumeEvents(
+async function consumeEvents(
   stream: string,
   groupName: string,
   consumerName: string,
@@ -373,7 +373,7 @@ export const Events = {
 };
 
 // Graceful shutdown
-export async function closeRedis(): Promise<void> {
+async function closeRedis(): Promise<void> {
   if (redisClient) {
     await redisClient.quit();
     redisClient = null;

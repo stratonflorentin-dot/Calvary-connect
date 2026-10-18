@@ -146,7 +146,7 @@ async function geocode(place: string): Promise<[number, number] | null> {
   }
 }
 
-export async function loadRuleConfig(supabase: SupabaseClient): Promise<Map<string, RuleConfig>> {
+async function loadRuleConfig(supabase: SupabaseClient): Promise<Map<string, RuleConfig>> {
   const { data } = await supabase.from("fuel_fraud_rules").select("rule_code, severity, weight, threshold, enabled");
   const map = new Map<string, RuleConfig>();
   for (const r of data || []) map.set(r.rule_code, r as RuleConfig);
@@ -700,7 +700,7 @@ export async function detectFuelAnomaliesForVehicle(
  * the same receipt number showing up against two different vehicles is
  * exactly the case a per-vehicle scan would miss.
  */
-export async function detectDuplicateReceiptAnomalies(
+async function detectDuplicateReceiptAnomalies(
   supabase: SupabaseClient,
   ruleConfig?: Map<string, RuleConfig>,
 ): Promise<DetectedAnomaly[]> {
@@ -763,7 +763,7 @@ const IDLING_MAX_GAP_MINUTES = 20; // a bigger gap than this between readings br
  * episode, deduped on (vehicle, hour bucket the episode started in) so a
  * single long idle doesn't get re-flagged every scan while it's ongoing.
  */
-export async function detectIdlingAnomalies(
+async function detectIdlingAnomalies(
   supabase: SupabaseClient,
   vehicleId: string,
   ruleConfig?: Map<string, RuleConfig>,

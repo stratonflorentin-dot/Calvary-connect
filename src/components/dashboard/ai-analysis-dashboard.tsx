@@ -167,7 +167,7 @@ function FormattedAiReport({ text }: { text: string }) {
   return <div className="space-y-1 text-[13px] leading-relaxed">{blocks}</div>;
 }
 
-export default function AIAnalysisDashboard() {
+function AIAnalysisDashboard() {
   const { format } = useCurrency();
   const { user } = useSupabase();
 

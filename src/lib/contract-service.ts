@@ -17,7 +17,7 @@ import type {
 /**
  * Generate next contract number in format CT-{YEAR}-{4-digit-sequence}
  */
-export async function generateContractNumber(): Promise<string> {
+async function generateContractNumber(): Promise<string> {
   const year = new Date().getFullYear();
 
   // Get the highest sequence for this year
@@ -259,7 +259,7 @@ export async function terminateContract(
 /**
  * Add history entry
  */
-export async function addContractHistory(
+async function addContractHistory(
   contractId: string,
   event: string,
   description: string,
@@ -347,7 +347,7 @@ export const RATE_SHEET = {
   "LIKASI - DRC": { "20FT": "$8,500.00", "40FT": "$8,500.00", "LOOSE": "$8,500.00", "TYPE": "C28", "DAYS": 9 },
 };
 
-export const CORE_CLAUSES = [
+const CORE_CLAUSES = [
   {
     number: "1",
     title: "Purpose of the agreement",
@@ -401,7 +401,7 @@ export interface ContractData {
   signatoryTitle?: string;
 }
 
-export function getDestinationRate(destination: string) {
+function getDestinationRate(destination: string) {
   return RATE_SHEET[destination as keyof typeof RATE_SHEET] || null;
 }
 

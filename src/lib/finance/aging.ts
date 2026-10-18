@@ -50,7 +50,7 @@ interface AgingInput {
 }
 
 /** Window used for the "due soon" / "due within next month" stat. */
-export const DUE_SOON_WINDOW_DAYS = 30;
+const DUE_SOON_WINDOW_DAYS = 30;
 
 export interface AgingSummary {
   totals: Record<AgingBucketKey, number>;

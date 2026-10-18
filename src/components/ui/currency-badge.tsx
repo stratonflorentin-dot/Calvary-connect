@@ -79,7 +79,7 @@ export function formatCurrency(
 }
 
 // Get currency info
-export function getCurrencyInfo(currency: CurrencyCode | string) {
+function getCurrencyInfo(currency: CurrencyCode | string) {
   return CURRENCIES[currency as CurrencyCode] || CURRENCIES.TZS;
 }
 

@@ -32,21 +32,21 @@ export function isValidCoordinate(latitude: number | null | undefined, longitude
 /**
  * Converts any coordinate representation to Leaflet format: [lat, lng]
  */
-export function toLeafletLatLng(lat: number, lng: number): LeafletLatLng {
+function toLeafletLatLng(lat: number, lng: number): LeafletLatLng {
   return [lat, lng];
 }
 
 /**
  * Converts any coordinate representation to GeoJSON format: [lng, lat]
  */
-export function toGeoJSONCoordinate(lat: number, lng: number): GeoJSONCoordinate {
+function toGeoJSONCoordinate(lat: number, lng: number): GeoJSONCoordinate {
   return [lng, lat];
 }
 
 /**
  * Formats a coordinate into a PostGIS point format: 'POINT(longitude latitude)'
  */
-export function toPostGISPoint(lat: number, lng: number): string {
+function toPostGISPoint(lat: number, lng: number): string {
   return `POINT(${lng} ${lat})`;
 }
 
@@ -76,7 +76,7 @@ export function calculateGeodesicDistance(
 /**
  * Calculates bearing between two coordinate points in degrees (0-360, where 0/360 is North).
  */
-export function calculateBearing(
+function calculateBearing(
   lat1: number,
   lng1: number,
   lat2: number,
@@ -98,7 +98,7 @@ export function calculateBearing(
 /**
  * Calculates speed in km/h based on distance and timestamp difference.
  */
-export function calculateSpeedFromPoints(
+function calculateSpeedFromPoints(
   lat1: number,
   lng1: number,
   t1: number, // ms

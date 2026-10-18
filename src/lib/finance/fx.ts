@@ -97,7 +97,7 @@ export async function getRate(
  * Convert `amount from` into `to` using the rate as-of `asOf`.
  * Returns `null` if no rate is available.
  */
-export async function convert(
+async function convert(
   amount: number,
   from: string,
   to: string = REPORTING_CURRENCY,
@@ -147,7 +147,7 @@ export async function loadRateMap(
   return map;
 }
 
-export async function saveRate(rate: Omit<FxRate, "id">): Promise<FxRate | null> {
+async function saveRate(rate: Omit<FxRate, "id">): Promise<FxRate | null> {
   const { data, error } = await supabase
     .from("exchange_rates")
     .insert({

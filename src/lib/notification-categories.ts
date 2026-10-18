@@ -1,4 +1,4 @@
-export const ALLOWED_NOTIFICATION_CATEGORIES = [
+const ALLOWED_NOTIFICATION_CATEGORIES = [
   "trip_assigned",
   "fuel_approval",
   "expense_approval",

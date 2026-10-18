@@ -135,7 +135,7 @@ interface DriverComplianceCardProps {
   onUpdate: () => void;
   compact?: boolean;
 }
-export function DriverComplianceCard({ driver, onUpdate, compact = false }: DriverComplianceCardProps) {
+function DriverComplianceCard({ driver, onUpdate, compact = false }: DriverComplianceCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 

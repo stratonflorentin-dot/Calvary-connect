@@ -426,7 +426,7 @@ type RateSheetItem = RateSheetRoute & {
 };
 
 // Display available routes
-export function RateSheetPreview() {
+function RateSheetPreview() {
   const { toast } = useToast();
   const [rates, setRates] = useState<RateSheetItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -908,7 +908,7 @@ interface CalvaryTransportAgreementGeneratorProps {
   onClose: () => void;
 }
 
-export function CalvaryTransportAgreementGenerator({ initialData, onClose }: CalvaryTransportAgreementGeneratorProps) {
+function CalvaryTransportAgreementGenerator({ initialData, onClose }: CalvaryTransportAgreementGeneratorProps) {
   const { format: formatCurrency } = useCurrency();
   const agreementRef = useRef<HTMLDivElement>(null);
 

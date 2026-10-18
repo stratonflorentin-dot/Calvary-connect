@@ -29,7 +29,7 @@ export interface StatementPdfData {
 const MUTED: [number, number, number] = [110, 110, 110];
 const LABEL_COLOR: [number, number, number] = [200, 30, 30];
 
-export function buildStatementPdf(d: StatementPdfData): jsPDF {
+function buildStatementPdf(d: StatementPdfData): jsPDF {
   const doc = new jsPDF();
   const fmtAmt = (n: number) => formatCurrency(n, d.currency);
   const pageWidth = doc.internal.pageSize.getWidth();

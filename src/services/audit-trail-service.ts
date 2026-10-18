@@ -338,11 +338,11 @@ export class AuditTrailService {
 }
 
 // Convenience exports
-export const auditLog = AuditTrailService.log.bind(AuditTrailService);
-export const logCreate = AuditTrailService.logCreate.bind(AuditTrailService);
-export const logUpdate = AuditTrailService.logUpdate.bind(AuditTrailService);
-export const logDelete = AuditTrailService.logDelete.bind(AuditTrailService);
-export const logApprove = AuditTrailService.logApprove.bind(AuditTrailService);
-export const logReject = AuditTrailService.logReject.bind(AuditTrailService);
-export const logConvert = AuditTrailService.logConvert.bind(AuditTrailService);
-export const logVerify = AuditTrailService.logVerify.bind(AuditTrailService);
+const auditLog = AuditTrailService.log.bind(AuditTrailService);
+const logCreate = AuditTrailService.logCreate.bind(AuditTrailService);
+const logUpdate = AuditTrailService.logUpdate.bind(AuditTrailService);
+const logDelete = AuditTrailService.logDelete.bind(AuditTrailService);
+const logApprove = AuditTrailService.logApprove.bind(AuditTrailService);
+const logReject = AuditTrailService.logReject.bind(AuditTrailService);
+const logConvert = AuditTrailService.logConvert.bind(AuditTrailService);
+const logVerify = AuditTrailService.logVerify.bind(AuditTrailService);

@@ -9,7 +9,7 @@ export interface DatabaseSchema {
   }[];
 }
 
-export const FLEET_SCHEMA: DatabaseSchema = {
+const FLEET_SCHEMA: DatabaseSchema = {
   tables: [
     {
       name: 'vehicles',
@@ -486,7 +486,7 @@ export function computeBusinessMetrics(ctx: any) {
   };
 }
 
-export function getSchemaString(): string {
+function getSchemaString(): string {
   return FLEET_SCHEMA.tables.map(table => {
     const cols = table.columns.map(c => `${c.name} (${c.type})`).join(', ');
     return `Table ${table.name}: ${cols}`;

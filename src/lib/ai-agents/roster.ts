@@ -332,7 +332,7 @@ const AGENT_BEHAVIOR: Record<string, Pick<AiAgent, 'run' | 'chatSystemPrompt'>> 
   },
 };
 
-export const AGENT_ROSTER: AiAgent[] = AGENT_METADATA.map((meta) => ({ ...meta, ...AGENT_BEHAVIOR[meta.id] }));
+const AGENT_ROSTER: AiAgent[] = AGENT_METADATA.map((meta) => ({ ...meta, ...AGENT_BEHAVIOR[meta.id] }));
 
 export function getAgentById(id: string): AiAgent | undefined {
   return AGENT_ROSTER.find((a) => a.id === id);

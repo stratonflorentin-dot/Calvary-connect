@@ -76,7 +76,7 @@ export async function createNotification(params: CreateNotificationParams) {
 // ERP Workflow Notifications
 
 // Lead Notifications
-export async function notifySalesTeamNewLead(
+async function notifySalesTeamNewLead(
   leadId: string,
   companyName: string,
   salesmanIds: string[],
@@ -97,7 +97,7 @@ export async function notifySalesTeamNewLead(
   );
 }
 
-export async function notifySalesTeamLeadConverted(
+async function notifySalesTeamLeadConverted(
   leadId: string,
   companyName: string,
   customerId: string,
@@ -120,7 +120,7 @@ export async function notifySalesTeamLeadConverted(
 }
 
 // Quotation Notifications
-export async function notifySalesTeamQuotationApproved(
+async function notifySalesTeamQuotationApproved(
   quotationId: string,
   quotationNumber: string,
   companyName: string,
@@ -142,7 +142,7 @@ export async function notifySalesTeamQuotationApproved(
   );
 }
 
-export async function notifySalesTeamQuotationSent(
+async function notifySalesTeamQuotationSent(
   quotationId: string,
   quotationNumber: string,
   companyName: string,
@@ -165,7 +165,7 @@ export async function notifySalesTeamQuotationSent(
 }
 
 // Booking Notifications
-export async function notifyOperationsTeamNewBooking(
+async function notifyOperationsTeamNewBooking(
   bookingId: string,
   bookingNumber: string,
   companyName: string,
@@ -188,7 +188,7 @@ export async function notifyOperationsTeamNewBooking(
 }
 
 // Trip Notifications
-export async function notifyDriverTripAssigned(
+async function notifyDriverTripAssigned(
   tripId: string,
   tripNumber: string,
   origin: string,
@@ -207,7 +207,7 @@ export async function notifyDriverTripAssigned(
   });
 }
 
-export async function notifyOperationsTeamTripStarted(
+async function notifyOperationsTeamTripStarted(
   tripId: string,
   tripNumber: string,
   operatorIds: string[],
@@ -229,7 +229,7 @@ export async function notifyOperationsTeamTripStarted(
 }
 
 // POD Notifications
-export async function notifyOperationsTeamPODUploaded(
+async function notifyOperationsTeamPODUploaded(
   podId: string,
   podNumber: string,
   tripNumber: string,
@@ -251,7 +251,7 @@ export async function notifyOperationsTeamPODUploaded(
   );
 }
 
-export async function notifyFinanceTeamPODVerified(
+async function notifyFinanceTeamPODVerified(
   podId: string,
   podNumber: string,
   invoiceNumber: string,
@@ -274,7 +274,7 @@ export async function notifyFinanceTeamPODVerified(
 }
 
 // Invoice Notifications
-export async function notifyFinanceTeamInvoiceGenerated(
+async function notifyFinanceTeamInvoiceGenerated(
   invoiceId: string,
   invoiceNumber: string,
   customerName: string,
@@ -340,7 +340,7 @@ export async function fetchAccountantUserIds(): Promise<string[]> {
   return (data || []).map((u) => u.id);
 }
 
-export async function fetchSalesmanUserIds(): Promise<string[]> {
+async function fetchSalesmanUserIds(): Promise<string[]> {
   const { data } = await supabase
     .from("user_profiles")
     .select("id, role")
@@ -356,7 +356,7 @@ export async function fetchOperatorUserIds(): Promise<string[]> {
   return (data || []).map((u) => u.id);
 }
 
-export async function fetchHRUserIds(): Promise<string[]> {
+async function fetchHRUserIds(): Promise<string[]> {
   const { data } = await supabase
     .from("user_profiles")
     .select("id, role")
@@ -364,7 +364,7 @@ export async function fetchHRUserIds(): Promise<string[]> {
   return (data || []).map((u) => u.id);
 }
 
-export async function fetchCompanyLoanApproverIds(): Promise<string[]> {
+async function fetchCompanyLoanApproverIds(): Promise<string[]> {
   const { data } = await supabase
     .from("user_profiles")
     .select("id, role")
@@ -394,7 +394,7 @@ export async function notifyCompanyLoanPaymentApproval(
   );
 }
 
-export async function fetchDriverUserIds(): Promise<string[]> {
+async function fetchDriverUserIds(): Promise<string[]> {
   const { data } = await supabase
     .from("user_profiles")
     .select("id, role")
@@ -422,7 +422,7 @@ export async function notifyAccountantsExpenseSubmitted(
   );
 }
 
-export async function notifyAccountantsTripRevenue(
+async function notifyAccountantsTripRevenue(
   tripId: string,
   origin: string,
   destination: string,
@@ -444,7 +444,7 @@ export async function notifyAccountantsTripRevenue(
   );
 }
 
-export async function notifySalesTeamPaymentStatus(
+async function notifySalesTeamPaymentStatus(
   tripId: string,
   clientName: string,
   status: "paid" | "pending" | "overdue",
@@ -466,7 +466,7 @@ export async function notifySalesTeamPaymentStatus(
   );
 }
 
-export async function notifyPaymentDispute(
+async function notifyPaymentDispute(
   tripId: string,
   clientName: string,
   amount: number,
@@ -491,7 +491,7 @@ export async function notifyPaymentDispute(
   );
 }
 
-export async function notifyAccountantsNewExpense(
+async function notifyAccountantsNewExpense(
   expenseType: string,
   amount: number,
   submittedBy: string,

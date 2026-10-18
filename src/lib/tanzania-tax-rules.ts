@@ -5,9 +5,9 @@
  * `tra-invoice-dialog.tsx` with no other caller able to reuse it.
  */
 
-export const VAT_RATE = 0.18; // 18% VAT
-export const WHT_RATE = 0.05; // 5% Withholding Tax (transport services)
-export const WHT_EXEMPT = 500_000; // WHT not applicable below TZS 500,000
+const VAT_RATE = 0.18; // 18% VAT
+const WHT_RATE = 0.05; // 5% Withholding Tax (transport services)
+const WHT_EXEMPT = 500_000; // WHT not applicable below TZS 500,000
 
 export interface InvoiceTotals {
   subtotal: number;

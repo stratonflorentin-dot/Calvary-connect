@@ -93,7 +93,7 @@ interface DashboardLayoutProps {
   hideSidebar?: boolean;
 }
 
-export function DashboardLayout({
+function DashboardLayout({
   children,
   title,
   description,
@@ -376,7 +376,7 @@ interface ActivityItem {
   color: string;
 }
 
-export function ActivityFeed({ activities }: { activities: ActivityItem[] }) {
+function ActivityFeed({ activities }: { activities: ActivityItem[] }) {
   return (
     <motion.div 
       variants={listContainerVariants}
@@ -422,7 +422,7 @@ interface AlertItem {
   time: string;
 }
 
-export function AlertPanel({ alerts }: { alerts: AlertItem[] }) {
+function AlertPanel({ alerts }: { alerts: AlertItem[] }) {
   return (
     <motion.div 
       variants={listContainerVariants}

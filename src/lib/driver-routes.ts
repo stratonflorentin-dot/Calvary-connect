@@ -17,6 +17,6 @@ export const DRIVER_ROUTE_CONFIG: RouteConfig[] = [
   { path: "/notifications", label: "Notifications", allowedRoles: ["DRIVER"], category: "system" },
 ];
 
-export function isDriverRole(role: UserRole | null): boolean {
+function isDriverRole(role: UserRole | null): boolean {
   return role === "DRIVER";
 }

@@ -98,7 +98,7 @@ interface SectionHeaderProps {
   className?: string;
 }
 
-export function SectionHeader({ title, description, children, className }: SectionHeaderProps) {
+function SectionHeader({ title, description, children, className }: SectionHeaderProps) {
   return (
     <div className={cn('flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4', className)}>
       <div>
@@ -128,4 +128,3 @@ export function PageSection({ children, className, animate = true }: PageSection
   );
 }
 
-export { slideUp };

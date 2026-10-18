@@ -92,7 +92,7 @@ export async function fetchLogoDataUrl(url: string | null | undefined): Promise<
   }
 }
 
-export function buildDocumentPdf(d: DocumentPdfData): jsPDF {
+function buildDocumentPdf(d: DocumentPdfData): jsPDF {
   const doc = new jsPDF();
   const fmtAmt = (n: number) => formatCurrency(n, d.currency);
   const pageWidth = doc.internal.pageSize.getWidth();
