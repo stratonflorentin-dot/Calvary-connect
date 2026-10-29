@@ -10,7 +10,7 @@
 //   - Firebase Realtime Database
 //   - Any authenticated API endpoint
 
-const CACHE_VERSION = 'calvary-connect-v7';
+const CACHE_VERSION = 'calvary-connect-v8';
 
 // Only cache assets that are guaranteed to exist at the root level
 const STATIC_PRECACHE = [
@@ -102,8 +102,20 @@ self.addEventListener('fetch', (event) => {
   // manages same-origin assets; third-party requests go straight to network.
   if (url.origin !== self.location.origin) return;
 
-  // Static assets (same-origin): CacheFirst
-  if (url.pathname.match(/\.(js|css|woff2?|png|jpg|jpeg|webp|svg|ico|gif)$/)) {
+  // Next.js JS/CSS chunks change on every deploy; cache them via NetworkFirst
+  // instead of CacheFirst so stale app bundles are never served after a release.
+  const isAppAsset =
+    url.pathname.includes('/_next/static/') ||
+    request.destination === 'script' ||
+    request.destination === 'style';
+  if (isAppAsset) {
+    event.respondWith(networkFirst(request, 5000));
+    return;
+  }
+
+  // Static assets (same-origin): CacheFirst. Keep only non-HTML, non-app-bundle
+  // resources such as icons, images, and fonts in the cache.
+  if (url.pathname.match(/\.(woff2?|png|jpg|jpeg|webp|svg|ico|gif)$/)) {
     event.respondWith(cacheFirst(request));
     return;
   }
