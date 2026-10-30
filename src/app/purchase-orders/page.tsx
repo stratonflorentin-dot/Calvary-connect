@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRole } from '@/hooks/use-role';
+import { VAT_RATE } from '@/lib/tanzania-tax-rules';
 import { useSupabase } from '@/components/supabase-provider';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -155,7 +156,7 @@ function PurchaseOrdersInner() {
     () => lines.reduce((sum, l) => sum + (Number(l.quantity_ordered) || 0) * (Number(l.unit_cost) || 0), 0),
     [lines],
   );
-  const draftVat = vatType === 'ZERO_RATED' ? 0 : Math.round(draftSubtotal * 0.18);
+  const draftVat = vatType === 'ZERO_RATED' ? 0 : Math.round(draftSubtotal * VAT_RATE);
 
   const resetCreateForm = () => {
     setSupplierId('');

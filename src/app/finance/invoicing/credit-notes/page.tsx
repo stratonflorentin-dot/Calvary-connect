@@ -17,8 +17,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDate } from "@/lib/utils";
 import { normalizeCurrency, REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
-
-const VAT_RATE = 0.18;
+import { VAT_RATE } from "@/lib/tanzania-tax-rules";
 
 type CreditNote = {
   id: string;

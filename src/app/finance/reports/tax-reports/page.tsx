@@ -18,6 +18,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as ExcelJS from 'exceljs';
 import { loadRateMap, convertSync } from "@/lib/finance/fx";
+import { VAT_RATE } from "@/lib/tanzania-tax-rules";
 import { REPORTING_CURRENCY } from "@/lib/finance/multi-currency";
 
 type Tax = {
@@ -121,19 +122,19 @@ export default function TaxReportsPage() {
 
     const salesTax = sumTzs(
       invoices.filter((i) => i.type === "AR" || i.type === "sales"),
-      (i) => i.tax_amount || i.amount * 0.18,
+      (i) => i.tax_amount || i.amount * VAT_RATE,
       (i) => i.currency,
     );
 
     const vatCollected = sumTzs(
       invoices.filter((i) => i.type === "AR"),
-      (i) => i.amount * 0.18,
+      (i) => i.amount * VAT_RATE,
       (i) => i.currency,
     );
 
     const vatPaid = sumTzs(
       expenses.filter((e) => e.tax_deductible !== false),
-      (e) => e.amount * 0.18,
+      (e) => e.amount * VAT_RATE,
       (e) => e.currency,
     );
 

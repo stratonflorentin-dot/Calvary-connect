@@ -5,7 +5,7 @@
  * `tra-invoice-dialog.tsx` with no other caller able to reuse it.
  */
 
-const VAT_RATE = 0.18; // 18% VAT
+export const VAT_RATE = 0.18; // 18% VAT (Mainland Tanzania standard rate)
 const WHT_RATE = 0.05; // 5% Withholding Tax (transport services)
 const WHT_EXEMPT = 500_000; // WHT not applicable below TZS 500,000
 
