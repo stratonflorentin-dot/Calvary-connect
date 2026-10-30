@@ -75,7 +75,11 @@ export default function NewMaintenancePage() {
                     vehicle_id: formData.vehicle_id || null,
                     trailer_id: formData.trailer_id || null,
                     trip_id: formData.trip_id || null,
-                    title: formData.title,
+                    title: formData.title.trim()
+                        || formData.description.trim()
+                        || formData.job_card_number.trim()
+                        || formData.parts_used.find((part) => part.description.trim())?.description.trim()
+                        || 'Maintenance Job Card',
                     type: formData.type,
                     priority: formData.priority,
                     description: formData.description || null,
@@ -86,7 +90,7 @@ export default function NewMaintenancePage() {
                     estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
                     currency: 'TZS',
                     job_card_number: formData.job_card_number || null,
-                    job_card_date: formData.job_card_date,
+                    job_card_date: formData.job_card_date || new Date().toISOString().split('T')[0],
                     odometer_reading_km: formData.odometer_reading_km ? Number(formData.odometer_reading_km) : null,
                     engine_hours: formData.engine_hours ? Number(formData.engine_hours) : null,
                     driver_name: formData.driver_name || null,
@@ -266,13 +270,12 @@ export default function NewMaintenancePage() {
                         </section>
 
                         <div className="space-y-2">
-                            <Label htmlFor="title">Job Card Title *</Label>
+                            <Label htmlFor="title">Job Card Title</Label>
                             <Input
                                 id="title"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                 placeholder="e.g., Engine Oil Change, Brake Inspection"
-                                required
                             />
                         </div>
 
@@ -456,7 +459,7 @@ export default function NewMaintenancePage() {
 
                             <div className="space-y-2">
                                 <Label htmlFor="job_card_date">Job Card Date</Label>
-                                <Input id="job_card_date" type="date" value={formData.job_card_date} onChange={(e) => setFormData({ ...formData, job_card_date: e.target.value })} required />
+                                <Input id="job_card_date" type="date" value={formData.job_card_date} onChange={(e) => setFormData({ ...formData, job_card_date: e.target.value })} />
                             </div>
 
                             <div className="space-y-2">
@@ -482,7 +485,7 @@ export default function NewMaintenancePage() {
                         </div>
 
                         <div className="flex gap-4 pt-6">
-                            <Button type="submit" disabled={loading || !formData.title}>
+                            <Button type="submit" disabled={loading}>
                                 {loading ? 'Creating...' : 'Create Record'}
                             </Button>
                             <Link href="/maintenance">
