@@ -21,6 +21,7 @@ import { DriverSilentTrackingRoot } from '@/components/tracking/driver-silent-tr
 import { ThemeProvider } from '@/components/theme-provider';
 import { FinancialSalesProvider } from '@/context/FinancialSalesContext';
 import { RouteOverridesProvider } from '@/components/route-overrides-provider';
+import { RouteGuard } from '@/components/route-guard';
 import { SidebarProvider } from '@/hooks/use-sidebar';
 
 export const viewport: Viewport = {
@@ -96,6 +97,7 @@ export default function RootLayout({
                     <ToastProvider />
                     <DriverSilentTrackingRoot />
                     <RouteOverridesProvider>
+                      <RouteGuard />
                       <FinancialSalesProvider>{children}</FinancialSalesProvider>
                     </RouteOverridesProvider>
                     <Toaster />

@@ -1066,6 +1066,52 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     allowedRoles: ["CEO", "ADMIN", "MECHANIC", "OPERATOR", "DRIVER"],
     showInNavigation: false,
   },
+  // --- Added when wiring useRouteGuard: these pages existed on disk with no
+  // ROUTE_CONFIG entry, so enabling the guard would have redirected every
+  // non-CEO/ADMIN role away from them (checkAccess denies unknown routes).
+  // Roles mirror each page's own inline role check.
+  {
+    path: "/admin/api-health",
+    label: "API Health",
+    allowedRoles: ["CEO", "ADMIN"],
+    category: "system",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/banking/bank-accounts/[id]",
+    label: "Bank Account Detail",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/finance/transactions/payments/[id]",
+    label: "Payment Detail",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT"],
+    category: "finance",
+    showInNavigation: false,
+  },
+  {
+    path: "/hr/company-loans",
+    label: "Company Loans",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+    showInNavigation: false,
+  },
+  {
+    path: "/hr/loan-calculator",
+    label: "Loan Calculator",
+    allowedRoles: ["CEO", "ADMIN", "HR", "ACCOUNTANT"],
+    category: "people",
+    showInNavigation: false,
+  },
+  {
+    path: "/reports/notebook",
+    label: "Reports Notebook",
+    allowedRoles: ["CEO", "ADMIN", "ACCOUNTANT", "HR"],
+    category: "reports",
+    showInNavigation: false,
+  },
 ];
 
 // Role-specific default landing pages
