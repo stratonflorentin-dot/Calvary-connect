@@ -21,18 +21,21 @@ export function HRView() {
   const { format } = useCurrency();
   const [staff, setStaff] = useState<any[]>([]);
   const [allowances, setAllowances] = useState<any[]>([]);
+  const [pendingLeave, setPendingLeave] = useState(0);
 
   const load = async () => {
-    const [u, a] = await Promise.all([
+    const [u, a, l] = await Promise.all([
       supabase.from("user_profiles").select("*"),
       // driver_allowances, not the legacy allowances table — see
       // src/app/allowances/actions.ts: nothing has ever successfully
       // written to `allowances` (its own CHECK constraint rejects every
       // value this app actually uses), so it reads back empty.
       supabase.from("driver_allowances").select("*").order("created_at", { ascending: false }).limit(30),
+      supabase.from("leave_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
     ]);
     setStaff(u.data ?? []);
     setAllowances(a.data ?? []);
+    setPendingLeave(l.count ?? 0);
   };
 
   useEffect(() => { load(); }, []);
@@ -61,6 +64,7 @@ export function HRView() {
         { label: "Active", value: stats.active, icon: UserCheck, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]" },
         { label: "Drivers", value: stats.drivers, icon: BadgeCheck, accent: "bg-sky-100 text-sky-700", href: "/drivers" },
         { label: "Pending allowances", value: stats.pendingAllowance, icon: Coins, accent: "bg-amber-100 text-amber-700", href: "/allowances" },
+        { label: "Leave pending", value: pendingLeave, icon: CalendarDays, accent: "bg-sky-100 text-sky-700", href: "/hr/leave" },
       ]}
       sections={[
         {

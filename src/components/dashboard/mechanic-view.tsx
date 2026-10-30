@@ -42,6 +42,13 @@ export function MechanicView() {
     return { requested, scheduled, inProgress, completed, parts: partsRequests.length };
   }, [records, partsRequests]);
 
+  // Vehicles past their scheduled next-service date — the preventive-maintenance
+  // compliance signal from the role playbook.
+  const serviceOverdue = useMemo(
+    () => vehicles.filter((v) => v.next_maintenance_due && new Date(v.next_maintenance_due).getTime() < Date.now()).length,
+    [vehicles],
+  );
+
   const workQueue = useMemo(() => records.filter((r) => ["requested", "scheduled", "in_progress"].includes(r.status)).slice(0, 8), [records]);
   const attention = useMemo(() => vehicles.filter((v) => {
     if (!v.next_maintenance_due) return false;
@@ -61,6 +68,7 @@ export function MechanicView() {
         { label: "Scheduled", value: stats.scheduled, icon: Wrench, accent: "bg-primary/10 text-primary", href: "/maintenance" },
         { label: "In progress", value: stats.inProgress, icon: Sparkles, accent: "bg-sky-100 text-sky-700", href: "/maintenance" },
         { label: "Completed", value: stats.completed, icon: CheckCircle2, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/maintenance" },
+        { label: "Service overdue", value: serviceOverdue, icon: AlertTriangle, accent: "bg-red-100 text-red-700", href: "/fleet/compliance" },
       ]}
       sections={[
         {

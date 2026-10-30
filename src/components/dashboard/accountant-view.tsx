@@ -13,6 +13,7 @@ import {
   Calculator,
   CheckCircle2,
   ClipboardList,
+  Clock,
   CreditCard,
   Landmark,
   Receipt,
@@ -92,8 +93,14 @@ export function AccountantView() {
 
   const stats = useMemo(() => {
     const pendingExpenses = expenses.filter((e) => e.status === "pending").length;
-    const arOverdue = invoices.filter((i) => (i.type ?? "receivable") === "receivable" && isOpenForAging(i.status) && daysOverdue(i.due_date) > 0).length;
-    return { pendingExpenses, arOverdue };
+    const overdueInvoices = invoices.filter((i) => (i.type ?? "receivable") === "receivable" && isOpenForAging(i.status) && daysOverdue(i.due_date) > 0);
+    const arOverdue = overdueInvoices.length;
+    // Collection health: average age of the overdue receivables. A rising
+    // number means invoices are sitting unpaid longer (see role playbook).
+    const avgDaysOverdue = arOverdue > 0
+      ? Math.round(overdueInvoices.reduce((s, i) => s + daysOverdue(i.due_date), 0) / arOverdue)
+      : 0;
+    return { pendingExpenses, arOverdue, avgDaysOverdue };
   }, [invoices, expenses]);
 
   const recentPending = useMemo(() => expenses.filter((e) => e.status === "pending").slice(0, 5), [expenses]);
@@ -134,6 +141,7 @@ export function AccountantView() {
       kpis={[
         ...currencyKpis,
         { label: "Overdue AR", value: stats.arOverdue, icon: TrendingDown, accent: "bg-red-100 text-red-700", href: "/finance/reports/aging-report" },
+        { label: "Avg days overdue", value: stats.avgDaysOverdue, icon: Clock, accent: "bg-amber-100 text-amber-700", href: "/finance/reports/aging-report" },
       ]}
       sections={[
         {
