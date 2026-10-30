@@ -622,6 +622,20 @@ export async function applyTransition(args: ApplyTransitionArgs): Promise<Transi
   };
   if (args.payload?.scheduled_date) updatePayload.scheduled_date = args.payload.scheduled_date;
   if (args.payload?.actual_cost != null) updatePayload.actual_cost = args.payload.actual_cost;
+  if (args.kind === "maintenance_request" && args.toState === "completed") {
+    for (const field of [
+      "completed_date",
+      "technician_signature",
+      "driver_confirmation_name",
+      "driver_confirmation_signature",
+      "driver_confirmation_at",
+      "completion_notes",
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(args.payload ?? {}, field)) {
+        updatePayload[field] = args.payload?.[field] ?? null;
+      }
+    }
+  }
   if (args.kind === "leave_request" && args.toState === "approved") {
     updatePayload.approved_by = args.actorId;
     updatePayload.approved_at = new Date().toISOString();

@@ -17,13 +17,15 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useFleetVehicles } from '@/hooks/data/use-fleet-vehicles';
 import { useTrips } from '@/hooks/data/use-trips';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { useCustomers } from '@/hooks/data/use-customers';
+import { AlertCircle, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NewMaintenancePage() {
     const router = useRouter();
     const { vehicles, loading: vehiclesLoading } = useFleetVehicles();
     const { trips, loading: tripsLoading } = useTrips();
+    const { customers, loading: customersLoading } = useCustomers();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +43,19 @@ export default function NewMaintenancePage() {
         workshop: '',
         estimated_cost: '',
         job_card_number: '',
+        job_card_date: new Date().toISOString().split('T')[0],
+        odometer_reading_km: '',
+        engine_hours: '',
+        driver_name: '',
+        driver_phone: '',
+        customer_id: '',
+        customer_company_name: '',
+        customer_contact_person: '',
+        customer_phone: '',
+        inspection_findings: '',
+        work_performed: [] as string[],
+        work_performed_other: '',
+        parts_used: [{ description: '', quantity: '1', unit_price: '' }],
         notes: '',
     });
 
@@ -71,6 +86,30 @@ export default function NewMaintenancePage() {
                     estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
                     currency: 'TZS',
                     job_card_number: formData.job_card_number || null,
+                    job_card_date: formData.job_card_date,
+                    odometer_reading_km: formData.odometer_reading_km ? Number(formData.odometer_reading_km) : null,
+                    engine_hours: formData.engine_hours ? Number(formData.engine_hours) : null,
+                    driver_name: formData.driver_name || null,
+                    driver_phone: formData.driver_phone || null,
+                    customer_id: formData.customer_id || null,
+                    customer_company_name: formData.customer_company_name || null,
+                    customer_contact_person: formData.customer_contact_person || null,
+                    customer_phone: formData.customer_phone || null,
+                    inspection_findings: formData.inspection_findings || null,
+                    work_performed: formData.work_performed,
+                    work_performed_other: formData.work_performed_other || null,
+                    parts_used: formData.parts_used
+                        .filter((part) => part.description.trim())
+                        .map((part) => {
+                            const quantity = Number(part.quantity) || 0;
+                            const unitPrice = Number(part.unit_price) || 0;
+                            return {
+                                description: part.description.trim(),
+                                quantity,
+                                unit_price: unitPrice,
+                                total_value: quantity * unitPrice,
+                            };
+                        }),
                     notes: formData.notes || null,
                     requested_by: user.id,
                     status: 'requested',
@@ -159,8 +198,75 @@ export default function NewMaintenancePage() {
                             </Select>
                         </div>
 
+                        <section className="space-y-4 rounded-xl border p-4">
+                            <div>
+                                <h2 className="font-semibold">Vehicle and Driver Details</h2>
+                                <p className="text-sm text-muted-foreground">Capture the truck condition and driver details at check-in.</p>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="odometer_reading_km">Odometer Reading (km)</Label>
+                                    <Input id="odometer_reading_km" type="number" min="0" step="0.1" value={formData.odometer_reading_km} onChange={(e) => setFormData({ ...formData, odometer_reading_km: e.target.value })} placeholder="e.g. 184250" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="engine_hours">Engine Hours</Label>
+                                    <Input id="engine_hours" type="number" min="0" step="0.1" value={formData.engine_hours} onChange={(e) => setFormData({ ...formData, engine_hours: e.target.value })} placeholder="e.g. 5230" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="driver_name">Driver Name</Label>
+                                    <Input id="driver_name" value={formData.driver_name} onChange={(e) => setFormData({ ...formData, driver_name: e.target.value })} placeholder="Driver full name" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="driver_phone">Driver Phone Number</Label>
+                                    <Input id="driver_phone" type="tel" value={formData.driver_phone} onChange={(e) => setFormData({ ...formData, driver_phone: e.target.value })} placeholder="+255 XXX XXX XXX" />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="space-y-4 rounded-xl border p-4">
+                            <div>
+                                <h2 className="font-semibold">Customer Details</h2>
+                                <p className="text-sm text-muted-foreground">Choose a customer to fill the details, or enter them manually.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="customer_id">Customer</Label>
+                                <Select value={formData.customer_id || 'none'} onValueChange={(value) => {
+                                    const selected = customers.find((customer: any) => customer.id === value);
+                                    setFormData({
+                                        ...formData,
+                                        customer_id: value === 'none' ? '' : value,
+                                        customer_company_name: selected?.company_name || formData.customer_company_name,
+                                        customer_contact_person: selected?.contact_person || formData.customer_contact_person,
+                                        customer_phone: selected?.phone || formData.customer_phone,
+                                    });
+                                }}>
+                                    <SelectTrigger><SelectValue placeholder={customersLoading ? 'Loading customers...' : 'Select customer (optional)'} /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">No customer / enter manually</SelectItem>
+                                        {customers.map((customer: any) => (
+                                            <SelectItem key={customer.id} value={customer.id}>{customer.company_name || customer.contact_person}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="customer_company_name">Company Name</Label>
+                                    <Input id="customer_company_name" value={formData.customer_company_name} onChange={(e) => setFormData({ ...formData, customer_company_name: e.target.value })} placeholder="Company" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="customer_contact_person">Contact Person</Label>
+                                    <Input id="customer_contact_person" value={formData.customer_contact_person} onChange={(e) => setFormData({ ...formData, customer_contact_person: e.target.value })} placeholder="Contact full name" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="customer_phone">Customer Phone Number</Label>
+                                    <Input id="customer_phone" type="tel" value={formData.customer_phone} onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })} placeholder="+255 XXX XXX XXX" />
+                                </div>
+                            </div>
+                        </section>
+
                         <div className="space-y-2">
-                            <Label htmlFor="title">Title *</Label>
+                            <Label htmlFor="title">Job Card Title *</Label>
                             <Input
                                 id="title"
                                 value={formData.title}
@@ -204,15 +310,93 @@ export default function NewMaintenancePage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description">Reported Problem / Service Request</Label>
                             <Textarea
                                 id="description"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="Detailed description of maintenance needed"
+                                placeholder="Describe the issue reported by the driver or customer"
                                 className="min-h-24"
                             />
                         </div>
+
+                        <section className="space-y-4 rounded-xl border p-4">
+                            <div>
+                                <h2 className="font-semibold">Inspection and Work Performed</h2>
+                                <p className="text-sm text-muted-foreground">Record findings and the repair areas completed.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="inspection_findings">Inspection Findings</Label>
+                                <Textarea id="inspection_findings" value={formData.inspection_findings} onChange={(e) => setFormData({ ...formData, inspection_findings: e.target.value })} placeholder="Inspection observations, diagnosis, and recommended action" className="min-h-24" />
+                            </div>
+                            <div className="space-y-3">
+                                <Label>Work Performed</Label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    {['Engine', 'Transmission', 'Brakes', 'Suspension', 'Electrical', 'Tyres', 'Body Repair', 'Welding', 'Lubrication', 'Other'].map((item) => (
+                                        <label key={item} className="flex items-center gap-2 rounded-md border p-3 text-sm">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.work_performed.includes(item)}
+                                                onChange={(event) => setFormData({
+                                                    ...formData,
+                                                    work_performed: event.target.checked
+                                                        ? [...formData.work_performed, item]
+                                                        : formData.work_performed.filter((value) => value !== item),
+                                                })}
+                                                className="h-4 w-4 accent-primary"
+                                            />
+                                            {item}
+                                        </label>
+                                    ))}
+                                </div>
+                                {formData.work_performed.includes('Other') && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="work_performed_other">Other Work</Label>
+                                        <Input id="work_performed_other" value={formData.work_performed_other} onChange={(e) => setFormData({ ...formData, work_performed_other: e.target.value })} placeholder="Specify any other work performed" />
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+
+                        <section className="space-y-4 rounded-xl border p-4">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h2 className="font-semibold">Parts Used</h2>
+                                    <p className="text-sm text-muted-foreground">Enter quantities and unit prices; line totals are calculated automatically.</p>
+                                </div>
+                                <Button type="button" variant="outline" size="sm" onClick={() => setFormData({ ...formData, parts_used: [...formData.parts_used, { description: '', quantity: '1', unit_price: '' }] })}>
+                                    <Plus className="mr-1 h-4 w-4" /> Add Part
+                                </Button>
+                            </div>
+                            <div className="space-y-3">
+                                {formData.parts_used.map((part, index) => {
+                                    const lineTotal = (Number(part.quantity) || 0) * (Number(part.unit_price) || 0);
+                                    return (
+                                        <div key={index} className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_auto] gap-3 items-end">
+                                            <div className="space-y-2">
+                                                <Label htmlFor={`part-description-${index}`}>Part Description</Label>
+                                                <Input id={`part-description-${index}`} value={part.description} onChange={(e) => setFormData({ ...formData, parts_used: formData.parts_used.map((item, itemIndex) => itemIndex === index ? { ...item, description: e.target.value } : item) })} placeholder="Part or material" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor={`part-quantity-${index}`}>Quantity</Label>
+                                                <Input id={`part-quantity-${index}`} type="number" min="0" step="0.01" value={part.quantity} onChange={(e) => setFormData({ ...formData, parts_used: formData.parts_used.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: e.target.value } : item) })} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor={`part-price-${index}`}>Unit Price (TZS)</Label>
+                                                <Input id={`part-price-${index}`} type="number" min="0" step="0.01" value={part.unit_price} onChange={(e) => setFormData({ ...formData, parts_used: formData.parts_used.map((item, itemIndex) => itemIndex === index ? { ...item, unit_price: e.target.value } : item) })} placeholder="0.00" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Line Total</Label>
+                                                <div className="h-10 flex items-center rounded-md border px-3 text-sm font-mono">{lineTotal.toLocaleString('en-TZ')}</div>
+                                            </div>
+                                            <Button type="button" variant="ghost" size="icon" aria-label="Remove part" disabled={formData.parts_used.length === 1} onClick={() => setFormData({ ...formData, parts_used: formData.parts_used.filter((_, itemIndex) => itemIndex !== index) })}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <div className="space-y-2">
@@ -247,7 +431,7 @@ export default function NewMaintenancePage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="estimated_cost">Estimated Cost (TZS)</Label>
                                 <Input
@@ -268,6 +452,11 @@ export default function NewMaintenancePage() {
                                     onChange={(e) => setFormData({ ...formData, job_card_number: e.target.value })}
                                     placeholder="e.g., JC-2024-001"
                                 />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="job_card_date">Job Card Date</Label>
+                                <Input id="job_card_date" type="date" value={formData.job_card_date} onChange={(e) => setFormData({ ...formData, job_card_date: e.target.value })} required />
                             </div>
 
                             <div className="space-y-2">

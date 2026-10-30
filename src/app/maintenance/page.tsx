@@ -265,6 +265,7 @@ export default function MaintenancePage() {
                                         >
                                             <td className="py-3 px-4">
                                                 <div className="font-mono text-xs font-bold text-foreground">{record.record_number}</div>
+                                                {record.job_card_number && <div className="text-xs font-medium text-primary">Job Card: {record.job_card_number}</div>}
                                                 <div className="text-xs text-muted-foreground">
                                                     {new Date(record.created_at).toLocaleDateString()}
                                                 </div>
@@ -287,7 +288,10 @@ export default function MaintenancePage() {
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="py-3 px-4 text-foreground font-medium">{record.title}</td>
+                                            <td className="py-3 px-4 text-foreground font-medium">
+                                                {record.title}
+                                                {record.customer_company_name && <div className="text-xs font-normal text-muted-foreground">{record.customer_company_name}</div>}
+                                            </td>
                                             <td className="py-3 px-4">
                                                 <Badge variant="outline" className="text-xs border-border">{record.type}</Badge>
                                             </td>

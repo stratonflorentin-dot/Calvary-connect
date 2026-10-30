@@ -24,6 +24,18 @@ interface MaintenanceRecord {
     actual_cost: number | null;
     currency: string;
     job_card_number: string | null;
+    odometer_reading_km?: number | null;
+    engine_hours?: number | null;
+    driver_name?: string | null;
+    driver_phone?: string | null;
+    customer_id?: string | null;
+    customer_company_name?: string | null;
+    customer_contact_person?: string | null;
+    customer_phone?: string | null;
+    inspection_findings?: string | null;
+    work_performed?: string[];
+    work_performed_other?: string | null;
+    parts_used?: { description: string; quantity: number; unit_price: number; total_value: number }[];
     notes: string | null;
     requested_by: string | null;
     approved_by: string | null;
@@ -101,7 +113,7 @@ export function useMaintenance(filters?: {
                 query = query.eq('type', filters.type);
             }
             if (filters?.search) {
-                query = query.or(`record_number.ilike.%${filters.search}%,title.ilike.%${filters.search}%,technician.ilike.%${filters.search}%`);
+                query = query.or(`record_number.ilike.%${filters.search}%,job_card_number.ilike.%${filters.search}%,title.ilike.%${filters.search}%,technician.ilike.%${filters.search}%,customer_company_name.ilike.%${filters.search}%`);
             }
 
             const { data, error: fetchError } = await query;

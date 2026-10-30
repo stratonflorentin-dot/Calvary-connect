@@ -28,6 +28,13 @@ import { toast } from '@/hooks/use-toast';
 import { ActivityFeed } from '@/components/workflow/activity-feed';
 import { TransitionButtons } from '@/components/workflow/transition-buttons';
 
+interface MaintenancePart {
+    description: string;
+    quantity: number;
+    unit_price: number;
+    total_value: number;
+}
+
 interface MaintenanceRecord {
     id: string;
     record_number: string;
@@ -43,12 +50,30 @@ interface MaintenanceRecord {
     completed_date: string | null;
     technician: string | null;
     technician_phone: string | null;
+    technician_signature: string | null;
     workshop: string | null;
     estimated_cost: number | null;
     actual_cost: number | null;
     currency: string;
     job_card_number: string | null;
+    job_card_date: string;
+    odometer_reading_km: number | null;
+    engine_hours: number | null;
+    driver_name: string | null;
+    driver_phone: string | null;
+    customer_id: string | null;
+    customer_company_name: string | null;
+    customer_contact_person: string | null;
+    customer_phone: string | null;
+    inspection_findings: string | null;
+    work_performed: string[];
+    work_performed_other: string | null;
+    parts_used: MaintenancePart[];
+    driver_confirmation_name: string | null;
+    driver_confirmation_signature: string | null;
+    driver_confirmation_at: string | null;
     notes: string | null;
+    completion_notes: string | null;
     created_at: string;
     vehicles?: {
         id: string;
@@ -79,6 +104,13 @@ export default function MaintenanceDetailPage() {
         actual_cost: '',
         completed_date: new Date().toISOString().split('T')[0],
         notes: '',
+        technician_signature: '',
+        driver_confirmation_name: '',
+        driver_confirmation_signature: '',
+        driver_confirmation_at: (() => {
+            const now = new Date();
+            return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        })(),
     });
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
@@ -136,11 +168,25 @@ export default function MaintenanceDetailPage() {
     };
 
     const completeFromModal = () => {
+        const hasDriverConfirmation = Boolean(
+            completionData.driver_confirmation_name.trim() || completionData.driver_confirmation_signature.trim()
+        );
+        if (hasDriverConfirmation && (!completionData.driver_confirmation_name.trim() || !completionData.driver_confirmation_signature.trim())) {
+            toast({ title: 'Driver confirmation incomplete', description: 'Enter both the driver name and typed signature.', variant: 'destructive' });
+            return;
+        }
+
         setShowCompleteModal(false);
         handleStatusChange('completed', {
             actual_cost: completionData.actual_cost ? parseFloat(completionData.actual_cost) : null,
             completed_date: completionData.completed_date,
-            notes: completionData.notes || null,
+            completion_notes: completionData.notes || null,
+            technician_signature: completionData.technician_signature.trim() || null,
+            driver_confirmation_name: hasDriverConfirmation ? completionData.driver_confirmation_name.trim() : null,
+            driver_confirmation_signature: hasDriverConfirmation ? completionData.driver_confirmation_signature.trim() : null,
+            driver_confirmation_at: hasDriverConfirmation && completionData.driver_confirmation_at
+                ? new Date(completionData.driver_confirmation_at).toISOString()
+                : null,
         });
     };
 
@@ -265,7 +311,7 @@ export default function MaintenanceDetailPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <div>
                                 <Label className="text-xs font-semibold text-muted-foreground">Technician Phone</Label>
                                 <p className="text-sm mt-2">{record.technician_phone || 'Not provided'}</p>
@@ -274,7 +320,82 @@ export default function MaintenanceDetailPage() {
                                 <Label className="text-xs font-semibold text-muted-foreground">Job Card Number</Label>
                                 <p className="text-sm mt-2">{record.job_card_number || 'Not assigned'}</p>
                             </div>
+                            <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">Job Card Date</Label>
+                                <p className="text-sm mt-2">{record.job_card_date ? new Date(record.job_card_date).toLocaleDateString() : '—'}</p>
+                            </div>
                         </div>
+
+                        <section className="space-y-4 rounded-xl border p-4">
+                            <h2 className="font-semibold">Vehicle and Driver Details</h2>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-xs font-semibold text-muted-foreground">Odometer Reading</Label>
+                                    <p className="text-sm mt-2">{record.odometer_reading_km != null ? `${record.odometer_reading_km.toLocaleString()} km` : 'Not recorded'}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold text-muted-foreground">Engine Hours</Label>
+                                    <p className="text-sm mt-2">{record.engine_hours != null ? `${record.engine_hours.toLocaleString()} hrs` : 'Not recorded'}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold text-muted-foreground">Driver Name</Label>
+                                    <p className="text-sm mt-2">{record.driver_name || 'Not provided'}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold text-muted-foreground">Driver Phone</Label>
+                                    <p className="text-sm mt-2">{record.driver_phone || 'Not provided'}</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {(record.customer_company_name || record.customer_contact_person || record.customer_phone) && (
+                            <section className="space-y-4 rounded-xl border p-4">
+                                <h2 className="font-semibold">Customer Details</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div><Label className="text-xs font-semibold text-muted-foreground">Company</Label><p className="text-sm mt-2">{record.customer_company_name || '—'}</p></div>
+                                    <div><Label className="text-xs font-semibold text-muted-foreground">Contact Person</Label><p className="text-sm mt-2">{record.customer_contact_person || '—'}</p></div>
+                                    <div><Label className="text-xs font-semibold text-muted-foreground">Phone</Label><p className="text-sm mt-2">{record.customer_phone || '—'}</p></div>
+                                </div>
+                            </section>
+                        )}
+
+                        {record.inspection_findings && (
+                            <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">Inspection Findings</Label>
+                                <p className="text-sm mt-2 whitespace-pre-wrap">{record.inspection_findings}</p>
+                            </div>
+                        )}
+
+                        {((record.work_performed ?? []).length > 0 || record.work_performed_other) && (
+                            <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">Work Performed</Label>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {(record.work_performed ?? []).map((item) => <Badge key={item} variant="outline">{item}</Badge>)}
+                                    {record.work_performed_other && <Badge variant="outline">Other: {record.work_performed_other}</Badge>}
+                                </div>
+                            </div>
+                        )}
+
+                        {Array.isArray(record.parts_used) && record.parts_used.length > 0 && (
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold text-muted-foreground">Parts Used</Label>
+                                <div className="overflow-x-auto rounded-md border">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-muted/50"><tr><th className="p-2 text-left">Description</th><th className="p-2 text-right">Quantity</th><th className="p-2 text-right">Unit Price</th><th className="p-2 text-right">Total Value</th></tr></thead>
+                                        <tbody>
+                                            {record.parts_used.map((part, index) => (
+                                                <tr key={`${part.description}-${index}`} className="border-t">
+                                                    <td className="p-2">{part.description}</td>
+                                                    <td className="p-2 text-right">{part.quantity}</td>
+                                                    <td className="p-2 text-right font-mono">{format(part.unit_price)}</td>
+                                                    <td className="p-2 text-right font-mono">{format(part.total_value)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-6">
                             <div>
@@ -289,6 +410,24 @@ export default function MaintenanceDetailPage() {
                             </div>
                         </div>
 
+                        {record.technician_signature && (
+                            <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">Technician Signature</Label>
+                                <p className="text-sm mt-2">{record.technician_signature}</p>
+                            </div>
+                        )}
+
+                        {(record.driver_confirmation_name || record.driver_confirmation_signature) && (
+                            <section className="space-y-3 rounded-xl border p-4">
+                                <h2 className="font-semibold">Driver Confirmation</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div><Label className="text-xs font-semibold text-muted-foreground">Name</Label><p className="text-sm mt-2">{record.driver_confirmation_name || '—'}</p></div>
+                                    <div><Label className="text-xs font-semibold text-muted-foreground">Typed Signature</Label><p className="text-sm mt-2">{record.driver_confirmation_signature || '—'}</p></div>
+                                    <div><Label className="text-xs font-semibold text-muted-foreground">Date and Time</Label><p className="text-sm mt-2">{record.driver_confirmation_at ? new Date(record.driver_confirmation_at).toLocaleString() : '—'}</p></div>
+                                </div>
+                            </section>
+                        )}
+
                         {record.actual_cost && (
                             <div>
                                 <Label className="text-xs font-semibold text-muted-foreground">Actual Cost</Label>
@@ -300,6 +439,12 @@ export default function MaintenanceDetailPage() {
                             <div>
                                 <Label className="text-xs font-semibold text-muted-foreground">Notes</Label>
                                 <p className="text-sm mt-2">{record.notes}</p>
+                            </div>
+                        )}
+                        {record.completion_notes && (
+                            <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">Completion Notes</Label>
+                                <p className="text-sm mt-2 whitespace-pre-wrap">{record.completion_notes}</p>
                             </div>
                         )}
                     </CardContent>
@@ -427,6 +572,31 @@ export default function MaintenanceDetailPage() {
                                 placeholder="Summary of work completed"
                                 className="min-h-20"
                             />
+                        </div>
+
+                        <div className="space-y-3 rounded-md border p-4">
+                            <p className="font-medium">Technician Sign-off</p>
+                            <div>
+                                <Label htmlFor="technician_signature">Technician Typed Signature</Label>
+                                <Input id="technician_signature" value={completionData.technician_signature} onChange={(e) => setCompletionData({ ...completionData, technician_signature: e.target.value })} placeholder="Type technician's full name" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 rounded-md border p-4">
+                            <p className="font-medium">Driver Confirmation</p>
+                            <p className="text-xs text-muted-foreground">Enter both fields to record a driver confirmation. The date and time are saved with it.</p>
+                            <div>
+                                <Label htmlFor="driver_confirmation_name">Driver Name</Label>
+                                <Input id="driver_confirmation_name" value={completionData.driver_confirmation_name} onChange={(e) => setCompletionData({ ...completionData, driver_confirmation_name: e.target.value })} placeholder="Driver full name" />
+                            </div>
+                            <div>
+                                <Label htmlFor="driver_confirmation_signature">Driver Typed Signature</Label>
+                                <Input id="driver_confirmation_signature" value={completionData.driver_confirmation_signature} onChange={(e) => setCompletionData({ ...completionData, driver_confirmation_signature: e.target.value })} placeholder="Type name to confirm completed work" />
+                            </div>
+                            <div>
+                                <Label htmlFor="driver_confirmation_at">Confirmation Date and Time</Label>
+                                <Input id="driver_confirmation_at" type="datetime-local" value={completionData.driver_confirmation_at} onChange={(e) => setCompletionData({ ...completionData, driver_confirmation_at: e.target.value })} />
+                            </div>
                         </div>
                     </div>
 
