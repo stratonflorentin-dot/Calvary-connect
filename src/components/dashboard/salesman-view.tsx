@@ -51,11 +51,17 @@ export default function SalesmanDashboard() {
       .reduce((s, i) => s + Number(i.total_amount ?? i.amount ?? 0), 0);
     const openQuotes = quotations.filter((q) => ["sent", "viewed", "draft"].includes(q.approval_status ?? q.status)).length;
     const openBookings = bookings.filter((b) => ["confirmed", "in_progress"].includes(b.status)).length;
+    // Quote win rate: share of quotations that reached a won/approved state.
+    // A core sales KPI (see role playbook); approximate over the recent window.
+    const decidedWon = ["approved", "accepted", "converted", "won"];
+    const wonQuotes = quotations.filter((q) => decidedWon.includes(String(q.approval_status ?? q.status ?? "").toLowerCase())).length;
+    const winRate = quotations.length > 0 ? Math.round((wonQuotes / quotations.length) * 100) : 0;
     return {
       customers: customers.length,
       openBookings,
       openQuotes,
       monthRevenue,
+      winRate,
     };
   }, [customers, bookings, quotations, invoices]);
 
@@ -74,6 +80,7 @@ export default function SalesmanDashboard() {
         { label: "Open quotes", value: stats.openQuotes, icon: FileText, accent: "bg-amber-100 text-amber-700", href: "/sales" },
         { label: "Live bookings", value: stats.openBookings, icon: Handshake, accent: "bg-sky-100 text-sky-700", href: "/bookings" },
         { label: "Revenue MTD", value: format(stats.monthRevenue), icon: TrendingUp, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/sales" },
+        { label: "Quote win %", value: stats.winRate, icon: Target, accent: "bg-violet-100 text-violet-700", href: "/sales" },
       ]}
       sections={[
         {
