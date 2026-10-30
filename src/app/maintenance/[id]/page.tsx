@@ -70,6 +70,8 @@ export default function MaintenanceDetailPage() {
         completed_date: new Date().toISOString().split('T')[0],
         notes: '',
     });
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [scheduleDate, setScheduleDate] = useState('');
 
     useEffect(() => {
         const fetchRecord = async () => {
@@ -129,6 +131,18 @@ export default function MaintenanceDetailPage() {
             completed_date: completionData.completed_date,
             notes: completionData.notes || null,
         });
+    };
+
+    const openScheduleModal = () => {
+        // Prefill with any date proposed on the request, else today.
+        setScheduleDate(record?.scheduled_date?.split('T')[0] ?? new Date().toISOString().split('T')[0]);
+        setShowScheduleModal(true);
+    };
+
+    const scheduleFromModal = () => {
+        if (!scheduleDate) return;
+        setShowScheduleModal(false);
+        handleStatusChange('scheduled', { scheduled_date: scheduleDate });
     };
 
     if (loading) return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
@@ -286,13 +300,27 @@ export default function MaintenanceDetailPage() {
                                     Mark Complete
                                 </Button>
                             )}
+                            {record.status === 'requested' && (role === 'ADMIN' || role === 'CEO' || role === 'MECHANIC') && (
+                                <Button
+                                    onClick={openScheduleModal}
+                                    className="w-full"
+                                >
+                                    Approve &amp; Schedule
+                                </Button>
+                            )}
                             <TransitionButtons
                                 kind="maintenance_request"
                                 entity={record}
                                 actorId={user?.id ?? 'system'}
                                 actorRole={role ?? undefined}
                                 layout="stack"
-                                exclude={record.status === 'in_progress' ? ['completed'] : undefined}
+                                exclude={
+                                    record.status === 'in_progress'
+                                        ? ['completed']
+                                        : record.status === 'requested'
+                                            ? ['scheduled']
+                                            : undefined
+                                }
                                 onDone={(next) => setRecord({ ...record, ...next })}
                             />
                             {record.status === 'completed' && (
@@ -377,6 +405,40 @@ export default function MaintenanceDetailPage() {
                             className="bg-green-600 hover:bg-green-700"
                         >
                             Complete
+                        </AlertDialogAction>
+                    </div>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Schedule Modal */}
+            <AlertDialog open={showScheduleModal} onOpenChange={setShowScheduleModal}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Approve &amp; Schedule Maintenance</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Set the date this maintenance is scheduled for. This approves the request and moves it to Scheduled.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="scheduled_date">Scheduled Date</Label>
+                            <Input
+                                id="scheduled_date"
+                                type="date"
+                                value={scheduleDate}
+                                onChange={(e) => setScheduleDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={scheduleFromModal}
+                            disabled={!scheduleDate}
+                        >
+                            Approve &amp; Schedule
                         </AlertDialogAction>
                     </div>
                 </AlertDialogContent>

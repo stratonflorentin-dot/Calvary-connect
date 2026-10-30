@@ -298,6 +298,18 @@ export default function ApprovalsInboxPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 p-5 lg:border-l border-border bg-muted/40">
+                      {/* Approve & Schedule needs a date the inline button bar
+                          can't collect, so maintenance scheduling is driven from
+                          the record's detail page (date-picker modal). Reject
+                          still works inline here. */}
+                      {item.kind === "maintenance_request" && (
+                        <Link
+                          href={`/maintenance/${item.id}`}
+                          className="inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+                        >
+                          Open to schedule
+                        </Link>
+                      )}
                       <TransitionButtons
                         kind={item.kind}
                         entity={{
@@ -308,6 +320,7 @@ export default function ApprovalsInboxPage() {
                         actorRole={role ?? undefined}
                         onDone={load}
                         size="sm"
+                        exclude={item.kind === "maintenance_request" ? ["scheduled"] : undefined}
                       />
                     </div>
                   </div>
