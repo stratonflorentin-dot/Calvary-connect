@@ -180,31 +180,41 @@ export default function MaintenancePage() {
                 }
             />
 
-            {/* Stat Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 xl:gap-4">
                 {([
-                    { label: 'Total', value: stats.total, icon: ListChecks, accent: 'bg-muted text-muted-foreground', filterValue: 'all' as const },
-                    { label: 'Pending Review', value: stats.requested, icon: AlertTriangle, accent: 'bg-info/10 text-info', filterValue: 'requested' as const },
-                    { label: 'Scheduled', value: stats.scheduled, icon: Clock, accent: 'bg-primary/10 text-primary', filterValue: 'scheduled' as const },
-                    { label: 'In Progress', value: stats.in_progress, icon: Activity, accent: 'bg-warning/10 text-warning', filterValue: 'in_progress' as const },
-                    { label: 'Completed', value: `${stats.completed} (${format(stats.totalCompletedCost)})`, icon: CheckCircle2, accent: 'bg-success/10 text-success', filterValue: 'completed' as const },
-                    { label: 'Postponed', value: stats.postponed, icon: Pause, accent: 'bg-accent/10 text-accent-foreground', filterValue: 'postponed' as const },
-                    { label: 'Overdue', value: stats.overdue, icon: AlertOctagon, accent: 'bg-destructive/10 text-destructive', filterValue: null },
+                    { label: 'Total', value: stats.total, sub: 'All maintenance records', icon: ListChecks, accent: 'bg-muted text-muted-foreground', filterValue: 'all' as const },
+                    { label: 'Pending Review', value: stats.requested, sub: 'Awaiting review', icon: AlertTriangle, accent: 'bg-info/10 text-info', filterValue: 'requested' as const },
+                    { label: 'Scheduled', value: stats.scheduled, sub: 'Planned maintenance', icon: Clock, accent: 'bg-primary/10 text-primary', filterValue: 'scheduled' as const },
+                    { label: 'In Progress', value: stats.in_progress, sub: 'Active maintenance work', icon: Activity, accent: 'bg-warning/10 text-warning', filterValue: 'in_progress' as const },
+                    { label: 'Completed', value: stats.completed, sub: `Completed spend · ${format(stats.totalCompletedCost)}`, icon: CheckCircle2, accent: 'bg-success/10 text-success', filterValue: 'completed' as const },
+                    { label: 'Postponed', value: stats.postponed, sub: 'Paused maintenance', icon: Pause, accent: 'bg-accent/10 text-accent-foreground', filterValue: 'postponed' as const },
+                    { label: 'Overdue', value: stats.overdue, sub: 'Past scheduled date', icon: AlertOctagon, accent: 'bg-destructive/10 text-destructive', filterValue: null },
                 ]).map((card) => {
                     const isActive = card.filterValue !== null && statusFilter === card.filterValue;
+                    const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+                        if (card.filterValue !== null && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            setStatusFilter(card.filterValue);
+                            setCurrentPage(1);
+                        }
+                    };
                     return (
                         <div
                             key={card.label}
+                            role={card.filterValue !== null ? 'button' : undefined}
+                            tabIndex={card.filterValue !== null ? 0 : undefined}
                             onClick={card.filterValue !== null ? () => { setStatusFilter(card.filterValue); setCurrentPage(1); } : undefined}
+                            onKeyDown={handleCardKeyDown}
                             className={cn(
-                                'transition-all',
-                                card.filterValue !== null && 'cursor-pointer hover:shadow-md hover:border-primary/40',
+                                'h-full min-h-[148px] rounded-xl border border-border bg-card p-4 shadow-sm transition-all',
+                                card.filterValue !== null && 'cursor-pointer hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                                 isActive && 'border-primary ring-1 ring-primary/30',
                             )}
                         >
                             <StatCard
                                 label={card.label}
                                 value={card.value}
+                                sub={card.sub}
                                 icon={card.icon}
                                 accent={card.accent}
                             />
