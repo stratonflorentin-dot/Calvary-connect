@@ -14,6 +14,7 @@ import { CashierView } from '@/components/dashboard/cashier-view';
 import { HRView } from '@/components/dashboard/hr-view';
 import { OperatorView } from '@/components/dashboard/operator-view';
 import SalesmanDashboard from '@/components/dashboard/salesman-view';
+import { WarehouseView } from '@/components/dashboard/warehouse-view';
 import { NotificationsBell } from '@/components/shared/notifications-bell';
 import { CurrencyDisplay } from '@/components/shared/currency-display';
 import { AIAnalysisDashboard } from '@/components/dashboard/ai-analysis-dashboard';
@@ -78,7 +79,7 @@ export default function Home() {
       case 'SALESMAN':
         return <SalesmanDashboard />;
       case 'WAREHOUSE_STAFF':
-        return <OperatorView />;
+        return <WarehouseView />;
       default:
         return <AdminDashboard />;
     }
