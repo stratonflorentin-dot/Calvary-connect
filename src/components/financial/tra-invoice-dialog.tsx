@@ -37,10 +37,11 @@ const COMPANY_FALLBACK = {
 
 function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMPANY: typeof COMPANY_FALLBACK): string {
   const subtotal = lineItems.reduce((s, l) => s + (l.qty * l.unit_price), 0);
-  const { vatAmount, whtAmount, totalPayable } = calculateInvoiceTotals({
+  const { vatAmount, whtAmount, vatWithheld, totalPayable } = calculateInvoiceTotals({
     subtotal,
     vatApplicable: !!invoice.vat_applicable,
     whtApplicable: !!invoice.wht_applicable,
+    vatWithholdingAgent: !!invoice.vat_withholding_agent,
   });
 
   const statusStamp = invoice.status === "paid"
@@ -236,6 +237,11 @@ function buildInvoiceHTML(invoice: any, client: any, lineItems: LineItem[], COMP
         <td>WHT Deductible (5%) <span class="tax-label">Transport Services</span></td>
         <td class="text-right" style="color:#dc2626">(${formatCurrency(whtAmount, cur)})</td>
       </tr>` : ""}
+      ${vatWithheld > 0 ? `
+      <tr>
+        <td>VAT withheld by customer (6%) <span class="tax-label">VAT withholding agent</span></td>
+        <td class="text-right" style="color:#dc2626">(${formatCurrency(vatWithheld, cur)})</td>
+      </tr>` : ""}
       <tr class="total-row">
         <td>TOTAL PAYABLE</td>
         <td class="text-right">${formatCurrency(totalPayable, cur)}</td>
@@ -304,6 +310,7 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
   const [saving, setSaving] = useState(false);
   const [vatApplicable, setVatApplicable] = useState(initialInvoice?.vat_applicable ?? true);
   const [whtApplicable, setWhtApplicable] = useState(initialInvoice?.wht_applicable ?? true);
+  const [vatWithholdingAgent, setVatWithholdingAgent] = useState(initialInvoice?.vat_withholding_agent ?? false);
   const [paymentTerms, setPaymentTerms] = useState(initialInvoice?.payment_terms || "Net 30 Days");
   const [notes, setNotes] = useState(initialInvoice?.notes || "");
   const [lineItems, setLineItems] = useState<LineItem[]>(
@@ -316,16 +323,18 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
     ...(initialInvoice || {}),
     vat_applicable: vatApplicable,
     wht_applicable: whtApplicable,
+    vat_withholding_agent: vatWithholdingAgent,
     payment_terms: paymentTerms,
     notes,
     line_items: lineItems,
   };
 
   const subtotal = lineItems.reduce((s, l) => s + l.qty * l.unit_price, 0);
-  const { vatAmount, whtAmount, totalPayable } = calculateInvoiceTotals({
+  const { vatAmount, whtAmount, vatWithheld, totalPayable } = calculateInvoiceTotals({
     subtotal,
     vatApplicable,
     whtApplicable,
+    vatWithholdingAgent,
   });
   const previewCurrency = invoiceData.currency || "TZS";
 
@@ -359,10 +368,12 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
         .update({
           vat_applicable: vatApplicable,
           wht_applicable: whtApplicable,
+          vat_withholding_agent: vatWithholdingAgent,
           payment_terms: paymentTerms,
           notes,
           vat_amount: vatAmount,
           wht_amount: whtAmount,
+          vat_withheld: vatWithheld,
           total_payable: totalPayable,
           updated_at: new Date().toISOString(),
         })
@@ -463,6 +474,16 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
                 />
                 <span className="text-sm font-medium">WHT Deductible (5%)</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer col-span-2">
+                <input
+                  type="checkbox"
+                  checked={vatWithholdingAgent}
+                  onChange={e => setVatWithholdingAgent(e.target.checked)}
+                  className="rounded"
+                  disabled={!vatApplicable}
+                />
+                <span className="text-sm font-medium">Customer is a VAT withholding agent (withholds 6%)</span>
+              </label>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Payment Terms</Label>
@@ -498,6 +519,12 @@ export function TRAInvoiceDialog({ invoice: initialInvoice, client, open, onClos
               <div className="flex justify-between text-destructive">
                 <span>WHT Deductible (5%)</span>
                 <span className="font-medium">({formatCurrency(whtAmount, previewCurrency)})</span>
+              </div>
+            )}
+            {vatWithheld > 0 && (
+              <div className="flex justify-between text-destructive">
+                <span>VAT withheld by customer (6%)</span>
+                <span className="font-medium">({formatCurrency(vatWithheld, previewCurrency)})</span>
               </div>
             )}
             <div className="flex justify-between font-black text-info border-t border-info/20 pt-1.5 text-base">
