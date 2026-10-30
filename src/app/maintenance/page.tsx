@@ -67,7 +67,7 @@ export default function MaintenancePage() {
         }
     };
 
-    const { records, loading, stats } = useMaintenance({
+    const { records, loading, error, refetch, stats } = useMaintenance({
         status: statusFilter === 'all' ? undefined : statusFilter,
         priority: priorityFilter === 'all' ? undefined : priorityFilter,
         type: typeFilter === 'all' ? undefined : typeFilter,
@@ -231,6 +231,12 @@ export default function MaintenancePage() {
                         <Loader2 className="w-8 h-8 animate-spin" />
                         <p>Loading records...</p>
                     </div>
+                ) : error ? (
+                    <div className="text-center py-12 text-destructive flex flex-col items-center gap-3">
+                        <AlertTriangle className="w-8 h-8" />
+                        <p>Could not load maintenance records: {error.message}</p>
+                        <Button variant="outline" onClick={() => void refetch()}>Retry</Button>
+                    </div>
                 ) : paginatedRecords.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
                         <Wrench className="w-12 h-12 opacity-20" />
@@ -283,7 +289,7 @@ export default function MaintenancePage() {
                                                     <div className="mt-1">
                                                         <Link href={`/vehicles/${record.trailer_id}`} className="text-primary hover:underline">
                                                             <div className="font-mono text-xs font-bold text-foreground">{record.trailers.plate_number}</div>
-                                                            <div className="text-xs text-muted-foreground">{record.trailers.make} {record.trailers.model} {record.trailers.trailerSubType ? `(${record.trailers.trailerSubType})` : ''}</div>
+                                                            <div className="text-xs text-muted-foreground">{record.trailers.make} {record.trailers.model} {record.trailers.trailer_sub_type ? `(${record.trailers.trailer_sub_type})` : ''}</div>
                                                         </Link>
                                                     </div>
                                                 )}

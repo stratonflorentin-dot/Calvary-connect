@@ -86,7 +86,7 @@ interface MaintenanceRecord {
         plate_number: string;
         make: string;
         model: string;
-        trailerSubType?: string;
+        trailer_sub_type?: string;
     };
 }
 
@@ -122,8 +122,8 @@ export default function MaintenanceDetailPage() {
                     .from('maintenance_records')
                     .select(`
             *,
-            vehicles:vehicle_id(id, plate_number, make, model),
-            trailers:trailer_id(id, plate_number, make, model, trailerSubType)
+            vehicles:vehicles!maintenance_records_vehicle_id_fkey(id, plate_number, make, model),
+            trailers:vehicles!maintenance_records_trailer_id_fkey(id, plate_number, make, model, trailer_sub_type)
           `)
                     .eq('id', params.id)
                     .single();
@@ -282,7 +282,7 @@ export default function MaintenanceDetailPage() {
                                 <Label className="text-xs font-semibold text-muted-foreground">Trailer</Label>
                                 <Link href={`/vehicles/${record.trailer_id}`} className="text-sm text-primary hover:underline block mt-2">
                                     <div className="font-mono font-bold">{record.trailers.plate_number}</div>
-                                    <div className="text-muted-foreground">{record.trailers.make} {record.trailers.model} {record.trailers.trailerSubType ? `(${record.trailers.trailerSubType})` : ''}</div>
+                                    <div className="text-muted-foreground">{record.trailers.make} {record.trailers.model} {record.trailers.trailer_sub_type ? `(${record.trailers.trailer_sub_type})` : ''}</div>
                                 </Link>
                             </div>
                         )}

@@ -52,7 +52,7 @@ interface MaintenanceRecord {
         plate_number: string;
         make: string;
         model: string;
-        trailerSubType?: string;
+        trailer_sub_type?: string;
     };
 }
 
@@ -95,8 +95,8 @@ export function useMaintenance(filters?: {
                 .from('maintenance_records')
                 .select(`
                     *,
-                    vehicles:vehicle_id(id, plate_number, make, model),
-                    trailers:trailer_id(id, plate_number, make, model, trailerSubType)
+                    vehicles:vehicles!maintenance_records_vehicle_id_fkey(id, plate_number, make, model),
+                    trailers:vehicles!maintenance_records_trailer_id_fkey(id, plate_number, make, model, trailer_sub_type)
                 `)
                 .order(filters?.sort || 'created_at', { ascending: false });
 
