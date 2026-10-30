@@ -32,6 +32,7 @@ interface MaintenanceRecord {
     id: string;
     record_number: string;
     vehicle_id: string | null;
+    trailer_id: string | null;
     trip_id: string | null;
     title: string;
     description: string | null;
@@ -41,10 +42,12 @@ interface MaintenanceRecord {
     scheduled_date: string | null;
     completed_date: string | null;
     technician: string | null;
+    technician_phone: string | null;
     workshop: string | null;
     estimated_cost: number | null;
     actual_cost: number | null;
     currency: string;
+    job_card_number: string | null;
     notes: string | null;
     created_at: string;
     vehicles?: {
@@ -52,6 +55,13 @@ interface MaintenanceRecord {
         plate_number: string;
         make: string;
         model: string;
+    };
+    trailers?: {
+        id: string;
+        plate_number: string;
+        make: string;
+        model: string;
+        trailerSubType?: string;
     };
 }
 
@@ -80,7 +90,8 @@ export default function MaintenanceDetailPage() {
                     .from('maintenance_records')
                     .select(`
             *,
-            vehicles:vehicle_id(id, plate_number, make, model)
+            vehicles:vehicle_id(id, plate_number, make, model),
+            trailers:trailer_id(id, plate_number, make, model, trailerSubType)
           `)
                     .eq('id', params.id)
                     .single();
@@ -212,10 +223,20 @@ export default function MaintenanceDetailPage() {
 
                         {record.vehicles && (
                             <div>
-                                <Label className="text-xs font-semibold text-muted-foreground">Vehicle</Label>
+                                <Label className="text-xs font-semibold text-muted-foreground">Truck</Label>
                                 <Link href={`/vehicles/${record.vehicle_id}`} className="text-sm text-primary hover:underline block mt-2">
                                     <div className="font-mono font-bold">{record.vehicles.plate_number}</div>
                                     <div className="text-muted-foreground">{record.vehicles.make} {record.vehicles.model}</div>
+                                </Link>
+                            </div>
+                        )}
+
+                        {record.trailers && (
+                            <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">Trailer</Label>
+                                <Link href={`/vehicles/${record.trailer_id}`} className="text-sm text-primary hover:underline block mt-2">
+                                    <div className="font-mono font-bold">{record.trailers.plate_number}</div>
+                                    <div className="text-muted-foreground">{record.trailers.make} {record.trailers.model} {record.trailers.trailerSubType ? `(${record.trailers.trailerSubType})` : ''}</div>
                                 </Link>
                             </div>
                         )}
@@ -241,6 +262,17 @@ export default function MaintenanceDetailPage() {
                             <div>
                                 <Label className="text-xs font-semibold text-muted-foreground">Technician</Label>
                                 <p className="text-sm mt-2">{record.technician || 'Not assigned'}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">Technician Phone</Label>
+                                <p className="text-sm mt-2">{record.technician_phone || 'Not provided'}</p>
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">Job Card Number</Label>
+                                <p className="text-sm mt-2">{record.job_card_number || 'Not assigned'}</p>
                             </div>
                         </div>
 

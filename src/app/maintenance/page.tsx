@@ -278,6 +278,14 @@ export default function MaintenancePage() {
                                                 ) : (
                                                     <span className="text-muted-foreground">N/A</span>
                                                 )}
+                                                {record.trailers && (
+                                                    <div className="mt-1">
+                                                        <Link href={`/vehicles/${record.trailer_id}`} className="text-primary hover:underline">
+                                                            <div className="font-mono text-xs font-bold text-foreground">{record.trailers.plate_number}</div>
+                                                            <div className="text-xs text-muted-foreground">{record.trailers.make} {record.trailers.model} {record.trailers.trailerSubType ? `(${record.trailers.trailerSubType})` : ''}</div>
+                                                        </Link>
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-3 px-4 text-foreground font-medium">{record.title}</td>
                                             <td className="py-3 px-4">

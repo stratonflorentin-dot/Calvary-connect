@@ -29,6 +29,7 @@ export default function NewMaintenancePage() {
 
     const [formData, setFormData] = useState({
         vehicle_id: '',
+        trailer_id: '',
         trip_id: '',
         title: '',
         type: 'scheduled',
@@ -36,8 +37,10 @@ export default function NewMaintenancePage() {
         description: '',
         scheduled_date: '',
         technician: '',
+        technician_phone: '',
         workshop: '',
         estimated_cost: '',
+        job_card_number: '',
         notes: '',
     });
 
@@ -55,6 +58,7 @@ export default function NewMaintenancePage() {
                 .from('maintenance_records')
                 .insert([{
                     vehicle_id: formData.vehicle_id || null,
+                    trailer_id: formData.trailer_id || null,
                     trip_id: formData.trip_id || null,
                     title: formData.title,
                     type: formData.type,
@@ -62,9 +66,11 @@ export default function NewMaintenancePage() {
                     description: formData.description || null,
                     scheduled_date: formData.scheduled_date || null,
                     technician: formData.technician || null,
+                    technician_phone: formData.technician_phone || null,
                     workshop: formData.workshop || null,
                     estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
                     currency: 'TZS',
+                    job_card_number: formData.job_card_number || null,
                     notes: formData.notes || null,
                     requested_by: user.id,
                     status: 'requested',
@@ -105,13 +111,13 @@ export default function NewMaintenancePage() {
 
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label htmlFor="vehicle_id">Vehicle</Label>
+                                <Label htmlFor="vehicle_id">Truck (Vehicle)</Label>
                                 <Select value={formData.vehicle_id} onValueChange={(val) => setFormData({ ...formData, vehicle_id: val })}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select vehicle" />
+                                        <SelectValue placeholder="Select truck" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {vehicles.map((v) => (
+                                        {vehicles.filter(v => v.type === 'TRUCK_HEAD' || v.type === 'DUMP_TRUCK').map((v) => (
                                             <SelectItem key={v.id} value={v.id}>
                                                 {v.plate_number} - {v.make} {v.model}
                                             </SelectItem>
@@ -121,20 +127,36 @@ export default function NewMaintenancePage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="trip_id">Shipment/Trip (Optional)</Label>
-                                <Select value={formData.trip_id} onValueChange={(val) => setFormData({ ...formData, trip_id: val })}>
+                                <Label htmlFor="trailer_id">Trailer (Optional)</Label>
+                                <Select value={formData.trailer_id} onValueChange={(val) => setFormData({ ...formData, trailer_id: val })}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select trip" />
+                                        <SelectValue placeholder="Select trailer" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {trips.slice(0, 20).map((t) => (
-                                            <SelectItem key={t.id} value={t.id}>
-                                                {t.origin} → {t.destination}
+                                        {vehicles.filter(v => v.type === 'TRAILER').map((v) => (
+                                            <SelectItem key={v.id} value={v.id}>
+                                                {v.plate_number} - {v.make} {v.model} {v.trailerSubType ? `(${v.trailerSubType})` : ''}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="trip_id">Shipment/Trip (Optional)</Label>
+                            <Select value={formData.trip_id} onValueChange={(val) => setFormData({ ...formData, trip_id: val })}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select trip" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {trips.slice(0, 20).map((t) => (
+                                        <SelectItem key={t.id} value={t.id}>
+                                            {t.origin} → {t.destination}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="space-y-2">
@@ -179,16 +201,6 @@ export default function NewMaintenancePage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="scheduled_date">Scheduled Date</Label>
-                                <Input
-                                    id="scheduled_date"
-                                    type="date"
-                                    value={formData.scheduled_date}
-                                    onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
-                                />
-                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -214,6 +226,17 @@ export default function NewMaintenancePage() {
                             </div>
 
                             <div className="space-y-2">
+                                <Label htmlFor="technician_phone">Technician Phone</Label>
+                                <Input
+                                    id="technician_phone"
+                                    type="tel"
+                                    value={formData.technician_phone}
+                                    onChange={(e) => setFormData({ ...formData, technician_phone: e.target.value })}
+                                    placeholder="+255 XXX XXX XXX"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
                                 <Label htmlFor="workshop">Workshop</Label>
                                 <Input
                                     id="workshop"
@@ -222,7 +245,9 @@ export default function NewMaintenancePage() {
                                     placeholder="Workshop name or location"
                                 />
                             </div>
+                        </div>
 
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="estimated_cost">Estimated Cost (TZS)</Label>
                                 <Input
@@ -232,6 +257,26 @@ export default function NewMaintenancePage() {
                                     value={formData.estimated_cost}
                                     onChange={(e) => setFormData({ ...formData, estimated_cost: e.target.value })}
                                     placeholder="0.00"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="job_card_number">Job Card Number</Label>
+                                <Input
+                                    id="job_card_number"
+                                    value={formData.job_card_number}
+                                    onChange={(e) => setFormData({ ...formData, job_card_number: e.target.value })}
+                                    placeholder="e.g., JC-2024-001"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="scheduled_date">Scheduled Date</Label>
+                                <Input
+                                    id="scheduled_date"
+                                    type="date"
+                                    value={formData.scheduled_date}
+                                    onChange={(e) => setFormData({ ...formData, scheduled_date: e.target.value })}
                                 />
                             </div>
                         </div>

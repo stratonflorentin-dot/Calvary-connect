@@ -8,6 +8,7 @@ interface MaintenanceRecord {
     id: string;
     record_number: string;
     vehicle_id: string | null;
+    trailer_id: string | null;
     trip_id: string | null;
     title: string;
     description: string | null;
@@ -17,10 +18,12 @@ interface MaintenanceRecord {
     scheduled_date: string | null;
     completed_date: string | null;
     technician: string | null;
+    technician_phone: string | null;
     workshop: string | null;
     estimated_cost: number | null;
     actual_cost: number | null;
     currency: string;
+    job_card_number: string | null;
     notes: string | null;
     requested_by: string | null;
     approved_by: string | null;
@@ -31,6 +34,13 @@ interface MaintenanceRecord {
         plate_number: string;
         make: string;
         model: string;
+    };
+    trailers?: {
+        id: string;
+        plate_number: string;
+        make: string;
+        model: string;
+        trailerSubType?: string;
     };
 }
 
@@ -73,7 +83,8 @@ export function useMaintenance(filters?: {
                 .from('maintenance_records')
                 .select(`
                     *,
-                    vehicles:vehicle_id(id, plate_number, make, model)
+                    vehicles:vehicle_id(id, plate_number, make, model),
+                    trailers:trailer_id(id, plate_number, make, model, trailerSubType)
                 `)
                 .order(filters?.sort || 'created_at', { ascending: false });
 
