@@ -1,0 +1,55 @@
+# Role & RLS Backbone Audit (Phase 0)
+
+_Part of the "production-legit, role by role" program. Project: `qaqonhjeqtlatqsrqcnx` (calvaryconnect)._
+
+## What changed in Phase 0
+
+- **0.1 Client-side role enforcement (done).** `useRouteGuard()` was exported but never invoked —
+  any authenticated user could load any page's shell. A `RouteGuard` component is now mounted in the
+  root layout, so each role is redirected to its default route on pages outside its `allowedRoles`.
+  CEO/ADMIN keep full access; the guard no-ops for signed-out visitors (public pages stay reachable).
+  Six pages missing from `ROUTE_CONFIG` were added first so enabling the guard wouldn't lock
+  non-admins out: `/admin/api-health`, `/finance/banking/bank-accounts/[id]`,
+  `/finance/transactions/payments/[id]`, `/hr/company-loans`, `/hr/loan-calculator`, `/reports/notebook`.
+- **0.4 WAREHOUSE_STAFF dashboard (done).** Previously fell back to `OperatorView`; now has a tailored
+  `WarehouseView` (stock levels, low-stock reorder list, parts-request queue).
+
+## 0.3 RLS audit (Supabase security advisors, read-only)
+
+**Headline: the RLS backbone is sound.** No `rls_disabled_in_public` findings — every public table
+has RLS enabled, so nothing is wide open.
+
+Findings:
+
+| Severity | Finding | Count | Assessment |
+|---|---|---|---|
+| INFO | `rls_enabled_no_policy` | 20 tables | RLS on, no policy ⇒ denies all direct access. **None of the 20 are read directly (`.from()`) by the app** — they're reached via SECURITY DEFINER RPCs/views or are legacy. Not a live breakage; a hygiene/defense-in-depth item. |
+| WARN | `authenticated_security_definer_function_executable` | 80 | Mostly intentional — the workflow engine, posting RPCs (`post_journal_entry`, `post_bank_transaction`, `acknowledge_performance_review`) run SECURITY DEFINER by design. Review grants, don't blanket-revoke. |
+| WARN | `anon_security_definer_function_executable` | 69 | Review which truly need `anon` (public tracking/quotation links) vs should be `authenticated`-only. |
+| WARN | `function_search_path_mutable` | 55 | Hardening: pin `search_path` on these functions. |
+| WARN | `auth_leaked_password_protection` | 1 | One-click enable in Supabase Auth settings. |
+
+The 20 no-policy tables: `compliance_documents, contract_lines, currency_exchange_rates, drivers,
+event_log, financial_reports, follow_ups, fuel_approvals, geofences, maintenance_schedules,
+mobile_money_transactions, revenue, route_profitability, sensor_readings, sensors,
+sustainability_metrics, trip_accounting, vehicle_expenses, vendor_balances, whatsapp_messages`.
+
+### Recommended (needs CEO/ADMIN sign-off before applying to production)
+
+1. For each of the 20 tables, **either** add explicit role-scoped policies **or** document it as
+   RPC/view-only and leave direct access denied (safer default). Finance tables (`revenue`,
+   `trip_accounting`, `vehicle_expenses`, `vendor_balances`, `financial_reports`) → policies only
+   with explicit sign-off.
+2. Pin `search_path` on the 55 flagged functions (mechanical, low-risk).
+3. Enable leaked-password protection in Auth settings.
+4. Review the `anon`-executable SECURITY DEFINER functions; restrict any not needed for public links.
+
+## Still open in Phase 0
+
+- **0.2 Cookie-based sessions** (migrate to `@supabase/ssr` so `middleware.ts` can gate server-side).
+  Higher risk — changes auth storage; must be verified with a real login after, so pair with the owner.
+
+## Verification status
+
+- `npx tsc --noEmit`: green. `npm run build`: green (155 pages compile).
+- Runtime per-role walkthrough (Phase 1) requires a login per role — owner to provide or seed.
