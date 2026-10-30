@@ -145,6 +145,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    /* Mobile-native: kill the gray/blue flash browsers paint over tapped
+       elements (the loudest "this is a website" tell), and stop font inflation
+       in landscape. Press feedback is handled by each control's :active state. */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -410,6 +415,9 @@ select {
     -webkit-user-select: none;
     user-select: none;
   }
+  /* Keep inputs >= 16px on every touch device (not just iOS): Android Chrome
+     also zooms into a focused input whose font-size is under 16px. */
+  input, textarea, select { font-size: 16px; }
 }
 
 @supports (-webkit-touch-callout: none) {
