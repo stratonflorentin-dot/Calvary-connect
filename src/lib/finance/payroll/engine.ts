@@ -174,7 +174,7 @@ export async function generatePayrollPeriod(
         unpaidLeaveDeduction,
     );
 
-    const calc = calculatePayslip(grossPay, loanDeductionTotal, payDate);
+    const calc = calculatePayslip(grossPay, loanDeductionTotal, payDate, compRows.length);
 
     const noteParts: string[] = [];
     if (unpaidLeaveDeduction > 0) noteParts.push(`Unpaid leave: ${unpaidLeaveDays} day(s) (-${unpaidLeaveDeduction})`);

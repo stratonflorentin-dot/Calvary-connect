@@ -4,6 +4,8 @@ import {
     calcNhif as calcNhifStatutory,
     calcSdl as calcSdlStatutory,
     calcWcf as calcWcfStatutory,
+    taxableForPaye,
+    sdlApplies,
 } from '@/lib/finance/payroll/statutory-rates';
 
 export type StatutoryRow = {
@@ -131,7 +133,8 @@ export const buildStatutoryData = (records: any[]) => {
         const baseSalary = Number(reason.baseSalary || 0);
         const allowances = Number(reason.allowances || 0);
         const grossPay = baseSalary + allowances || Number(record.amount || 0);
-        const paye = calcPaye(grossPay);
+        // PAYE on gross less employee NSSF (TZ statutory pension relief).
+        const paye = calcPaye(taxableForPaye(grossPay));
         const nssfEmployee = Math.round(grossPay * 0.1);
         const nssfEmployer = Math.round(grossPay * 0.1);
         const nhif = calcNhif(grossPay);
@@ -181,6 +184,15 @@ export const buildStatutoryData = (records: any[]) => {
     });
 
     const rows = Array.from(grouped.values());
+
+    // SDL only applies to employers with >= the statutory headcount (Mainland:
+    // 10). The per-record loop above charges it unconditionally; zero it out
+    // here once we know the distinct employee count for this period.
+    if (!sdlApplies(grouped.size)) {
+        for (const row of rows) row.sdl = 0;
+        totals.sdl = 0;
+    }
+
     const status = getStatusLabel(statusSet.has('paid') ? 'paid' : statusSet.has('approved') ? 'approved' : 'pending');
 
     return {

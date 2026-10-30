@@ -57,6 +57,20 @@ export interface StatutoryRateTable {
   nhifBands?: PayeBand[];
   sdlRate: number; // employer-only, % of gross payroll
   wcfRate: number; // employer-only, % of gross payroll
+  /**
+   * Tanzania treats the employee's statutory NSSF (pension) contribution as a
+   * deduction from employment income *before* PAYE. When true, PAYE is computed
+   * on `gross − employee NSSF`, not on full gross. (Confirm against the current
+   * Income Tax Act before a live run.)
+   */
+  nssfReliefBeforePaye?: boolean;
+  /**
+   * SDL only applies to employers with at least this many employees (Mainland:
+   * 10). The gate is applied at the payroll-run / report level where headcount
+   * is known; a per-payslip call with no headcount still charges SDL so it's
+   * never silently dropped.
+   */
+  sdlMinEmployees?: number;
 }
 
 // ── Rate tables ─────────────────────────────────────────────────────────────
@@ -76,6 +90,8 @@ const RATE_TABLES: StatutoryRateTable[] = [
     nhifRate: 0.03, // 3% of gross — VERIFY against current NHIF Tanzania circular before using
     sdlRate: 0.035,
     wcfRate: 0.005, // VERIFY against the gazetted WCF rate for your business class
+    nssfReliefBeforePaye: true, // PAYE computed on gross less employee NSSF
+    sdlMinEmployees: 10, // SDL applies only to employers with >= 10 employees (Mainland)
   },
 ];
 
@@ -97,6 +113,32 @@ function getActiveRateTable(asOfDate: string | Date = new Date()): StatutoryRate
  * 520,001 pays 0% on the first 270,000, 8% on the next 250,000, and 20%
  * only on the single shilling above 520,000 — not 20% on the whole amount.
  */
+/**
+ * Taxable pay for PAYE. In Tanzania the employee's statutory NSSF contribution
+ * is deducted from employment income before PAYE, so (when the active table
+ * sets `nssfReliefBeforePaye`) this returns `gross − employee NSSF`. Compute
+ * PAYE as `calcPaye(taxableForPaye(gross))`, never on raw gross.
+ */
+export function taxableForPaye(grossPay: number, asOfDate?: string | Date): number {
+  const table = getActiveRateTable(asOfDate);
+  const base = Math.max(0, grossPay);
+  if (!table.nssfReliefBeforePaye) return base;
+  return Math.max(0, base - base * table.nssf.employeeRate);
+}
+
+/**
+ * Whether SDL applies for the given employer headcount. An undefined count
+ * means the caller doesn't know it (e.g. a single-payslip preview) — SDL is
+ * then charged so it's never silently dropped; the run/report passes the real
+ * count so a sub-threshold employer is correctly exempted.
+ */
+export function sdlApplies(employeeCount?: number, asOfDate?: string | Date): boolean {
+  const table = getActiveRateTable(asOfDate);
+  const min = table.sdlMinEmployees ?? 0;
+  if (employeeCount == null) return true;
+  return employeeCount >= min;
+}
+
 export function calcPaye(grossPay: number, asOfDate?: string | Date): number {
   const table = getActiveRateTable(asOfDate);
   let remaining = Math.max(0, grossPay);
@@ -139,9 +181,12 @@ export function calcNhif(grossPay: number, asOfDate?: string | Date): number {
   return Math.round(grossPay * (table.nhifRate ?? 0));
 }
 
-/** Employer-only cost — not deducted from the employee. */
-export function calcSdl(grossPay: number, asOfDate?: string | Date): number {
+/** Employer-only cost — not deducted from the employee. SDL only applies to
+ *  employers with >= `sdlMinEmployees` staff; pass `employeeCount` from the
+ *  payroll run/report so a sub-threshold employer is exempted. */
+export function calcSdl(grossPay: number, asOfDate?: string | Date, employeeCount?: number): number {
   const table = getActiveRateTable(asOfDate);
+  if (!sdlApplies(employeeCount, asOfDate)) return 0;
   return Math.round(grossPay * table.sdlRate);
 }
 
@@ -173,12 +218,13 @@ export function calculatePayslip(
   grossPay: number,
   otherDeductions: number = 0,
   asOfDate?: string | Date,
+  employeeCount?: number,
 ): PayslipCalculation {
-  const paye = calcPaye(grossPay, asOfDate);
+  const paye = calcPaye(taxableForPaye(grossPay, asOfDate), asOfDate);
   const nssfEmployee = calcNssfEmployee(grossPay, asOfDate);
   const nssfEmployer = calcNssfEmployer(grossPay, asOfDate);
   const nhifEmployee = calcNhif(grossPay, asOfDate);
-  const sdl = calcSdl(grossPay, asOfDate);
+  const sdl = calcSdl(grossPay, asOfDate, employeeCount);
   const wcf = calcWcf(grossPay, asOfDate);
   const netPay = grossPay - paye - nssfEmployee - nhifEmployee - otherDeductions;
 

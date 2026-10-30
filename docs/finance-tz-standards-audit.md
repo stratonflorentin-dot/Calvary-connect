@@ -51,6 +51,22 @@ Sources: [PwC Tanzania other taxes](https://taxsummaries.pwc.com/tanzania/corpor
 
 7. **Centralize the VAT rate.** `0.18` is hardcoded in [credit-notes](src/app/finance/invoicing/credit-notes/page.tsx), [tax-reports](src/app/finance/reports/tax-reports/page.tsx), [pod](src/app/operations/pod/page.tsx), [purchase-orders](src/app/purchase-orders/page.tsx) instead of one source of truth, while quotations/proforma use `settings.default_vat_rate`. → Export `VAT_RATE` from `tanzania-tax-rules.ts` and have all literals reference it (value unchanged, so no behaviour change), with settings as the configurable override.
 
+## Implemented (2026-10) — pending TRA figure confirmation
+
+Items 1–3 are now in code as **versioned, structured** changes (behaviour driven by the
+`StatutoryRateTable` flags, so historical periods and a future rate change stay isolated). The
+**rates/thresholds still need TRA confirmation** before a live payroll/invoice run:
+
+- **#1 PAYE base net of NSSF** — `taxableForPaye()` + `nssfReliefBeforePaye` flag; applied in
+  `calculatePayslip` and the statutory report ([statutory-rates.ts](src/lib/finance/payroll/statutory-rates.ts), [helpers.ts](src/app/api/admin/hr/payroll/statutory/helpers.ts)).
+- **#2 SDL ≥10-employee gate** — `sdlApplies()` + `sdlMinEmployees` flag; `calcSdl`/`calculatePayslip`
+  take a headcount, the run passes `compRows.length` ([engine.ts](src/lib/finance/payroll/engine.ts)), the report gates on distinct employees.
+- **#3 WHT annual-aggregate threshold** — `WHT_ANNUAL_THRESHOLD` (TZS 1,000,000) with an optional
+  `priorPaymentsToPayeeThisYear` so WHT withholds only once the yearly aggregate per payee is crossed
+  ([tanzania-tax-rules.ts](src/lib/tanzania-tax-rules.ts)). Invoice call sites can pass the YTD figure to be fully correct.
+
+Still open: #4 (NHIF applicability), #5 (VAT withholding regime), #6 (EFD fiscal receipts).
+
 ## Suggested order
 
 Do #7 now (safe). Confirm #1–#4 against TRA, then apply as versioned rate-table/flag changes (no retroactive effect). Scope #5 and #6 as their own projects. Every tax-amount change lands behind CEO/ADMIN sign-off.
