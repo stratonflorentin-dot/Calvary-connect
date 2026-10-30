@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Flame,
   Fuel,
+  Gauge,
   MapPin,
   Navigation,
   Package,
@@ -46,7 +47,12 @@ export function OperatorView() {
     const inTransit = trips.filter((t) => String(t.status).toLowerCase() === "in_transit").length;
     const overdue = trips.filter((t) => !["delivered", "cancelled"].includes(String(t.status).toLowerCase()) && t.created_at && isOverdue("trip", t.created_at)).length;
     const available = vehicles.filter((v) => isVehicleAvailable(v.status)).length;
-    return { pending, loading, inTransit, overdue, available, fuel: fuel.length };
+    // Fleet utilization: share of the operable fleet (excludes out-of-service)
+    // that is currently on the road. A core operations KPI (see role playbook).
+    const operable = vehicles.filter((v) => String(v.status).toLowerCase() !== "out_of_service").length;
+    const inUse = vehicles.filter((v) => String(v.status).toLowerCase() === "in_use").length;
+    const utilization = operable > 0 ? Math.round((inUse / operable) * 100) : 0;
+    return { pending, loading, inTransit, overdue, available, utilization, fuel: fuel.length };
   }, [trips, vehicles, fuel]);
 
   const unassigned = useMemo(() => trips.filter((t) => String(t.status).toLowerCase() === "pending" && !t.driverId).slice(0, 5), [trips]);
@@ -64,6 +70,7 @@ export function OperatorView() {
         { label: "Loading", value: stats.loading, icon: Package, accent: "bg-info/10 text-info", href: "/dispatch" },
         { label: "In transit", value: stats.inTransit, icon: Navigation, accent: "bg-primary/10 text-primary", href: "/map" },
         { label: "Overdue", value: stats.overdue, icon: Flame, accent: "bg-destructive/10 text-destructive", href: "/dispatch" },
+        { label: "Utilization %", value: stats.utilization, icon: Gauge, accent: "bg-info/10 text-info", href: "/fleet" },
         { label: "Available vehicles", value: stats.available, icon: Truck, accent: "bg-[hsl(var(--success-soft))] text-[hsl(var(--success))]", href: "/fleet" },
         { label: "Fuel approvals", value: stats.fuel, icon: Fuel, accent: "bg-warning/10 text-warning", href: "/fuel-approvals" },
       ]}
