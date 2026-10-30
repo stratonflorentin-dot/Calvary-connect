@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
 /**
  * Calvary Connect — Enterprise Security Middleware
@@ -76,12 +77,41 @@ function getClientIP(request: NextRequest): string {
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestId = crypto.randomUUID();
   const clientIP = getClientIP(request);
 
-  const response = NextResponse.next();
+  let response = NextResponse.next({ request });
+
+  // ── Supabase session refresh (cookie-based, @supabase/ssr) ──────────────
+  // Keeps the auth token fresh and makes the session visible to this Edge
+  // middleware. Refresh always runs (harmless); the redirect ENFORCEMENT below
+  // is gated behind ENFORCE_AUTH_MIDDLEWARE so enabling cookie sessions can
+  // never lock users out until login has been verified in this setup.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  let user: unknown = null;
+  if (supabaseUrl && supabaseAnonKey) {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        },
+      },
+    });
+    try {
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    } catch {
+      user = null;
+    }
+  }
 
   // ── 1. Request ID for distributed tracing ──────────────────────────────
   response.headers.set('x-request-id', requestId);
@@ -155,6 +185,22 @@ export function middleware(request: NextRequest) {
   // ── 5. Log API request metadata (for OpenTelemetry pickup) ────────────
   if (pathname.startsWith('/api/')) {
     response.headers.set('x-api-start-time', Date.now().toString());
+  }
+
+  // ── 6. Auth enforcement (opt-in) ───────────────────────────────────────
+  // Redirect signed-out visitors away from protected routes to the login
+  // landing. OFF by default — set ENFORCE_AUTH_MIDDLEWARE=true only after
+  // confirming cookie-based login works, so a misconfigured session can't
+  // lock the whole company out. RLS remains the real data boundary regardless.
+  if (
+    process.env.ENFORCE_AUTH_MIDDLEWARE === 'true' &&
+    !user &&
+    isProtectedRoute(pathname) &&
+    !isPublicRoute(pathname)
+  ) {
+    const redirect = NextResponse.redirect(new URL('/', request.url));
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    return redirect;
   }
 
   return response;

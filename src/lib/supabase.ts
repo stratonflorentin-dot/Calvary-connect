@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
 // Use environment variables for Supabase connection
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,7 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Cookie-backed browser client (@supabase/ssr) instead of the default
+// localStorage client, so the session is readable by the Edge middleware
+// (src/middleware.ts) and can be enforced server-side. The client API is
+// identical to supabase-js, so every existing `supabase.*` caller is unchanged.
+// One-time effect: users with an existing localStorage session must sign in
+// again once, after which the session lives in cookies.
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 export async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
