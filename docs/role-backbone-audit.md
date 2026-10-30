@@ -49,6 +49,26 @@ sustainability_metrics, trip_accounting, vehicle_expenses, vendor_balances, what
 - **0.2 Cookie-based sessions** (migrate to `@supabase/ssr` so `middleware.ts` can gate server-side).
   Higher risk — changes auth storage; must be verified with a real login after, so pair with the owner.
 
+## Phase 2 — Workflow dead-button sweep (done)
+
+Audited every workflow-consuming page for transitions a role can see but can never satisfy
+(the generic `TransitionButtons` bar can only pass `reason`). Result: **the maintenance
+"Approve & Schedule" dead-end was the only one** — fixed earlier this session. All others are
+correctly handled:
+
+| Workflow / page | Guarded transition | How it's handled | Verdict |
+|---|---|---|---|
+| Maintenance detail + approvals | Approve & Schedule (date), Complete (cost) | date/complete modals; `scheduled`/`completed` excluded | fixed |
+| Disciplinary | Schedule Hearing (date), Record Outcome (outcome) | dedicated modals; `hearing`/`resolved` excluded | ok |
+| Separation | Start Clearance / Final Pay / Complete | guards read entity fields set by same-page steps (LWD, clearance toggles, raise-expense) | ok |
+| Performance reviews | Submit (rating), Acknowledge | rating set at creation; `acknowledged` excluded, done by employee on /hr/my-hr | ok |
+| Cash requests | Disburse (account), Retire (lines) | custom modals; `disbursed`/`retired` excluded | ok |
+| Bank statements | Post (reason if partial) | custom Post button + reason modal; generic bar only shows Reopen when posted | ok |
+| Fuel/expense/cash approve | requiresApproval (amount tier) | engine enforces tier; inbox shows tier + a "For me" filter via `canRoleApprove` | ok (soft) |
+| Trips / dispatch / fuel anomaly / leave / PO | reason-only or role-gated | no payload-beyond-reason guards | ok |
+
+No code changes were needed beyond the maintenance fix.
+
 ## Verification status
 
 - `npx tsc --noEmit`: green. `npm run build`: green (155 pages compile).
