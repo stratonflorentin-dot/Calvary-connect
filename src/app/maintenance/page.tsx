@@ -1,6 +1,7 @@
 'use client';
 
 import { useMaintenance } from '@/hooks/data/use-maintenance';
+import { useFleetVehicles } from '@/hooks/data/use-fleet-vehicles';
 import { useRole } from '@/hooks/use-role';
 import { useCurrency } from '@/hooks/use-currency';
 import { useLanguage } from '@/hooks/use-language';
@@ -44,6 +45,10 @@ export default function MaintenancePage() {
     const [statusFilter, setStatusFilter] = useState<'all' | 'requested' | 'scheduled' | 'in_progress' | 'completed' | 'postponed' | 'cancelled'>('all');
     const [priorityFilter, setPriorityFilter] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
     const [typeFilter, setTypeFilter] = useState<'all' | 'scheduled' | 'preventive' | 'repair' | 'breakdown' | 'inspection'>('all');
+    const [vehicleFilter, setVehicleFilter] = useState('all');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [dateRange, setDateRange] = useState('all');
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [scanning, setScanning] = useState(false);
@@ -67,10 +72,15 @@ export default function MaintenancePage() {
         }
     };
 
+    const { vehicles: fleetVehicles } = useFleetVehicles();
+
     const { records, loading, error, refetch, stats } = useMaintenance({
         status: statusFilter === 'all' ? undefined : statusFilter,
         priority: priorityFilter === 'all' ? undefined : priorityFilter,
         type: typeFilter === 'all' ? undefined : typeFilter,
+        vehicle_id: vehicleFilter === 'all' ? undefined : vehicleFilter,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
         search: search || undefined,
     });
 
@@ -79,6 +89,43 @@ export default function MaintenancePage() {
         currentPage * pageSize
     );
     const totalPages = Math.ceil(records.length / pageSize);
+
+    const applyDuration = (range: string) => {
+        setDateRange(range);
+        setCurrentPage(1);
+        if (range === 'custom') return;
+        if (range === 'all') {
+            setDateFrom('');
+            setDateTo('');
+            return;
+        }
+
+        const end = new Date();
+        const start = new Date(end);
+        if (range === 'year') {
+            start.setMonth(0, 1);
+        } else {
+            start.setDate(start.getDate() - Number(range));
+        }
+        const toInputDate = (date: Date) => {
+            const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+            return localDate.toISOString().slice(0, 10);
+        };
+        setDateFrom(toInputDate(start));
+        setDateTo(toInputDate(end));
+    };
+
+    const clearFilters = () => {
+        setSearch('');
+        setStatusFilter('all');
+        setPriorityFilter('all');
+        setTypeFilter('all');
+        setVehicleFilter('all');
+        setDateRange('all');
+        setDateFrom('');
+        setDateTo('');
+        setCurrentPage(1);
+    };
 
     const getPriorityColor = (priority: string) => {
         switch (priority) {
@@ -166,9 +213,8 @@ export default function MaintenancePage() {
                 })}
             </div>
 
-            {/* Filter Bar */}
-            <SectionCard title="Filters" padded>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <SectionCard title="Maintenance Report Filters" padded>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                     <Input
                         placeholder="Search record #, title, technician..."
                         value={search}
@@ -176,14 +222,41 @@ export default function MaintenancePage() {
                             setSearch(e.target.value);
                             setCurrentPage(1);
                         }}
-                        className="sm:col-span-2 lg:col-span-1"
                     />
+                    <Select value={vehicleFilter} onValueChange={(value) => { setVehicleFilter(value); setCurrentPage(1); }}>
+                        <SelectTrigger aria-label="Filter by truck">
+                            <SelectValue placeholder="All trucks" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All trucks</SelectItem>
+                            {fleetVehicles
+                                .filter((vehicle) => vehicle.type === 'TRUCK_HEAD' || vehicle.type === 'DUMP_TRUCK')
+                                .map((vehicle) => (
+                                    <SelectItem key={vehicle.id} value={vehicle.id}>
+                                        {vehicle.plateNumber || vehicle.plate_number || vehicle.id} · {vehicle.make} {vehicle.model}
+                                    </SelectItem>
+                                ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={dateRange} onValueChange={applyDuration}>
+                        <SelectTrigger aria-label="Report duration">
+                            <SelectValue placeholder="Report duration" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All time</SelectItem>
+                            <SelectItem value="30">Last 30 days</SelectItem>
+                            <SelectItem value="90">Last 90 days</SelectItem>
+                            <SelectItem value="180">Last 6 months</SelectItem>
+                            <SelectItem value="year">This year</SelectItem>
+                            <SelectItem value="custom">Custom date range</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val as typeof statusFilter); setCurrentPage(1); }}>
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Filter by status">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="all">All statuses</SelectItem>
                             <SelectItem value="requested">Requested</SelectItem>
                             <SelectItem value="scheduled">Scheduled</SelectItem>
                             <SelectItem value="in_progress">In Progress</SelectItem>
@@ -193,11 +266,11 @@ export default function MaintenancePage() {
                         </SelectContent>
                     </Select>
                     <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val as typeof typeFilter); setCurrentPage(1); }}>
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Filter by maintenance type">
                             <SelectValue placeholder="Type" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="all">All types</SelectItem>
                             <SelectItem value="scheduled">Scheduled</SelectItem>
                             <SelectItem value="preventive">Preventive</SelectItem>
                             <SelectItem value="repair">Repair</SelectItem>
@@ -206,22 +279,38 @@ export default function MaintenancePage() {
                         </SelectContent>
                     </Select>
                     <Select value={priorityFilter} onValueChange={(val) => { setPriorityFilter(val as typeof priorityFilter); setCurrentPage(1); }}>
-                        <SelectTrigger>
+                        <SelectTrigger aria-label="Filter by priority">
                             <SelectValue placeholder="Priority" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="all">All priorities</SelectItem>
                             <SelectItem value="critical">Critical</SelectItem>
                             <SelectItem value="high">High</SelectItem>
                             <SelectItem value="medium">Medium</SelectItem>
                             <SelectItem value="low">Low</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button variant="outline" className="w-full gap-2">
+                    {(dateRange === 'custom' || dateFrom || dateTo) && (
+                        <>
+                            <div className="space-y-1">
+                                <label htmlFor="maintenance-date-from" className="text-xs text-muted-foreground">From</label>
+                                <Input id="maintenance-date-from" type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setDateRange('custom'); setCurrentPage(1); }} />
+                            </div>
+                            <div className="space-y-1">
+                                <label htmlFor="maintenance-date-to" className="text-xs text-muted-foreground">To</label>
+                                <Input id="maintenance-date-to" type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => { setDateTo(event.target.value); setDateRange('custom'); setCurrentPage(1); }} />
+                            </div>
+                        </>
+                    )}
+                    <Button variant="outline" className="w-full gap-2" onClick={clearFilters}>
                         <Filter className="w-4 h-4" />
-                        Filter
+                        Clear filters
                     </Button>
                 </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                    {vehicleFilter !== 'all' ? `Showing records for ${fleetVehicles.find((vehicle) => vehicle.id === vehicleFilter)?.plateNumber || 'selected truck'}` : 'Showing records for all trucks'}
+                    {dateFrom || dateTo ? ` · ${dateFrom || 'Start'} to ${dateTo || 'Today'}` : ' · All dates'}
+                </p>
             </SectionCard>
 
             {/* Data Table */}

@@ -80,6 +80,8 @@ export function useMaintenance(filters?: {
     vehicle_id?: string;
     type?: string;
     search?: string;
+    date_from?: string;
+    date_to?: string;
     sort?: 'created_at' | 'scheduled_date' | 'priority';
 }): UseMaintenance {
     const [records, setRecords] = useState<MaintenanceRecord[]>([]);
@@ -111,6 +113,12 @@ export function useMaintenance(filters?: {
             }
             if (filters?.type) {
                 query = query.eq('type', filters.type);
+            }
+            if (filters?.date_from) {
+                query = query.gte('job_card_date', filters.date_from);
+            }
+            if (filters?.date_to) {
+                query = query.lte('job_card_date', filters.date_to);
             }
             if (filters?.search) {
                 query = query.or(`record_number.ilike.%${filters.search}%,job_card_number.ilike.%${filters.search}%,title.ilike.%${filters.search}%,technician.ilike.%${filters.search}%,customer_company_name.ilike.%${filters.search}%`);
@@ -147,7 +155,7 @@ export function useMaintenance(filters?: {
                 supabase.removeChannel(channel);
             }
         };
-    }, [filters?.status, filters?.priority, filters?.vehicle_id, filters?.type, filters?.search, filters?.sort]);
+    }, [filters?.status, filters?.priority, filters?.vehicle_id, filters?.type, filters?.search, filters?.date_from, filters?.date_to, filters?.sort]);
 
     // Calculate stats
     const stats = {
