@@ -170,9 +170,10 @@ export default function CustomerDetailPage() {
     setAiLoading(true);
     setAiSummary(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/ai/customer-relationship-summary", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
         body: JSON.stringify({
           customer: {
             company_name: customer.company_name,

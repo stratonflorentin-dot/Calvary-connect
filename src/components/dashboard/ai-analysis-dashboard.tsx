@@ -195,7 +195,7 @@ function AIAnalysisDashboard() {
     try {
       const resp = await fetch('/api/ai/tts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAiAccessToken()}` },
         body: JSON.stringify({ text }),
       });
       if (!resp.ok) {

@@ -49,10 +49,16 @@ not a data-leak risk, but being callable unauthenticated is a cost/abuse vector.
 - `ceo-insights`, `fuel-prediction`, `predictive-maintenance` — ✅ now require a valid session.
 - `diagnose` — already blocked in production (dev-only GET); left as-is.
 
-Still open (need a coordinated client change — their callers send **no** token today, so adding auth
-would 401 them): `dispatch-suggestion` (trip form), `driver-performance-summary`, `customer-relationship-summary`,
-`tts`. Fix = have each caller send `Authorization: Bearer <token>` (like `callAiRoute`), then add the
-same guard. Verify with a login.
+✅ **DONE** — the remaining four are now authenticated too, with their callers updated to send the
+Bearer token (`supabase.auth.getSession()` / `getAiAccessToken()`):
+
+- `dispatch-suggestion` (trip form) — also queries the DB via `getDispatchContext`, which now takes a
+  `queryClient` param so it runs under the caller's RLS (was anon/empty, like analyze/forecast).
+- `driver-performance-summary`, `customer-relationship-summary` — authenticate-only (body data).
+- `tts` — authenticate-only (paid ElevenLabs API).
+
+Every `/api/ai/*` route is now authenticated (or prod-blocked, for `diagnose`). **Verify with a login**
+that these four features still work end to end.
 
 ## Lower-priority follow-ups
 

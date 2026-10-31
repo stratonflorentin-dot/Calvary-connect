@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { buildDispatchPrompt } from '@/ai/flows/dispatch-suggestion.server';
 import { getDispatchContext } from '@/lib/ai-database-context';
 import { generateAI } from '@/lib/ai-provider';
+import { AiRequestAuthError, authenticateAiRequest } from '@/lib/ai-request-auth';
 
 const SuggestionSchema = z.object({
   suggestions: z.array(
@@ -38,7 +39,10 @@ export async function POST(req: Request) {
 
     // Resolve fleet/driver availability server-side — never trust
     // client-supplied fleet data, same rationale as ask-company/route.ts.
-    const context = await getDispatchContext();
+    // Authenticate and query as the caller so RLS applies (otherwise the
+    // server runs as anon and getDispatchContext comes back empty).
+    const { dataClient } = await authenticateAiRequest(req);
+    const context = await getDispatchContext(dataClient);
     const system = buildDispatchPrompt(
       { origin, destination, cargoDescription, cargoWeightTons: cargoWeightTons != null ? Number(cargoWeightTons) : undefined },
       context,
@@ -64,6 +68,7 @@ export async function POST(req: Request) {
     }
   } catch (err: any) {
     console.error('API dispatch-suggestion error:', err);
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+    const status = err instanceof AiRequestAuthError ? err.status : 500;
+    return NextResponse.json({ error: err.message || 'Server error' }, { status });
   }
 }

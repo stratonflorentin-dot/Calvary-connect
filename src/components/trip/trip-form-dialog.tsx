@@ -192,9 +192,10 @@ export function TripFormDialog({ open, onOpenChange, trip, onSaved, shipmentId, 
     setSuggestions([]);
     setSuggestionCaveats([]);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/ai/dispatch-suggestion", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
         body: JSON.stringify({
           origin: form.origin,
           destination: form.destination,

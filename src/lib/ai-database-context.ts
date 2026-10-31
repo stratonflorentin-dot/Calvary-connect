@@ -334,17 +334,17 @@ export interface DispatchContext {
  * for a general-purpose chat/analysis feature. Driver "busy" status has no
  * DB column and is derived from active trip assignments.
  */
-export async function getDispatchContext(): Promise<DispatchContext> {
+export async function getDispatchContext(queryClient: any = supabase): Promise<DispatchContext> {
   const [vehiclesRes, driversRes, activeTripsRes, reviewsRes, locationsResult] = await Promise.all([
     safeQuery(() =>
-      supabase
+      queryClient
         .from('vehicles')
         .select('id, plate_number, type, trailer_sub_type, status, cargo_capacity_tons, gvw_kg, tare_weight_kg, tank_capacity_litres, dimensions')
         .limit(300),
     ),
-    safeQuery(() => supabase.from('user_profiles').select('id, name, license_class, license_expiry').eq('role', 'DRIVER').limit(300)),
-    safeQuery(() => supabase.from('trips').select('driver_id, truck_id, trailer_id, vehicle_id, status').in('status', BUSY_TRIP_STATUSES)),
-    safeQuery(() => supabase.from('performance_reviews').select('employee_id, rating')),
+    safeQuery(() => queryClient.from('user_profiles').select('id, name, license_class, license_expiry').eq('role', 'DRIVER').limit(300)),
+    safeQuery(() => queryClient.from('trips').select('driver_id, truck_id, trailer_id, vehicle_id, status').in('status', BUSY_TRIP_STATUSES)),
+    safeQuery(() => queryClient.from('performance_reviews').select('employee_id, rating')),
     // Trusted server-side context (same as getFleetContext, which has no
     // auth check either) — bypasses the manager-session verification that
     // gates this action's normal client-facing callers.

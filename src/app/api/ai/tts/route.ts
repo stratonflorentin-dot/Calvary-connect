@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { AiRequestAuthError, authenticateAiRequest } from '@/lib/ai-request-auth';
 
 export const runtime = 'nodejs';
 
@@ -14,6 +15,16 @@ export async function POST(req: Request) {
             { error: 'Voice is not configured — add ELEVENLABS_API_KEY to the environment.' },
             { status: 503 },
         );
+    }
+
+    // Require a valid session — ElevenLabs TTS is a paid API, not for
+    // unauthenticated use. (Reads only the Authorization header, so req.json()
+    // below still works.)
+    try {
+        await authenticateAiRequest(req);
+    } catch (err: any) {
+        const status = err instanceof AiRequestAuthError ? err.status : 401;
+        return NextResponse.json({ error: err?.message || 'Sign in to use voice.' }, { status });
     }
 
     let text = '';

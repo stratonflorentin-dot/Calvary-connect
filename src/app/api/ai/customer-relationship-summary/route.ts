@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateAI } from '@/lib/ai-provider';
+import { AiRequestAuthError, authenticateAiRequest } from '@/lib/ai-request-auth';
 
 function buildPrompt(customer: any): string {
   return `
@@ -23,6 +24,7 @@ Respond with plain text only, no markdown, no JSON.
 
 export async function POST(req: Request) {
   try {
+    await authenticateAiRequest(req); // paid LLM — require a valid session
     const body = await req.json().catch(() => ({}));
     const customer = body?.customer;
     if (!customer || !customer.company_name) {
@@ -41,6 +43,7 @@ export async function POST(req: Request) {
     }
   } catch (err: any) {
     console.error('API customer-relationship-summary error:', err);
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+    const status = err instanceof AiRequestAuthError ? err.status : 500;
+    return NextResponse.json({ error: err.message || 'Server error' }, { status });
   }
 }
