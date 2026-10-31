@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAI } from '@/lib/ai-provider';
 import { getFleetContext } from '@/lib/ai-database-context';
+import { AiRequestAuthError, authenticateAiRequest } from '@/lib/ai-request-auth';
 
 const TYPE_PROMPTS: Record<string, string> = {
   performance: 'Analyze fleet performance: vehicle utilization, trip completion, and driver activity.',
@@ -15,7 +16,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid analysis type' }, { status: 400 });
     }
 
-    const context = await getFleetContext();
+    // Authenticate and query as the caller so RLS applies (otherwise the
+    // server runs as anon and getFleetContext comes back empty).
+    const { dataClient } = await authenticateAiRequest(request);
+    const context = await getFleetContext(dataClient);
     const system = `
 You are a fleet operations analyst at Calvary Investment Co. Ltd, a road
 freight company in Tanzania. ${TYPE_PROMPTS[type]}
@@ -50,6 +54,7 @@ in "insights" rather than fabricating a conclusion.
     }
   } catch (error: any) {
     console.error('Analysis API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = error instanceof AiRequestAuthError ? error.status : 500;
+    return NextResponse.json({ error: error.message }, { status });
   }
 }

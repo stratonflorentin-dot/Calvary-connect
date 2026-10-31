@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAI } from '@/lib/ai-provider';
 import { getFleetContext } from '@/lib/ai-database-context';
+import { AiRequestAuthError, authenticateAiRequest } from '@/lib/ai-request-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +10,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'type must be revenue or expenses' }, { status: 400 });
     }
 
-    const context = await getFleetContext();
+    // Authenticate and query as the caller so RLS applies (otherwise the
+    // server runs as anon and getFleetContext comes back empty).
+    const { dataClient } = await authenticateAiRequest(request);
+    const context = await getFleetContext(dataClient);
     const series = type === 'revenue' ? context.trips : context.expenses;
 
     const system = `
@@ -43,6 +47,7 @@ and set confidence to "low" rather than fabricating a trend.
     }
   } catch (error: any) {
     console.error('Forecast API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = error instanceof AiRequestAuthError ? error.status : 500;
+    return NextResponse.json({ error: error.message }, { status });
   }
 }
