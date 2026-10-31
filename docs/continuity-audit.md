@@ -7,6 +7,8 @@ and linked back? Part of the "production-legit" program._
 
 | Chain | Status | Notes |
 |---|---|---|
+| Quotation accepted → shipment | ✅ correct | `convertToShipment` (quotations/[id]) creates a shipment carrying quotation_id / customer / route / quoted_amount / currency and links back via `quotations.shipment_id`; guarded against double-convert. |
+| Shipment → trips → invoice | ✅ correct | Trips are created with `shipment_id`; the shipment page loads its trips, waybills and invoice by `shipment_id`; the engine syncs shipment status as trips move. |
 | Trip delivered → sale + AR invoice | ✅ correct | `WorkflowService.completeTrip` creates one sale and one receivable invoice (`linked_revenue`); shipment status syncs in the engine. Single bill. |
 | Fuel request approved → expense + payable | ✅ **fixed** | Was creating **two** payable bills (`createExpense` auto-bills, plus an explicit `createInvoice`). Removed the duplicate — commit 56126e7. |
 | Allowance approved → expense + payable | ✅ **fixed** | Same duplicate pattern in `processAllowance` (currently unwired, latent). Removed. |
