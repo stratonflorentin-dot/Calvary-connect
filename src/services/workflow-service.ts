@@ -64,8 +64,12 @@ export class WorkflowService {
       approved_at: new Date().toISOString()
     });
 
-    // 2. Create financial expense
-    const expense = await SupabaseService.createExpense({
+    // 2. Create financial expense. createExpense() already auto-creates the
+    // matching payable bill internally (see its body), so there is no explicit
+    // createInvoice() here — a second one was a duplicate payable for the same
+    // fuel cost on every approval, overstating AP. Same fix already applied to
+    // completeMaintenance().
+    await SupabaseService.createExpense({
       type: "fuel",
       amount: request.amount,
       description: `Fuel for Vehicle ${request.vehicleId} (Ref: ${request.id})`,
@@ -78,18 +82,7 @@ export class WorkflowService {
       approvedBy: approvedBy
     });
 
-    // 3. Create Payable Invoice (Bill)
-    await SupabaseService.createInvoice({
-      invoice_number: `FUEL-${request.id}`,
-      customer_name: "Fuel Supplier",
-      amount: request.amount,
-      due_date: new Date().toISOString(),
-      status: "pending",
-      type: "payable",
-      linked_expense: expense.id
-    });
-
-    // 4. Notify Driver
+    // 3. Notify Driver
     await createNotification({
       userId: request.driverId,
       module: "operations",
@@ -163,8 +156,10 @@ export class WorkflowService {
       updated_at: new Date().toISOString()
     });
 
-    // 2. Create financial expense for payroll
-    const expense = await SupabaseService.createExpense({
+    // 2. Create financial expense for payroll. As in approveFuelRequest /
+    // completeMaintenance, createExpense() auto-creates the payable bill, so no
+    // explicit createInvoice() here — that was a duplicate payable per allowance.
+    await SupabaseService.createExpense({
       type: "allowance",
       amount: allowance.amount,
       description: `Allowance: ${allowance.workerName} - ${allowance.reason}`,
@@ -174,18 +169,7 @@ export class WorkflowService {
       approvedBy: approvedBy
     });
 
-    // 3. Create Payable Invoice
-    await SupabaseService.createInvoice({
-      invoice_number: `PAY-${allowance.id}`,
-      customer_name: allowance.workerName,
-      amount: allowance.amount,
-      due_date: new Date().toISOString(),
-      status: "pending",
-      type: "payable",
-      linked_expense: expense.id
-    });
-
-    // 4. Notify Employee
+    // 3. Notify Employee
     await createNotification({
       userId: allowance.employee_id,
       module: "hr",
