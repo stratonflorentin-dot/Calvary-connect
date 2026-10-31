@@ -36,6 +36,24 @@ allowing the apply) before the Issue button works. The front-end is in place and
 Note: `parts_requests` has no maintenance link column, so cost does **not** roll into a maintenance
 record (there is nothing to link to) — a separate enhancement if that association is wanted.
 
+## Allowances table split — not a break (dead code)
+
+The live allowances/payroll flow (allowances/actions.ts, the driver & HR dashboards, the statutory
+payroll routes, financial reports) uses **`driver_allowances`** consistently. The legacy
+**`allowances`** table is touched only by old service methods (`SupabaseService.createAllowance/
+updateAllowance/getAllowances`, `WorkflowService.processAllowance`, fleet-service helpers) — and a
+caller scan found **none of them are called anywhere**. So there is no live write/read to the dead
+table; it's uncalled cruft (safe to delete later, and a mild landmine if someone rewires it since its
+CHECK constraint rejects the values this app uses). Not a functional break.
+
+## Sweep status
+
+Core chains audited with no remaining live breaks: finance (fuel/allowance/maintenance→bill — dup fixed),
+PO→receive→stock (+ manual vendor bill), parts→issue→stock (built), and revenue
+(quotation→shipment→trip→invoice). Remaining items are hardening, not continuity: RLS policies for the
+20 no-policy tables and `search_path` pinning on flagged functions — both need a production deploy
+(guarded) and, for finance/HR RLS, sign-off.
+
 ## Method note
 
 Audited `WorkflowService`, `SupabaseService.createExpense/createAllowance`, the PO receive RPC
