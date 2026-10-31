@@ -59,7 +59,14 @@ are read-only proxies to third-party APIs. One real hole found and fixed:
   `authenticateAiRequest` guards; `compliance`/`expiring` were unwired, and the `summary` caller (HR
   insurance page) now sends the token it was already computing. `contracts/generate` is a template-fill
   compute endpoint (no DB) and `maintenance/preventive` uses the anon client (RLS-limited) — noted, not
-  changed.
+  changed. `telematics/sync` and `fuel/detect-anomalies` gate on a token/CRON_SECRET before using the
+  admin client — fine.
+- **Public `/api/track`** (intentionally public, courier-style) used the admin client but matched the
+  tracking number with a **substring `ilike %q%`** (so a short query fished out a shipment) and
+  returned **per-shipment revenue** (`salesAmount`) to anonymous callers. Hardened: exact
+  (case-insensitive) match so the full tracking number is required, and revenue dropped from the public
+  payload (it wasn't displayed anyway). Other service-role code is confined to `InsuranceService` (now
+  gated) and the auth helpers themselves.
 
 ## Still open in Phase 0
 

@@ -129,7 +129,6 @@ export default function TrackingPage() {
         estimated_arrival: r.estimated_time,
         delivered_at: r.delivered_at,
         notes: r.notes,
-        revenue: r.salesAmount,
       });
     }
     setLoading(false);

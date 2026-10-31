@@ -28,9 +28,11 @@ const SHIPMENT_STAGE_TO_TRIP_STATUS: Record<string, string> = {
 // and two into user_profiles (driver/customer_confirmed_by) — PostgREST refuses
 // an unqualified embed when more than one relationship matches, so both joins
 // below must name the exact constraint.
+// Deliberately excludes sales_amount / total_amount: this is a PUBLIC endpoint
+// (tracking number is not a secret), so it must not leak per-shipment revenue.
 const TRIP_SELECT = `
   id, trip_number, origin, destination, status, cargo_type,
-  client, created_at, estimated_arrival, notes, sales_amount, total_amount,
+  client, created_at, estimated_arrival, notes,
   pod_uploaded_at, updated_at,
   driver:user_profiles!fk_trips_driver_id(name),
   vehicle:vehicles!trips_truck_id_fkey(plate_number)
@@ -49,7 +51,7 @@ export async function GET(request: NextRequest) {
       created_at, actual_delivery,
       customer:customer_id(company_name)
     `)
-    .ilike("shipment_number", `%${q}%`)
+    .ilike("shipment_number", q)
     .limit(1)
     .maybeSingle();
 
@@ -76,7 +78,6 @@ export async function GET(request: NextRequest) {
         created_at: shipment.created_at,
         estimated_time: (trip as any)?.estimated_arrival,
         notes: (trip as any)?.notes,
-        salesAmount: (trip as any)?.total_amount ?? (trip as any)?.sales_amount,
         delivered_at: shipment.actual_delivery ?? (trip as any)?.pod_uploaded_at,
       },
     });
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
   const { data: trip, error } = await admin
     .from("trips")
     .select(TRIP_SELECT)
-    .ilike("trip_number", `%${q}%`)
+    .ilike("trip_number", q)
     .limit(1)
     .maybeSingle();
 
@@ -105,7 +106,6 @@ export async function GET(request: NextRequest) {
       created_at: t.created_at,
       estimated_time: t.estimated_arrival,
       notes: t.notes,
-      salesAmount: t.total_amount ?? t.sales_amount,
       delivered_at: t.pod_uploaded_at ?? (t.status?.toLowerCase() === "delivered" ? t.updated_at : null),
       driver: t.driver,
       vehicle: t.vehicle,
