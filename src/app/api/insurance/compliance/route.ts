@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { InsuranceService } from '@/services/insurance-service';
+import { AiRequestAuthError, authenticateAiRequest } from '@/lib/ai-request-auth';
 
 export async function GET(req: Request) {
   try {
+    // Require a valid session — InsuranceService reads via the service-role
+    // client (RLS-bypassing), so this must not be callable unauthenticated.
+    await authenticateAiRequest(req);
     const { searchParams } = new URL(req.url);
     const checkType = searchParams.get('type') || 'tira';
 
@@ -45,6 +49,7 @@ export async function GET(req: Request) {
     );
   } catch (error: any) {
     console.error('GET /api/insurance/compliance error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = error instanceof AiRequestAuthError ? error.status : 500;
+    return NextResponse.json({ error: error.message }, { status });
   }
 }

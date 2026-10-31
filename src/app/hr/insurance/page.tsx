@@ -98,7 +98,7 @@ export default function InsuranceDashboard() {
       const { data: { session } } = await supabase.auth.getSession();
       const authHeaders = session ? { Authorization: `Bearer ${session.access_token}` } : undefined;
       const [summaryRes, insuranceRes] = await Promise.all([
-        fetch('/api/insurance/summary'),
+        fetch('/api/insurance/summary', { headers: authHeaders }),
         fetch('/api/insurance', { headers: authHeaders }),
       ]);
 

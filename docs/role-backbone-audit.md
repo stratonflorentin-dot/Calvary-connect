@@ -47,6 +47,20 @@ sustainability_metrics, trip_accounting, vehicle_expenses, vendor_balances, what
    Dashboard → Authentication → Policies/Password → enable "Leaked password protection". Owner action.
 4. Review the `anon`-executable SECURITY DEFINER functions; restrict any not needed for public links.
 
+## API route auth sweep (done)
+
+Audited all non-AI `/api/*` routes. Most authenticate via a `require*Access` helper or a shared-secret
+(the `internal/external-health-check` cron uses a timing-safe secret compare). The `external/*` routes
+are read-only proxies to third-party APIs. One real hole found and fixed:
+
+- **Insurance GET routes** (`/api/insurance/compliance`, `/expiring`, `/summary`) called
+  `InsuranceService`, which reads via the **service-role client (RLS-bypassing)**, with **no auth** —
+  so anyone could pull company insurance policies/premiums/compliance unauthenticated. Added
+  `authenticateAiRequest` guards; `compliance`/`expiring` were unwired, and the `summary` caller (HR
+  insurance page) now sends the token it was already computing. `contracts/generate` is a template-fill
+  compute endpoint (no DB) and `maintenance/preventive` uses the anon client (RLS-limited) — noted, not
+  changed.
+
 ## Still open in Phase 0
 
 - **0.2 Cookie-based sessions** (migrate to `@supabase/ssr` so `middleware.ts` can gate server-side).
