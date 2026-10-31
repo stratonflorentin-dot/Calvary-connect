@@ -36,12 +36,15 @@ sustainability_metrics, trip_accounting, vehicle_expenses, vendor_balances, what
 
 ### Recommended (needs CEO/ADMIN sign-off before applying to production)
 
-1. For each of the 20 tables, **either** add explicit role-scoped policies **or** document it as
-   RPC/view-only and leave direct access denied (safer default). Finance tables (`revenue`,
-   `trip_accounting`, `vehicle_expenses`, `vendor_balances`, `financial_reports`) → policies only
-   with explicit sign-off.
-2. Pin `search_path` on the 55 flagged functions (mechanical, low-risk).
-3. Enable leaked-password protection in Auth settings.
+1. The 20 no-policy tables are **currently deny-all, which is the secure state** (RLS on, no policy ⇒
+   no direct client access), and the app doesn't read them directly — so the hardening decision is to
+   **leave them deny-all** (RPC/view-only) rather than add permissive policies, since adding policies
+   would *open* access currently closed. Revisit only if a role genuinely needs direct access.
+2. ✅ **DONE** — Pinned `search_path = public` on all 55 flagged non-extension functions
+   (migration `148_pin_function_search_path.sql`, applied; re-verified 0 remaining). Clears the
+   `function_search_path_mutable` warnings.
+3. **Enable leaked-password protection** — this is a Supabase **Auth project setting**, not SQL:
+   Dashboard → Authentication → Policies/Password → enable "Leaked password protection". Owner action.
 4. Review the `anon`-executable SECURITY DEFINER functions; restrict any not needed for public links.
 
 ## Still open in Phase 0
