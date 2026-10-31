@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Clock, CheckCircle, XCircle, AlertTriangle, Wrench } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, AlertTriangle, Wrench, PackageCheck } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 // Type definitions
 interface MaintenanceRequest {
@@ -123,6 +124,19 @@ export default function PartsRequestsPage() {
     } catch (error) {
       console.error('Handle action error:', error);
     }
+  };
+
+  // Issue an approved request: atomically deducts spare-part stock, records a
+  // stock movement, and marks the request issued (issue_parts_request RPC —
+  // migration 147). This is the step that actually takes parts out of the store.
+  const handleIssue = async (requestId: string) => {
+    const { data, error } = await supabase.rpc('issue_parts_request', { p_request_id: requestId });
+    if (error) {
+      toast({ title: "Couldn't issue parts", description: error.message, variant: 'destructive' });
+      return;
+    }
+    setRequests(prev => prev.map(r => (r.id === requestId ? { ...r, status: 'issued', ...(data ?? {}) } : r)));
+    toast({ variant: 'success', title: 'Parts issued', description: 'Stock has been deducted from the store.' });
   };
 
   if (!isAdmin && !['CEO', 'ADMIN', 'OPERATOR'].includes(role || '')) {
@@ -240,8 +254,9 @@ export default function PartsRequestsPage() {
                   <TableCell>
                     <Badge className={cn(
                       "text-[10px]",
-                      r.status === 'approved' ? 'bg-success' :
-                        r.status === 'rejected' ? 'bg-destructive' : 'bg-warning'
+                      r.status === 'issued' ? 'bg-primary' :
+                        r.status === 'approved' ? 'bg-success' :
+                          r.status === 'rejected' ? 'bg-destructive' : 'bg-warning'
                     )}>
                       {r.status.toUpperCase()}
                     </Badge>
@@ -264,6 +279,17 @@ export default function PartsRequestsPage() {
                           onClick={() => handleAction(r.id, 'rejected', r)}
                         >
                           <XCircle className="size-4" />
+                        </Button>
+                      </div>
+                    )}
+                    {r.status === 'approved' && (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => handleIssue(r.id)}
+                        >
+                          <PackageCheck className="size-4" /> Issue
                         </Button>
                       </div>
                     )}

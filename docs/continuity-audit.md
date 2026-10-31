@@ -15,14 +15,24 @@ and linked back? Part of the "production-legit" program._
 | PO → vendor bill | ✅ by design | Receiving does **not** auto-bill; the vendor bill is raised manually against the PO (`vendor_bills.purchase_order_id`) for three-way matching (PO vs received vs billed). Not a gap. |
 | `createExpense` → payable | ✅ correct | Auto-creates exactly one payable (`BILL-…`); it is the single source of the duplicate bug fixed above — no other caller double-bills (scanned). |
 
-## Open gap (needs a decision / deeper work)
+## Parts request → stock deduction — ADDRESSED (migration apply pending)
 
-- **Parts request → inventory deduction.** The `parts_requests` workflow has an `issued` state, but the
-  Parts Requests page only does **approve / reject** — there is no "issue" action that writes a
-  `stock_movements` 'out' row / decrements `inventory.quantity_available`. So an approved part request
-  may never actually reduce stock, and its cost never rolls into the maintenance record it was for.
-  Fix = add an "Issue" action (mirroring the PO-receive RPC in reverse) that deducts stock and links
-  the issue to the maintenance record. Scoped as its own task (touches a workflow transition + an RPC).
+The `parts_requests` workflow had an `issued` state but the page only did **approve / reject**, so an
+approved request never reduced stock. Fixed:
+
+- **Migration `147_issue_parts_request.sql`** adds `parts_requests.issued_by/issued_at` and an atomic
+  `issue_parts_request(p_request_id)` RPC: checks the request is approved, verifies `spare_parts.quantity`
+  is sufficient, decrements it, writes a `stock_movements` 'out' row, and marks the request `issued`.
+  (`part_id` → `spare_parts`, which is also what `stock_movements.spare_part_id` references.)
+- **Parts Requests page** now shows an **Issue** button on approved rows calling that RPC, with a
+  stock-shortage error surfaced as a toast.
+
+**Action needed:** the migration was NOT applied — the production-deploy was blocked by the auto-mode
+guard. Apply `supabase/migrations/147_issue_parts_request.sql` (via your migration pipeline, or by
+allowing the apply) before the Issue button works. The front-end is in place and errors cleanly until then.
+
+Note: `parts_requests` has no maintenance link column, so cost does **not** roll into a maintenance
+record (there is nothing to link to) — a separate enhancement if that association is wanted.
 
 ## Method note
 
